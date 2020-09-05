@@ -1,6 +1,6 @@
-import { UpdateParams } from "./types";
+import { UpdateParams, DepositParams, UpdateType, WithdrawParams, CreateTransferParams, ResolveTransferParams } from "./types";
 import * as sync from "./sync";
-import {updateState, generateUpdate} from "./update";
+import {generateUpdate} from "./update";
 
 export class Vector {
   constructor(
@@ -31,6 +31,9 @@ export class Vector {
       logService,
       signer
     );
+
+    // Handles up asynchronous services and checks to see that
+    // channel is `setup` plus is not in dispute
     return node.setupServices();
   }
 
@@ -40,8 +43,9 @@ export class Vector {
 
   get publicIdentifier() {
     return this.signer.publicIdentifier;
-  }
+  } 
 
+  // Primary protocol execution from the leader side
   private async executeUpdate(params: UpdateParams) {
     this.logService.log(`Executing update with: ${params}`);
 
@@ -62,9 +66,63 @@ export class Vector {
       }
     });
 
+    // TODO run setup updates if the channel is not already setup
+
+    // TODO validate that the channel is not currently in dispute/checkpoint state
+
     // sync latest state before starting
     const channelState = this.storeService.getChannelState();
     await sync.outbound(channelState.latestUpdate, this.messagingService)
     return this;
+  }
+
+   /* 
+   * ***************************
+   * *** CORE PUBLIC METHODS ***
+   * ***************************
+   */
+
+  public async deposit(params: DepositParams) {
+    // TODO validate deposit params for completeness
+    const updateParams = {
+      channelId: params.channelId,
+      type: UpdateType.deposit,
+      details: params
+    } as UpdateParams
+
+    return this.executeUpdate(updateParams)
+  }
+
+  public async withdraw(params: WithdrawParams) {
+    // TODO validate withdraw params for completeness
+    const updateParams = {
+      channelId: params.channelId,
+      type: UpdateType.withdraw,
+      details: params
+    } as UpdateParams
+
+    return this.executeUpdate(updateParams)
+  }
+
+  public async createTransfer(params: CreateTransferParams) {
+    // TODO validate create params for completeness
+    const updateParams = {
+      channelId: params.channelId,
+      type: UpdateType.create,
+      details: params
+    } as UpdateParams
+
+    return this.executeUpdate(updateParams)
+  }
+
+  public async resolveTransfer(params: ResolveTransferParams) {
+    // TODO validate resolve params for completeness
+    const updateParams = {
+      channelId: params.channelId,
+      type: UpdateType.resolve,
+      details: params
+    } as UpdateParams
+
+    return this.executeUpdate(updateParams)
   }
 }
