@@ -1,0 +1,36 @@
+{
+  "name": "@connext/utils",
+  "version": "7.3.4",
+  "description": "Crypto module for Connext client",
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "src",
+    "types"
+  ],
+  "scripts": {
+    "build": "rm -rf ./dist/* && ./node_modules/.bin/tsc -p tsconfig.json",
+    "rebuild": "npm run clean && npm run build",
+    "clean": "rm -rf ./dist",
+    "test": "./node_modules/.bin/ts-mocha --bail --check-leaks --exit 'src/**/*.spec.ts'"
+  },
+  "dependencies": {
+    "@connext/types": "7.3.4",
+    "axios": "0.19.2",
+    "bs58check": "2.1.2",
+    "eccrypto-js": "4.5.4",
+    "evt": "1.8.4"
+  },
+  "devDependencies": {
+    "@babel/polyfill": "7.10.4",
+    "@types/chai": "4.2.12",
+    "@types/mocha": "8.0.1",
+    "@types/node": "14.0.27",
+    "chai": "4.2.0",
+    "eth-crypto": "1.6.0",
+    "ethers": "5.0.8",
+    "mocha": "8.1.1",
+    "ts-mocha": "7.0.0",
+    "typescript": "3.9.7"
+  }
+}
