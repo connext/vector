@@ -14,7 +14,7 @@ The core protocol flow has three primary phases:
 3. **Syncronization** -- the sender's update is dispatched over the wire. Receiver validates the update, merges the update with their channel, stores the channel, and then acks. Sender receives the ack and stores.
 
 ## Sync Protocol
-At the core of Vector lies the `sync` protocol. `Sync` is used both when a sender wants to propose a new update to the replicated state, and *also* when peer state has diverged. Because updates are monotonic (nonce += 1), there are only a very limited number of cases within which party states possibly diverge.
+At the core of Vector lies the `sync` protocol. Unlike in CounterFactual, there is only a single protocol -- `sync` is used both when a sender wants to propose a new update to the replicated state, and *also* when peer state has diverged. Because updates are monotonic (nonce += 1), there are only a very limited number of cases within which party states possibly diverge.
 
 For this reason, `sync` takes a higher degree of control over message delivery than CF does. Outbound messages are retried on a timer if they fail. Inbound message nonces are checked against the `ChannelState` in store and dropped if they are duplicates.
 
