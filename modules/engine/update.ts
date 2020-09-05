@@ -1,11 +1,11 @@
-import { UpdateParams, ChannelUpdate, UpdateType } from "./types";
+import { UpdateParams, ChannelUpdate, UpdateType, ChannelState } from "./types";
 
 export async function generateUpdate(params: UpdateParams, storeService): Promise<ChannelUpdate> {
     const state = await storeService.getChannelState();
 
     switch (params.type) {
         case UpdateType.setup: {
-
+            return generateSetupUpdate()
         }
 
         case UpdateType.deposit: {
@@ -13,7 +13,7 @@ export async function generateUpdate(params: UpdateParams, storeService): Promis
         }
 
         case UpdateType.withdraw: {
-
+            nonce
         }
 
         case UpdateType.create: {
@@ -28,6 +28,14 @@ export async function generateUpdate(params: UpdateParams, storeService): Promis
             throw new Error(`Unexpected UpdateType in params: ${params.type}`);
         }
     }
+}
 
-    return {} as ChannelUpdate;
+async function generateSetupUpdate(state: ChannelState): Promise<ChannelUpdate> {
+
+
+    return {
+        counterpartyPublicIdentifier: "", //TODO
+        nonce: "0",
+        type: 
+    }
 }

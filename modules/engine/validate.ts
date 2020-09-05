@@ -10,6 +10,8 @@ export function validate(update: ChannelUpdate, state: ChannelState) {
 
     // First validate update fields to make sure everything is defined and of the right type
 
+    // Then do some base validation -- signatures?
+
     // Then break out into type-specific validation
     switch (update.type) {
         case UpdateType.setup: {
