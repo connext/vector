@@ -1,4 +1,4 @@
-# Vector
+# ↗️ Vector
 Vector is an ultra-minimal state channel implementation that borrows ideas from the Counterfactual framework, the v1 Connext Payment Channel Hub, and the StateChannels framework.
 
 ## Core Principles
