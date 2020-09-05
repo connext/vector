@@ -1,6 +1,6 @@
 import { UpdateParams } from "./types";
 import * as sync from "./sync";
-import update from "./update";
+import {updateState, generateUpdate} from "./update";
 
 export class Vector {
   constructor(
@@ -17,7 +17,7 @@ export class Vector {
     this.signer = signer;
   }
 
-  static create(
+  static connect(
     messagingService,
     lockService,
     storeService,
@@ -46,7 +46,7 @@ export class Vector {
     this.logService.log(`Executing update with: ${params}`);
 
     const key = await this.lockService.acquireLock(params.channelId);
-    const update = await update(params);
+    const update = await generateUpdate(params, this.storeService);
     await sync.outbound(update, this.messagingService);
     await this.lockService.releaseLock(params.channelId, key);
   }
@@ -54,13 +54,17 @@ export class Vector {
   private async setupServices() {
     this.messagingService.onReceive(this.publicIdentifier, async (msg) => {
       try {
-        await sync.inbound(msg);
+        await sync.inbound(msg, this.storeService);
       } catch (e) {
         // No need to crash the entire cfCore if we receive an invalid message.
         // Just log & wait for the next one
         this.logService.error(`Failed to handle ${msg.type} message: ${e.message}`);
       }
     });
+
+    // sync latest state before starting
+    const channelState = this.storeService.getChannelState();
+    await sync.outbound(channelState.latestUpdate, this.messagingService)
     return this;
   }
 }
