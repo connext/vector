@@ -1,34 +1,35 @@
-import { UpdateParams, DepositParams, UpdateType, WithdrawParams, CreateTransferParams, ResolveTransferParams } from "./types";
+import { UpdateParams, DepositParams, UpdateType, WithdrawParams, CreateTransferParams, ResolveTransferParams, ChannelState, IMessagingService, IStoreService, ILockService, VectorMessage } from "./types";
 import * as sync from "./sync";
 import {generateUpdate} from "./update";
+import {Evt} from "evt";
+import { InboundChannelError, logger } from "./utils";
 
 export class Vector {
+  private channelStateEvt = Evt.create<ChannelState>();
+  private channelErrorEvt = Evt.create<InboundChannelError>();
+
   constructor(
     private messagingService,
     private lockService,
     private storeService,
-    private logService,
     private signer
   ) {
     this.messagingService = messagingService;
     this.storeService = storeService;
     this.lockService = lockService;
-    this.logService = logService;
     this.signer = signer;
   }
 
   static connect(
-    messagingService,
-    lockService,
-    storeService,
+    messagingService: IMessagingService,
+    lockService: ILockService,
+    storeService: IStoreService,
     signer,
-    logService?
   ): Promise<Vector> {
     const node = new Vector(
       messagingService,
       lockService,
       storeService,
-      logService,
       signer
     );
 
@@ -47,22 +48,22 @@ export class Vector {
 
   // Primary protocol execution from the leader side
   private async executeUpdate(params: UpdateParams) {
-    this.logService.log(`Executing update with: ${params}`);
+    logger.info(`Start executeUpdate`, {params});
 
     const key = await this.lockService.acquireLock(params.channelId);
     const update = await generateUpdate(params, this.storeService);
-    await sync.outbound(update, this.messagingService);
+    await sync.outbound(update, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
     await this.lockService.releaseLock(params.channelId, key);
   }
 
   private async setupServices() {
-    this.messagingService.onReceive(this.publicIdentifier, async (msg) => {
+    this.messagingService.onReceive(this.publicIdentifier, async (msg: VectorMessage) => {
       try {
-        await sync.inbound(msg, this.storeService);
+        await sync.inbound(msg, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
       } catch (e) {
-        // No need to crash the entire cfCore if we receive an invalid message.
-        // Just log & wait for the next one
-        this.logService.error(`Failed to handle ${msg.type} message: ${e.message}`);
+        // No need to crash the entire vector core if we receive an invalid
+        // message. Just log & wait for the next one
+        logger.error(`Failed to handle message`, { msg });
       }
     });
 
@@ -72,7 +73,7 @@ export class Vector {
 
     // sync latest state before starting
     const channelState = this.storeService.getChannelState();
-    await sync.outbound(channelState.latestUpdate, this.messagingService)
+    await sync.outbound(channelState.latestUpdate, this.messagingService, this.channelStateEvt, this.channelErrorEvt)
     return this;
   }
 

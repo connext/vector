@@ -1,4 +1,5 @@
-import { enumify } from "./utils";
+import {BigNumber} from "ethers";
+import { InboundChannelError } from "./utils";
 
 // Method params
 export type DepositParams = {
@@ -45,17 +46,38 @@ export type ChannelState = {
 };
 
 export type ChannelUpdate = {
+  channelId: string;
   counterpartyPublicIdentifier: string;
   nonce: string;
   type: UpdateType;
   commitment: MultisigCommitment;
 };
 
-export const UpdateType = enumify({
-    setup: "setup",
-    deposit: "deposit",
-    withdraw: "withdraw",
-    create: "create",
-    resolve: "resolve",
-});
+export const UpdateType = {
+  create: "create",
+  deposit: "deposit",
+  resolve: "resolve",
+  setup: "setup",
+  withdraw: "withdraw"
+} as const;
 export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
+
+export type VectorChannelMessage = {
+  to: string;
+  from: string;
+  data: any;
+}
+export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {error: InboundChannelError}
+export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
+
+export type Values<E> = E[keyof E];
+
+export interface IStoreService {
+  getChannelState(channelId: string): Promise<ChannelState | undefined>
+  saveChannelState(channelState: ChannelState): Promise<void>
+};
+
+
+// TODO: fix these interfaces!
+export type ILockService = any;
+export type IMessagingService = any
