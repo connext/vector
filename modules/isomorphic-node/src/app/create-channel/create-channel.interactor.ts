@@ -10,8 +10,8 @@ import { constants } from 'ethers';
 export class CreateChannelInteractor implements Interactor {
   constructor(
     private createChannelValidator: CreateChannelValidator,
-    private errorFactory: ApplicationErrorFactory,
     private walletService: IWalletService,
+    private errorFactory: ApplicationErrorFactory,
   ) {}
 
   async execute(request: CreateChannelInput): Promise<CreateChannelOutput> {

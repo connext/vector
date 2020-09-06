@@ -7,6 +7,7 @@ import { CreateChannelOutput } from './create-channel.out';
 import { ValidatorResult } from '../core/definitions/validator-result';
 import { CreateChannelValidator } from './create-channel.validator';
 import { expect } from '../../test/assert';
+import { mockWalletService } from '../../test/mocks/wallet';
 
 function isCreateChannelOutput(output: CreateChannelOutput): output is CreateChannelOutput {
   return (output as CreateChannelOutput) !== undefined;
@@ -34,6 +35,10 @@ describe('create channel interactor', () => {
       {
         name: 'createChannelValidator',
         useValue: createChannelValidator,
+      },
+      {
+        name: 'walletService',
+        useValue: mockWalletService,
       },
       {
         name: 'errorFactory',
