@@ -5,7 +5,7 @@ Vector is an ultra-minimal state channel implementation that borrows ideas from 
 - Core priniciples
 - Sync protocol
 - Update types // TODO
-- Contracts (in `modules/contracts/README.md`)
+- [Contracts](https://github.com/connext/vector/blob/master/modules/contracts/README.md) (in `modules/contracts/README.md`)
 
 ## Core Principles
 Vector uses the following fundamental design principles:
