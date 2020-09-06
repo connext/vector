@@ -1,5 +1,5 @@
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
-import * as joi from 'joi';
+import joi from 'joi';
 
 import { App } from '../app/app';
 import { CreateChannelInteractor } from '../app/create-channel/create-channel.interactor';
