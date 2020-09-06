@@ -127,6 +127,8 @@ async function processChannelMessage(
   // Get our latest stored state
   const storedState: ChannelState = await storeService.getChannelState(requestedUpdate.channelId);
   if (!storedState) {
+    // TODO: if this function should *also* handle channel creation methods,
+    // then that is the case that should be handled here
     return handleError(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState))
   }
 

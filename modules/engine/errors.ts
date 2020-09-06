@@ -1,10 +1,13 @@
 import { ChannelUpdate, ChannelState, Values } from "./types";
 import { logger } from "./utils";
 
-// TODO: Stronger message typings for known errors
+// Abstract error for package
 export abstract class VectorError extends Error {
+  // These will define the subclasses of errors.
   static readonly errors = {
     ChannelUpdateError: 'ChannelUpdateError',
+    DepositError: 'DepositError',
+    // etc.
   } as const;
 
   abstract readonly type: Values<typeof VectorError.errors>;
@@ -20,12 +23,15 @@ export abstract class VectorError extends Error {
   }
 }
 
+// Error type returned by the `processChannelMethod` function
 export class ChannelUpdateError extends VectorError {
   readonly type = VectorError.errors.ChannelUpdateError;
 
+  // This is the message that will be thrown by the error
+  // and all other details will be logged
   static readonly reasons = {
     BadSignatures: 'BadSignatures',
-    ChannelNotFound: 'ChannelNotFound',
+    ChannelNotFound: 'ChannelNotFound', // See note in `processChannel`
     StaleUpdateNonce: 'StaleUpdateNonce',
     StaleChannelNonce: 'StaleChannelNonce',
     MergeUpdateFailed: 'MergeUpdateFailed',
@@ -39,6 +45,8 @@ export class ChannelUpdateError extends VectorError {
     public readonly context: any = undefined,
   ) {
     super(message, update, state, context);
+    // TODO: we may want to filter out some key items from the
+    // state and update here instead of logging everything
     logger.error(message, {update, state, ...context});
   }
 }
