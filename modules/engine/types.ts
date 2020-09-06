@@ -8,13 +8,6 @@ export type DepositParams = {
   assetId: string;
 }
 
-export type WithdrawParams = {
-  channelId: string;
-  amount: BigNumber;
-  assetId: string;
-  recipient: string;
-}
-
 export type CreateTransferParams = {
   channelId: string;
   amount: BigNumber;
@@ -57,8 +50,7 @@ export const UpdateType = {
   create: "create",
   deposit: "deposit",
   resolve: "resolve",
-  setup: "setup",
-  withdraw: "withdraw"
+  setup: "setup", // TODO do we need this?
 } as const;
 export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 

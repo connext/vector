@@ -4,16 +4,12 @@ export async function generateUpdate(params: UpdateParams, storeService): Promis
     const state = await storeService.getChannelState();
 
     switch (params.type) {
-        case UpdateType.setup: {
+        case UpdateType.setup: { //TODO, do we actually need setup?
             return generateSetupUpdate()
         }
 
         case UpdateType.deposit: {
 
-        }
-
-        case UpdateType.withdraw: {
-            nonce
         }
 
         case UpdateType.create: {

@@ -22,10 +22,6 @@ export function validate(update: ChannelUpdate, state: ChannelState) {
 
         }
 
-        case UpdateType.withdraw: {
-
-        }
-
         case UpdateType.create: {
 
         }

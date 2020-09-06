@@ -1,4 +1,4 @@
-import { UpdateParams, DepositParams, UpdateType, WithdrawParams, CreateTransferParams, ResolveTransferParams, ChannelState, IMessagingService, IStoreService, ILockService, VectorMessage } from "./types";
+import { UpdateParams, DepositParams, UpdateType,  CreateTransferParams, ResolveTransferParams, ChannelState, IMessagingService, IStoreService, ILockService, VectorMessage } from "./types";
 import * as sync from "./sync";
 import {generateUpdate} from "./update";
 import {Evt} from "evt";
@@ -52,14 +52,14 @@ export class Vector {
 
     const key = await this.lockService.acquireLock(params.channelId);
     const update = await generateUpdate(params, this.storeService);
-    await sync.outbound(update, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
+    await sync.outbound(update, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
     await this.lockService.releaseLock(params.channelId, key);
   }
 
   private async setupServices() {
     this.messagingService.onReceive(this.publicIdentifier, async (msg: VectorMessage) => {
       try {
-        await sync.inbound(msg, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
+        await sync.inbound(msg, this.storeService, this.messagingService, this.signer, this.channelStateEvt, this.channelErrorEvt);
       } catch (e) {
         // No need to crash the entire vector core if we receive an invalid
         // message. Just log & wait for the next one
@@ -73,7 +73,7 @@ export class Vector {
 
     // sync latest state before starting
     const channelState = this.storeService.getChannelState();
-    await sync.outbound(channelState.latestUpdate, this.messagingService, this.channelStateEvt, this.channelErrorEvt)
+    await sync.outbound(channelState.latestUpdate, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt)
     return this;
   }
 
@@ -88,17 +88,6 @@ export class Vector {
     const updateParams = {
       channelId: params.channelId,
       type: UpdateType.deposit,
-      details: params
-    } as UpdateParams
-
-    return this.executeUpdate(updateParams)
-  }
-
-  public async withdraw(params: WithdrawParams) {
-    // TODO validate withdraw params for completeness
-    const updateParams = {
-      channelId: params.channelId,
-      type: UpdateType.withdraw,
       details: params
     } as UpdateParams
 
