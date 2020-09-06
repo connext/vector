@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "incremental": true,
+    "noUnusedLocals": false,
+    "outDir": "dist",
+    "strict": false,
+    "target": "es6",
+    "declarationDir": "dist/",
+    "module": "commonjs"
+  },
+  "exclude": ["dist", "node_modules", "**/*spec.ts"],
+  "include": ["src/**/*.ts"]
+}
