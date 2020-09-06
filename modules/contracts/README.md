@@ -26,6 +26,7 @@ In Vector, channel funding is asymmetric.
 
 The initiator of a channel (as determined by `participants[]`), *must* deposit using the `depositA` function in the `Multisig.sol` contract. The responder of a channel can deposit simply by sending funds to the multisig address.
 
+//TODO in order for this to work, the multisig proxy has to be deployed up front :/
 Calling `depositA` registers Alice's deposit `amount`, `assetId`, `depositNonce` as the latest deposit onchain. This means that Alice's flow for depositing funds is:
 1. Call `depositA` with funds
 2. Attempt to reconcile the latest deposit in Alice's balance offchain with Bob (i.e. add `deposit.amount` to `balanceA`)
@@ -47,3 +48,6 @@ The above flows have a few consequences:
 - Alice does not need to do preparatory work before sending her deposit to chain. The onchain part of her deposit is entirely decoupled from offchain reconciliation.
 - We need to pass in an `assetId[]` array into `emptyChannel()` in order for it to work. This is probably ok as the function should be able to be called multiple times within the dispute window. //TODO is this true?
 - Alice's cannot deposit many times concurrently (we can potentially modify the `latestDepositByAssetId` to track historic balances and aggregate them to allow this, however)
+
+## Commitments
+// TODO
