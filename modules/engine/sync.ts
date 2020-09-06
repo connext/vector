@@ -11,10 +11,16 @@ import { ChannelUpdateError } from "./errors";
 // has been persisted.
 export async function outbound(
   update: ChannelUpdate, 
+  storeService: IStoreService,
   messagingService: IMessagingService, 
   stateEvt: Evt<ChannelState>, 
   errorEvt: Evt<ChannelUpdateError>
 ): Promise<ChannelState> {
+  const storedChannel = await storeService.getChannelState(update.channelId);
+  if (!storedChannel) {
+    // TODO: what if this is creating a channel?
+    throw new Error('Channel not found')
+  }
   // Create a helper function that will create a function that properly
   // sets up the promise handlers
   const generatePromise = () => new Promise<ChannelState>((resolve, reject) => {
@@ -33,7 +39,8 @@ export async function outbound(
     .attachOnce((e: ChannelState) => resolve(e));
 
     // TODO: turn `update` into a DTO before sending?
-    messagingService.send(update.counterpartyPublicIdentifier, update).catch(e => reject(e.message));
+    // TODO: what if there is no latest update?
+    messagingService.send(update.counterpartyPublicIdentifier, { update, latestUpdate: storedChannel.latestUpdate }).catch(e => reject(e.message));
   });
 
 
@@ -189,6 +196,7 @@ async function processChannelMessage(
   if (diff.eq(2)) {
     // Create the proper state to play the update on top of
     try {
+      // TODO: what if there is no latest update?
       previousState = await mergeUpdate(counterpartyLatestUpdate, storedState);
     } catch (e) {
       return handleError(new ChannelUpdateError(ChannelUpdateError.reasons.MergeUpdateFailed, counterpartyLatestUpdate, storedState, { requestedUpdate, error: e.message, stack: e.stack }))
