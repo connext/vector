@@ -2,19 +2,17 @@
 pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
-import "./MultisigData.sol";
-// import "../../shared/libs/LibCommitment.sol";
-// import "../../shared/libs/LibChannelCrypto.sol";
+import "../../shared/libs/LibCommitment.sol";
+import "../../shared/libs/LibChannelCrypto.sol";
 
 
 /// @title Multisig - A channel multisig
 /// @author Arjun Bhuptani <arjun@connext.network>
 /// @notice
-/// (a) Executes arbitrary transactions using `DELEGATECALL`
-/// (b) Requires n-of-n unanimous consent
-/// (c) Does not use on-chain address for signature verification
-/// (d) Uses hash-based instead of nonce-based replay protection
-contract Multisig is MultisigData, LibCommitment {
+/// (a) Is "owned" (and deployed?) by an Adjudicator.sol contract
+/// (b) Executes transactions when called by Adjudicator.sol (without requiring any signatures)
+/// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
+contract Multisig is LibCommitment {
 
     using LibChannelCrypto for bytes32;
 
@@ -22,10 +20,23 @@ contract Multisig is MultisigData, LibCommitment {
 
     address[] private _owners;
 
+    struct LatestDeposit {
+        uint256 amount;
+        uint256 nonce;
+    };
+
+    mapping(address => LatestDeposit) public latestDepositByAssetId;
+
     receive() external payable { }
+
+    modifier onlyAdjudicator {
+      require(msg.sender == /*TODO get adjudicator address here */);
+      _;
+   }
 
     /// @notice Contract constructor
     /// @param owners An array of unique addresses representing the multisig owners
+    //TODO should this be onlyAdjudicator?
     function setup(address[] memory owners) public {
         require(_owners.length == 0, "Contract has been set up before");
         _owners = owners;
@@ -39,18 +50,27 @@ contract Multisig is MultisigData, LibCommitment {
         public payable
     {
         // TODO
-        // This should validate signature against _owners[0], then save a deposited amount + latest deposit nonce to multisig data
+        // This should validate signature against _owners[0], then save/upsert latestDepositByAssetId
     }
 
-    /// @notice Execute an n-of-n signed transaction specified by a (to, data) tuple
-    /// This transaction is a delegate call. The arguments `to`, `data` are passed
-    /// as arguments to the DELEGATECALL.
+    // TODO gets admin-called by the adjudicator contract in the event of a dispute to push out funds
+    function adjudicatorTransfer(
+        address[] to,
+        uint256[] amount,
+        address assetId
+    ) public onlyAdjudicator {
+
+    }
+
+  /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
+    /// This transaction is a message CALL
     /// @param to The destination address of the message call
     /// @param value The amount of ETH being forwarded in the message call
     /// @param data Any calldata being sent along with the message call
     /// @param signatures A sorted bytes string of concatenated signatures of each owner
     function execTransaction(
         address to,
+        uint256 value,
         bytes memory data,
         bytes[] memory signatures
     )
@@ -58,9 +78,9 @@ contract Multisig is MultisigData, LibCommitment {
     {
         bytes32 transactionHash = getTransactionHash(
             to,
+            value,
             data,
         );
-
         require(
             !isExecuted[transactionHash],
             "Transacation has already been executed"
@@ -75,9 +95,9 @@ contract Multisig is MultisigData, LibCommitment {
             );
         }
 
-        require(execute(to, data), "execute failed");
         execute(
             to,
+            value,
             data,
         );
     }
@@ -88,7 +108,9 @@ contract Multisig is MultisigData, LibCommitment {
     /// are not distinguished.
     function getTransactionHash(
         address to,
+        uint256 value,
         bytes memory data,
+        Operation operation
     )
         public
         view
@@ -96,9 +118,12 @@ contract Multisig is MultisigData, LibCommitment {
     {
         return keccak256(
             abi.encodePacked(
+                uint8(CommitmentTarget.MULTISIG),
                 address(this),
                 to,
+                value,
                 keccak256(data),
+                uint8(operation)
             )
         );
     }
@@ -113,15 +138,15 @@ contract Multisig is MultisigData, LibCommitment {
         return _owners;
     }
 
-    /// @notice Execute a DELEGATECALL on behalf of the multisignature wallet
+    /// @notice Execute a CALL on behalf of the multisignature wallet
+    /// @notice This is largely used for withdrawing from the channel + migrations
     /// @return success A boolean indicating if the transaction was successful or not
-    function execute(address to, bytes memory data)
+    function execute(address to, uint256 value, bytes memory data)
         internal
         returns (bool success)
     {
         assembly {
-            success := delegatecall(not(0), to, add(data, 0x20), mload(data), 0, 0)
+            success := call(not(0), to, value, add(data, 0x20), mload(data), 0, 0)
         }
     }
-
 }
