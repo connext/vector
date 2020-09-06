@@ -1,4 +1,4 @@
-export type ErrorDataType = string | number | object | [] | void | boolean | Error;
+export type ErrorDataType = string | number | Record<string, unknown> | [] | void | boolean | Error;
 
 export abstract class CustomError extends Error {
   name = '';

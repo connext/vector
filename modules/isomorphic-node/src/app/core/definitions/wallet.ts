@@ -20,7 +20,7 @@ export type TransferUpdate = {
 export type SetupParams = {
   channelId: string;
   participants: string[];
-  chainId: string;
+  chainId: number;
 };
 
 export type DepositParams = {

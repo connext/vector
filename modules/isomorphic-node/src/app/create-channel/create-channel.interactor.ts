@@ -1,13 +1,11 @@
-import { constants, BigNumber } from 'ethers';
-
 import { ApplicationErrorFactory } from '../core/definitions/application-error-factory';
 import { Interactor } from '../core/definitions/interactor';
 import { CreateChannelInput } from './create-channel';
 import { CreateChannelOutput } from './create-channel.out';
 import { CreateChannelValidator } from './create-channel.validator';
 import { ErrorType } from '../core/definitions/error-type';
-import { IMessagingService } from '../core/definitions/messaging';
 import { IWalletService } from '../core/definitions/wallet';
+import { constants } from 'ethers';
 
 export class CreateChannelInteractor implements Interactor {
   constructor(
@@ -24,9 +22,14 @@ export class CreateChannelInteractor implements Interactor {
     }
 
     try {
-      const result = await this.walletService.setup({});
+      const channelId = constants.HashZero;
+      await this.walletService.setup({
+        chainId: request.chainId,
+        channelId, // TODO: generate from identifiers
+        participants: [this.walletService.getPublicIdentifier(), request.publicIdentifier],
+      });
 
-      return {};
+      return { channelId };
     } catch (error) {
       throw this.errorFactory.getError(ErrorType.createChannel, error);
     }

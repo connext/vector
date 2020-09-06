@@ -1,4 +1,4 @@
 export interface ValidatorResult {
   valid: boolean;
-  error: unknown;
+  error: Record<string, unknown>;
 }

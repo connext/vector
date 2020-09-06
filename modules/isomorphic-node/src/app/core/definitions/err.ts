@@ -1,1 +1,1 @@
-export type Err = string | {};
+export type Err = string | Record<string, unknown>;

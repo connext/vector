@@ -1,73 +1,53 @@
-import { DepositInteractor } from './create-channel.interactor';
+import { CreateChannelInteractor } from './create-channel.interactor';
 import { TestEnvironment } from '../../test-environment';
-import { DepositInput } from './create-channel';
-import { DepositOutput } from './create-channel.out';
+import { CreateChannelInput } from './create-channel';
+import { CreateChannelOutput } from './create-channel.out';
 import { ValidatorResult } from '../core/definitions/validator-result';
+import { CreateChannelValidator } from './create-channel.validator';
 
-function isDepositOutput(output: DepositOutput): output is DepositOutput {
-  return (output as DepositOutput) !== undefined;
+function isCreateChannelOutput(output: CreateChannelOutput): output is CreateChannelOutput {
+  return (output as CreateChannelOutput) !== undefined;
 }
 
-describe('deposit interactor', () => {
+describe('create channel interactor', () => {
   const validatorResult: ValidatorResult = { valid: true, error: null };
-  const saveResult = true;
-  const createResult = { id: 1 };
-  const user = {
-    firstname: 'JOHN',
-    lastname: 'Connan',
-    email: 'johnconnan@jk.com',
-    username: 'johnconnan',
-    password: 'passwd',
-    id: 1,
-  };
 
-  let interactor: DepositInteractor;
-  let depositValidator;
-  let depositRepository;
+  let interactor: CreateChannelInteractor;
+  let createChannelValidator: CreateChannelValidator;
   let errorFactory;
 
   beforeEach(() => {
-    depositValidator = {
+    createChannelValidator = {
       validate: jest.fn(() => {
         return validatorResult;
       }),
-    };
-
-    depositRepository = {
-      findUserById: jest.fn(async () => Promise.resolve(user)),
-      saveUser: jest.fn(async () => Promise.resolve(saveResult)),
-      createTransaction: jest.fn(async () => Promise.resolve(createResult)),
     };
 
     errorFactory = {
       getError: jest.fn(() => new Error('error')),
     };
 
-    interactor = TestEnvironment.createInstance(DepositInteractor, [
+    interactor = TestEnvironment.createInstance(CreateChannelInteractor, [
       {
-        name: 'depositValidator',
-        useValue: depositValidator,
-      },
-      {
-        name: 'depositRepository',
-        useValue: depositRepository,
+        name: 'createChannelValidator',
+        useValue: createChannelValidator,
       },
       {
         name: 'errorFactory',
         useValue: errorFactory,
       },
-    ]) as DepositInteractor;
+    ]) as CreateChannelInteractor;
   });
 
   describe('execute', () => {
     it('should works', async () => {
-      const request: DepositInput = {
-        userId: 1,
-        value: 100,
+      const request: CreateChannelInput = {
+        chainId: 1337,
+        publicIdentifier: 'indraABC',
       };
 
       const response = await interactor.execute(request);
-      const isCorrectResponse = isDepositOutput(response);
+      const isCorrectResponse = isCreateChannelOutput(response);
       expect(isCorrectResponse).toBeTruthy();
     });
   });
