@@ -1,4 +1,4 @@
-import {BigNumber} from "ethers";
+import { BigNumber } from "ethers";
 import { InboundChannelError } from "./utils";
 
 // Method params
@@ -6,7 +6,7 @@ export type DepositParams = {
   channelId: string;
   amount: BigNumber; // TODO we actually dont need this?
   assetId: string;
-}
+};
 
 export type CreateTransferParams = {
   channelId: string;
@@ -15,14 +15,13 @@ export type CreateTransferParams = {
   transferDefinition: string;
   initialState: TransferState;
   timeout: BigNumber;
-}
+};
 
 export type ResolveTransferParams = {
   channelId: string;
   transferId: string;
   resolver: TransferUpdate;
-}
-
+};
 
 // Protocol update
 export type UpdateParams = {
@@ -32,11 +31,11 @@ export type UpdateParams = {
 };
 
 export type ChannelState = {
-    channelId: string;
-    participants: string[];
-    chainId: string;
-    latestNonce: string;
-    latestUpdate: ChannelUpdate
+  channelId: string;
+  participants: string[];
+  chainId: string;
+  latestNonce: string;
+  latestUpdate: ChannelUpdate;
 };
 
 export type ChannelUpdate = {
@@ -59,18 +58,21 @@ export type VectorChannelMessage = {
   to: string;
   from: string;
   data: any;
-}
-export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {error: InboundChannelError}
+};
+
+export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
+  error: InboundChannelError;
+};
+
 export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
 
 export type Values<E> = E[keyof E];
 
 export interface IStoreService {
-  getChannelState(channelId: string): Promise<ChannelState | undefined>
-  saveChannelState(channelState: ChannelState): Promise<void>
-};
-
+  getChannelState(channelId: string): Promise<ChannelState | undefined>;
+  saveChannelState(channelState: ChannelState): Promise<void>;
+}
 
 // TODO: fix these interfaces!
 export type ILockService = any;
-export type IMessagingService = any
+export type IMessagingService = any;
