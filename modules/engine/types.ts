@@ -4,7 +4,7 @@ import { InboundChannelError } from "./utils";
 // Method params
 export type DepositParams = {
   channelId: string;
-  amount: BigNumber;
+  amount: BigNumber; // TODO we actually dont need this?
   assetId: string;
 }
 
@@ -14,6 +14,7 @@ export type CreateTransferParams = {
   assetId: string;
   transferDefinition: string;
   initialState: TransferState;
+  timeout: BigNumber;
 }
 
 export type ResolveTransferParams = {
@@ -50,7 +51,7 @@ export const UpdateType = {
   create: "create",
   deposit: "deposit",
   resolve: "resolve",
-  setup: "setup", // TODO do we need this?
+  setup: "setup",
 } as const;
 export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 
