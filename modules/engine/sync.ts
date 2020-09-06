@@ -99,6 +99,7 @@ export async function inbound(
 
   // It is an error message from a counterparty. An `outbound` promise
   // may be waiting to resolve, so post to th errorEvt
+  // TODO we should not assume here that any non-channel-message is an error message(!!)
   errorEvt.post((message as VectorErrorMessage).error);
 }
 
