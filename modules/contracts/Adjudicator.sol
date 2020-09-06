@@ -3,9 +3,45 @@ pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
 contract Adjudicator {
+
+    enum AppStatus {
+        CREATED,
+        RESOLVED
+    }
+
+    struct Balance {
+        uint256 amount; 
+        address to;
+    }
+
+    // TODO, state seems large
+    struct CoreChannelState {
+        Balance[][] balances; // TODO index by assetId? // initiator, responder
+        uint256[] lockedValue; // Indexed by assetId -- should always be changed in lockstep with transfers
+        address[] assetIds;
+        bytes32 channelId;
+        address[] participants; // Signer keys -- does NOT have to be the same as balances.to[]
+        uint256 timeout;
+        uint256 nonce;
+        uint256 latestDepositNonce;
+        bytes32 merkleRoot;
+    }
+
+    struct CoreTransferState {
+        Balance[] balances;
+        address assetId;
+        bytes32 transferId;
+        address transferDefinition;
+        uint256 transferTimeout;
+        bytes32 appStateHash;
+        AppStatus status; // either of CREATED or RESOLVED
+        // TODO merkleProof
+    }
     
     function forceChannelConsensus(
-
+        // Params
+        // - CoreChannelState
+        // - signatures[]
     ) public {
         // TODO
 
@@ -20,7 +56,11 @@ contract Adjudicator {
             // It should hash the state and store it to the mapping from channelId to checkpointHash
     }
 
-    function emptyChannel() public {
+    function emptyChannel(
+        // Params
+        // - CoreChannelState
+        // - assetIds[]?
+    ) public {
         // TODO should the dispute case be broken out into another function?
             // 1. Check passed in state state against latest checkpointed state -- should revert if post-checkpoint dispute timeout has expired or if channel is not in checkpoint period
             // 2. For each assetId passed in, do the below
@@ -31,7 +71,11 @@ contract Adjudicator {
         // Then, for each assetId, call the Multisig.sol using channelId, passing in correct balances
     }
 
-    function emptyTransfer() public {
+    function emptyTransfer(
+        // Params
+        // - CoreTransferState
+        // - signatures[]
+    ) public {
         // TODO
 
         // It should check that the channel is the dispute period
@@ -42,7 +86,12 @@ contract Adjudicator {
         // Else if it is in the RESOLVED state, the finalized balance of the transfer should be immediately forwarded to the `Multisig.sol` to `adjudicatorTransfer()
     }
 
-    function setTransferResolution() public {
+    function setTransferResolution(
+        // Params
+        // - CoreTransferState
+        // - signatures[]
+        // - TransferResolver
+    ) public {
         // It should call the transfer definition contract using the initial state + transfer update and then set that in a `resolution` mapping to be read by `emptyTransfer()`
     }
 }
