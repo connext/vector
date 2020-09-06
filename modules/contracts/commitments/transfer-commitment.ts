@@ -1,12 +1,21 @@
 // TODO
 
-// For now, this must be created on every (both) transfer updates.
+// Created on every transfer update
 
-// Should contain at least the following info:
-// - transferId
-// - merkle proof
-// - transferDefinition
-// - transferState
+/*
+
+    struct CoreTransferState {
+        Balance[] balances;
+        address assetId;
+        bytes32 transferId;
+        address transferDefinition;
+        uint256 transferTimeout;
+        bytes32 appStateHash;
+        AppStatus status; // either of CREATED or RESOLVED
+        // TODO merkleProof
+    }
+
+*/
 
 // transferId should be hash of:
 // - channelId
