@@ -31,21 +31,12 @@ contract Adjudicator {
         // Else if it is in the RESOLVED state, the finalized balance of the transfer should be immediately sent to the recipient
     }
 
-    function setTransferResolution()
-    public {
+    function setTransferResolution() public {
         // It should call the transfer definition contract using the initial state + transfer update and then set that in a `resolution` mapping to be read by `disputeTransfer()`
     }
 
-
-    function withdraw(
-
-    )
-        public
-    {
-        // First, validate params against signatures
-        // If `happyCase` bool is true, then set balances for A and B to be equal to balances in state
+    function defund() public {
         // TODO should the dispute case be broken out into another function?
-        // Else
             // 1. Check passed in state state against latest checkpointed state -- should revert if post-checkpoint dispute timeout has expired or if channel is not in checkpoint period
             // 2. For each assetId passed in, do the below
             // 2. Check state.latestDepositA nonce  to see if it is less than the onchain deposit A nonce for that assetId
@@ -53,6 +44,15 @@ contract Adjudicator {
                 //    and set user balance as equal to (onchain balance for that assetId - (state.balA + onchain deposit A balance))
                 // b. Else, set the node balance as equal to state.balA and set user balance as equal to (onchain balance for that assetId - state.balA)
         // Then, for each assetId passed in, send balances
+    }
+
+    function withdraw(
+
+    )
+        public
+    {
+        // TODO
+        // It should disburse funds to the specified counterparty
     }
 
 }
