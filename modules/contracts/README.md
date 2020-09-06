@@ -9,7 +9,7 @@ The Vector contracts make some simplifying assumptions compared to CF:
 
 Additionally, the contract control flow in Vector is inverted compared to CF (it is more similar to StateChannels):
 
-![alt text](<https://i.ibb.co/gyqFSzg/vector-Contract-Control-Flow.png)
+![alt text](https://i.ibb.co/gyqFSzg/vector-Contract-Control-Flow.png)
 
 ## Disputes
 The dispute flow works as follows:
