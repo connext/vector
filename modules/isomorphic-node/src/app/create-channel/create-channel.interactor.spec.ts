@@ -1,9 +1,12 @@
+import { fake } from 'sinon';
+
 import { CreateChannelInteractor } from './create-channel.interactor';
 import { TestEnvironment } from '../../test-environment';
 import { CreateChannelInput } from './create-channel';
 import { CreateChannelOutput } from './create-channel.out';
 import { ValidatorResult } from '../core/definitions/validator-result';
 import { CreateChannelValidator } from './create-channel.validator';
+import { expect } from '../../test/assert';
 
 function isCreateChannelOutput(output: CreateChannelOutput): output is CreateChannelOutput {
   return (output as CreateChannelOutput) !== undefined;
@@ -18,13 +21,13 @@ describe('create channel interactor', () => {
 
   beforeEach(() => {
     createChannelValidator = {
-      validate: jest.fn(() => {
+      validate: fake(() => {
         return validatorResult;
       }),
     };
 
     errorFactory = {
-      getError: jest.fn(() => new Error('error')),
+      getError: fake(() => new Error('error')),
     };
 
     interactor = TestEnvironment.createInstance(CreateChannelInteractor, [
@@ -40,7 +43,7 @@ describe('create channel interactor', () => {
   });
 
   describe('execute', () => {
-    it('should works', async () => {
+    it('should work', async () => {
       const request: CreateChannelInput = {
         chainId: 1337,
         publicIdentifier: 'indraABC',
@@ -48,7 +51,7 @@ describe('create channel interactor', () => {
 
       const response = await interactor.execute(request);
       const isCorrectResponse = isCreateChannelOutput(response);
-      expect(isCorrectResponse).toBeTruthy();
+      expect(isCorrectResponse).to.be.ok;
     });
   });
 });
