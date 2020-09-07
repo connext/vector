@@ -35,9 +35,13 @@ export type ChannelState = {
   participants: string[];
   chainId: string;
   latestNonce: string;
-  latestUpdate: ChannelUpdate;
+  latestUpdate?: ChannelUpdate;
 };
 
+// TODO: separate into a fixed and variable part
+// so when you send prev update in `outbound` it does
+// not have a lot of overhead (can only send the variable)
+// part
 export type ChannelUpdate = {
   channelId: string;
   counterpartyPublicIdentifier: string;
