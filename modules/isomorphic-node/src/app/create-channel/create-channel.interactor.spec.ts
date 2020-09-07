@@ -2,7 +2,7 @@ import { fake } from 'sinon';
 
 import { CreateChannelInteractor } from './create-channel.interactor';
 import { TestEnvironment } from '../../test-environment';
-import { CreateChannelInput } from './create-channel';
+import { CreateChannelInput } from './create-channel.in';
 import { CreateChannelOutput } from './create-channel.out';
 import { ValidatorResult } from '../core/definitions/validator-result';
 import { CreateChannelValidator } from './create-channel.validator';

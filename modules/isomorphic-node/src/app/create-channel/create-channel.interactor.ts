@@ -1,10 +1,10 @@
 import { ApplicationErrorFactory } from '../core/definitions/application-error-factory';
 import { Interactor } from '../core/definitions/interactor';
-import { CreateChannelInput } from './create-channel';
+import { CreateChannelInput } from './create-channel.in';
 import { CreateChannelOutput } from './create-channel.out';
 import { CreateChannelValidator } from './create-channel.validator';
 import { ErrorType } from '../core/definitions/error-type';
-import { IWalletService } from '../core/definitions/wallet';
+import { IWalletService } from '../core/definitions/wallet.service';
 import { constants } from 'ethers';
 
 export class CreateChannelInteractor implements Interactor {

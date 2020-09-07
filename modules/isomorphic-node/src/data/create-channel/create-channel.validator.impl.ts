@@ -1,7 +1,7 @@
 import Joi from 'joi';
 
 import { ValidatorResult } from '../../app/core/definitions/validator-result';
-import { CreateChannelInput } from '../../app/create-channel/create-channel';
+import { CreateChannelInput } from '../../app/create-channel/create-channel.in';
 import { CreateChannelValidator } from '../../app/create-channel/create-channel.validator';
 
 export class CreateChannelValidatorImpl implements CreateChannelValidator {

@@ -1,4 +1,4 @@
-import { CreateChannelInput } from './create-channel/create-channel';
+import { CreateChannelInput } from './create-channel/create-channel.in';
 import { CreateChannelInteractor } from './create-channel/create-channel.interactor';
 import { CreateChannelOutput } from './create-channel/create-channel.out';
 
