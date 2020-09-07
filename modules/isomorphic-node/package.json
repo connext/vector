@@ -1,5 +1,5 @@
 {
-  "name": "clean-architecture-base",
+  "name": "@connext/isomorphic-node",
   "version": "0.0.1",
   "description": "Typescript + Clean architecture used as scaffolding",
   "main": "app.ts",
@@ -17,7 +17,7 @@
     "Clean Architecture",
     "Node"
   ],
-  "author": "Danniel Hugo <dannielhugo@gmail.com>",
+  "author": "Connext & Friends",
   "license": "MIT",
   "devDependencies": {
     "@commitlint/cli": "^9.1.2",
