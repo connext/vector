@@ -1,9 +1,10 @@
 import {BigNumber} from "ethers";
 import {Evt} from "evt";
-import { ChannelUpdate, ChannelState, IStoreService, IMessagingService, VectorMessage, VectorChannelMessage, VectorErrorMessage } from "./types";
+import { ChannelUpdate, ChannelState, IStoreService, IMessagingService, VectorMessage, VectorChannelMessage, VectorErrorMessage, UpdateType } from "./types";
 import {validate} from "./validate";
-import { logger, isChannelMessage } from "./utils";
+import { logger, isChannelMessage, isChannelState } from "./utils";
 import { ChannelUpdateError } from "./errors";
+import { delay } from "../utils/src";
 
 // Function responsible for handling user-initated/outbound channel updates.
 // These updates will be single signed, the function should dispatch the 
@@ -18,18 +19,22 @@ export async function outbound(
 ): Promise<ChannelState> {
   const storedChannel = await storeService.getChannelState(update.channelId);
   if (!storedChannel) {
-    // TODO: what if this is creating a channel?
-    throw new Error('Channel not found')
+    // NOTE: IFF creating a channel, the initial channel state should be
+    // created and saved using `generate` (i.e. before it gets to this 
+    // function call)
+    throw new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, update, storedChannel)
   }
   // Create a helper function that will create a function that properly
-  // sets up the promise handlers
-  const generatePromise = () => new Promise<ChannelState>((resolve, reject) => {
+  // sets up the promise handlers. The only time this promise should
+  // reject instead of resolve is if *sending* the message failed. In
+  // that case, this should be safe to retry on failure
+  const generatePromise = () => new Promise<ChannelState | ChannelUpdateError>((resolve, reject) => {
     // If there is an error event corresponding to this channel and
     // this nonce, reject the promise
     errorEvt.pipe((e: ChannelUpdateError) => {
       return e.update.nonce === update.nonce && e.update.channelId === e.update.channelId
     })
-    .attachOnce((e: ChannelUpdateError) => reject(e.message))
+    .attachOnce((e: ChannelUpdateError) => resolve(e))
 
     // If there is a channel update event corresponding to
     // this channel update, resolve the promise
@@ -43,38 +48,77 @@ export async function outbound(
     messagingService.send(update.counterpartyPublicIdentifier, { update, latestUpdate: storedChannel.latestUpdate }).catch(e => reject(e.message));
   });
 
-
-  try {
-    const newState = await generatePromise();
-    return newState;
-  } catch (e) {
-    logger.error(`Failed to update channel: ${e.message}`, { message: e.message, update, stack: e.stack })
-    // The above promise could fail for a variety of reasons:
-    // - timeout
-    // - out of sync
-    // - channel not found
-    // - invalid update
-    // - etc.
-    // In only ONE case should this function retry automatically: where
-    // we are behind, and they have supplied a latest update for us
-    // to apply to get the channels in sync (this will be the 
-    // `StaleUpdateNonce` error message)
-    if (!e.message.includes(ChannelUpdateError.reasons.StaleUpdateNonce)) {
-      // TODO: What error message here? We may want to change the channel update
-      // error constructor
-      throw new Error(e.message);
+  // Retry sending the message 5 times w/3s delay
+  const sendWithRetry = async () => {
+    for (const _ of Array(5).fill(0)) {
+      try {
+        const result = await generatePromise()
+        return result;
+        // Otherwise, it is an error
+      } catch (e) {
+        logger.error(`Failed to execute helper`, { error: e.message, stack: e.stack })
+        await delay(3_000);
+      }
     }
 
-    // FIXME: should apply the `latestUpdate`, if possible, that is returned
-    // on the error thrown by the channel counterparty and retry update
-    // proposal. If the update CANNOT be directly applied, then you should
-    // hard error with the need to restore
-    throw new Error("FIXME: the outbound function should handle the update, bring their channel up to date, and retry the update");
-
-    // TODO: Is this the only time you would want to retry automatically?
-
-    // If the error is recognized and can be retried, handle that case.
+    throw new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, update, storedChannel);
   }
+
+  const result = await sendWithRetry();
+  if (isChannelState(result)) {
+    // No error returned, successfully updated state
+    return result;
+  }
+
+  // The only error we should handle and retry is the case where we
+  // are one state behind
+  if (result.message !== ChannelUpdateError.reasons.StaleUpdateNonce) {
+    throw new ChannelUpdateError(result.message, update, storedChannel)
+  }
+
+  // We know we are out of sync with our counterparty, but we do not
+  // know by how many updates. Only in the case where our proposed
+  // update nonce == their latest update nonce
+
+  // Make sure the update exists
+  if (!result.state.latestUpdate) {
+    throw new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonceNoUpdate, update, storedChannel);
+  }
+
+  // Make sure the update is the correct one
+  if (result.state.latestUpdate.nonce !== update.nonce) {
+    throw new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonce, update, storedChannel, { counterpartyLatestUpdate: result.state.latestUpdate })
+  }
+
+  // Apply the update, and retry the update
+  let newState: string | ChannelState
+  try {
+    newState = await mergeUpdate(result.state.latestUpdate, storedChannel);
+  } catch (e) {
+    newState = e.message;
+  }
+  if (typeof newState === "string") {
+    throw new ChannelUpdateError(ChannelUpdateError.reasons.MergeUpdateFailed, result.state.latestUpdate, storedChannel)
+  }
+
+  // Save the updated state before retrying the update
+  let error: string | undefined;
+  try {
+    await storeService.saveChannelState(newState);
+  } catch (e) {
+    error = e.message;
+  }
+  if (error) {
+    throw new ChannelUpdateError(ChannelUpdateError.reasons.SaveChannelFailed, result.state.latestUpdate, storedChannel)
+  }
+
+
+  // Retry the update
+  const syncedResult = await sendWithRetry();
+  if (!isChannelState(syncedResult)) {
+    throw new ChannelUpdateError(syncedResult.message, update, newState);
+  }
+  return syncedResult
 }
 
 // This function is responsible for handling any inbound vector messages.
@@ -104,9 +148,6 @@ export async function inbound(
 }
 
 // This function is responsible for handling any inbound state requests.
-// TODO: How should this function handle `create` messages?
-// We should probably break this up into the different protocols,
-// since atm this is mostly geared towards handling "updates"
 async function processChannelMessage(
   message: VectorChannelMessage, 
   storeService: IStoreService,
@@ -133,11 +174,23 @@ async function processChannelMessage(
   }
 
   // Get our latest stored state
-  const storedState: ChannelState = await storeService.getChannelState(requestedUpdate.channelId);
+  let storedState: ChannelState = await storeService.getChannelState(requestedUpdate.channelId);
   if (!storedState) {
-    // TODO: if this function should *also* handle channel creation methods,
-    // then that is the case that should be handled here
-    return handleError(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState))
+    // NOTE: the creation update MUST have a nonce of 1 not 0!
+    // You may not be able to find a channel state IFF the channel is
+    // being created for the first time. If this is the case, create an
+    // empty channel and continue through the function
+    if (requestedUpdate.type !== UpdateType.setup) {
+      return handleError(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState))
+    }
+    // Create an empty channel state
+    storedState = {
+      channelId: requestedUpdate.channelId,
+      participants: [requestedUpdate.counterpartyPublicIdentifier, signer.publicIdentifier],
+      chainId: (await signer.provider.getNetwork()).chainId,
+      latestNonce: "0",
+      latestUpdate: undefined,
+    }
   }
 
   // Assume that our stored state has nonce `k`, and the update
@@ -179,7 +232,10 @@ async function processChannelMessage(
 
   // If we are ahead, or even, do not process update
   if (diff.lte(0)) {
-    // FIXME: How should the outbound handle syncs?
+    // NOTE: when you are out of sync as a protocol initiator, you will
+    // use the information from this error to sync, then retry your update
+
+    // FIXME: We don't need to pass everything over the wire here, fix that
     return handleError(new ChannelUpdateError(ChannelUpdateError.reasons.StaleUpdateNonce, requestedUpdate, storedState, { counterpartyLatestUpdate }));
   }
 
@@ -195,9 +251,12 @@ async function processChannelMessage(
   // latest action
   let previousState = storedState;
   if (diff.eq(2)) {
-    // Create the proper state to play the update on top of
+    // Create the proper state to play the update on top of using the
+    // latest update
+    if (!counterpartyLatestUpdate) {
+      return handleError(new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonceNoUpdate, counterpartyLatestUpdate, storedState, { requestedUpdate }))
+    }
     try {
-      // TODO: what if there is no latest update?
       previousState = await mergeUpdate(counterpartyLatestUpdate, storedState);
     } catch (e) {
       return handleError(new ChannelUpdateError(ChannelUpdateError.reasons.MergeUpdateFailed, counterpartyLatestUpdate, storedState, { requestedUpdate, error: e.message, stack: e.stack }))
