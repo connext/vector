@@ -4,7 +4,7 @@
 
 The Vector contracts make some simplifying assumptions compared to CF:
 
-- All "apps" (now just called transfers) are single-turn only. We also explicitly assume that the app state contains a `transfers[]` tuple.
+- All "apps" (now just called transfers) are single-turn only. We also explicitly assume that the app state contains a `balances[]` tuple.
 - Rather than keeping track of an `activeApps[]`, we now just include a merkle root within the `ChannelState`. This means that a `TransferState` must include corresponding materials for a proof (gets validated as part of `emptyTransfer()`)
 - No more pushing outcomes -- the responsibility for deciding on a final set of balances to be transferred is delegated entirely to the `transferDefinition` code.
 - Disputing occurs within a dispute window within which `emptyChannel()` and any `emptyTransfer()` calls MUST be made. After the window ends, the channel returns to a "happy" state onchain (including any undisputed transfers). After that point, any _new_ disputes/checkpointing MUST happen at a higher nonce than what is already registered onchain.
