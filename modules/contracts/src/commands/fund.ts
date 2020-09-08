@@ -29,8 +29,11 @@ export const fund = async (
         to: recipient,
         value: parseEther(amount),
       });
+      if (!tx.hash) {
+        throw new Error(`Unable to send transaction: ${JSON.stringify(tx)}`);
+      }
       console.log(`Sending ${EtherSymbol} ${amount} to ${recipient} via tx: ${tx.hash}`);
-      await sender.provider.waitForTransaction(tx.hash!);
+      await sender.provider.waitForTransaction(tx.hash);
       const recipientBal = `${EtherSymbol} ${formatEther(
         await sender.provider.getBalance(recipient),
       )}`;
@@ -56,7 +59,7 @@ export const fund = async (
 export const fundCommand = {
   command: "fund",
   describe: "Fund an address with a chunk of ETH or tokens",
-  builder: (yargs: Argv) => {
+  builder: (yargs: Argv): Argv => {
     return yargs
       .option("a", cliOpts.tokenAddress)
       .option("f", cliOpts.fromMnemonic)
@@ -65,7 +68,7 @@ export const fundCommand = {
       .option("q", cliOpts.amount)
       .demandOption(["p", "t"]);
   },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]) => {
+  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     await fund(
       Wallet.fromMnemonic(argv.fromMnemonic).connect(getEthProvider(argv.ethProvider)),
       argv.toAddress,

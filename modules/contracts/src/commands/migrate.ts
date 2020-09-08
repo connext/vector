@@ -1,6 +1,5 @@
 import { getEthProvider } from "@connext/utils";
 import { Wallet, constants, providers, utils } from "ethers";
-
 import { Argv } from "yargs";
 
 import { getAddressBook } from "../address-book";
@@ -66,13 +65,13 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
 export const migrateCommand = {
   command: "migrate",
   describe: "Migrate contracts",
-  builder: (yargs: Argv) => {
+  builder: (yargs: Argv): Argv => {
     return yargs
       .option("a", cliOpts.addressBook)
       .option("m", cliOpts.mnemonic)
       .option("p", cliOpts.ethProvider);
   },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]) => {
+  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     console.log(
       `Migration started: ethprovider - ${argv.ethProvider} | addressBook - ${argv.addressBook}`,
     );

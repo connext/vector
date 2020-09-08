@@ -9,10 +9,14 @@ export class Vector {
   private channelErrorEvt = Evt.create<InboundChannelError>();
 
   constructor(
-    private messagingService,
-    private lockService,
-    private storeService,
-    private signer,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    private messagingService: any,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    private lockService: any,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    private storeService: any,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    private signer: any,
   ) {
     this.messagingService = messagingService;
     this.storeService = storeService;
@@ -24,7 +28,8 @@ export class Vector {
     messagingService: IMessagingService,
     lockService: ILockService,
     storeService: IStoreService,
-    signer,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    signer: any,
   ): Promise<Vector> {
     const node = new Vector(
       messagingService,
@@ -38,11 +43,11 @@ export class Vector {
     return node.setupServices();
   }
 
-  get signerAddress() {
+  get signerAddress(): string {
     return this.signer.address;
   }
 
-  get publicIdentifier() {
+  get publicIdentifier(): string {
     return this.signer.publicIdentifier;
   } 
 
@@ -83,7 +88,7 @@ export class Vector {
    * ***************************
    */
 
-  public async deposit(params: DepositParams) {
+  public async deposit(params: DepositParams): Promise<any> {
     // TODO validate deposit params for completeness
     const updateParams = {
       channelId: params.channelId,
@@ -94,7 +99,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async createTransfer(params: CreateTransferParams) {
+  public async createTransfer(params: CreateTransferParams): Promise<any> {
     // TODO validate create params for completeness
     const updateParams = {
       channelId: params.channelId,
@@ -105,7 +110,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async resolveTransfer(params: ResolveTransferParams) {
+  public async resolveTransfer(params: ResolveTransferParams): Promise<any> {
     // TODO validate resolve params for completeness
     const updateParams = {
       channelId: params.channelId,

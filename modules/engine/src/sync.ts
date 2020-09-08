@@ -50,6 +50,7 @@ export async function outbound(
 
   // Retry sending the message 5 times w/3s delay
   const sendWithRetry = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const _ of Array(5).fill(0)) {
       try {
         const result = await generatePromise();
@@ -127,6 +128,7 @@ export async function inbound(
   message: VectorMessage, 
   storeService: IStoreService,
   messagingService: IMessagingService,
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   signer: any,
   stateEvt: Evt<ChannelState>, 
   errorEvt: Evt<ChannelUpdateError>,

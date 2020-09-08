@@ -5,6 +5,7 @@ const { hexDataLength, hexlify, isHexString, getAddress, randomBytes } = utils;
 ////////////////////////////////////////
 // Validators
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getHexStringError = (value: any, length?: number): string | undefined => {
   if (typeof value !== "string") {
     return `Invalid hex string: ${value} is a ${typeof value}, expected a string`;
@@ -20,8 +21,10 @@ export const getHexStringError = (value: any, length?: number): string | undefin
   }
   return undefined;
 };
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isValidHexString = (value: any): boolean => !getHexStringError(value);
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getAddressError = (value: any): string | undefined => {
   try {
     const hexError = getHexStringError(value, 20);
@@ -32,17 +35,20 @@ export const getAddressError = (value: any): string | undefined => {
     return e.message;
   }
 };
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isValidAddress = (value: any): boolean => !getAddressError(value);
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getBytes32Error = (value: any): string | undefined => {
   const hexStringError = getHexStringError(value, 32);
   if (hexStringError) return hexStringError;
   return undefined;
 };
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isValidBytes32 = (value: any): boolean => !getBytes32Error(value);
 
 ////////////////////////////////////////
 // Generators
 
-export const getRandomAddress = () => getAddress(hexlify(randomBytes(20)));
-export const getRandomBytes32 = () => hexlify(randomBytes(32));
+export const getRandomAddress = (): string => getAddress(hexlify(randomBytes(20)));
+export const getRandomBytes32 = (): string => hexlify(randomBytes(32));

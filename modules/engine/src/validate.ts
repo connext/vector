@@ -1,6 +1,6 @@
 import { ChannelUpdate, ChannelState, UpdateType } from "./types";
 
-export function validate(update: ChannelUpdate, state: ChannelState) {
+export function validate(update: ChannelUpdate, state: ChannelState): void {
     // By the time this function is called, you should assume that the update has been deduped/recovered
     // Therefore, validate should only be called when this is a *new update* that needs to be acked
 

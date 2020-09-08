@@ -23,7 +23,7 @@ export class LimitedCache {
     this.maxLength = maxLength;
   }
 
-  set<T>(k: string, v: T) {
+  set<T>(k: string, v: T): void {
     const exists = !!this.cache[k];
     this.cache[k] = v;
     if (exists) {
@@ -45,9 +45,9 @@ export class LimitedCache {
     this.tail.next = node;
     this.tail = node;
     if (this.length === this.maxLength) {
-      const head = this.head!;
+      const head = this.head;
       delete this.cache[head.key];
-      this.head = head.next!;
+      this.head = head.next;
       return;
     }
 

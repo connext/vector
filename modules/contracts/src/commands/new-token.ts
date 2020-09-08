@@ -39,14 +39,14 @@ const newToken = async (wallet: Wallet, addressBookPath: string, force: boolean)
 export const newTokenCommand = {
   command: "new-token",
   describe: "Deploy a new ERC20 token contract",
-  builder: (yargs: Argv) => {
+  builder: (yargs: Argv): Argv => {
     return yargs
       .option("a", cliOpts.addressBook)
       .option("m", cliOpts.mnemonic)
       .option("p", cliOpts.ethProvider)
       .option("f", cliOpts.force);
   },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]) => {
+  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     await newToken(
       Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider)),
       argv.addressBook,

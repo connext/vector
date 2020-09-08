@@ -1,6 +1,6 @@
 import { getEthProvider } from "@connext/utils";
-import { Argv } from "yargs";
 import { providers } from "ethers";
+import { Argv } from "yargs";
 
 import { getAddressBook } from "../address-book";
 import { cliOpts } from "../constants";
@@ -18,14 +18,14 @@ const useToken = async (
 export const useTokenCommand = {
   command: "use-token",
   describe: "Set some tokenAddress",
-  builder: (yargs: Argv) => {
+  builder: (yargs: Argv): Argv => {
     return yargs
       .option("a", cliOpts.addressBook)
       .option("p", cliOpts.ethProvider)
       .option("t", cliOpts.tokenAddress)
       .demandOption(["t"]);
   },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]) => {
+  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     await useToken(getEthProvider(argv.ethProvider), argv.addressBook, argv.tokenAddress);
   },
 };

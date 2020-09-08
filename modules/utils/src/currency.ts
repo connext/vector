@@ -7,10 +7,15 @@ export class Currency {
   ////////////////////////////////////////
   // Static Properties/Methods
 
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public static DAI = (amount: any, daiRate?: any) => new Currency("DAI", amount, daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public static DEI = (amount: any, daiRate?: any) => new Currency("DEI", amount, daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public static ETH = (amount: any, daiRate?: any) => new Currency("ETH", amount, daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public static FIN = (amount: any, daiRate?: any) => new Currency("FIN", amount, daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public static WEI = (amount: any, daiRate?: any) => new Currency("WEI", amount, daiRate);
 
   public typeToSymbol = {
@@ -46,6 +51,7 @@ export class Currency {
   ////////////////////////////////////////
   // Constructor
 
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   constructor(type: string, amount: any, daiRate?: any) {
     this.type = type;
     this.daiRate = typeof daiRate !== "undefined" ? daiRate : "1";
@@ -62,45 +68,48 @@ export class Currency {
   // Getters
 
   // Returns a decimal string
-  get amount() {
+  get amount(): string {
     return this.fromWad(this.wad);
   }
 
-  get currency() {
+  get currency(): { amount: string; type: string; } {
     return {
       amount: this.amount,
       type: this.type,
     };
   }
 
-  get symbol() {
+  get symbol(): string {
     return this.typeToSymbol[this.type];
   }
 
-  get floor() {
+  get floor(): string {
     return this._floor(this.amount);
   }
 
   ////////////////////////////////////////
   // Public Methods
 
-  public toString() {
+  public toString(): string {
     return this.amount.slice(0, this.amount.indexOf("."));
   }
 
-  public isEthType(type?: any) {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public isEthType(type?: any): boolean {
     return ["ETH", "FIN", "WEI"].includes(type || this.type);
   }
 
-  public isTokenType(type?: any) {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public isTokenType(type?: any): boolean {
     return ["DAI", "DEI"].includes(type || this.type);
   }
 
-  public toBN() {
+  public toBN(): BigNumber {
     return BigNumber.from(this._round(this.amount));
   }
 
-  public format(_options?: any) {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public format(_options?: any): string {
     const amt = this.amount;
     const options = {
       ...this.defaultOptions[this.type],
@@ -118,7 +127,8 @@ export class Currency {
     return `${symbol}${options.commas ? commify(amount) : amount}`;
   }
 
-  public round(decimals: any) {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public round(decimals: any): string {
     const amt = this.amount;
     const nDecimals = amt.length - amt.indexOf(".") - 1;
     // rounding to more decimals than are available: pad with zeros
@@ -139,7 +149,8 @@ export class Currency {
 
   // In units of ray aka append an extra 36 units of precision
   // eg ETH:WEI rate is 1e18 ray aka 1e54
-  public getRate = (currency: any) => {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public getRate = (currency: any): string => {
     const exchangeRates = {
       DAI: this.toRay(this.daiRate),
       DEI: this.toRay(parseUnits(this.daiRate, 18).toString()),
@@ -161,17 +172,24 @@ export class Currency {
     return exchangeRates[currency];
   };
 
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public toDAI = (daiRate?: any) => this._convert("DAI", daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public toDEI = (daiRate?: any) => this._convert("DEI", daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public toETH = (daiRate?: any) => this._convert("ETH", daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public toFIN = (daiRate?: any) => this._convert("FIN", daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public toWEI = (daiRate?: any) => this._convert("WEI", daiRate);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   public toGWEI = (daiRate?: any) => this._convert("GWEI", daiRate);
 
   ////////////////////////////////////////
   // Private Methods
 
-  public _convert = (targetType: any, daiRate?: any) => {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public _convert = (targetType: any, daiRate?: any): Currency => {
     if (daiRate) {
       this.daiRate = daiRate;
       this.daiRateGiven = true;
@@ -187,18 +205,25 @@ export class Currency {
   };
 
   // convert to wad, add 0.5 wad, convert back to dec string, then truncate decimal
-  public _round = (decStr: any) =>
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public _round = (decStr: any): string =>
     this._floor(this.fromWad(this.toWad(decStr).add(this.toWad("0.5"))).toString());
 
-  public _floor = (decStr: any) => decStr.substring(0, decStr.indexOf("."));
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public _floor = (decStr: any): string => decStr.substring(0, decStr.indexOf("."));
 
-  public toWad = (n: any) => parseUnits(n.toString(), 18);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public toWad = (n: any): BigNumber => parseUnits(n.toString(), 18);
 
-  public toRay = (n: any) => this.toWad(this.toWad(n.toString()));
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public toRay = (n: any): BigNumber => this.toWad(this.toWad(n.toString()));
 
-  public fromWad = (n: any) => formatUnits(n.toString(), 18);
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public fromWad = (n: any): string => formatUnits(n.toString(), 18);
 
-  public fromRoundRay = (n: any) => this._round(this.fromRay(n));
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public fromRoundRay = (n: any): string => this._round(this.fromRay(n));
 
-  public fromRay = (n: any) => this.fromWad(this._round(this.fromWad(n.toString())));
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  public fromRay = (n: any): string => this.fromWad(this._round(this.fromWad(n.toString())));
 }

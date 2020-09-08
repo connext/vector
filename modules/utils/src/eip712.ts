@@ -13,12 +13,12 @@ import { bufferify } from "./crypto";
 
 const { keccak256, toUtf8Bytes, defaultAbiCoder, solidityKeccak256 } = utils;
 
-export const hashString = (str: string) => keccak256(toUtf8Bytes(str));
+export const hashString = (str: string): string => keccak256(toUtf8Bytes(str));
 
 export const hashTypedMessage = (domainSeparator: string, messageHash: string): string =>
   solidityKeccak256(["string", "bytes32", "bytes32"], ["\x19\x01", domainSeparator, messageHash]);
 
-export const hashStruct = (typeHash: string, types: string[], values: any[]) => {
+export const hashStruct = (typeHash: string, types: string[], values: any[]): string => {
   types.forEach((type, i) => {
     if (["string", "bytes"].includes(type)) {
       types[i] = "bytes32";
@@ -36,7 +36,7 @@ export const DOMAIN_TYPE_HASH = hashString(
   "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)",
 );
 
-export const hashDomainSeparator = (domain: EIP712Domain) =>
+export const hashDomainSeparator = (domain: EIP712Domain): string =>
   hashStruct(
     DOMAIN_TYPE_HASH,
     ["string", "string", "uint256", "address", "bytes32"],
@@ -45,7 +45,7 @@ export const hashDomainSeparator = (domain: EIP712Domain) =>
 
 export const RECEIPT_TYPE_HASH = hashString("Receipt(bytes32 paymentId,bytes32 data)");
 
-export const hashReceiptData = (receipt: Receipt) =>
+export const hashReceiptData = (receipt: Receipt): string =>
   hashStruct(RECEIPT_TYPE_HASH, ["bytes32", "bytes32"], [receipt.paymentId, receipt.data]);
 
 export const hashReceiptMessage = (domain: EIP712Domain, receipt: Receipt): string =>
@@ -55,7 +55,7 @@ export const signReceiptMessage = async (
   domain: EIP712Domain,
   receipt: Receipt,
   privateKey: PrivateKey,
-) =>
+): Promise<string> =>
   hexlify(await sign(bufferify(privateKey), bufferify(hashReceiptMessage(domain, receipt)), true));
 
 export const getTestEIP712Domain = (chainId: number): EIP712Domain => ({

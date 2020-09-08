@@ -16,10 +16,10 @@ export const snapshot = async (ethProvider: providers.JsonRpcProvider): Promise<
 export const snapshotCommand = {
   command: "snapshot",
   describe: "Take a snapshot of the current EVM state (testnet only)",
-  builder: (yargs: Argv) => {
+  builder: (yargs: Argv): Argv => {
     return yargs.option("p", cliOpts.ethProvider);
   },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]) => {
+  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     await snapshot(getEthProvider(argv.ethProvider));
   },
 };

@@ -1,6 +1,8 @@
 import { UpdateParams, ChannelUpdate, UpdateType, ChannelState } from "./types";
 
-export async function generateUpdate(params: UpdateParams, storeService): Promise<ChannelUpdate> {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export async function generateUpdate(params: UpdateParams, storeService: any): Promise<ChannelUpdate> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const state = await storeService.getChannelState();
 
     switch (params.type) {
@@ -26,6 +28,7 @@ export async function generateUpdate(params: UpdateParams, storeService): Promis
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function generateSetupUpdate(state: ChannelState): Promise<ChannelUpdate> {
 
     return {

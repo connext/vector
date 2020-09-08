@@ -51,14 +51,14 @@ export const drip = async (
 export const dripCommand = {
   command: "drip",
   describe: "Drip tokens to sender address",
-  builder: (yargs: Argv) => {
+  builder: (yargs: Argv): Argv => {
     return yargs
       .option("a", cliOpts.addressBook)
       .option("k", cliOpts.privateKey)
       .option("p", cliOpts.ethProvider)
       .demandOption(["k", "p"]);
   },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]) => {
+  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     await drip(new Wallet(argv.privateKey, getEthProvider(argv.ethProvider)), argv.addressBook);
   },
 };

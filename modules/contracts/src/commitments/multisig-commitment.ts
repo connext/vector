@@ -26,7 +26,11 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     if (!this.initiatorSignature && !this.responderSignature) {
       return [];
     }
-    return [this.initiatorSignature!, this.responderSignature!];
+    return [this.initiatorSignature, this.responderSignature];
+  }
+
+  set signatures(sigs: string[]) {
+    throw new Error(`Use "addSignatures" to ensure the correct sorting`);
   }
 
   public async addSignatures(signature1: string, signature2: string): Promise<void> {
@@ -42,10 +46,6 @@ export abstract class MultisigCommitment implements EthereumCommitment {
         );
       }
     }
-  }
-
-  set signatures(sigs: string[]) {
-    throw new Error(`Use "addSignatures" to ensure the correct sorting`);
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {
@@ -82,7 +82,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     return keccak256(this.encode());
   }
 
-  public async assertSignatures() {
+  public async assertSignatures(): Promise<void> {
     if (!this.signatures || this.signatures.length === 0) {
       throw new Error(`No signatures detected`);
     }

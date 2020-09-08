@@ -31,7 +31,7 @@ export const appIdentityToHash = (appIdentity: AppIdentity): string => {
 };
 
 // TS version of MChallengeRegistryCore::computeCancelDisputeHash
-export const computeCancelDisputeHash = (identityHash: string, versionNumber: BigNumberish) =>
+export const computeCancelDisputeHash = (identityHash: string, versionNumber: BigNumberish): string =>
   keccak256(
     solidityPack(
       ["uint8", "bytes32", "uint256"],
@@ -40,7 +40,7 @@ export const computeCancelDisputeHash = (identityHash: string, versionNumber: Bi
   );
 
 // TS version of MChallengeRegistryCore::appStateToHash
-export const appStateToHash = (state: string) => keccak256(state);
+export const appStateToHash = (state: string): string => keccak256(state);
 
 // TS version of MChallengeRegistryCore::computeAppChallengeHash
 export const computeAppChallengeHash = (
@@ -48,7 +48,7 @@ export const computeAppChallengeHash = (
   appStateHash: string,
   versionNumber: BigNumberish,
   timeout: BigNumberish,
-) =>
+): string =>
   keccak256(
     solidityPack(
       ["uint8", "bytes32", "bytes32", "uint256", "uint256"],

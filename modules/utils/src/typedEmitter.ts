@@ -23,6 +23,7 @@ export class TypedEmitter {
       const eventFilter = ([emittedEvent, emittedPayload]) => {
         return event === emittedEvent && filter(emittedPayload);
       };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const eventCallback = ([_, emittedPayload]) => {
         return callback(emittedPayload);
       };
@@ -46,6 +47,7 @@ export class TypedEmitter {
       const eventFilter = ([emittedEvent, emittedPayload]) => {
         return event === emittedEvent && filter(emittedPayload);
       };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const eventCallback = ([_, emittedPayload]) => {
         return callback(emittedPayload);
       };
@@ -82,6 +84,7 @@ export class TypedEmitter {
       }
       return event === emittedEvent;
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_, payload] = await this.evt.waitFor(eventFilter, timeout);
     return payload as EventPayload[T];
   }
