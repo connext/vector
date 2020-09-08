@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.1;
 
+import "./interfaces/IAdjudicator.sol";
+
+
 // Called directly by a VectorChannel.sol instance
-contract Adjudicator {
+contract Adjudicator is IAdjudicator {
 
     struct Balance {
-        uint256[] amount; 
+        uint256[] amount;
         address[] to;
         //TODO should we just make assetId part of the Balance?
     }
@@ -16,7 +19,7 @@ contract Adjudicator {
         bytes32 merkleRoot;
         uint256 consensusExpiry;
         uint256 defundExpiry;
-        iterable_mapping(address => bool) assetDefunded;
+        // iterable_mapping(address => bool) assetDefunded;
     }
 
     struct TransferDispute {

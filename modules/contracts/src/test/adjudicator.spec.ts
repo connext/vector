@@ -18,7 +18,7 @@ describe("Adjudicator", () => {
     await adjudicator.deployed();
   });
 
-  it("should be deployable", async () => {
+  it("should deploy", async () => {
     expect(adjudicator.address).to.be.a("string");
   });
 
