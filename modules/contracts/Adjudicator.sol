@@ -45,18 +45,18 @@ contract Adjudicator {
     ) public {
         // TODO
 
-        // If the channel is not in the checkpoint OR dispute period, 
+        // If the channel is not in the consensus OR defund phase, 
             // it should take in latest state and start two timeouts:
                 // The first one, `checkpointComplete` should finalize in X blocks
                 // The second one, `disputeComplete` should finalize in 2X blocks
-        // Else if the channel is in the dispute period, then revert
+        // Else if the channel is in the defund phase, then revert
         // Else
             // It should validate that the newly provided state is greater than whatever exists in store
             // It should validate the signatures/params on the passe din state
             // It should hash the state and store it to the mapping from channelId to checkpointHash
     }
 
-    function emptyChannel(
+    function defundChannel(
         // Params
         // - CoreChannelState
         // - assetIds[]?
@@ -71,10 +71,9 @@ contract Adjudicator {
         // Then, for each assetId, call the Multisig.sol using channelId, passing in correct balances
     }
 
-    function emptyTransfer(
+    function defundTransfer(
         // Params
         // - CoreTransferState
-        // - signatures[]
     ) public {
         // TODO
 
@@ -89,9 +88,19 @@ contract Adjudicator {
     function setTransferResolution(
         // Params
         // - CoreTransferState
-        // - signatures[]
+        // - signature
         // - TransferResolver
     ) public {
         // It should call the transfer definition contract using the initial state + transfer update and then set that in a `resolution` mapping to be read by `emptyTransfer()`
     }
 }
+
+
+// TODOS
+// 1. Move towards only one commitment
+// 2. emptyTransfer should not need sigs -- instead it can rely on the merkle proof to show that the transfer initial/resolve state is correct
+    // a. How will the above work for resolve? in the resolve case, are we removing the merkle root? Do we do that after?
+    // b. How do we stop replay attacks on the merkle root registered onchain for the same transfer? (perhaps by saving the state hash onchain?)
+// 3. forceChannelConsensus should allow sending the same-nonced state to chain if it's not in the consensus or empty phase -- this way, peers can redispute the 
+//    at the same state if they attempted to resume channel ops but the counterparty never signed a new state.
+// 4. emptyChannel currently doesn't take into account balance changes as a result of unsubmitted withdraws
