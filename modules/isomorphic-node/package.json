@@ -4,13 +4,14 @@
   "description": "Typescript + Clean architecture used as scaffolding",
   "main": "app.ts",
   "scripts": {
+    "build": "npm run compile:ts",
     "compile:ts": "rm -rf build/ && tsc -p .",
-    "test": "ts-mocha -p ./tsconfig.json src/**/*.spec.ts",
-    "start:script": "npm run compile:ts && node build/frameworks/script/index.js",
-    "start:api": "npm run compile:ts && node build/frameworks/api/index.js",
+    "husky:precommit": "npm run lint && npm run test",
     "lint": "eslint src --ext ts",
     "lint:fix": "eslint src --ext ts --fix",
-    "husky:precommit": "npm run lint && npm run test"
+    "start:api": "npm run compile:ts && node build/frameworks/api/index.js",
+    "start:script": "npm run compile:ts && node build/frameworks/script/index.js",
+    "test": "ts-mocha -p ./tsconfig.json src/**/*.spec.ts"
   },
   "keywords": [
     "Typescript",

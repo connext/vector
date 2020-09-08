@@ -1,0 +1,21 @@
+{
+  "Rules": [
+    {
+      "ID": "Backups Lifecycle Configuration",
+      "Status": "Enabled",
+      "Prefix": "backups/",
+      "Transitions": [
+        {
+          "Days": 30,
+          "StorageClass": "STANDARD_IA"
+        }
+      ],
+      "Expiration": {
+        "Days": 180
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 2
+      }
+    }
+  ]
+}

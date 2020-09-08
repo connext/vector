@@ -2,8 +2,8 @@
 pragma solidity ^0.6.4;
 pragma experimental ABIEncoderV2;
 
-import "../../shared/libs/LibCommitment.sol";
-import "../../shared/libs/LibChannelCrypto.sol";
+import "../shared/LibCommitment.sol";
+import "../shared/LibChannelCrypto.sol";
 
 
 /// @title Multisig - A channel multisig
@@ -62,7 +62,7 @@ contract Multisig is LibCommitment {
 
     }
 
-  /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
+    /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
     /// This transaction is a message CALL
     /// @param to The destination address of the message call
     /// @param value The amount of ETH being forwarded in the message call

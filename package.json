@@ -1,5 +1,5 @@
 {
-  "name": "@connext/vector",
+  "name": "vector",
   "version": "1.0.0",
   "description": "Vector is an ultra-minimal state channel implementation that borrows ideas from the Counterfactual framework, the v1 Connext Payment Channel Hub, and the StateChannels framework.",
   "main": "index.js",
