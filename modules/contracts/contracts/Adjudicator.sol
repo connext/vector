@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.4;
+pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
+
 
 contract Adjudicator {
 
@@ -10,7 +11,7 @@ contract Adjudicator {
     }
 
     struct Balance {
-        uint256 amount; 
+        uint256 amount;
         address to;
     }
 
@@ -37,15 +38,18 @@ contract Adjudicator {
         AppStatus status; // either of CREATED or RESOLVED
         // TODO merkleProof
     }
-    
+
     function forceChannelConsensus(
         // Params
         // - CoreChannelState
         // - signatures[]
-    ) public {
+    )
+        public
+    {
+        require(true, "oh boy");
         // TODO
 
-        // If the channel is not in the checkpoint OR dispute period, 
+        // If the channel is not in the checkpoint OR dispute period,
             // it should take in latest state and start two timeouts:
                 // The first one, `checkpointComplete` should finalize in X blocks
                 // The second one, `disputeComplete` should finalize in 2X blocks
@@ -60,7 +64,10 @@ contract Adjudicator {
         // Params
         // - CoreChannelState
         // - assetIds[]?
-    ) public {
+    )
+        public
+    {
+        require(true, "oh boy");
         // TODO should the dispute case be broken out into another function?
             // 1. Check passed in state state against latest checkpointed state -- should revert if post-checkpoint dispute timeout has expired or if channel is not in checkpoint period
             // 2. For each assetId passed in, do the below
@@ -75,7 +82,10 @@ contract Adjudicator {
         // Params
         // - CoreTransferState
         // - signatures[]
-    ) public {
+    )
+        public
+    {
+        require(true, "oh boy");
         // TODO
 
         // It should check that the channel is the dispute period
@@ -91,7 +101,10 @@ contract Adjudicator {
         // - CoreTransferState
         // - signatures[]
         // - TransferResolver
-    ) public {
+    )
+        public
+    {
+        require(true, "oh boy");
         // It should call the transfer definition contract using the initial state + transfer update and then set that in a `resolution` mapping to be read by `emptyTransfer()`
     }
 }

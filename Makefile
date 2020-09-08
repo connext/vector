@@ -103,6 +103,11 @@ node-modules: builder package.json $(shell ls modules/*/package.json)
 # Build Core JS libs & bundles
 # Keep prerequisites synced w the @connext/* dependencies of each module's package.json
 
+contracts: node-modules $(shell find modules/contracts $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/contracts && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 isomorphic-node: node-modules $(shell find modules/isomorphic-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/isomorphic-node && npm run build"
@@ -117,10 +122,10 @@ database: $(shell find ops/database $(find_options))
 	docker tag $(project)_database $(project)_database:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-ethprovider:
+ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
-	@#docker build --file ops/ethprovider/Dockerfile $(image_cache) --tag $(project)_ethprovider ops/ethprovider
-	@#docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
+	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
+	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 node: isomorphic-node $(shell find modules/isomorphic-node/ops $(find_options))

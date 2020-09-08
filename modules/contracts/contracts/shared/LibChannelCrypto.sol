@@ -1,14 +1,15 @@
 
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.4;
+pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "./ECDSA.sol";
+
 
 library LibChannelCrypto {
     function verifyChannelMessage(bytes32 hash, bytes memory signature) internal pure returns (address) {
-      bytes32 digest = toChannelSignedMessage(hash);
-      return ECDSA.recover(digest, signature);
+        bytes32 digest = toChannelSignedMessage(hash);
+        return ECDSA.recover(digest, signature);
     }
 
     function toChannelSignedMessage(bytes32 hash) internal pure returns (bytes32) {

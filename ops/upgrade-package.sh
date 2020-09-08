@@ -15,13 +15,14 @@ fi
 
 echo
 echo "Before:"
-grep -r '"'$package'": "' modules/*/package.json package.json
+grep -r '"'$package'": "' modules/*/package.json modules/*/ops/package.json package.json
 echo
 
-find modules/*/package.json package.json \
+find modules/*/package.json modules/contracts/ops/package.json package.json \
   -type f \
+  -not -path "*/node_modules/*" \
   -exec sed -i -E 's|"'"$package"'": "[a-z0-9.-]+"|"'"$package"'": "'"$version"'"|g' {} \;
 
 echo "After:"
-grep -r '"'$package'": "' modules/*/package.json package.json
+grep -r '"'$package'": "' modules/*/package.json modules/*/ops/package.json package.json
 echo

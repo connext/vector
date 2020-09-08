@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitAny": true,
+    "outDir": "dist",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowJs": true
+  },
+  "exclude": ["dist", "node_modules"],
+  "include": [
+    "../../node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
+    "../../node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
+    "./buidler.config.ts",
+    "./src.ts/**/*.ts"
+  ]
+}

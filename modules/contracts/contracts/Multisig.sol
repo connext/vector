@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.4;
+pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "../shared/LibCommitment.sol";
-import "../shared/LibChannelCrypto.sol";
+import "./shared/LibCommitment.sol";
+import "./shared/LibChannelCrypto.sol";
 
 
 /// @title Multisig - A channel multisig
@@ -20,19 +20,25 @@ contract Multisig is LibCommitment {
 
     address[] private _owners;
 
+    enum Operation {
+        Call,
+        DelegateCall
+    }
+
+
     struct LatestDeposit {
         uint256 amount;
         uint256 nonce;
-    };
+    }
 
     mapping(address => LatestDeposit) public latestDepositByAssetId;
 
     receive() external payable { }
 
     modifier onlyAdjudicator {
-      require(msg.sender == /*TODO get adjudicator address here */);
-      _;
-   }
+        require(msg.sender == address(0), "not adjudi"); // TODO use adjudicator address
+        _;
+    }
 
     /// @notice Contract constructor
     /// @param owners An array of unique addresses representing the multisig owners
@@ -55,11 +61,14 @@ contract Multisig is LibCommitment {
 
     // TODO gets admin-called by the adjudicator contract in the event of a dispute to push out funds
     function adjudicatorTransfer(
-        address[] to,
-        uint256[] amount,
+        address[] memory to,
+        uint256[] memory amount,
         address assetId
-    ) public onlyAdjudicator {
-
+    )
+        public
+        onlyAdjudicator
+    {
+        require(true, "oh boy");
     }
 
     /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
@@ -80,6 +89,7 @@ contract Multisig is LibCommitment {
             to,
             value,
             data,
+            Operation.Call // or delegatecall?
         );
         require(
             !isExecuted[transactionHash],
@@ -98,7 +108,7 @@ contract Multisig is LibCommitment {
         execute(
             to,
             value,
-            data,
+            data
         );
     }
 

@@ -1,6 +1,6 @@
 {
-  "name": "@connext/utils",
-  "version": "7.3.4",
+  "name": "@connext/vector-utils",
+  "version": "1.0.0",
   "description": "Crypto module for Connext client",
   "main": "dist/index.js",
   "files": [
