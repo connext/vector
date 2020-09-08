@@ -5,14 +5,10 @@ pragma experimental ABIEncoderV2;
 // Called directly by a VectorChannel.sol instance
 contract Adjudicator {
 
-    enum AppStatus {
-        CREATED,
-        RESOLVED
-    }
-
     struct Balance {
-        uint256 amount; 
-        address to;
+        uint256[] amount; 
+        address[] to;
+        //TODO should we just make assetId part of the Balance?
     }
 
     struct Dispute { // Maybe this should be ChannelDispute?
@@ -32,9 +28,8 @@ contract Adjudicator {
     mapping(address => Dispute) channelDispute;
     mapping(address => TransferDispute) transferDisputes;
 
-    // TODO, state seems large?
     struct CoreChannelState {
-        Balance[][] balances; // TODO index by assetId? // initiator, responder
+        Balance[] balances; // TODO index by assetId? // initiator, responder
         uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
         address[] assetIds;
         bytes32 channelAddress;
@@ -46,7 +41,6 @@ contract Adjudicator {
     }
 
     struct CoreTransferState {
-        Balance[] balances;
         address assetId;
         bytes32 channelId;
         bytes32 transferId;

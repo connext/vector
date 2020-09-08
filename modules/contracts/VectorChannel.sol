@@ -15,7 +15,7 @@ import "../../shared/libs/LibChannelCrypto.sol";
 
 // TODO how will this connect to the adjudicator? 
 
-contract VectorChannel is IAdjudicator.sol { //TODO write this interface
+contract VectorChannel is IAdjudicator { //TODO write this interface
 
     using LibChannelCrypto for bytes32;
 
@@ -28,7 +28,7 @@ contract VectorChannel is IAdjudicator.sol { //TODO write this interface
     struct LatestDeposit {
         uint256 amount;
         uint256 nonce;
-    };
+    }
 
     uint256 private adjudicatorUpdateNonce;
 
