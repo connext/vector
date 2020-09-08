@@ -1,0 +1,34 @@
+name: Master
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+
+  build:
+    env:
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make all
+      - run: make build-report
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      - run: make push
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull
+      - run: make start-prod
+      - run: make dls
+      - run: make test-integration-prod
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 indra_node && docker service logs --tail 200 indra_proxy
