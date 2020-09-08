@@ -31,20 +31,46 @@ export type UpdateParams = {
   details: any; //TODO set to one of the above
 };
 
-export type ChannelState = {
-    channelId: string;
-    participants: string[];
-    chainId: string;
-    latestNonce: string;
+export type Balance = {
+  amount: BigNumber;
+  to: Address;
+}
+
+export type NetworkContext = {
+  adjudicator: Address;
+  multisigMastercopy: Address;
+  proxyFactory: Address;
+  chainId: number;
+}
+
+// This should be the same as the params for disputing the channel
+export type ChannelStateCore = {
+  // Fixed channel properties
+  channelId: Address;
+  participants: Address[]; // Signer keys..?
+  timeout: BigNumber;
+  networkContext: NetworkContext
+  // Dynamic channel properties
+  balances: Balance[][] // TODO index by assetId? // initiator, responder
+  lockedValue: BigNumber[] // Indexed by assetId -- should always be changed in lockstep with transfers
+  assetIds: Address[];
+  nonce: number;
+  latestDepositNonce: number;
+  merkleRoot: string;
+}
+
+// Includes any additional info that doesn't need to be sent to chain
+export type ChannelState = ChannelStateCore & {
+    publicIdentifiers: string[]
     latestUpdate: ChannelUpdate
 };
 
+//TODO
 export type ChannelUpdate = {
   channelId: string;
   counterpartyPublicIdentifier: string;
-  nonce: string;
+  nonce: number;
   type: UpdateType;
-  commitment: MultisigCommitment;
 };
 
 export const UpdateType = {
