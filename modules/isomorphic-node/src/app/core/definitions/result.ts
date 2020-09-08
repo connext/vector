@@ -1,4 +1,4 @@
-import { UseCaseError } from './use-case-error';
+import { UseCaseError } from "./use-case-error";
 
 export class Result<T, Y = UseCaseError> {
   private value?: T;

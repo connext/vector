@@ -1,4 +1,4 @@
-import { Input } from "../core/definitions/input";
+import { Input } from "../../definitions/input";
 
 export interface CreateChannelInput extends Input {
   publicIdentifier: string;

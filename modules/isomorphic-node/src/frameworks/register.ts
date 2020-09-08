@@ -2,7 +2,7 @@ import { asClass, asValue, createContainer, InjectionMode } from "awilix";
 import joi from "joi";
 
 import { App } from "../app/app";
-import { CreateChannelInteractor } from "../app/create-channel/create-channel.interactor";
+import { CreateChannelUseCase } from "../app/core/usecases/create-channel/create-channel.usecase";
 import { ApplicationErrorFactoryImpl } from "../data/core/errors/application-error-factory.impl";
 import { CreateChannelValidatorImpl } from "../data/create-channel/create-channel.validator.impl";
 
@@ -21,7 +21,7 @@ container.register({
   createChannelValidator: asClass(CreateChannelValidatorImpl),
 
   // interactors
-  createChannelInteractor: asClass(CreateChannelInteractor),
+  createChannelInteractor: asClass(CreateChannelUseCase),
 
   // repositories
 });

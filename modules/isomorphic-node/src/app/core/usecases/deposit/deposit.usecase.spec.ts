@@ -1,13 +1,13 @@
 import { fake } from "sinon";
 import { constants } from "ethers";
 
-import { TestEnvironment } from "../../test-environment";
-import { expect } from "../../test/assert";
-import { mockWalletService } from "../../test/mocks/wallet";
-import { ValidatorResult } from "../core/definitions/validator-result";
+import { TestEnvironment } from "../../../../test-environment";
+import { expect } from "../../../../test/assert";
+import { mockWalletService } from "../../../../test/mocks/wallet";
+import { ValidatorResult } from "../../definitions/validator-result";
 
 import { DepositInput } from "./deposit.in";
-import { DepositInteractor } from "./deposit.interactor";
+import { DepositUsecase } from "./deposit.usecase";
 import { DepositOutput } from "./deposit.out";
 import { DepositValidator } from "./deposit.validator";
 
@@ -18,9 +18,8 @@ function isDepositOutput(output: DepositOutput): output is DepositOutput {
 describe("deposit interactor", () => {
   const validatorResult: ValidatorResult = { valid: true, error: null };
 
-  let interactor: DepositInteractor;
+  let interactor: DepositUsecase;
   let depositValidator: DepositValidator;
-  let errorFactory;
 
   beforeEach(() => {
     depositValidator = {
@@ -29,11 +28,7 @@ describe("deposit interactor", () => {
       }),
     };
 
-    errorFactory = {
-      getError: fake(() => new Error("error")),
-    };
-
-    interactor = TestEnvironment.createInstance(DepositInteractor, [
+    interactor = TestEnvironment.createInstance(DepositUsecase, [
       {
         name: "depositValidator",
         useValue: depositValidator,
@@ -42,11 +37,7 @@ describe("deposit interactor", () => {
         name: "walletService",
         useValue: mockWalletService,
       },
-      {
-        name: "errorFactory",
-        useValue: errorFactory,
-      },
-    ]) as DepositInteractor;
+    ]) as DepositUsecase;
   });
 
   describe("execute", () => {
@@ -57,9 +48,10 @@ describe("deposit interactor", () => {
         channelId: constants.AddressZero,
       };
 
-      const response = await interactor.execute(request);
-      const isCorrectResponse = isDepositOutput(response);
+      const result = await interactor.execute(request);
+      const isCorrectResponse = isDepositOutput(result);
       expect(isCorrectResponse).to.be.ok;
+      expect(result.getValue()).to.be.ok;
     });
   });
 });

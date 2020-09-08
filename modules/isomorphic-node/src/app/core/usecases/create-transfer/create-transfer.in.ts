@@ -1,6 +1,6 @@
-import { BigNumber } from 'ethers';
+import { BigNumber } from "ethers";
 
-import { Input } from '../core/definitions/input';
+import { Input } from "../../definitions/input";
 
 export interface CreateTransferInput extends Input {
   channelId: string;

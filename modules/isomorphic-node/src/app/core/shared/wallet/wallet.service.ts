@@ -1,4 +1,6 @@
 import { BigNumber } from "ethers";
+import { Result } from "../../definitions/result";
+import { WalletError } from "./errors/wallet-error";
 
 // TODO: import
 export type CoinTransfers = [
@@ -62,10 +64,10 @@ export type ChannelUpdate = {
 };
 
 export const UpdateType = {
-  create: 'create',
-  deposit: 'deposit',
-  resolve: 'resolve',
-  setup: 'setup',
+  create: "create",
+  deposit: "deposit",
+  resolve: "resolve",
+  setup: "setup",
 } as const;
 export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 
@@ -74,10 +76,10 @@ export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 export interface IWalletService {
   getPublicIdentifier(): string;
   getSignerAddress(): string;
-  setup(params: SetupParams): Promise<ChannelState>;
-  deposit(params: DepositParams): Promise<ChannelState>;
-  create(params: CreateTransferParams): Promise<ChannelState>;
-  resolve(params: ResolveTransferParams): Promise<ChannelState>;
-  withdraw(params: unknown): Promise<ChannelState>;
-  getChannel(channelId: string): Promise<ChannelState | undefined>;
+  setup(params: SetupParams): Promise<Result<ChannelState, WalletError>>;
+  deposit(params: DepositParams): Promise<Result<ChannelState, WalletError>>;
+  create(params: CreateTransferParams): Promise<Result<ChannelState, WalletError>>;
+  resolve(params: ResolveTransferParams): Promise<Result<ChannelState, WalletError>>;
+  withdraw(params: unknown): Promise<Result<ChannelState, WalletError>>;
+  getChannel(channelId: string): Promise<Result<ChannelState | undefined, WalletError>>;
 }

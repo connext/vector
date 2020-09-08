@@ -1,6 +1,6 @@
 import { connect, Client } from "ts-nats";
 
-import { IMessagingService } from "../../app/core/definitions/messaging.service";
+import { IMessagingService } from "../../app/core/shared/messaging/messaging.service";
 
 export class TempNatsMessagingService implements IMessagingService {
   private connection: Client | undefined;

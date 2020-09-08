@@ -1,11 +1,11 @@
 import { fake } from "sinon";
 
-import { TestEnvironment } from "../../test-environment";
-import { expect } from "../../test/assert";
-import { mockWalletService } from "../../test/mocks/wallet";
-import { ValidatorResult } from "../core/definitions/validator-result";
+import { TestEnvironment } from "../../../../test-environment";
+import { expect } from "../../../../test/assert";
+import { mockWalletService } from "../../../../test/mocks/wallet";
+import { ValidatorResult } from "../../definitions/validator-result";
 
-import { CreateChannelInteractor } from "./create-channel.interactor";
+import { CreateChannelUseCase } from "./create-channel.usecase";
 import { CreateChannelValidator } from "./create-channel.validator";
 import { CreateChannelOutput } from "./create-channel.out";
 import { CreateChannelInput } from "./create-channel.in";
@@ -17,9 +17,8 @@ function isCreateChannelOutput(output: CreateChannelOutput): output is CreateCha
 describe("create channel interactor", () => {
   const validatorResult: ValidatorResult = { valid: true, error: null };
 
-  let interactor: CreateChannelInteractor;
+  let interactor: CreateChannelUseCase;
   let createChannelValidator: CreateChannelValidator;
-  let errorFactory;
 
   beforeEach(() => {
     createChannelValidator = {
@@ -28,11 +27,7 @@ describe("create channel interactor", () => {
       }),
     };
 
-    errorFactory = {
-      getError: fake(() => new Error("error")),
-    };
-
-    interactor = TestEnvironment.createInstance(CreateChannelInteractor, [
+    interactor = TestEnvironment.createInstance(CreateChannelUseCase, [
       {
         name: "createChannelValidator",
         useValue: createChannelValidator,
@@ -41,11 +36,7 @@ describe("create channel interactor", () => {
         name: "walletService",
         useValue: mockWalletService,
       },
-      {
-        name: "errorFactory",
-        useValue: errorFactory,
-      },
-    ]) as CreateChannelInteractor;
+    ]) as CreateChannelUseCase;
   });
 
   describe("execute", () => {
@@ -55,9 +46,10 @@ describe("create channel interactor", () => {
         publicIdentifier: "indraABC",
       };
 
-      const response = await interactor.execute(request);
-      const isCorrectResponse = isCreateChannelOutput(response);
+      const result = await interactor.execute(request);
+      const isCorrectResponse = isCreateChannelOutput(result);
       expect(isCorrectResponse).to.be.ok;
+      expect(result.getValue()).to.be.ok;
     });
   });
 });

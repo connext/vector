@@ -1,9 +1,9 @@
-import { CreateChannelInput } from "./create-channel/create-channel.in";
-import { CreateChannelInteractor } from "./create-channel/create-channel.interactor";
-import { CreateChannelOutput } from "./create-channel/create-channel.out";
+import { CreateChannelInput } from "./core/usecases/create-channel/create-channel.in";
+import { CreateChannelUseCase } from "./core/usecases/create-channel/create-channel.usecase";
+import { CreateChannelOutput } from "./core/usecases/create-channel/create-channel.out";
 
 export class App {
-  constructor(private createChannelInteractor: CreateChannelInteractor) {}
+  constructor(private createChannelInteractor: CreateChannelUseCase) {}
 
   async createChannel(createChannelInput: CreateChannelInput): Promise<CreateChannelOutput> {
     return await this.createChannelInteractor.execute(createChannelInput);
