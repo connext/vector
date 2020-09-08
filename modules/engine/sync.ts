@@ -17,7 +17,7 @@ export async function outbound(
   stateEvt: Evt<ChannelState>, 
   errorEvt: Evt<ChannelUpdateError>
 ): Promise<ChannelState> {
-  const storedChannel = await storeService.getChannelState(update.channelId);
+  const storedChannel = await storeService.getChannelState(update.channelAddress);
   if (!storedChannel) {
     // NOTE: IFF creating a channel, the initial channel state should be
     // created and saved using `generate` (i.e. before it gets to this 
@@ -32,14 +32,14 @@ export async function outbound(
     // If there is an error event corresponding to this channel and
     // this nonce, reject the promise
     errorEvt.pipe((e: ChannelUpdateError) => {
-      return e.update.nonce === update.nonce && e.update.channelId === e.update.channelId
+      return e.update.nonce === update.nonce && e.update.channelAddress === e.update.channelAddress
     })
     .attachOnce((e: ChannelUpdateError) => resolve(e))
 
     // If there is a channel update event corresponding to
     // this channel update, resolve the promise
     stateEvt.pipe((e: ChannelState) => {
-      return e.channelId === update.channelId && e.latestNonce === update.nonce
+      return e.channelAddress === update.channelAddress && e.latestNonce === update.nonce
     })
     .attachOnce((e: ChannelState) => resolve(e));
 
@@ -174,7 +174,7 @@ async function processChannelMessage(
   }
 
   // Get our latest stored state
-  let storedState: ChannelState = await storeService.getChannelState(requestedUpdate.channelId);
+  let storedState: ChannelState = await storeService.getChannelState(requestedUpdate.channelAddress);
   if (!storedState) {
     // NOTE: the creation update MUST have a nonce of 1 not 0!
     // You may not be able to find a channel state IFF the channel is
@@ -185,7 +185,7 @@ async function processChannelMessage(
     }
     // Create an empty channel state
     storedState = {
-      channelId: requestedUpdate.channelId,
+      channelAddress: requestedUpdate.channelAddress,
       participants: [requestedUpdate.counterpartyPublicIdentifier, signer.publicIdentifier],
       chainId: (await signer.provider.getNetwork()).chainId,
       latestNonce: "0",

@@ -50,10 +50,10 @@ export class Vector {
   private async executeUpdate(params: UpdateParams) {
     logger.info(`Start executeUpdate`, {params});
 
-    const key = await this.lockService.acquireLock(params.channelId);
+    const key = await this.lockService.acquireLock(params.channelAddress);
     const update = await generateUpdate(params, this.storeService);
     await sync.outbound(update, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
-    await this.lockService.releaseLock(params.channelId, key);
+    await this.lockService.releaseLock(params.channelAddress, key);
   }
 
   private async setupServices() {
@@ -86,7 +86,7 @@ export class Vector {
   public async deposit(params: DepositParams) {
     // TODO validate deposit params for completeness
     const updateParams = {
-      channelId: params.channelId,
+      channelAddress: params.channelAddress,
       type: UpdateType.deposit,
       details: params
     } as UpdateParams
@@ -97,7 +97,7 @@ export class Vector {
   public async createTransfer(params: CreateTransferParams) {
     // TODO validate create params for completeness
     const updateParams = {
-      channelId: params.channelId,
+      channelAddress: params.channelAddress,
       type: UpdateType.create,
       details: params
     } as UpdateParams
@@ -108,7 +108,7 @@ export class Vector {
   public async resolveTransfer(params: ResolveTransferParams) {
     // TODO validate resolve params for completeness
     const updateParams = {
-      channelId: params.channelId,
+      channelAddress: params.channelAddress,
       type: UpdateType.resolve,
       details: params
     } as UpdateParams
