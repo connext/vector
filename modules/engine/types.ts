@@ -1,81 +1,133 @@
-import { BigNumber } from "ethers";
 import { InboundChannelError } from "./utils";
 
 // Method params
 export type DepositParams = {
-  channelId: string;
-  amount: BigNumber; // TODO we actually dont need this?
+  channelAddress: string;
+  amount: string; // TODO we actually dont need this?
   assetId: string;
 };
 
 export type CreateTransferParams = {
-  channelId: string;
-  amount: BigNumber;
+  channelAddress: string;
+  amount: string;
   assetId: string;
   transferDefinition: string;
-  initialState: TransferState;
-  timeout: BigNumber;
+  transferInitialState: any; // TODO (solidityvaluetype?)
+  timeout: string;
+  encodings: string[]; // [Initial state, resolve state]
 };
 
 export type ResolveTransferParams = {
-  channelId: string;
+  channelAddress: string;
   transferId: string;
-  resolver: TransferUpdate;
+  transferResolver: any; // TODO (solidityvaluetype?)
 };
 
 // Protocol update
 export type UpdateParams = {
-  channelId: string;
+  channelAddress: string;
   type: UpdateType;
-  details: any; //TODO set to one of the above
+  details: DepositParams | CreateTransferParams | ResolveTransferParams;
 };
 
 export type Balance = {
-  amount: BigNumber;
-  to: Address;
+  amount: string[];
+  to: Address[];
 }
 
-export type NetworkContext = {
-  adjudicator: Address;
-  multisigMastercopy: Address;
-  proxyFactory: Address;
-  chainId: number;
-}
-
-// This should be the same as the params for disputing the channel
-export type ChannelStateCore = {
-  // Fixed channel properties
-  channelId: Address;
+export type CoreChannelState = {
+  channelAddress: Address;
   participants: Address[]; // Signer keys..?
-  timeout: BigNumber;
-  networkContext: NetworkContext
-  // Dynamic channel properties
-  balances: Balance[][] // TODO index by assetId? // initiator, responder
-  lockedValue: BigNumber[] // Indexed by assetId -- should always be changed in lockstep with transfers
+  timeout: string;
+  balances: Balance[] // TODO index by assetId? // initiator, responder
+  lockedValue: string[] // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
   nonce: number;
   latestDepositNonce: number;
   merkleRoot: string;
 }
 
+export type CoreTransferState = {
+  assetId: Address;
+  channelAddress: Address;
+  transferId: string;
+  transferDefinition: Address;
+  transferTimeout: string;
+  transferStateHash: string;
+  transferEncodings: string[]; // Initial state encoding, resolver encoding
+  merkleProofData: any //TODO
+}
+
+export type ChannelCommitmentData = {
+  state: CoreChannelState;
+  signatures: string[];
+  adjudicatorAddress: Address;
+  chainId: number;
+}
+
+export type TransferCommitmentData = {
+  state: CoreTransferState;
+  adjudicatorAddress: Address;
+  chainId: number;
+}
+
 // Includes any additional info that doesn't need to be sent to chain
-export type ChannelState = ChannelStateCore & {
+export type FullChannelState = CoreChannelState & {
     publicIdentifiers: string[]
-    latestUpdate: ChannelUpdate
+    latestUpdate: ChannelUpdate<any>
+    networkContext: NetworkContext;
 };
 
-// TODO: separate into a fixed and variable part
-// so when you send prev update in `outbound` it does
-// not have a lot of overhead (can only send the variable)
-// part
+export type NetworkContext = {
+  channelFactoryAddress: Address;
+  vectorChannelMastercopyAddress: Address;
+  chainId: number;
+  providerUrl: string;
+}
 
-//TODO
-export type ChannelUpdate = {
-  channelId: string;
-  counterpartyPublicIdentifier: string;
+export type ChannelUpdate<T extends UpdateType> = {
+  channelAddress: string;
+  fromIdentifier: string;
+  toIdentifier: string;
+  type: T;
   nonce: number;
-  type: UpdateType;
+  balance: Balance;
+  assetId: Address;
+  details: ChannelUpdateDetailsMap[T]
+  signatures: string[]; // [from, to]
 };
+
+interface ChannelUpdateDetailsMap {
+  [UpdateType.create]: CreateUpdateDetails;
+  [UpdateType.deposit]: DepositUpdateDetails;
+  [UpdateType.resolve]: ResolveUpdateDetails;
+  [UpdateType.setup]: SetupUpdateDetails;
+}
+
+type CreateUpdateDetails = {
+  transferId: string;
+  transferDefinition: Address;
+  transferTimeout: string;
+  transferInitialState: any; //TODO
+  transferEncodings: string[]; // Initial state, resolver state
+  merkleProofData: any //TODO
+  merkleRoot: string;
+}
+
+type ResolveUpdateDetails = {
+  transferId: string;
+  transferDefinition: Address;
+  transferResolver: any; //TODO
+  transferEncodings: string[]; // Initial state, resolver state
+  merkleProofData: any //TODO
+  merkleRoot: string;
+}
+
+type DepositUpdateDetails = {
+  latestDepositNonce: number;
+}
+
+type SetupUpdateDetails = any; //TODO
 
 export const UpdateType = {
   create: "create",
@@ -100,8 +152,8 @@ export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
 export type Values<E> = E[keyof E];
 
 export interface IStoreService {
-  getChannelState(channelId: string): Promise<ChannelState | undefined>;
-  saveChannelState(channelState: ChannelState): Promise<void>;
+  getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
+  saveChannelState(channelState: FullChannelState): Promise<void>;
 }
 
 // TODO: fix these interfaces!
