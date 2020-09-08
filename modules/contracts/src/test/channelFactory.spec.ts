@@ -1,29 +1,43 @@
+import { getRandomPrivateKey } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet } from "ethers";
 
-import { ChannelFactory } from "../artifacts";
+import { Channel, ChannelFactory } from "../artifacts";
 
 import { expect, provider } from "./utils";
 
 describe("ChannelFactory", () => {
   let deployer: Wallet;
-  let factory: Contract;
+  let channelFactory: Contract;
 
   beforeEach(async () => {
     deployer = (await provider.getWallets())[0];
-    factory = await new ContractFactory(
+    const channelMastercopy = await new ContractFactory(
+      Channel.abi,
+      Channel.bytecode,
+      deployer,
+    ).deploy();
+    await channelMastercopy.deployed();
+    channelFactory = await new ContractFactory(
       ChannelFactory.abi,
       ChannelFactory.bytecode,
       deployer,
-    ).deploy();
-    await factory.deployed();
+    ).deploy(channelMastercopy.address);
+    await channelFactory.deployed();
   });
 
   it("should deploy", async () => {
-    expect(factory.address).to.be.a("string");
+    expect(channelFactory.address).to.be.a("string");
   });
 
   it("should create a channel", async () => {
-    // factory.
+    const initiator = new Wallet(getRandomPrivateKey());
+    const responder = new Wallet(getRandomPrivateKey());
+    // let channelAddress;
+    // TODO: wait on channel created event & make sure contract deployed properly
+    // channelFactory.once("?", () => {});
+    const tx = await channelFactory.createChannel(initiator.address, responder.address);
+    await tx.wait();
+    expect(tx.hash).to.be.a("string");
   });
 
 });

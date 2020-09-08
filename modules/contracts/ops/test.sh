@@ -5,7 +5,6 @@ then cd modules/contracts
 fi
 
 cmd="${1:-test}"
-echo "Executing command $cmd ($1)"
 
 if [[ "$NODE_ENV" == "production" ]]
 then opts="--forbid-only"

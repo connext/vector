@@ -2,13 +2,6 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-/*
-abi = [
-  'function adjudicatorTransfer(address[] to, uint256[] amount, address assetId)',
-  'function depositA(uint256 amount, address assetId, bytes signature) payable',
-  'function execTransaction(address to, uint256 value, bytes data, bytes[] signatures)'
-]
-*/
 
 interface IChannel {
 

@@ -5,107 +5,86 @@ import "./Proxy.sol";
 import "./interfaces/IChannelFactory.sol";
 
 
-/// @title Channel Factory - Allows to create new proxy contact and execute a message call to the new proxy within one transaction.
-/// @author Stefan George - <stefan@gnosis.pm>
+/// @title Channel Factory - Allows us to create new channel proxy contact
 contract ChannelFactory is IChannelFactory {
 
-    event ProxyCreation(Proxy proxy);
+    address mastercopy;
+    string domainSalt = "vector";
 
-    /// @dev Allows to get the address for a new proxy contact created via `createProxyWithNonce`
-    ///    This method is only meant for address calculation purpose when you use an initializer that would revert,
-    ///    therefore the response is returned with a revert. When calling this method set `from` to the address of the proxy factory.
-    /// @param _mastercopy Address of master copy.
-    /// @param initializer Payload for message call sent to new proxy contract.
-    /// @param saltNonce Nonce that will be used to generate the salt to calculate the address of the new proxy contract.
-    function
-    calculateCreateProxyWithNonceAddress(
-        address _mastercopy,
-        bytes calldata initializer,
-        uint256 saltNonce
-    )
-        external
-        override
-        returns (Proxy proxy)
-    {
-        proxy = deployProxyWithNonce(_mastercopy, initializer, saltNonce);
-        revert(string(abi.encodePacked(proxy)));
+    event ChannelCreation(address channel);
+
+    constructor(address _mastercopy) {
+        mastercopy = _mastercopy;
     }
 
-    /// @dev Allows to create new proxy contact and execute a message call to the new proxy within one transaction.
-    /// @param masterCopy Address of master copy.
-    /// @param data Payload for message call sent to new proxy contract.
-    function createProxy(address masterCopy, bytes memory data)
-        public
-        returns (Proxy proxy)
-    {
-        proxy = new Proxy(masterCopy);
-        if (data.length > 0) {
-            // solium-disable-next-line security/no-inline-assembly
-            assembly {
-              if eq(call(gas(), proxy, 0, add(data, 0x20), mload(data), 0, 0), 0) { revert(0, 0) }
-            }
-        }
-        emit ProxyCreation(proxy);
-    }
-
-    /// @dev Allows to retrieve the runtime code of a deployed Proxy. This can be used to check that the expected Proxy was deployed.
+    /// @dev Allows us to retrieve the runtime code of a deployed Proxy.
+    /// @dev This can be used to check that the expected Proxy was deployed.
     function proxyRuntimeCode() public override pure returns (bytes memory) {
         return type(Proxy).runtimeCode;
     }
 
-    /// @dev Allows to retrieve the creation code used for the Proxy deployment. With this it is easily possible to calculate predicted address.
+    /// @dev Allows us to retrieve the creation code used for the Proxy deployment.
+    /// @dev With this it is easily possible to calculate predicted address.
     function proxyCreationCode() public override pure returns (bytes memory) {
         return type(Proxy).creationCode;
     }
 
-    /// @dev Allows to create new proxy contact and execute a message call to the new proxy within one transaction.
-    /// @param _mastercopy Address of master copy.
-    /// @param initializer Payload for message call sent to new proxy contract.
-    /// @param saltNonce Nonce that will be used to generate the salt to calculate the address of the new proxy contract.
-    function createProxyWithNonce(
-        address _mastercopy,
-        bytes memory initializer,
-        uint256 saltNonce
+    /// @dev Allows us to get the address for a new channel contact created via `createChannel`
+    /// @dev When calling this method set `from` to the address of the channel factory.
+    /// @param initiator address of one of the two participants in the channel
+    /// @param responder address of the other channel participant
+    function getChannelAddress(
+        address initiator,
+        address responder
     )
         public
         override
-        returns (Proxy proxy)
+        returns (address channel)
     {
-        proxy = deployProxyWithNonce(_mastercopy, initializer, saltNonce);
-        if (initializer.length > 0) {
-            // solium-disable-next-line security/no-inline-assembly
-            assembly {
-                if eq(call(gas(), proxy, 0, add(initializer, 0x20), mload(initializer), 0, 0), 0) { revert(0,0) }
-            }
-        }
-        emit ProxyCreation(proxy);
+        channel = deployChannelProxy(initiator, responder);
+        revert(string(abi.encodePacked(channel)));
     }
 
-    /// @dev Allows to create new proxy contact using CREATE2 but it doesn't run the initializer.
-    ///    This method is only meant as an utility to be called from other methods
-    /// @param _mastercopy Address of master copy.
-    /// @param initializer Payload for message call sent to new proxy contract.
-    /// @param saltNonce Nonce that will be used to generate the salt to calculate the address of the new proxy contract.
-    function deployProxyWithNonce(
-        address _mastercopy,
-        bytes memory initializer,
-        uint256 saltNonce
+    /// @dev Allows us to create new channel contact and get it all set up in one transaction
+    /// @param initiator address of one of the two participants in the channel
+    /// @param responder address of the other channel participant
+    function createChannel(
+        address initiator,
+        address responder
+    )
+        public
+        override
+        returns (address channel)
+    {
+        channel = deployChannelProxy(initiator, responder);
+        // TODO: call channel.setup()? Do any other channel initialization chores?
+        emit ChannelCreation(channel);
+    }
+
+    /// @dev Allows us to create new channel contact using CREATE2
+    /// @dev This method is only meant as an utility to be called from other methods
+    /// @param initiator address of one of the two participants in the channel
+    /// @param responder address of the other channel participant
+    function deployChannelProxy(
+        address initiator,
+        address responder
     )
         internal
-        returns (Proxy proxy)
+        returns (address channel)
     {
-        // If the initializer changes the proxy address should change too. Hashing the initializer data is cheaper than just concatinating it
+        // TODO: include chainId in the create2 salt
         bytes32 salt = keccak256(
-            abi.encodePacked(keccak256(initializer), saltNonce)
+            abi.encodePacked(initiator, responder, domainSalt)
         );
 
         bytes memory deploymentData = abi.encodePacked(
-            type(Proxy).creationCode, uint256(_mastercopy)
+            type(Proxy).creationCode, uint256(mastercopy)
         );
+
         // solium-disable-next-line security/no-inline-assembly
         assembly {
-            proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
-            let codeSize := extcodesize(proxy)
+            channel := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
+            let codeSize := extcodesize(channel)
             if eq(codeSize, 0) { revert(0, 0) }
         }
     }
