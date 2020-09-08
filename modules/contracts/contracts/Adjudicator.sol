@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.1;
-pragma experimental ABIEncoderV2;
+
+import "../interfaces/IAdjudicator.sol";
 
 
-contract Adjudicator {
+contract Adjudicator is IAdjudicator {
 
     enum AppStatus {
         CREATED,
@@ -45,10 +46,11 @@ contract Adjudicator {
         // - signatures[]
     )
         public
+        override
+        pure
     {
         require(true, "oh boy");
         // TODO
-
         // If the channel is not in the checkpoint OR dispute period,
             // it should take in latest state and start two timeouts:
                 // The first one, `checkpointComplete` should finalize in X blocks
@@ -66,6 +68,8 @@ contract Adjudicator {
         // - assetIds[]?
     )
         public
+        override
+        pure
     {
         require(true, "oh boy");
         // TODO should the dispute case be broken out into another function?
@@ -84,6 +88,8 @@ contract Adjudicator {
         // - signatures[]
     )
         public
+        override
+        pure
     {
         require(true, "oh boy");
         // TODO
@@ -103,6 +109,8 @@ contract Adjudicator {
         // - TransferResolver
     )
         public
+        override
+        pure
     {
         require(true, "oh boy");
         // It should call the transfer definition contract using the initial state + transfer update and then set that in a `resolution` mapping to be read by `emptyTransfer()`

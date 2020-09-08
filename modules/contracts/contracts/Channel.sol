@@ -4,15 +4,16 @@ pragma experimental ABIEncoderV2;
 
 import "./shared/LibCommitment.sol";
 import "./shared/LibChannelCrypto.sol";
+import "../interfaces/IChannel.sol";
 
 
-/// @title Multisig - A channel multisig
+/// @title Channel - A channel multisig
 /// @author Arjun Bhuptani <arjun@connext.network>
 /// @notice
 /// (a) Is "owned" (and deployed?) by an Adjudicator.sol contract
 /// (b) Executes transactions when called by Adjudicator.sol (without requiring any signatures)
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
-contract Multisig is LibCommitment {
+contract Channel is IChannel, LibCommitment {
 
     using LibChannelCrypto for bytes32;
 
@@ -33,7 +34,7 @@ contract Multisig is LibCommitment {
 
     mapping(address => LatestDeposit) public latestDepositByAssetId;
 
-    receive() external payable { }
+    receive() external payable {}
 
     modifier onlyAdjudicator {
         require(msg.sender == address(0), "not adjudi"); // TODO use adjudicator address
@@ -53,7 +54,9 @@ contract Multisig is LibCommitment {
         address assetId,
         bytes memory signature
     )
-        public payable
+        public
+        payable
+        override
     {
         // TODO
         // This should validate signature against _owners[0], then save/upsert latestDepositByAssetId
@@ -66,9 +69,13 @@ contract Multisig is LibCommitment {
         address assetId
     )
         public
+        override
         onlyAdjudicator
+        view
     {
-        require(true, "oh boy");
+        // TODO: replace w real logic
+        require(to[0] == assetId, "oh boy");
+        require(amount[0] > 0, "oh boy");
     }
 
     /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
@@ -84,6 +91,7 @@ contract Multisig is LibCommitment {
         bytes[] memory signatures
     )
         public
+        override
     {
         bytes32 transactionHash = getTransactionHash(
             to,

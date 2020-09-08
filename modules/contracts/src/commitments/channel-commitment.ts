@@ -10,4 +10,5 @@ Core channel state:
     uint256 nonce;
     uint256 latestDepositNonce;
     bytes32 merkleRoot;
+
 */

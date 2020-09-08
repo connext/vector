@@ -11,7 +11,7 @@ const { formatEther } = utils;
 
 export const coreContracts = [
   "Adjudicator",
-  "Multisig",
+  "Channel",
   "ChannelFactory",
 ];
 

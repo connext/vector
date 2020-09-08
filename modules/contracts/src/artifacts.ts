@@ -2,7 +2,7 @@ import { HexString } from "@connext/types";
 import { utils } from "ethers";
 
 import * as Adjudicator from "../artifacts/Adjudicator.json";
-import * as Multisig from "../artifacts/Multisig.json";
+import * as Channel from "../artifacts/Channel.json";
 import * as ChannelFactory from "../artifacts/ChannelFactory.json";
 
 type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
@@ -21,12 +21,12 @@ type Artifacts = { [contractName: string]: Artifact };
 
 export const artifacts: Artifacts = {
   Adjudicator,
-  Multisig,
+  Channel,
   ChannelFactory,
 } as any;
 
 export {
   Adjudicator,
-  Multisig,
+  Channel,
   ChannelFactory,
 };
