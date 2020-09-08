@@ -142,10 +142,9 @@ contract Adjudicator {
         //  transferDisputes(state.transferId) = transferDispute
     }
 
-    function emptyTransfer(
+    function defundTransfer(
         // Params
         // - CoreTransferState state
-        // - bytes memory signature
         // - bytes calldata encodedInitialTransferState
         // - bytes calldata encodedTransferResolver
     ) public {
