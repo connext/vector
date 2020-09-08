@@ -36,6 +36,7 @@ export type CreateTransferParams = {
   transferDefinition: string;
   initialState: TransferState;
   timeout: BigNumber;
+  meta?: Record<string, unknown>;
 };
 
 export type ResolveTransferParams = {
@@ -43,13 +44,40 @@ export type ResolveTransferParams = {
   transferId: string;
   resolver: TransferUpdate;
 };
+
+export type ChannelState = {
+  channelId: string;
+  participants: string[];
+  chainId: string;
+  latestNonce: string;
+  latestUpdate?: ChannelUpdate;
+};
+
+export type ChannelUpdate = {
+  channelId: string;
+  counterpartyPublicIdentifier: string;
+  nonce: string;
+  type: UpdateType;
+  commitment: unknown;
+};
+
+export const UpdateType = {
+  create: 'create',
+  deposit: 'deposit',
+  resolve: 'resolve',
+  setup: 'setup',
+} as const;
+export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
+
 //////
 
 export interface IWalletService {
   getPublicIdentifier(): string;
-  setup(params: SetupParams): Promise<void>;
-  deposit(params: DepositParams): Promise<void>;
-  create(params: CreateTransferParams): Promise<void>;
-  resolve(params: ResolveTransferParams): Promise<void>;
-  withdraw(params: unknown): Promise<void>;
+  getSignerAddress(): string;
+  setup(params: SetupParams): Promise<ChannelState>;
+  deposit(params: DepositParams): Promise<ChannelState>;
+  create(params: CreateTransferParams): Promise<ChannelState>;
+  resolve(params: ResolveTransferParams): Promise<ChannelState>;
+  withdraw(params: unknown): Promise<ChannelState>;
+  getChannel(channelId: string): Promise<ChannelState | undefined>;
 }

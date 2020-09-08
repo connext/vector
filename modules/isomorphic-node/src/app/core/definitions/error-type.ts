@@ -3,4 +3,5 @@ export enum ErrorType {
   validation = 'validation',
   createChannel = 'createChannel',
   deposit = 'deposit',
+  createTransfer = 'createTransfer',
 }
