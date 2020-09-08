@@ -1,0 +1,21 @@
+name: Feature Branch
+
+on:
+  push:
+    branches-ignore:
+      - master
+      - staging
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make indra
+      - run: make start
+      - run: make dls
+      - run: make test
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 vector_node && docker service logs --tail 200 vector_proxy

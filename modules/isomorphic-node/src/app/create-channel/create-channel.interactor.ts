@@ -1,11 +1,13 @@
-import { ApplicationErrorFactory } from '../core/definitions/application-error-factory';
-import { Interactor } from '../core/definitions/interactor';
-import { CreateChannelInput } from './create-channel.in';
-import { CreateChannelOutput } from './create-channel.out';
-import { CreateChannelValidator } from './create-channel.validator';
-import { ErrorType } from '../core/definitions/error-type';
-import { IWalletService } from '../core/definitions/wallet.service';
-import { constants } from 'ethers';
+import { constants } from "ethers";
+
+import { ApplicationErrorFactory } from "../core/definitions/application-error-factory";
+import { ErrorType } from "../core/definitions/error-type";
+import { Interactor } from "../core/definitions/interactor";
+import { IWalletService } from "../core/definitions/wallet.service";
+
+import { CreateChannelInput } from "./create-channel.in";
+import { CreateChannelOutput } from "./create-channel.out";
+import { CreateChannelValidator } from "./create-channel.validator";
 
 export class CreateChannelInteractor implements Interactor {
   constructor(

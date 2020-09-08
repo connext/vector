@@ -1,7 +1,7 @@
-import { CustomError } from '../../../app/core/definitions/custom-error';
+import { CustomError } from "../../../app/core/definitions/custom-error";
 
 export class GeneralErrorImpl extends CustomError {
-  name = 'generalError';
+  name = "generalError";
 
   constructor() {
     super();

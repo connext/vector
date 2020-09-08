@@ -16,12 +16,12 @@
   "license": "MIT",
   "dependencies": {
     "@connext/utils": "7.3.14",
-    "ethers": "5.0.10",
+    "ethers": "5.0.12",
     "evt": "1.8.9",
     "mocha": "8.1.3",
-    "pino": "6.5.1"
+    "pino": "6.6.0"
   },
   "devDependencies": {
-    "typescript": "^4.0.2"
+    "typescript": "4.0.2"
   }
 }

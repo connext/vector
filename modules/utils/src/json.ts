@@ -3,6 +3,7 @@ import { BigNumber } from "ethers";
 import { isBN, toBN } from "./bigNumbers";
 import { abbreviate } from "./strings";
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function bigNumberifyJson<T = any>(json: any): T {
   return typeof json === "string"
     ? json
@@ -11,12 +12,15 @@ export function bigNumberifyJson<T = any>(json: any): T {
       );
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function deBigNumberifyJson<T = any>(json: any): T {
   return JSON.parse(JSON.stringify(json), (key: string, value: any) =>
     value && isBN(value) && value.toHexString ? value.toHexString() : value,
   );
 }
+
 // Give abrv = true to abbreviate hex strings and addresss to look like "0x6FEC..kuQk"
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const stringify = (value: any, abrv = false, spaces = 2): string =>
   JSON.stringify(
     value,
@@ -33,6 +37,7 @@ export const stringify = (value: any, abrv = false, spaces = 2): string =>
 
 const nullify = (key: string, value: any) => (typeof value === "undefined" ? null : value);
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const safeJsonStringify = (value: any): string => {
   try {
     return typeof value === "string" ? value : JSON.stringify(value, nullify);
@@ -42,6 +47,7 @@ export const safeJsonStringify = (value: any): string => {
   }
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function safeJsonParse<T = any>(value: any): T {
   try {
     return typeof value === "string" ? JSON.parse(value, nullify) : value;
@@ -53,6 +59,7 @@ export function safeJsonParse<T = any>(value: any): T {
 
 // ethers returns an array of [ <each value by index>, <each value by key> ]
 // so we need to recursively clean this response before returning
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const keyify = (templateObj: any, dataObj: any, key?: string): Promise<any> => {
   const template = key ? templateObj[key] : templateObj;
   const data = key ? dataObj[key] : dataObj;

@@ -21,7 +21,7 @@ import {
 import { getPublicIdentifierFromPublicKey } from "./identifiers";
 import { getChainId } from "./chainId";
 
-export const getRandomChannelSigner = (provider?: UrlString | providers.Provider) =>
+export const getRandomChannelSigner = (provider?: UrlString | providers.Provider): ChannelSigner =>
   new ChannelSigner(getRandomPrivateKey(), provider);
 
 export class ChannelSigner extends Signer implements IChannelSigner {

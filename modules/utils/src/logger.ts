@@ -14,11 +14,17 @@ export const logTime = (log: ILogger, start: number, msg: string): void => {
 
 // Example implementation that can be used as a silent default
 export const nullLogger: ILoggerService = {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function,@typescript-eslint/no-unused-vars
   debug: (msg: string): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function,@typescript-eslint/no-unused-vars
   info: (msg: string): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function,@typescript-eslint/no-unused-vars
   warn: (msg: string): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function,@typescript-eslint/no-unused-vars
   error: (msg: string): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function,@typescript-eslint/no-unused-vars
   setContext: (context: string): void => {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   newContext: function (context: string): ILoggerService {
     return this;
   },

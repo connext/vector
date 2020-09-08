@@ -1,20 +1,21 @@
-import { fake } from 'sinon';
-import { constants } from 'ethers';
+import { fake } from "sinon";
+import { constants } from "ethers";
 
-import { DepositInteractor } from './deposit.interactor';
-import { TestEnvironment } from '../../test-environment';
-import { DepositInput } from './deposit.in';
-import { DepositOutput } from './deposit.out';
-import { ValidatorResult } from '../core/definitions/validator-result';
-import { DepositValidator } from './deposit.validator';
-import { expect } from '../../test/assert';
-import { mockWalletService } from '../../test/mocks/wallet';
+import { TestEnvironment } from "../../test-environment";
+import { expect } from "../../test/assert";
+import { mockWalletService } from "../../test/mocks/wallet";
+import { ValidatorResult } from "../core/definitions/validator-result";
+
+import { DepositInput } from "./deposit.in";
+import { DepositInteractor } from "./deposit.interactor";
+import { DepositOutput } from "./deposit.out";
+import { DepositValidator } from "./deposit.validator";
 
 function isDepositOutput(output: DepositOutput): output is DepositOutput {
   return (output as DepositOutput) !== undefined;
 }
 
-describe('deposit interactor', () => {
+describe("deposit interactor", () => {
   const validatorResult: ValidatorResult = { valid: true, error: null };
 
   let interactor: DepositInteractor;
@@ -29,27 +30,27 @@ describe('deposit interactor', () => {
     };
 
     errorFactory = {
-      getError: fake(() => new Error('error')),
+      getError: fake(() => new Error("error")),
     };
 
     interactor = TestEnvironment.createInstance(DepositInteractor, [
       {
-        name: 'depositValidator',
+        name: "depositValidator",
         useValue: depositValidator,
       },
       {
-        name: 'walletService',
+        name: "walletService",
         useValue: mockWalletService,
       },
       {
-        name: 'errorFactory',
+        name: "errorFactory",
         useValue: errorFactory,
       },
     ]) as DepositInteractor;
   });
 
-  describe('execute', () => {
-    it('should work', async () => {
+  describe("execute", () => {
+    it("should work", async () => {
       const request: DepositInput = {
         amount: constants.One,
         assetId: constants.AddressZero,

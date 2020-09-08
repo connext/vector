@@ -13,6 +13,7 @@ import { getBigNumberishError } from "./bigNumbers";
 export const notBigNumberish = getBigNumberishError;
 
 // return string when value is not greater than ceiling
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const notGreaterThan = (value: any, ceil: BigNumberish): string | undefined => {
   if (notBigNumberish(value)) {
     return notBigNumberish(value);
@@ -22,6 +23,7 @@ export const notGreaterThan = (value: any, ceil: BigNumberish): string | undefin
     : `Value (${value.toString()}) is not greater than ${ceil.toString()}`;
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const notGreaterThanOrEqualTo = (value: any, ceil: BigNumberish): string | undefined => {
   if (notBigNumberish(value)) {
     return notBigNumberish(value);
@@ -32,6 +34,7 @@ export const notGreaterThanOrEqualTo = (value: any, ceil: BigNumberish): string 
 };
 
 // return string when value is not less than floor
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const notLessThan = (value: any, floor: BigNumberish): string | undefined => {
   if (notBigNumberish(value)) {
     return notBigNumberish(value);
@@ -41,6 +44,7 @@ export const notLessThan = (value: any, floor: BigNumberish): string | undefined
     : `Value (${value.toString()}) is not less than ${floor.toString()}`;
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const notLessThanOrEqualTo = (value: any, floor: BigNumberish): string | undefined => {
   if (notBigNumberish(value)) {
     return notBigNumberish(value);
@@ -50,10 +54,12 @@ export const notLessThanOrEqualTo = (value: any, floor: BigNumberish): string | 
     : `Value (${value.toString()}) is not less than or equal to ${floor.toString()}`;
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const notPositive = (value: any): string | undefined => {
   return notGreaterThanOrEqualTo(value, 0);
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const notNegative = (value: any): string | undefined => {
   if (notLessThan(0, value)) {
     return `Value ${value.toString()} is negative.`;

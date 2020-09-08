@@ -19,7 +19,7 @@ const cache = new LimitedCache(200);
 export const getPublicIdentifierFromPublicKey = (publicKey: PublicKey): PublicIdentifier =>
   INDRA_PUB_ID_PREFIX + bs58check.encode(compress(hexToBuffer(publicKey)));
 
-export const getPublicKeyFromPublicIdentifier = (publicIdentifier: PublicIdentifier) =>
+export const getPublicKeyFromPublicIdentifier = (publicIdentifier: PublicIdentifier): string =>
   `0x${bufferToHex(
     decompress(bs58check.decode(publicIdentifier.replace(INDRA_PUB_ID_PREFIX, ""))),
   )}`;
@@ -50,6 +50,7 @@ export const getRandomIdentifier = (): PublicIdentifier =>
 ////////////////////////////////////////
 // Validators
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getPublicIdentifierError = (value: any): string | undefined => {
   try {
     if (typeof value !== "string") {
@@ -65,4 +66,5 @@ export const getPublicIdentifierError = (value: any): string | undefined => {
     return e.message;
   }
 };
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isValidPublicIdentifier = (value: any): boolean => !getPublicIdentifierError(value);

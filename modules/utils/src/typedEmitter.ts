@@ -1,10 +1,10 @@
-import { IBasicEventEmitter, EventName, EventPayload } from "@connext/types";
+import { EventName, EventPayload } from "@connext/types";
 import { Evt, to, Ctx } from "evt";
 
 // Disable max handlers warnings
 Evt.setDefaultMaxHandlers(0);
 
-export class TypedEmitter implements IBasicEventEmitter {
+export class TypedEmitter {
   private evt: Evt<[EventName, EventPayload[EventName]]>;
   constructor() {
     this.evt = Evt.create<[EventName, EventPayload[EventName]]>();
@@ -23,6 +23,7 @@ export class TypedEmitter implements IBasicEventEmitter {
       const eventFilter = ([emittedEvent, emittedPayload]) => {
         return event === emittedEvent && filter(emittedPayload);
       };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const eventCallback = ([_, emittedPayload]) => {
         return callback(emittedPayload);
       };
@@ -46,6 +47,7 @@ export class TypedEmitter implements IBasicEventEmitter {
       const eventFilter = ([emittedEvent, emittedPayload]) => {
         return event === emittedEvent && filter(emittedPayload);
       };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const eventCallback = ([_, emittedPayload]) => {
         return callback(emittedPayload);
       };
@@ -82,6 +84,7 @@ export class TypedEmitter implements IBasicEventEmitter {
       }
       return event === emittedEvent;
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_, payload] = await this.evt.waitFor(eventFilter, timeout);
     return payload as EventPayload[T];
   }

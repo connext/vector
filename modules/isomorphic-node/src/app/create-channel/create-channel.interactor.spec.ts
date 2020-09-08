@@ -1,19 +1,20 @@
-import { fake } from 'sinon';
+import { fake } from "sinon";
 
-import { CreateChannelInteractor } from './create-channel.interactor';
-import { TestEnvironment } from '../../test-environment';
-import { CreateChannelInput } from './create-channel.in';
-import { CreateChannelOutput } from './create-channel.out';
-import { ValidatorResult } from '../core/definitions/validator-result';
-import { CreateChannelValidator } from './create-channel.validator';
-import { expect } from '../../test/assert';
-import { mockWalletService } from '../../test/mocks/wallet';
+import { TestEnvironment } from "../../test-environment";
+import { expect } from "../../test/assert";
+import { mockWalletService } from "../../test/mocks/wallet";
+import { ValidatorResult } from "../core/definitions/validator-result";
+
+import { CreateChannelInteractor } from "./create-channel.interactor";
+import { CreateChannelValidator } from "./create-channel.validator";
+import { CreateChannelOutput } from "./create-channel.out";
+import { CreateChannelInput } from "./create-channel.in";
 
 function isCreateChannelOutput(output: CreateChannelOutput): output is CreateChannelOutput {
   return (output as CreateChannelOutput) !== undefined;
 }
 
-describe('create channel interactor', () => {
+describe("create channel interactor", () => {
   const validatorResult: ValidatorResult = { valid: true, error: null };
 
   let interactor: CreateChannelInteractor;
@@ -28,30 +29,30 @@ describe('create channel interactor', () => {
     };
 
     errorFactory = {
-      getError: fake(() => new Error('error')),
+      getError: fake(() => new Error("error")),
     };
 
     interactor = TestEnvironment.createInstance(CreateChannelInteractor, [
       {
-        name: 'createChannelValidator',
+        name: "createChannelValidator",
         useValue: createChannelValidator,
       },
       {
-        name: 'walletService',
+        name: "walletService",
         useValue: mockWalletService,
       },
       {
-        name: 'errorFactory',
+        name: "errorFactory",
         useValue: errorFactory,
       },
     ]) as CreateChannelInteractor;
   });
 
-  describe('execute', () => {
-    it('should work', async () => {
+  describe("execute", () => {
+    it("should work", async () => {
       const request: CreateChannelInput = {
         chainId: 1337,
-        publicIdentifier: 'indraABC',
+        publicIdentifier: "indraABC",
       };
 
       const response = await interactor.execute(request);

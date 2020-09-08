@@ -12,9 +12,11 @@ export const fromWad = (wad: BigNumberish, decimals = 18): string => {
   return sanitizeDecimals(formatUnits(wad, decimals), decimals);
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const maxBN = (lobn: any) =>
   lobn.reduce((max: any, current: any) => (max.gt(current) ? max : current), Zero);
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const minBN = (lobn: any) =>
   lobn.reduce((min: any, current: any) => (min.lt(current) ? min : current), MaxUint256);
 
@@ -82,7 +84,7 @@ function padRight(str: string, length: number, padding = "0"): string {
   return padString(str, length, false, padding);
 }
 
-export const formatDisplayAmount = (amount: string, precision = 2, symbol = "") => {
+export const formatDisplayAmount = (amount: string, precision = 2, symbol = ""): string => {
   const _symbol = symbol.trim() ? `${symbol.trim()} ` : "";
   const [integer, fractional] = amount.split(".");
   let _fractional = fractional

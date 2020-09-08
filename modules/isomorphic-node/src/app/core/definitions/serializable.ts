@@ -1,4 +1,4 @@
-import { ID } from './id';
+import { ID } from "./id";
 
 export interface Serializable {
   id?: ID;

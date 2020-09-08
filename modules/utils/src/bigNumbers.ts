@@ -3,6 +3,7 @@ import { BigNumber, BigNumberish } from "ethers";
 
 export const isBN = BigNumber.isBigNumber;
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isBNJson = (value: any): boolean => !isBN(value) && !!value._hex;
 
 export const toBN = (n: BigNumberish | BigNumberJson): BigNumber =>
@@ -19,9 +20,11 @@ export const toBNJson = (n: BigNumberish | BigNumberJson): BigNumberJson => ({
   _isBigNumber: true,
 });
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getBigNumberError = (value: any): string | undefined =>
   isBN(value) ? undefined : `Value "${value}" is not a BigNumber`;
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getBigNumberishError = (value: any): string | undefined => {
   try {
     toBN(value);

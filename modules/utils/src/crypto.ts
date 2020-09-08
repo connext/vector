@@ -45,6 +45,7 @@ export const bufferify = (input: Uint8Array | Buffer | string): Buffer =>
 ////////////////////////////////////////
 // Validators
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getPublicKeyError = (value: any): string | undefined => {
   try {
     const hexStringError = getHexStringError(value, 65);
@@ -57,8 +58,10 @@ export const getPublicKeyError = (value: any): string | undefined => {
     return e.message;
   }
 };
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isValidPublicKey = (value: any): boolean => !getPublicKeyError(value);
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getPrivateKeyError = (value: any): string | undefined => {
   try {
     const hexStringError = getHexStringError(value, 32);
@@ -69,13 +72,16 @@ export const getPrivateKeyError = (value: any): string | undefined => {
     return e.message;
   }
 };
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isValidPrivateKey = (value: any): boolean => !getPrivateKeyError(value);
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getEthSignatureError = (value: any): string | undefined => {
   const hexStringError = getHexStringError(value, 65);
   if (hexStringError) return hexStringError;
   return undefined;
 };
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isValidEthSignature = (value: any): boolean => !getEthSignatureError(value);
 
 ////////////////////////////////////////
