@@ -1,7 +1,7 @@
-import { CustomError } from '../../../app/core/definitions/custom-error';
+import { CustomError } from "../../../app/core/definitions/custom-error";
 
 export class CreateChannelErrorImpl extends CustomError {
-  name = 'createChannelError';
+  name = "createChannelError";
 
   constructor() {
     super();

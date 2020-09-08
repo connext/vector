@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { BigNumber } from "ethers";
 
 // TODO: import
 export type CoinTransfers = [

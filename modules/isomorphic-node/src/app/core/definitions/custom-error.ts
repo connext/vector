@@ -1,7 +1,7 @@
 export type ErrorDataType = string | number | Record<string, unknown> | [] | void | boolean | Error;
 
 export abstract class CustomError extends Error {
-  name = '';
+  name = "";
   protected data: ErrorDataType = {};
 
   constructor() {

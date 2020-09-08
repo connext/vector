@@ -1,6 +1,6 @@
-import { CreateChannelInput } from './create-channel/create-channel.in';
-import { CreateChannelInteractor } from './create-channel/create-channel.interactor';
-import { CreateChannelOutput } from './create-channel/create-channel.out';
+import { CreateChannelInput } from "./create-channel/create-channel.in";
+import { CreateChannelInteractor } from "./create-channel/create-channel.interactor";
+import { CreateChannelOutput } from "./create-channel/create-channel.out";
 
 export class App {
   constructor(private createChannelInteractor: CreateChannelInteractor) {}

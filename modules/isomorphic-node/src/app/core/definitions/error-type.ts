@@ -1,6 +1,6 @@
 export enum ErrorType {
-  general = 'general',
-  validation = 'validation',
-  createChannel = 'createChannel',
-  deposit = 'deposit',
+  general = "general",
+  validation = "validation",
+  createChannel = "createChannel",
+  deposit = "deposit",
 }
