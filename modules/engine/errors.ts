@@ -30,12 +30,14 @@ export class ChannelUpdateError extends VectorError {
   // This is the message that will be thrown by the error
   // and all other details will be logged
   static readonly reasons = {
-    BadSignatures: 'BadSignatures',
-    ChannelNotFound: 'ChannelNotFound', // See note in `processChannel`
-    StaleUpdateNonce: 'StaleUpdateNonce',
-    StaleChannelNonce: 'StaleChannelNonce',
-    MergeUpdateFailed: 'MergeUpdateFailed',
-    SaveChannelFailed: 'SaveChannelFailed',
+    BadSignatures: 'Could not recover signers',
+    ChannelNotFound: 'No channel found in storage', // See note in `processChannel`
+    StaleUpdateNonce: 'Update does not progress state nonce',
+    StaleChannelNonce: 'Stored nonce is stale for requested update',
+    MergeUpdateFailed: 'Failed to merge update',
+    SaveChannelFailed: 'Failed to save channel',
+    StaleChannelNonceNoUpdate: 'Stored nonce is one behind, no latest update from counterparty',
+    MessageFailed: 'Failed to send message'
   } as const;
 
   constructor(

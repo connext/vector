@@ -1,0 +1,24 @@
+{
+  "name": "@connext/vector",
+  "version": "1.0.0",
+  "description": "Vector is an ultra-minimal state channel implementation that borrows ideas from the Counterfactual framework, the v1 Connext Payment Channel Hub, and the StateChannels framework.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "bootstrap": "lerna bootstrap --hoist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/connext/vector.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/connext/vector/issues"
+  },
+  "homepage": "https://github.com/connext/vector#readme",
+  "dependencies": {
+    "lerna": "^3.22.1"
+  }
+}
