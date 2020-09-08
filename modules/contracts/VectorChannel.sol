@@ -2,24 +2,28 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./shared/LibCommitment.sol";
-import "./shared/LibChannelCrypto.sol";
-import "../interfaces/IChannel.sol";
+import "../../shared/libs/LibChannelCrypto.sol";
 
 
-/// @title Channel - A channel multisig
+/// @title Vector Channel
 /// @author Arjun Bhuptani <arjun@connext.network>
 /// @notice
-/// (a) Is "owned" (and deployed?) by an Adjudicator.sol contract
-/// (b) Executes transactions when called by Adjudicator.sol (without requiring any signatures)
+/// (a) A proxy to this contract is deployed per-channel using the ChannelFactory.sol contract
+/// (b) Executes transactions dispute logic on a hardcoded Adjudicator.sol
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
-contract Channel is IChannel, LibCommitment {
+
+
+// TODO how will this connect to the adjudicator? 
+
+contract VectorChannel is IAdjudicator.sol { //TODO write this interface
 
     using LibChannelCrypto for bytes32;
 
     mapping(bytes32 => bool) isExecuted;
 
     address[] private _owners;
+    
+    address private _adjudicatorAddress;
 
     enum Operation {
         Call,
@@ -32,20 +36,35 @@ contract Channel is IChannel, LibCommitment {
         uint256 nonce;
     }
 
+    uint256 private adjudicatorUpdateNonce;
+
     mapping(address => LatestDeposit) public latestDepositByAssetId;
 
     receive() external payable {}
 
     modifier onlyAdjudicator {
-        require(msg.sender == address(0), "not adjudi"); // TODO use adjudicator address
-        _;
+      require(msg.sender == _adjudicatorAddress);
+      _;
     }
 
     /// @notice Contract constructor
     /// @param owners An array of unique addresses representing the multisig owners
-    //TODO should this be onlyAdjudicator?
-    function setup(address[] memory owners) public {
+    /// @param adjudicatorAddress Address of associated Adjudicator that we can call to
+    function setup(address[] memory owners, address memory adjudicatorAddress) public {
         require(_owners.length == 0, "Contract has been set up before");
+        _adjudicatorAddress = adjudicatorAddress
+        _owners = owners;
+    }
+
+    /// @notice Alternative contract constructor that also allows for a deposit -- Perhaps merge into above?
+    /// @param owners An array of unique addresses representing the multisig owners
+    /// @param adjudicatorAddress Address of associated Adjudicator that we can call to
+    /// @param amount Deposit amount for owners[0]
+    /// @param assetId Asset for deposit
+    /// @param signature Signature from owners[0] on deposit params // TODO do we need this?
+    function setupWithDepositA(address[] memory owners, address memory adjudicatorAddress) public {
+        require(_owners.length == 0, "Contract has been set up before");
+        _adjudicatorAddress = adjudicatorAddress
         _owners = owners;
     }
 
@@ -62,10 +81,9 @@ contract Channel is IChannel, LibCommitment {
         // This should validate signature against _owners[0], then save/upsert latestDepositByAssetId
     }
 
-    // TODO gets admin-called by the adjudicator contract in the event of a dispute to push out funds
+    // TODO gets called by the adjudicator contract in the event of a dispute to push out funds
     function adjudicatorTransfer(
-        address[] memory to,
-        uint256[] memory amount,
+        Balances[] balances,
         address assetId
     )
         public
@@ -78,7 +96,22 @@ contract Channel is IChannel, LibCommitment {
         require(amount[0] > 0, "oh boy");
     }
 
-    /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
+    function updateAdjudicator(
+        bytes[] memory signatures,
+        uint256 nonce
+        address newAdjudicator
+    ) public {
+        require(
+            nonce > adjudicatorNonce,
+            "Already upgraded using this nonce"
+        );
+
+        // TODO validate signatures
+
+        _adjudicatorAddress = newAdjudicator;
+    }
+
+  /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
     /// This transaction is a message CALL
     /// @param to The destination address of the message call
     /// @param value The amount of ETH being forwarded in the message call
@@ -136,7 +169,6 @@ contract Channel is IChannel, LibCommitment {
     {
         return keccak256(
             abi.encodePacked(
-                uint8(CommitmentTarget.MULTISIG),
                 address(this),
                 to,
                 value,

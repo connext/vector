@@ -59,5 +59,10 @@ The above flows have a few consequences:
 - Alice's cannot deposit many times concurrently (we can potentially modify the `latestDepositByAssetId` to track historic balances and aggregate them to allow this, however)
 
 ## Commitments
-
 // TODO
+
+Some thoughts on commitments:
+
+One of the biggest headaches in CF is that we use multiple different types of commitments for channel disputes vs app disputes. This creates an attack vector where, in a single roundtrip, one party can choose to sign some of the commitments but not others (this is why we have `propose` and `install` as two separate protocols in CF).
+
+In vector, we want to avoid updates that dont materially update the balance entirely (i.e. we don't want a `propose`). This means that in the ideal case, we only have one type of commitment for the critical dispute path.

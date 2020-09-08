@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.1;
 
-import "../interfaces/IAdjudicator.sol";
-
-
-contract Adjudicator is IAdjudicator {
+// Called directly by a VectorChannel.sol instance
+contract Adjudicator {
 
     enum AppStatus {
         CREATED,
@@ -16,12 +14,29 @@ contract Adjudicator is IAdjudicator {
         address to;
     }
 
-    // TODO, state seems large
+    struct Dispute { // Maybe this should be ChannelDispute?
+        bytes32 channelStateHash;
+        uint256 nonce;
+        bytes32 merkleRoot;
+        uint256 consensusExpiry;
+        uint256 defundExpiry;
+    }
+
+    struct TransferDispute {
+        uint256 transferDisputeExpiry;
+        bytes32 transferStateHash;
+        bool isDefunded;
+    }
+
+    mapping(address => Dispute) channelDispute;
+    mapping(address => TransferDispute) transferDisputes;
+
+    // TODO, state seems large?
     struct CoreChannelState {
         Balance[][] balances; // TODO index by assetId? // initiator, responder
-        uint256[] lockedValue; // Indexed by assetId -- should always be changed in lockstep with transfers
+        uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
         address[] assetIds;
-        bytes32 channelId;
+        bytes32 channelAddress;
         address[] participants; // Signer keys -- does NOT have to be the same as balances.to[]
         uint256 timeout;
         uint256 nonce;
@@ -32,87 +47,129 @@ contract Adjudicator is IAdjudicator {
     struct CoreTransferState {
         Balance[] balances;
         address assetId;
+        bytes32 channelId;
         bytes32 transferId;
         address transferDefinition;
         uint256 transferTimeout;
-        bytes32 appStateHash;
-        AppStatus status; // either of CREATED or RESOLVED
-        // TODO merkleProof
+        bytes32 transferStateHash;
+        bytes[] encodings; // Initial state, resolver state
+        // TODO merkleProofData
     }
 
     function forceChannelConsensus(
         // Params
-        // - CoreChannelState
-        // - signatures[]
-    )
-        public
-        override
-        pure
-    {
-        require(true, "oh boy");
-        // TODO
-        // If the channel is not in the checkpoint OR dispute period,
-            // it should take in latest state and start two timeouts:
-                // The first one, `checkpointComplete` should finalize in X blocks
-                // The second one, `disputeComplete` should finalize in 2X blocks
-        // Else if the channel is in the dispute period, then revert
-        // Else
-            // It should validate that the newly provided state is greater than whatever exists in store
-            // It should validate the signatures/params on the passe din state
-            // It should hash the state and store it to the mapping from channelId to checkpointHash
+        // - CoreChannelState state
+        // - bytes[] signatures
+    ) public {
+        // Dispute memory lastDispute = channelDispute(state.channelAddress)
+        // require(!inDefundPhase(lastDispute))
+        // if (!inConsenusPhase(lastDispute)) { -- this means that there is no dispute ongoing
+        //      require(state.nonce >= lastDispute.nonce) -- >= because we want to allow for redisputing
+        //      validateSignatures(signatures, participants, state);
+        //      
+        //      Dispute dispute = {
+        //          channelStateHash: hash(state),
+        //          nonce: state.nonce,
+        //          merkleRoot: state.merkleRoot,
+        //          consensusExpiry: block.number.add(state.timeout)
+        //          defundExpiry: block.number.add(state.timeout.mul(2))
+        //      };
+
+        //      channelDispute(state.channelAddress) = dispute;
+        // } else if (inConsensusPhase(lastDispute)) {
+        //      require(state.nonce > lastDispute.nonce)
+        //      validateSignatures(signatures, participants, state);
+        //      
+        //      Dispute dispute = {
+        //          channelStateHash: hash(state),
+        //          nonce: state.nonce,
+        //          merkleRoot: state.merkleRoot,
+        //          consensusExpiry: lastDispute.consensusExpiry
+        //          defundExpiry: lastDispute.defundExpiry
+        //      };
+        // } else {
+        //      //something has gone terribly wrong
+        //      revert()
+        // }
     }
 
-    function emptyChannel(
+    function defundChannel(
         // Params
-        // - CoreChannelState
-        // - assetIds[]?
-    )
-        public
-        override
-        pure
-    {
-        require(true, "oh boy");
-        // TODO should the dispute case be broken out into another function?
-            // 1. Check passed in state state against latest checkpointed state -- should revert if post-checkpoint dispute timeout has expired or if channel is not in checkpoint period
-            // 2. For each assetId passed in, do the below
-            // 2. Check state.latestDepositA nonce  to see if it is less than the onchain deposit A nonce for that assetId
-                // a. If so, set the node balance as equal to (state.balA + onchain deposit A balance) -- node do not include state.lockedBal
-                //    and set user balance as equal to (onchain balance for that assetId - (state.balA + onchain deposit A balance))
-                // b. Else, set the node balance as equal to state.balA and set user balance as equal to (onchain balance for that assetId - state.balA)
-        // Then, for each assetId, call the Multisig.sol using channelId, passing in correct balances
+        // - CoreChannelState state
+        // - address[] assetIds
+    ) public {
+        // Dispute memory dispute = channelDispute(state.channelAddress)
+        // require(inDefundPhase(dispute))
+        // require(hash(state) == dispute.channelStateHash)
+
+        // for(int i = 0, i < assetIds.length(), i++) {
+        //      VectorChannel channel = VectorChannel(state.channelAddress)
+        //      LatestDeposit latestDeposit = channel.latestDepositA(assetIds[i])
+        //
+        //      Balance memory aBalance, bBalance; //Bad syntax here, I know
+        //      aBalance.to = state.balA.to
+        //      bBalance.to = state.balB.to
+
+        //      if(latestDeposit.nonce < state.latestDepositNonce) {
+        //          aBalance.amount = state.balA.add(latestDeposit.amount)
+        //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i]))) //TODO can we assume that assetIds[i] == lockedBalance[i]? probably not
+        //      } else if (latestDeposit.nonce == state.latestDepositNonce) {
+        //          aBalance.amount = state.balA;
+        //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
+        //      }
+        //      
+        //      channel.adjudicatorTransfer([aBalance, bBalance], assetIds[i]);
+        //  }
+    }
+
+    function forceTransferConsensus(
+        // Params
+        // - CoreTransferState state
+    ) public {
+        // Dispute memory dispute = channelDispute(state.channelAddress)
+        // require(inDefundPhase(dispute))
+        // require(doMerkleProof(hash(state), dispute.merkleRoot, state.merkleProofData))
+        // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
+        // require(!inTransferDispute(transferDispute) && !afterTransferDispute(transferDispute))
+        // require(!transferDispute.isDefunded)
+
+        // TransferDispute transferDispute = {
+        //      transferDisputeExpiry: block.number.add(state.timeout)
+        //      transferStateHash: hash(state)
+        //      isDefunded: false
+        // }
+        //  transferDisputes(state.transferId) = transferDispute
     }
 
     function emptyTransfer(
         // Params
-        // - CoreTransferState
-        // - signatures[]
-    )
-        public
-        override
-        pure
-    {
-        require(true, "oh boy");
-        // TODO
+        // - CoreTransferState state
+        // - bytes memory signature
+        // - bytes calldata encodedInitialTransferState
+        // - bytes calldata encodedTransferResolver
+    ) public {
+        // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
+        // require(hash(state) == transferDispute.transferStateHash)
+        // require(inTransferDispute(transferDispute) || afterTransferDispute(transferDispute))
 
-        // It should check that the channel is the dispute period
-        // It should check that the transferId hash is part of the merkle root of the checkpointed state
-        // It should check whether the transfer is in the CREATED or RESOLVED state
-        // If it is in the CREATED state, a timeout should be started within which the recipient may call the below `resolveTransfer()` function
-            // TODO This function should also check the store of this contract to see if a `resolved` balances is available for this transferId set by `setTransferResolution`
-        // Else if it is in the RESOLVED state, the finalized balance of the transfer should be immediately forwarded to the `Multisig.sol` to `adjudicatorTransfer()
-    }
+        // uint256[] finalBalances;
 
-    function setTransferResolution(
-        // Params
-        // - CoreTransferState
-        // - signatures[]
-        // - TransferResolver
-    )
-        public
-        override
-        pure
-    {
-        require(true, "oh boy");
-        // It should call the transfer definition contract using the initial state + transfer update and then set that in a `resolution` mapping to be read by `emptyTransfer()`
+        // if(afterTransferDispute(transferDispute)) { -- empty it with created state
+        //      finalBalances = state.balances
+        // } else // inTransferDispute(transferDispute) {
+        //      TransferState memory initialTransferState = abi.decode(encodedInitialTransferState, state.encodings[0])
+        //
+        //      require(hash(initialTransferState) == state.initialStateHash)
+        //      TransferInterface transferInterface = TransferInterface(state.transferDefinition)
+        //      
+        //      encodedResolvedBalances = transferInterface.resolve(encodedInitialTransferState, encodedTransferResolver)
+        //      finalBalances = abi.decode(encodedResolvedBalances, Balances)
+        // }
+        // 
+        // transferDispute.isDefunded = true;
+        // transferDisputes(state.transferId) = transferDispute
+
+        // VectorChannel channel = VectorChannel(state.channelAddress)
+        // channel.adjudicatorTransfer(finalBalances, state.assetId)
     }
 }
