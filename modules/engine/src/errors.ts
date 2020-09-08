@@ -5,8 +5,8 @@ import { logger } from "./utils";
 export abstract class VectorError extends Error {
   // These will define the subclasses of errors.
   static readonly errors = {
-    ChannelUpdateError: 'ChannelUpdateError',
-    DepositError: 'DepositError',
+    ChannelUpdateError: "ChannelUpdateError",
+    DepositError: "DepositError",
     // etc.
   } as const;
 
@@ -30,14 +30,14 @@ export class ChannelUpdateError extends VectorError {
   // This is the message that will be thrown by the error
   // and all other details will be logged
   static readonly reasons = {
-    BadSignatures: 'Could not recover signers',
-    ChannelNotFound: 'No channel found in storage', // See note in `processChannel`
-    StaleUpdateNonce: 'Update does not progress state nonce',
-    StaleChannelNonce: 'Stored nonce is stale for requested update',
-    MergeUpdateFailed: 'Failed to merge update',
-    SaveChannelFailed: 'Failed to save channel',
-    StaleChannelNonceNoUpdate: 'Stored nonce is one behind, no latest update from counterparty',
-    MessageFailed: 'Failed to send message'
+    BadSignatures: "Could not recover signers",
+    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
+    StaleUpdateNonce: "Update does not progress state nonce",
+    StaleChannelNonce: "Stored nonce is stale for requested update",
+    MergeUpdateFailed: "Failed to merge update",
+    SaveChannelFailed: "Failed to save channel",
+    StaleChannelNonceNoUpdate: "Stored nonce is one behind, no latest update from counterparty",
+    MessageFailed: "Failed to send message",
   } as const;
 
   constructor(

@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-set -e
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-eslint="$root/node_modules/.bin/eslint"
+eslint="$root/node_modules/.bin/eslint -c $root/.eslintrc.js"
 
 for package in `ls modules`
 do
   echo "Linting ${package}"
   cd "${root}/modules/${package}"
-  $eslint src/**/*.ts
+  eval "$eslint src/**/* $@"
   cd "${root}"
 done
+
+if [[ -z "$@" ]]
+then echo "Protip: run 'bash ops/lint.sh --fix' to auto-fix simple formatting inconsistencies"
+fi

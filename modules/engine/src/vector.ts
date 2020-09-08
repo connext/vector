@@ -12,7 +12,7 @@ export class Vector {
     private messagingService,
     private lockService,
     private storeService,
-    private signer
+    private signer,
   ) {
     this.messagingService = messagingService;
     this.storeService = storeService;
@@ -30,7 +30,7 @@ export class Vector {
       messagingService,
       lockService,
       storeService,
-      signer
+      signer,
     );
 
     // Handles up asynchronous services and checks to see that
@@ -73,7 +73,7 @@ export class Vector {
 
     // sync latest state before starting
     const channelState = this.storeService.getChannelState();
-    await sync.outbound(channelState.latestUpdate, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt)
+    await sync.outbound(channelState.latestUpdate, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
     return this;
   }
 
@@ -88,10 +88,10 @@ export class Vector {
     const updateParams = {
       channelId: params.channelId,
       type: UpdateType.deposit,
-      details: params
-    } as UpdateParams
+      details: params,
+    } as UpdateParams;
 
-    return this.executeUpdate(updateParams)
+    return this.executeUpdate(updateParams);
   }
 
   public async createTransfer(params: CreateTransferParams) {
@@ -99,10 +99,10 @@ export class Vector {
     const updateParams = {
       channelId: params.channelId,
       type: UpdateType.create,
-      details: params
-    } as UpdateParams
+      details: params,
+    } as UpdateParams;
 
-    return this.executeUpdate(updateParams)
+    return this.executeUpdate(updateParams);
   }
 
   public async resolveTransfer(params: ResolveTransferParams) {
@@ -110,9 +110,9 @@ export class Vector {
     const updateParams = {
       channelId: params.channelId,
       type: UpdateType.resolve,
-      details: params
-    } as UpdateParams
+      details: params,
+    } as UpdateParams;
 
-    return this.executeUpdate(updateParams)
+    return this.executeUpdate(updateParams);
   }
 }

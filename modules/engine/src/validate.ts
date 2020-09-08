@@ -5,7 +5,7 @@ export function validate(update: ChannelUpdate, state: ChannelState) {
     // Therefore, validate should only be called when this is a *new update* that needs to be acked
 
     if (update.nonce !== state.latestNonce + 1) {
-        throw new Error(`Incorrect nonce in validator -- this should never happen!`)
+        throw new Error(`Incorrect nonce in validator -- this should never happen!`);
     }
 
     // First validate update fields to make sure everything is defined and of the right type

@@ -13,5 +13,6 @@ module.exports = {
     "comma-dangle": ["warn", "always-multiline"],
     "quotes": ["warn", "double", { "allowTemplateLiterals": true, "avoidEscape": true }],
     "semi": ["error", "always"],
+    "@typescript-eslint/no-explicit-any": ["off"],
   },
 };

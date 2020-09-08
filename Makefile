@@ -79,6 +79,9 @@ dls:
 	@echo "====="
 	@docker container ls -a
 
+lint:
+	bash ops/lint.sh
+
 ########################################
 # Test Commands
 
@@ -109,12 +112,22 @@ node-modules: builder package.json $(shell ls modules/*/package.json)
 # Build Core JS libs & bundles
 # Keep prerequisites synced w the @connext/* dependencies of each module's package.json
 
-contracts: node-modules $(shell find modules/contracts $(find_options))
+utils: node-modules $(shell find modules/utils $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/utils && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+contracts: utils $(shell find modules/contracts $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-isomorphic-node: node-modules $(shell find modules/isomorphic-node $(find_options))
+engine: contracts $(shell find modules/engine $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/engine && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+isomorphic-node: contracts engine $(shell find modules/isomorphic-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/isomorphic-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@

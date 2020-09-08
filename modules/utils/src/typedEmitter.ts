@@ -1,10 +1,10 @@
-import { IBasicEventEmitter, EventName, EventPayload } from "@connext/types";
+import { EventName, EventPayload } from "@connext/types";
 import { Evt, to, Ctx } from "evt";
 
 // Disable max handlers warnings
 Evt.setDefaultMaxHandlers(0);
 
-export class TypedEmitter implements IBasicEventEmitter {
+export class TypedEmitter {
   private evt: Evt<[EventName, EventPayload[EventName]]>;
   constructor() {
     this.evt = Evt.create<[EventName, EventPayload[EventName]]>();

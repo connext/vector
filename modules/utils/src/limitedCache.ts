@@ -11,7 +11,7 @@ interface Node {
 export class LimitedCache {
   public readonly maxLength: number;
 
-  private length: number = 0;
+  private length = 0;
 
   private head: Node | null = null;
 

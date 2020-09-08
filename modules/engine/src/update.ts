@@ -5,7 +5,7 @@ export async function generateUpdate(params: UpdateParams, storeService): Promis
 
     switch (params.type) {
         case UpdateType.setup: { //TODO, do we actually need setup?
-            return generateSetupUpdate()
+          return generateSetupUpdate(0 as any);
         }
 
         case UpdateType.deposit: {
@@ -28,10 +28,9 @@ export async function generateUpdate(params: UpdateParams, storeService): Promis
 
 async function generateSetupUpdate(state: ChannelState): Promise<ChannelUpdate> {
 
-
     return {
         counterpartyPublicIdentifier: "", //TODO
         nonce: "0",
-        type: 
-    }
+        type: "create",
+    } as any;
 }
