@@ -7,7 +7,7 @@ import { DepositOutput } from "./deposit.out";
 import { DepositValidator } from "./deposit.validator";
 import { DepositInvalidRequest } from "./errors/invalid-request";
 
-export class DepositUsecase implements UseCase<DepositInput, DepositOutput> {
+export class DepositUseCase implements UseCase<DepositInput, DepositOutput> {
   constructor(private depositValidator: DepositValidator, private walletService: IWalletService) {}
 
   async execute(request: DepositInput): Promise<DepositOutput> {

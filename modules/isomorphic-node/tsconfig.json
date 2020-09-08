@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
+    "baseUrl": "./",
+    "incremental": true,
+    "noUnusedLocals": false,
     "outDir": "dist",
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
+    "strict": true,
     "target": "es6",
-    "noImplicitAny": true,
-    "moduleResolution": "node",
-    "sourceMap": true,
-    "strict": true
+    "declarationDir": "dist/",
+    "module": "commonjs",
+    "declaration": true,
+    "esModuleInterop": true
   },
   "include": ["src/*.ts", "src/**/*.ts"],
   "exclude": ["**/*.spec.ts", "test-environment.ts", "test/*.ts"]

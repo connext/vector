@@ -7,7 +7,7 @@ import { mockWalletService } from "../../../../test/mocks/wallet";
 import { ValidatorResult } from "../../definitions/validator-result";
 
 import { DepositInput } from "./deposit.in";
-import { DepositUsecase } from "./deposit.usecase";
+import { DepositUseCase } from "./deposit.usecase";
 import { DepositOutput } from "./deposit.out";
 import { DepositValidator } from "./deposit.validator";
 
@@ -18,7 +18,7 @@ function isDepositOutput(output: DepositOutput): output is DepositOutput {
 describe("deposit interactor", () => {
   const validatorResult: ValidatorResult = { valid: true, error: null };
 
-  let interactor: DepositUsecase;
+  let interactor: DepositUseCase;
   let depositValidator: DepositValidator;
 
   beforeEach(() => {
@@ -28,7 +28,7 @@ describe("deposit interactor", () => {
       }),
     };
 
-    interactor = TestEnvironment.createInstance(DepositUsecase, [
+    interactor = TestEnvironment.createInstance(DepositUseCase, [
       {
         name: "depositValidator",
         useValue: depositValidator,
@@ -37,7 +37,7 @@ describe("deposit interactor", () => {
         name: "walletService",
         useValue: mockWalletService,
       },
-    ]) as DepositUsecase;
+    ]) as DepositUseCase;
   });
 
   describe("execute", () => {

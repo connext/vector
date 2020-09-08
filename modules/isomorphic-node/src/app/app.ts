@@ -1,11 +1,35 @@
 import { CreateChannelInput } from "./core/usecases/create-channel/create-channel.in";
 import { CreateChannelUseCase } from "./core/usecases/create-channel/create-channel.usecase";
 import { CreateChannelOutput } from "./core/usecases/create-channel/create-channel.out";
+import { DepositUseCase } from "./core/usecases/deposit/deposit.usecase";
+import { DepositInput } from "./core/usecases/deposit/deposit.in";
+import { DepositOutput } from "./core/usecases/deposit/deposit.out";
+import { CreateTransferInput } from "./core/usecases/create-transfer/create-transfer.in";
+import { CreateTransferOutput } from "./core/usecases/create-transfer/create-transfer.out";
+import { CreateTransferUseCase } from "./core/usecases/create-transfer/create-transfer.usecase";
+
+export interface IsomorphicNode {
+  createChannel(createChannelInput: CreateChannelInput): Promise<CreateChannelOutput>;
+  deposit(depositInput: DepositInput): Promise<DepositOutput>;
+  createTransfer(createTransferInput: CreateTransferInput): Promise<CreateTransferOutput>;
+}
 
 export class App {
-  constructor(private createChannelInteractor: CreateChannelUseCase) {}
+  constructor(
+    private readonly createChannelUseCase: CreateChannelUseCase,
+    private readonly depositUseCase: DepositUseCase,
+    private readonly createTransferUseCase: CreateTransferUseCase,
+  ) {}
 
   async createChannel(createChannelInput: CreateChannelInput): Promise<CreateChannelOutput> {
-    return await this.createChannelInteractor.execute(createChannelInput);
+    return await this.createChannelUseCase.execute(createChannelInput);
+  }
+
+  async deposit(depositInput: DepositInput): Promise<DepositOutput> {
+    return await this.depositUseCase.execute(depositInput);
+  }
+
+  async createTransfer(createTransferInput: CreateTransferInput): Promise<CreateTransferOutput> {
+    return await this.createTransferUseCase.execute(createTransferInput);
   }
 }

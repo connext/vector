@@ -2,10 +2,11 @@
   "name": "@connext/isomorphic-node",
   "version": "0.0.1",
   "description": "Typescript + Clean architecture used as scaffolding",
-  "main": "app.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "npm run compile:ts",
-    "compile:ts": "rm -rf build/ && tsc -p .",
+    "compile:ts": "rm -rf dist/ && tsc -p .",
     "lint": "eslint src --ext ts",
     "lint:fix": "eslint src --ext ts --fix",
     "start:api": "npm run compile:ts && node build/frameworks/api/index.js",
