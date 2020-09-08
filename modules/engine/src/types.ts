@@ -1,8 +1,5 @@
 import { InboundChannelError } from "./utils";
 
-// TODO: replace below w real types
-export type TransferState = any;
-export type TransferUpdate = any;
 export type MultisigCommitment = any;
 
 // Method params
