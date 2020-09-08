@@ -32,7 +32,7 @@ contract Multisig is LibCommitment {
     modifier onlyAdjudicator {
       require(msg.sender == /*TODO get adjudicator address here */);
       _;
-   }
+    }
 
     /// @notice Contract constructor
     /// @param owners An array of unique addresses representing the multisig owners
