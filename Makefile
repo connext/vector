@@ -112,12 +112,7 @@ node-modules: builder package.json $(shell ls modules/*/package.json)
 # Build Core JS libs & bundles
 # Keep prerequisites synced w the @connext/* dependencies of each module's package.json
 
-utils: node-modules $(shell find modules/utils $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/utils && npm run build"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-contracts: utils $(shell find modules/contracts $(find_options))
+contracts: $(shell find modules/contracts $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
@@ -127,9 +122,14 @@ engine: contracts $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-isomorphic-node: contracts engine $(shell find modules/isomorphic-node $(find_options))
+isomorphic-node-bundle: node-modules $(shell find modules/isomorphic-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/isomorphic-node && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+node-bundle: isomorphic-node-bundle $(shell find modules/rest-api-node $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/rest-api-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
@@ -147,9 +147,9 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node: isomorphic-node $(shell find modules/isomorphic-node/ops $(find_options))
+node: node-bundle $(shell find modules/rest-api-node/ops $(find_options))
 	$(log_start)
-	docker build --file modules/isomorphic-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/isomorphic-node
+	docker build --file modules/rest-api-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/rest-api-node
 	docker tag $(project)_node $(project)_node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 

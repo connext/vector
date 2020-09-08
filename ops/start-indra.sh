@@ -115,12 +115,13 @@ node_port="8888"
 
 if [[ $INDRA_ENV == "prod" ]]
 then
-  node_image_name="${project}_node:$version"
+  node_image_name="${project}_rest-api-node:$version"
   pull_if_unavailable "$node_image_name"
   node_image="image: '$node_image_name'"
 else
+  echo "Running dev mode"
   node_image="image: '${project}_builder'
-    entrypoint: 'bash modules/isomorphic-node/ops/entry.sh'
+    entrypoint: 'bash modules/rest-api-node/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
@@ -239,6 +240,8 @@ services:
   node:
     $common
     $node_image
+    ports:
+      '$node_port:$node_port'
     environment:
       INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
       INDRA_CHAIN_PROVIDERS: '$INDRA_CHAIN_PROVIDERS'

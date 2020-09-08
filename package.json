@@ -1,8 +1,8 @@
 {
   "name": "vector",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Vector is an ultra-minimal state channel implementation that borrows ideas from the Counterfactual framework, the v1 Connext Payment Channel Hub, and the StateChannels framework.",
-  "main": "index.js",
+  "registry": "docker.io/connextproject",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "bootstrap": "lerna bootstrap --hoist"

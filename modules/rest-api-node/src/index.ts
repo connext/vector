@@ -1,9 +1,11 @@
 import fastify from "fastify";
-import { createNode } from "@connext/isomorphic-node";
-import { IsomorphicNode } from "@connext/isomorphic-node/dist/app/app"; // TODO: fix import
-import { CreateChannelInput } from "@connext/isomorphic-node/dist/app/core/usecases/create-channel/create-channel.in";
-import { DepositInput } from "@connext/isomorphic-node/dist/app/core/usecases/deposit/deposit.in";
-import { CreateTransferInput } from "@connext/isomorphic-node/dist/app/core/usecases/create-transfer/create-transfer.in";
+import {
+  createNode,
+  IsomorphicNode,
+  CreateChannelInput,
+  DepositInput,
+  CreateTransferInput,
+} from "@connext/isomorphic-node";
 import { BigNumber } from "ethers";
 
 import { GenericErrorResponse } from "./helpers/types";
