@@ -16,6 +16,7 @@ contract Adjudicator {
         bytes32 merkleRoot;
         uint256 consensusExpiry;
         uint256 defundExpiry;
+        iterable_mapping(address => bool) assetDefunded;
     }
 
     struct TransferDispute {
@@ -31,6 +32,9 @@ contract Adjudicator {
         Balance[] balances; // TODO index by assetId? // initiator, responder
         uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
         address[] assetIds;
+        // TODO: The channelAddress needs to be derived from the participants (and chainId, channel nonce, etc.); otherwise Alice and Bob can control someone else's channel...
+        // Maybe we should really put the adjudication logic into the VectorChannel; then we don't need to compute the address onchain and, in general, don't need to
+        // worry aboout the adjudicator releasing the wrong (i.e. someone else's) funds.?
         bytes32 channelAddress;
         address[] participants; // Signer keys -- does NOT have to be the same as balances.to[]
         uint256 timeout;
@@ -56,34 +60,23 @@ contract Adjudicator {
         // - bytes[] signatures
     ) public {
         // Dispute memory lastDispute = channelDispute(state.channelAddress)
+        // validateSignatures(signatures, participants, state);
         // require(!inDefundPhase(lastDispute))
-        // if (!inConsenusPhase(lastDispute)) { -- this means that there is no dispute ongoing
-        //      require(state.nonce >= lastDispute.nonce) -- >= because we want to allow for redisputing
-        //      validateSignatures(signatures, participants, state);
-        //      
-        //      Dispute dispute = {
-        //          channelStateHash: hash(state),
-        //          nonce: state.nonce,
-        //          merkleRoot: state.merkleRoot,
-        //          consensusExpiry: block.number.add(state.timeout)
-        //          defundExpiry: block.number.add(state.timeout.mul(2))
+        // require(state.nonce >= lastDispute.nonce)
+        // if (state.nonce == lastDispute.nonce) {
+        //     require(!inConsensusPhase(lastDispute))
+        //     channelDispute(state.channelAddress).consensusExpiry = block.number.add(state.timeout)
+        //     channelDispute(state.channelAddress).defundExpiry    = block.number.add(state.timeout.mul(2))
+        // } else { -- state.nonce > lastDispute.nonce
+        //     Dispute dispute = {
+        //         channelStateHash: hash(state),
+        //         nonce: state.nonce,
+        //         merkleRoot: state.merkleRoot,
+        //         consensusExpiry: block.number.add(state.timeout)
+        //         defundExpiry: block.number.add(state.timeout.mul(2))
+        //         assetDefunded: empty mapping
         //      };
-
         //      channelDispute(state.channelAddress) = dispute;
-        // } else if (inConsensusPhase(lastDispute)) {
-        //      require(state.nonce > lastDispute.nonce)
-        //      validateSignatures(signatures, participants, state);
-        //      
-        //      Dispute dispute = {
-        //          channelStateHash: hash(state),
-        //          nonce: state.nonce,
-        //          merkleRoot: state.merkleRoot,
-        //          consensusExpiry: lastDispute.consensusExpiry
-        //          defundExpiry: lastDispute.defundExpiry
-        //      };
-        // } else {
-        //      //something has gone terribly wrong
-        //      revert()
         // }
     }
 
@@ -97,6 +90,9 @@ contract Adjudicator {
         // require(hash(state) == dispute.channelStateHash)
 
         // for(int i = 0, i < assetIds.length(), i++) {
+        //      require(!dispute.assetDefunded[assetIds[i]])
+        //      dispute.assetDefunded[assetIds[i]] = true
+
         //      VectorChannel channel = VectorChannel(state.channelAddress)
         //      LatestDeposit latestDeposit = channel.latestDepositA(assetIds[i])
         //
