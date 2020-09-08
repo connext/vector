@@ -26,13 +26,11 @@ exec docker run \
     
     cd modules/$unit
 
-    export PATH=./node_modules/.bin:$PATH
-
     function finish {
       echo && echo 'Test-$unit container exiting..' && exit
     }
     trap finish SIGTERM SIGINT
 
     echo 'Launching $unit tests!';echo
-    npm run test $args
+    bash ops/test.sh $args
   "

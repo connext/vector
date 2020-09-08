@@ -2,11 +2,12 @@
 pragma solidity ^0.7.1;
 
 import "./Proxy.sol";
+import "./interfaces/IChannelFactory.sol";
 
 
 /// @title Channel Factory - Allows to create new proxy contact and execute a message call to the new proxy within one transaction.
 /// @author Stefan George - <stefan@gnosis.pm>
-contract ChannelFactory {
+contract ChannelFactory is IChannelFactory {
 
     event ProxyCreation(Proxy proxy);
 
@@ -16,12 +17,14 @@ contract ChannelFactory {
     /// @param _mastercopy Address of master copy.
     /// @param initializer Payload for message call sent to new proxy contract.
     /// @param saltNonce Nonce that will be used to generate the salt to calculate the address of the new proxy contract.
-    function calculateCreateProxyWithNonceAddress(
+    function
+    calculateCreateProxyWithNonceAddress(
         address _mastercopy,
         bytes calldata initializer,
         uint256 saltNonce
     )
         external
+        override
         returns (Proxy proxy)
     {
         proxy = deployProxyWithNonce(_mastercopy, initializer, saltNonce);
@@ -46,12 +49,12 @@ contract ChannelFactory {
     }
 
     /// @dev Allows to retrieve the runtime code of a deployed Proxy. This can be used to check that the expected Proxy was deployed.
-    function proxyRuntimeCode() public pure returns (bytes memory) {
+    function proxyRuntimeCode() public override pure returns (bytes memory) {
         return type(Proxy).runtimeCode;
     }
 
     /// @dev Allows to retrieve the creation code used for the Proxy deployment. With this it is easily possible to calculate predicted address.
-    function proxyCreationCode() public pure returns (bytes memory) {
+    function proxyCreationCode() public override pure returns (bytes memory) {
         return type(Proxy).creationCode;
     }
 
@@ -65,6 +68,7 @@ contract ChannelFactory {
         uint256 saltNonce
     )
         public
+        override
         returns (Proxy proxy)
     {
         proxy = deployProxyWithNonce(_mastercopy, initializer, saltNonce);

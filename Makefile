@@ -88,6 +88,9 @@ lint:
 test-contracts: contracts
 	bash ops/test/unit.sh contracts
 
+watch-contracts: contracts
+	bash ops/test/unit.sh contracts --watch
+
 ########################################
 # Begin Real Build Rules
 
