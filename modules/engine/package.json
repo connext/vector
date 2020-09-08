@@ -15,7 +15,7 @@
   "author": "Arjun Bhuptani",
   "license": "MIT",
   "dependencies": {
-    "@connext/utils": "7.3.14",
+    "@connext/utils": "7.3.15",
     "ethers": "5.0.12",
     "evt": "1.8.9",
     "mocha": "8.1.3",

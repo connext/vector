@@ -33,7 +33,6 @@
     "transpile": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@connext/vector-utils": "1.0.0",
     "@nomiclabs/buidler": "1.4.5",
     "@openzeppelin/contracts": "3.1.0",
     "ethers": "5.0.12",
