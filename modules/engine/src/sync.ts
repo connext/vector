@@ -1,5 +1,5 @@
-import {BigNumber} from "ethers";
-import {Evt} from "evt";
+import { BigNumber } from "ethers";
+import { Evt } from "evt";
 
 import { ChannelUpdateError } from "./errors";
 import { ChannelUpdate, MultisigCommitment, ChannelState, IStoreService, IMessagingService, VectorMessage, VectorChannelMessage, VectorErrorMessage, UpdateType } from "./types";

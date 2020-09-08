@@ -1,10 +1,11 @@
 import { ApplicationErrorFactory } from "../core/definitions/application-error-factory";
+import { ErrorType } from "../core/definitions/error-type";
 import { Interactor } from "../core/definitions/interactor";
+import { IWalletService } from "../core/definitions/wallet.service";
+
 import { DepositInput } from "./deposit.in";
 import { DepositOutput } from "./deposit.out";
 import { DepositValidator } from "./deposit.validator";
-import { ErrorType } from "../core/definitions/error-type";
-import { IWalletService } from "../core/definitions/wallet.service";
 
 export class DepositInteractor implements Interactor {
   constructor(

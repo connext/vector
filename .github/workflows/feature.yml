@@ -18,4 +18,4 @@ jobs:
       - run: make test
       - name: Print logs
         if: failure()
-        run: docker service logs --tail 200 sc-indra_node && docker service logs --tail 200 sc-indra_proxy
+        run: docker service logs --tail 200 vector_node && docker service logs --tail 200 vector_proxy

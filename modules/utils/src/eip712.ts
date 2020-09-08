@@ -1,4 +1,3 @@
-import { utils } from "ethers";
 import {
   EIP712Domain,
   PrivateKey,
@@ -7,8 +6,10 @@ import {
   DOMAIN_SALT,
   DOMAIN_VERSION,
 } from "@connext/types";
-import { hexlify } from "ethers/lib/utils";
 import { sign } from "eccrypto-js";
+import { utils } from "ethers";
+import { hexlify } from "ethers/lib/utils";
+
 import { bufferify } from "./crypto";
 
 const { keccak256, toUtf8Bytes, defaultAbiCoder, solidityKeccak256 } = utils;

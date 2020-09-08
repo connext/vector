@@ -7,7 +7,7 @@ import {
 import { recoverAddressFromChannelMessage } from "@connext/utils";
 import { utils } from "ethers";
 
-import * as Channel from "../artifacts/Channel.json";
+import * as Channel from "../../artifacts/Channel.json";
 
 const { Interface, keccak256, solidityKeccak256, solidityPack } = utils;
 

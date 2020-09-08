@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { asClass, asValue, AwilixContainer, createContainer, InjectionMode } from 'awilix';
+import { asClass, asValue, createContainer, InjectionMode } from "awilix";
 
 interface Constructor<T> {
   new (...args: any[]): T;
@@ -12,7 +11,7 @@ interface Dependency {
   useValue?: any;
 }
 
-let container: AwilixContainer;
+let container: any; // AwilixContainer;
 
 class TestEnvironment {
   static createInstance<T>(constructorFn: Constructor<T>, deps?: Dependency[]): T {

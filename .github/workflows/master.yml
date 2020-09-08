@@ -31,4 +31,4 @@ jobs:
       - run: make test-integration-prod
       - name: Print logs
         if: failure()
-        run: docker service logs --tail 200 indra_node && docker service logs --tail 200 indra_proxy
+        run: docker service logs --tail 200 vector_node && docker service logs --tail 200 vector_proxy

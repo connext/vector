@@ -1,14 +1,15 @@
 import { fake } from "sinon";
 import { constants } from "ethers";
 
-import { DepositInteractor } from "./deposit.interactor";
 import { TestEnvironment } from "../../test-environment";
-import { DepositInput } from "./deposit.in";
-import { DepositOutput } from "./deposit.out";
-import { ValidatorResult } from "../core/definitions/validator-result";
-import { DepositValidator } from "./deposit.validator";
 import { expect } from "../../test/assert";
 import { mockWalletService } from "../../test/mocks/wallet";
+import { ValidatorResult } from "../core/definitions/validator-result";
+
+import { DepositInput } from "./deposit.in";
+import { DepositInteractor } from "./deposit.interactor";
+import { DepositOutput } from "./deposit.out";
+import { DepositValidator } from "./deposit.validator";
 
 function isDepositOutput(output: DepositOutput): output is DepositOutput {
   return (output as DepositOutput) !== undefined;

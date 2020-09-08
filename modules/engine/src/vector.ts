@@ -1,7 +1,19 @@
-import { UpdateParams, DepositParams, UpdateType,  CreateTransferParams, ResolveTransferParams, ChannelState, IMessagingService, IStoreService, ILockService, VectorMessage } from "./types";
+import { Evt } from "evt";
+
 import * as sync from "./sync";
-import {generateUpdate} from "./update";
-import {Evt} from "evt";
+import {
+  ChannelState,
+  CreateTransferParams,
+  DepositParams,
+  ILockService,
+  IMessagingService,
+  IStoreService,
+  ResolveTransferParams,
+  UpdateParams,
+  UpdateType,
+  VectorMessage,
+} from "./types";
+import { generateUpdate } from "./update";
 import { InboundChannelError, logger } from "./utils";
 
 export class Vector {

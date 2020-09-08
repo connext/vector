@@ -1,5 +1,6 @@
 import { BigNumberish, utils } from "ethers";
 import { AppIdentity, CommitmentTarget } from "@connext/types";
+
 import { LimitedCache } from "./limitedCache";
 
 const { solidityPack, keccak256 } = utils;

@@ -1,13 +1,14 @@
 import { fake } from "sinon";
 
-import { CreateChannelInteractor } from "./create-channel.interactor";
 import { TestEnvironment } from "../../test-environment";
-import { CreateChannelInput } from "./create-channel.in";
-import { CreateChannelOutput } from "./create-channel.out";
-import { ValidatorResult } from "../core/definitions/validator-result";
-import { CreateChannelValidator } from "./create-channel.validator";
 import { expect } from "../../test/assert";
 import { mockWalletService } from "../../test/mocks/wallet";
+import { ValidatorResult } from "../core/definitions/validator-result";
+
+import { CreateChannelInteractor } from "./create-channel.interactor";
+import { CreateChannelValidator } from "./create-channel.validator";
+import { CreateChannelOutput } from "./create-channel.out";
+import { CreateChannelInput } from "./create-channel.in";
 
 function isCreateChannelOutput(output: CreateChannelOutput): output is CreateChannelOutput {
   return (output as CreateChannelOutput) !== undefined;

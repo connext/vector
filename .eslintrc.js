@@ -1,8 +1,12 @@
 module.exports = {
   parser: "@typescript-eslint/parser",
+  plugins: ["import"],
   extends: [
     "plugin:@typescript-eslint/recommended",
     "prettier/@typescript-eslint",
+    "plugin:import/errors",
+    "plugin:import/warnings",
+    "plugin:import/typescript"
   ],
   parserOptions: {
     ecmaVersion: 2018,
@@ -14,5 +18,13 @@ module.exports = {
     "quotes": ["warn", "double", { "allowTemplateLiterals": true, "avoidEscape": true }],
     "semi": ["error", "always"],
     "@typescript-eslint/no-explicit-any": ["off"],
+    "import/order": [
+      1,
+      {
+        groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
+        "newlines-between": "always",
+      },
+    ],
+
   },
 };
