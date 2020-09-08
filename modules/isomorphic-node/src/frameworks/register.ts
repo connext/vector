@@ -1,11 +1,11 @@
 import { asClass, asValue, createContainer, InjectionMode } from "awilix";
 import joi from "joi";
 
-import { App } from "../app/app";
-import { CreateChannelUseCase } from "../app/core/usecases/create-channel/create-channel.usecase";
+import { App } from "../core/app";
+import { CreateChannelUseCase } from "../core/usecases/create-channel/create-channel.usecase";
 import { CreateChannelValidatorImpl } from "../data/core/create-channel/create-channel.validator.impl";
-import { DepositUseCase } from "../app/core/usecases/deposit/deposit.usecase";
-import { CreateTransferUseCase } from "../app/core/usecases/create-transfer/create-transfer.usecase";
+import { DepositUseCase } from "../core/usecases/deposit/deposit.usecase";
+import { CreateTransferUseCase } from "../core/usecases/create-transfer/create-transfer.usecase";
 import { mockWalletService } from "../test/mocks/wallet";
 import { MockMessagingService } from "../test/mocks/messaging-service";
 

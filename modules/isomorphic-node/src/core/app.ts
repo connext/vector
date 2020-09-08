@@ -1,12 +1,12 @@
-import { CreateChannelInput } from "./core/usecases/create-channel/create-channel.in";
-import { CreateChannelUseCase } from "./core/usecases/create-channel/create-channel.usecase";
-import { CreateChannelOutput } from "./core/usecases/create-channel/create-channel.out";
-import { DepositUseCase } from "./core/usecases/deposit/deposit.usecase";
-import { DepositInput } from "./core/usecases/deposit/deposit.in";
-import { DepositOutput } from "./core/usecases/deposit/deposit.out";
-import { CreateTransferInput } from "./core/usecases/create-transfer/create-transfer.in";
-import { CreateTransferOutput } from "./core/usecases/create-transfer/create-transfer.out";
-import { CreateTransferUseCase } from "./core/usecases/create-transfer/create-transfer.usecase";
+import { CreateChannelInput } from "./usecases/create-channel/create-channel.in";
+import { CreateChannelUseCase } from "./usecases/create-channel/create-channel.usecase";
+import { CreateChannelOutput } from "./usecases/create-channel/create-channel.out";
+import { DepositUseCase } from "./usecases/deposit/deposit.usecase";
+import { DepositInput } from "./usecases/deposit/deposit.in";
+import { DepositOutput } from "./usecases/deposit/deposit.out";
+import { CreateTransferInput } from "./usecases/create-transfer/create-transfer.in";
+import { CreateTransferOutput } from "./usecases/create-transfer/create-transfer.out";
+import { CreateTransferUseCase } from "./usecases/create-transfer/create-transfer.usecase";
 
 export interface IsomorphicNode {
   createChannel(createChannelInput: CreateChannelInput): Promise<CreateChannelOutput>;

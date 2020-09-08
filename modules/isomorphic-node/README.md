@@ -1,75 +1,28 @@
-# Typescript Clean Architecture
+# Connext Isomorphic Node
 
-## Intro
+Implementation of a Connext node. This package contains a node implementation that is isomorphic, so it can be used in either a browser context or a Node.js process.
 
-Typescript + Clean architecture
+## Architecture
 
-:warning:  This is still (and maybe will always be) under development! Any PR is greatly welcome!
+The architecture of the node is based on the [clean architecture pattern](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html). It draws inspiration from the following sources:
 
-This project tries to follow the rules of [Uncle Bob's Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html).
+- https://github.com/alireza-bonab/clean-todo/tree/39794697ee301639f4ff4b837a674535050fd1ac
+- https://github.com/dannielhugo/typescript-clean-architecture
 
-## Project structure
-```
-.
-├── src
-|   ├── app                   - Enterprise business rules
-|   |   ├── core              - Core business rules
-|   |   |   ├── entities      - Interfaces and classes that defines the app.
-|   |   |   └── definitions   - Interfaces and classes complement the app.
-|   |   └── {feat-name}       - Business features
-|   ├── data                  - Interfaces adapters
-|   └── frameworks            - Frameworks and drivers that exposes the app
-└── build                     - Compiled javascript files
-```
+### File Structure
 
-## Install
+#### `core`
 
-- Clone the project
-- Install dependencies:
-  - Using yarn
-  ```bash
-  $ yarn install
-  ```
+The `core` directory contains all definitions and interfaces related to business logic. An important consideration is it should not contain any implementation details. Everything should be based on interfaces and dependencies should be injected into the class constructors.
 
-  - Using npm
-  ```bash
-  $ npm install
-  ```
+`usecases` are the business logic which drives each of the app's external methods. Everything related to a `usecase` is within the folder, including input/output definitions, error definitions, and test cases.
 
-## Running
+#### `data`
 
-- Running the script
+The `data` directory is where the actual implementations of the interfaces in `core` are.
 
-  This will run a single node script file and will execute pre-defined methods as an example.
+#### `frameworks`
 
-    - Using yarn
-    ```bash
-    $ yarn start:script
-    ```
-    - Using npm
-    ```bash
-    $ npm run start:script
-    ```
+The `frameworks` directory contains the specific dependency injection pattern which registers the dependencies and resolves the main `app`.
 
-- Running the Rest Server
-
-  This will start an express rest server at localhost:3000. You can use [this example](src/frameworks/api/Example.md) to consume endpoints.
-
-    - Using yarn
-    ```bash
-    $ yarn start:api
-    ```
-    - Using npm
-    ```bash
-    $ npm run start:api
-    ```
-
-## Executing tests
-  - Using yarn
-  ```bash
-  $ yarn test
-  ```
-  - Using npm
-  ```bash
-  $ npm test
-  ```
+### Error Handling

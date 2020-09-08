@@ -1,8 +1,8 @@
 import Joi from "joi";
 
-import { ValidatorResult } from "../../../app/core/definitions/validator-result";
-import { CreateChannelInput } from "../../../app/core/usecases/create-channel/create-channel.in";
-import { CreateChannelValidator } from "../../../app/core/usecases/create-channel/create-channel.validator";
+import { ValidatorResult } from "../../../core/definitions/validator-result";
+import { CreateChannelInput } from "../../../core/usecases/create-channel/create-channel.in";
+import { CreateChannelValidator } from "../../../core/usecases/create-channel/create-channel.validator";
 
 export class CreateChannelValidatorImpl implements CreateChannelValidator {
   private joi: typeof Joi;

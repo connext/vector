@@ -1,6 +1,6 @@
 import { fake } from "sinon";
 
-import { IWalletService } from "../../app/core/shared/wallet/wallet.service";
+import { IWalletService } from "../../core/shared/wallet/wallet.service";
 
 export const mockWalletService: IWalletService = {
   getPublicIdentifier: fake(() => {

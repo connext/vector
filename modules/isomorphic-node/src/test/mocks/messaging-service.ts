@@ -1,4 +1,4 @@
-import { IMessagingService } from "../../app/core/shared/messaging/messaging.service";
+import { IMessagingService } from "../../core/shared/messaging/messaging.service";
 
 export class MockMessagingService implements IMessagingService {
   connect(natsUrl: string): Promise<void> {
