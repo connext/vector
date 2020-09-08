@@ -1,0 +1,21 @@
+{
+  "name": "@connext/rest-api-node",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "14.6.4",
+    "typescript": "4.0.2"
+  },
+  "dependencies": {
+    "@connext/isomorphic-node": "0.0.1",
+    "ethers": "5.0.12",
+    "fastify": "3.3.0"
+  }
+}

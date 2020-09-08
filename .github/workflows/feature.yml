@@ -1,0 +1,17 @@
+name: Feature Branch
+
+on:
+  push:
+    branches-ignore:
+      - master
+      - staging
+
+jobs:
+
+  test-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make
+      - run: make all
+      - run: make test-contracts

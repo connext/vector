@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.4;
+pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "../../shared/libs/LibChannelCrypto.sol";
@@ -25,6 +25,12 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
     
     address private _adjudicatorAddress;
 
+    enum Operation {
+        Call,
+        DelegateCall
+    }
+
+
     struct LatestDeposit {
         uint256 amount;
         uint256 nonce;
@@ -34,7 +40,7 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
 
     mapping(address => LatestDeposit) public latestDepositByAssetId;
 
-    receive() external payable { }
+    receive() external payable {}
 
     modifier onlyAdjudicator {
       require(msg.sender == _adjudicatorAddress);
@@ -67,7 +73,9 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
         address assetId,
         bytes memory signature
     )
-        public payable
+        public
+        payable
+        override
     {
         // TODO
         // This should validate signature against _owners[0], then save/upsert latestDepositByAssetId
@@ -77,8 +85,15 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
     function adjudicatorTransfer(
         Balances[] balances,
         address assetId
-    ) public onlyAdjudicator {
-
+    )
+        public
+        override
+        onlyAdjudicator
+        view
+    {
+        // TODO: replace w real logic
+        require(to[0] == assetId, "oh boy");
+        require(amount[0] > 0, "oh boy");
     }
 
     function updateAdjudicator(
@@ -109,11 +124,13 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
         bytes[] memory signatures
     )
         public
+        override
     {
         bytes32 transactionHash = getTransactionHash(
             to,
             value,
             data,
+            Operation.Call // or delegatecall?
         );
         require(
             !isExecuted[transactionHash],
@@ -132,7 +149,7 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
         execute(
             to,
             value,
-            data,
+            data
         );
     }
 

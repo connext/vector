@@ -1,0 +1,11 @@
+{
+  "test": {
+    "driver": "pg",
+    "database": "indra"
+  },
+
+  "dev": {
+    "driver": "pg",
+    "database": "indra"
+  }
+}

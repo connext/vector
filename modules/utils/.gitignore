@@ -1,7 +1,0 @@
-*.sw[op]
-.DS_Store
-.env
-.rpt2_cache
-dist
-node_modules
-types
