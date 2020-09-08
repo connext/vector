@@ -8,14 +8,10 @@ on:
 
 jobs:
 
-  test:
+  test-contracts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make indra
-      - run: make start
-      - run: make dls
-      - run: make test
-      - name: Print logs
-        if: failure()
-        run: docker service logs --tail 200 vector_node && docker service logs --tail 200 vector_proxy
+      - run: make
+      - run: make all
+      - run: make test-contracts

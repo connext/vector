@@ -6,6 +6,12 @@ export const mockWalletService: IWalletService = {
   getPublicIdentifier: fake(() => {
     return;
   }),
+  getSignerAddress: fake(() => {
+    return;
+  }),
+  getChannel: fake(() => {
+    return;
+  }),
   setup: fake(() => {
     return;
   }),

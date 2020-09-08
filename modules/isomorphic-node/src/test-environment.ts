@@ -28,11 +28,11 @@ class TestEnvironment {
         }
       });
     }
-    return container.resolve<T>(constructorFn.name);
+    return container.resolve(constructorFn.name);
   }
 
   static get<T>(name: string): T {
-    return container.resolve<T>(name);
+    return container.resolve(name);
   }
 }
 
