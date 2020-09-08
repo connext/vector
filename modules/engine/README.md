@@ -23,7 +23,7 @@ For this reason, `sync` takes a higher degree of control over message delivery t
 ## Update Types
 All channel updates fall into one of 4 types. Each update type is responsible for generating and storing one or two [double-signed commitments](https://github.com/connext/vector/blob/master/modules/contracts/README.md#commitments).
 
-Note that there is no specific update for `Withdraw`. That is because a withdraw op can be constructed in an easy and generalizeable way using `Create` and `Resolve` similar to what we currently do in CF.1`
+Note that there is no specific update for `Withdraw`. That is because a withdraw op can be constructed in an easy and generalizeable way using `Create` and `Resolve` similar to what we currently do in CF.
 
 ### Setup
 Like in CF, creating a new channel simply involves calculating a `channelId` which is the CREATE2 address at which a proxy to the `Multisig.sol` contract will be deployed.
@@ -34,8 +34,6 @@ Setup also performs one more highly critical task -- the channel initiator/respo
 
 ### Deposit
 A deposit update should occur after deposits have been send to chain (either by calling the `depositA` function for the channel initiator, or simply sending funds to the multisig for the channel responder).
-
-// TODO calling `depositA` on Alice's (node) side will only work if the multisig is predeployed - hmm
 
 The deposit update is used to confirm an already-mined deposit tx into the channel `balance`. To do this safely, the following must occur:
 1. The update initiator's balance must be incremented by the deposit amount (calculating new balances for each party using onchain data as described in the [Funding a Channel](https://github.com/connext/vector/blob/master/modules/contracts/README.md#funding-a-channel) writeup). Note that this is per-assetId, so a new assetId may need to be added to the `assetId` array.
@@ -53,14 +51,10 @@ The create update must do the following:
 3. Update the channel nonce by 1.
 4. Create a new `TransferState` with a status of CREATED, passing in the correct params.
 5. Hash the `TransferState` and add it to the merkle root in the new channel state.
-6. Generate a duoblesigned `ChannelCommitment` and `TransferCommitment`.
+6. Generate a duoblesigned `ChannelCommitment`.
 7. Set this update to `state.latestUpdate`.
-
-//TODO How can we generate the above commitments safely? We need to make sure tha the transfer disputability and the reduction in balance are *atomic*. I.e. it should never be possible for a `ChannelCommitment` to be signed without a `TransferCommitment` also being signed.
 
 ### Resolve
 A resolve update should occur when both parties want to resolve a conditional transfer and reintroduce it's balances back to the main channel balance.
 
 Should do the exact oppositve of the `create` update above.
-
-// Still a TODO here to figure out exactly how this should progress since you want to make sure the fund/defund part of transfers is atomic.
