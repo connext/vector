@@ -1,9 +1,19 @@
 import fastify from "fastify";
 import { createNode } from "@connext/isomorphic-node";
+import { IsomorphicNode } from "@connext/isomorphic-node/dist/app/app"; // TODO: fix import
+import { CreateChannelInput } from "@connext/isomorphic-node/dist/app/core/usecases/create-channel/create-channel.in";
+import { DepositInput } from "@connext/isomorphic-node/dist/app/core/usecases/deposit/deposit.in";
+import { CreateTransferInput } from "@connext/isomorphic-node/dist/app/core/usecases/create-transfer/create-transfer.in";
+import { BigNumber } from "ethers";
+
+import { GenericErrorResponse } from "./helpers/types";
+import { Routes } from "./schema";
+
+type StringifyBigNumberAmount<T> = Omit<T, "amount"> & { amount: string };
 
 const server = fastify();
 
-let isoNode;
+let isoNode: IsomorphicNode;
 server.addHook("onReady", async () => {
   isoNode = await createNode();
   const res = await isoNode.createChannel({ chainId: 1, publicIdentifier: "blah" });
@@ -16,6 +26,57 @@ server.addHook("onReady", async () => {
 server.get("/ping", async (request, reply) => {
   return "pong\n";
 });
+
+server.post<{ Body: CreateChannelInput }>(
+  Routes.post.createChannel.route,
+  { schema: Routes.post.createChannel.schema },
+  async (request, reply) => {
+    const res = await isoNode.createChannel({
+      chainId: request.body.chainId,
+      publicIdentifier: request.body.publicIdentifier,
+    });
+    if (res.isError) {
+      return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
+    }
+    return reply.status(200).send(res.getValue());
+  },
+);
+
+server.post<{ Body: StringifyBigNumberAmount<DepositInput> }>(
+  Routes.post.deposit.route,
+  { schema: Routes.post.deposit.schema },
+  async (request, reply) => {
+    const res = await isoNode.deposit({
+      amount: BigNumber.from(request.body.amount),
+      assetId: request.body.assetId,
+      channelId: request.body.channelId,
+    });
+    if (res.isError) {
+      return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
+    }
+    return reply.status(200).send(res.getValue());
+  },
+);
+
+server.post<{ Body: StringifyBigNumberAmount<CreateTransferInput> }>(
+  Routes.post.createTransfer.route,
+  { schema: Routes.post.deposit.schema },
+  async (request, reply) => {
+    const res = await isoNode.createTransfer({
+      amount: BigNumber.from(request.body.amount),
+      assetId: request.body.assetId,
+      channelId: request.body.channelId,
+      paymentId: request.body.paymentId,
+      preImage: request.body.preImage,
+      meta: request.body.meta,
+      recipient: request.body.recipient,
+    });
+    if (res.isError) {
+      return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
+    }
+    return reply.status(200).send(res.getValue());
+  },
+);
 
 server.listen(8080, (err, address) => {
   if (err) {

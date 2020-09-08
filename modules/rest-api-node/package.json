@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@connext/isomorphic-node": "0.0.1",
+    "ethers": "5.0.12",
     "fastify": "3.3.0"
   }
 }
