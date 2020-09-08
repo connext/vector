@@ -19,11 +19,15 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
 
     using LibChannelCrypto for bytes32;
 
+    // TODO: re-introduce masterCopy; be careful with inheritance!
+
+    // TODO: decide which variables should be public
+
     mapping(bytes32 => bool) isExecuted;
 
     address[] private _owners;
     
-    address private _adjudicatorAddress;
+    address public _adjudicatorAddress;
 
     enum Operation {
         Call,
@@ -40,6 +44,7 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
 
     mapping(address => LatestDeposit) public latestDepositByAssetId;
 
+    // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
 
     modifier onlyAdjudicator {
@@ -48,11 +53,11 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
     }
 
     /// @notice Contract constructor
-    /// @param owners An array of unique addresses representing the multisig owners
+    /// @param owners An array of unique addresses representing the participants of the channel
     /// @param adjudicatorAddress Address of associated Adjudicator that we can call to
     function setup(address[] memory owners, address memory adjudicatorAddress) public {
         require(_owners.length == 0, "Contract has been set up before");
-        _adjudicatorAddress = adjudicatorAddress
+        _adjudicatorAddress = adjudicatorAddress;
         _owners = owners;
     }
 
@@ -64,7 +69,7 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
     /// @param signature Signature from owners[0] on deposit params // TODO do we need this?
     function setupWithDepositA(address[] memory owners, address memory adjudicatorAddress) public {
         require(_owners.length == 0, "Contract has been set up before");
-        _adjudicatorAddress = adjudicatorAddress
+        _adjudicatorAddress = adjudicatorAddress;
         _owners = owners;
     }
 
@@ -108,6 +113,7 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
 
         // TODO validate signatures
 
+        adjudicatorNonce = nonce;
         _adjudicatorAddress = newAdjudicator;
     }
 
