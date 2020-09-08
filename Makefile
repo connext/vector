@@ -80,6 +80,12 @@ dls:
 	@docker container ls -a
 
 ########################################
+# Test Commands
+
+test-contracts: contracts
+	bash ops/test/unit.sh contracts
+
+########################################
 # Begin Real Build Rules
 
 # All rules from here on should only depend on rules that come before it
