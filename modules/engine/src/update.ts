@@ -13,7 +13,7 @@ import { MerkleTree } from "./merkleTree";
 // Should return a validated state with the given update applied
 export async function applyUpdate<T extends UpdateType>(
   // optional sig typings allows this fn to be used by initiator before signing
-  update: Omit<ChannelUpdate<T>, "signatures"> & { signatures?: string[] },
+  update: ChannelUpdate<T>,
   state: FullChannelState<T>,
 ): Promise<FullChannelState<T>> {
   // TODO: May need store service and provider in validation function
@@ -134,11 +134,12 @@ async function generateSetupUpdate(
   }
 
   // Create the channel update from the params
-  const unsigned: Omit<ChannelUpdate<"setup">, "signatures"> = {
+  const unsigned: ChannelUpdate<"setup"> = {
     ...generateBaseUpdate(baseState, params, signer),
     balance: { to: [], amount: []},
     assetId: constants.AddressZero,
     details: {},
+    signatures: []
   }
   // Create a signed commitment for the new state
   const newState = await applyUpdate(unsigned, baseState);
@@ -169,9 +170,9 @@ async function generateDepositUpdate(
   // Determine the latest deposit nonce from chain using
   // the provided assetId from the params
   const multisig = new Contract(channelAddress, VectorChannel.abi, signer.provider);
-  const nonces = await multisig.latestDepositByAssetId();
+  const deposits = await multisig.latestDepositByAssetId();
   // TODO: when will this increase?
-  const latestDepositNonce = nonces[params.details.assetId] || 0;
+  const latestDepositNonce = deposits[params.details.assetId].nonce || 0;
 
   // Generate the new balance field for the channel
   // TODO: How are balances indexed? Need to finalize this type
@@ -185,6 +186,8 @@ async function generateDepositUpdate(
   const assetIdx = assetIds.findIndex((a) => a === params.details.assetId);
   // It is possible that the assetId does not yet exist in the state,
   // in which case this is the first deposit of this asset into the channel
+  // TODO: do we even need to have an amount field? How exactly would we
+  // reconcile balances here
   const postDepositBal = BigNumber.from(params.details.amount).add(
     assetIdx === -1 ? 0 : balances[participantIdx].amount[assetIdx],
   );
@@ -196,6 +199,7 @@ async function generateDepositUpdate(
     balance,
     assetId: params.details.assetId,
     details: { latestDepositNonce },
+    signatures: []
   };
 
   // Create a signed commitment for the new state
@@ -238,7 +242,7 @@ async function generateCreateUpdate(
   // BUT should update the `balance` field to be equivalent to them
   // losing transfer amount from channel balance, and adding to locked
   // value
-  const unsigned: Omit<ChannelUpdate<"create">, "signatures"> = {
+  const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
     assetId,
@@ -252,6 +256,7 @@ async function generateCreateUpdate(
       merkleProofData: merkle.proof(hashTransferState(transferInitialState)),
       merkleRoot: merkle.root,
     },
+    signatures: []
   };
 
   // Create a signed commitment for the new state
@@ -292,7 +297,7 @@ async function generateResolveUpdate(
   const merkle = new MerkleTree(hashes);
 
   // Generate the unsigned update from the params
-  const unsigned: Omit<ChannelUpdate<"resolve">, "signatures"> = {
+  const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
     assetId: stored.assetId,
@@ -304,7 +309,8 @@ async function generateResolveUpdate(
       // TODO: do we need to pass around a proof here?
       merkleProofData: merkle.proof(hashTransferState(initial)),
       merkleRoot: merkle.root,
-    }
+    },
+    signatures: []
   };
 
   // Validate the generated update is correct, and create a

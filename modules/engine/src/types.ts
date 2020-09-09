@@ -27,12 +27,14 @@ export type CreateTransferParams = {
   transferInitialState: any; // TODO (solidityvaluetype?)
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
+  meta?: object;
 };
 
 export type ResolveTransferParams = {
   channelAddress: string;
   transferId: string;
   transferResolver: any; // TODO (solidityvaluetype?)
+  meta?: object;
 };
 
 interface ParamsMap {
