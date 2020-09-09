@@ -19,6 +19,7 @@ contract Adjudicator is IAdjudicator {
         uint256 consensusExpiry;
         uint256 defundExpiry;
         // iterable_mapping(address => bool) assetDefunded;
+        bool isDefunded;
     }
 
     struct TransferDispute {
@@ -28,7 +29,7 @@ contract Adjudicator is IAdjudicator {
     }
 
     mapping(address => Dispute) channelDispute;
-    mapping(address => TransferDispute) transferDisputes;
+    mapping(bytes32 => TransferDispute) transferDisputes;
 
     function forceChannelConsensus(
         CoreChannelState memory ccs,
@@ -38,7 +39,7 @@ contract Adjudicator is IAdjudicator {
         override
         onlyParticipant(ccs)
     {
-        // PSEUDOCODE:
+        // PSEUDOCODE: Please don't delete yet!
         // Dispute memory lastDispute = channelDispute(state.channelAddress)
         // validateSignatures(signatures, participants, state);
         // require(!inDefundPhase(lastDispute))
@@ -68,6 +69,8 @@ contract Adjudicator is IAdjudicator {
             !inDefundPhase(dispute),
             "Adjudicator forceChannelConsensus: Not allowed in defund phase"
         );
+
+        // TODO: check not defunded???
 
         require(
             dispute.nonce <= ccs.nonce,
@@ -101,7 +104,7 @@ contract Adjudicator is IAdjudicator {
         override
         onlyParticipant(ccs)
     {
-        // PSEUDOCODE:
+        // PSEUDOCODE: Please don't delete yet!
         // Dispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(hash(state) == dispute.channelStateHash)
@@ -135,6 +138,12 @@ contract Adjudicator is IAdjudicator {
             inDefundPhase(dispute),
             "Adjudicator defundChannel: Not in defund phase"
         );
+
+        require(
+            !dispute.isDefunded,
+            "Adjudicator defundChannel: channel already defunded"
+        );
+        dispute.isDefunded = true;
 
         require(
             hashChannelState(ccs) == dispute.channelStateHash,
@@ -172,14 +181,13 @@ contract Adjudicator is IAdjudicator {
     }
 
     function forceTransferConsensus(
-        // Params
-        // - CoreTransferState state
+        CoreTransferState memory cts
     )
         public
         override
-        pure
+        // TODO: Who should be able to call this?
     {
-        // PSEUDOCODE:
+        // PSEUDOCODE: Please don't delete yet!
         // Dispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(doMerkleProof(hash(state), dispute.merkleRoot, state.merkleProofData))
@@ -194,20 +202,44 @@ contract Adjudicator is IAdjudicator {
         // }
         //  transferDisputes(state.transferId) = transferDispute
 
-        require(true, "oh no");
+        Dispute storage dispute = channelDispute[cts.channelId];
+
+        require(
+            inDefundPhase(dispute),
+            "Adjudicator defundChannel: Not in defund phase"
+        );
+
+        bytes32 transferStateHash = hashTransferState(cts);
+
+        verifyMerkleProof(transferStateHash, dispute.merkleRoot, cts.merkleProofData);
+
+        TransferDispute memory transferDispute = transferDisputes[cts.transferId];
+
+        require(
+            transferDispute.transferDisputeExpiry == 0,
+            "Adjudicator forceTransferConsensus: transfer already disputed"
+        );
+
+        // necessary?
+        require(
+            !transferDispute.isDefunded,
+            "Adjudicator forceTransferConsensus: transfer already defunded"
+        );
+
+        transferDispute.transferStateHash = transferStateHash;
+        transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout); // TODO: offchain-ensure that there can't be an overflow
     }
 
     function defundTransfer(
-        // Params
-        // - CoreTransferState state
-        // - bytes calldata encodedInitialTransferState
-        // - bytes calldata encodedTransferResolver
+        CoreTransferState memory cts,
+        bytes memory encodedInitialTransferState,
+        bytes memory encodedTransferResolver
     )
         public
         override
-        pure
+        // TODO: Who should be able to call this?
     {
-        // PSEUDOCODE:
+        // PSEUDOCODE: Please don't delete yet!
         // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
         // require(hash(state) == transferDispute.transferStateHash)
         // require(inTransferDispute(transferDispute) || afterTransferDispute(transferDispute))
@@ -232,10 +264,10 @@ contract Adjudicator is IAdjudicator {
         // VectorChannel channel = VectorChannel(state.channelAddress)
         // channel.adjudicatorTransfer(finalBalances, state.assetId)
 
+        TransferDispute memory transferDispute = transferDisputes[cts.transferId];
 
-        // TODO SECURITY: Beware of reentrancy
+        // TODO: CONTINUE
 
-        require(true, "oh no");
     }
 
 
@@ -280,6 +312,18 @@ contract Adjudicator is IAdjudicator {
         return;
     }
 
+    function verifyMerkleProof(
+        bytes32 leaf,
+        bytes32 root,
+        bytes32[] memory proof
+    )
+        internal
+        pure
+    {
+        //TODO
+        return;
+    }
+
     function inConsensusPhase(Dispute storage dispute) internal view returns (bool) {
         return block.number < dispute.consensusExpiry;
     }
@@ -289,6 +333,11 @@ contract Adjudicator is IAdjudicator {
     }
 
     function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
+        // TODO
+        return 0;
+    }
+
+    function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
         // TODO
         return 0;
     }

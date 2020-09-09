@@ -24,32 +24,36 @@ interface IAdjudicator {
 
     struct CoreTransferState {
         address assetId;
-        bytes32 channelId;
+        address channelId;
         bytes32 transferId;
         address transferDefinition;
         uint256 transferTimeout;
         bytes32 transferStateHash;
         bytes[] encodings; // Initial state, resolver state
-        // TODO merkleProofData
+        bytes32[] merkleProofData;
     }
 
     function forceChannelConsensus(
         CoreChannelState memory ccs,
         bytes[2] memory signatures
-    )
-        external;
+    ) external;
 
 
     function defundChannel(
         CoreChannelState memory ccs,
         address[] memory assetIds
-    )
-        external;
+    ) external;
 
 
-    function forceTransferConsensus() external;
+    function forceTransferConsensus(
+        CoreTransferState memory cts
+    ) external;
 
-    function defundTransfer() external;
+    function defundTransfer(
+        CoreTransferState memory cts,
+        bytes memory encodedInitialTransferState,
+        bytes memory encodedTransferResolver
+    ) external;
 
     // function setTransferResolution() external;
 
