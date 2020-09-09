@@ -1,5 +1,7 @@
 import { BigNumber } from "ethers";
+
 import { Result } from "../../definitions/result";
+
 import { WalletError } from "./errors/wallet-error";
 
 // TODO: import

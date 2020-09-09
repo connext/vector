@@ -1,4 +1,4 @@
-import { Output } from "../../definitions/output";
+// import { Output } from "../../definitions/output";
 import { Result } from "../../definitions/result";
 import { WalletError } from "../../shared/wallet/errors/wallet-error";
 

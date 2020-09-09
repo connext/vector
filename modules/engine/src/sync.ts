@@ -11,7 +11,7 @@ import { validate } from "./validate";
 // message to the counterparty, and resolve once the updated channel state 
 // has been persisted.
 export async function outbound(
-  update: ChannelUpdate, 
+  update: ChannelUpdate<any>, 
   storeService: IStoreService,
   messagingService: IMessagingService, 
   stateEvt: Evt<ChannelState>, 
@@ -32,14 +32,14 @@ export async function outbound(
     // If there is an error event corresponding to this channel and
     // this nonce, reject the promise
     errorEvt.pipe((e: ChannelUpdateError) => {
-      return e.update.nonce === update.nonce && e.update.channelAddress === e.update.channelAddress
+      return e.update.nonce === update.nonce && e.update.channelAddress === e.update.channelAddress;
     })
     .attachOnce((e: ChannelUpdateError) => resolve(e));
 
     // If there is a channel update event corresponding to
     // this channel update, resolve the promise
     stateEvt.pipe((e: ChannelState) => {
-      return e.channelAddress === update.channelAddress && e.latestNonce === update.nonce
+      return e.channelAddress === update.channelAddress && e.latestNonce === update.nonce;
     })
     .attachOnce((e: ChannelState) => resolve(e));
 
@@ -49,7 +49,7 @@ export async function outbound(
   });
 
   // Retry sending the message 5 times w/3s delay
-  const sendWithRetry = async () => {
+  const sendWithRetry = async (): Promise<any> => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const _ of Array(5).fill(0)) {
       try {
@@ -140,7 +140,7 @@ export async function inbound(
 
   // If it is a response, process the response
   if (isChannelMessage(message)) {
-    return processChannelMessage(message, storeService, messagingService, signer, stateEvt, errorEvt);
+    return processChannelMessage(message as VectorChannelMessage, storeService, messagingService, signer, stateEvt, errorEvt);
   }
 
   // It is an error message from a counterparty. An `outbound` promise
@@ -159,8 +159,8 @@ async function processChannelMessage(
   errorEvt: Evt<ChannelUpdateError>,
 ): Promise<void> {
   const { from, data } = message;
-  const requestedUpdate = data.update as ChannelUpdate;
-  const counterpartyLatestUpdate = data.latestUpdate as ChannelUpdate;
+  const requestedUpdate = data.update as ChannelUpdate<any>;
+  const counterpartyLatestUpdate = data.latestUpdate as ChannelUpdate<any>;
   // Create helper to handle errors
   const handleError = async (error: ChannelUpdateError) => {
     // If the update is single signed, the counterparty is waiting
@@ -306,7 +306,7 @@ async function processChannelMessage(
 }
 
 // Creates a new state from the given update
-async function mergeUpdate(update: ChannelUpdate, state: ChannelState): Promise<ChannelState> {
+async function mergeUpdate(update: ChannelUpdate<any>, state: ChannelState): Promise<ChannelState> {
   // TODO should this just exist in the store?
   await validate(update, state);
   throw new Error("Method not implemented");

@@ -1,9 +1,9 @@
 import { fake } from "sinon";
 import { constants } from "ethers";
 
-import { TestEnvironment } from "../../../../test-environment";
-import { expect } from "../../../../test/assert";
-import { mockWalletService } from "../../../../test/mocks/wallet";
+import { TestEnvironment } from "../../../test-environment";
+import { expect } from "../../../test/assert";
+import { mockWalletService } from "../../../test/mocks/wallet";
 import { ValidatorResult } from "../../definitions/validator-result";
 
 import { DepositInput } from "./deposit.in";

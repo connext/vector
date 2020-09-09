@@ -1,6 +1,10 @@
 import { InboundChannelError } from "./utils";
 
+// TODO: replace these placeholders w real types
+export type Address = any;
+export type ChannelState = any;
 export type MultisigCommitment = any;
+export type TransferState = any;
 
 // Method params
 export type DepositParams = {
@@ -91,6 +95,8 @@ export type ChannelUpdate<T extends UpdateType> = {
   channelAddress: string;
   fromIdentifier: string;
   toIdentifier: string;
+  counterpartyPublicIdentifier?: string;
+  commitment: any; // TODO
   type: T;
   nonce: number;
   balance: Balance;

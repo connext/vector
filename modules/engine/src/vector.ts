@@ -68,7 +68,7 @@ export class Vector {
     logger.info(`Start executeUpdate`, {params});
 
     const key = await this.lockService.acquireLock(params.channelAddress);
-    const update = await generateUpdate(params, this.storeService);
+    const update = await generateUpdate(params, this.storeService, null, null);
     await sync.outbound(update, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
     await this.lockService.releaseLock(params.channelAddress, key);
   }
