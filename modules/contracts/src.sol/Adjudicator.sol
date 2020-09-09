@@ -3,10 +3,14 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IAdjudicator.sol";
+import "./interfaces/IVectorChannel.sol";
+import "./shared/SafeMath.sol";
 
 
 // Called directly by a VectorChannel.sol instance
 contract Adjudicator is IAdjudicator {
+
+    using SafeMath for uint256;
 
     struct Dispute { // Maybe this should be ChannelDispute?
         bytes32 channelStateHash;
@@ -83,15 +87,15 @@ contract Adjudicator is IAdjudicator {
             // TODO: reset mapping
         }
 
-        dispute.consensusExpiry = block.number + ccs.timeout; // TODO: offchain-ensure that there can't be an overflow
-        dispute.defundExpiry = block.number + 2 * ccs.timeout; // TODO: offchain-ensure that there can't be an overflow
+        dispute.consensusExpiry = block.number.add(ccs.timeout); // TODO: offchain-ensure that there can't be an overflow
+        dispute.defundExpiry = block.number.add(ccs.timeout.mul(2)); // TODO: offchain-ensure that there can't be an overflow
 
         // TODO: Can everybody who has the signatures do that, or should we restrict it to the participants?
     }
 
     function defundChannel(
         CoreChannelState memory ccs,
-        address[] memory assetIds
+        address[] memory assetIds  // TODO: For now, we ignore this argument and defund all assets
     )
         public
         override
@@ -138,12 +142,32 @@ contract Adjudicator is IAdjudicator {
         );
 
         // TODO SECURITY: Beware of reentrancy
-        for (uint256 i = 0; i < assetIds.length; i++) {
-            // TODO:
-            // 1. Require that asset has not already been defunded.
-            // 2. Mark asset as defunded
 
-            // ...
+        // TODO: keep this? offchain code has to ensure this
+        assert(ccs.balances.length == ccs.lockedBalance.length && ccs.balances.length == ccs.assetIds.length);
+
+        for (uint256 i = 0; i < ccs.balances.length; i++) {
+            Balance memory balance = ccs.balances[i];
+            uint256 lockedBalance = ccs.lockedBalance[i];
+            address assetId = ccs.assetIds[i];
+
+            IVectorChannel channel = IVectorChannel(channelAddress);
+            LatestDeposit memory latestDeposit = channel.latestDepositByAssetId(assetId);
+
+            Balance memory transfer;
+
+            transfer.to[0] = balance.to[0];
+            transfer.to[1] = balance.to[1];
+
+            transfer.amount[0] = balance.amount[0];
+
+            if (latestDeposit.nonce < ccs.latestDepositNonce) {
+                transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
+            }
+
+            transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
+
+            channel.adjudicatorTransfer(transfer, assetId);
         }
     }
 
@@ -207,6 +231,9 @@ contract Adjudicator is IAdjudicator {
 
         // VectorChannel channel = VectorChannel(state.channelAddress)
         // channel.adjudicatorTransfer(finalBalances, state.assetId)
+
+
+        // TODO SECURITY: Beware of reentrancy
 
         require(true, "oh no");
     }

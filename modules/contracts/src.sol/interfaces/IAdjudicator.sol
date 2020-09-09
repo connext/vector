@@ -2,14 +2,10 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./Types.sol";
+
 
 interface IAdjudicator {
-
-    struct Balance {
-        uint256[] amount;
-        address[] to;
-        //TODO should we just make assetId part of the Balance?
-    }
 
     struct CoreChannelState {
         Balance[] balances; // TODO index by assetId? // initiator, responder

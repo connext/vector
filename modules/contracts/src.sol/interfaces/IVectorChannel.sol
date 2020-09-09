@@ -2,13 +2,18 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./Types.sol";
+
 
 interface IVectorChannel {
 
-    struct Balances {
-        uint256 amount;
-        address assetId;
-    }
+    function getBalance(
+        address assetId
+    ) external view returns (uint256);
+
+    function latestDepositByAssetId(
+        address assetId
+    ) external view returns (LatestDeposit memory);
 
     function depositA(
         uint256 amount,
@@ -17,7 +22,7 @@ interface IVectorChannel {
     ) external payable;
 
     function adjudicatorTransfer(
-        Balances[] memory balances,
+        Balance memory balances,
         address assetId
     ) external;
 
