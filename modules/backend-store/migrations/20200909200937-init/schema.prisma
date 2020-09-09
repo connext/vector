@@ -1,0 +1,55 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = ["sqlite", "postgresql"]
+  url = "***"
+}
+
+model Balance {
+  @@map(name: "balance")
+  id             String   @id @default(uuid())
+  participant    String
+  to             String
+  amount         String
+  lockedValue    String
+  Channel        Channel? @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress String?
+}
+
+model Channel {
+  @@map(name: "channel")
+  channelAddress                 String    @id
+  publicIdentifierA              String
+  publicIdentifierB              String
+  participantA                   String
+  participantB                   String
+  timeout                        String
+  nonce                          Int
+  latestDepositNonce             Int
+  merkleRoot                     String
+  balances                       Balance[]
+  channelFactoryAddress          String
+  vectorChannelMastercopyAddress String
+  chainId                        Int
+  providerUrl                    String
+  latestUpdate                   Update?
+}
+
+model Update {
+  @@map(name: "update")
+  transferId         String  @id
+  assetId            String
+  transferDefinition String
+  transferTimeout    String
+  transferStateHash  Int
+  transferEncodings  String
+  merkleProofData    String
+  signatureA         String?
+  signatureB         String?
+  adjudicatorAddress String
+  channel            Channel @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress     String
+}
