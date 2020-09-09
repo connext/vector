@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.1;
+pragma experimental ABIEncoderV2;
 
 import "./interfaces/IAdjudicator.sol";
+import "./interfaces/IVectorChannel.sol";
+import "./shared/SafeMath.sol";
 
 
 // Called directly by a VectorChannel.sol instance
 contract Adjudicator is IAdjudicator {
 
-    struct Balance {
-        uint256[] amount;
-        address[] to;
-        //TODO should we just make assetId part of the Balance?
-    }
+    using SafeMath for uint256;
 
     struct Dispute { // Maybe this should be ChannelDispute?
         bytes32 channelStateHash;
@@ -31,42 +30,15 @@ contract Adjudicator is IAdjudicator {
     mapping(address => Dispute) channelDispute;
     mapping(address => TransferDispute) transferDisputes;
 
-    struct CoreChannelState {
-        Balance[] balances; // TODO index by assetId? // initiator, responder
-        uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
-        address[] assetIds;
-        // TODO: The channelAddress needs to be derived from the participants (and chainId, channel nonce, etc.); otherwise Alice and Bob can control someone else's channel...
-        // Maybe we should really put the adjudication logic into the VectorChannel; then we don't need to compute the address onchain and, in general, don't need to
-        // worry aboout the adjudicator releasing the wrong (i.e. someone else's) funds.?
-        bytes32 channelAddress;
-        address[] participants; // Signer keys -- does NOT have to be the same as balances.to[]
-        uint256 timeout;
-        uint256 nonce;
-        uint256 latestDepositNonce;
-        bytes32 merkleRoot;
-    }
-
-    struct CoreTransferState {
-        address assetId;
-        bytes32 channelId;
-        bytes32 transferId;
-        address transferDefinition;
-        uint256 transferTimeout;
-        bytes32 transferStateHash;
-        bytes[] encodings; // Initial state, resolver state
-        // TODO merkleProofData
-    }
-
     function forceChannelConsensus(
-        // Params
-        // - CoreChannelState state
-        // - bytes[] signatures
+        CoreChannelState memory ccs,
+        bytes[2] memory signatures
     )
         public
         override
-        pure
+        onlyParticipant(ccs)
     {
-        require(true, "oh no");
+        // PSEUDOCODE:
         // Dispute memory lastDispute = channelDispute(state.channelAddress)
         // validateSignatures(signatures, participants, state);
         // require(!inDefundPhase(lastDispute))
@@ -86,18 +58,50 @@ contract Adjudicator is IAdjudicator {
         //      };
         //      channelDispute(state.channelAddress) = dispute;
         // }
+
+        address channelAddress = getChannelAddress(ccs);
+        Dispute storage dispute = channelDispute[channelAddress];
+
+        verifySignatures(ccs.participants, ccs, signatures);
+
+        require(
+            !inDefundPhase(dispute),
+            "Adjudicator forceChannelConsensus: Not allowed in defund phase"
+        );
+
+        require(
+            dispute.nonce <= ccs.nonce,
+            "Adjudicator forceChannelConsensus: New nonce smaller than stored one"
+        );
+
+        if (dispute.nonce == ccs.nonce) {
+            require(
+                !inConsensusPhase(dispute),
+                "Adjudicator forceChannelConsensus: Same nonce not allowed in consensus phase"
+            );
+
+        } else { // dispute.nonce < ccs.nonce
+            dispute.channelStateHash = hashChannelState(ccs);
+            dispute.nonce = ccs.nonce;
+            dispute.merkleRoot = ccs.merkleRoot;
+            // TODO: reset mapping
+        }
+
+        dispute.consensusExpiry = block.number.add(ccs.timeout); // TODO: offchain-ensure that there can't be an overflow
+        dispute.defundExpiry = block.number.add(ccs.timeout.mul(2)); // TODO: offchain-ensure that there can't be an overflow
+
+        // TODO: Can everybody who has the signatures do that, or should we restrict it to the participants?
     }
 
     function defundChannel(
-        // Params
-        // - CoreChannelState state
-        // - address[] assetIds
+        CoreChannelState memory ccs,
+        address[] memory assetIds  // TODO: For now, we ignore this argument and defund all assets
     )
         public
         override
-        pure
+        onlyParticipant(ccs)
     {
-        require(true, "oh no");
+        // PSEUDOCODE:
         // Dispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(hash(state) == dispute.channelStateHash)
@@ -123,6 +127,48 @@ contract Adjudicator is IAdjudicator {
         //
         //      channel.adjudicatorTransfer([aBalance, bBalance], assetIds[i]);
         //  }
+
+        address channelAddress = getChannelAddress(ccs);
+        Dispute storage dispute = channelDispute[channelAddress];
+
+        require(
+            inDefundPhase(dispute),
+            "Adjudicator defundChannel: Not in defund phase"
+        );
+
+        require(
+            hashChannelState(ccs) == dispute.channelStateHash,
+            "Adjudicator defundChannel: Hash of core channel state does not match stored hash"
+        );
+
+        // TODO SECURITY: Beware of reentrancy
+
+        // TODO: keep this? offchain code has to ensure this
+        assert(ccs.balances.length == ccs.lockedBalance.length && ccs.balances.length == ccs.assetIds.length);
+
+        for (uint256 i = 0; i < ccs.balances.length; i++) {
+            Balance memory balance = ccs.balances[i];
+            uint256 lockedBalance = ccs.lockedBalance[i];
+            address assetId = ccs.assetIds[i];
+
+            IVectorChannel channel = IVectorChannel(channelAddress);
+            LatestDeposit memory latestDeposit = channel.latestDepositByAssetId(assetId);
+
+            Balance memory transfer;
+
+            transfer.to[0] = balance.to[0];
+            transfer.to[1] = balance.to[1];
+
+            transfer.amount[0] = balance.amount[0];
+
+            if (latestDeposit.nonce < ccs.latestDepositNonce) {
+                transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
+            }
+
+            transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
+
+            channel.adjudicatorTransfer(transfer, assetId);
+        }
     }
 
     function forceTransferConsensus(
@@ -133,7 +179,7 @@ contract Adjudicator is IAdjudicator {
         override
         pure
     {
-        require(true, "oh no");
+        // PSEUDOCODE:
         // Dispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(doMerkleProof(hash(state), dispute.merkleRoot, state.merkleProofData))
@@ -147,6 +193,8 @@ contract Adjudicator is IAdjudicator {
         //      isDefunded: false
         // }
         //  transferDisputes(state.transferId) = transferDispute
+
+        require(true, "oh no");
     }
 
     function defundTransfer(
@@ -159,7 +207,7 @@ contract Adjudicator is IAdjudicator {
         override
         pure
     {
-        require(true, "oh no");
+        // PSEUDOCODE:
         // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
         // require(hash(state) == transferDispute.transferStateHash)
         // require(inTransferDispute(transferDispute) || afterTransferDispute(transferDispute))
@@ -183,5 +231,66 @@ contract Adjudicator is IAdjudicator {
 
         // VectorChannel channel = VectorChannel(state.channelAddress)
         // channel.adjudicatorTransfer(finalBalances, state.assetId)
+
+
+        // TODO SECURITY: Beware of reentrancy
+
+        require(true, "oh no");
     }
+
+
+    /* INTERNAL AND HELPER FUNCTIONS */
+
+    modifier onlyParticipant(CoreChannelState memory ccs) {
+        require(
+            msg.sender == ccs.participants[0] ||
+            msg.sender == ccs.participants[1],
+            "Adjudicator: msg.sender is not channel participant"
+        );
+        _;
+    }
+
+    function getChannelAddress(CoreChannelState memory ccs) internal pure returns (address) {
+        // TODO: FIX! SECURITY!
+        // Must be derived from participants, chainId, channel nonce, etc.
+        return ccs.channelAddress;
+    }
+
+    function verifySignatures(
+        address[2] memory participants,
+        CoreChannelState memory ccs,
+        bytes[2] memory signatures
+    )
+        internal
+        pure
+    {
+        verifySignature(participants[0], ccs, signatures[0]);
+        verifySignature(participants[1], ccs, signatures[1]);
+    }
+
+    function verifySignature(
+        address participant,
+        CoreChannelState memory ccs,
+        bytes memory signature
+    )
+        internal
+        pure
+    {
+        //TODO
+        return;
+    }
+
+    function inConsensusPhase(Dispute storage dispute) internal view returns (bool) {
+        return block.number < dispute.consensusExpiry;
+    }
+
+    function inDefundPhase(Dispute storage dispute) internal view returns (bool) {
+        return dispute.consensusExpiry <= block.number && block.number < dispute.defundExpiry;
+    }
+
+    function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
+        // TODO
+        return 0;
+    }
+
 }

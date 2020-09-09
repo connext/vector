@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./shared/LibCommitment.sol";
 import "./shared/LibChannelCrypto.sol";
 import "./interfaces/IVectorChannel.sol";
+import "./shared/IERC20.sol";
 
 
 /// @title Vector Channel
@@ -36,14 +37,16 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         DelegateCall
     }
 
-    struct LatestDeposit {
-        uint256 amount;
-        uint256 nonce;
-    }
-
     uint256 private adjudicatorNonce;
 
-    mapping(address => LatestDeposit) public latestDepositByAssetId;
+    // Workaround, because I was not able to convince the compiler
+    // to let me override the getter in the interface with the
+    // auto-generated getter of an overriding state variable
+    // if said variable is a mapping with a struct as value type.
+    mapping(address => LatestDeposit) internal _latestDepositByAssetId;
+    function latestDepositByAssetId(address assetId) public override view returns (LatestDeposit memory) {
+        return _latestDepositByAssetId[assetId];
+    }
 
     // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
@@ -81,6 +84,19 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         depositA(amount, assetId);
     }
 
+    function getBalance(
+        address assetId
+    )
+        public
+        override
+        view
+        returns (uint256)
+    {
+        return assetId == address(0) ?
+            address(this).balance :
+            IERC20(assetId).balanceOf(address(this));
+    }
+
     function depositA(
         uint256 amount,
         address assetId
@@ -97,7 +113,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
 
     // TODO gets called by the adjudicator contract in the event of a dispute to push out funds
     function adjudicatorTransfer(
-        Balances[] memory balances,
+        Balance memory balances,
         address assetId
     )
         public
@@ -106,7 +122,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         view
     {
         // TODO: replace w real logic
-        require(balances[0].amount > 0, "oh boy");
+        require(balances.amount[0] > 0, "oh boy");
         require(assetId != address(0), "oh boy");
     }
 
