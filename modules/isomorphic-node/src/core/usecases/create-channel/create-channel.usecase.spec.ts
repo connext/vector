@@ -1,8 +1,8 @@
 import { fake } from "sinon";
 
-import { TestEnvironment } from "../../../../test-environment";
-import { expect } from "../../../../test/assert";
-import { mockWalletService } from "../../../../test/mocks/wallet";
+import { TestEnvironment } from "../../../test-environment";
+import { expect } from "../../../test/assert";
+import { mockWalletService } from "../../../test/mocks/wallet";
 import { ValidatorResult } from "../../definitions/validator-result";
 
 import { CreateChannelUseCase } from "./create-channel.usecase";

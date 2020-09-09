@@ -19,6 +19,16 @@ read response
 echo
 
 if [[ "$response" == "y" ]]
-then find .github/workflows/* Makefile modules/*/src modules/*/ops ops -type f -not -name "*.swp" -exec sed -i "s|$old|$new|g" {} \;
+then
+
+  find \
+    .github/workflows/* \
+    Makefile \
+    modules/*/contracts \
+    modules/*/ops \
+    modules/*/src \
+    ops \
+    -type f -not -name "*.swp" -exec sed -i "s|$old|$new|g" {} \;
+
 else echo "Goodbye"
 fi

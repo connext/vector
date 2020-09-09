@@ -64,11 +64,11 @@ export class Vector {
   } 
 
   // Primary protocol execution from the leader side
-  private async executeUpdate(params: UpdateParams) {
+  private async executeUpdate(params: UpdateParams<any>) {
     logger.info(`Start executeUpdate`, {params});
 
     const key = await this.lockService.acquireLock(params.channelAddress);
-    const update = await generateUpdate(params, this.storeService);
+    const update = await generateUpdate(params, this.storeService, null);
     await sync.outbound(update, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
     await this.lockService.releaseLock(params.channelAddress, key);
   }
@@ -106,7 +106,7 @@ export class Vector {
       channelAddress: params.channelAddress,
       type: UpdateType.deposit,
       details: params,
-    } as UpdateParams;
+    } as UpdateParams<any>;
 
     return this.executeUpdate(updateParams);
   }
@@ -117,7 +117,7 @@ export class Vector {
       channelAddress: params.channelAddress,
       type: UpdateType.create,
       details: params,
-    } as UpdateParams;
+    } as UpdateParams<any>;
 
     return this.executeUpdate(updateParams);
   }
@@ -128,7 +128,7 @@ export class Vector {
       channelAddress: params.channelAddress,
       type: UpdateType.resolve,
       details: params,
-    } as UpdateParams;
+    } as UpdateParams<any>;
 
     return this.executeUpdate(updateParams);
   }

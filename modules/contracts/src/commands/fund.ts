@@ -1,5 +1,5 @@
 import { Address, DecString } from "@connext/types";
-import { getEthProvider } from "@connext/utils";
+import { getEthProvider } from "@connext/vector-utils";
 import * as tokenArtifacts from "@openzeppelin/contracts/build/contracts/ERC20Mintable.json";
 import { Contract, Wallet, constants, utils } from "ethers";
 import { Argv } from "yargs";

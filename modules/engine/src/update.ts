@@ -1,11 +1,14 @@
+import { VectorChannel } from "@connext/vector-contracts";
+import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
+
 import {
-  UpdateParams,
+  ChannelCommitmentData,
   ChannelUpdate,
-  UpdateType,
   FullChannelState,
   IStoreService,
-  ChannelCommitmentData,
+  UpdateParams,
+  UpdateType,
 } from "./types";
 import { validate } from "./validate";
 import { MerkleTree } from "./merkleTree";
@@ -41,7 +44,7 @@ export async function applyUpdate<T extends UpdateType>(
         lockedValue: {} as any, // FIXME: balance type finalized, this should be new balances
         nonce: update.nonce,
         merkleRoot: update.details.merkleRoot,
-      }
+      };
     }
     case UpdateType.resolve: {
       return {
@@ -50,7 +53,7 @@ export async function applyUpdate<T extends UpdateType>(
         lockedValue: {} as any, // FIXME: balance type finalized, this should be new balances
         nonce: update.nonce,
         merkleRoot: update.details.merkleRoot,
-      }
+      };
     }
     default: {
       throw new Error(`Unrecognized update type: ${update.type}`);
@@ -73,6 +76,7 @@ export async function applyUpdate<T extends UpdateType>(
 export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   storeService: IStoreService,
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/no-unused-vars
   signer: any,
 ): Promise<ChannelUpdate<T>> {
   const state = await storeService.getChannelState(params.channelAddress);
@@ -123,7 +127,7 @@ async function generateSetupUpdate(
     latestDepositNonce: 0,
     channelAddress: params.channelAddress,
     timeout: params.details.timeout,
-    participants: publicIdentifiers.map(getSignerAddressFromIdentifier),
+    participants: [/* TODO: ?? */].map(getSignerAddressFromPublicIdentifier),
     balances: [],
     lockedValue: [],
     assetIds: [],
@@ -131,16 +135,17 @@ async function generateSetupUpdate(
     latestUpdate: undefined,
     networkContext: params.details.networkContext,
      publicIdentifiers,
-  }
+  };
 
   // Create the channel update from the params
   const unsigned: ChannelUpdate<"setup"> = {
     ...generateBaseUpdate(baseState, params, signer),
     balance: { to: [], amount: []},
+    commitment: {} as any,
     assetId: constants.AddressZero,
     details: {},
-    signatures: []
-  }
+    signatures: [],
+  };
   // Create a signed commitment for the new state
   const newState = await applyUpdate(unsigned, baseState);
   const commitment = await generateSignedChannelCommitment(newState, signer);
@@ -192,14 +197,16 @@ async function generateDepositUpdate(
     assetIdx === -1 ? 0 : balances[participantIdx].amount[assetIdx],
   );
   // TODO: Finalize the balance obj so we can propose a new balance
+  console.log(postDepositBal);
   const balance = {} as any;
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
     balance,
+    commitment: {} as any,
     assetId: params.details.assetId,
     details: { latestDepositNonce },
-    signatures: []
+    signatures: [],
   };
 
   // Create a signed commitment for the new state
@@ -220,7 +227,7 @@ async function generateCreateUpdate(
   storeService: IStoreService,
 ): Promise<ChannelUpdate<"create">> {
   const {
-    details: { assetId, transferDefinition, timeout, amount, encodings, transferInitialState },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState },
     channelAddress,
   } = params;
 
@@ -245,6 +252,7 @@ async function generateCreateUpdate(
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
+    commitment: {} as any,
     assetId,
     details: {
       transferId: utils.hexlify(utils.randomBytes(32)),
@@ -256,7 +264,7 @@ async function generateCreateUpdate(
       merkleProofData: merkle.proof(hashTransferState(transferInitialState)),
       merkleRoot: merkle.root,
     },
-    signatures: []
+    signatures: [],
   };
 
   // Create a signed commitment for the new state
@@ -287,19 +295,20 @@ async function generateResolveUpdate(
   // asset id and other data
   const stored = await storeService.getTransferState(params.details.transferId);
   if (!stored) {
-    throw new Error(`Cannot find stored transfer for id ${params.details.transferId}`)
+    throw new Error(`Cannot find stored transfer for id ${params.details.transferId}`);
   }
 
   // First generate latest merkle tree data
   const active = await storeService.getTransferInitialStates(params.channelAddress);
   const hashes = active.filter(x => x.transferId === params.details.transferId).map(hashTransferState);
-  const initial = active.find(a => a.transferId === params.details.transferId)
+  const initial = active.find(a => a.transferId === params.details.transferId);
   const merkle = new MerkleTree(hashes);
 
   // Generate the unsigned update from the params
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
+    commitment: {} as any,
     assetId: stored.assetId,
     details: {
       transferId: params.details.transferId,
@@ -310,7 +319,7 @@ async function generateResolveUpdate(
       merkleProofData: merkle.proof(hashTransferState(initial)),
       merkleRoot: merkle.root,
     },
-    signatures: []
+    signatures: [],
   };
 
   // Validate the generated update is correct, and create a
@@ -320,7 +329,7 @@ async function generateResolveUpdate(
   return {
     ...unsigned,
     signatures: commitment.signatures,
-  }
+  };
 }
 
 
@@ -331,7 +340,7 @@ async function generateSignedChannelCommitment(
   newState: FullChannelState,
   signer: any,
 ): Promise<ChannelCommitmentData> {
-  const { publicIdentifiers, latestUpdate, networkContext, ...core } = newState;
+  const { publicIdentifiers, networkContext, ...core } = newState;
   const multisig = new Contract(newState.channelAddress, VectorChannel.abi, signer.provider);
   const unsigned = {
     chainId: networkContext.chainId,
@@ -369,5 +378,5 @@ function generateBaseUpdate<T extends UpdateType>(
 }
 
 function hashTransferState(state: any): string {
-  throw new Error("hashTransferState not implemented");
+  throw new Error("hashTransferState not implemented: " + state);
 }

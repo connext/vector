@@ -1,6 +1,6 @@
 import pino from "pino";
 
-import { VectorChannelMessage, ChannelState } from "./types";
+// import { VectorChannelMessage, ChannelState } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type InboundChannelError = any;
@@ -12,17 +12,19 @@ export const tidy = (str: string): string => `${str.replace(/\n/g, "").replace(/
 export const logger = pino();
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isChannelMessage(msg: any): msg is VectorChannelMessage {
+export function isChannelMessage(msg: any): boolean {
   if (msg?.error) return false;
   if (!msg?.data) return false;
+  return true;
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isChannelState(blob: any): blob is ChannelState {
+export function isChannelState(blob: any): boolean {
   if (!blob?.channelId) return false;
   if (!blob?.participants) return false;
   if (!blob?.chainId) return false;
   if (!blob?.latestNonce) return false;
+  return true;
 }
 
 export const delay = (ms: number): Promise<void> =>

@@ -1,11 +1,11 @@
 import { fake } from "sinon";
 import { constants } from "ethers";
-import { getRandomIdentifier } from "@connext/utils";
+import { getRandomIdentifier } from "@connext/vector-utils";
 
-import { TestEnvironment } from "../../../../test-environment";
+import { TestEnvironment } from "../../../test-environment";
+import { expect } from "../../../test/assert";
+import { mockWalletService } from "../../../test/mocks/wallet";
 import { ValidatorResult } from "../../definitions/validator-result";
-import { expect } from "../../../../test/assert";
-import { mockWalletService } from "../../../../test/mocks/wallet";
 
 import { CreateTransferValidator } from "./create-transfer.validator";
 import { CreateTransferUseCase } from "./create-transfer.usecase";

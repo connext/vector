@@ -61,7 +61,7 @@ clean: stop-all
 	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
 	rm -rf modules/*/node_modules/*/.git
 	rm -rf modules/*/node_modules/.bin
-	rm -rf modules/*/build modules/*/dist
+	rm -rf modules/*/artifacts modules/*/build modules/*/dist
 	rm -rf modules/*/.*cache* modules/*/node_modules/.cache modules/contracts/cache/*.json
 	rm -rf modules/*/package-lock.json
 
@@ -88,6 +88,9 @@ lint:
 test-contracts: contracts
 	bash ops/test/unit.sh contracts
 
+watch-contracts: utils
+	bash ops/test/unit.sh contracts --watch
+
 ########################################
 # Begin Real Build Rules
 
@@ -112,17 +115,22 @@ node-modules: builder package.json $(shell ls modules/*/package.json)
 # Build Core JS libs & bundles
 # Keep prerequisites synced w the @connext/* dependencies of each module's package.json
 
-contracts: $(shell find modules/contracts $(find_options))
+utils: node-modules $(shell find modules/utils $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/utils && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+contracts: utils $(shell find modules/contracts $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-engine: contracts $(shell find modules/engine $(find_options))
+engine: utils contracts $(shell find modules/engine $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-isomorphic-node-bundle: node-modules $(shell find modules/isomorphic-node $(find_options))
+isomorphic-node-bundle: utils engine $(shell find modules/isomorphic-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/isomorphic-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@

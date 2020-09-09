@@ -1,5 +1,8 @@
-import { getAddress } from "ethers";
-import { ChannelUpdate, UpdateType, FullChannelState, UpdateParams } from "./types";
+import { utils } from "ethers";
+
+import { ChannelUpdate, UpdateType, FullChannelState } from "./types";
+
+const { getAddress } = utils;
 
 // TODO: Decide on validation structure
 // There are two main options:
@@ -31,7 +34,7 @@ export async function validate<T extends UpdateType = any>(
   // be a double signed state
 
   // First, validate all the common fields within the channel update
-  const { channelAddress, fromIdentifier, toIdentifier, nonce, balance, assetId, signatures } = update;
+  const { channelAddress, fromIdentifier, toIdentifier, nonce, assetId } = update;
 
   // The channel address should not change from the state
   if (channelAddress !== state.channelAddress) {
@@ -105,7 +108,7 @@ function validateSetup(update: ChannelUpdate<"setup">, state: FullChannelState<"
   // TODO: is initial nonce 0 or 1?
 
   // Validate merkle root is empty hash, assetIds are empty
-  throw new Error("validateSetup not implemented");
+  throw new Error("validateSetup not implemented: " + JSON.stringify(update) + JSON.stringify(state));
 }
 
 function validateDeposit(update: ChannelUpdate<"deposit">, state: FullChannelState<"deposit">): void {
@@ -114,15 +117,15 @@ function validateDeposit(update: ChannelUpdate<"deposit">, state: FullChannelSta
   // TODO: Best way to reconcile on and offchain balances?
   // Should we check the state balances + lockedVal + update.amount
   // === currentMultisigBalance?
-  throw new Error("validateDeposit not implemented");
+  throw new Error("validateDeposit not implemented: " + JSON.stringify(update) + JSON.stringify(state));
 }
 
 function validateCreate(update: ChannelUpdate<"create">, state: FullChannelState<"create">): void {
-  throw new Error("validateCreate not implemented");
+  throw new Error("validateCreate not implemented: " + JSON.stringify(update) + JSON.stringify(state));
 }
 
 function validateResolve(update: ChannelUpdate<"resolve">, state: FullChannelState<"resolve">): void {
-  throw new Error("validateResolve not implemented");
+  throw new Error("validateResolve not implemented: " + JSON.stringify(update) + JSON.stringify(state));
 }
 
 function isAddress(addr: any): boolean {

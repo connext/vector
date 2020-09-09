@@ -4,7 +4,10 @@ import { InboundChannelError } from "./utils";
 // TODO: Eth address string validation?
 export type Address = string;
 
+// TODO: replace these placeholders w real types
+export type ChannelState = any;
 export type MultisigCommitment = any;
+export type TransferState = any;
 
 // Method params
 export type SetupParams = {
@@ -27,14 +30,14 @@ export type CreateTransferParams = {
   transferInitialState: any; // TODO (solidityvaluetype?)
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
-  meta?: object;
+  meta?: any;
 };
 
 export type ResolveTransferParams = {
   channelAddress: string;
   transferId: string;
   transferResolver: any; // TODO (solidityvaluetype?)
-  meta?: object;
+  meta?: any;
 };
 
 interface ParamsMap {
@@ -110,6 +113,8 @@ export type ChannelUpdate<T extends UpdateType> = {
   channelAddress: string;
   fromIdentifier: string;
   toIdentifier: string;
+  counterpartyPublicIdentifier?: string;
+  commitment: any; // TODO
   type: T;
   nonce: number;
   balance: Balance;
@@ -153,7 +158,7 @@ type DepositUpdateDetails = {
 };
 
 // TODO: verify these are correct
-type SetupUpdateDetails = {}
+type SetupUpdateDetails = any;
 
 export const UpdateType = {
   create: "create",
@@ -166,7 +171,7 @@ export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 export type VectorChannelMessage<T extends UpdateType = any> = {
   to: string;
   from: string;
-  data: any; // TODO: Should be typed based on message
+  data: T | any; // TODO: Should be typed based on message
 };
 
 export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {

@@ -2,7 +2,7 @@ import { Contract, ContractFactory, Wallet, providers, utils, BigNumber } from "
 
 import { AddressBook } from "./address-book";
 import { artifacts } from "./artifacts";
-// import { stringify } from "@connext/utils";
+// import { stringify } from "@connext/vector-utils";
 
 const { keccak256 } = utils;
 

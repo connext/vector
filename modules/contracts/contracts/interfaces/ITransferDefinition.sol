@@ -10,7 +10,7 @@ interface ITransferDefinition {
     function initialize(bytes calldata)
         external
         view
-        returns (bool)
+        returns (bool);
 
     // Performs a state transition to resolve a transfer
     // and returns final balances. Called by validator.ts
@@ -18,6 +18,6 @@ interface ITransferDefinition {
     function resolve(bytes calldata, bytes calldata)
         external
         view
-        returns (bytes memory)
-        
+        returns (bytes memory);
+
 }

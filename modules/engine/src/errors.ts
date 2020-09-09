@@ -15,7 +15,7 @@ export abstract class VectorError extends Error {
 
   constructor(
     public readonly message: Values<typeof VectorError.reasons>,
-    public readonly update: ChannelUpdate,
+    public readonly update: ChannelUpdate<any>,
     public readonly state: ChannelState,
     public readonly context: any = undefined,
   ) {
@@ -30,6 +30,7 @@ export class ChannelUpdateError extends VectorError {
   // This is the message that will be thrown by the error
   // and all other details will be logged
   static readonly reasons = {
+    applyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
     ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     StaleUpdateNonce: "Update does not progress state nonce",
@@ -42,7 +43,7 @@ export class ChannelUpdateError extends VectorError {
 
   constructor(
     public readonly message: Values<typeof ChannelUpdateError.reasons>,
-    public readonly update: ChannelUpdate,
+    public readonly update: ChannelUpdate<any>,
     public readonly state: ChannelState,
     public readonly context: any = undefined,
   ) {
