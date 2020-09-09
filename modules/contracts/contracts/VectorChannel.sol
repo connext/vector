@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./shared/LibCommitment.sol";
 import "./shared/LibChannelCrypto.sol";
-import "./interfaces/IChannel.sol";
+import "./interfaces/IVectorChannel.sol";
 
 
 /// @title Vector Channel
@@ -15,20 +15,19 @@ import "./interfaces/IChannel.sol";
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
 
-// TODO how will this connect to the adjudicator? 
+// TODO how will this connect to the adjudicator?
 
-contract VectorChannel is IAdjudicator { //TODO write this interface
+contract VectorChannel is IVectorChannel { //TODO write this interface
 
     using LibChannelCrypto for bytes32;
 
-    // TODO: re-introduce masterCopy; be careful with inheritance!
-
+    // Note: this is the mastercopy of channel logic, this address is managed by the ProxyFactory
     // TODO: decide which variables should be public
 
     mapping(bytes32 => bool) isExecuted;
 
     address[] private _owners;
-    
+
     address public _adjudicatorAddress;
 
     enum Operation {
@@ -36,13 +35,12 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
         DelegateCall
     }
 
-
     struct LatestDeposit {
         uint256 amount;
         uint256 nonce;
     }
 
-    uint256 private adjudicatorUpdateNonce;
+    uint256 private adjudicatorNonce;
 
     mapping(address => LatestDeposit) public latestDepositByAssetId;
 
@@ -50,14 +48,14 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
     receive() external payable {}
 
     modifier onlyAdjudicator {
-      require(msg.sender == _adjudicatorAddress);
-      _;
+        require(msg.sender == _adjudicatorAddress, "msg.sender is not the adjudicator");
+        _;
     }
 
     /// @notice Contract constructor
     /// @param owners An array of unique addresses representing the participants of the channel
     /// @param adjudicatorAddress Address of associated Adjudicator that we can call to
-    function setup(address[] memory owners, address memory adjudicatorAddress) public {
+    function setup(address[] memory owners, address adjudicatorAddress) public {
         require(_owners.length == 0, "Contract has been set up before");
         _adjudicatorAddress = adjudicatorAddress;
         _owners = owners;
@@ -68,29 +66,37 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
     /// @param adjudicatorAddress Address of associated Adjudicator that we can call to
     /// @param amount Deposit amount for owners[0]
     /// @param assetId Asset for deposit
-    /// @param signature Signature from owners[0] on deposit params // TODO do we need this?
-    function setupWithDepositA(address[] memory owners, address memory adjudicatorAddress) public {
+    function setupWithDepositA(
+        address[] memory owners,
+        address adjudicatorAddress,
+        uint256 amount,
+        address assetId
+    )
+        public
+    {
         require(_owners.length == 0, "Contract has been set up before");
         _adjudicatorAddress = adjudicatorAddress;
         _owners = owners;
+        depositA(amount, assetId);
     }
 
     function depositA(
         uint256 amount,
-        address assetId,
-        bytes memory signature
+        address assetId
+        // bytes memory signature
     )
         public
         payable
         override
     {
-        // TODO
-        // This should validate signature against _owners[0], then save/upsert latestDepositByAssetId
+        // TODO: Does this really need to validate signature against _owners[0]?
+        //       Or can owners[0] just call this method directly?
+        // This should save/upsert latestDepositByAssetId
     }
 
     // TODO gets called by the adjudicator contract in the event of a dispute to push out funds
     function adjudicatorTransfer(
-        Balances[] balances,
+        Balances[] memory balances,
         address assetId
     )
         public
@@ -99,18 +105,24 @@ contract VectorChannel is IAdjudicator { //TODO write this interface
         view
     {
         // TODO: replace w real logic
-        require(to[0] == assetId, "oh boy");
-        require(amount[0] > 0, "oh boy");
+        require(balances[0].amount > 0, "oh boy");
+        require(assetId != address(0), "oh boy");
     }
 
     function updateAdjudicator(
         bytes[] memory signatures,
-        uint256 nonce
+        uint256 nonce,
         address newAdjudicator
-    ) public {
+    )
+        public
+    {
         require(
             nonce > adjudicatorNonce,
             "Already upgraded using this nonce"
+        );
+        require(
+            signatures.length > 0,
+            "More than 0 signatures must be provided"
         );
 
         // TODO validate signatures

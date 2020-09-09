@@ -61,7 +61,12 @@ contract Adjudicator is IAdjudicator {
         // Params
         // - CoreChannelState state
         // - bytes[] signatures
-    ) public {
+    )
+        public
+        override
+        pure
+    {
+        require(true, "oh no");
         // Dispute memory lastDispute = channelDispute(state.channelAddress)
         // validateSignatures(signatures, participants, state);
         // require(!inDefundPhase(lastDispute))
@@ -87,7 +92,12 @@ contract Adjudicator is IAdjudicator {
         // Params
         // - CoreChannelState state
         // - address[] assetIds
-    ) public {
+    )
+        public
+        override
+        pure
+    {
+        require(true, "oh no");
         // Dispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(hash(state) == dispute.channelStateHash)
@@ -110,28 +120,9 @@ contract Adjudicator is IAdjudicator {
         //          aBalance.amount = state.balA;
         //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
         //      }
-        //      
+        //
         //      channel.adjudicatorTransfer([aBalance, bBalance], assetIds[i]);
         //  }
-    }
-
-    function forceTransferConsensus(
-        // Params
-        // - CoreTransferState state
-    ) public {
-        // Dispute memory dispute = channelDispute(state.channelAddress)
-        // require(inDefundPhase(dispute))
-        // require(doMerkleProof(hash(state), dispute.merkleRoot, state.merkleProofData))
-        // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
-        // require(!inTransferDispute(transferDispute) && !afterTransferDispute(transferDispute))
-        // require(!transferDispute.isDefunded)
-
-        // TransferDispute transferDispute = {
-        //      transferDisputeExpiry: block.number.add(state.timeout)
-        //      transferStateHash: hash(state)
-        //      isDefunded: false
-        // }
-        //  transferDisputes(state.transferId) = transferDispute
     }
 
     function defundTransfer(
@@ -139,7 +130,12 @@ contract Adjudicator is IAdjudicator {
         // - CoreTransferState state
         // - bytes calldata encodedInitialTransferState
         // - bytes calldata encodedTransferResolver
-    ) public {
+    )
+        public
+        override
+        pure
+    {
+        require(true, "oh no");
         // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
         // require(hash(state) == transferDispute.transferStateHash)
         // require(inTransferDispute(transferDispute) || afterTransferDispute(transferDispute))
@@ -153,11 +149,11 @@ contract Adjudicator is IAdjudicator {
         //
         //      require(hash(initialTransferState) == state.initialStateHash)
         //      TransferInterface transferInterface = TransferInterface(state.transferDefinition)
-        //      
+        //
         //      encodedResolvedBalances = transferInterface.resolve(encodedInitialTransferState, encodedTransferResolver)
         //      finalBalances = abi.decode(encodedResolvedBalances, Balances)
         // }
-        // 
+        //
         // transferDispute.isDefunded = true;
         // transferDisputes(state.transferId) = transferDispute
 

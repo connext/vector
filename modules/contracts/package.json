@@ -33,11 +33,13 @@
     "transpile": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@connext/types": "7.3.15",
+    "@connext/vector-utils": "0.0.1",
     "@nomiclabs/buidler": "1.4.5",
     "@openzeppelin/contracts": "3.1.0",
     "ethers": "5.0.12",
     "keccak": "3.0.1",
-    "yargs": "15.4.1"
+    "yargs": "16.0.0"
   },
   "devDependencies": {
     "@nomiclabs/buidler-ethers": "2.0.0",

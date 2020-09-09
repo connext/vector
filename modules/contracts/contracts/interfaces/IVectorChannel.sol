@@ -3,17 +3,21 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 
-interface IChannel {
+interface IVectorChannel {
+
+    struct Balances {
+        uint256 amount;
+        address assetId;
+    }
 
     function depositA(
         uint256 amount,
-        address assetId,
-        bytes memory signature
+        address assetId
+        // bytes memory signature
     ) external payable;
 
     function adjudicatorTransfer(
-        address[] memory to,
-        uint256[] memory amount,
+        Balances[] memory balances,
         address assetId
     ) external;
 
