@@ -1,5 +1,5 @@
 import { VectorChannel } from "@connext/vector-contracts";
-import { getSignerAddressFromIdentifier } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
 
 import {
@@ -127,7 +127,7 @@ async function generateSetupUpdate(
     latestDepositNonce: 0,
     channelAddress: params.channelAddress,
     timeout: params.details.timeout,
-    participants: publicIdentifiers.map(getSignerAddressFromIdentifier),
+    participants: [/* TODO: ?? */].map(getSignerAddressFromPublicIdentifier),
     balances: [],
     lockedValue: [],
     assetIds: [],
