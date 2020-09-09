@@ -23,6 +23,8 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
 
     using LibChannelCrypto for bytes32;
 
+    address internal masterCopy;
+
     mapping(bytes32 => bool) isExecuted;
 
     address[] private _owners;

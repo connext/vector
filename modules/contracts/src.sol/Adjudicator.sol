@@ -125,6 +125,30 @@ contract Adjudicator is IAdjudicator {
         //  }
     }
 
+    function forceTransferConsensus(
+        // Params
+        // - CoreTransferState state
+    )
+        public
+        override
+        pure
+    {
+        require(true, "oh no");
+        // Dispute memory dispute = channelDispute(state.channelAddress)
+        // require(inDefundPhase(dispute))
+        // require(doMerkleProof(hash(state), dispute.merkleRoot, state.merkleProofData))
+        // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
+        // require(!inTransferDispute(transferDispute) && !afterTransferDispute(transferDispute))
+        // require(!transferDispute.isDefunded)
+
+        // TransferDispute transferDispute = {
+        //      transferDisputeExpiry: block.number.add(state.timeout)
+        //      transferStateHash: hash(state)
+        //      isDefunded: false
+        // }
+        //  transferDisputes(state.transferId) = transferDispute
+    }
+
     function defundTransfer(
         // Params
         // - CoreTransferState state

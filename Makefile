@@ -145,14 +145,14 @@ engine: utils contracts $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-isomorphic-node-bundle: utils engine $(shell find modules/isomorphic-node $(find_options))
+client-bundle: utils engine $(shell find modules/client $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/isomorphic-node && npm run build"
+	$(docker_run) "cd modules/client && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node-bundle: isomorphic-node-bundle $(shell find modules/rest-api-node $(find_options))
+node-bundle: client-bundle $(shell find modules/rest-api-wrapper $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/rest-api-node && npm run build"
+	$(docker_run) "cd modules/rest-api-wrapper && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
@@ -170,9 +170,9 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node: node-bundle $(shell find modules/rest-api-node/ops $(find_options))
+node: node-bundle $(shell find modules/rest-api-wrapper/ops $(find_options))
 	$(log_start)
-	docker build --file modules/rest-api-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/rest-api-node
+	docker build --file modules/rest-api-wrapper/ops/Dockerfile $(image_cache) --tag $(project)_node modules/rest-api-wrapper
 	docker tag $(project)_node $(project)_node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 

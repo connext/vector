@@ -9,6 +9,8 @@ interface IAdjudicator {
 
     function defundChannel() external;
 
+    function forceTransferConsensus() external;
+
     function defundTransfer() external;
 
     // function setTransferResolution() external;
