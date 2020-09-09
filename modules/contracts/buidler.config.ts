@@ -15,8 +15,8 @@ usePlugin("@nomiclabs/buidler-waffle");
 
 const config: BuidlerConfig = {
   paths: {
-    sources: "./contracts",
-    tests: "./src/test",
+    sources: "./src.sol",
+    tests: "./src.ts/test",
     artifacts: "./artifacts",
   },
   solc: {

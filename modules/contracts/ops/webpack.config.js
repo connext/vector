@@ -4,7 +4,7 @@ module.exports = {
   mode: "development",
   target: "node",
 
-  entry: path.join(__dirname, "../src/cli.ts"),
+  entry: path.join(__dirname, "../src.ts/cli.ts"),
 
   node: {
     __filename: false,
