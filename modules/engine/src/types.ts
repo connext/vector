@@ -1,12 +1,21 @@
 import { InboundChannelError } from "./utils";
 
+// Alias types
+// TODO: Eth address string validation?
+export type Address = string;
+
 // TODO: replace these placeholders w real types
-export type Address = any;
 export type ChannelState = any;
 export type MultisigCommitment = any;
 export type TransferState = any;
 
 // Method params
+export type SetupParams = {
+  counterpartyIdentifier: string;
+  timeout: string;
+  networkContext: NetworkContext;
+}
+
 export type DepositParams = {
   channelAddress: string;
   amount: string; // TODO we actually dont need this?
@@ -21,37 +30,46 @@ export type CreateTransferParams = {
   transferInitialState: any; // TODO (solidityvaluetype?)
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
+  meta?: any;
 };
 
 export type ResolveTransferParams = {
   channelAddress: string;
   transferId: string;
   transferResolver: any; // TODO (solidityvaluetype?)
+  meta?: any;
 };
 
+interface ParamsMap {
+  [UpdateType.create]: CreateTransferParams;
+  [UpdateType.deposit]: DepositParams;
+  [UpdateType.resolve]: ResolveTransferParams;
+  [UpdateType.setup]: SetupParams;
+}
+
 // Protocol update
-export type UpdateParams = {
+export type UpdateParams<T extends UpdateType> = {
   channelAddress: string;
-  type: UpdateType;
-  details: DepositParams | CreateTransferParams | ResolveTransferParams;
+  type: T;
+  details: ParamsMap[T];
 };
 
 export type Balance = {
   amount: string[];
   to: Address[];
-}
+};
 
 export type CoreChannelState = {
   channelAddress: Address;
   participants: Address[]; // Signer keys..?
   timeout: string;
-  balances: Balance[] // TODO index by assetId? // initiator, responder
-  lockedValue: string[] // Indexed by assetId -- should always be changed in lockstep with transfers
+  balances: Balance[]; // TODO index by assetId? // initiator, responder
+  lockedValue: string[]; // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
   nonce: number;
   latestDepositNonce: number;
   merkleRoot: string;
-}
+};
 
 export type CoreTransferState = {
   assetId: Address;
@@ -61,27 +79,27 @@ export type CoreTransferState = {
   transferTimeout: string;
   transferStateHash: string;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
-  merkleProofData: any //TODO
-}
+  merkleProofData: any; //TODO
+};
 
 export type ChannelCommitmentData = {
   state: CoreChannelState;
   signatures: string[];
   adjudicatorAddress: Address;
   chainId: number;
-}
+};
 
 export type TransferCommitmentData = {
   state: CoreTransferState;
   adjudicatorAddress: Address;
   chainId: number;
-}
+};
 
 // Includes any additional info that doesn't need to be sent to chain
-export type FullChannelState = CoreChannelState & {
-    publicIdentifiers: string[]
-    latestUpdate: ChannelUpdate<any>
-    networkContext: NetworkContext;
+export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
+  publicIdentifiers: string[];
+  latestUpdate: ChannelUpdate<T>;
+  networkContext: NetworkContext;
 };
 
 export type NetworkContext = {
@@ -89,7 +107,7 @@ export type NetworkContext = {
   vectorChannelMastercopyAddress: Address;
   chainId: number;
   providerUrl: string;
-}
+};
 
 export type ChannelUpdate<T extends UpdateType> = {
   channelAddress: string;
@@ -101,8 +119,10 @@ export type ChannelUpdate<T extends UpdateType> = {
   nonce: number;
   balance: Balance;
   assetId: Address;
-  details: ChannelUpdateDetailsMap[T]
+  details: ChannelUpdateDetailsMap[T];
   signatures: string[]; // [from, to]
+  // TODO: convention around single signed states?
+  // Do the sigs *have* to be an array?
 };
 
 interface ChannelUpdateDetailsMap {
@@ -118,24 +138,27 @@ type CreateUpdateDetails = {
   transferTimeout: string;
   transferInitialState: any; //TODO
   transferEncodings: string[]; // Initial state, resolver state
-  merkleProofData: any //TODO
+  merkleProofData: any; //TODO
   merkleRoot: string;
-}
+};
 
+// NOTE: proof data can be reconstructed, do we need to pass it around?
+// what does it mean
 type ResolveUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
   transferResolver: any; //TODO
   transferEncodings: string[]; // Initial state, resolver state
-  merkleProofData: any //TODO
+  merkleProofData: any; //TODO
   merkleRoot: string;
-}
+};
 
 type DepositUpdateDetails = {
   latestDepositNonce: number;
-}
+};
 
-type SetupUpdateDetails = any; //TODO
+// TODO: verify these are correct
+type SetupUpdateDetails = any;
 
 export const UpdateType = {
   create: "create",
@@ -145,10 +168,10 @@ export const UpdateType = {
 } as const;
 export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 
-export type VectorChannelMessage = {
+export type VectorChannelMessage<T extends UpdateType = any> = {
   to: string;
   from: string;
-  data: any;
+  data: T | any; // TODO: Should be typed based on message
 };
 
 export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
@@ -162,8 +185,14 @@ export type Values<E> = E[keyof E];
 export interface IStoreService {
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
   saveChannelState(channelState: FullChannelState): Promise<void>;
+
+  // Should return all initial transfer state data needed to
+  // create the merkle root
+  getTransferInitialStates(channelAddress: string): Promise<CoreTransferState[]>
+  getTransferState(transferId: string): Promise<CoreTransferState | undefined>
 }
 
 // TODO: fix these interfaces!
 export type ILockService = any;
 export type IMessagingService = any;
+export type IOnchainService = any;
