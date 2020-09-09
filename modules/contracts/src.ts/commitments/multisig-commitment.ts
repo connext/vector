@@ -1,9 +1,4 @@
-import {
-  CommitmentTarget,
-  EthereumCommitment,
-  MinimalTransaction,
-  MultisigTransaction,
-} from "@connext/types";
+import { CommitmentTarget, EthereumCommitment, MinimalTransaction, MultisigTransaction } from "@connext/types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { utils } from "ethers";
 
@@ -26,7 +21,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     if (!this.initiatorSignature && !this.responderSignature) {
       return [];
     }
-    return [this.initiatorSignature, this.responderSignature];
+    return [this.initiatorSignature!, this.responderSignature!];
   }
 
   set signatures(sigs: string[]) {
@@ -41,9 +36,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
       } else if (recovered === this.multisigOwners[1]) {
         this.responderSignature = sig;
       } else {
-        throw new Error(
-          `Invalid signer detected. Got ${recovered}, expected one of: ${this.multisigOwners}`,
-        );
+        throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.multisigOwners}`);
       }
     }
   }
@@ -67,14 +60,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     const { to, value, data, operation } = this.getTransactionDetails();
     return solidityPack(
       ["uint8", "address", "address", "uint256", "bytes32", "uint8"],
-      [
-        CommitmentTarget.MULTISIG,
-        this.multisigAddress,
-        to,
-        value,
-        solidityKeccak256(["bytes"], [data]),
-        operation,
-      ],
+      [CommitmentTarget.MULTISIG, this.multisigAddress, to, value, solidityKeccak256(["bytes"], [data]), operation],
     );
   }
 
@@ -90,9 +76,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     for (const sig of this.signatures) {
       const recovered = await recoverAddressFromChannelMessage(this.hashToSign(), sig);
       if (!this.multisigOwners.includes(recovered)) {
-        throw new Error(
-          `Invalid signer detected. Got ${recovered}, expected one of: ${this.multisigOwners}`,
-        );
+        throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.multisigOwners}`);
       }
     }
   }

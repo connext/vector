@@ -1,18 +1,9 @@
+import { ChannelUpdate, IStoreService, ChannelState, UpdateType, MultisigCommitment } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import { Evt } from "evt";
 
 import { ChannelUpdateError } from "./errors";
-import {
-  ChannelUpdate,
-  ChannelState,
-  MultisigCommitment,
-  IStoreService,
-  IMessagingService,
-  VectorMessage,
-  VectorChannelMessage,
-  VectorErrorMessage,
-  UpdateType,
-} from "./types";
+import { IMessagingService, VectorMessage, VectorChannelMessage, VectorErrorMessage } from "./types";
 import { delay, logger, isChannelMessage, isChannelState } from "./utils";
 import { applyUpdate } from "./update";
 

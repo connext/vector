@@ -15,8 +15,9 @@
   "author": "Arjun Bhuptani",
   "license": "MIT",
   "dependencies": {
-    "@connext/vector-utils": "0.0.1",
     "@connext/vector-contracts": "0.0.1",
+    "@connext/vector-types": "0.0.1",
+    "@connext/vector-utils": "0.0.1",
     "ethers": "5.0.12",
     "evt": "1.8.9",
     "pino": "6.6.0"

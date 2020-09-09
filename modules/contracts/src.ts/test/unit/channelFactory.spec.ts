@@ -1,9 +1,8 @@
 import { getRandomPrivateKey } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet } from "ethers";
 
-import { VectorChannel, ChannelFactory } from "../artifacts";
-
-import { expect, provider } from "./utils";
+import { VectorChannel, ChannelFactory } from "../../artifacts";
+import { expect, provider } from "../utils";
 
 describe("ChannelFactory", () => {
   let deployer: Wallet;
@@ -11,17 +10,11 @@ describe("ChannelFactory", () => {
 
   beforeEach(async () => {
     deployer = (await provider.getWallets())[0];
-    const channelMastercopy = await new ContractFactory(
-      VectorChannel.abi,
-      VectorChannel.bytecode,
-      deployer,
-    ).deploy();
+    const channelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, deployer).deploy();
     await channelMastercopy.deployed();
-    channelFactory = await new ContractFactory(
-      ChannelFactory.abi,
-      ChannelFactory.bytecode,
-      deployer,
-    ).deploy(channelMastercopy.address);
+    channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer).deploy(
+      channelMastercopy.address,
+    );
     await channelFactory.deployed();
   });
 
@@ -32,7 +25,7 @@ describe("ChannelFactory", () => {
   it("should create a channel", async () => {
     const initiator = new Wallet(getRandomPrivateKey());
     const responder = new Wallet(getRandomPrivateKey());
-    const created = new Promise(res => {
+    const created = new Promise((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
         // console.log(`Detected a new ChannelCreation event: ${JSON.stringify(data)}`);
         res(data);
@@ -44,6 +37,4 @@ describe("ChannelFactory", () => {
     const channelAddress = await created;
     expect(channelAddress).to.be.a("string");
   });
-
 });
-

@@ -1,4 +1,6 @@
-import { ChannelUpdate, ChannelState, Values } from "./types";
+import { ChannelUpdate, ChannelState } from "@connext/vector-types";
+
+import { Values } from "./types";
 import { logger } from "./utils";
 
 // Abstract error for package
@@ -11,7 +13,7 @@ export abstract class VectorError extends Error {
   } as const;
 
   abstract readonly type: Values<typeof VectorError.errors>;
-  static readonly reasons: {[key: string]: string};
+  static readonly reasons: { [key: string]: string };
 
   constructor(
     public readonly message: Values<typeof VectorError.reasons>,
@@ -50,6 +52,6 @@ export class ChannelUpdateError extends VectorError {
     super(message, update, state, context);
     // TODO: we may want to filter out some key items from the
     // state and update here instead of logging everything
-    logger.error(message, {update, state, ...context});
+    logger.error(message, { update, state, ...context });
   }
 }

@@ -1,15 +1,15 @@
 import { VectorChannel } from "@connext/vector-contracts";
 import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
-
 import {
-  ChannelCommitmentData,
+  UpdateType,
   ChannelUpdate,
   FullChannelState,
-  IStoreService,
   UpdateParams,
-  UpdateType,
-} from "./types";
+  IStoreService,
+  ChannelCommitmentData,
+} from "@connext/vector-types";
+
 import { validate } from "./validate";
 import { MerkleTree } from "./merkleTree";
 

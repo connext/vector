@@ -1,18 +1,16 @@
+import {
+  ChannelState,
+  IStoreService,
+  UpdateParams,
+  DepositParams,
+  UpdateType,
+  CreateTransferParams,
+  ResolveTransferParams,
+} from "@connext/vector-types";
 import { Evt } from "evt";
 
 import * as sync from "./sync";
-import {
-  ChannelState,
-  CreateTransferParams,
-  DepositParams,
-  ILockService,
-  IMessagingService,
-  IStoreService,
-  ResolveTransferParams,
-  UpdateParams,
-  UpdateType,
-  VectorMessage,
-} from "./types";
+import { ILockService, IMessagingService, VectorMessage } from "./types";
 import { generateUpdate } from "./update";
 import { InboundChannelError, logger } from "./utils";
 
@@ -43,12 +41,7 @@ export class Vector {
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     signer: any,
   ): Promise<Vector> {
-    const node = new Vector(
-      messagingService,
-      lockService,
-      storeService,
-      signer,
-    );
+    const node = new Vector(messagingService, lockService, storeService, signer);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
@@ -61,11 +54,11 @@ export class Vector {
 
   get publicIdentifier(): string {
     return this.signer.publicIdentifier;
-  } 
+  }
 
   // Primary protocol execution from the leader side
   private async executeUpdate(params: UpdateParams<any>) {
-    logger.info(`Start executeUpdate`, {params});
+    logger.info(`Start executeUpdate`, { params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
     const update = await generateUpdate(params, this.storeService, null);
@@ -76,7 +69,14 @@ export class Vector {
   private async setupServices() {
     this.messagingService.onReceive(this.publicIdentifier, async (msg: VectorMessage) => {
       try {
-        await sync.inbound(msg, this.storeService, this.messagingService, this.signer, this.channelStateEvt, this.channelErrorEvt);
+        await sync.inbound(
+          msg,
+          this.storeService,
+          this.messagingService,
+          this.signer,
+          this.channelStateEvt,
+          this.channelErrorEvt,
+        );
       } catch (e) {
         // No need to crash the entire vector core if we receive an invalid
         // message. Just log & wait for the next one
@@ -90,11 +90,17 @@ export class Vector {
 
     // sync latest state before starting
     const channelState = this.storeService.getChannelState();
-    await sync.outbound(channelState.latestUpdate, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
+    await sync.outbound(
+      channelState.latestUpdate,
+      this.storeService,
+      this.messagingService,
+      this.channelStateEvt,
+      this.channelErrorEvt,
+    );
     return this;
   }
 
-   /* 
+  /*
    * ***************************
    * *** CORE PUBLIC METHODS ***
    * ***************************
@@ -139,11 +145,11 @@ export class Vector {
   // - "vector_resolveTransfer"
   // TODO add rpc request type
   public async request(payload: any) {
-    if(!payload.method.startsWith(`vector_`)) {
+    if (!payload.method.startsWith(`vector_`)) {
       throw new Error(`TODO`);
     }
-    const methodName = payload.method.replace("vector_","");
-    if(typeof this[methodName] !== "function") {
+    const methodName = payload.method.replace("vector_", "");
+    if (typeof this[methodName] !== "function") {
       throw new Error(`TODO`);
     }
     await this[methodName](payload.params);

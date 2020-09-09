@@ -1,6 +1,5 @@
+import { UpdateType, ChannelUpdate, FullChannelState } from "@connext/vector-types";
 import { utils } from "ethers";
-
-import { ChannelUpdate, UpdateType, FullChannelState } from "./types";
 
 const { getAddress } = utils;
 
