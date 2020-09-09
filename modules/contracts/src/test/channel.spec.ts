@@ -1,18 +1,18 @@
 import { Contract, ContractFactory, Wallet } from "ethers";
 
-import { Channel } from "../artifacts";
+import { VectorChannel } from "../artifacts";
 
 import { expect, provider } from "./utils";
 
-describe("Channel", () => {
+describe("VectorChannel", () => {
   let deployer: Wallet;
   let channel: Contract;
 
   beforeEach(async () => {
     deployer = (await provider.getWallets())[0];
     channel = await new ContractFactory(
-      Channel.abi,
-      Channel.bytecode,
+      VectorChannel.abi,
+      VectorChannel.bytecode,
       deployer,
     ).deploy();
     await channel.deployed();

@@ -87,6 +87,8 @@ contract ChannelFactory is IChannelFactory {
             let codeSize := extcodesize(channel)
             if eq(codeSize, 0) { revert(0, 0) }
         }
+
+        // TODO: finish deployment by calling setup([initiator, responder], adjudicatorAddress)
     }
 
 }

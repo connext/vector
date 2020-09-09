@@ -18,11 +18,10 @@ import "./interfaces/IVectorChannel.sol";
 // TODO how will this connect to the adjudicator?
 
 contract VectorChannel is IVectorChannel { //TODO write this interface
-
-    using LibChannelCrypto for bytes32;
-
     // Note: this is the mastercopy of channel logic, this address is managed by the ProxyFactory
     // TODO: decide which variables should be public
+
+    using LibChannelCrypto for bytes32;
 
     mapping(bytes32 => bool) isExecuted;
 

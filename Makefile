@@ -61,7 +61,7 @@ clean: stop-all
 	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
 	rm -rf modules/*/node_modules/*/.git
 	rm -rf modules/*/node_modules/.bin
-	rm -rf modules/*/build modules/*/dist
+	rm -rf modules/*/artifacts modules/*/build modules/*/dist
 	rm -rf modules/*/.*cache* modules/*/node_modules/.cache modules/contracts/cache/*.json
 	rm -rf modules/*/package-lock.json
 
@@ -115,7 +115,7 @@ node-modules: builder package.json $(shell ls modules/*/package.json)
 # Build Core JS libs & bundles
 # Keep prerequisites synced w the @connext/* dependencies of each module's package.json
 
-utils: $(shell find modules/utils $(find_options))
+utils: node-modules $(shell find modules/utils $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/utils && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@

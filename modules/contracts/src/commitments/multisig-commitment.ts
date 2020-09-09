@@ -7,11 +7,11 @@ import {
 import { recoverAddressFromChannelMessage } from "@connext/utils";
 import { utils } from "ethers";
 
-import * as Channel from "../../artifacts/Channel.json";
+import { VectorChannel } from "../artifacts";
 
 const { Interface, keccak256, solidityKeccak256, solidityPack } = utils;
 
-// A commitment to make Channel perform a message call
+// A commitment to make VectorChannel perform a message call
 export abstract class MultisigCommitment implements EthereumCommitment {
   constructor(
     readonly multisigAddress: string,
@@ -52,7 +52,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     await this.assertSignatures();
     const multisigInput = this.getTransactionDetails();
 
-    const txData = new Interface(Channel.abi).encodeFunctionData("execTransaction", [
+    const txData = new Interface(VectorChannel.abi).encodeFunctionData("execTransaction", [
       multisigInput.to,
       multisigInput.value,
       multisigInput.data,
