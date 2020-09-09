@@ -4,6 +4,12 @@ import { InboundChannelError } from "./utils";
 // TODO: Eth address string validation?
 export type Address = string;
 
+// TODO: Use the standard here and replace all non-signer addresses everywhere
+export type ContextualAddress = {
+  address: Address,
+  chainId: number
+}
+
 // TODO: replace these placeholders w real types
 export type ChannelState = any;
 export type MultisigCommitment = any;
@@ -54,17 +60,25 @@ export type UpdateParams<T extends UpdateType> = {
   details: ParamsMap[T];
 };
 
+// TODO update this in contracts
 export type Balance = {
   amount: string[];
   to: Address[];
+  assetId: Address;
 };
+
+// TODO update this in contracts
+export type LockedValueType = {
+  amount: string;
+  assetId: Address;
+}
 
 export type CoreChannelState = {
   channelAddress: Address;
   participants: Address[]; // Signer keys..?
   timeout: string;
   balances: Balance[]; // TODO index by assetId? // initiator, responder
-  lockedValue: string[]; // Indexed by assetId -- should always be changed in lockstep with transfers
+  lockedValue: LockedValueType[]; // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
   nonce: number;
   latestDepositNonce: number;
@@ -85,7 +99,7 @@ export type CoreTransferState = {
 export type ChannelCommitmentData = {
   state: CoreChannelState;
   signatures: string[];
-  adjudicatorAddress: Address;
+  adjudicatorAddress: Address; // TODO do we need this if the adjudicator address is available in multisig? This depends on whether we want to allow adjudicator updates.
   chainId: number;
 };
 
@@ -113,8 +127,6 @@ export type ChannelUpdate<T extends UpdateType> = {
   channelAddress: string;
   fromIdentifier: string;
   toIdentifier: string;
-  counterpartyPublicIdentifier?: string;
-  commitment: any; // TODO
   type: T;
   nonce: number;
   balance: Balance;

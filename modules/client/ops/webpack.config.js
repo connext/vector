@@ -1,5 +1,5 @@
-const CopyPlugin = require("copy-webpack-plugin");
-const path = require("path");
+const CopyPlugin = require("../../rest-api-wrapper/ops/node_modules/copy-webpack-plugin");
+const path = require("../../rest-api-wrapper/ops/node_modules/path");
 
 module.exports = {
   mode: "development",

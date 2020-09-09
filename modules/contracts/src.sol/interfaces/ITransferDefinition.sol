@@ -7,7 +7,7 @@ interface ITransferDefinition {
 
     // Validates the initial state of the transfer.
     // Called by validator.ts during `create` updates.
-    function initialize(bytes calldata)
+    function create(bytes calldata)
         external
         view
         returns (bool);
