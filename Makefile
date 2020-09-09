@@ -75,7 +75,6 @@ reset: stop-all
 reset-images:
 	rm -f .flags/database .flags/ethprovider .flags/node .flags/proxy
 
-
 purge: clean reset
 
 push:
@@ -86,6 +85,9 @@ pull:
 
 pull-latest:
 	bash ops/pull-images.sh latest
+
+build-report:
+	bash ops/build-report.sh
 
 dls:
 	@docker service ls
