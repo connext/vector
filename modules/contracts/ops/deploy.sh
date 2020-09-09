@@ -17,13 +17,13 @@ mkdir -p $data_dir /data /tmpfs
 touch $address_book
 
 echo "Deploying contracts.."
-node dist/src/cli.js migrate \
+node dist/src.ts/cli.js migrate \
   --address-book "$address_book" \
   --eth-provider "$eth_provider" \
   --mnemonic "$mnemonic"
 
 echo "Deploying testnet token.."
-node dist/src/cli.js new-token \
+node dist/src.ts/cli.js new-token \
   --address-book "$address_book" \
   --eth-provider "$eth_provider" \
   --mnemonic "$mnemonic"

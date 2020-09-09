@@ -23,7 +23,7 @@ then
   prev_checksum=""
   while true
   do
-    checksum="`find contracts src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
+    checksum="`find src.sol src.ts -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
     if [[ "$checksum" != "$prev_checksum" ]]
     then
       echo
@@ -40,7 +40,7 @@ then
 
       sleep 2
       echo "Re-running tests..."
-      checksum="`find contracts src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
+      checksum="`find src.sol src.ts -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
       npx buidler test
       prev_checksum=$checksum
 
