@@ -79,7 +79,7 @@ export type LockedValueType = {
   assetId: Address;
 };
 
-export type CoreChannelState = {
+export interface CoreChannelState {
   channelAddress: Address;
   participants: Address[]; // Signer keys..?
   timeout: string;
@@ -89,9 +89,9 @@ export type CoreChannelState = {
   nonce: number;
   latestDepositNonce: number;
   merkleRoot: string;
-};
+}
 
-export type CoreTransferState = {
+export interface CoreTransferState {
   assetId: Address;
   channelAddress: Address;
   transferId: string;
@@ -100,20 +100,20 @@ export type CoreTransferState = {
   transferStateHash: string;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   merkleProofData: any; //TODO
-};
+}
 
-export type ChannelCommitmentData = {
+export interface ChannelCommitmentData {
   state: CoreChannelState;
   signatures: string[];
   adjudicatorAddress: Address; // TODO do we need this if the adjudicator address is available in multisig? This depends on whether we want to allow adjudicator updates.
   chainId: number;
-};
+}
 
-export type TransferCommitmentData = {
+export interface TransferCommitmentData {
   state: CoreTransferState;
   adjudicatorAddress: Address;
   chainId: number;
-};
+}
 
 // Includes any additional info that doesn't need to be sent to chain
 export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
