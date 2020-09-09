@@ -21,7 +21,7 @@ import { applyUpdate } from "./update";
 // message to the counterparty, and resolve once the updated channel state
 // has been persisted.
 export async function outbound(
-  update: ChannelUpdate<any>, 
+  update: ChannelUpdate<any>,
   storeService: IStoreService,
   messagingService: IMessagingService,
   stateEvt: Evt<ChannelState>,
@@ -59,7 +59,7 @@ export async function outbound(
       // TODO: turn `update` into a DTO before sending?
       // TODO: what if there is no latest update?
       messagingService
-        .send(update.counterpartyPublicIdentifier, { update, latestUpdate: storedChannel.latestUpdate })
+        .send(update.toIdentifier, { update, latestUpdate: storedChannel.latestUpdate })
         .catch((e) => reject(e.message));
     });
 
@@ -164,7 +164,14 @@ export async function inbound(
 
   // If it is a response, process the response
   if (isChannelMessage(message)) {
-    return processChannelMessage(message as VectorChannelMessage, storeService, messagingService, signer, stateEvt, errorEvt);
+    return processChannelMessage(
+      message as VectorChannelMessage,
+      storeService,
+      messagingService,
+      signer,
+      stateEvt,
+      errorEvt,
+    );
   }
 
   // It is an error message from a counterparty. An `outbound` promise
@@ -189,7 +196,7 @@ async function processChannelMessage(
   const handleError = async (error: ChannelUpdateError) => {
     // If the update is single signed, the counterparty is waiting
     // for a response.
-    if (requestedUpdate.commitment.signatures.length === 1) {
+    if (requestedUpdate.signatures.length === 1) {
       await messagingService.send(from, error);
     }
     // Post to the evt
@@ -214,7 +221,7 @@ async function processChannelMessage(
     // Create an empty channel state
     storedState = {
       channelAddress: requestedUpdate.channelAddress,
-      participants: [requestedUpdate.counterpartyPublicIdentifier, signer.publicIdentifier],
+      participants: [requestedUpdate.fromIdentifier, signer.publicIdentifier],
       chainId: (await signer.provider.getNetwork()).chainId,
       latestNonce: "0",
       latestUpdate: undefined,
@@ -248,9 +255,9 @@ async function processChannelMessage(
 
   // Before proceeding, verify any signatures present are correct
   try {
-    await requestedUpdate.commitment.assertSignatures();
+    // await requestedUpdate.commitment.assertSignatures();
     // TODO: should also make sure that there are *2* signatures
-    await counterpartyLatestUpdate.commitment.assertSignatures();
+    // await counterpartyLatestUpdate.commitment.assertSignatures();
   } catch (e) {
     return handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.BadSignatures, requestedUpdate, storedState, {
@@ -336,12 +343,12 @@ async function processChannelMessage(
 
   // If the update was single signed, the counterparty is proposing
   // an update, so we should return an ack
-  if (requestedUpdate.commitment.signatures.length === 1) {
+  if (requestedUpdate.signatures.length === 1) {
     // Sign the update
     let signed: MultisigCommitment;
     try {
-      const sig = await signer.signMessage(requestedUpdate.commitment.getHash());
-      signed = requestedUpdate.commitment.addSignature(sig);
+      // const sig = await signer.signMessage(requestedUpdate.commitment.getHash());
+      // signed = requestedUpdate.commitment.addSignature(sig);
       await storeService.saveChannelState(response);
     } catch (e) {
       return handleError(

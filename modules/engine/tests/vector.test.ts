@@ -15,12 +15,7 @@ describe("Vector", () => {
   it("can be created", async () => {
     const store = getMemoryStore();
     await store.init();
-    const node = await Vector.connect(
-      memoryMessagingService,
-      new MemoryLockService(),
-      store,
-      getRandomChannelSigner(),
-    );
+    const node = await Vector.connect(memoryMessagingService, new MemoryLockService(), store, getRandomChannelSigner());
     expect(node).to.be.ok;
   });
 });

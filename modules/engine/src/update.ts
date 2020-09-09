@@ -32,7 +32,9 @@ export async function applyUpdate<T extends UpdateType>(
       return {
         ...state,
         balances: {} as any, // FIXME: balance type finalized, this should be new balance
-        assetIds: !!state.assetIds.find(a => a === update.assetId) ? state.assetIds : [...state.assetIds, update.assetId],
+        assetIds: !!state.assetIds.find((a) => a === update.assetId)
+          ? state.assetIds
+          : [...state.assetIds, update.assetId],
         nonce: update.nonce,
         latestDepositNonce: update.details.latestDepositNonce,
       };
@@ -115,10 +117,7 @@ export async function generateUpdate<T extends UpdateType>(
   return update;
 }
 
-async function generateSetupUpdate(
-  params: UpdateParams<"setup">,
-  signer: any,
-): Promise<ChannelUpdate<"setup">> {
+async function generateSetupUpdate(params: UpdateParams<"setup">, signer: any): Promise<ChannelUpdate<"setup">> {
   // During channel creation, you have no channel state, so create
   // the base values
   const publicIdentifiers = [signer.publicIdentifier, params.details.counterpartyIdentifier];
@@ -127,24 +126,25 @@ async function generateSetupUpdate(
     latestDepositNonce: 0,
     channelAddress: params.channelAddress,
     timeout: params.details.timeout,
-    participants: [/* TODO: ?? */].map(getSignerAddressFromPublicIdentifier),
+    participants: [
+      /* TODO: ?? */
+    ].map(getSignerAddressFromPublicIdentifier),
     balances: [],
     lockedValue: [],
     assetIds: [],
     merkleRoot: constants.HashZero,
     latestUpdate: undefined,
     networkContext: params.details.networkContext,
-     publicIdentifiers,
+    publicIdentifiers,
   };
 
   // Create the channel update from the params
   const unsigned: ChannelUpdate<"setup"> = {
     ...generateBaseUpdate(baseState, params, signer),
-    balance: { to: [], amount: []},
-    commitment: {} as any,
-    assetId: constants.AddressZero,
+    balance: { to: [], amount: [], assetId: constants.AddressZero },
     details: {},
     signatures: [],
+    assetId: constants.AddressZero,
   };
   // Create a signed commitment for the new state
   const newState = await applyUpdate(unsigned, baseState);
@@ -252,7 +252,6 @@ async function generateCreateUpdate(
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
-    commitment: {} as any,
     assetId,
     details: {
       transferId: utils.hexlify(utils.randomBytes(32)),
@@ -285,7 +284,7 @@ async function generateResolveUpdate(
   storeService: IStoreService,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
-  // channel fields: 
+  // channel fields:
   // - balances
   // - lockedValue
   // - nonce
@@ -300,15 +299,14 @@ async function generateResolveUpdate(
 
   // First generate latest merkle tree data
   const active = await storeService.getTransferInitialStates(params.channelAddress);
-  const hashes = active.filter(x => x.transferId === params.details.transferId).map(hashTransferState);
-  const initial = active.find(a => a.transferId === params.details.transferId);
+  const hashes = active.filter((x) => x.transferId === params.details.transferId).map(hashTransferState);
+  const initial = active.find((a) => a.transferId === params.details.transferId);
   const merkle = new MerkleTree(hashes);
 
   // Generate the unsigned update from the params
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
-    commitment: {} as any,
     assetId: stored.assetId,
     details: {
       transferId: params.details.transferId,
@@ -331,7 +329,6 @@ async function generateResolveUpdate(
     signatures: commitment.signatures,
   };
 }
-
 
 // This function signs the state after the update is applied,
 // not for the update that exists

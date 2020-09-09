@@ -6,9 +6,9 @@ export type Address = string;
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
 export type ContextualAddress = {
-  address: Address,
-  chainId: number
-}
+  address: Address;
+  chainId: number;
+};
 
 // TODO: replace these placeholders w real types
 export type ChannelState = any;
@@ -20,7 +20,7 @@ export type SetupParams = {
   counterpartyIdentifier: string;
   timeout: string;
   networkContext: NetworkContext;
-}
+};
 
 export type DepositParams = {
   channelAddress: string;
@@ -71,7 +71,7 @@ export type Balance = {
 export type LockedValueType = {
   amount: string;
   assetId: Address;
-}
+};
 
 export type CoreChannelState = {
   channelAddress: Address;
@@ -200,8 +200,8 @@ export interface IStoreService {
 
   // Should return all initial transfer state data needed to
   // create the merkle root
-  getTransferInitialStates(channelAddress: string): Promise<CoreTransferState[]>
-  getTransferState(transferId: string): Promise<CoreTransferState | undefined>
+  getTransferInitialStates(channelAddress: string): Promise<CoreTransferState[]>;
+  getTransferState(transferId: string): Promise<CoreTransferState | undefined>;
 }
 
 // TODO: fix these interfaces!
