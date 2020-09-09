@@ -22,11 +22,11 @@ if [[ "$response" == "y" ]]
 then
 
   find \
-    .github/workflows/*
+    .github/workflows/* \
     Makefile \
     modules/*/contracts \
-    modules/*/src \
     modules/*/ops \
+    modules/*/src \
     ops \
     -type f -not -name "*.swp" -exec sed -i "s|$old|$new|g" {} \;
 

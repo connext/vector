@@ -1,13 +1,12 @@
+import { VectorChannel } from "@connext/vector-contracts";
+import { getSignerAddressFromIdentifier } from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
 
 import {
+  ChannelCommitmentData,
   ChannelUpdate,
-  UpdateParams,
-  ChannelUpdate,
-  UpdateType,
   FullChannelState,
   IStoreService,
-  ChannelCommitmentData,
   UpdateParams,
   UpdateType,
 } from "./types";
@@ -142,6 +141,7 @@ async function generateSetupUpdate(
   const unsigned: ChannelUpdate<"setup"> = {
     ...generateBaseUpdate(baseState, params, signer),
     balance: { to: [], amount: []},
+    commitment: {} as any,
     assetId: constants.AddressZero,
     details: {},
     signatures: [],
@@ -196,13 +196,14 @@ async function generateDepositUpdate(
   const postDepositBal = BigNumber.from(params.details.amount).add(
     assetIdx === -1 ? 0 : balances[participantIdx].amount[assetIdx],
   );
-  postDepositBal(); // TODO: rm
   // TODO: Finalize the balance obj so we can propose a new balance
+  console.log(postDepositBal);
   const balance = {} as any;
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
     balance,
+    commitment: {} as any,
     assetId: params.details.assetId,
     details: { latestDepositNonce },
     signatures: [],
@@ -251,6 +252,7 @@ async function generateCreateUpdate(
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
+    commitment: {} as any,
     assetId,
     details: {
       transferId: utils.hexlify(utils.randomBytes(32)),
@@ -306,6 +308,7 @@ async function generateResolveUpdate(
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: {} as any,
+    commitment: {} as any,
     assetId: stored.assetId,
     details: {
       transferId: params.details.transferId,

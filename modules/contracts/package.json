@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "license": "ISC",
   "files": [

@@ -4,7 +4,7 @@ import {
   MinimalTransaction,
   MultisigTransaction,
 } from "@connext/types";
-import { recoverAddressFromChannelMessage } from "@connext/utils";
+import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { utils } from "ethers";
 
 import { VectorChannel } from "../artifacts";

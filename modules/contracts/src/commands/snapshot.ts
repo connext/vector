@@ -1,4 +1,4 @@
-import { getEthProvider } from "@connext/utils";
+import { getEthProvider } from "@connext/vector-utils";
 import { Argv } from "yargs";
 import { providers } from "ethers";
 

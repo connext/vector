@@ -4,6 +4,7 @@ import { Evt } from "evt";
 import { ChannelUpdateError } from "./errors";
 import {
   ChannelUpdate,
+  ChannelState,
   MultisigCommitment,
   IStoreService,
   IMessagingService,

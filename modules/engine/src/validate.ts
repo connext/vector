@@ -1,6 +1,8 @@
-import { getAddress } from "ethers";
+import { utils } from "ethers";
 
 import { ChannelUpdate, UpdateType, FullChannelState } from "./types";
+
+const { getAddress } = utils;
 
 // TODO: Decide on validation structure
 // There are two main options:

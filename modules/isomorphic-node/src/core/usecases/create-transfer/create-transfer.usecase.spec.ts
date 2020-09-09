@@ -1,6 +1,6 @@
 import { fake } from "sinon";
 import { constants } from "ethers";
-import { getRandomIdentifier } from "@connext/utils";
+import { getRandomIdentifier } from "@connext/vector-utils";
 
 import { TestEnvironment } from "../../../test-environment";
 import { expect } from "../../../test/assert";
