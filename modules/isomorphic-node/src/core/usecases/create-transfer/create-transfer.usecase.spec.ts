@@ -44,7 +44,7 @@ describe("create transfer usecase", () => {
   describe("execute", () => {
     it("should work", async () => {
       const request: CreateTransferInput = {
-        amount: constants.One,
+        amount: "1",
         assetId: constants.AddressZero,
         channelId: constants.AddressZero,
         paymentId: constants.HashZero,

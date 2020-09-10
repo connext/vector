@@ -1,6 +1,4 @@
-// Alias types
-// TODO: Eth address string validation?
-export type Address = string;
+import { Address } from "./basic";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
 export type ContextualAddress = {

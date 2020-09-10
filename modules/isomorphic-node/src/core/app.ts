@@ -8,13 +8,13 @@ import { CreateTransferInput } from "./usecases/create-transfer/create-transfer.
 import { CreateTransferOutput } from "./usecases/create-transfer/create-transfer.out";
 import { CreateTransferUseCase } from "./usecases/create-transfer/create-transfer.usecase";
 
-export interface IsomorphicNode {
+export interface IIsomorphicNode {
   createChannel(createChannelInput: CreateChannelInput): Promise<CreateChannelOutput>;
   deposit(depositInput: DepositInput): Promise<DepositOutput>;
   createTransfer(createTransferInput: CreateTransferInput): Promise<CreateTransferOutput>;
 }
 
-export class App {
+export class IsomorphicNode implements IIsomorphicNode {
   constructor(
     private readonly createChannelUseCase: CreateChannelUseCase,
     private readonly depositUseCase: DepositUseCase,

@@ -1,7 +1,5 @@
-import { BigNumber } from "ethers";
-
 export type DepositInput = {
   channelId: string;
-  amount: BigNumber;
+  amount: string;
   assetId: string;
 };

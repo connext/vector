@@ -1,9 +1,16 @@
-import { ChannelUpdate, IStoreService, ChannelState, UpdateType, MultisigCommitment } from "@connext/vector-types";
+import {
+  ChannelUpdate,
+  IStoreService,
+  ChannelState,
+  UpdateType,
+  MultisigCommitment,
+  IMessagingService,
+} from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import { Evt } from "evt";
 
 import { ChannelUpdateError } from "./errors";
-import { IMessagingService, VectorMessage, VectorChannelMessage, VectorErrorMessage } from "./types";
+import { VectorMessage, VectorChannelMessage, VectorErrorMessage } from "./types";
 import { delay, logger, isChannelMessage, isChannelState } from "./utils";
 import { applyUpdate } from "./update";
 
@@ -50,7 +57,7 @@ export async function outbound(
       // TODO: turn `update` into a DTO before sending?
       // TODO: what if there is no latest update?
       messagingService
-        .send(update.toIdentifier, { update, latestUpdate: storedChannel.latestUpdate })
+        .publish(update.toIdentifier, { update, latestUpdate: storedChannel.latestUpdate })
         .catch((e) => reject(e.message));
     });
 
@@ -191,7 +198,7 @@ async function processChannelMessage(
     // If the update is single signed, the counterparty is waiting
     // for a response.
     if (requestedUpdate.signatures.length === 1) {
-      await messagingService.send(from, error);
+      await messagingService.publish(from, error);
     }
     // Post to the evt
     errorEvt.post(error);
@@ -353,7 +360,7 @@ async function processChannelMessage(
     }
 
     // Send the latest update to the node
-    await messagingService.send(from, {
+    await messagingService.publish(from, {
       update: { ...requestedUpdate, commitment: signed },
       latestUpdate: response.latestUpdate,
     });

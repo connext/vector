@@ -43,7 +43,7 @@ describe("deposit interactor", () => {
   describe("execute", () => {
     it("should work", async () => {
       const request: DepositInput = {
-        amount: constants.One,
+        amount: "1",
         assetId: constants.AddressZero,
         channelId: constants.AddressZero,
       };

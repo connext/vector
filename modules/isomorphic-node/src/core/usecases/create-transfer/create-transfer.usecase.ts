@@ -1,6 +1,6 @@
 import { constants } from "ethers";
 
-import { IWalletService, TransferState } from "../../shared/wallet/wallet.service";
+import { IWalletService } from "../../shared/wallet/wallet.service";
 import { UseCase } from "../../definitions/use-case";
 import { Result } from "../../definitions/result";
 
@@ -8,6 +8,7 @@ import { CreateTransferInput } from "./create-transfer.in";
 import { CreateTransferOutput } from "./create-transfer.out";
 import { CreateTransferValidator } from "./create-transfer.validator";
 import { CreateTransferInvalidRequest } from "./errors/invalid-request";
+import { TransferState } from "@connext/vector-types";
 
 export class CreateTransferUseCase implements UseCase<CreateTransferInput, CreateTransferOutput> {
   constructor(private createTransferValidator: CreateTransferValidator, private walletService: IWalletService) {}
@@ -27,7 +28,7 @@ export class CreateTransferUseCase implements UseCase<CreateTransferInput, Creat
     const counterparty = channel.participants.find(
       (participant) => participant !== this.walletService.getSignerAddress(),
     );
-    const initialState: TransferState = [
+    const transferInitialState: TransferState = [
       { amount: request.amount, to: this.walletService.getSignerAddress() },
       { amount: constants.Zero, to: counterparty! },
     ];
@@ -40,11 +41,12 @@ export class CreateTransferUseCase implements UseCase<CreateTransferInput, Creat
     const createResult = await this.walletService.create({
       amount: request.amount,
       assetId: request.assetId,
-      channelId: request.channelId,
-      initialState,
-      timeout: constants.Zero,
+      timeout: "0",
       transferDefinition: constants.AddressZero,
       meta,
+      channelAddress: request.channelId,
+      encodings: [""],
+      transferInitialState,
     });
 
     if (createResult.isError) {

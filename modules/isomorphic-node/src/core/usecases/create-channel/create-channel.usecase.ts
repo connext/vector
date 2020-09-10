@@ -1,5 +1,3 @@
-import { constants } from "ethers";
-
 import { IWalletService } from "../../shared/wallet/wallet.service";
 import { UseCase } from "../../definitions/use-case";
 import { Result } from "../../definitions/result";
@@ -19,17 +17,15 @@ export class CreateChannelUseCase implements UseCase<CreateChannelInput, CreateC
       return Result.fail(new CreateChannelInvalidRequest(request));
     }
 
-    const channelId = constants.HashZero;
     const setupResult = await this.walletService.setup({
       chainId: request.chainId,
-      channelId, // TODO: generate from identifiers
-      participants: [this.walletService.getPublicIdentifier(), request.publicIdentifier],
+      publicIdentifier: request.publicIdentifier,
     });
 
     if (setupResult.isError) {
       return Result.fail(setupResult.getError()!);
     }
 
-    return Result.ok({ channelId });
+    return Result.ok({ channelId: setupResult.getValue().channelAddress });
   }
 }

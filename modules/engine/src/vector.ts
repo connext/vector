@@ -7,11 +7,12 @@ import {
   CreateTransferParams,
   ResolveTransferParams,
   ILockService,
+  IMessagingService,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
 import * as sync from "./sync";
-import { IMessagingService, VectorMessage } from "./types";
+import { VectorMessage } from "./types";
 import { generateUpdate } from "./update";
 import { InboundChannelError, logger } from "./utils";
 
@@ -65,8 +66,11 @@ export class Vector {
   }
 
   private async setupServices() {
-    this.messagingService.onReceive(this.publicIdentifier, async (msg: VectorMessage) => {
+    this.messagingService.subscribe(this.publicIdentifier, async (err: Error, msg: VectorMessage) => {
       try {
+        if (err) {
+          throw err;
+        }
         await sync.inbound(
           msg,
           this.storeService,

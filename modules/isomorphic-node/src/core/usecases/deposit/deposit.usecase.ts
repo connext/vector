@@ -20,7 +20,7 @@ export class DepositUseCase implements UseCase<DepositInput, DepositOutput> {
     const depositResult = await this.walletService.deposit({
       amount: request.amount,
       assetId: request.assetId,
-      channelId: request.channelId,
+      channelAddress: request.channelId,
     });
     if (depositResult.isError) {
       return Result.fail(depositResult.getError()!);

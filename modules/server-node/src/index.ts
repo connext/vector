@@ -1,4 +1,5 @@
 import fastify from "fastify";
+
 import {
   createNode,
   IsomorphicNode,
@@ -6,7 +7,6 @@ import {
   DepositInput,
   CreateTransferInput,
 } from "../../isomorphic-node/dist";
-import { BigNumber } from "ethers";
 
 import { GenericErrorResponse } from "./helpers/types";
 import { Routes } from "./schema";
@@ -17,7 +17,7 @@ const server = fastify();
 
 let isoNode: IsomorphicNode;
 server.addHook("onReady", async () => {
-  isoNode = await createNode();
+  isoNode = createNode({} as any);
   const res = await isoNode.createChannel({ chainId: 1, publicIdentifier: "blah" });
   if (res.isError) {
     throw res.getError();
@@ -49,7 +49,7 @@ server.post<{ Body: StringifyBigNumberAmount<DepositInput> }>(
   { schema: Routes.post.deposit.schema },
   async (request, reply) => {
     const res = await isoNode.deposit({
-      amount: BigNumber.from(request.body.amount),
+      amount: request.body.amount,
       assetId: request.body.assetId,
       channelId: request.body.channelId,
     });
@@ -65,7 +65,7 @@ server.post<{ Body: StringifyBigNumberAmount<CreateTransferInput> }>(
   { schema: Routes.post.deposit.schema },
   async (request, reply) => {
     const res = await isoNode.createTransfer({
-      amount: BigNumber.from(request.body.amount),
+      amount: request.body.amount,
       assetId: request.body.assetId,
       channelId: request.body.channelId,
       paymentId: request.body.paymentId,
