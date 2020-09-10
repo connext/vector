@@ -1,4 +1,4 @@
-import { FullChannelState, CoreTransferState } from "./channel";
+import { FullChannelState, CoreTransferState, TransferState } from "./channel";
 
 export interface IStoreService {
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
@@ -7,5 +7,5 @@ export interface IStoreService {
   // Should return all initial transfer state data needed to
   // create the merkle root
   getTransferInitialStates(channelAddress: string): Promise<CoreTransferState[]>;
-  getTransferState(transferId: string): Promise<CoreTransferState | undefined>;
+  getTransferState(transferId: string): Promise<TransferState | undefined>;
 }

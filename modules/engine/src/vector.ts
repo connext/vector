@@ -61,7 +61,14 @@ export class Vector {
 
     const key = await this.lockService.acquireLock(params.channelAddress);
     const update = await generateUpdate(params, this.storeService, null);
-    await sync.outbound(update, this.storeService, this.messagingService, this.channelStateEvt, this.channelErrorEvt);
+    await sync.outbound(
+      update,
+      this.signer,
+      this.storeService,
+      this.messagingService,
+      this.channelStateEvt,
+      this.channelErrorEvt,
+    );
     await this.lockService.releaseLock(params.channelAddress, key);
   }
 

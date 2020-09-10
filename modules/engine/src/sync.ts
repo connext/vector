@@ -20,6 +20,7 @@ import { applyUpdate } from "./update";
 // has been persisted.
 export async function outbound(
   update: ChannelUpdate<any>,
+  signer: any,
   storeService: IStoreService,
   messagingService: IMessagingService,
   stateEvt: Evt<ChannelState>,
@@ -109,7 +110,7 @@ export async function outbound(
   // Apply the update, and retry the update
   let newState: string | ChannelState;
   try {
-    newState = await applyUpdate(result.state.latestUpdate, storedChannel);
+    newState = await applyUpdate(result.state.latestUpdate, storedChannel, storeService, signer.providerUrl);
   } catch (e) {
     newState = e.message;
   }
@@ -160,6 +161,9 @@ export async function inbound(
     return;
   }
 
+  // TODO: If it is not a channel or error message,
+  // ignore the message
+
   // If it is a response, process the response
   if (isChannelMessage(message)) {
     return processChannelMessage(
@@ -174,10 +178,6 @@ export async function inbound(
 
   // It is an error message from a counterparty. An `outbound` promise
   // may be waiting to resolve, so post to th errorEvt
-  // TODO we should not assume here that any non-channel-message is an error message(!!)
-  // @arjun -- what other possible messages would you get? the only other way
-  // i can think of handling this, is checking if it *is* an error, and throwing
-  // if it isn't
   errorEvt.post((message as VectorErrorMessage).error);
 }
 
@@ -313,7 +313,7 @@ async function processChannelMessage(
       );
     }
     try {
-      previousState = await applyUpdate(counterpartyLatestUpdate, storedState);
+      previousState = await applyUpdate(counterpartyLatestUpdate, storedState, storeService, signer.providerUrl);
     } catch (e) {
       return handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, counterpartyLatestUpdate, storedState, {
@@ -329,7 +329,7 @@ async function processChannelMessage(
   // able to play it on top of the update
   let response: ChannelState | string;
   try {
-    response = await applyUpdate(requestedUpdate, previousState);
+    response = await applyUpdate(requestedUpdate, previousState, storeService, signer.providerUrl);
   } catch (e) {
     response = e.message;
   }

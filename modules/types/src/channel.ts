@@ -9,7 +9,7 @@ export type ContextualAddress = {
 // TODO: replace these placeholders w real types
 export type ChannelState = any;
 export type MultisigCommitment = any;
-export type TransferState = any;
+export type TransferState = any & { balance: Balance; assetId: string; transferId: string };
 
 // Method params
 export type SetupParams = {
@@ -29,7 +29,7 @@ export type CreateTransferParams = {
   amount: string;
   assetId: string;
   transferDefinition: string;
-  transferInitialState: any; // TODO (solidityvaluetype?)
+  transferInitialState: TransferState; // TODO (solidityvaluetype?)
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
   meta?: any;
@@ -68,15 +68,16 @@ export type UpdateParams<T extends UpdateType> = {
 export type Balance = {
   amount: string[];
   to: Address[];
-  assetId: Address;
 };
 
 // TODO update this in contracts
 export type LockedValueType = {
   amount: string;
-  assetId: Address;
 };
 
+// Array ordering should always correspond to the channel
+// participants array ordering (but value in `to` field may
+// not always be the particpants addresses)
 export interface CoreChannelState {
   channelAddress: Address;
   participants: Address[]; // Signer keys..?
@@ -98,7 +99,6 @@ export interface CoreTransferState {
   transferStateHash: string;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   merkleProofData: any; //TODO
-  transferAmount: string; // TODO: not needed for contracts but useful offchain
 }
 
 export interface ChannelCommitmentData {
@@ -124,6 +124,7 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
 export type NetworkContext = {
   channelFactoryAddress: Address;
   vectorChannelMastercopyAddress: Address;
+  adjudicatorAddress: Address;
   chainId: number;
   providerUrl: string;
 };

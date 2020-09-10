@@ -6,7 +6,6 @@ export const createTestChannelUpdate = (): ChannelUpdate<"create"> => {
     balance: {
       amount: ["1"],
       to: ["0x0000000000000000000000000000000000000000"],
-      assetId: "0x0000000000000000000000000000000000000000",
     },
     channelAddress: "0x1110000000000000000000000000000000000000",
     details: {
@@ -34,13 +33,11 @@ export const createTestChannelState = (): FullChannelState => {
       {
         amount: ["1", "2"],
         to: ["0xa000000000000000000000000000000000000000", "0xb000000000000000000000000000000000000000"],
-        assetId: "0x0000000000000000000000000000000000000000",
       },
       // participantB
       {
         amount: ["1", "2"],
         to: ["0xa000000000000000000000000000000000000000", "0xb000000000000000000000000000000000000000"],
-        assetId: "0x1000000000000000000000000000000000000000",
       },
     ],
     channelAddress: "0x1110000000000000000000000000000000000000",
@@ -49,11 +46,9 @@ export const createTestChannelState = (): FullChannelState => {
     lockedValue: [
       {
         amount: "1",
-        assetId: "0x0000000000000000000000000000000000000000",
       },
       {
         amount: "2",
-        assetId: "0x1000000000000000000000000000000000000000",
       },
     ],
     merkleRoot: "0x",
@@ -61,6 +56,7 @@ export const createTestChannelState = (): FullChannelState => {
       chainId: 1337,
       channelFactoryAddress: "0x0000000000000000000000000000000000000000",
       providerUrl: "",
+      adjudicatorAddress: "0x0000000000000000000000000000000000000000",
       vectorChannelMastercopyAddress: "0x0000000000000000000000000000000000000000",
     },
     nonce: 2,

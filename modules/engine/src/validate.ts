@@ -1,20 +1,7 @@
-import { UpdateType, ChannelUpdate, FullChannelState } from "@connext/vector-types";
+import { UpdateType, ChannelUpdate, FullChannelState, IStoreService } from "@connext/vector-types";
 import { utils } from "ethers";
 
 const { getAddress } = utils;
-
-// TODO: Decide on validation structure
-// There are two main options:
-// 1. Apply update, validate resulting state
-// 2. Validate update, return resulting state
-// The main differences between these two depends on
-// how we expect signatures to be validated. Using option (1)
-// you can easily verify the signature on the new states, but
-// using option (2) this becomes more difficult since you have
-// not *yet* generated the commitment data that you sign.
-// We could change the API here, or validate the state, or
-// do a combination of both with a `validateState` / `validateUpdate`
-// helper pair
 
 // This function is used to validate any update before signing it into your
 // state. This function may be called by functions that need to be ack-d
@@ -28,6 +15,8 @@ const { getAddress } = utils;
 export async function validate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
+  storeService: IStoreService, // TODO: only initial states?
+  providerUrl: string, // TODO: just signer?
 ): Promise<void> {
   // There is no need to validate items in the state since this will always
   // be a double signed state

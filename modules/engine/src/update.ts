@@ -10,6 +10,7 @@ import {
   ChannelCommitmentData,
   Balance,
   LockedValueType,
+  TransferState,
 } from "@connext/vector-types";
 
 import { validate } from "./validate";
@@ -20,19 +21,19 @@ export async function applyUpdate<T extends UpdateType>(
   // optional sig typings allows this fn to be used by initiator before signing
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
+  storeService: IStoreService, // TODO: only initial states?
+  providerUrl: string, // TODO: just signer?
 ): Promise<FullChannelState<T>> {
   // TODO: May need store service and provider in validation function
-  await validate(update, state);
+  await validate(update, state, storeService, providerUrl);
   switch (update.type) {
     case UpdateType.setup: {
-      // The initial state should be passed into the setup function
-      // TODO: there may be some weirdness with 0 nonces, will have to
-      // check what the nonce should be in the open state
+      // TODO: implement as if onchain first state is nonce 1
       return state;
     }
     case UpdateType.deposit: {
       // Generate the new balance field for the channel
-      const balances = reconcileBalanceWithExisting(update.balance, state.balances);
+      const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       return {
         ...state,
         balances,
@@ -45,8 +46,13 @@ export async function applyUpdate<T extends UpdateType>(
     }
     case UpdateType.create: {
       // Generate the new balance field for the channel
-      const balances = reconcileBalanceWithExisting(update.balance, state.balances);
-      const lockedValue = reconcileLockedValue(UpdateType.create, update.balance, state.balances, state.lockedValue);
+      const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
+      const lockedValue = reconcileLockedValue(
+        UpdateType.create,
+        update.details.transferInitialState,
+        state.assetIds,
+        state.lockedValue,
+      );
       return {
         ...state,
         balances,
@@ -56,8 +62,13 @@ export async function applyUpdate<T extends UpdateType>(
       };
     }
     case UpdateType.resolve: {
-      const balances = reconcileBalanceWithExisting(update.balance, state.balances);
-      const lockedValue = reconcileLockedValue(UpdateType.resolve, update.balance, state.balances, state.lockedValue);
+      const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
+      const initialStates = await storeService.getTransferInitialStates(state.channelAddress);
+      const initialState = initialStates.find((s) => s.transferId === update.details.transferId);
+      if (!initialState) {
+        throw new Error(`Could not find initial state for transfer to resolve. Id: ${update.details.transferId}`);
+      }
+      const lockedValue = reconcileLockedValue(UpdateType.resolve, initialState, state.assetIds, state.lockedValue);
       return {
         ...state,
         balances,
@@ -101,11 +112,11 @@ export async function generateUpdate<T extends UpdateType>(
   let update: ChannelUpdate<any>;
   switch (params.type) {
     case UpdateType.setup: {
-      update = await generateSetupUpdate(params as UpdateParams<"setup">, signer);
+      update = await generateSetupUpdate(params as UpdateParams<"setup">, signer, storeService);
       break;
     }
     case UpdateType.deposit: {
-      update = await generateDepositUpdate(state, params as UpdateParams<"deposit">, signer);
+      update = await generateDepositUpdate(state, params as UpdateParams<"deposit">, signer, storeService);
       break;
     }
     case UpdateType.create: {
@@ -125,20 +136,21 @@ export async function generateUpdate<T extends UpdateType>(
   return update;
 }
 
-async function generateSetupUpdate(params: UpdateParams<"setup">, signer: any): Promise<ChannelUpdate<"setup">> {
+async function generateSetupUpdate(
+  params: UpdateParams<"setup">,
+  signer: any,
+  storeService: IStoreService,
+): Promise<ChannelUpdate<"setup">> {
   // During channel creation, you have no channel state, so create
   // the base values
   const publicIdentifiers = [signer.publicIdentifier, params.details.counterpartyIdentifier];
+  const participants = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
   const baseState: FullChannelState = {
     nonce: 0,
     latestDepositNonce: 0,
     channelAddress: params.channelAddress,
     timeout: params.details.timeout,
-    participants: [
-      /* TODO: ?? */
-      // @rahul / @arjun -- when would it ever me anything
-      // but the corresponding addresses from the pubId array
-    ].map(getSignerAddressFromPublicIdentifier),
+    participants,
     balances: [],
     lockedValue: [],
     assetIds: [],
@@ -148,16 +160,21 @@ async function generateSetupUpdate(params: UpdateParams<"setup">, signer: any): 
     publicIdentifiers,
   };
 
+  // TODO: There may have to be a setup signature for the channel
+  // when deploying the multisig. will need to generate that here
+  // (check with heiko)
+
   // Create the channel update from the params
   const unsigned: ChannelUpdate<"setup"> = {
     ...generateBaseUpdate(baseState, params, signer),
-    balance: { to: [], amount: [], assetId: constants.AddressZero },
+    // should have the to field filled out
+    balance: { to: participants, amount: ["0", "0"] },
     details: {},
     signatures: [],
     assetId: constants.AddressZero,
   };
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, baseState);
+  const newState = await applyUpdate(unsigned, baseState, storeService, signer.providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   return {
@@ -171,6 +188,7 @@ async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
   signer: any,
+  storeService: IStoreService,
 ): Promise<ChannelUpdate<"deposit">> {
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
@@ -182,11 +200,14 @@ async function generateDepositUpdate(
 
   const { channelAddress } = state;
 
+  // Initiating a deposit update should happen *after* money is
+  // sent to the multisig. This means that the `latestDepositByAssetId`
+  // will include the latest nonce needed
+
   // Determine the latest deposit nonce from chain using
   // the provided assetId from the params
   const multisig = new Contract(channelAddress, VectorChannel.abi, signer.provider);
   const deposits = await multisig.latestDepositByAssetId();
-  // TODO: when will this increase?
   const latestDepositNonce = deposits[params.details.assetId].nonce || 0;
 
   const balance = getUpdatedBalance("increment", params.details.assetId, params.details.amount, signer.address, state);
@@ -200,7 +221,7 @@ async function generateDepositUpdate(
   };
 
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state);
+  const newState = await applyUpdate(unsigned, state, storeService, signer.providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   return {
@@ -254,7 +275,7 @@ async function generateCreateUpdate(
   };
 
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state);
+  const newState = await applyUpdate(unsigned, state, storeService, signer.providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   return {
@@ -312,7 +333,7 @@ async function generateResolveUpdate(
 
   // Validate the generated update is correct, and create a
   // commitment for the new state
-  const newState = await applyUpdate(unsigned, state);
+  const newState = await applyUpdate(unsigned, state, storeService, signer.providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
   return {
     ...unsigned,
@@ -322,7 +343,6 @@ async function generateResolveUpdate(
 
 // This function signs the state after the update is applied,
 // not for the update that exists
-// TODO: This should make use of the channel commitment class
 async function generateSignedChannelCommitment(
   newState: FullChannelState,
   signer: any,
@@ -332,8 +352,10 @@ async function generateSignedChannelCommitment(
   const unsigned = {
     chainId: networkContext.chainId,
     state: core,
+    // TODO: don't pull from chain, pull from stored data
     adjudicatorAddress: await multisig._adjudicatorAddress(),
   };
+  // TODO: hash and use signMessage, not signChannelCommitment
   const sig = await signer.signChannelCommitment(unsigned);
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
@@ -343,6 +365,9 @@ async function generateSignedChannelCommitment(
     // convention
   };
 }
+
+// TODO: signature assertion helpers for commitment data
+// and for updates
 
 // Holds the logic that is the same between all update types:
 // - increasing channel nonce
@@ -375,37 +400,53 @@ function getUpdatedBalance(
   initiator: string,
   state: FullChannelState,
 ): Balance {
-  const existing = state.balances.find((b) => b.assetId === assetId);
+  // Create a helper to manipulate a bignumber value to update based
+  // on the balance update type
   const updateValue = (toUpdate) => {
-    return type === "increment" ? BigNumber.from(toUpdate || 0).add(amount) : BigNumber.from(toUpdate || 0).sub(amount);
+    return type === "increment"
+      ? BigNumber.from(toUpdate || 0)
+          .add(amount)
+          .toString()
+      : BigNumber.from(toUpdate || 0)
+          .sub(amount)
+          .toString();
   };
-  // TODO: Verify `balance` field passed into update should include the
-  // changed balances for *both* parties, not just the initiated delta.
+
+  // Get the existing balances to update
+  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  const existing = assetIdx === -1 ? ["0", "0"] : state.balances[assetIdx].amount;
+
+  // Calculate the updated amount array (with proper
+  // amount indexing)
+  const updated =
+    initiator === state.participants[0]
+      ? [updateValue(existing[0]), existing[1]]
+      : [existing[0], updateValue(existing[1])];
+
   return {
-    assetId,
-    // TODO: always the same ordering or update dependent?
-    to: existing.to || state.participants,
-    amount:
-      initiator === state.participants[0]
-        ? [updateValue(existing.amount[0]).toString(), existing.amount[1] || "0"]
-        : [existing.amount[0] || "0", updateValue(existing.amount[1]).toString()],
+    to: state.participants,
+    amount: updated,
   };
 }
 
 // Updates the existing state balances with the proposed balance
 // from the update (generated from `getUpdatedBalance`)
-function reconcileBalanceWithExisting(toReconcile: Balance, existing: Balance[]): Balance[] {
-  // Clone the exisitng array
-  const updated = [...existing];
-  const idx = existing.findIndex((b) => b.assetId === toReconcile.assetId);
-  if (idx === -1) {
-    // New assetId, add the balance to reconcile to the array
-    updated.push(toReconcile);
-  } else {
-    // The `getUpdatedBalances` function should return the correct
-    // final balance for this asset id, so insert into updated array
-    updated[idx] === toReconcile;
+function reconcileBalanceWithExisting(
+  balanceToReconcile: Balance,
+  assetToReconcile: string,
+  existing: Balance[],
+  assetIds: string[],
+): Balance[] {
+  // Update the balances array at the appropriate index
+  const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
+  if (assetIdx === -1) {
+    // Add new balance to array (new asset id)
+    return [...existing, balanceToReconcile];
   }
+
+  // Otherwise, update the array at the given index
+  const updated = [...existing];
+  updated[assetIdx] = balanceToReconcile;
   return updated;
 }
 
@@ -413,47 +454,31 @@ function reconcileBalanceWithExisting(toReconcile: Balance, existing: Balance[])
 // locked value during transfer creation/resolution
 function reconcileLockedValue(
   type: typeof UpdateType.create | typeof UpdateType.resolve,
-  toReconcile: Balance, // updated asset balance after update is applied
-  storedBalance: Balance[],
+  transferInitialState: TransferState,
+  assetIds: string[],
   lockedValue: LockedValueType[],
 ): LockedValueType[] {
-  // First, we must determine how much the transfer was for based on the
-  // balance change from the update balance (balance for the asset after
-  // the update was applied) and the stored balance
-  const existing = storedBalance.find((b) => b.assetId === toReconcile.assetId);
-  if (!existing) {
-    throw new Error(`Could not find balance for transfer in stored balances`);
+  // First find the appropriate index for the assetId
+  const assetIdx = assetIds.findIndex((a) => a === transferInitialState.assetId);
+
+  // Sanity-check that this is greater than -1 since these funds should
+  // always existing within the channel
+  if (assetIdx === -1) {
+    throw new Error(`Could not find transfer asset in assetIds`);
   }
 
-  // The transfer amount is the difference betweeen `existing` and `toReconcile`
-  // amounts. First find the appropriate index
-  const idx = existing.amount.findIndex((a, idx) => a !== toReconcile.amount[idx]);
+  // Get the transfer amount from the initial state
+  const transferAmount = BigNumber.from(transferInitialState.balance.amount[0]);
 
-  // Then calculate the transfer amount
-  const transferAmount = BigNumber.from(existing.amount[idx]).sub(toReconcile.amount[idx]).abs();
+  // Get the existing locked value entry
+  const existing = { ...lockedValue[assetIdx] };
+  const updatedAmt =
+    type === UpdateType.create
+      ? transferAmount.add(existing.amount)
+      : BigNumber.from(existing.amount).sub(transferAmount);
 
-  // Update the locked value
+  // Generate the new locked value object
   const updated = [...lockedValue];
-  const lockedIdx = lockedValue.findIndex((v) => v.assetId === toReconcile.assetId);
-  if (lockedIdx === -1 && type === UpdateType.resolve) {
-    throw new Error(`Could not find locked value to update for resolving transfer`);
-  }
-
-  if (lockedIdx === -1) {
-    // New transfer asset id, simply push transfer amount to locked
-    // value array (can only be the case for create)
-    const lockedBal: LockedValueType = {
-      assetId: toReconcile.assetId,
-      amount: transferAmount.toString(),
-    };
-    updated.push(lockedBal);
-  } else {
-    // Update the existing locked value entry for the given asset
-    updated[lockedIdx] = {
-      ...lockedValue[lockedIdx],
-      amount: transferAmount.add(lockedValue[lockedIdx].amount).toString(),
-    };
-  }
-
+  updated[assetIdx] = { amount: updatedAmt.toString() };
   return updated;
 }
