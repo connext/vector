@@ -87,14 +87,15 @@ export class Vector {
     // TODO validate that the channel is not currently in dispute/checkpoint state
 
     // sync latest state before starting
-    const channelState = this.storeService.getChannelState();
-    await sync.outbound(
-      channelState.latestUpdate,
-      this.storeService,
-      this.messagingService,
-      this.channelStateEvt,
-      this.channelErrorEvt,
-    );
+    // TODO: How to get channelId on startup? should we sync *all* channels?
+    // const channelState = this.storeService.getChannelState(msg.data.channelId);
+    // await sync.outbound(
+    //   channelState.latestUpdate,
+    //   this.storeService,
+    //   this.messagingService,
+    //   this.channelStateEvt,
+    //   this.channelErrorEvt,
+    // );
     return this;
   }
 
