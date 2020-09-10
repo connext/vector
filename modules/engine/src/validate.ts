@@ -120,10 +120,37 @@ function validateDeposit(update: ChannelUpdate<"deposit">, state: FullChannelSta
 }
 
 function validateCreate(update: ChannelUpdate<"create">, state: FullChannelState<"create">): void {
+  // Validate transfer id
+
+  // Validate transfer definition
+
+  // Validate reasonable timeout
+
+  // Validate tranfer initial state
+  // TODO: this will require a provider!
+
+  // Validate transfer encodings are correct
+  // TODO: can we get this from chain?
+
+  // Validate merkle proof data
+
+  // Recalculate + validate merkle root
+  // TODO: this will require all transfer initial states!
   throw new Error("validateCreate not implemented: " + JSON.stringify(update) + JSON.stringify(state));
 }
 
 function validateResolve(update: ChannelUpdate<"resolve">, state: FullChannelState<"resolve">): void {
+  // Validate transfer id
+
+  // Validate transfer definition
+
+  // Validate resolver
+  // TODO: define transfer types
+
+  // Validate merkle proof data
+
+  // Recalculate + validate merkle root
+  // TODO: this will require all transfer initial states!
   throw new Error("validateResolve not implemented: " + JSON.stringify(update) + JSON.stringify(state));
 }
 

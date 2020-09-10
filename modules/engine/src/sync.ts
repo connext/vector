@@ -168,6 +168,9 @@ export async function inbound(
   // It is an error message from a counterparty. An `outbound` promise
   // may be waiting to resolve, so post to th errorEvt
   // TODO we should not assume here that any non-channel-message is an error message(!!)
+  // @arjun -- what other possible messages would you get? the only other way
+  // i can think of handling this, is checking if it *is* an error, and throwing
+  // if it isn't
   errorEvt.post((message as VectorErrorMessage).error);
 }
 

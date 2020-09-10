@@ -8,6 +8,8 @@ import {
   UpdateParams,
   IStoreService,
   ChannelCommitmentData,
+  Balance,
+  LockedValueType,
 } from "@connext/vector-types";
 
 import { validate } from "./validate";
@@ -29,9 +31,11 @@ export async function applyUpdate<T extends UpdateType>(
       return state;
     }
     case UpdateType.deposit: {
+      // Generate the new balance field for the channel
+      const balances = reconcileBalanceWithExisting(update.balance, state.balances);
       return {
         ...state,
-        balances: {} as any, // FIXME: balance type finalized, this should be new balance
+        balances,
         assetIds: !!state.assetIds.find((a) => a === update.assetId)
           ? state.assetIds
           : [...state.assetIds, update.assetId],
@@ -40,19 +44,24 @@ export async function applyUpdate<T extends UpdateType>(
       };
     }
     case UpdateType.create: {
+      // Generate the new balance field for the channel
+      const balances = reconcileBalanceWithExisting(update.balance, state.balances);
+      const lockedValue = reconcileLockedValue(UpdateType.create, update.balance, state.balances, state.lockedValue);
       return {
         ...state,
-        balances: {} as any, // FIXME: balance type finalized, this should be new balances
-        lockedValue: {} as any, // FIXME: balance type finalized, this should be new balances
+        balances,
+        lockedValue,
         nonce: update.nonce,
         merkleRoot: update.details.merkleRoot,
       };
     }
     case UpdateType.resolve: {
+      const balances = reconcileBalanceWithExisting(update.balance, state.balances);
+      const lockedValue = reconcileLockedValue(UpdateType.resolve, update.balance, state.balances, state.lockedValue);
       return {
         ...state,
-        balances: {} as any, // FIXME: balance type finalized, this should be new balances
-        lockedValue: {} as any, // FIXME: balance type finalized, this should be new balances
+        balances,
+        lockedValue,
         nonce: update.nonce,
         merkleRoot: update.details.merkleRoot,
       };
@@ -89,7 +98,7 @@ export async function generateUpdate<T extends UpdateType>(
   }
 
   // Create the update from user parameters based on type
-  let update;
+  let update: ChannelUpdate<any>;
   switch (params.type) {
     case UpdateType.setup: {
       update = await generateSetupUpdate(params as UpdateParams<"setup">, signer);
@@ -110,7 +119,6 @@ export async function generateUpdate<T extends UpdateType>(
     default: {
       throw new Error(`Unrecognized channel update type: ${params.type}`);
     }
-    // Is there a case where updateType isn't one of these? I guess we can validate incoming params elsewhere
   }
 
   // Return the validated update to send to counterparty
@@ -128,6 +136,8 @@ async function generateSetupUpdate(params: UpdateParams<"setup">, signer: any): 
     timeout: params.details.timeout,
     participants: [
       /* TODO: ?? */
+      // @rahul / @arjun -- when would it ever me anything
+      // but the corresponding addresses from the pubId array
     ].map(getSignerAddressFromPublicIdentifier),
     balances: [],
     lockedValue: [],
@@ -170,7 +180,7 @@ async function generateDepositUpdate(
   // - latestDepositNonce
   // while the remaining fields are consistent
 
-  const { channelAddress, publicIdentifiers, assetIds, balances } = state;
+  const { channelAddress } = state;
 
   // Determine the latest deposit nonce from chain using
   // the provided assetId from the params
@@ -179,31 +189,11 @@ async function generateDepositUpdate(
   // TODO: when will this increase?
   const latestDepositNonce = deposits[params.details.assetId].nonce || 0;
 
-  // Generate the new balance field for the channel
-  // TODO: How are balances indexed? Need to finalize this type
-  // For now, the implementation assumes same indexing as pubIds/signers
-  // But then it is unclear what the arrays *within* the balance field refer to,
-  // is this for the assetIds?
-  const participantIdx = publicIdentifiers.findIndex((s) => s === signer.publicIdentifier);
-  if (participantIdx === -1) {
-    throw new Error(`Signer not found in channel`);
-  }
-  const assetIdx = assetIds.findIndex((a) => a === params.details.assetId);
-  // It is possible that the assetId does not yet exist in the state,
-  // in which case this is the first deposit of this asset into the channel
-  // TODO: do we even need to have an amount field? How exactly would we
-  // reconcile balances here
-  const postDepositBal = BigNumber.from(params.details.amount).add(
-    assetIdx === -1 ? 0 : balances[participantIdx].amount[assetIdx],
-  );
-  // TODO: Finalize the balance obj so we can propose a new balance
-  console.log(postDepositBal);
-  const balance = {} as any;
+  const balance = getUpdatedBalance("increment", params.details.assetId, params.details.amount, signer.address, state);
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
     balance,
-    commitment: {} as any,
     assetId: params.details.assetId,
     details: { latestDepositNonce },
     signatures: [],
@@ -227,7 +217,7 @@ async function generateCreateUpdate(
   storeService: IStoreService,
 ): Promise<ChannelUpdate<"create">> {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, amount },
     channelAddress,
   } = params;
 
@@ -245,13 +235,10 @@ async function generateCreateUpdate(
   const merkle = new MerkleTree(hashes);
 
   // Create the update from the user provided params
-  // FIXME: Need to settle on how balances are indexed/structured
-  // BUT should update the `balance` field to be equivalent to them
-  // losing transfer amount from channel balance, and adding to locked
-  // value
+  const balance = getUpdatedBalance("decrement", assetId, amount, signer.address, state);
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
-    balance: {} as any,
+    balance,
     assetId,
     details: {
       transferId: utils.hexlify(utils.randomBytes(32)),
@@ -303,10 +290,13 @@ async function generateResolveUpdate(
   const initial = active.find((a) => a.transferId === params.details.transferId);
   const merkle = new MerkleTree(hashes);
 
+  // Create the new balance
+  const balance = getUpdatedBalance("increment", stored.assetId, stored.transferAmount, signer.address, state);
+
   // Generate the unsigned update from the params
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
-    balance: {} as any,
+    balance,
     assetId: stored.assetId,
     details: {
       transferId: params.details.transferId,
@@ -376,4 +366,94 @@ function generateBaseUpdate<T extends UpdateType>(
 
 function hashTransferState(state: any): string {
   throw new Error("hashTransferState not implemented: " + state);
+}
+
+function getUpdatedBalance(
+  type: "increment" | "decrement",
+  assetId: string,
+  amount: string,
+  initiator: string,
+  state: FullChannelState,
+): Balance {
+  const existing = state.balances.find((b) => b.assetId === assetId);
+  const updateValue = (toUpdate) => {
+    return type === "increment" ? BigNumber.from(toUpdate || 0).add(amount) : BigNumber.from(toUpdate || 0).sub(amount);
+  };
+  // TODO: Verify `balance` field passed into update should include the
+  // changed balances for *both* parties, not just the initiated delta.
+  return {
+    assetId,
+    // TODO: always the same ordering or update dependent?
+    to: existing.to || state.participants,
+    amount:
+      initiator === state.participants[0]
+        ? [updateValue(existing.amount[0]).toString(), existing.amount[1] || "0"]
+        : [existing.amount[0] || "0", updateValue(existing.amount[1]).toString()],
+  };
+}
+
+// Updates the existing state balances with the proposed balance
+// from the update (generated from `getUpdatedBalance`)
+function reconcileBalanceWithExisting(toReconcile: Balance, existing: Balance[]): Balance[] {
+  // Clone the exisitng array
+  const updated = [...existing];
+  const idx = existing.findIndex((b) => b.assetId === toReconcile.assetId);
+  if (idx === -1) {
+    // New assetId, add the balance to reconcile to the array
+    updated.push(toReconcile);
+  } else {
+    // The `getUpdatedBalances` function should return the correct
+    // final balance for this asset id, so insert into updated array
+    updated[idx] === toReconcile;
+  }
+  return updated;
+}
+
+// Uses a balance generated from `getUpdatedBalance` to update the
+// locked value during transfer creation/resolution
+function reconcileLockedValue(
+  type: typeof UpdateType.create | typeof UpdateType.resolve,
+  toReconcile: Balance, // updated asset balance after update is applied
+  storedBalance: Balance[],
+  lockedValue: LockedValueType[],
+): LockedValueType[] {
+  // First, we must determine how much the transfer was for based on the
+  // balance change from the update balance (balance for the asset after
+  // the update was applied) and the stored balance
+  const existing = storedBalance.find((b) => b.assetId === toReconcile.assetId);
+  if (!existing) {
+    throw new Error(`Could not find balance for transfer in stored balances`);
+  }
+
+  // The transfer amount is the difference betweeen `existing` and `toReconcile`
+  // amounts. First find the appropriate index
+  const idx = existing.amount.findIndex((a, idx) => a !== toReconcile.amount[idx]);
+
+  // Then calculate the transfer amount
+  const transferAmount = BigNumber.from(existing.amount[idx]).sub(toReconcile.amount[idx]).abs();
+
+  // Update the locked value
+  const updated = [...lockedValue];
+  const lockedIdx = lockedValue.findIndex((v) => v.assetId === toReconcile.assetId);
+  if (lockedIdx === -1 && type === UpdateType.resolve) {
+    throw new Error(`Could not find locked value to update for resolving transfer`);
+  }
+
+  if (lockedIdx === -1) {
+    // New transfer asset id, simply push transfer amount to locked
+    // value array (can only be the case for create)
+    const lockedBal: LockedValueType = {
+      assetId: toReconcile.assetId,
+      amount: transferAmount.toString(),
+    };
+    updated.push(lockedBal);
+  } else {
+    // Update the existing locked value entry for the given asset
+    updated[lockedIdx] = {
+      ...lockedValue[lockedIdx],
+      amount: transferAmount.add(lockedValue[lockedIdx].amount).toString(),
+    };
+  }
+
+  return updated;
 }

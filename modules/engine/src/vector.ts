@@ -6,11 +6,12 @@ import {
   UpdateType,
   CreateTransferParams,
   ResolveTransferParams,
+  ILockService,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
 import * as sync from "./sync";
-import { ILockService, IMessagingService, VectorMessage } from "./types";
+import { IMessagingService, VectorMessage } from "./types";
 import { generateUpdate } from "./update";
 import { InboundChannelError, logger } from "./utils";
 

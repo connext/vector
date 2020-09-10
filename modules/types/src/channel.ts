@@ -100,6 +100,7 @@ export interface CoreTransferState {
   transferStateHash: string;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   merkleProofData: any; //TODO
+  transferAmount: string; // TODO: not needed for contracts but useful offchain
 }
 
 export interface ChannelCommitmentData {
@@ -156,7 +157,7 @@ type CreateUpdateDetails = {
   transferTimeout: string;
   transferInitialState: any; //TODO
   transferEncodings: string[]; // Initial state, resolver state
-  merkleProofData: any; //TODO
+  merkleProofData: string;
   merkleRoot: string;
 };
 

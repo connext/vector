@@ -17,6 +17,5 @@ export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
 export type Values<E> = E[keyof E];
 
 // TODO: fix these interfaces!
-export type ILockService = any;
 export type IMessagingService = any;
 export type IOnchainService = any;
