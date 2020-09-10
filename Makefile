@@ -109,6 +109,9 @@ watch-contracts: utils
 test-engine: engine
 	bash ops/test/engine.sh test
 
+test-server-node: server-node
+	bash ops/test/server-node.sh test
+
 ########################################
 # Begin Real Build Rules
 

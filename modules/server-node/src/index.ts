@@ -17,16 +17,13 @@ const server = fastify();
 let isoNode: IsomorphicNode;
 server.addHook("onReady", async () => {
   isoNode = createNode({} as any);
-  const res = await isoNode.createChannel({ chainId: 1, publicIdentifier: "blah" });
-  if (res.isError) {
-    throw res.getError();
-  }
-  res.getValue();
 });
 
 server.get("/ping", async (request, reply) => {
   return "pong\n";
 });
+
+// isAlive NATS
 
 server.post<{ Body: CreateChannelInput }>(
   Routes.post.createChannel.route,

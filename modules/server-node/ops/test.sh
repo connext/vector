@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [[ -d "modules/node" ]]
-then cd modules/node
+if [[ -d "modules/server-node" ]]
+then cd modules/server-node
 fi
 
 cmd="${1:-test}"
@@ -46,6 +46,6 @@ then
 
 else
 
-  echo "Starting node tester"
+  echo "Starting server-node tester"
   exec ts-mocha $opts --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'
 fi
