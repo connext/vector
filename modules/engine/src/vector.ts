@@ -20,12 +20,9 @@ export class Vector {
   private channelErrorEvt = Evt.create<InboundChannelError>();
 
   constructor(
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    private messagingService: any,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    private lockService: any,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    private storeService: any,
+    private messagingService: IMessagingService,
+    private lockService: ILockService,
+    private storeService: IStoreService,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     private signer: any,
   ) {
