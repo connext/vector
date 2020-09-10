@@ -2,6 +2,8 @@
 pragma solidity ^0.7.1;
 pragma experimental "ABIEncoderV2";
 
+import "./Types.sol";
+
 
 interface ITransferDefinition {
 
@@ -18,6 +20,6 @@ interface ITransferDefinition {
     function resolve(bytes calldata, bytes calldata)
         external
         view
-        returns (bytes memory);
+        returns (Balance memory);
 
 }

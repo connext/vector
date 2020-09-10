@@ -23,12 +23,13 @@ interface IAdjudicator {
     }
 
     struct CoreTransferState {
+        Balance balance;
         address assetId;
-        address channelId;
+        address channelAddress;
         bytes32 transferId;
         address transferDefinition;
         uint256 transferTimeout;
-        bytes32 transferStateHash;
+        bytes32 initialStateHash;
         bytes[] encodings; // Initial state, resolver state
         bytes32[] merkleProofData;
     }

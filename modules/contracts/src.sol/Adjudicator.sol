@@ -4,7 +4,9 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IVectorChannel.sol";
+import "./interfaces/ITransferDefinition.sol";
 import "./shared/SafeMath.sol";
+import "./shared/MerkleProof.sol";
 
 
 // Called directly by a VectorChannel.sol instance
@@ -202,18 +204,18 @@ contract Adjudicator is IAdjudicator {
         // }
         //  transferDisputes(state.transferId) = transferDispute
 
-        Dispute storage dispute = channelDispute[cts.channelId];
+        Dispute storage dispute = channelDispute[cts.channelAddress];
 
         require(
             inDefundPhase(dispute),
-            "Adjudicator defundChannel: Not in defund phase"
+            "Adjudicator forceTransferConsensus: Not in defund phase"
         );
 
         bytes32 transferStateHash = hashTransferState(cts);
 
         verifyMerkleProof(transferStateHash, dispute.merkleRoot, cts.merkleProofData);
 
-        TransferDispute memory transferDispute = transferDisputes[cts.transferId];
+        TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
         require(
             transferDispute.transferDisputeExpiry == 0,
@@ -266,8 +268,39 @@ contract Adjudicator is IAdjudicator {
 
         TransferDispute memory transferDispute = transferDisputes[cts.transferId];
 
-        // TODO: CONTINUE
+        require(
+            hashTransferState(cts) == transferDispute.transferStateHash,
+            "Adjudicator defundTransfer: Hash of core transfer state does not match stored hash"
+        );
 
+        // TODO: check / simplify
+        require(
+            transferDispute.transferDisputeExpiry != 0,
+            "Adjudicator defundTransfer: transfer not yet disputed"
+        );
+
+        require(
+            !transferDispute.isDefunded,
+            "Adjudicator defundTransfer: transfer already defunded"
+        );
+
+        Balance memory finalBalance;
+
+        if (block.number < transferDispute.transferDisputeExpiry) {
+            require(
+                keccak256(encodedInitialTransferState) == cts.initialStateHash,
+                "Adjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
+            );
+
+            ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
+            finalBalance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
+
+        } else {
+            finalBalance = cts.balance;
+        }
+
+        IVectorChannel channel = IVectorChannel(cts.channelAddress);
+        channel.adjudicatorTransfer(finalBalance, cts.assetId);
     }
 
 
@@ -320,8 +353,10 @@ contract Adjudicator is IAdjudicator {
         internal
         pure
     {
-        //TODO
-        return;
+        require(
+            MerkleProof.verify(proof, root, leaf),
+            "Adjudicator: Merkle proof verification failed"
+        );
     }
 
     function inConsensusPhase(Dispute storage dispute) internal view returns (bool) {
