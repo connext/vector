@@ -1,5 +1,5 @@
 {
-  "name": "@connext/rest-api-node",
+  "name": "@connext/server-node",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",

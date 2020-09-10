@@ -5,7 +5,7 @@ import {
   CreateChannelInput,
   DepositInput,
   CreateTransferInput,
-} from "@connext/isomorphic-node";
+} from "../../isomorphic-node/dist";
 import { BigNumber } from "ethers";
 
 import { GenericErrorResponse } from "./helpers/types";

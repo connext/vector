@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_node:latest,$(project)_proxy:latest"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_proxy:latest"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -34,7 +34,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 # Build Shortcuts
 
 default: indra
-indra: database proxy node
+indra: database proxy server-node
 extras: ethprovider
 all: indra extras
 
@@ -150,14 +150,14 @@ engine: utils contracts $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-client-bundle: utils engine $(shell find modules/client $(find_options))
+isomorphic-node-bundle: utils engine $(shell find modules/isomorphic-node $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/client && npm run build"
+	$(docker_run) "cd modules/isomorphic-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node-bundle: client-bundle $(shell find modules/rest-api-wrapper $(find_options))
+server-node-bundle: isomorphic-node-bundle $(shell find modules/server-node $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/rest-api-wrapper && npm run build"
+	$(docker_run) "cd modules/server-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
@@ -175,10 +175,10 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node: node-bundle $(shell find modules/rest-api-wrapper/ops $(find_options))
+server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
-	docker build --file modules/rest-api-wrapper/ops/Dockerfile $(image_cache) --tag $(project)_node modules/rest-api-wrapper
-	docker tag $(project)_node $(project)_node:$(commit)
+	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
+	docker tag $(project)_server-node $(project)_server-node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 proxy: $(shell find ops/proxy $(find_options))

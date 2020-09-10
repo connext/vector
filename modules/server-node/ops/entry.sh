@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-if [[ -d "modules/rest-api-node" ]]
-then cd modules/rest-api-node
+if [[ -d "modules/server-node" ]]
+then cd modules/server-node
 fi
 
 ########################################

@@ -5,7 +5,8 @@
   "registry": "docker.io/connextproject",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "bootstrap": "lerna bootstrap --hoist"
+    "bootstrap": "lerna bootstrap --hoist",
+    "build": "make"
   },
   "repository": {
     "type": "git",
