@@ -24,18 +24,16 @@ export const registerWithConfig = ({ lockService, storeService, signer }: IIsomo
 
     app: asClass(IsomorphicNode).singleton(),
 
-    // errors
+    // validators
+    createChannelValidator: asClass(CreateChannelValidatorImpl).singleton(),
+    depositValidator: asClass(CreateChannelValidatorImpl).singleton(),
+    createTransferValidator: asClass(CreateChannelValidatorImpl).singleton(),
 
     // shared services
     walletService: asFunction(({ messagingService }) => {
       return new WalletService(storeService, messagingService, lockService, signer);
     }).singleton(),
     messagingService: asClass(TempNatsMessagingService).singleton(),
-
-    // validators
-    createChannelValidator: asClass(CreateChannelValidatorImpl).singleton(),
-    depositValidator: asClass(CreateChannelValidatorImpl).singleton(),
-    createTransferValidator: asClass(CreateChannelValidatorImpl).singleton(),
 
     // usecases
     createChannelUseCase: asClass(CreateChannelUseCase).singleton(),
@@ -45,5 +43,6 @@ export const registerWithConfig = ({ lockService, storeService, signer }: IIsomo
     // repositories
   });
   const main = container.resolve<IsomorphicNode>("app");
+
   return main;
 };
