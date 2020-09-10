@@ -1,12 +1,11 @@
 import fastify from "fastify";
-
 import {
   createNode,
   IsomorphicNode,
   CreateChannelInput,
   DepositInput,
   CreateTransferInput,
-} from "../../isomorphic-node/dist";
+} from "@connext/isomorphic-node";
 
 import { GenericErrorResponse } from "./helpers/types";
 import { Routes } from "./schema";

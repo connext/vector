@@ -10,6 +10,6 @@
     "strict": false,
     "target": "es6"
   },
-  "exclude": ["dist", "node_modules", "**/*spec.ts"],
+  "exclude": ["dist", "node_modules", "src/testing"],
   "include": ["src/**/*.ts"]
 }

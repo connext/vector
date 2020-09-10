@@ -106,6 +106,9 @@ test-contracts: contracts
 watch-contracts: utils
 	bash ops/test/unit.sh contracts --watch
 
+test-engine: engine
+	bash ops/test/engine.sh test
+
 ########################################
 # Begin Real Build Rules
 
