@@ -60,8 +60,8 @@ contract Withdraw is TransferDefinition {
 
             // Reduce withdraw amount by optional fee -- note that it's up to the offchain validators to ensure
             // That the withdraw commitment takes this fee into account
-            state.balance.amount[1] == state.fee;
-            state.balance.amount[0] == 0;
+            state.balance.amount[1] = state.fee;
+            state.balance.amount[0] = 0;
         }
 
         return state.balance;

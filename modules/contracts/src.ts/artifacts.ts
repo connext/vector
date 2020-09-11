@@ -28,6 +28,7 @@ export const artifacts: Artifacts = {
   ChannelFactory,
   TransferDefinition,
   LinkedTransfer,
+  Withdraw,
 } as any;
 
 export {
@@ -35,5 +36,6 @@ export {
   VectorChannel,
   ChannelFactory,
   TransferDefinition,
-  LinkedTransfer
+  LinkedTransfer,
+  Withdraw,
 };

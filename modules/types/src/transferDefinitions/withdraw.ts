@@ -6,7 +6,7 @@ import { BalanceEncoding } from "../contracts";
 export type WithdrawState = {
   balance: Balance;
   initiatorSignature: SignatureString;
-  signers: Address[2];
+  signers: Address[];
   data: Bytes32;
   nonce: Bytes32;
   fee: string;
@@ -21,7 +21,7 @@ export const WithdrawStateEncoding = tidy(`tuple(
     bytes initiatorSignature,
     address[2] signers,
     bytes32 data,
-    bytes42 nonce,
+    bytes32 nonce,
     uint256 fee
   )`);
 
