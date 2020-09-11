@@ -1,6 +1,7 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native"]
+  provider        = "prisma-client-js"
+  previewFeatures = ["connectOrCreate"]
+  binaryTargets   = ["native"]
 }
 
 datasource db {
@@ -34,6 +35,7 @@ model Channel {
   balances                       Balance[]
   channelFactoryAddress          String
   vectorChannelMastercopyAddress String
+  adjudicatorAddress             String
   chainId                        Int
   providerUrl                    String
   latestUpdate                   Update?
@@ -41,15 +43,42 @@ model Channel {
 
 model Update {
   @@map(name: "update")
-  transferId         String  @id
-  assetId            String
-  transferDefinition String
-  transferTimeout    String
-  transferEncodings  String
-  merkleProofData    String
-  signatureA         String?
-  signatureB         String?
-  adjudicatorAddress String
-  channel            Channel @relation(fields: [channelAddress], references: [channelAddress])
-  channelAddress     String
+  // COMMON PARAMS
+  channelAddress String
+  channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
+
+  fromIdentifier String
+  toIdentifier   String
+  type           String
+  nonce          Int
+
+  // balance
+  amountA String
+  amountB String
+  toA     String
+  toB     String
+
+  assetId    String
+  signatureA String?
+  signatureB String?
+
+  // DETAILS
+  // create details
+  transferId           String?
+  transferDefinition   String?
+  transferTimeout      String?
+  transferInitialState String? // JSON string
+  transferEncodings    String?
+  merkleProofData      String?
+
+  // resolve details
+  transferResolver String?
+  merkleRoot       String?
+
+  // deposit details
+  latestDepositNonce Int?
+
+  // setup inferred from channel params
+
+  @@id([channelAddress, nonce])
 }

@@ -4,8 +4,8 @@ export const createTestChannelUpdate = (): ChannelUpdate<"create"> => {
   return {
     assetId: "0x0000000000000000000000000000000000000000",
     balance: {
-      amount: ["1"],
-      to: ["0x0000000000000000000000000000000000000000"],
+      amount: ["1", "0"],
+      to: ["0xaa00000000000000000000000000000000000000", "0xbb00000000000000000000000000000000000000"],
     },
     channelAddress: "0x1110000000000000000000000000000000000000",
     details: {

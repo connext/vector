@@ -20,11 +20,13 @@ describe("store", () => {
     await store.disconnect();
   });
 
-  it("should save a channel update", async () => {
+  it("should save and retrieve channel update", async () => {
     const state = createTestChannelState();
     await store.saveChannelState(state);
 
     const fromStore = await store.getChannelState(state.channelAddress);
+    console.log("fromStore: ", fromStore);
+    console.log("state: ", state);
     expect(fromStore).to.deep.eq(state);
   });
 });
