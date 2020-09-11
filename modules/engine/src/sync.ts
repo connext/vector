@@ -8,6 +8,7 @@ import {
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import { Evt } from "evt";
+import { ChannelSigner } from "@connext/vector-utils";
 
 import { ChannelUpdateError } from "./errors";
 import { VectorMessage, VectorChannelMessage, VectorErrorMessage } from "./types";
@@ -20,7 +21,7 @@ import { applyUpdate } from "./update";
 // has been persisted.
 export async function outbound(
   update: ChannelUpdate<any>,
-  signer: any,
+  providerUrl: string,
   storeService: IStoreService,
   messagingService: IMessagingService,
   stateEvt: Evt<ChannelState>,
@@ -107,10 +108,13 @@ export async function outbound(
     });
   }
 
+  // Get all the latest states
+  const transferInitialStates = await storeService.getTransferInitialStates(update.channelAddress);
+
   // Apply the update, and retry the update
   let newState: string | ChannelState;
   try {
-    newState = await applyUpdate(result.state.latestUpdate, storedChannel, storeService, signer.providerUrl);
+    newState = await applyUpdate(result.state.latestUpdate, storedChannel, transferInitialStates, providerUrl);
   } catch (e) {
     newState = e.message;
   }
@@ -151,8 +155,8 @@ export async function inbound(
   message: VectorMessage,
   storeService: IStoreService,
   messagingService: IMessagingService,
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  signer: any,
+  signer: ChannelSigner,
+  providerUrl: string,
   stateEvt: Evt<ChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
 ): Promise<void> {
@@ -171,6 +175,7 @@ export async function inbound(
       storeService,
       messagingService,
       signer,
+      providerUrl,
       stateEvt,
       errorEvt,
     );
@@ -186,7 +191,8 @@ async function processChannelMessage(
   message: VectorChannelMessage,
   storeService: IStoreService,
   messagingService: IMessagingService,
-  signer: any,
+  signer: ChannelSigner,
+  providerUrl: string,
   stateEvt: Evt<ChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
 ): Promise<void> {
@@ -207,7 +213,8 @@ async function processChannelMessage(
     throw error;
   };
 
-  // Get our latest stored state
+  // Get our latest stored state + active transfers
+  const transferInitialStates = await storeService.getTransferInitialStates(requestedUpdate.channelAddress);
   let storedState: ChannelState = await storeService.getChannelState(requestedUpdate.channelAddress);
   if (!storedState) {
     // NOTE: the creation update MUST have a nonce of 1 not 0!
@@ -313,7 +320,7 @@ async function processChannelMessage(
       );
     }
     try {
-      previousState = await applyUpdate(counterpartyLatestUpdate, storedState, storeService, signer.providerUrl);
+      previousState = await applyUpdate(counterpartyLatestUpdate, storedState, transferInitialStates, providerUrl);
     } catch (e) {
       return handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, counterpartyLatestUpdate, storedState, {
@@ -329,7 +336,7 @@ async function processChannelMessage(
   // able to play it on top of the update
   let response: ChannelState | string;
   try {
-    response = await applyUpdate(requestedUpdate, previousState, storeService, signer.providerUrl);
+    response = await applyUpdate(requestedUpdate, previousState, transferInitialStates, providerUrl);
   } catch (e) {
     response = e.message;
   }

@@ -9,6 +9,7 @@ import {
   ILockService,
   IMessagingService,
 } from "@connext/vector-types";
+import { ChannelSigner } from "@connext/vector-utils";
 import { Evt } from "evt";
 
 import * as sync from "./sync";
@@ -24,23 +25,24 @@ export class Vector {
     private messagingService: IMessagingService,
     private lockService: ILockService,
     private storeService: IStoreService,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    private signer: any,
+    private signer: ChannelSigner,
+    public providerUrl: string, // TODO: can this be derived from signer
   ) {
     this.messagingService = messagingService;
     this.storeService = storeService;
     this.lockService = lockService;
     this.signer = signer;
+    this.providerUrl = providerUrl;
   }
 
   static connect(
     messagingService: IMessagingService,
     lockService: ILockService,
     storeService: IStoreService,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    signer: any,
+    signer: ChannelSigner,
+    providerUrl: string,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer);
+    const node = new Vector(messagingService, lockService, storeService, signer, providerUrl);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
@@ -60,10 +62,14 @@ export class Vector {
     logger.info(`Start executeUpdate`, { params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
-    const update = await generateUpdate(params, this.storeService, null);
+    const state = await this.storeService.getChannelState(params.channelAddress);
+    // NOTE: This is a heavy query, but is required on every update (even if it
+    // is not a transfer) due to the general nature of the `validate` api
+    const transferInitialStates = await this.storeService.getTransferInitialStates(params.channelAddress);
+    const update = await generateUpdate(params, state, transferInitialStates, this.signer, this.providerUrl);
     await sync.outbound(
       update,
-      this.signer,
+      this.providerUrl,
       this.storeService,
       this.messagingService,
       this.channelStateEvt,
@@ -83,6 +89,7 @@ export class Vector {
           this.storeService,
           this.messagingService,
           this.signer,
+          this.providerUrl,
           this.channelStateEvt,
           this.channelErrorEvt,
         );

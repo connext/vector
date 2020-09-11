@@ -1,12 +1,11 @@
 import { VectorChannel } from "@connext/vector-contracts";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { ChannelSigner, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
 import {
   UpdateType,
   ChannelUpdate,
   FullChannelState,
   UpdateParams,
-  IStoreService,
   ChannelCommitmentData,
   Balance,
   LockedValueType,
@@ -21,11 +20,11 @@ export async function applyUpdate<T extends UpdateType>(
   // optional sig typings allows this fn to be used by initiator before signing
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
-  storeService: IStoreService, // TODO: only initial states?
-  providerUrl: string, // TODO: just signer?
+  transferInitialStates: TransferState[],
+  providerUrl: string,
 ): Promise<FullChannelState<T>> {
   // TODO: May need store service and provider in validation function
-  await validate(update, state, storeService, providerUrl);
+  await validate(update, state, transferInitialStates, providerUrl);
   switch (update.type) {
     case UpdateType.setup: {
       // TODO: implement as if onchain first state is nonce 1
@@ -63,8 +62,7 @@ export async function applyUpdate<T extends UpdateType>(
     }
     case UpdateType.resolve: {
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const initialStates = await storeService.getTransferInitialStates(state.channelAddress);
-      const initialState = initialStates.find((s) => s.transferId === update.details.transferId);
+      const initialState = transferInitialStates.find((s) => s.transferId === update.details.transferId);
       if (!initialState) {
         throw new Error(`Could not find initial state for transfer to resolve. Id: ${update.details.transferId}`);
       }
@@ -97,12 +95,13 @@ export async function applyUpdate<T extends UpdateType>(
 // properly validated resultant state
 export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
-  storeService: IStoreService,
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/no-unused-vars
-  signer: any,
+  state: FullChannelState,
+  transferInitialStates: TransferState[],
+  // NOTE: this is a heavy database query but is required on every update
+  // due to the general nature of the `validate` function.
+  signer: ChannelSigner,
+  providerUrl: string, // TODO: can this be derived from signer?
 ): Promise<ChannelUpdate<T>> {
-  const state = await storeService.getChannelState(params.channelAddress);
-
   // Only in the case of setup should the state be undefined
   if (!state && params.type !== UpdateType.setup) {
     throw new Error(`Could not find channel in store to update`);
@@ -112,19 +111,19 @@ export async function generateUpdate<T extends UpdateType>(
   let update: ChannelUpdate<any>;
   switch (params.type) {
     case UpdateType.setup: {
-      update = await generateSetupUpdate(params as UpdateParams<"setup">, signer, storeService);
+      update = await generateSetupUpdate(params as UpdateParams<"setup">, signer, providerUrl);
       break;
     }
     case UpdateType.deposit: {
-      update = await generateDepositUpdate(state, params as UpdateParams<"deposit">, signer, storeService);
+      update = await generateDepositUpdate(state, params as UpdateParams<"deposit">, signer, transferInitialStates, providerUrl);
       break;
     }
     case UpdateType.create: {
-      update = await generateCreateUpdate(state, params as UpdateParams<"create">, signer, storeService);
+      update = await generateCreateUpdate(state, params as UpdateParams<"create">, signer, transferInitialStates, providerUrl);
       break;
     }
     case UpdateType.resolve: {
-      update = await generateResolveUpdate(state, params as UpdateParams<"resolve">, signer, storeService);
+      update = await generateResolveUpdate(state, params as UpdateParams<"resolve">, signer, transferInitialStates, providerUrl);
       break;
     }
     default: {
@@ -138,8 +137,8 @@ export async function generateUpdate<T extends UpdateType>(
 
 async function generateSetupUpdate(
   params: UpdateParams<"setup">,
-  signer: any,
-  storeService: IStoreService,
+  signer: ChannelSigner,
+  providerUrl: string,
 ): Promise<ChannelUpdate<"setup">> {
   // During channel creation, you have no channel state, so create
   // the base values
@@ -174,7 +173,7 @@ async function generateSetupUpdate(
     assetId: constants.AddressZero,
   };
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, baseState, storeService, signer.providerUrl);
+  const newState = await applyUpdate(unsigned, baseState, [], providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   return {
@@ -187,8 +186,9 @@ async function generateSetupUpdate(
 async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
-  signer: any,
-  storeService: IStoreService,
+  signer: ChannelSigner,
+  transferInitialStates: TransferState[],
+  providerUrl: string,
 ): Promise<ChannelUpdate<"deposit">> {
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
@@ -221,7 +221,7 @@ async function generateDepositUpdate(
   };
 
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state, storeService, signer.providerUrl);
+  const newState = await applyUpdate(unsigned, state, transferInitialStates, providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   return {
@@ -234,12 +234,12 @@ async function generateDepositUpdate(
 async function generateCreateUpdate(
   state: FullChannelState,
   params: UpdateParams<"create">,
-  signer: any,
-  storeService: IStoreService,
+  signer: ChannelSigner,
+  transferInitialStates: TransferState[],
+  providerUrl: string,
 ): Promise<ChannelUpdate<"create">> {
   const {
     details: { assetId, transferDefinition, timeout, encodings, transferInitialState, amount },
-    channelAddress,
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -251,8 +251,7 @@ async function generateCreateUpdate(
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
-  const transfers = await storeService.getTransferInitialStates(channelAddress);
-  const hashes = [...transfers, transferInitialState].map(hashTransferState);
+  const hashes = [...transferInitialStates, transferInitialState].map(hashTransferState);
   const merkle = new MerkleTree(hashes);
 
   // Create the update from the user provided params
@@ -275,7 +274,7 @@ async function generateCreateUpdate(
   };
 
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state, storeService, signer.providerUrl);
+  const newState = await applyUpdate(unsigned, state, transferInitialStates, providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   return {
@@ -288,8 +287,9 @@ async function generateCreateUpdate(
 async function generateResolveUpdate(
   state: FullChannelState,
   params: UpdateParams<"resolve">,
-  signer: any,
-  storeService: IStoreService,
+  signer: ChannelSigner,
+  transferInitialStates: TransferState[],
+  providerUrl: string,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
   // channel fields:
@@ -300,30 +300,29 @@ async function generateResolveUpdate(
 
   // Grab the transfer from the store service to get the
   // asset id and other data
-  const stored = await storeService.getTransferState(params.details.transferId);
-  if (!stored) {
-    throw new Error(`Cannot find stored transfer for id ${params.details.transferId}`);
-  }
+  // const stored = await storeService.getTransferState(params.details.transferId);
+  // if (!stored) {
+  //   throw new Error(`Cannot find stored transfer for id ${params.details.transferId}`);
+  // }
 
   // First generate latest merkle tree data
-  const active = await storeService.getTransferInitialStates(params.channelAddress);
-  const hashes = active.filter((x) => x.transferId === params.details.transferId).map(hashTransferState);
-  const initial = active.find((a) => a.transferId === params.details.transferId);
+  const hashes = transferInitialStates.filter((x) => x.transferId === params.details.transferId).map(hashTransferState);
+  const initial = transferInitialStates.find((a) => a.transferId === params.details.transferId);
   const merkle = new MerkleTree(hashes);
 
   // Create the new balance
-  const balance = getUpdatedBalance("increment", stored.assetId, stored.transferAmount, signer.address, state);
+  const balance = getUpdatedBalance("increment", initial.assetId, initial.balance.amount[0], signer.address, state);
 
   // Generate the unsigned update from the params
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
-    assetId: stored.assetId,
+    assetId: initial.assetId,
     details: {
       transferId: params.details.transferId,
-      transferDefinition: stored.transferDefinition,
+      transferDefinition: initial.transferDefinition,
       transferResolver: params.details.transferResolver,
-      transferEncodings: stored.transferEncodings,
+      transferEncodings: initial.transferEncodings,
       // TODO: do we need to pass around a proof here?
       merkleProofData: merkle.proof(hashTransferState(initial)),
       merkleRoot: merkle.root,
@@ -333,7 +332,7 @@ async function generateResolveUpdate(
 
   // Validate the generated update is correct, and create a
   // commitment for the new state
-  const newState = await applyUpdate(unsigned, state, storeService, signer.providerUrl);
+  const newState = await applyUpdate(unsigned, state, transferInitialStates, providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
   return {
     ...unsigned,
@@ -345,18 +344,16 @@ async function generateResolveUpdate(
 // not for the update that exists
 async function generateSignedChannelCommitment(
   newState: FullChannelState,
-  signer: any,
+  signer: ChannelSigner,
 ): Promise<ChannelCommitmentData> {
   const { publicIdentifiers, networkContext, ...core } = newState;
-  const multisig = new Contract(newState.channelAddress, VectorChannel.abi, signer.provider);
-  const unsigned = {
+  const unsigned: ChannelCommitmentData = {
     chainId: networkContext.chainId,
     state: core,
-    // TODO: don't pull from chain, pull from stored data
-    adjudicatorAddress: await multisig._adjudicatorAddress(),
+    adjudicatorAddress: newState.networkContext.adjudicatorAddress,
+    signatures: [],
   };
-  // TODO: hash and use signMessage, not signChannelCommitment
-  const sig = await signer.signChannelCommitment(unsigned);
+  const sig = await signer.signMessage(hashCommitment(unsigned));
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
@@ -364,6 +361,10 @@ async function generateSignedChannelCommitment(
     // TODO: see notes in ChannelUpdate type re: single-signed state
     // convention
   };
+}
+
+function hashCommitment(commitment: ChannelCommitmentData): string {
+  throw new Error("hashCommitment not implemented");
 }
 
 // TODO: signature assertion helpers for commitment data
@@ -376,7 +377,7 @@ async function generateSignedChannelCommitment(
 function generateBaseUpdate<T extends UpdateType>(
   state: FullChannelState,
   params: UpdateParams<T>,
-  signer: any,
+  signer: ChannelSigner,
 ): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
   // Create the update with all the things that are constant
   // between update types

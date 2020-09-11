@@ -1,5 +1,6 @@
-import { UpdateType, ChannelUpdate, FullChannelState, IStoreService } from "@connext/vector-types";
+import { UpdateType, ChannelUpdate, FullChannelState, IStoreService, TransferState } from "@connext/vector-types";
 import { utils } from "ethers";
+import { logger } from "./utils";
 
 const { getAddress } = utils;
 
@@ -15,7 +16,7 @@ const { getAddress } = utils;
 export async function validate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
-  storeService: IStoreService, // TODO: only initial states?
+  transferInitialStates: TransferState[],
   providerUrl: string, // TODO: just signer?
 ): Promise<void> {
   // There is no need to validate items in the state since this will always
@@ -96,7 +97,7 @@ function validateSetup(update: ChannelUpdate<"setup">, state: FullChannelState<"
   // TODO: is initial nonce 0 or 1?
 
   // Validate merkle root is empty hash, assetIds are empty
-  throw new Error("validateSetup not implemented: " + JSON.stringify(update) + JSON.stringify(state));
+  logger.error("validateSetup not implemented", { update, state });
 }
 
 function validateDeposit(update: ChannelUpdate<"deposit">, state: FullChannelState<"deposit">): void {
@@ -105,7 +106,7 @@ function validateDeposit(update: ChannelUpdate<"deposit">, state: FullChannelSta
   // TODO: Best way to reconcile on and offchain balances?
   // Should we check the state balances + lockedVal + update.amount
   // === currentMultisigBalance?
-  throw new Error("validateDeposit not implemented: " + JSON.stringify(update) + JSON.stringify(state));
+  logger.error("validateDeposit not implemented", { update, state });
 }
 
 function validateCreate(update: ChannelUpdate<"create">, state: FullChannelState<"create">): void {
@@ -125,7 +126,7 @@ function validateCreate(update: ChannelUpdate<"create">, state: FullChannelState
 
   // Recalculate + validate merkle root
   // TODO: this will require all transfer initial states!
-  throw new Error("validateCreate not implemented: " + JSON.stringify(update) + JSON.stringify(state));
+  logger.error("validateCreate not implemented", { update, state });
 }
 
 function validateResolve(update: ChannelUpdate<"resolve">, state: FullChannelState<"resolve">): void {
@@ -140,7 +141,7 @@ function validateResolve(update: ChannelUpdate<"resolve">, state: FullChannelSta
 
   // Recalculate + validate merkle root
   // TODO: this will require all transfer initial states!
-  throw new Error("validateResolve not implemented: " + JSON.stringify(update) + JSON.stringify(state));
+  logger.error("validateResolve not implemented", { update, state });
 }
 
 function isAddress(addr: any): boolean {
