@@ -7,6 +7,7 @@ import {
   IMessagingService,
   ILockService,
   IChannelSigner,
+  ChainProviders,
 } from "@connext/vector-types";
 import { Vector } from "@connext/vector-engine";
 
@@ -22,10 +23,11 @@ export class WalletService implements IWalletService {
     private readonly messaging: IMessagingService,
     private readonly lock: ILockService,
     private readonly signer: IChannelSigner,
+    private readonly chainProviders: ChainProviders,
   ) {}
 
   async connect(): Promise<void> {
-    this.vector = await Vector.connect(this.messaging, this.lock, this.store, this.signer);
+    this.vector = await Vector.connect(this.messaging, this.lock, this.store, this.signer, this.chainProviders);
   }
 
   getPublicIdentifier(): string {

@@ -150,7 +150,7 @@ export interface ChannelUpdateDetailsMap {
   [UpdateType.setup]: SetupUpdateDetails;
 }
 
-type CreateUpdateDetails = {
+export type CreateUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
   transferTimeout: string;
@@ -162,7 +162,7 @@ type CreateUpdateDetails = {
 
 // NOTE: proof data can be reconstructed, do we need to pass it around?
 // what does it mean
-type ResolveUpdateDetails = {
+export type ResolveUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
   transferResolver: any; //TODO
@@ -171,12 +171,12 @@ type ResolveUpdateDetails = {
   merkleRoot: string;
 };
 
-type DepositUpdateDetails = {
+export type DepositUpdateDetails = {
   latestDepositNonce: number;
 };
 
 // TODO: verify these are correct
-type SetupUpdateDetails = {
+export type SetupUpdateDetails = {
   timeout: string;
   networkContext: NetworkContext;
 };

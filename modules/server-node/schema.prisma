@@ -12,6 +12,7 @@ model Balance {
   @@map(name: "balance")
   id             String   @id @default(uuid())
   participant    String
+  assetId        String
   to             String
   amount         String
   lockedValue    String

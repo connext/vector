@@ -5,10 +5,13 @@ import {
   UpdateType,
   MultisigCommitment,
   IMessagingService,
+  ChainProviders,
+  SetupUpdateDetails,
+  FullChannelState,
+  IChannelSigner,
 } from "@connext/vector-types";
-import { BigNumber } from "ethers";
+import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
-import { ChannelSigner } from "@connext/vector-utils";
 
 import { ChannelUpdateError } from "./errors";
 import { VectorMessage, VectorChannelMessage, VectorErrorMessage } from "./types";
@@ -155,8 +158,8 @@ export async function inbound(
   message: VectorMessage,
   storeService: IStoreService,
   messagingService: IMessagingService,
-  signer: ChannelSigner,
-  providerUrl: string,
+  signer: IChannelSigner,
+  chainProviders: ChainProviders,
   stateEvt: Evt<ChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
 ): Promise<void> {
@@ -175,7 +178,7 @@ export async function inbound(
       storeService,
       messagingService,
       signer,
-      providerUrl,
+      chainProviders,
       stateEvt,
       errorEvt,
     );
@@ -191,8 +194,8 @@ async function processChannelMessage(
   message: VectorChannelMessage,
   storeService: IStoreService,
   messagingService: IMessagingService,
-  signer: ChannelSigner,
-  providerUrl: string,
+  signer: IChannelSigner,
+  chainProviders: ChainProviders,
   stateEvt: Evt<ChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
 ): Promise<void> {
@@ -215,7 +218,7 @@ async function processChannelMessage(
 
   // Get our latest stored state + active transfers
   const transferInitialStates = await storeService.getTransferInitialStates(requestedUpdate.channelAddress);
-  let storedState: ChannelState = await storeService.getChannelState(requestedUpdate.channelAddress);
+  let storedState: FullChannelState = await storeService.getChannelState(requestedUpdate.channelAddress);
   if (!storedState) {
     // NOTE: the creation update MUST have a nonce of 1 not 0!
     // You may not be able to find a channel state IFF the channel is
@@ -226,15 +229,25 @@ async function processChannelMessage(
         new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState),
       );
     }
+    requestedUpdate.details as SetupUpdateDetails;
     // Create an empty channel state
     storedState = {
       channelAddress: requestedUpdate.channelAddress,
       participants: [requestedUpdate.fromIdentifier, signer.publicIdentifier],
-      chainId: (await signer.provider.getNetwork()).chainId,
-      latestNonce: "0",
+      networkContext: (requestedUpdate.details as SetupUpdateDetails).networkContext,
+      assetIds: [],
+      balances: [],
+      lockedValue: [],
+      merkleRoot: constants.HashZero,
+      nonce: 0,
+      publicIdentifiers: [requestedUpdate.fromIdentifier, signer.publicIdentifier],
+      timeout: (requestedUpdate.details as SetupUpdateDetails).timeout,
       latestUpdate: undefined,
+      latestDepositNonce: 0,
     };
   }
+
+  const providerUrl = chainProviders[storedState.networkContext.chainId];
 
   // Assume that our stored state has nonce `k`, and the update
   // has nonce `n`, and `k` is the latest double signed state for you. The
@@ -276,7 +289,7 @@ async function processChannelMessage(
   }
 
   // Get the difference between the stored and received nonces
-  const diff = BigNumber.from(requestedUpdate.nonce).sub(storedState.latestNonce);
+  const diff = BigNumber.from(requestedUpdate.nonce).sub(storedState.nonce);
 
   // If we are ahead, or even, do not process update
   if (diff.lte(0)) {

@@ -8,8 +8,9 @@ import {
   ResolveTransferParams,
   ILockService,
   IMessagingService,
+  ChainProviders,
+  IChannelSigner,
 } from "@connext/vector-types";
-import { ChannelSigner } from "@connext/vector-utils";
 import { Evt } from "evt";
 
 import * as sync from "./sync";
@@ -21,28 +22,29 @@ export class Vector {
   private channelStateEvt = Evt.create<ChannelState>();
   private channelErrorEvt = Evt.create<InboundChannelError>();
 
-  constructor(
+  // make it private so the only way to create the class is to use `connect`
+  private constructor(
     private messagingService: IMessagingService,
     private lockService: ILockService,
     private storeService: IStoreService,
-    private signer: ChannelSigner,
-    public providerUrl: string, // TODO: can this be derived from signer
+    private signer: IChannelSigner,
+    public chainProviders: ChainProviders,
   ) {
     this.messagingService = messagingService;
     this.storeService = storeService;
     this.lockService = lockService;
     this.signer = signer;
-    this.providerUrl = providerUrl;
+    this.chainProviders = chainProviders;
   }
 
   static connect(
     messagingService: IMessagingService,
     lockService: ILockService,
     storeService: IStoreService,
-    signer: ChannelSigner,
-    providerUrl: string,
+    signer: IChannelSigner,
+    chainProviders: ChainProviders,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer, providerUrl);
+    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
@@ -66,10 +68,11 @@ export class Vector {
     // NOTE: This is a heavy query, but is required on every update (even if it
     // is not a transfer) due to the general nature of the `validate` api
     const transferInitialStates = await this.storeService.getTransferInitialStates(params.channelAddress);
-    const update = await generateUpdate(params, state, transferInitialStates, this.signer, this.providerUrl);
+    const providerUrl = this.chainProviders[state.networkContext.chainId];
+    const update = await generateUpdate(params, state, transferInitialStates, this.signer, providerUrl);
     await sync.outbound(
       update,
-      this.providerUrl,
+      providerUrl,
       this.storeService,
       this.messagingService,
       this.channelStateEvt,
@@ -89,7 +92,7 @@ export class Vector {
           this.storeService,
           this.messagingService,
           this.signer,
-          this.providerUrl,
+          this.chainProviders,
           this.channelStateEvt,
           this.channelErrorEvt,
         );

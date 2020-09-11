@@ -1,6 +1,6 @@
 import { asClass, asValue, createContainer, InjectionMode, asFunction } from "awilix";
 import joi from "joi";
-import { ILockService, IStoreService, IChannelSigner } from "@connext/vector-types";
+import { ILockService, IStoreService, IChannelSigner, ChainProviders } from "@connext/vector-types";
 
 import { IsomorphicNode, IIsomorphicNode } from "../core/app";
 import { CreateChannelUseCase } from "../core/usecases/create-channel/create-channel.usecase";
@@ -16,8 +16,14 @@ export interface IIsomorphicNodeConfig {
   lockService: ILockService;
   storeService: IStoreService;
   signer: IChannelSigner;
+  chainProviders: ChainProviders;
 }
-export const registerWithConfig = ({ lockService, storeService, signer }: IIsomorphicNodeConfig): IIsomorphicNode => {
+export const registerWithConfig = ({
+  lockService,
+  storeService,
+  signer,
+  chainProviders,
+}: IIsomorphicNodeConfig): IIsomorphicNode => {
   container.register({
     // Node_modules
     joi: asValue(joi),
@@ -31,7 +37,7 @@ export const registerWithConfig = ({ lockService, storeService, signer }: IIsomo
 
     // shared services
     walletService: asFunction(({ messagingService }) => {
-      return new WalletService(storeService, messagingService, lockService, signer);
+      return new WalletService(storeService, messagingService, lockService, signer, chainProviders);
     }).singleton(),
     messagingService: asClass(TempNatsMessagingService).singleton(),
 

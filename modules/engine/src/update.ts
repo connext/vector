@@ -1,5 +1,5 @@
 import { VectorChannel } from "@connext/vector-contracts";
-import { ChannelSigner, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
 import {
   UpdateType,
@@ -10,6 +10,7 @@ import {
   Balance,
   LockedValueType,
   TransferState,
+  IChannelSigner,
 } from "@connext/vector-types";
 
 import { validate } from "./validate";
@@ -117,9 +118,7 @@ export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   state: FullChannelState,
   transferInitialStates: TransferState[],
-  // NOTE: this is a heavy database query but is required on every update
-  // due to the general nature of the `validate` function.
-  signer: ChannelSigner,
+  signer: IChannelSigner,
   providerUrl: string, // TODO: can this be derived from signer?
 ): Promise<ChannelUpdate<T>> {
   // Only in the case of setup should the state be undefined
@@ -135,15 +134,33 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      update = await generateDepositUpdate(state, params as UpdateParams<"deposit">, signer, transferInitialStates, providerUrl);
+      update = await generateDepositUpdate(
+        state,
+        params as UpdateParams<"deposit">,
+        signer,
+        transferInitialStates,
+        providerUrl,
+      );
       break;
     }
     case UpdateType.create: {
-      update = await generateCreateUpdate(state, params as UpdateParams<"create">, signer, transferInitialStates, providerUrl);
+      update = await generateCreateUpdate(
+        state,
+        params as UpdateParams<"create">,
+        signer,
+        transferInitialStates,
+        providerUrl,
+      );
       break;
     }
     case UpdateType.resolve: {
-      update = await generateResolveUpdate(state, params as UpdateParams<"resolve">, signer, transferInitialStates, providerUrl);
+      update = await generateResolveUpdate(
+        state,
+        params as UpdateParams<"resolve">,
+        signer,
+        transferInitialStates,
+        providerUrl,
+      );
       break;
     }
     default: {
@@ -157,7 +174,7 @@ export async function generateUpdate<T extends UpdateType>(
 
 async function generateSetupUpdate(
   params: UpdateParams<"setup">,
-  signer: ChannelSigner,
+  signer: IChannelSigner,
   providerUrl: string,
 ): Promise<ChannelUpdate<"setup">> {
   // During channel creation, you have no channel state, so create
@@ -200,7 +217,7 @@ async function generateSetupUpdate(
 async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
-  signer: ChannelSigner,
+  signer: IChannelSigner,
   transferInitialStates: TransferState[],
   providerUrl: string,
 ): Promise<ChannelUpdate<"deposit">> {
@@ -248,7 +265,7 @@ async function generateDepositUpdate(
 async function generateCreateUpdate(
   state: FullChannelState,
   params: UpdateParams<"create">,
-  signer: ChannelSigner,
+  signer: IChannelSigner,
   transferInitialStates: TransferState[],
   providerUrl: string,
 ): Promise<ChannelUpdate<"create">> {
@@ -301,7 +318,7 @@ async function generateCreateUpdate(
 async function generateResolveUpdate(
   state: FullChannelState,
   params: UpdateParams<"resolve">,
-  signer: ChannelSigner,
+  signer: IChannelSigner,
   transferInitialStates: TransferState[],
   providerUrl: string,
 ): Promise<ChannelUpdate<"resolve">> {
@@ -358,7 +375,7 @@ async function generateResolveUpdate(
 // not for the update that exists
 async function generateSignedChannelCommitment(
   newState: FullChannelState,
-  signer: ChannelSigner,
+  signer: IChannelSigner,
 ): Promise<ChannelCommitmentData> {
   const { publicIdentifiers, networkContext, ...core } = newState;
   const unsigned: ChannelCommitmentData = {
@@ -391,7 +408,7 @@ function hashCommitment(commitment: ChannelCommitmentData): string {
 function generateBaseUpdate<T extends UpdateType>(
   state: FullChannelState,
   params: UpdateParams<T>,
-  signer: ChannelSigner,
+  signer: IChannelSigner,
 ): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
   // Create the update with all the things that are constant
   // between update types
