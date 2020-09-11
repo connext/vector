@@ -1,6 +1,6 @@
 import { tidy } from "./utils";
 
 export const BalanceEncoding = tidy(`tuple(
-    address[] amount,
-    uint256[] to
+    uint256[] amount,
+    address[] to
   )`);
