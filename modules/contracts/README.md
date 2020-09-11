@@ -1,5 +1,14 @@
 # Vector Contracts
 
+## Developing
+Build the contracts with:
+// TODO
+
+Test by running the following at the root of the vector monorepo:
+```
+make watch-contracts
+```
+
 ## Overview
 
 The Vector contracts make some simplifying assumptions compared to CF:

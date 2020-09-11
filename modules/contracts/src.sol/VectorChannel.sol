@@ -78,6 +78,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
     )
         public
     {
+        // TODO -- setting up with deposit params will change the calculated CREATE2 address
         require(_owners.length == 0, "Contract has been set up before");
         _adjudicatorAddress = adjudicatorAddress;
         _owners = owners;
