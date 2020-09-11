@@ -38,7 +38,7 @@ export class PrismaStore implements IStoreService {
     }
     // dedup assetIds. this is needed because the db stores balances keyed on [participant,channel,assetId] so there
     // will be 2 entries for each assetId
-    const assetIds = [...new Set(channelEntity!.balances.map((bal) => bal.assetId))].sort();
+    const assetIds = channelEntity!.assetIds.split(",");
 
     // get balances and locked value for each assetId
     const lockedValue: LockedValueType[] = [];
@@ -176,6 +176,7 @@ export class PrismaStore implements IStoreService {
     const channel = await this.prisma.channel.upsert({
       where: { channelAddress: channelState.channelAddress },
       create: {
+        assetIds: channelState.assetIds.join(","),
         chainId: channelState.networkContext.chainId,
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
@@ -191,31 +192,35 @@ export class PrismaStore implements IStoreService {
         vectorChannelMastercopyAddress: channelState.networkContext.vectorChannelMastercopyAddress,
         adjudicatorAddress: channelState.networkContext.adjudicatorAddress,
         balances: {
-          create: channelState.assetIds.reduce((create: BalanceCreateWithoutChannelInput[], assetId, index) => {
-            return [
-              ...create,
-              {
-                amount: channelState.balances[index].amount[0],
-                lockedValue: channelState.lockedValue[index].amount,
-                participant: channelState.participants[0],
-                to: channelState.balances[index].to[0],
-                assetId,
-              },
-              {
-                amount: channelState.balances[index].amount[1],
-                lockedValue: channelState.lockedValue[index].amount,
-                participant: channelState.participants[1],
-                to: channelState.balances[index].to[1],
-                assetId,
-              },
-            ];
-          }, []),
+          create: channelState.assetIds.reduce(
+            (create: BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
+              return [
+                ...create,
+                {
+                  amount: channelState.balances[index].amount[0],
+                  lockedValue: channelState.lockedValue[index].amount,
+                  participant: channelState.participants[0],
+                  to: channelState.balances[index].to[0],
+                  assetId,
+                },
+                {
+                  amount: channelState.balances[index].amount[1],
+                  lockedValue: channelState.lockedValue[index].amount,
+                  participant: channelState.participants[1],
+                  to: channelState.balances[index].to[1],
+                  assetId,
+                },
+              ];
+            },
+            [],
+          ),
         },
         latestUpdate: {
           create: latestUpdate,
         },
       },
       update: {
+        assetIds: channelState.assetIds.join(","),
         latestDepositNonce: channelState.latestDepositNonce,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
@@ -232,7 +237,7 @@ export class PrismaStore implements IStoreService {
         },
         balances: {
           upsert: channelState.assetIds.reduce(
-            (upsert: BalanceUpsertWithWhereUniqueWithoutChannelInput[], assetId, index) => {
+            (upsert: BalanceUpsertWithWhereUniqueWithoutChannelInput[], assetId: string, index: number) => {
               return [
                 ...upsert,
                 {

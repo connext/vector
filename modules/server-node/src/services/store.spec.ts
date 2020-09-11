@@ -10,6 +10,12 @@ describe("store", () => {
     store = new PrismaStore();
   });
 
+  beforeEach(async () => {
+    await store.prisma.balance.deleteMany({});
+    await store.prisma.update.deleteMany({});
+    await store.prisma.channel.deleteMany({});
+  });
+
   afterEach(async () => {
     await store.prisma.balance.deleteMany({});
     await store.prisma.update.deleteMany({});
@@ -25,8 +31,6 @@ describe("store", () => {
     await store.saveChannelState(state);
 
     const fromStore = await store.getChannelState(state.channelAddress);
-    console.log("fromStore: ", fromStore);
-    console.log("state: ", state);
     expect(fromStore).to.deep.eq(state);
   });
 });

@@ -28,6 +28,7 @@ model Channel {
   publicIdentifierB              String
   participantA                   String
   participantB                   String
+  assetIds                       String
   timeout                        String
   nonce                          Int
   latestDepositNonce             Int
