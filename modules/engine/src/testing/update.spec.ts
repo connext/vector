@@ -3,6 +3,7 @@ import {
   getRandomChannelSigner,
   createTestChannelState,
   createTestChannelUpdate,
+  mkAddress,
   mkHash,
   createTestChannelStateWithSigners,
   createTestChannelUpdateWithSigners,
@@ -57,7 +58,61 @@ describe.only("applyUpdate", () => {
     });
   });
 
-  // it("should work for deposit", () => {});
+  it("should work for deposit (adding a new assetId)", async () => {
+    const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
+      nonce: 1,
+      balances: [],
+      assetIds: [],
+      latestDepositNonce: 0,
+    });
+    const assetId = mkAddress();
+    const balance = {
+      to: signers.map((s) => s.address),
+      amount: ["1", "0"],
+    };
+    const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+      nonce: 2,
+      balance,
+      assetId,
+      details: { latestDepositNonce: 1 },
+    });
+
+    const newState = await applyUpdate(update, state, [], providerUrl);
+    expect(newState).to.containSubset({
+      ...state,
+      nonce: update.nonce,
+      latestDepositNonce: update.details.latestDepositNonce,
+      balances: [balance],
+      assetIds: [assetId],
+    });
+  });
+
+  it.only("should work for deposit (existing assetId)", async () => {
+    const initialBalanceAmt = ["1", "0"];
+    const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+      nonce: 3,
+      balances: [{ to: signers.map((s) => s.address), amount: initialBalanceAmt }],
+      assetIds: [mkAddress()],
+      latestDepositNonce: 1,
+    });
+
+    const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+      nonce: 4,
+      balance: { amount: ["1", "1"], to: signers.map((s) => s.address) },
+      assetId: mkAddress(),
+      fromIdentifier: signers[1].publicIdentifier,
+      toIdentifier: signers[0].publicIdentifier,
+      details: { latestDepositNonce: 1 },
+    });
+
+    const newState = await applyUpdate(update, state, [], providerUrl);
+    expect(newState).to.containSubset({
+      ...state,
+      nonce: update.nonce,
+      latestDepositNonce: update.details.latestDepositNonce,
+      balances: [update.balance],
+    });
+  });
 
   // it("should work for create", () => {});
 
