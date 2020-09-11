@@ -29,10 +29,8 @@ export async function applyUpdate<T extends UpdateType>(
   switch (update.type) {
     case UpdateType.setup: {
       const { timeout, networkContext } = (update as ChannelUpdate<"setup">).details;
-      // TODO: implement as if onchain first state is nonce 1
-      // return state;
       const publicIdentifiers = [update.fromIdentifier, update.toIdentifier];
-      const participants = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
+      const participants: string[] = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
       return {
         nonce: 1,
         latestDepositNonce: 0,
