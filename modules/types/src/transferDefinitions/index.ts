@@ -1,1 +1,2 @@
-export * from "./lnkedTransfer";
+export * from "./linkedTransfer";
+export * from "./withdraw";

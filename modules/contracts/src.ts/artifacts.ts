@@ -6,6 +6,7 @@ import * as VectorChannel from "../artifacts/VectorChannel.json";
 import * as ChannelFactory from "../artifacts/ChannelFactory.json";
 import * as TransferDefinition from "../artifacts/TransferDefinition.json";
 import * as LinkedTransfer from "../artifacts/LinkedTransfer.json";
+import * as Withdraw from "../artifacts/Withdraw.json";
 
 type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
 
