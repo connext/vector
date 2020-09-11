@@ -39,7 +39,7 @@ fi
 docker run \
   $interactive \
   --entrypoint="bash" \
-  --env="ETHPROVIDER_URL=http://172.17.0.1:$ethprovider_port" \
+  --env="PROVIDER_URL=http://172.17.0.1:$ethprovider_port" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --name="${project}_engine_tester" \
