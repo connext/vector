@@ -80,9 +80,9 @@ export type LockedValueType = {
 // not always be the particpants addresses)
 export interface CoreChannelState {
   channelAddress: Address;
-  participants: Address[]; // Signer keys..?
+  participants: Address[]; // Signer keys
   timeout: string;
-  balances: Balance[]; // TODO index by assetId? // initiator, responder
+  balances: Balance[]; // initiator, responder
   lockedValue: LockedValueType[]; // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
   nonce: number;
@@ -104,7 +104,7 @@ export interface CoreTransferState {
 export interface ChannelCommitmentData {
   state: CoreChannelState;
   signatures: string[];
-  adjudicatorAddress: Address; // TODO do we need this if the adjudicator address is available in multisig? This depends on whether we want to allow adjudicator updates.
+  adjudicatorAddress: Address;
   chainId: number;
 }
 
