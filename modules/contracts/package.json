@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@connext/types": "7.3.15",
+    "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
     "@nomiclabs/buidler": "1.4.5",
     "@openzeppelin/contracts": "3.1.0",

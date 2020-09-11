@@ -4,6 +4,8 @@ import { utils } from "ethers";
 import * as Adjudicator from "../artifacts/Adjudicator.json";
 import * as VectorChannel from "../artifacts/VectorChannel.json";
 import * as ChannelFactory from "../artifacts/ChannelFactory.json";
+import * as TransferDefinition from "../artifacts/TransferDefinition.json";
+import * as LinkedTransfer from "../artifacts/LinkedTransfer.json";
 
 type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
 
@@ -23,10 +25,14 @@ export const artifacts: Artifacts = {
   Adjudicator,
   VectorChannel,
   ChannelFactory,
+  TransferDefinition,
+  LinkedTransfer,
 } as any;
 
 export {
   Adjudicator,
   VectorChannel,
   ChannelFactory,
+  TransferDefinition,
+  LinkedTransfer
 };

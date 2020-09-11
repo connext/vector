@@ -11,5 +11,4 @@ struct LatestDeposit {
 struct Balance {
     uint256[] amount;
     address[] to;
-    //TODO should we just make assetId part of the Balance?
 }
