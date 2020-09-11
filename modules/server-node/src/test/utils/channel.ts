@@ -29,20 +29,17 @@ export const createTestChannelState = (): FullChannelState => {
   return {
     assetIds: ["0x0000000000000000000000000000000000000000", "0x1000000000000000000000000000000000000000"],
     balances: [
-      // participantA
+      // assetId0
       {
         amount: ["1", "2"],
         to: ["0xa000000000000000000000000000000000000000", "0xb000000000000000000000000000000000000000"],
       },
-      // participantB
+      // assetId1
       {
         amount: ["1", "2"],
         to: ["0xa000000000000000000000000000000000000000", "0xb000000000000000000000000000000000000000"],
       },
     ],
-    channelAddress: "0x1110000000000000000000000000000000000000",
-    latestDepositNonce: 1,
-    latestUpdate: createTestChannelUpdate(),
     lockedValue: [
       {
         amount: "1",
@@ -51,6 +48,9 @@ export const createTestChannelState = (): FullChannelState => {
         amount: "2",
       },
     ],
+    channelAddress: "0x1110000000000000000000000000000000000000",
+    latestDepositNonce: 1,
+    latestUpdate: createTestChannelUpdate(),
     merkleRoot: "0x",
     networkContext: {
       chainId: 1337,

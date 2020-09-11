@@ -64,3 +64,5 @@ cypress/videos
 
 # Local address book
 address-book.json
+modules/server-node/connext-store.db
+modules/server-node/migrations/migrate.lock

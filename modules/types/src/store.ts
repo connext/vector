@@ -1,6 +1,8 @@
 import { FullChannelState, CoreTransferState, TransferState } from "./channel";
 
 export interface IStoreService {
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
   saveChannelState(channelState: FullChannelState): Promise<void>;
 

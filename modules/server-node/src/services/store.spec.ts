@@ -1,15 +1,25 @@
-import { IStoreService } from "@connext/vector-types";
-
 import { createTestChannelState } from "../test/utils/channel";
 import { expect } from "../test/utils/assert";
 
-import { Store } from "./store";
+import { PrismaStore } from "./store";
 
 describe("store", () => {
-  let store: IStoreService;
+  let store: PrismaStore;
+
   before(() => {
-    store = new Store();
+    store = new PrismaStore();
   });
+
+  afterEach(async () => {
+    await store.prisma.balance.deleteMany({});
+    await store.prisma.update.deleteMany({});
+    await store.prisma.channel.deleteMany({});
+  });
+
+  after(async () => {
+    await store.disconnect();
+  });
+
   it("should save a channel update", async () => {
     const state = createTestChannelState();
     await store.saveChannelState(state);
