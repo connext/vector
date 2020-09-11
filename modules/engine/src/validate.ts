@@ -1,5 +1,6 @@
-import { UpdateType, ChannelUpdate, FullChannelState, IStoreService, TransferState } from "@connext/vector-types";
+import { UpdateType, ChannelUpdate, FullChannelState, TransferState } from "@connext/vector-types";
 import { utils } from "ethers";
+
 import { logger } from "./utils";
 
 const { getAddress } = utils;
@@ -17,7 +18,7 @@ export async function validate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
   transferInitialStates: TransferState[],
-  providerUrl: string, // TODO: just signer?
+  providerUrl: string,
 ): Promise<void> {
   // There is no need to validate items in the state since this will always
   // be a double signed state
@@ -36,7 +37,7 @@ export async function validate<T extends UpdateType = any>(
   }
 
   // The identifiers should be the same
-  if ([fromIdentifier, toIdentifier].sort() !== state.publicIdentifiers.sort()) {
+  if (JSON.stringify([fromIdentifier, toIdentifier].sort()) !== JSON.stringify(state.publicIdentifiers.sort())) {
     throw new Error(`Update has different identifiers than state`);
   }
 

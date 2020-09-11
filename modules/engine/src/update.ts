@@ -27,11 +27,29 @@ export async function applyUpdate<T extends UpdateType>(
   await validate(update, state, transferInitialStates, providerUrl);
   switch (update.type) {
     case UpdateType.setup: {
+      const { timeout, networkContext } = (update as ChannelUpdate<"setup">).details;
       // TODO: implement as if onchain first state is nonce 1
-      return state;
+      // return state;
+      const publicIdentifiers = [update.fromIdentifier, update.toIdentifier];
+      const participants = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
+      return {
+        nonce: 1,
+        latestDepositNonce: 0,
+        channelAddress: update.channelAddress,
+        timeout,
+        participants,
+        balances: [],
+        lockedValue: [],
+        assetIds: [],
+        merkleRoot: constants.HashZero,
+        latestUpdate: undefined,
+        networkContext,
+        publicIdentifiers,
+      };
     }
     case UpdateType.deposit: {
       // Generate the new balance field for the channel
+      const { latestDepositNonce } = (update as ChannelUpdate<"deposit">).details;
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       return {
         ...state,
@@ -40,15 +58,16 @@ export async function applyUpdate<T extends UpdateType>(
           ? state.assetIds
           : [...state.assetIds, update.assetId],
         nonce: update.nonce,
-        latestDepositNonce: update.details.latestDepositNonce,
+        latestDepositNonce,
       };
     }
     case UpdateType.create: {
+      const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       const lockedValue = reconcileLockedValue(
         UpdateType.create,
-        update.details.transferInitialState,
+        transferInitialState,
         state.assetIds,
         state.lockedValue,
       );
@@ -57,14 +76,15 @@ export async function applyUpdate<T extends UpdateType>(
         balances,
         lockedValue,
         nonce: update.nonce,
-        merkleRoot: update.details.merkleRoot,
+        merkleRoot,
       };
     }
     case UpdateType.resolve: {
+      const { transferId, merkleRoot } = (update as ChannelUpdate<"resolve">).details;
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const initialState = transferInitialStates.find((s) => s.transferId === update.details.transferId);
+      const initialState = transferInitialStates.find((s) => s.transferId === transferId);
       if (!initialState) {
-        throw new Error(`Could not find initial state for transfer to resolve. Id: ${update.details.transferId}`);
+        throw new Error(`Could not find initial state for transfer to resolve. Id: ${transferId}`);
       }
       const lockedValue = reconcileLockedValue(UpdateType.resolve, initialState, state.assetIds, state.lockedValue);
       return {
@@ -72,11 +92,11 @@ export async function applyUpdate<T extends UpdateType>(
         balances,
         lockedValue,
         nonce: update.nonce,
-        merkleRoot: update.details.merkleRoot,
+        merkleRoot,
       };
     }
     default: {
-      throw new Error(`Unrecognized update type: ${update.type}`);
+      throw new Error(`Unexpected UpdateType in received update: ${update.type}`);
     }
   }
 }
@@ -144,36 +164,30 @@ async function generateSetupUpdate(
   // the base values
   const publicIdentifiers = [signer.publicIdentifier, params.details.counterpartyIdentifier];
   const participants = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
-  const baseState: FullChannelState = {
-    nonce: 0,
-    latestDepositNonce: 0,
-    channelAddress: params.channelAddress,
-    timeout: params.details.timeout,
-    participants,
-    balances: [],
-    lockedValue: [],
-    assetIds: [],
-    merkleRoot: constants.HashZero,
-    latestUpdate: undefined,
-    networkContext: params.details.networkContext,
-    publicIdentifiers,
-  };
 
   // TODO: There may have to be a setup signature for the channel
   // when deploying the multisig. will need to generate that here
   // (check with heiko)
 
   // Create the channel update from the params
+  // Don't use `generateBaseUpdate` for initial update
   const unsigned: ChannelUpdate<"setup"> = {
-    ...generateBaseUpdate(baseState, params, signer),
+    nonce: 1,
+    channelAddress: params.channelAddress,
+    type: UpdateType.setup,
+    fromIdentifier: signer.publicIdentifier,
+    toIdentifier: params.details.counterpartyIdentifier,
     // should have the to field filled out
     balance: { to: participants, amount: ["0", "0"] },
-    details: {},
+    details: {
+      networkContext: params.details.networkContext,
+      timeout: params.details.timeout,
+    },
     signatures: [],
     assetId: constants.AddressZero,
   };
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, baseState, [], providerUrl);
+  const newState = await applyUpdate(unsigned, {} as any, [], providerUrl);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   return {

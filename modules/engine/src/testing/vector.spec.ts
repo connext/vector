@@ -6,19 +6,21 @@ import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 import { MemoryStoreService } from "./services/store";
 import { expect } from "./utils/assert";
+import { config } from "./services/config";
 
-describe("Vector", () => {
-  it("is defined", () => {
-    expect(Vector).to.be.ok;
-  });
-
+describe("Vector.connect", () => {
   it("can be created", async () => {
+    const signer = getRandomChannelSigner();
     const node = await Vector.connect(
       new MemoryMessagingService(),
       new MemoryLockService(),
       new MemoryStoreService(),
-      getRandomChannelSigner(),
+      signer,
+      config.providerUrl,
     );
-    expect(node).to.be.ok;
+    expect(node).to.be.instanceOf(Vector);
+    expect(node.providerUrl).to.be.eq(config.providerUrl);
+    expect(node.publicIdentifier).to.be.eq(signer.publicIdentifier);
+    expect(node.signerAddress).to.be.eq(signer.address);
   });
 });

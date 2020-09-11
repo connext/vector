@@ -117,7 +117,7 @@ export interface TransferCommitmentData {
 // Includes any additional info that doesn't need to be sent to chain
 export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   publicIdentifiers: string[];
-  latestUpdate: ChannelUpdate<T>;
+  latestUpdate?: ChannelUpdate<T>;
   networkContext: NetworkContext;
 };
 
@@ -143,7 +143,7 @@ export type ChannelUpdate<T extends UpdateType> = {
   // Do the sigs *have* to be an array?
 };
 
-interface ChannelUpdateDetailsMap {
+export interface ChannelUpdateDetailsMap {
   [UpdateType.create]: CreateUpdateDetails;
   [UpdateType.deposit]: DepositUpdateDetails;
   [UpdateType.resolve]: ResolveUpdateDetails;
@@ -176,4 +176,7 @@ type DepositUpdateDetails = {
 };
 
 // TODO: verify these are correct
-type SetupUpdateDetails = any;
+type SetupUpdateDetails = {
+  timeout: string;
+  networkContext: NetworkContext;
+};
