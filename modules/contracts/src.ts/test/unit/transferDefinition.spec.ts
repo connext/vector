@@ -3,7 +3,7 @@ import { Contract, ContractFactory, Wallet, utils } from "ethers";
 import { TransferDefinition } from "../../artifacts";
 import { expect, provider } from "../utils";
 
-describe.only("TransferDefinition", () => {
+describe("TransferDefinition", () => {
   let deployer: Wallet;
   let definition: Contract;
 
