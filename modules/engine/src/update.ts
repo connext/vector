@@ -1,5 +1,11 @@
 import { VectorChannel } from "@connext/vector-contracts";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import {
+  getSignerAddressFromPublicIdentifier,
+  hashCoreTransferState,
+  hashTransferState,
+  getTransferNameFromState,
+  hashChannelCommitment,
+} from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
 import {
   UpdateType,
@@ -8,24 +14,24 @@ import {
   UpdateParams,
   ChannelCommitmentData,
   Balance,
-  LockedValueType,
-  TransferState,
   IChannelSigner,
+  CoreTransferState,
+  IStoreService,
+  TransferState,
 } from "@connext/vector-types";
 
-import { validate } from "./validate";
 import { MerkleTree } from "./merkleTree";
+import { resolve } from "./utils";
+import { TransferState } from "../../types/dist/src";
 
-// Should return a validated state with the given update applied
+// Should return a state with the given update applied
+// It is assumed here that the update is validated before
+// being passed in
 export async function applyUpdate<T extends UpdateType>(
-  // optional sig typings allows this fn to be used by initiator before signing
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
-  transferInitialStates: TransferState[],
-  providerUrl: string,
+  transferState?: TransferState,
 ): Promise<FullChannelState<T>> {
-  // TODO: May need store service and provider in validation function
-  await validate(update, state, transferInitialStates, providerUrl);
   switch (update.type) {
     case UpdateType.setup: {
       const { timeout, networkContext } = (update as ChannelUpdate<"setup">).details;
@@ -64,35 +70,27 @@ export async function applyUpdate<T extends UpdateType>(
       const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedValue = reconcileLockedValue(
-        UpdateType.create,
-        transferInitialState,
-        state.assetIds,
-        state.lockedValue,
-      );
-      return {
-        ...state,
-        balances,
-        lockedValue,
-        nonce: update.nonce,
-        merkleRoot,
-      };
+      const lockedValue = ;
+      throw new Error("must reconcile locked value on transfer creation");
+      // return {
+      //   ...state,
+      //   balances,
+      //   lockedValue,
+      //   nonce: update.nonce,
+      //   merkleRoot,
+      // };
     }
     case UpdateType.resolve: {
       const { transferId, merkleRoot } = (update as ChannelUpdate<"resolve">).details;
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const initialState = transferInitialStates.find((s) => s.transferId === transferId);
-      if (!initialState) {
-        throw new Error(`Could not find initial state for transfer to resolve. Id: ${transferId}`);
-      }
-      const lockedValue = reconcileLockedValue(UpdateType.resolve, initialState, state.assetIds, state.lockedValue);
-      return {
-        ...state,
-        balances,
-        lockedValue,
-        nonce: update.nonce,
-        merkleRoot,
-      };
+      throw new Error("must reconcile locked value on transfer resolution");
+      // return {
+      //   ...state,
+      //   balances,
+      //   lockedValue,
+      //   nonce: update.nonce,
+      //   merkleRoot,
+      // };
     }
     default: {
       throw new Error(`Unexpected UpdateType in received update: ${update.type}`);
@@ -114,50 +112,42 @@ export async function applyUpdate<T extends UpdateType>(
 // properly validated resultant state
 export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
-  state: FullChannelState,
-  transferInitialStates: TransferState[],
+  storeService: IStoreService,
   signer: IChannelSigner,
-  providerUrl: string, // TODO: can this be derived from signer?
 ): Promise<ChannelUpdate<T>> {
+  // Get the channel state
+  const state = await storeService.getChannelState(params.channelAddress);
+
   // Only in the case of setup should the state be undefined
   if (!state && params.type !== UpdateType.setup) {
     throw new Error(`Could not find channel in store to update`);
   }
 
   // Create the update from user parameters based on type
-  let update: ChannelUpdate<any>;
+  let unsigned: ChannelUpdate<any>;
   switch (params.type) {
     case UpdateType.setup: {
-      update = await generateSetupUpdate(params as UpdateParams<"setup">, signer, providerUrl);
+      unsigned = await generateSetupUpdate(params as UpdateParams<"setup">, signer);
       break;
     }
     case UpdateType.deposit: {
-      update = await generateDepositUpdate(
-        state,
-        params as UpdateParams<"deposit">,
-        signer,
-        transferInitialStates,
-        providerUrl,
-      );
+      unsigned = await generateDepositUpdate(state, params as UpdateParams<"deposit">, signer);
       break;
     }
     case UpdateType.create: {
-      update = await generateCreateUpdate(
-        state,
-        params as UpdateParams<"create">,
-        signer,
-        transferInitialStates,
-        providerUrl,
-      );
+      const transfers = await storeService.getActiveTransfers(params.channelAddress);
+      unsigned = await generateCreateUpdate(state, params as UpdateParams<"create">, signer, transfers);
       break;
     }
     case UpdateType.resolve: {
-      update = await generateResolveUpdate(
+      const transfers = await storeService.getActiveTransfers(params.channelAddress);
+      const transferState = await storeService.getTransferState((params as UpdateParams<"resolve">).details.transferId);
+      unsigned = await generateResolveUpdate(
         state,
         params as UpdateParams<"resolve">,
         signer,
-        transferInitialStates,
-        providerUrl,
+        transfers,
+        transferState,
       );
       break;
     }
@@ -166,19 +156,25 @@ export async function generateUpdate<T extends UpdateType>(
     }
   }
 
+  // Create a signed commitment for the new state
+  const newState = await applyUpdate(unsigned, state);
+  const commitment = await generateSignedChannelCommitment(newState, signer);
+
   // Return the validated update to send to counterparty
-  return update;
+  return {
+    ...unsigned,
+    signatures: commitment.signatures,
+  };
 }
 
 async function generateSetupUpdate(
-  params: UpdateParams<"setup">,
+  params: UpdateParams<"setup">, // already validated
   signer: IChannelSigner,
-  providerUrl: string,
 ): Promise<ChannelUpdate<"setup">> {
   // During channel creation, you have no channel state, so create
   // the base values
   const publicIdentifiers = [signer.publicIdentifier, params.details.counterpartyIdentifier];
-  const participants = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
+  const participants: string[] = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
 
   // TODO: There may have to be a setup signature for the channel
   // when deploying the multisig. will need to generate that here
@@ -201,14 +197,8 @@ async function generateSetupUpdate(
     signatures: [],
     assetId: constants.AddressZero,
   };
-  // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, {} as any, [], providerUrl);
-  const commitment = await generateSignedChannelCommitment(newState, signer);
 
-  return {
-    ...unsigned,
-    signatures: commitment.signatures,
-  };
+  return unsigned;
 }
 
 // Generates deposit update from user input params.
@@ -216,8 +206,6 @@ async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
   signer: IChannelSigner,
-  transferInitialStates: TransferState[],
-  providerUrl: string,
 ): Promise<ChannelUpdate<"deposit">> {
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
@@ -249,14 +237,7 @@ async function generateDepositUpdate(
     signatures: [],
   };
 
-  // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state, transferInitialStates, providerUrl);
-  const commitment = await generateSignedChannelCommitment(newState, signer);
-
-  return {
-    ...unsigned,
-    signatures: commitment.signatures,
-  };
+  return unsigned;
 }
 
 // Generates the transfer creation update based on user input
@@ -264,8 +245,7 @@ async function generateCreateUpdate(
   state: FullChannelState,
   params: UpdateParams<"create">,
   signer: IChannelSigner,
-  transferInitialStates: TransferState[],
-  providerUrl: string,
+  transfers: CoreTransferState[],
 ): Promise<ChannelUpdate<"create">> {
   const {
     details: { assetId, transferDefinition, timeout, encodings, transferInitialState, amount },
@@ -280,7 +260,19 @@ async function generateCreateUpdate(
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
-  const hashes = [...transferInitialStates, transferInitialState].map(hashTransferState);
+  // TODO: how to include the merkle proof in the hash?
+  const coreTransferState: Omit<CoreTransferState, "merkleProofData"> = {
+    assetId,
+    // TODO: Should we pass in a transfer id?
+    transferId: utils.hexlify(utils.randomBytes(32)),
+    channelAddress: state.channelAddress,
+    transferDefinition,
+    transferEncodings: encodings,
+    transferTimeout: timeout,
+    initialStateHash: hashGenericTransferState(transferInitialState),
+  };
+  const transferHash = hashCoreTransferState(coreTransferState);
+  const hashes = [...transfers.map((t) => t.initialStateHash), transferHash];
   const merkle = new MerkleTree(hashes);
 
   // Create the update from the user provided params
@@ -290,26 +282,17 @@ async function generateCreateUpdate(
     balance,
     assetId,
     details: {
-      transferId: utils.hexlify(utils.randomBytes(32)),
-      // TODO: Should we pass in a transfer id?
+      transferId: coreTransferState.transferId,
       transferDefinition,
       transferTimeout: timeout,
       transferInitialState,
       transferEncodings: encodings,
-      merkleProofData: merkle.proof(hashTransferState(transferInitialState)),
+      merkleProofData: merkle.proof(transferHash),
       merkleRoot: merkle.root,
     },
     signatures: [],
   };
-
-  // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state, transferInitialStates, providerUrl);
-  const commitment = await generateSignedChannelCommitment(newState, signer);
-
-  return {
-    ...unsigned,
-    signatures: commitment.signatures,
-  };
+  return unsigned;
 }
 
 // Generates resolve update from user input params
@@ -317,8 +300,8 @@ async function generateResolveUpdate(
   state: FullChannelState,
   params: UpdateParams<"resolve">,
   signer: IChannelSigner,
-  transferInitialStates: TransferState[],
-  providerUrl: string,
+  transfers: CoreTransferState[],
+  transfer: TransferState,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
   // channel fields:
@@ -327,46 +310,32 @@ async function generateResolveUpdate(
   // - nonce
   // - merkle root
 
-  // Grab the transfer from the store service to get the
-  // asset id and other data
-  // const stored = await storeService.getTransferState(params.details.transferId);
-  // if (!stored) {
-  //   throw new Error(`Cannot find stored transfer for id ${params.details.transferId}`);
-  // }
-
   // First generate latest merkle tree data
-  const hashes = transferInitialStates.filter((x) => x.transferId === params.details.transferId).map(hashTransferState);
-  const initial = transferInitialStates.find((a) => a.transferId === params.details.transferId);
+  const coreTransfer = transfers.find((x) => x.transferId === params.details.transferId);
+  const hashes = transfers.filter((x) => x.transferId !== params.details.transferId).map((x) => x.initialStateHash);
   const merkle = new MerkleTree(hashes);
 
-  // Create the new balance
-  const balance = getUpdatedBalance("increment", initial.assetId, initial.balance.amount[0], signer.address, state);
+  // Get the new balance from contract
+  const balance = await resolve(coreTransfer, transfer, params.details.transferResolver, signer);
 
   // Generate the unsigned update from the params
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
-    assetId: initial.assetId,
+    assetId: coreTransfer.assetId,
     details: {
       transferId: params.details.transferId,
-      transferDefinition: initial.transferDefinition,
+      transferDefinition: coreTransfer.transferDefinition,
       transferResolver: params.details.transferResolver,
-      transferEncodings: initial.transferEncodings,
+      transferEncodings: coreTransfer.transferEncodings,
       // TODO: do we need to pass around a proof here?
-      merkleProofData: merkle.proof(hashTransferState(initial)),
+      merkleProofData: merkle.proof(coreTransfer.initialStateHash),
       merkleRoot: merkle.root,
     },
     signatures: [],
   };
 
-  // Validate the generated update is correct, and create a
-  // commitment for the new state
-  const newState = await applyUpdate(unsigned, state, transferInitialStates, providerUrl);
-  const commitment = await generateSignedChannelCommitment(newState, signer);
-  return {
-    ...unsigned,
-    signatures: commitment.signatures,
-  };
+  return unsigned;
 }
 
 // This function signs the state after the update is applied,
@@ -382,7 +351,7 @@ async function generateSignedChannelCommitment(
     adjudicatorAddress: newState.networkContext.adjudicatorAddress,
     signatures: [],
   };
-  const sig = await signer.signMessage(hashCommitment(unsigned));
+  const sig = await signer.signMessage(hashChannelCommitment(unsigned));
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
@@ -390,10 +359,6 @@ async function generateSignedChannelCommitment(
     // TODO: see notes in ChannelUpdate type re: single-signed state
     // convention
   };
-}
-
-function hashCommitment(commitment: ChannelCommitmentData): string {
-  throw new Error("hashCommitment not implemented");
 }
 
 // TODO: signature assertion helpers for commitment data
@@ -404,23 +369,29 @@ function hashCommitment(commitment: ChannelCommitmentData): string {
 // - defining update type
 // - channel addressing (participants, address, etc.)
 function generateBaseUpdate<T extends UpdateType>(
-  state: FullChannelState,
+  state: FullChannelState | undefined,
   params: UpdateParams<T>,
   signer: IChannelSigner,
 ): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
   // Create the update with all the things that are constant
   // between update types
+  const publicIdentifiers = state.publicIdentifiers ?? [
+    signer.publicIdentifier,
+    (params as UpdateParams<"setup">).details.counterpartyIdentifier,
+  ];
   return {
-    nonce: state.nonce + 1,
-    channelAddress: state.channelAddress,
+    nonce: (state.nonce ?? 0) + 1,
+    channelAddress: state.channelAddress ?? params.channelAddress,
     type: params.type,
     fromIdentifier: signer.publicIdentifier,
-    toIdentifier: state.publicIdentifiers.find((s) => s !== signer.publicIdentifier),
+    toIdentifier: publicIdentifiers.find((id) => id !== signer.publicIdentifier),
   };
 }
 
-function hashTransferState(state: any): string {
-  throw new Error("hashTransferState not implemented: " + state);
+// TODO: Remove this if we add a transfer type flag
+// to create / resolve
+function hashGenericTransferState(state: any): string {
+  return hashTransferState(getTransferNameFromState(state), state);
 }
 
 function getUpdatedBalance(
@@ -477,38 +448,5 @@ function reconcileBalanceWithExisting(
   // Otherwise, update the array at the given index
   const updated = [...existing];
   updated[assetIdx] = balanceToReconcile;
-  return updated;
-}
-
-// Uses a balance generated from `getUpdatedBalance` to update the
-// locked value during transfer creation/resolution
-function reconcileLockedValue(
-  type: typeof UpdateType.create | typeof UpdateType.resolve,
-  transferInitialState: TransferState,
-  assetIds: string[],
-  lockedValue: LockedValueType[],
-): LockedValueType[] {
-  // First find the appropriate index for the assetId
-  const assetIdx = assetIds.findIndex((a) => a === transferInitialState.assetId);
-
-  // Sanity-check that this is greater than -1 since these funds should
-  // always existing within the channel
-  if (assetIdx === -1) {
-    throw new Error(`Could not find transfer asset in assetIds`);
-  }
-
-  // Get the transfer amount from the initial state
-  const transferAmount = BigNumber.from(transferInitialState.balance.amount[0]);
-
-  // Get the existing locked value entry
-  const existing = { ...lockedValue[assetIdx] };
-  const updatedAmt =
-    type === UpdateType.create
-      ? transferAmount.add(existing.amount)
-      : BigNumber.from(existing.amount).sub(transferAmount);
-
-  // Generate the new locked value object
-  const updated = [...lockedValue];
-  updated[assetIdx] = { amount: updatedAmt.toString() };
   return updated;
 }

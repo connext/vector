@@ -1,4 +1,5 @@
 import { Address } from "./basic";
+import { TransferState } from "./transferDefinitions";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
 export type ContextualAddress = {
@@ -7,9 +8,7 @@ export type ContextualAddress = {
 };
 
 // TODO: replace these placeholders w real types
-export type ChannelState = any;
 export type MultisigCommitment = any;
-export type TransferState = any & { balance: Balance; assetId: string; transferId: string };
 
 // Method params
 export type SetupParams = {
@@ -96,7 +95,7 @@ export interface CoreTransferState {
   transferId: string;
   transferDefinition: Address;
   transferTimeout: string;
-  transferStateHash: string;
+  initialStateHash: string;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   merkleProofData: any; //TODO
 }
@@ -154,7 +153,7 @@ export type CreateUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
   transferTimeout: string;
-  transferInitialState: any; //TODO
+  transferInitialState: TransferState; //TODO
   transferEncodings: string[]; // Initial state, resolver state
   merkleProofData: string;
   merkleRoot: string;

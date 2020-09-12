@@ -65,6 +65,12 @@ export class MerkleTree {
     return hexlify(concat(proofArray));
   }
 
+  public static isIncluded(element: string, elements: string[]): boolean {
+    const t = new MerkleTree(elements);
+    const proof =  t.proof(element);
+    return t.verify(proof);
+  }
+
   public verify(proof: string): boolean {
     const proofArray: RegExpMatchArray = proof.substring(2).match(/.{64}/g) || [];
     if (!proofArray || proofArray.length * 64 !== proof.length -2) {

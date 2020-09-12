@@ -6,6 +6,7 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
+  LinkedTransferState,
 } from "@connext/vector-types";
 
 import { Balance, TransferState } from "../../types/dist/src";
@@ -184,7 +185,7 @@ export const createTestChannelUpdateWithSigners = (
   // function
   const details: any = {};
   if (type === UpdateType.create) {
-    details.transferInitialState = createTestTransferState({
+    details.transferInitialState = createTestLinkedTransferState({
       balance: {
         to: signers.map((s) => s.address),
       },
@@ -205,26 +206,28 @@ export const createTestChannelUpdateWithSigners = (
   return createTestChannelUpdate(type, signerOverrides);
 };
 
-export const createTestTransferState = (
+export const createTestLinkedTransferState = (
   overrides: Partial<{ balance: Partial<Balance>; assetId: string }> = {},
-): TransferState => {
+): LinkedTransferState => {
+  const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {
       to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
       amount: ["1", "0"],
-      ...(overrides.balance ?? {}),
+      ...(balanceOverrides ?? {}),
     },
-    assetId: overrides.assetId ?? mkAddress(),
+    linkedHash: mkHash("0xeee"),
+    ...defaultOverrides,
   };
 };
 
-export const createTestTransferStates = (
+export const createTestLinkedTransferStates = (
   count = 2,
   overrides: Partial<{ amount: string; assetId: string }>[] = [],
 ): TransferState[] => {
   return Array(count)
     .fill(0)
     .map((val, idx) => {
-      return createTestTransferState({ ...(overrides[idx] ?? {}) });
+      return createTestLinkedTransferState({ ...(overrides[idx] ?? {}) });
     });
 };

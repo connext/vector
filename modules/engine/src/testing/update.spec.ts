@@ -7,10 +7,13 @@ import {
   mkHash,
   createTestChannelStateWithSigners,
   createTestChannelUpdateWithSigners,
+  createTestLinkedTransferState,
+  hashLinkedTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 
 import { applyUpdate } from "../../src/update";
+import { MerkleTree } from "../merkleTree";
 
 import { config } from "./services/config";
 
@@ -87,7 +90,7 @@ describe.only("applyUpdate", () => {
     });
   });
 
-  it.only("should work for deposit (existing assetId)", async () => {
+  it("should work for deposit (existing assetId)", async () => {
     const initialBalanceAmt = ["1", "0"];
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,
@@ -114,7 +117,36 @@ describe.only("applyUpdate", () => {
     });
   });
 
-  // it("should work for create", () => {});
+  it.only("should work for create", async () => {
+    const transferInitialState = createTestLinkedTransferState({ balance: { to: signers.map((s) => s.address) } });
+
+    // Create the channel state
+    const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+      nonce: 3,
+      balances: [transferInitialState.balance],
+      assetIds: [transferInitialState.assetId],
+      latestDepositNonce: 1,
+    });
+
+    // Create the transfer update
+    const hash = hashLinkedTransferState(transferInitialState);
+    const tree = new MerkleTree([hash]);
+    const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
+      nonce: state.nonce + 1,
+      assetId: transferInitialState.assetId,
+      balance: transferInitialState.balance,
+      details: { transferInitialState, merkleRoot: tree.root, merkleProofData: tree.proof(hash) },
+    });
+
+    const newState = await applyUpdate(update, state, [], providerUrl);
+    expect(newState).to.containSubset({
+      ...state,
+      balances: [],
+      lockedValue: [],
+      nonce: update.nonce,
+      merkleRoot: update.details.merkleRoot,
+    });
+  });
 
   // it("should work for resolve", () => {});
 

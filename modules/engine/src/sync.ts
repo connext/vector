@@ -1,7 +1,6 @@
 import {
   ChannelUpdate,
   IStoreService,
-  ChannelState,
   UpdateType,
   MultisigCommitment,
   IMessagingService,
@@ -17,6 +16,7 @@ import { ChannelUpdateError } from "./errors";
 import { VectorMessage, VectorChannelMessage, VectorErrorMessage } from "./types";
 import { delay, logger, isChannelMessage, isChannelState } from "./utils";
 import { applyUpdate } from "./update";
+import { validate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
 // These updates will be single signed, the function should dispatch the
@@ -27,9 +27,9 @@ export async function outbound(
   providerUrl: string,
   storeService: IStoreService,
   messagingService: IMessagingService,
-  stateEvt: Evt<ChannelState>,
+  stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-): Promise<ChannelState> {
+): Promise<FullChannelState> {
   const storedChannel = await storeService.getChannelState(update.channelAddress);
   if (!storedChannel) {
     // NOTE: IFF creating a channel, the initial channel state should be
@@ -42,7 +42,7 @@ export async function outbound(
   // reject instead of resolve is if *sending* the message failed. In
   // that case, this should be safe to retry on failure
   const generatePromise = () =>
-    new Promise<ChannelState | ChannelUpdateError>((resolve, reject) => {
+    new Promise<FullChannelState | ChannelUpdateError>((resolve, reject) => {
       // If there is an error event corresponding to this channel and
       // this nonce, reject the promise
       errorEvt
@@ -54,10 +54,10 @@ export async function outbound(
       // If there is a channel update event corresponding to
       // this channel update, resolve the promise
       stateEvt
-        .pipe((e: ChannelState) => {
-          return e.channelAddress === update.channelAddress && e.latestNonce === update.nonce;
+        .pipe((e: FullChannelState) => {
+          return e.channelAddress === update.channelAddress && e.nonce === update.nonce;
         })
-        .attachOnce((e: ChannelState) => resolve(e));
+        .attachOnce((e: FullChannelState) => resolve(e));
 
       // TODO: turn `update` into a DTO before sending?
       // TODO: what if there is no latest update?
@@ -111,13 +111,10 @@ export async function outbound(
     });
   }
 
-  // Get all the latest states
-  const transferInitialStates = await storeService.getTransferInitialStates(update.channelAddress);
-
   // Apply the update, and retry the update
-  let newState: string | ChannelState;
+  let newState: string | FullChannelState;
   try {
-    newState = await applyUpdate(result.state.latestUpdate, storedChannel, transferInitialStates, providerUrl);
+    newState = await applyUpdate(result.state.latestUpdate, storedChannel);
   } catch (e) {
     newState = e.message;
   }
@@ -160,7 +157,7 @@ export async function inbound(
   messagingService: IMessagingService,
   signer: IChannelSigner,
   chainProviders: ChainProviders,
-  stateEvt: Evt<ChannelState>,
+  stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
 ): Promise<void> {
   // If the message is from us, ignore
@@ -196,7 +193,7 @@ async function processChannelMessage(
   messagingService: IMessagingService,
   signer: IChannelSigner,
   chainProviders: ChainProviders,
-  stateEvt: Evt<ChannelState>,
+  stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
 ): Promise<void> {
   const { from, data } = message;
@@ -217,7 +214,7 @@ async function processChannelMessage(
   };
 
   // Get our latest stored state + active transfers
-  const transferInitialStates = await storeService.getTransferInitialStates(requestedUpdate.channelAddress);
+  const transferInitialStates = await storeService.getActiveTransfers(requestedUpdate.channelAddress);
   let storedState: FullChannelState = await storeService.getChannelState(requestedUpdate.channelAddress);
   if (!storedState) {
     // NOTE: the creation update MUST have a nonce of 1 not 0!
@@ -333,7 +330,7 @@ async function processChannelMessage(
       );
     }
     try {
-      previousState = await applyUpdate(counterpartyLatestUpdate, storedState, transferInitialStates, providerUrl);
+      previousState = await mergeUpdate(counterpartyLatestUpdate, storedState, transferInitialStates, providerUrl);
     } catch (e) {
       return handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, counterpartyLatestUpdate, storedState, {
@@ -347,9 +344,9 @@ async function processChannelMessage(
 
   // We now have the latest state for the update, and should be
   // able to play it on top of the update
-  let response: ChannelState | string;
+  let response: FullChannelState | string;
   try {
-    response = await applyUpdate(requestedUpdate, previousState, transferInitialStates, providerUrl);
+    response = await mergeUpdate(requestedUpdate, previousState, transferInitialStates, providerUrl);
   } catch (e) {
     response = e.message;
   }
@@ -400,3 +397,11 @@ async function processChannelMessage(
   }
   stateEvt.post(response);
 }
+
+const mergeUpdate = async (update, state, transfers, providerUrl): Promise<FullChannelState> => {
+  await validate(update, state, transfers, providerUrl);
+  const newState = await applyUpdate(update, state);
+
+  // Return the validated update to send to counterparty
+  return newState;
+};

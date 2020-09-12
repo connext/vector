@@ -3,6 +3,8 @@ import { HexString } from "../basic";
 import { tidy } from "../utils";
 import { BalanceEncoding } from "../contracts";
 
+export const LinkedTransferName = "LinkedTransfer";
+
 export type LinkedTransferState = {
   balance: Balance;
   linkedHash: HexString;
@@ -14,7 +16,7 @@ export type LinkedTransferResolver = {
 
 export const LinkedTransferStateEncoding = tidy(`tuple(
     ${BalanceEncoding} balance,
-    bytes32 linkedHash,
+    bytes32 linkedHash
   )`);
 
 export const LinkedTransferResolverEncoding = tidy(`tuple(

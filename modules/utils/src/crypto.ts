@@ -25,6 +25,7 @@ import {
 } from "eccrypto-js";
 
 import { getAddressError, getHexStringError, isValidHexString } from "./hexStrings";
+import { LinkedTransferState, TransferState } from "@connext/vector-types";
 
 const { arrayify, getAddress, hexlify, randomBytes, toUtf8String } = utils;
 

@@ -6,14 +6,14 @@ import {
   LinkedTransferResolver,
   Balance,
 } from "@connext/vector-types";
+import { getRandomAddress, getRandomBytes32 } from "@connext/vector-utils";
 
 import { LinkedTransfer } from "../../../artifacts";
 import { expect, provider } from "../../utils";
-import { getRandomAddress, getRandomBytes32, stringify } from "@connext/vector-utils";
 
 const { HashZero, Zero } = constants;
 
-describe("LinkedTransfer", () => {
+describe.only("LinkedTransfer", () => {
   let deployer: Wallet;
   let definition: Contract;
 
@@ -68,9 +68,10 @@ describe("LinkedTransfer", () => {
     resolver: LinkedTransferResolver,
     result: Balance,
   ): Promise<void> => {
+    const [value] = result as any;
     if (createLinkedHash(resolver.preImage) === initialState.linkedHash) {
       // Payment completed
-      expect(result).to.deep.equal({
+      expect(value).to.deep.equal({
         ...initialState.balance,
         amount: [initialState.balance.amount[1], initialState.balance.amount[0]],
       });
@@ -89,12 +90,13 @@ describe("LinkedTransfer", () => {
     it("should create successfully", async () => {
       const preImage = getRandomBytes32();
       const initialState = await createInitialState(preImage);
-      expect(await createTransfer(initialState)).to.be.true;
+      const res = await createTransfer(initialState);
+      expect((res as any)[0]).to.be.true;
     });
 
     it("should fail create if receiver balance is nonzero", async () => {
       const preImage = getRandomBytes32();
-      let initialState = await createInitialState(preImage);
+      const initialState = await createInitialState(preImage);
       initialState.balance.amount[1] = initialState.balance.amount[0];
       await expect(createTransfer(initialState)).revertedWith(
         "Cannot create linked transfer with nonzero recipient balance",
@@ -103,7 +105,7 @@ describe("LinkedTransfer", () => {
 
     it("should fail create if linkedHash is empty", async () => {
       const preImage = getRandomBytes32();
-      let initialState = await createInitialState(preImage);
+      const initialState = await createInitialState(preImage);
       initialState.linkedHash = HashZero;
       await expect(createTransfer(initialState)).revertedWith("Cannot create linked transfer with empty linkedHash");
     });
@@ -118,18 +120,20 @@ describe("LinkedTransfer", () => {
     });
 
     it("should refund if linkedHash is HashZero", async () => {
-        const preImage = getRandomBytes32();
-        let initialState = await createInitialState(preImage);
-        initialState.linkedHash = HashZero;
-        const result = await resolveTransfer(initialState, { preImage });
-        await validateResult(initialState, { preImage }, result);
-    }) 
+      const preImage = getRandomBytes32();
+      const initialState = await createInitialState(preImage);
+      initialState.linkedHash = HashZero;
+      const result = await resolveTransfer(initialState, { preImage });
+      await validateResult(initialState, { preImage }, result);
+    });
 
     it("should fail if the hash generated does not match preimage", async () => {
-        const preImage = getRandomBytes32();
-        const initialState = await createInitialState(preImage);
-        const incorrectPreImage = getRandomBytes32();
-        await expect(resolveTransfer(initialState, { preImage: incorrectPreImage })).revertedWith("Hash generated from preimage does not match hash in state")
-    })
+      const preImage = getRandomBytes32();
+      const initialState = await createInitialState(preImage);
+      const incorrectPreImage = getRandomBytes32();
+      await expect(resolveTransfer(initialState, { preImage: incorrectPreImage })).revertedWith(
+        "Hash generated from preimage does not match hash in state",
+      );
+    });
   });
 });

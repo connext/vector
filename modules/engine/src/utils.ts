@@ -1,4 +1,10 @@
 import pino from "pino";
+import * as evm from "@connext/pure-evm-wasm";
+import { Contract, CoreTransferState, JsonRpcProvider, TransferState, TransferResolver, Balance } from "@connext/vector-types";
+import { TransferDefinition } from "@connext/vector-contracts";
+import { Signer, utils } from "ethers";
+
+const { defaultAbiCoder } = utils;
 
 // import { VectorChannelMessage, ChannelState } from "./types";
 
@@ -27,8 +33,59 @@ export function isChannelState(blob: any): boolean {
   return true;
 }
 
-export const delay = (ms: number): Promise<void> =>
-  new Promise((res: any): any => setTimeout(res, ms));
+export const delay = (ms: number): Promise<void> => new Promise((res: any): any => setTimeout(res, ms));
 
 export const delayAndThrow = (ms: number, msg = ""): Promise<undefined> =>
   new Promise((res: any, rej: any): any => setTimeout((): undefined => rej(new Error(msg)), ms));
+
+// We might need to convert this file to JS...
+// https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
+export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
+  evm.exec(
+    Uint8Array.from(Buffer.from(bytecode.replace(/^0x/, ""), "hex")),
+    Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
+  );
+
+export const create = async (
+  core: CoreTransferState,
+  state: TransferState,
+  signer: Signer,
+  bytecode?: string,
+): Promise<boolean> => {
+  const encodedState = defaultAbiCoder.encode([core.transferEncodings[0]], [state]);
+  const contract = new Contract(core.transferId, TransferDefinition.abi, signer);
+  // TODO: use pure-evm
+  if (bytecode) {
+    try {
+      const data = contract.interface.encodeFunctionData("create", [encodedState]);
+      const output = await execEvmBytecode(bytecode, data);
+      return contract.interface.decodeFunctionResult("create", output)[0];
+    } catch (e) {
+      logger.debug(`Failed to create with pure-evm`, { error: e.message });
+    }
+  }
+  return contract.create(encodedState);
+};
+
+export const resolve = async (
+  core: CoreTransferState,
+  state: TransferState,
+  resolver: TransferResolver,
+  signer: Signer,
+  bytecode?: string,
+): Promise<Balance> => {
+  const encodedState = defaultAbiCoder.encode([core.transferEncodings[0]], [state]);
+  const encodedResolver = defaultAbiCoder.encode([core.transferEncodings[1]], [resolver]);
+  const contract = new Contract(core.transferId, TransferDefinition.abi, signer);
+  // TODO: use pure-evm
+  if (bytecode) {
+    try {
+      const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);
+      const output = await execEvmBytecode(bytecode, data);
+      return contract.interface.decodeFunctionResult("resolve", output)[0];
+    } catch (e) {
+      logger.debug(`Failed to create with pure-evm`, { error: e.message });
+    }
+  }
+  return contract.resolve(encodedState, encodedResolver);
+};

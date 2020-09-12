@@ -1,4 +1,4 @@
-import { UpdateType, ChannelUpdate, FullChannelState, TransferState } from "@connext/vector-types";
+import { UpdateType, ChannelUpdate, FullChannelState, CoreTransferState } from "@connext/vector-types";
 import { utils } from "ethers";
 
 import { logger } from "./utils";
@@ -17,7 +17,7 @@ const { getAddress } = utils;
 export async function validate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
-  transferInitialStates: TransferState[],
+  transferInitialStates: CoreTransferState[],
   providerUrl: string,
 ): Promise<void> {
   // There is no need to validate items in the state since this will always
