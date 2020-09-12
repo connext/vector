@@ -27,6 +27,7 @@ export class Vector {
   private channelStateEvt = Evt.create<FullChannelState>();
   private channelErrorEvt = Evt.create<InboundChannelError>();
   private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
+  private updateEvt = Evt.create();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
@@ -66,7 +67,7 @@ export class Vector {
   }
 
   // Primary protocol execution from the leader side
-  private async executeUpdate(params: UpdateParams<any>) {
+  private async executeUpdate(params: UpdateParams<any>): Promise<FullChannelState> {
     logger.info(`Start executeUpdate`, { params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
@@ -75,7 +76,7 @@ export class Vector {
     // is not a transfer) due to the general nature of the `validate` api
     const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
     const update = await generateUpdate(params, this.storeService, this.signer);
-    await sync.outbound(
+    const newState = await sync.outbound(
       update,
       providerUrl,
       this.storeService,
@@ -84,6 +85,7 @@ export class Vector {
       this.channelErrorEvt,
     );
     await this.lockService.releaseLock(params.channelAddress, key);
+    return newState;
   }
 
   private async setupServices() {
@@ -154,7 +156,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async deposit(params: DepositParams): Promise<any> {
+  public async deposit(params: DepositParams): Promise<FullChannelState> {
     // TODO validate deposit params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -165,7 +167,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async createTransfer(params: CreateTransferParams): Promise<any> {
+  public async createTransfer(params: CreateTransferParams): Promise<FullChannelState> {
     // TODO validate create params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -176,7 +178,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async resolveTransfer(params: ResolveTransferParams): Promise<any> {
+  public async resolveTransfer(params: ResolveTransferParams): Promise<FullChannelState> {
     // TODO validate resolve params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -186,6 +188,8 @@ export class Vector {
 
     return this.executeUpdate(updateParams);
   }
+
+  public on() {}
 
   // JSON RPC interface -- this will accept:
   // - "vector_deposit"
