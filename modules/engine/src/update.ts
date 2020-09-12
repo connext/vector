@@ -89,11 +89,11 @@ export async function applyUpdate<T extends UpdateType>(
     }
     case UpdateType.resolve: {
       const { merkleRoot, transferId } = (update as ChannelUpdate<"resolve">).details;
-      const transfer = await storeService.getTransferState(transferId);
+      const transfer = await storeService.getCoreTransferState(transferId);
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       const lockedValue = reconcileLockedValue(
         UpdateType.create,
-        transfer.balance,
+        transfer.initialBalance,
         update.assetId,
         state.lockedValue,
         state.assetIds,
@@ -510,7 +510,7 @@ function reconcileLockedValue(
   // state
   const transferLocked = BigNumber.from(transferBalanceToReconcile.amount[0]).add(transferBalanceToReconcile.amount[1]);
 
-  // Update the locked value by the balance difference\
+  // Update the locked value by the balance difference
   // Locked values should increase during transfer creation
   // and decrease during resolution
   const updated = [...existingLocked];

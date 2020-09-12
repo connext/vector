@@ -10,6 +10,7 @@ export interface IEngineStore {
   // Should return all initial transfer state data needed to
   // create the merkle root
   getActiveTransfers(channelAddress: string): Promise<CoreTransferState[]>;
+  getCoreTransferState(transferId: string): Promise<CoreTransferState>;
   getTransferState(transferId: string): Promise<TransferState | undefined>;
 }
 
