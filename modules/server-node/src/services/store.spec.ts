@@ -1,4 +1,6 @@
-import { createTestChannelState } from "../test/utils/channel";
+import { Balance } from "@connext/vector-types";
+import { createTestChannelState } from "@connext/vector-utils";
+
 import { expect } from "../test/utils/assert";
 
 import { PrismaStore } from "./store";
@@ -26,11 +28,21 @@ describe("store", () => {
     await store.disconnect();
   });
 
-  it("should save and retrieve channel update", async () => {
-    const state = createTestChannelState();
-    await store.saveChannelState(state);
+  it("should save and retrieve all update types and keep updating the channel", async () => {
+    const setupState = createTestChannelState("setup");
+    await store.saveChannelState(setupState);
 
-    const fromStore = await store.getChannelState(state.channelAddress);
-    expect(fromStore).to.deep.eq(state);
+    let fromStore = await store.getChannelState(setupState.channelAddress);
+    expect(fromStore).to.deep.eq(setupState);
+
+    const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
+    const depositState = createTestChannelState("deposit", {
+      nonce: setupState.nonce + 1,
+      balances: [updatedBalanceForDeposit, setupState.balances[0]],
+    });
+    await store.saveChannelState(depositState);
+
+    fromStore = await store.getChannelState(setupState.channelAddress);
+    expect(fromStore).to.deep.eq(depositState);
   });
 });

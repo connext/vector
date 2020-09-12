@@ -35,7 +35,7 @@ export const createTestChannelUpdate = (
           providerUrl: "http://localhost:8545",
           vectorChannelMastercopyAddress: mkAddress("0xmast"),
         },
-        timeout: "0",
+        timeout: "1",
       } as SetupUpdateDetails;
       break;
     case "deposit":
@@ -71,13 +71,13 @@ export const createTestChannelUpdate = (
       amount: ["1", "0"],
       to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
     },
-    channelAddress: mkAddress("0xcha"),
+    channelAddress: mkAddress("0xchan"),
     details,
     fromIdentifier: mkPublicIdentifier("indraA"),
     nonce: 2,
     signatures: [mkBytes32("0xsig1"), mkBytes32("0xsig2")],
     toIdentifier: mkPublicIdentifier("indraB"),
-    type: "create",
+    type,
     ...overrides,
   };
 };

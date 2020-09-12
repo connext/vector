@@ -45,8 +45,9 @@ model Channel {
 model Update {
   @@map(name: "update")
   // COMMON PARAMS
-  channelAddress String
-  channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress    String?
+  channel           Channel? @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddressId  String // required for ID so that relation can be removed
 
   fromIdentifier String
   toIdentifier   String
@@ -81,5 +82,5 @@ model Update {
 
   // setup inferred from channel params
 
-  @@id([channelAddress, nonce])
+  @@id([channelAddressId, nonce])
 }

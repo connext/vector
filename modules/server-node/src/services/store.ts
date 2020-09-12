@@ -36,6 +36,7 @@ export class PrismaStore implements IStoreService {
     if (!channelEntity) {
       return undefined;
     }
+    console.log("channelEntity: ", channelEntity);
     // dedup assetIds. this is needed because the db stores balances keyed on [participant,channel,assetId] so there
     // will be 2 entries for each assetId
     const assetIds = channelEntity!.assetIds.split(",");
@@ -62,7 +63,6 @@ export class PrismaStore implements IStoreService {
       switch (channelEntity.latestUpdate.type) {
         case "setup":
           details = {
-            counterpartyIdentifier: channelEntity.participantA, // TODO
             networkContext: {
               adjudicatorAddress: channelEntity.adjudicatorAddress,
               chainId: channelEntity.chainId,
@@ -143,6 +143,7 @@ export class PrismaStore implements IStoreService {
   async saveChannelState(channelState: FullChannelState<any>): Promise<void> {
     // create the latest update db structure from the input data
     const latestUpdate = {
+      channelAddressId: channelState.channelAddress,
       fromIdentifier: channelState.latestUpdate!.fromIdentifier,
       toIdentifier: channelState.latestUpdate!.toIdentifier,
       nonce: channelState.latestUpdate!.nonce,
@@ -227,8 +228,8 @@ export class PrismaStore implements IStoreService {
         latestUpdate: {
           connectOrCreate: {
             where: {
-              channelAddress_nonce: {
-                channelAddress: channelState.channelAddress,
+              channelAddressId_nonce: {
+                channelAddressId: channelState.channelAddress,
                 nonce: channelState.latestUpdate!.nonce,
               },
             },

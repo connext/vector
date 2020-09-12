@@ -214,6 +214,13 @@
     {
       "tag": "CreateField",
       "model": "Channel",
+      "field": "assetIds",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
       "field": "timeout",
       "type": "String",
       "arity": "Required"
@@ -320,14 +327,14 @@
       "model": "Update",
       "field": "channelAddress",
       "type": "String",
-      "arity": "Required"
+      "arity": "Optional"
     },
     {
       "tag": "CreateField",
       "model": "Update",
       "field": "channel",
       "type": "Channel",
-      "arity": "Required"
+      "arity": "Optional"
     },
     {
       "tag": "CreateDirective",
@@ -367,6 +374,13 @@
       },
       "argument": "references",
       "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "channelAddressId",
+      "type": "String",
+      "arity": "Required"
     },
     {
       "tag": "CreateField",
@@ -552,7 +566,7 @@
         "directive": "id"
       },
       "argument": "",
-      "value": "[channelAddress, nonce]"
+      "value": "[channelAddressId, nonce]"
     }
   ]
 }
