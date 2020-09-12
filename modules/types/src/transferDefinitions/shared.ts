@@ -27,5 +27,5 @@ export const CoreTransferStateEncoding = tidy(`tuple(
   bytes32 transferIf,
   address transferDefinition,
   uint256 transferTimeout,
-  bytes32 initialStateHash,
+  bytes32 initialStateHash
 )`);

@@ -16,10 +16,9 @@ describe("Vector.connect", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      config.providerUrl,
+      config.chainProviders,
     );
     expect(node).to.be.instanceOf(Vector);
-    expect(node.providerUrl).to.be.eq(config.providerUrl);
     expect(node.publicIdentifier).to.be.eq(signer.publicIdentifier);
     expect(node.signerAddress).to.be.eq(signer.address);
   });

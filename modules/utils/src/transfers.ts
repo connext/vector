@@ -26,7 +26,6 @@ export const isLinkedTransferState = (state: any): state is LinkedTransferState 
 };
 
 export const encodeLinkedTransferState = (state: LinkedTransferState): string => {
-  console.log(`trying to encode state`, state);
   return defaultAbiCoder.encode([LinkedTransferStateEncoding], [{
     ...state,
     balance: {
@@ -38,6 +37,12 @@ export const encodeLinkedTransferState = (state: LinkedTransferState): string =>
 
 export const encodeWithdrawTransferState = (state: WithdrawState): string => {
   return defaultAbiCoder.encode([WithdrawStateEncoding], [state]);
+};
+
+export const encodeCoreTransferState = (state: CoreTransferState): string => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { transferEncodings, ...toEncode } = state;
+  return defaultAbiCoder.encode([CoreTransferStateEncoding], [toEncode]);
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
@@ -78,19 +83,17 @@ export function hashTransferState(name: TransferName, state: TransferNameToState
 }
 
 // TODO: how to include the merkle proof in the hash?
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const hashCoreTransferState = (state: Omit<CoreTransferState, "merkleProofData">): string => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { transferEncodings, ...toEncode } = state;
-  return keccak256(solidityPack(["bytes"], [defaultAbiCoder.encode([CoreTransferStateEncoding], [toEncode])]));
+export const hashCoreTransferState = (state: CoreTransferState): string => {
+  return keccak256(
+    solidityPack(["address", "address", "bytes32", "address", "bytes32", "uint256"],
+    [state.assetId, state.channelAddress, state.transferId, state.transferDefinition, state.initialStateHash, state.transferTimeout]
+  ));
 };
 
 // TODO: correct implementation?
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const hashLinkedTransferState = (state: LinkedTransferState): string => {
-  const encoded = encodeLinkedTransferState(state);
-  console.log(`encoded`, encoded);
-  return keccak256(solidityPack(["bytes"], [encoded]));
+  return keccak256(solidityPack(["bytes"], [encodeLinkedTransferState(state)]));
 };
 
 // TODO: correct implementation?

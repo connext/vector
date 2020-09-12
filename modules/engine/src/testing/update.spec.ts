@@ -1,4 +1,4 @@
-import { UpdateType } from "@connext/vector-types";
+import { IEngineStore, UpdateType } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
   createTestChannelState,
@@ -9,22 +9,33 @@ import {
   createTestChannelUpdateWithSigners,
   createTestLinkedTransferState,
   hashLinkedTransferState,
+  createCoreTransferState,
+  hashCoreTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
+import { constants } from "ethers";
 
 import { applyUpdate } from "../../src/update";
 import { MerkleTree } from "../merkleTree";
 
 import { config } from "./services/config";
+import { MemoryStoreService } from "./services/store";
 
 // Should test that the application of an update results in the correct
 // final state. While this function *will* fail if validation fails,
 // the validation function is tested elsewhere
 describe.only("applyUpdate", () => {
-  const providerUrl = config.providerUrl;
+  const chainProviders = config.chainProviders;
+  const [providerUrl] = Object.values(chainProviders) as string[];
   const signers = Array(2)
     .fill(0)
-    .map((v) => getRandomChannelSigner());
+    .map((v) => getRandomChannelSigner(providerUrl));
+
+  let store: IEngineStore;
+
+  beforeEach(() => {
+    store = new MemoryStoreService();
+  });
 
   it("should fail for an unrecognized update type", async () => {
     const update = createTestChannelUpdate(UpdateType.setup, {
@@ -32,18 +43,15 @@ describe.only("applyUpdate", () => {
       nonce: 1,
     });
     const state = createTestChannelState(UpdateType.setup, { nonce: 0 });
-    const transfers = [];
 
-    await expect(applyUpdate(update, state, transfers, providerUrl)).to.be.rejectedWith(
-      `Unexpected UpdateType in received update`,
-    );
+    await expect(applyUpdate(update, state, store)).to.be.rejectedWith(`Unexpected UpdateType in received update`);
   });
 
   it("should work for setup", async () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 0 });
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.setup, { nonce: 1 });
 
-    const newState = await applyUpdate(update, state, [], providerUrl);
+    const newState = await applyUpdate(update, state, store);
     expect(newState).to.containSubset({
       ...state,
       publicIdentifiers: state.publicIdentifiers,
@@ -80,7 +88,7 @@ describe.only("applyUpdate", () => {
       details: { latestDepositNonce: 1 },
     });
 
-    const newState = await applyUpdate(update, state, [], providerUrl);
+    const newState = await applyUpdate(update, state, store);
     expect(newState).to.containSubset({
       ...state,
       nonce: update.nonce,
@@ -108,7 +116,7 @@ describe.only("applyUpdate", () => {
       details: { latestDepositNonce: 1 },
     });
 
-    const newState = await applyUpdate(update, state, [], providerUrl);
+    const newState = await applyUpdate(update, state, store);
     expect(newState).to.containSubset({
       ...state,
       nonce: update.nonce,
@@ -117,32 +125,42 @@ describe.only("applyUpdate", () => {
     });
   });
 
-  it.only("should work for create", async () => {
-    const transferInitialState = createTestLinkedTransferState({ balance: { to: signers.map((s) => s.address) } });
+  it("should work for create", async () => {
+    const transferInitialState = createTestLinkedTransferState({
+      balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
+    });
+    const assetId = constants.AddressZero;
 
     // Create the channel state
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,
+      lockedValue: [],
       balances: [transferInitialState.balance],
-      assetIds: [transferInitialState.assetId],
+      assetIds: [assetId],
       latestDepositNonce: 1,
     });
 
     // Create the transfer update
-    const hash = hashLinkedTransferState(transferInitialState);
+    const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
+    const hash = hashCoreTransferState(coreState);
     const tree = new MerkleTree([hash]);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
       nonce: state.nonce + 1,
-      assetId: transferInitialState.assetId,
+      assetId,
       balance: transferInitialState.balance,
-      details: { transferInitialState, merkleRoot: tree.root, merkleProofData: tree.proof(hash) },
+      details: {
+        ...coreState,
+        transferInitialState, 
+        merkleRoot: tree.root, 
+        merkleProofData: tree.proof(hash),
+      },
     });
 
-    const newState = await applyUpdate(update, state, [], providerUrl);
+    const newState = await applyUpdate(update, state, store);
     expect(newState).to.containSubset({
       ...state,
-      balances: [],
-      lockedValue: [],
+      balances: [{ ...transferInitialState.balance, amount: ["0", "0"] }],
+      lockedValue: [{ amount: "1" }],
       nonce: update.nonce,
       merkleRoot: update.details.merkleRoot,
     });

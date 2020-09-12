@@ -116,7 +116,7 @@ export async function outbound(
   // Apply the update, and retry the update
   let newState: string | FullChannelState;
   try {
-    newState = await applyUpdate(channelError.state.latestUpdate, storedChannel);
+    newState = await mergeUpdate(channelError.state.latestUpdate, storedChannel, storeService, providerUrl);
   } catch (e) {
     newState = e.message;
   }
@@ -331,7 +331,7 @@ async function processChannelMessage(
       );
     }
     try {
-      previousState = await mergeUpdate(counterpartyLatestUpdate, storedState, transferInitialStates, providerUrl);
+      previousState = await mergeUpdate(counterpartyLatestUpdate, storedState, storeService, providerUrl);
     } catch (e) {
       handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, counterpartyLatestUpdate, storedState, {
@@ -347,7 +347,7 @@ async function processChannelMessage(
   // able to play it on top of the update
   let response: FullChannelState;
   try {
-    response = await mergeUpdate(requestedUpdate, previousState, transferInitialStates, providerUrl);
+    response = await mergeUpdate(requestedUpdate, previousState, storeService, providerUrl);
   } catch (e) {
     handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, requestedUpdate, previousState, {
@@ -397,9 +397,14 @@ async function processChannelMessage(
   return response;
 }
 
-const mergeUpdate = async (update, state, transfers, providerUrl): Promise<FullChannelState> => {
-  await validate(update, state, transfers, providerUrl);
-  const newState = await applyUpdate(update, state);
+const mergeUpdate = async (
+  update: ChannelUpdate<any>,
+  state: FullChannelState,
+  storeService: IEngineStore,
+  providerUrl: string,
+): Promise<FullChannelState> => {
+  await validate(update, state, storeService, providerUrl);
+  const newState = await applyUpdate(update, state, storeService);
 
   // Return the validated update to send to counterparty
   return newState;

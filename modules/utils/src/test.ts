@@ -7,6 +7,10 @@ import {
   ResolveUpdateDetails,
   SetupUpdateDetails,
   LinkedTransferState,
+  ChannelUpdateDetailsMap,
+  CoreTransferState,
+  LinkedTransferStateEncoding,
+  LinkedTransferResolverEncoding,
 } from "@connext/vector-types";
 
 import { Balance, TransferState } from "../../types/dist/src";
@@ -29,9 +33,20 @@ export const mkBytes32 = (prefix = "0xa"): string => {
   return prefix.padEnd(66, "0");
 };
 
+// Helper partial types for test helpers
+type PartialChannelUpdate<T extends UpdateType> = Partial<
+  Omit<ChannelUpdate<T>, "details"> & { details: Partial<ChannelUpdateDetailsMap[T]> }
+>;
+
+type PartialFullChannelState<T extends UpdateType> = Partial<
+  Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
+>;
+
+type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
+
 export function createTestChannelUpdate<T extends UpdateType>(
   type: T,
-  overrides: Partial<ChannelUpdate<T>> = {},
+  overrides: PartialChannelUpdate<T> = {},
 ): ChannelUpdate<T> {
   // Generate the base update values
   const baseUpdate = {
@@ -72,12 +87,12 @@ export function createTestChannelUpdate<T extends UpdateType>(
       } as DepositUpdateDetails;
       break;
     case UpdateType.create:
-      details = {
+      const state = (details = {
         merkleProofData: mkBytes32("0xproof"),
         merkleRoot: mkBytes32("0xroot"),
         transferDefinition: mkAddress("0xdef"),
         transferEncodings: ["create", "resolve"],
-        transferId: mkBytes32("id"),
+        transferId: mkBytes32("0xid"),
         transferInitialState: {
           balance: {
             amount: ["10", "0"],
@@ -86,7 +101,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
           linkedHash: mkBytes32("0xlinkedhash"),
         } as LinkedTransferState,
         transferTimeout: "0",
-      } as CreateUpdateDetails;
+      } as CreateUpdateDetails);
       break;
     case UpdateType.resolve:
       details = {
@@ -109,10 +124,10 @@ export function createTestChannelUpdate<T extends UpdateType>(
   } as ChannelUpdate<T>;
 }
 
-export const createTestChannelState = (
-  type: UpdateType = "setup",
-  overrides: Partial<FullChannelState<typeof type>> = {},
-): FullChannelState<typeof type> => {
+export function createTestChannelState<T extends UpdateType = typeof UpdateType.setup>(
+  type: T,
+  overrides: PartialFullChannelState<T> = {},
+): FullChannelState<T> {
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = overrides.publicIdentifiers ?? [mkPublicIdentifier("indraA"), mkPublicIdentifier("indraB")];
@@ -144,6 +159,7 @@ export const createTestChannelState = (
     ],
     channelAddress,
     latestDepositNonce: 1,
+    // TODO: wtf typescript? why do i have to any cast this
     latestUpdate: createTestChannelUpdate(type, {
       channelAddress,
       fromIdentifier: publicIdentifiers[0],
@@ -151,7 +167,7 @@ export const createTestChannelState = (
       assetId: assetIds[0],
       nonce,
       ...(overrides.latestUpdate ?? {}),
-    }),
+    }) as any,
     merkleRoot: mkHash(),
     networkContext: {
       adjudicatorAddress: mkAddress("0xadj"),
@@ -166,13 +182,13 @@ export const createTestChannelState = (
     timeout: "1",
     ...overrides,
   };
-};
+}
 
-export const createTestChannelStateWithSigners = (
+export function createTestChannelStateWithSigners<T extends UpdateType = typeof UpdateType.setup>(
   signers: ChannelSigner[],
-  type: UpdateType = "setup",
-  overrides: Partial<FullChannelState<typeof type>> = {},
-): FullChannelState<typeof type> => {
+  type: T,
+  overrides: PartialFullChannelState<T> = {},
+): FullChannelState<T> {
   const publicIdentifiers = signers.map((s) => s.publicIdentifier);
   const participants = signers.map((s) => s.address);
   const signerOverrides = {
@@ -180,14 +196,14 @@ export const createTestChannelStateWithSigners = (
     participants,
     ...(overrides ?? {}),
   };
-  return createTestChannelState(type, signerOverrides);
-};
+  return createTestChannelState(type, signerOverrides) as FullChannelState<T>;
+}
 
-export const createTestChannelUpdateWithSigners = (
+export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof UpdateType.setup>(
   signers: ChannelSigner[],
-  type: UpdateType = "setup",
-  overrides: Partial<ChannelUpdate<typeof type>> = {},
-): ChannelUpdate<typeof type> => {
+  type: T,
+  overrides: PartialChannelUpdate<T> = {},
+): ChannelUpdate<T> {
   // The only update type where signers could matter
   // is when providing the transfer initial state to the
   // function
@@ -197,7 +213,7 @@ export const createTestChannelUpdateWithSigners = (
       balance: {
         to: signers.map((s) => s.address),
       },
-      ...((overrides as ChannelUpdate<"create">).details.transferInitialState ?? {}),
+      ...(((overrides as unknown) as ChannelUpdate<"create">).details.transferInitialState ?? {}),
     });
   }
 
@@ -212,11 +228,9 @@ export const createTestChannelUpdateWithSigners = (
   };
 
   return createTestChannelUpdate(type, signerOverrides);
-};
+}
 
-export const createTestLinkedTransferState = (
-  overrides: Partial<{ balance: Partial<Balance>; assetId: string }> = {},
-): LinkedTransferState => {
+export const createTestLinkedTransferState = (overrides: PartialTransferOverrides = {}): LinkedTransferState => {
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {
@@ -231,7 +245,7 @@ export const createTestLinkedTransferState = (
 
 export const createTestLinkedTransferStates = (
   count = 2,
-  overrides: Partial<{ amount: string; assetId: string }>[] = [],
+  overrides: PartialTransferOverrides[] = [],
 ): TransferState[] => {
   return Array(count)
     .fill(0)
@@ -239,3 +253,17 @@ export const createTestLinkedTransferStates = (
       return createTestLinkedTransferState({ ...(overrides[idx] ?? {}) });
     });
 };
+
+export function createCoreTransferState(overrides: Partial<CoreTransferState> = {}): CoreTransferState {
+  // TODO: make dependent on transfer def/name
+  return {
+    assetId: mkAddress(),
+    channelAddress: mkAddress("0xccc"),
+    transferId: mkBytes32("0xeeefff"),
+    transferDefinition: mkAddress("0xdef"),
+    transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+    initialStateHash: mkBytes32("0xabcdef"),
+    transferTimeout: "1",
+    ...overrides,
+  };
+}

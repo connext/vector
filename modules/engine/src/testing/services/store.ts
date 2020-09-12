@@ -1,16 +1,22 @@
-import { IStoreService, FullChannelState, CoreTransferState } from "@connext/vector-types";
+import { FullChannelState, CoreTransferState, IEngineStore, TransferState } from "@connext/vector-types";
 
-export class MemoryStoreService implements IStoreService {
+export class MemoryStoreService implements IEngineStore {
+  connect(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  disconnect(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
   getChannelState(channelAddress: string): Promise<FullChannelState<any>> {
     throw new Error("Method not implemented.");
   }
   saveChannelState(channelState: FullChannelState<any>): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  getTransferInitialStates(channelAddress: string): Promise<CoreTransferState[]> {
+  getActiveTransfers(channelAddress: string): Promise<CoreTransferState[]> {
     throw new Error("Method not implemented.");
   }
-  getTransferState(transferId: string): Promise<CoreTransferState> {
+  getTransferState(transferId: string): Promise<TransferState | undefined> {
     throw new Error("Method not implemented.");
   }
 }

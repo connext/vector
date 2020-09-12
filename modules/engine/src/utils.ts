@@ -1,6 +1,6 @@
 import pino from "pino";
 import * as evm from "@connext/pure-evm-wasm";
-import { Contract, CoreTransferState, JsonRpcProvider, TransferState, TransferResolver, Balance } from "@connext/vector-types";
+import { Contract, CoreTransferState, TransferState, TransferResolver, Balance } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { Signer, utils } from "ethers";
 

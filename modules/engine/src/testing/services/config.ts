@@ -1,3 +1,3 @@
 export const config = {
-  providerUrl: process.env.PROVIDER_URL ?? "http://localhost:8545",
+  chainProviders: JSON.parse(process.env.CHAIN_PROVIDERS ?? '{"1337":"http://localhost:8545"}'),
 };

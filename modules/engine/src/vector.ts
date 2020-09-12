@@ -43,7 +43,7 @@ export class Vector {
     private readonly storeService: IEngineStore,
     private readonly signer: IChannelSigner,
     private readonly chainProviderUrls: ChainProviders,
-    private readonly chainAddresses: ChainAddresses,
+    // private readonly chainAddresses: ChainAddresses,
   ) {
     Object.entries(chainProviderUrls).forEach(([chainId, providerUrl]) => {
       this.chainProviders.set(parseInt(chainId), new providers.JsonRpcProvider(providerUrl));
@@ -56,9 +56,9 @@ export class Vector {
     storeService: IEngineStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
-    chainAddresses: ChainAddresses,
+    // chainAddresses: ChainAddresses,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders, chainAddresses);
+    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
@@ -79,8 +79,6 @@ export class Vector {
 
     const key = await this.lockService.acquireLock(params.channelAddress);
     const state = await this.storeService.getChannelState(params.channelAddress);
-    // NOTE: This is a heavy query, but is required on every update (even if it
-    // is not a transfer) due to the general nature of the `validate` api
     const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
     const update = await generateUpdate(params, this.storeService, this.signer);
     const updatedChannelState = await sync.outbound(

@@ -25,7 +25,11 @@ trap cleanup EXIT SIGINT SIGTERM
 
 echo "Starting $ethprovider_host.."
 export INDRA_MNEMONIC=$eth_mnemonic
+ethprovider_url="http://172.17.0.1:$ethprovider_port"
 bash ops/start-chain.sh $chain_id
+CHAIN_PROVIDERS="{\"$chain_id\":\"$ethprovider_url\"}"
+
+echo "CHAIN_PROVIDERS" $CHAIN_PROVIDERS
 
 ########################################
 # Launch tests
@@ -39,7 +43,8 @@ fi
 docker run \
   $interactive \
   --entrypoint="bash" \
-  --env="PROVIDER_URL=http://172.17.0.1:$ethprovider_port" \
+  --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
+  --env="CONTRACT_ADDRESSES=$CONTRACT_ADDRESSES" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --name="${project}_engine_tester" \

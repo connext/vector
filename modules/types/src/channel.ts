@@ -97,7 +97,6 @@ export interface CoreTransferState {
   transferTimeout: string;
   initialStateHash: string;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
-  merkleProofData: any; //TODO
 }
 
 export interface ChannelCommitmentData {
@@ -111,6 +110,7 @@ export interface TransferCommitmentData {
   state: CoreTransferState;
   adjudicatorAddress: Address;
   chainId: number;
+  merkleProofData: any; //TODO
 }
 
 // Includes any additional info that doesn't need to be sent to chain
