@@ -67,7 +67,7 @@ export async function outbound(
     });
 
   // Retry sending the message 5 times w/3s delay
-  const sendWithRetry = async (): Promise<any> => {
+  const sendWithRetry = async (): Promise<FullChannelState<any> | ChannelUpdateError> => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const _ of Array(5).fill(0)) {
       try {
@@ -86,13 +86,15 @@ export async function outbound(
   const result = await sendWithRetry();
   if (isChannelState(result)) {
     // No error returned, successfully updated state
-    return result;
+    return result as FullChannelState<any>;
   }
+
+  const channelError = result as ChannelUpdateError;
 
   // The only error we should handle and retry is the case where we
   // are one state behind
-  if (result.message !== ChannelUpdateError.reasons.StaleUpdateNonce) {
-    throw new ChannelUpdateError(result.message, update, storedChannel);
+  if (channelError.message !== ChannelUpdateError.reasons.StaleUpdateNonce) {
+    throw new ChannelUpdateError((result as ChannelUpdateError).message, update, storedChannel);
   }
 
   // We know we are out of sync with our counterparty, but we do not
@@ -100,28 +102,28 @@ export async function outbound(
   // update nonce == their latest update nonce
 
   // Make sure the update exists
-  if (!result.state.latestUpdate) {
+  if (!channelError.state.latestUpdate) {
     throw new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonceNoUpdate, update, storedChannel);
   }
 
   // Make sure the update is the correct one
-  if (result.state.latestUpdate.nonce !== update.nonce) {
+  if (channelError.state.latestUpdate.nonce !== update.nonce) {
     throw new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonce, update, storedChannel, {
-      counterpartyLatestUpdate: result.state.latestUpdate,
+      counterpartyLatestUpdate: channelError.state.latestUpdate,
     });
   }
 
   // Apply the update, and retry the update
   let newState: string | FullChannelState;
   try {
-    newState = await applyUpdate(result.state.latestUpdate, storedChannel);
+    newState = await applyUpdate(channelError.state.latestUpdate, storedChannel);
   } catch (e) {
     newState = e.message;
   }
   if (typeof newState === "string") {
     throw new ChannelUpdateError(
       ChannelUpdateError.reasons.applyUpdateFailed,
-      result.state.latestUpdate,
+      channelError.state.latestUpdate,
       storedChannel,
     );
   }
@@ -136,7 +138,7 @@ export async function outbound(
   if (error) {
     throw new ChannelUpdateError(
       ChannelUpdateError.reasons.SaveChannelFailed,
-      result.state.latestUpdate,
+      channelError.state.latestUpdate,
       storedChannel,
     );
   }
@@ -144,9 +146,9 @@ export async function outbound(
   // Retry the update
   const syncedResult = await sendWithRetry();
   if (!isChannelState(syncedResult)) {
-    throw new ChannelUpdateError(syncedResult.message, update, newState);
+    throw new ChannelUpdateError((syncedResult as ChannelUpdateError).message, update, newState);
   }
-  return syncedResult;
+  return syncedResult as FullChannelState;
 }
 
 // This function is responsible for handling any inbound vector messages.
@@ -159,10 +161,10 @@ export async function inbound(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-): Promise<void> {
+): Promise<FullChannelState | undefined> {
   // If the message is from us, ignore
   if (message.from === signer.publicIdentifier) {
-    return;
+    return undefined;
   }
 
   // TODO: If it is not a channel or error message,
@@ -184,6 +186,7 @@ export async function inbound(
   // It is an error message from a counterparty. An `outbound` promise
   // may be waiting to resolve, so post to th errorEvt
   errorEvt.post((message as VectorErrorMessage).error);
+  return undefined;
 }
 
 // This function is responsible for handling any inbound state requests.
@@ -195,12 +198,12 @@ async function processChannelMessage(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-): Promise<void> {
+): Promise<FullChannelState> {
   const { from, data } = message;
   const requestedUpdate = data.update as ChannelUpdate<any>;
   const counterpartyLatestUpdate = data.latestUpdate as ChannelUpdate<any>;
   // Create helper to handle errors
-  const handleError = async (error: ChannelUpdateError) => {
+  const handleError = async (error: ChannelUpdateError): Promise<never> => {
     // If the update is single signed, the counterparty is waiting
     // for a response.
     if (requestedUpdate.signatures.length === 1) {
@@ -222,9 +225,7 @@ async function processChannelMessage(
     // being created for the first time. If this is the case, create an
     // empty channel and continue through the function
     if (requestedUpdate.type !== UpdateType.setup) {
-      return handleError(
-        new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState),
-      );
+      handleError(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState));
     }
     requestedUpdate.details as SetupUpdateDetails;
     // Create an empty channel state
@@ -277,7 +278,7 @@ async function processChannelMessage(
     // TODO: should also make sure that there are *2* signatures
     // await counterpartyLatestUpdate.commitment.assertSignatures();
   } catch (e) {
-    return handleError(
+    handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.BadSignatures, requestedUpdate, storedState, {
         counterpartyLatestUpdate,
         error: e.message,
@@ -294,7 +295,7 @@ async function processChannelMessage(
     // use the information from this error to sync, then retry your update
 
     // FIXME: We don't need to pass everything over the wire here, fix that
-    return handleError(
+    handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.StaleUpdateNonce, requestedUpdate, storedState, {
         counterpartyLatestUpdate,
       }),
@@ -304,7 +305,7 @@ async function processChannelMessage(
   // If we are behind by more than 3, we cannot sync from their latest
   // update, and must use restore
   if (diff.gte(3)) {
-    return handleError(
+    handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonce, requestedUpdate, storedState, {
         counterpartyLatestUpdate,
       }),
@@ -320,7 +321,7 @@ async function processChannelMessage(
     // Create the proper state to play the update on top of using the
     // latest update
     if (!counterpartyLatestUpdate) {
-      return handleError(
+      handleError(
         new ChannelUpdateError(
           ChannelUpdateError.reasons.StaleChannelNonceNoUpdate,
           counterpartyLatestUpdate,
@@ -332,7 +333,7 @@ async function processChannelMessage(
     try {
       previousState = await mergeUpdate(counterpartyLatestUpdate, storedState, transferInitialStates, providerUrl);
     } catch (e) {
-      return handleError(
+      handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, counterpartyLatestUpdate, storedState, {
           requestedUpdate,
           error: e.message,
@@ -344,17 +345,14 @@ async function processChannelMessage(
 
   // We now have the latest state for the update, and should be
   // able to play it on top of the update
-  let response: FullChannelState | string;
+  let response: FullChannelState;
   try {
     response = await mergeUpdate(requestedUpdate, previousState, transferInitialStates, providerUrl);
   } catch (e) {
-    response = e.message;
-  }
-  if (typeof response === "string") {
-    return handleError(
+    handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, requestedUpdate, previousState, {
         counterpartyLatestUpdate,
-        error: response,
+        error: e.message,
       }),
     );
   }
@@ -381,7 +379,7 @@ async function processChannelMessage(
       update: { ...requestedUpdate, commitment: signed },
       latestUpdate: response.latestUpdate,
     });
-    return;
+    return response;
   }
 
   // Otherwise, we are receiving an ack, and we should save the
@@ -396,6 +394,7 @@ async function processChannelMessage(
     );
   }
   stateEvt.post(response);
+  return response;
 }
 
 const mergeUpdate = async (update, state, transfers, providerUrl): Promise<FullChannelState> => {

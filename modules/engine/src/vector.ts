@@ -23,9 +23,17 @@ import { VectorMessage } from "./types";
 import { generateUpdate } from "./update";
 import { InboundChannelError, logger } from "./utils";
 
+export type UpdateEvent = {
+  direction: "inbound" | "outbound";
+  updatedChannelState: FullChannelState;
+};
+
+export type EngineEventNames = "CHANNEL_UPDATE_EVENT" | "PROTOCOL_MESSAGE_EVENT" | "PROTOCOL_ERROR_EVENT";
+
 export class Vector {
-  private channelStateEvt = Evt.create<FullChannelState>();
-  private channelErrorEvt = Evt.create<InboundChannelError>();
+  private protocolChannelStateEvt = Evt.create<FullChannelState>();
+  private protocolChannelErrorEvt = Evt.create<InboundChannelError>();
+  private channelUpdateEvt = Evt.create<UpdateEvent>();
   private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
 
   // make it private so the only way to create the class is to use `connect`
@@ -66,7 +74,7 @@ export class Vector {
   }
 
   // Primary protocol execution from the leader side
-  private async executeUpdate(params: UpdateParams<any>) {
+  private async executeUpdate(params: UpdateParams<any>): Promise<FullChannelState> {
     logger.info(`Start executeUpdate`, { params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
@@ -75,15 +83,20 @@ export class Vector {
     // is not a transfer) due to the general nature of the `validate` api
     const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
     const update = await generateUpdate(params, this.storeService, this.signer);
-    await sync.outbound(
+    const updatedChannelState = await sync.outbound(
       update,
       providerUrl,
       this.storeService,
       this.messagingService,
-      this.channelStateEvt,
-      this.channelErrorEvt,
+      this.protocolChannelStateEvt,
+      this.protocolChannelErrorEvt,
     );
+    this.channelUpdateEvt.post({
+      direction: "outbound",
+      updatedChannelState,
+    });
     await this.lockService.releaseLock(params.channelAddress, key);
+    return updatedChannelState;
   }
 
   private async setupServices() {
@@ -92,15 +105,19 @@ export class Vector {
         if (err) {
           throw err;
         }
-        await sync.inbound(
+        const updatedChannelState = await sync.inbound(
           msg,
           this.storeService,
           this.messagingService,
           this.signer,
           this.chainProviderUrls,
-          this.channelStateEvt,
-          this.channelErrorEvt,
+          this.protocolChannelStateEvt,
+          this.protocolChannelErrorEvt,
         );
+        this.channelUpdateEvt.post({
+          direction: "inbound",
+          updatedChannelState,
+        });
       } catch (e) {
         // No need to crash the entire vector core if we receive an invalid
         // message. Just log & wait for the next one
@@ -154,7 +171,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async deposit(params: DepositParams): Promise<any> {
+  public async deposit(params: DepositParams): Promise<FullChannelState> {
     // TODO validate deposit params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -165,7 +182,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async createTransfer(params: CreateTransferParams): Promise<any> {
+  public async createTransfer(params: CreateTransferParams): Promise<FullChannelState> {
     // TODO validate create params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -176,7 +193,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async resolveTransfer(params: ResolveTransferParams): Promise<any> {
+  public async resolveTransfer(params: ResolveTransferParams): Promise<FullChannelState> {
     // TODO validate resolve params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
