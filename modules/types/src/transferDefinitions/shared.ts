@@ -1,3 +1,4 @@
+import { BalanceEncoding } from "../contracts";
 import { tidy } from "../utils";
 
 import { LinkedTransferName, LinkedTransferResolver, LinkedTransferState, LinkedTransferStateEncoding } from "./linkedTransfer";
@@ -22,10 +23,13 @@ export type TransferStateEncodings = typeof LinkedTransferStateEncoding | typeof
 
 // TODO: is this correct?
 export const CoreTransferStateEncoding = tidy(`tuple(
+  ${BalanceEncoding} initialBalance,
   address assetId,
   address channelAddress,
-  bytes32 transferIf,
+  bytes32 transferId,
   address transferDefinition,
   uint256 transferTimeout,
-  bytes32 initialStateHash
+  bytes32 initialStateHash,
+  bytes[] encodings,
+  bytes32[] merkleProofData
 )`);

@@ -23,7 +23,7 @@ interface IAdjudicator {
     }
 
     struct CoreTransferState {
-        Balance balance;
+        Balance initialBalance;
         address assetId;
         address channelAddress;
         bytes32 transferId;
@@ -31,7 +31,6 @@ interface IAdjudicator {
         uint256 transferTimeout;
         bytes32 initialStateHash;
         bytes[] encodings; // Initial state, resolver state
-        bytes32[] merkleProofData;
     }
 
     function forceChannelConsensus(
@@ -47,7 +46,8 @@ interface IAdjudicator {
 
 
     function forceTransferConsensus(
-        CoreTransferState memory cts
+        CoreTransferState memory cts,
+        bytes32[] memory merkeProofData
     ) external;
 
     function defundTransfer(

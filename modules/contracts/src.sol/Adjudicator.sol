@@ -5,8 +5,9 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./interfaces/ITransferDefinition.sol";
-import "./shared/SafeMath.sol";
+import "./shared/LibChannelCrypto.sol";
 import "./shared/MerkleProof.sol";
+import "./shared/SafeMath.sol";
 
 
 // Called directly by a VectorChannel.sol instance
@@ -184,8 +185,8 @@ contract Adjudicator is IAdjudicator {
     }
 
     function forceTransferConsensus(
-        CoreTransferState memory cts
-        // TODO also pass in merkle proof data separately
+        CoreTransferState memory cts,
+        bytes32[] memory merkleProofData
     )
         public
         override
@@ -215,7 +216,7 @@ contract Adjudicator is IAdjudicator {
 
         bytes32 transferStateHash = hashTransferState(cts);
 
-        verifyMerkleProof(transferStateHash, dispute.merkleRoot, cts.merkleProofData);
+        verifyMerkleProof(transferStateHash, dispute.merkleRoot, merkleProofData);
 
         TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
@@ -298,7 +299,7 @@ contract Adjudicator is IAdjudicator {
             finalBalance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
 
         } else {
-            finalBalance = cts.balance;
+            finalBalance = cts.initialBalance;
         }
 
         IVectorChannel channel = IVectorChannel(cts.channelAddress);
@@ -344,7 +345,7 @@ contract Adjudicator is IAdjudicator {
         pure
     {
         // TODO WIP, check this!!
-        bytes32 generatedHash = hashChannelState(css);
+        bytes32 generatedHash = hashChannelState(ccs);
         require(participant == generatedHash.verifyChannelMessage(signature), "invalid signature on core channel state");
         return;
     }

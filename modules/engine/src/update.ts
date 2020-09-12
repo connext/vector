@@ -278,7 +278,8 @@ async function generateCreateUpdate(
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
-  const coreTransferState: Omit<CoreTransferState, "merkleProofData"> = {
+  const coreTransferState: CoreTransferState = {
+    initialBalance: transferInitialState.balance,
     assetId,
     // TODO: Should we pass in a transfer id?
     transferId: utils.hexlify(utils.randomBytes(32)),

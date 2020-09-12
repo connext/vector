@@ -90,6 +90,7 @@ export interface CoreChannelState {
 }
 
 export interface CoreTransferState {
+  initialBalance: Balance;
   assetId: Address;
   channelAddress: Address;
   transferId: string;

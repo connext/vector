@@ -257,6 +257,7 @@ export const createTestLinkedTransferStates = (
 export function createCoreTransferState(overrides: Partial<CoreTransferState> = {}): CoreTransferState {
   // TODO: make dependent on transfer def/name
   return {
+    initialBalance: {to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"]},
     assetId: mkAddress(),
     channelAddress: mkAddress("0xccc"),
     transferId: mkBytes32("0xeeefff"),
