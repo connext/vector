@@ -1,4 +1,5 @@
 import { constants } from "ethers";
+import { TransferState } from "@connext/vector-types";
 
 import { IWalletService } from "../../shared/wallet/wallet.service";
 import { UseCase } from "../../definitions/use-case";
@@ -8,7 +9,6 @@ import { CreateTransferInput } from "./create-transfer.in";
 import { CreateTransferOutput } from "./create-transfer.out";
 import { CreateTransferValidator } from "./create-transfer.validator";
 import { CreateTransferInvalidRequest } from "./errors/invalid-request";
-import { TransferState } from "@connext/vector-types";
 
 export class CreateTransferUseCase implements UseCase<CreateTransferInput, CreateTransferOutput> {
   constructor(private createTransferValidator: CreateTransferValidator, private walletService: IWalletService) {}

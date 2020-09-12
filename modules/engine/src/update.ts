@@ -22,7 +22,6 @@ import {
 
 import { MerkleTree } from "./merkleTree";
 import { resolve } from "./utils";
-import { TransferState } from "../../types/dist/src";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -70,7 +69,7 @@ export async function applyUpdate<T extends UpdateType>(
       const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedValue = ;
+      // const lockedValue = ;
       throw new Error("must reconcile locked value on transfer creation");
       // return {
       //   ...state,
