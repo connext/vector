@@ -16,7 +16,7 @@ import {
   Balance,
   IChannelSigner,
   CoreTransferState,
-  IStoreService,
+  IEngineStore,
   TransferState,
 } from "@connext/vector-types";
 
@@ -111,7 +111,7 @@ export async function applyUpdate<T extends UpdateType>(
 // properly validated resultant state
 export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
-  storeService: IStoreService,
+  storeService: IEngineStore,
   signer: IChannelSigner,
 ): Promise<ChannelUpdate<T>> {
   // Get the channel state

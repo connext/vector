@@ -1,22 +1,25 @@
 import fastify from "fastify";
-import {
-  createNode,
-  IsomorphicNode,
-  CreateChannelInput,
-  DepositInput,
-  CreateTransferInput,
-} from "@connext/isomorphic-node";
+import { Vector } from "@connext/vector-engine";
+import { ChannelSigner } from "@connext/vector-utils";
+import { Wallet } from "ethers";
 
-import { GenericErrorResponse } from "./helpers/types";
+import { SetupInput, GenericErrorResponse } from "./types";
 import { Routes } from "./schema";
+import { TempNatsMessagingService } from "./services/messaging";
+import { LockService } from "./services/lock";
+import { PrismaStore } from "./services/store";
+import { config } from "./config";
 
 type StringifyBigNumberAmount<T> = Omit<T, "amount"> & { amount: string };
 
 const server = fastify();
 
-let isoNode: IsomorphicNode;
+let vectorEngine: Vector;
+const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic!).privateKey);
 server.addHook("onReady", async () => {
-  isoNode = createNode({} as any);
+  const messaging = new TempNatsMessagingService("nats://localhost:4222");
+  await messaging.connect();
+  vectorEngine = await Vector.connect(messaging, new LockService(), new PrismaStore(), signer, config.chainProviders);
 });
 
 server.get("/ping", async (request, reply) => {
@@ -25,13 +28,15 @@ server.get("/ping", async (request, reply) => {
 
 // isAlive NATS
 
-server.post<{ Body: CreateChannelInput }>(
-  Routes.post.createChannel.route,
-  { schema: Routes.post.createChannel.schema },
+server.post<{ Body: SetupInput }>(
+  Routes.post.setup.route,
+  { schema: Routes.post.setup.schema },
   async (request, reply) => {
-    const res = await isoNode.createChannel({
-      chainId: request.body.chainId,
-      publicIdentifier: request.body.publicIdentifier,
+    request.body.counterpartyIdentifier;
+    const res = await vectorEngine.setup({
+      counterpartyIdentifier: request.body.counterpartyIdentifier,
+      networkContext,
+      timeout: request.body.timeout,
     });
     if (res.isError) {
       return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });

@@ -156,12 +156,12 @@ engine: utils contracts $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-isomorphic-node-bundle: utils engine $(shell find modules/isomorphic-node $(find_options))
+node-core-bundle: utils engine $(shell find modules/node-core $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/isomorphic-node && npm run build"
+	$(docker_run) "cd modules/node-core && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-server-node-bundle: isomorphic-node-bundle $(shell find modules/server-node $(find_options))
+server-node-bundle: node-core-bundle $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@

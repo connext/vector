@@ -120,10 +120,17 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   networkContext: NetworkContext;
 };
 
-export type NetworkContext = {
+export type ChainAddresses = {
+  [chainId: number]: ContractAddresses;
+};
+
+export type ContractAddresses = {
   channelFactoryAddress: Address;
   vectorChannelMastercopyAddress: Address;
   adjudicatorAddress: Address;
+};
+
+export type NetworkContext = ContractAddresses & {
   chainId: number;
   providerUrl: string;
 };

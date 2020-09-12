@@ -1,6 +1,6 @@
 import {
   ChannelUpdate,
-  IStoreService,
+  IEngineStore,
   UpdateType,
   MultisigCommitment,
   IMessagingService,
@@ -25,7 +25,7 @@ import { validate } from "./validate";
 export async function outbound(
   update: ChannelUpdate<any>,
   providerUrl: string,
-  storeService: IStoreService,
+  storeService: IEngineStore,
   messagingService: IMessagingService,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
@@ -153,7 +153,7 @@ export async function outbound(
 // This function is expected to handle errors and updates from a counterparty.
 export async function inbound(
   message: VectorMessage,
-  storeService: IStoreService,
+  storeService: IEngineStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
   chainProviders: ChainProviders,
@@ -189,7 +189,7 @@ export async function inbound(
 // This function is responsible for handling any inbound state requests.
 async function processChannelMessage(
   message: VectorChannelMessage,
-  storeService: IStoreService,
+  storeService: IEngineStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
   chainProviders: ChainProviders,

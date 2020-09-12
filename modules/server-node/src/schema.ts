@@ -1,14 +1,19 @@
-export const Routes = {
+import { FastifySchema } from "fastify";
+
+export type RoutesSchema = { post: { [routeName: string]: { route: string; schema: FastifySchema } } };
+
+export const Routes: RoutesSchema = {
   post: {
-    createChannel: {
-      route: "create-channel",
+    setup: {
+      route: "setup",
       schema: {
         body: {
           type: "object",
-          required: ["publicIdentifier", "chainId"],
+          required: ["counterpartyIdentifier", "chainId", "timeout"],
           properties: {
-            publicIdentifier: { type: "string" },
+            counterpartyIdentifier: { type: "string" },
             chainId: { type: "number" },
+            timeout: { type: "string" },
           },
         },
       },

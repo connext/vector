@@ -1,7 +1,7 @@
 import { FullChannelState, CoreTransferState } from "./channel";
 import { TransferState } from "./transferDefinitions";
 
-export interface IStoreService {
+export interface IEngineStore {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
@@ -12,3 +12,5 @@ export interface IStoreService {
   getActiveTransfers(channelAddress: string): Promise<CoreTransferState[]>;
   getTransferState(transferId: string): Promise<TransferState | undefined>;
 }
+
+export interface INodeCoreStore extends IEngineStore {}

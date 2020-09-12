@@ -1,5 +1,5 @@
 import {
-  IStoreService,
+  IEngineStore,
   UpdateParams,
   DepositParams,
   UpdateType,
@@ -10,9 +10,14 @@ import {
   ChainProviders,
   IChannelSigner,
   FullChannelState,
+  SetupParams,
+  ChainAddresses,
 } from "@connext/vector-types";
+import { providers } from "ethers";
 import { Evt } from "evt";
+import { VectorChannel, ChannelFactory } from "@connext/vector-contracts";
 
+import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
 import { VectorMessage } from "./types";
 import { generateUpdate } from "./update";
@@ -21,30 +26,31 @@ import { InboundChannelError, logger } from "./utils";
 export class Vector {
   private channelStateEvt = Evt.create<FullChannelState>();
   private channelErrorEvt = Evt.create<InboundChannelError>();
+  private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
 
   // make it private so the only way to create the class is to use `connect`
   private constructor(
-    private messagingService: IMessagingService,
-    private lockService: ILockService,
-    private storeService: IStoreService,
-    private signer: IChannelSigner,
-    public chainProviders: ChainProviders,
+    private readonly messagingService: IMessagingService,
+    private readonly lockService: ILockService,
+    private readonly storeService: IEngineStore,
+    private readonly signer: IChannelSigner,
+    private readonly chainProviderUrls: ChainProviders,
+    private readonly chainAddresses: ChainAddresses,
   ) {
-    this.messagingService = messagingService;
-    this.storeService = storeService;
-    this.lockService = lockService;
-    this.signer = signer;
-    this.chainProviders = chainProviders;
+    Object.entries(chainProviderUrls).forEach(([chainId, providerUrl]) => {
+      this.chainProviders.set(parseInt(chainId), new providers.JsonRpcProvider(providerUrl));
+    });
   }
 
   static connect(
     messagingService: IMessagingService,
     lockService: ILockService,
-    storeService: IStoreService,
+    storeService: IEngineStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
+    chainAddresses: ChainAddresses,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders);
+    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders, chainAddresses);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
@@ -67,7 +73,7 @@ export class Vector {
     const state = await this.storeService.getChannelState(params.channelAddress);
     // NOTE: This is a heavy query, but is required on every update (even if it
     // is not a transfer) due to the general nature of the `validate` api
-    const providerUrl = this.chainProviders[state.networkContext.chainId];
+    const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
     const update = await generateUpdate(params, this.storeService, this.signer);
     await sync.outbound(
       update,
@@ -91,7 +97,7 @@ export class Vector {
           this.storeService,
           this.messagingService,
           this.signer,
-          this.chainProviders,
+          this.chainProviderUrls,
           this.channelStateEvt,
           this.channelErrorEvt,
         );
@@ -125,13 +131,36 @@ export class Vector {
    * ***************************
    */
 
+  public async setup(params: SetupParams): Promise<any> {
+    if (!this.chainProviders.has(params.networkContext.chainId)) {
+      throw new Error(`No chain provider for chainId ${params.networkContext.chainId}`);
+    }
+    const channelAddress = await getCreate2MultisigAddress(
+      this.publicIdentifier,
+      params.counterpartyIdentifier,
+      params.networkContext.channelFactoryAddress,
+      ChannelFactory.abi,
+      params.networkContext.vectorChannelMastercopyAddress,
+      VectorChannel.abi,
+      this.chainProviders.get(params.networkContext.chainId),
+    );
+    // TODO validate setup params for completeness
+    const updateParams = {
+      channelAddress,
+      details: params,
+      type: UpdateType.setup,
+    } as UpdateParams<"setup">;
+
+    return this.executeUpdate(updateParams);
+  }
+
   public async deposit(params: DepositParams): Promise<any> {
     // TODO validate deposit params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
       type: UpdateType.deposit,
       details: params,
-    } as UpdateParams<any>;
+    } as UpdateParams<"deposit">;
 
     return this.executeUpdate(updateParams);
   }
@@ -142,7 +171,7 @@ export class Vector {
       channelAddress: params.channelAddress,
       type: UpdateType.create,
       details: params,
-    } as UpdateParams<any>;
+    } as UpdateParams<"create">;
 
     return this.executeUpdate(updateParams);
   }
@@ -153,7 +182,7 @@ export class Vector {
       channelAddress: params.channelAddress,
       type: UpdateType.resolve,
       details: params,
-    } as UpdateParams<any>;
+    } as UpdateParams<"resolve">;
 
     return this.executeUpdate(updateParams);
   }
