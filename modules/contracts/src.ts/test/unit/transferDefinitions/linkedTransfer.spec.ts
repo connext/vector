@@ -6,7 +6,7 @@ import {
   LinkedTransferResolver,
   Balance,
 } from "@connext/vector-types";
-import { getRandomAddress, getRandomBytes32 } from "@connext/vector-utils";
+import { getRandomAddress, getRandomBytes32, stringify, keyify } from "@connext/vector-utils";
 
 import { LinkedTransfer } from "../../../artifacts";
 import { expect, provider } from "../../utils";
@@ -60,7 +60,8 @@ describe.only("LinkedTransfer", () => {
   ): Promise<Balance> => {
     const encodedState = encodeTransferState(initialState);
     const encodedResolver = encodeTransferResolver(resolver);
-    return definition.functions.resolve(encodedState, encodedResolver);
+    const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
+    return keyify(initialState.balance, ret);
   };
 
   const validateResult = async (
@@ -68,16 +69,18 @@ describe.only("LinkedTransfer", () => {
     resolver: LinkedTransferResolver,
     result: Balance,
   ): Promise<void> => {
-    const [value] = result as any;
     if (createLinkedHash(resolver.preImage) === initialState.linkedHash) {
       // Payment completed
-      expect(value).to.deep.equal({
-        ...initialState.balance,
-        amount: [initialState.balance.amount[1], initialState.balance.amount[0]],
-      });
-    } else if (initialState.linkedHash === HashZero) {
+      expect(result.to).to.deep.equal(initialState.balance.to);
+      expect(result.amount[0].toString()).to.eq("0");
+      expect(result.amount[1].toString()).to.eq(initialState.balance.amount[0]);
+    } else if (resolver.preImage === HashZero) {
       // Payment reverted
-      expect(result).to.deep.equal(initialState.balance);
+      expect(result.to).to.deep.equal(initialState.balance.to);
+      expect(result.amount[0].toString()).to.eq(initialState.balance.amount[0]);
+      expect(result.amount[1].toString()).to.eq(initialState.balance.amount[1]);
+    } else {
+      expect(false).to.be.true;
     }
   };
 
@@ -86,7 +89,6 @@ describe.only("LinkedTransfer", () => {
   });
 
   describe("Create", () => {
-    // TODO this fails on encoding -- why?
     it("should create successfully", async () => {
       const preImage = getRandomBytes32();
       const initialState = await createInitialState(preImage);
@@ -116,15 +118,15 @@ describe.only("LinkedTransfer", () => {
       const preImage = getRandomBytes32();
       const initialState = await createInitialState(preImage);
       const result = await resolveTransfer(initialState, { preImage });
+      console.log(`Result: ${stringify(result)}`)
       await validateResult(initialState, { preImage }, result);
     });
 
-    it("should refund if linkedHash is HashZero", async () => {
+    it("should refund if preimage is HashZero", async () => {
       const preImage = getRandomBytes32();
       const initialState = await createInitialState(preImage);
-      initialState.linkedHash = HashZero;
-      const result = await resolveTransfer(initialState, { preImage });
-      await validateResult(initialState, { preImage }, result);
+      const result = await resolveTransfer(initialState, { preImage: HashZero });
+      await validateResult(initialState, { preImage: HashZero }, result);
     });
 
     it("should fail if the hash generated does not match preimage", async () => {
