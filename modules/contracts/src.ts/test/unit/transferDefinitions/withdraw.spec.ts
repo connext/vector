@@ -6,14 +6,20 @@ import {
   WithdrawResolver,
   Balance,
 } from "@connext/vector-types";
+import {
+  getRandomAddress,
+  getRandomBytes32,
+  signChannelMessage,
+  recoverAddressFromChannelMessage,
+  keyify,
+} from "@connext/vector-utils";
 
 import { Withdraw } from "../../../artifacts";
 import { expect, provider } from "../../utils";
-import { getRandomAddress, getRandomBytes32, signChannelMessage, recoverAddressFromChannelMessage, keyify, stringify } from "@connext/vector-utils";
 
-const { HashZero, Zero } = constants;
+const { Zero } = constants;
 
-describe.only("Withdraw", () => {
+describe("Withdraw", () => {
   let deployer: Wallet;
   let definition: Contract;
   let initiator: Wallet;
@@ -45,7 +51,7 @@ describe.only("Withdraw", () => {
       signers: [initiator.address, responder.address],
       data,
       nonce: getRandomBytes32(),
-      fee: "0"
+      fee: "0",
     };
   };
 
@@ -55,13 +61,10 @@ describe.only("Withdraw", () => {
     return ret;
   };
 
-  const resolveTransfer = async (
-    initialState: WithdrawState,
-    resolver: WithdrawResolver,
-  ): Promise<Balance> => {
+  const resolveTransfer = async (initialState: WithdrawState, resolver: WithdrawResolver): Promise<Balance> => {
     const encodedState = encodeTransferState(initialState);
     const encodedResolver = encodeTransferResolver(resolver);
-    const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0] 
+    const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };
 
@@ -72,9 +75,9 @@ describe.only("Withdraw", () => {
   ): Promise<void> => {
     if (recoverAddressFromChannelMessage(initialState.data, resolver.responderSignature)) {
       // Withdraw completed
-        expect(result.to).to.deep.equal(initialState.balance.to)
-        expect(result.amount[0].toString()).to.eq("0")
-        expect(result.amount[1].toString()).to.eq(initialState.fee.toString())
+      expect(result.to).to.deep.equal(initialState.balance.to);
+      expect(result.amount[0].toString()).to.eq("0");
+      expect(result.amount[1].toString()).to.eq(initialState.fee.toString());
     } else {
       // Payment reverted
       expect(result).to.deep.equal(initialState.balance);
@@ -86,7 +89,7 @@ describe.only("Withdraw", () => {
   });
 
   describe("Create", () => {
-    it("should create successfully", async () => {
+    it.only("should create successfully", async () => {
       const data = getRandomBytes32();
       const initialState = await createInitialState(data);
       expect(await createTransfer(initialState)).to.be.true;
@@ -97,18 +100,18 @@ describe.only("Withdraw", () => {
     it("should resolve successfully", async () => {
       const data = getRandomBytes32();
       const initialState = await createInitialState(data);
-      const responderSignature = await signChannelMessage(data, responder.privateKey)
+      const responderSignature = await signChannelMessage(data, responder.privateKey);
       const result = await resolveTransfer(initialState, { responderSignature });
       await validateResult(initialState, { responderSignature }, result);
     });
 
     it("should resolve successfully with fees", async () => {
-        const data = getRandomBytes32();
-        let initialState = await createInitialState(data);
-        initialState.fee = "100"
-        const responderSignature = await signChannelMessage(data, responder.privateKey)
-        const result = await resolveTransfer(initialState, { responderSignature });
-        await validateResult(initialState, { responderSignature }, result);
-      });
+      const data = getRandomBytes32();
+      const initialState = await createInitialState(data);
+      initialState.fee = "100";
+      const responderSignature = await signChannelMessage(data, responder.privateKey);
+      const result = await resolveTransfer(initialState, { responderSignature });
+      await validateResult(initialState, { responderSignature }, result);
+    });
   });
 });

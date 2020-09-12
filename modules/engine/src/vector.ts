@@ -1,5 +1,4 @@
 import {
-  ChannelState,
   IStoreService,
   UpdateParams,
   DepositParams,
@@ -10,6 +9,7 @@ import {
   IMessagingService,
   ChainProviders,
   IChannelSigner,
+  FullChannelState,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -19,7 +19,7 @@ import { generateUpdate } from "./update";
 import { InboundChannelError, logger } from "./utils";
 
 export class Vector {
-  private channelStateEvt = Evt.create<ChannelState>();
+  private channelStateEvt = Evt.create<FullChannelState>();
   private channelErrorEvt = Evt.create<InboundChannelError>();
 
   // make it private so the only way to create the class is to use `connect`
@@ -67,9 +67,8 @@ export class Vector {
     const state = await this.storeService.getChannelState(params.channelAddress);
     // NOTE: This is a heavy query, but is required on every update (even if it
     // is not a transfer) due to the general nature of the `validate` api
-    const transferInitialStates = await this.storeService.getTransferInitialStates(params.channelAddress);
     const providerUrl = this.chainProviders[state.networkContext.chainId];
-    const update = await generateUpdate(params, state, transferInitialStates, this.signer, providerUrl);
+    const update = await generateUpdate(params, this.storeService, this.signer);
     await sync.outbound(
       update,
       providerUrl,

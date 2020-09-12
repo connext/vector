@@ -3,6 +3,8 @@ import { SignatureString, Address, Bytes32 } from "../basic";
 import { tidy } from "../utils";
 import { BalanceEncoding } from "../contracts";
 
+export const WithdrawName = "Withdraw";
+
 export type WithdrawState = {
   balance: Balance;
   initiatorSignature: SignatureString;

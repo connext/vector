@@ -1,5 +1,6 @@
 export * from "./bigNumbers";
 export * from "./chainId";
+export * from "./channel";
 export * from "./channelSigner";
 export * from "./comparisons";
 export * from "./contracts";
@@ -19,3 +20,4 @@ export * from "./math";
 export * from "./strings";
 export * from "./test";
 export * from "./typedEmitter";
+export * from "./transfers";
