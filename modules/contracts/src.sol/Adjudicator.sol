@@ -12,6 +12,7 @@ import "./shared/MerkleProof.sol";
 // Called directly by a VectorChannel.sol instance
 contract Adjudicator is IAdjudicator {
 
+    using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
     struct Dispute { // Maybe this should be ChannelDispute?
@@ -342,7 +343,9 @@ contract Adjudicator is IAdjudicator {
         internal
         pure
     {
-        //TODO
+        // TODO WIP, check this!!
+        bytes32 generatedHash = hashChannelState(css);
+        require(participant == generatedHash.verifyChannelMessage(signature), "invalid signature on core channel state");
         return;
     }
 
@@ -369,8 +372,9 @@ contract Adjudicator is IAdjudicator {
     }
 
     function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
-        // TODO
-        return 0;
+        // TODO WIP, check this!!
+        bytes32 hashedState = sha256(abi.encode(ccs));
+        return hashedState.toChannelSignedMessage();
     }
 
     function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
