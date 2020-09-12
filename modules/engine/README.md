@@ -1,5 +1,18 @@
 # Vector Engine
-Engine is where the core Vector framework is executed. 
+Engine is where the core Vector framework is executed. Engine takes in method calls over a simple JSON RPC interface, uses them to make updates to its shared state with a channel peer, and stores resulting commmitments. 
+
+Contents:
+- [Developing and Running Tests](https://github.com/connext/vector/tree/master/modules/engine#developing-and-running-tests)
+- [Core Principles](https://github.com/connext/vector/tree/master/modules/engine#core-principles)
+- [Sync Protocol](https://github.com/connext/vector/tree/master/modules/engine#sync)
+- [Update Types](https://github.com/connext/vector/tree/master/modules/engine#update-types)
+- [RPC Interface Reference] // TODO
+
+## Developing and Running Tests
+
+In `~/vector` (root), run:
+- `make` to build the engine
+- `make test-engine` to run the tests
 
 ## Core Principles
 Vector uses the following fundamental design principles:

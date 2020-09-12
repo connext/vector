@@ -1,30 +1,39 @@
 # Vector Contracts
 
-## Developing
-Build the contracts with:
-// TODO
+The contracts module contains the core solidity files that back Vector's security onchain. **IMPORTANT: Do not edit these contracts unless you know exactly what you're doing**, even small changes to commitment interfaces or parameters can render the *entire* system undisputable.
 
-Test by running the following at the root of the vector monorepo:
-```
-make watch-contracts
-```
+Contents:
+- [Developing and Running Tests](https://github.com/connext/vector/tree/master/modules/contracts#developing)
+- [Simplifying Assumptions](https://github.com/connext/vector/tree/master/modules/contracts#simplifying-assumptions)
+- [Dispute Flow](https://github.com/connext/vector/tree/master/modules/contracts#dispute-flow)
+- [Funding a Channel](https://github.com/connext/vector/tree/master/modules/contracts#funding-a-channel)
+- [Commitments](https://github.com/connext/vector/tree/master/modules/contracts#commitments)
+- Security // TODO
 
-## Overview
+## Developing and Running Tests
 
-The Vector contracts make some simplifying assumptions compared to CF:
+In `~/vector` (root), run:
+- `make` to build the contracts
+- `make test-contracts` to run the tests
+- `make watch-contracts` to test in watch-mode
+
+## Control Flow
+
+The contract control flow in Vector is inverted compared to CF (it is more similar to StateChannels):
+
+![alt text](https://i.ibb.co/gyqFSzg/vector-Contract-Control-Flow.png)
+
+## Simplifying Assumptions
+
+The Vector contracts make some simplifying assumptions compared to CounterFactual:
 
 - All "apps" (now just called transfers) are single-turn only. We also explicitly assume that the app state contains a `balances[]` tuple.
 - Rather than keeping track of an `activeApps[]`, we now just include a merkle root within the `ChannelState`. This means that a `TransferState` must include corresponding materials for a proof (gets validated as part of `forceTransferConsensus()`)
 - No more pushing outcomes -- the responsibility for deciding on a final set of balances to be transferred is delegated entirely to the `transferDefinition` code.
-- Disputing occurs within a dispute window within which `defundChannel()` and any `defundTransfer()` calls MUST be made. After the window ends, the channel returns to a "happy" state onchain (including any undisputed transfers). After that point, any _new_ disputes/checkpointing MUST happen at a higher nonce than what is already registered onchain.
-- After the dispute window ends, both parties can continue signing commitments at a higher nonce and resume normal channel operations.
+- Disputing occurs within a dispute window within which `defundChannel()` and any `defundTransfer()` calls MUST be made. After the window ends, the channel returns to a "happy" state onchain (including any undisputed transfers). After that point, a _new_ dispute can happen at or above the nonce registered onchain.
+- After the dispute window ends, both parties can continue signing commitments at a higher nonce and resume normal channel operations. They also retain the ability to dispute again in case offchain coordination cannot be reached.
 
-Additionally, the contract control flow in Vector is inverted compared to CF (it is more similar to StateChannels):
-//TODO this actually needs to be changed -- VectorChannel.sol now calls the adjudicator directly which calls back into VectorChannel
-
-![alt text](https://i.ibb.co/gyqFSzg/vector-Contract-Control-Flow.png)
-
-## Disputes
+## Dispute Flow
 
 The dispute flow works as follows:
 
@@ -86,4 +95,18 @@ struct CoreChannelState {
 }
 ```
 
+Despite not being a "real" commitment, the `CoreTransferState` is a part of the merkle root in the channel state. Thus it's security is enforced using both peers' signatures on the above.
 
+```
+   struct CoreTransferState {
+      Balance balance;
+      address assetId;
+      address channelAddress;
+      bytes32 transferId;
+      address transferDefinition;
+      uint256 transferTimeout;
+      bytes32 initialStateHash;
+      bytes[] encodings; // Initial state, resolver state
+      bytes32[] merkleProofData;
+   }
+```
