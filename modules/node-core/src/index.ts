@@ -47,7 +47,7 @@ export class NodeCore {
     // TODO input validation
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createParams: CreateTransferParams = await convertConditionalTransferParams(params, this.chainAddresses, this.chainProviders);
+    const createParams: CreateTransferParams = await convertConditionalTransferParams(params, this.chainAddresses);
     return this.engineProvider.create(createParams);
   }
 
@@ -62,7 +62,7 @@ export class NodeCore {
   public async withdraw(params: WithdrawParams): Promise<any> { // TODO types
     // TODO input validation
 
-    const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses, this.chainProviders);
+    const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses);
     return this.engineProvider.create(withdrawParams);
   }
 
