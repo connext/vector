@@ -44,5 +44,21 @@ describe("store", () => {
 
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(depositState);
+
+    const createState = createTestChannelState("create", {
+      nonce: depositState.nonce + 1,
+    });
+    await store.saveChannelState(createState);
+
+    fromStore = await store.getChannelState(setupState.channelAddress);
+    expect(fromStore).to.deep.eq(createState);
+
+    const resolveState = createTestChannelState("resolve", {
+      nonce: createState.nonce + 1,
+    });
+    await store.saveChannelState(resolveState);
+
+    fromStore = await store.getChannelState(setupState.channelAddress);
+    expect(fromStore).to.deep.eq(resolveState);
   });
 });

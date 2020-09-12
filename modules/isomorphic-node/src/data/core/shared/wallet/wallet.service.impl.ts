@@ -1,5 +1,4 @@
 import {
-  ChannelState,
   DepositParams,
   CreateTransferParams,
   ResolveTransferParams,
@@ -8,6 +7,7 @@ import {
   ILockService,
   IChannelSigner,
   ChainProviders,
+  FullChannelState,
 } from "@connext/vector-types";
 import { Vector } from "@connext/vector-engine";
 
@@ -36,22 +36,22 @@ export class WalletService implements IWalletService {
   getSignerAddress(): string {
     throw new Error("Method not implemented.");
   }
-  setup(params: CreateChannelInput): Promise<Result<ChannelState, WalletError>> {
+  setup(params: CreateChannelInput): Promise<Result<FullChannelState, WalletError>> {
     throw new Error("Method not implemented.");
   }
-  deposit(params: DepositParams): Promise<Result<ChannelState, WalletError>> {
+  deposit(params: DepositParams): Promise<Result<FullChannelState, WalletError>> {
     throw new Error("Method not implemented.");
   }
-  create(params: CreateTransferParams): Promise<Result<ChannelState, WalletError>> {
+  create(params: CreateTransferParams): Promise<Result<FullChannelState, WalletError>> {
     throw new Error("Method not implemented.");
   }
-  resolve(params: ResolveTransferParams): Promise<Result<ChannelState, WalletError>> {
+  resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, WalletError>> {
     throw new Error("Method not implemented.");
   }
-  withdraw(params: unknown): Promise<Result<ChannelState, WalletError>> {
+  withdraw(params: unknown): Promise<Result<FullChannelState, WalletError>> {
     throw new Error("Method not implemented.");
   }
-  getChannel(channelId: string): Promise<Result<ChannelState | undefined, WalletError>> {
+  getChannel(channelId: string): Promise<Result<FullChannelState | undefined, WalletError>> {
     throw new Error("Method not implemented.");
   }
 }

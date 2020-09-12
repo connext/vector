@@ -8,6 +8,8 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
+  LinkedTransferState,
+  WithdrawState,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
@@ -36,9 +38,8 @@ export class PrismaStore implements IStoreService {
     if (!channelEntity) {
       return undefined;
     }
-    console.log("channelEntity: ", channelEntity);
-    // dedup assetIds. this is needed because the db stores balances keyed on [participant,channel,assetId] so there
-    // will be 2 entries for each assetId
+
+    // use the inputted assetIds to preserve order
     const assetIds = channelEntity!.assetIds.split(",");
 
     // get balances and locked value for each assetId
@@ -142,42 +143,48 @@ export class PrismaStore implements IStoreService {
 
   async saveChannelState(channelState: FullChannelState<any>): Promise<void> {
     // create the latest update db structure from the input data
-    const latestUpdate = {
-      channelAddressId: channelState.channelAddress,
-      fromIdentifier: channelState.latestUpdate!.fromIdentifier,
-      toIdentifier: channelState.latestUpdate!.toIdentifier,
-      nonce: channelState.latestUpdate!.nonce,
-      signatureA: channelState.latestUpdate!.signatures[0],
-      signatureB: channelState.latestUpdate!.signatures[1],
-      amountA: channelState.latestUpdate!.balance.amount[0],
-      amountB: channelState.latestUpdate!.balance.amount[1],
-      toA: channelState.latestUpdate!.balance.to[0],
-      toB: channelState.latestUpdate!.balance.to[1],
-      type: channelState.latestUpdate!.type,
-      assetId: channelState.latestUpdate!.assetId,
+    let latestUpdateModel: any;
+    if (channelState.latestUpdate) {
+      latestUpdateModel = {
+        channelAddressId: channelState.channelAddress,
+        fromIdentifier: channelState.latestUpdate!.fromIdentifier,
+        toIdentifier: channelState.latestUpdate!.toIdentifier,
+        nonce: channelState.latestUpdate!.nonce,
+        signatureA: channelState.latestUpdate?.signatures[0],
+        signatureB: channelState.latestUpdate?.signatures[1],
+        amountA: channelState.latestUpdate!.balance.amount[0],
+        amountB: channelState.latestUpdate!.balance.amount[1],
+        toA: channelState.latestUpdate!.balance.to[0],
+        toB: channelState.latestUpdate!.balance.to[1],
+        type: channelState.latestUpdate!.type,
+        assetId: channelState.latestUpdate!.assetId,
 
-      // details
-      // deposit
-      latestDepositNonce: channelState.latestUpdate?.details.latestDepositNonce,
-      // create transfer
-      transferInitialState: JSON.stringify(channelState.latestUpdate!.details.transferInitialState),
-      merkleRoot: channelState.latestUpdate!.details.merkleRoot,
-      merkleProofData: channelState.latestUpdate!.details.merkleProofData,
-      transferDefinition: channelState.latestUpdate!.details.transferDefinition,
-      transferEncodings: JSON.stringify(channelState.latestUpdate!.details.transferEncodings),
-      transferId: channelState.latestUpdate!.details.transferId,
-      transferTimeout: channelState.latestUpdate!.details.transferTimeout,
+        // details
+        // deposit
+        latestDepositNonce: channelState.latestUpdate?.details.latestDepositNonce,
+        // create transfer
+        transferInitialState: JSON.stringify(channelState.latestUpdate!.details.transferInitialState),
+        merkleRoot: channelState.latestUpdate!.details.merkleRoot,
+        merkleProofData: channelState.latestUpdate!.details.merkleProofData,
+        transferDefinition: channelState.latestUpdate!.details.transferDefinition,
+        transferEncodings: JSON.stringify(channelState.latestUpdate!.details.transferEncodings),
+        transferId: channelState.latestUpdate!.details.transferId,
+        transferTimeout: channelState.latestUpdate!.details.transferTimeout,
 
-      // resolve transfer
-      transferResolver: channelState.latestUpdate!.details.transferResolver,
-    };
+        // resolve transfer
+        transferResolver: JSON.stringify(channelState.latestUpdate!.details.transferResolver),
+      };
+    }
+
+    // use the inputted assetIds to preserve order
+    const assetIds = channelState.assetIds.join(",");
 
     // create the rest of the channel
     // use upsert so that it can be idempotent
-    const channel = await this.prisma.channel.upsert({
+    await this.prisma.channel.upsert({
       where: { channelAddress: channelState.channelAddress },
       create: {
-        assetIds: channelState.assetIds.join(","),
+        assetIds,
         chainId: channelState.networkContext.chainId,
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
@@ -217,14 +224,15 @@ export class PrismaStore implements IStoreService {
           ),
         },
         latestUpdate: {
-          create: latestUpdate,
+          create: channelState.latestUpdate ? latestUpdateModel : undefined,
         },
       },
       update: {
-        assetIds: channelState.assetIds.join(","),
+        assetIds,
         latestDepositNonce: channelState.latestDepositNonce,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
+        adjudicatorAddress: channelState.networkContext.adjudicatorAddress,
         latestUpdate: {
           connectOrCreate: {
             where: {
@@ -233,7 +241,7 @@ export class PrismaStore implements IStoreService {
                 nonce: channelState.latestUpdate!.nonce,
               },
             },
-            create: latestUpdate,
+            create: latestUpdateModel,
           },
         },
         balances: {
@@ -293,10 +301,11 @@ export class PrismaStore implements IStoreService {
     });
   }
 
-  getTransferInitialStates(channelAddress: string): Promise<CoreTransferState[]> {
+  getActiveTransfers(channelAddress: string): Promise<CoreTransferState[]> {
     throw new Error("Method not implemented.");
   }
-  getTransferState(transferId: string): Promise<CoreTransferState | undefined> {
+
+  getTransferState(transferId: string): Promise<LinkedTransferState | WithdrawState | undefined> {
     throw new Error("Method not implemented.");
   }
 }

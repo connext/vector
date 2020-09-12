@@ -42,7 +42,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
     },
     channelAddress: mkAddress("0xccc"),
     fromIdentifier: mkPublicIdentifier("indraA"),
-    nonce: 2,
+    nonce: 1,
     signatures: [mkBytes32("0xsig1"), mkBytes32("0xsig2")],
     toIdentifier: mkPublicIdentifier("indraB"),
     type,
@@ -78,7 +78,13 @@ export function createTestChannelUpdate<T extends UpdateType>(
         transferDefinition: mkAddress("0xdef"),
         transferEncodings: ["create", "resolve"],
         transferId: mkBytes32("id"),
-        transferInitialState: {},
+        transferInitialState: {
+          balance: {
+            amount: ["10", "0"],
+            to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
+          },
+          linkedHash: mkBytes32("0xlinkedhash"),
+        } as LinkedTransferState,
         transferTimeout: "0",
       } as CreateUpdateDetails;
       break;
@@ -113,6 +119,7 @@ export const createTestChannelState = (
   const participants = overrides.participants ?? [mkAddress("0xaaa"), mkAddress("0xbbb")];
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
+  const nonce = overrides.nonce ?? 1;
   return {
     assetIds,
     balances: [
@@ -142,6 +149,7 @@ export const createTestChannelState = (
       fromIdentifier: publicIdentifiers[0],
       toIdentifier: publicIdentifiers[1],
       assetId: assetIds[0],
+      nonce,
       ...(overrides.latestUpdate ?? {}),
     }),
     merkleRoot: mkHash(),
@@ -152,7 +160,7 @@ export const createTestChannelState = (
       providerUrl: "http://localhost:8545",
       vectorChannelMastercopyAddress: mkAddress("0xmast"),
     },
-    nonce: 2,
+    nonce,
     participants,
     publicIdentifiers,
     timeout: "1",

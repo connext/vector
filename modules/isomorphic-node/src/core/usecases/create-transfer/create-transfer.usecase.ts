@@ -28,10 +28,10 @@ export class CreateTransferUseCase implements UseCase<CreateTransferInput, Creat
     const counterparty = channel.participants.find(
       (participant) => participant !== this.walletService.getSignerAddress(),
     );
-    const transferInitialState: TransferState = [
-      { amount: request.amount, to: this.walletService.getSignerAddress() },
-      { amount: constants.Zero, to: counterparty! },
-    ];
+    const transferInitialState: TransferState = {
+      balance: { amount: [request.amount, "0"], to: [this.walletService.getSignerAddress(), counterparty!] },
+      linkedHash: constants.HashZero,
+    };
 
     const meta = request.meta ?? {};
     if (request.recipient) {
