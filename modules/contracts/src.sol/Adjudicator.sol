@@ -184,6 +184,7 @@ contract Adjudicator is IAdjudicator {
 
     function forceTransferConsensus(
         CoreTransferState memory cts
+        // TODO also pass in merkle proof data separately
     )
         public
         override
