@@ -9,13 +9,15 @@ import {
   IEngineStore,
 } from "@connext/vector-types";
 import { Address, DepositParams, CreateTransferParams, ResolveTransferParams } from "@connext/vector-types";
-import { CreateTransferParams } from "../../utils/node_modules/@connext/vector-types/dist/src";
+import { convertConditionalTransferParams, convertResolveConditionParams, convertWithdrawParams } from "./paramConverter";
 
 export class NodeCore {
   private constructor(
     private readonly messaging: IMessagingService,
     private readonly store: INodeCoreStore,
     private readonly engineProvider: Vector,
+    private readonly chainProviders: ChainProviders,
+    private readonly chainAddresses: ChainAddresses
   ) {}
 
   static async connect(
@@ -33,7 +35,7 @@ export class NodeCore {
     // TODO look at what was done for SDK to relay events
     await setupListener(engineProvider);
 
-    const nodeCore = new NodeCore(messaging, store, engineProvider);
+    const nodeCore = new NodeCore(messaging, store, engineProvider, chainProviders, chainAddresses);
     return nodeCore;
   }
 
@@ -45,7 +47,7 @@ export class NodeCore {
     // TODO input validation
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createParams: CreateTransferParams = await convertConditionalTransferParams(params);
+    const createParams: CreateTransferParams = await convertConditionalTransferParams(params, this.chainAddresses, this.chainProviders);
     return this.engineProvider.create(createParams);
   }
 
@@ -60,7 +62,7 @@ export class NodeCore {
   public async withdraw(params: WithdrawParams): Promise<any> { // TODO types
     // TODO input validation
 
-    const withdrawParams: CreateTransferParams = await convertWithdrawParams(params);
+    const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses, this.chainProviders);
     return this.engineProvider.create(withdrawParams);
   }
 
