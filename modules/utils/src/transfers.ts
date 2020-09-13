@@ -1,4 +1,3 @@
-import { BigNumber } from "@connext/types";
 import {
   LinkedTransferState,
   WithdrawState,
