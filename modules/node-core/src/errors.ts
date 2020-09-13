@@ -1,6 +1,4 @@
-import { GenericError } from "@connext/vector-types";
-
-export class InvalidTransferType extends GenericError {
+export class InvalidTransferType extends Error {
   constructor(transferType: string) {
     super(`Transfer type ${transferType} invalid`);
   }

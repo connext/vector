@@ -1,5 +1,4 @@
 import { ChannelUpdate, FullChannelState } from "./channel";
-import { VectorChannelMessage } from "./engine";
 export class Result<T, Y = any> {
   private value?: T;
   private error?: Y;
@@ -49,6 +48,7 @@ export abstract class VectorError extends Error {
   static readonly errors = {
     ChannelUpdateError: "ChannelUpdateError",
     DepositError: "DepositError",
+    UpdateValidationError: "UpdateValidationError",
     // etc.
   } as const;
 
@@ -85,6 +85,30 @@ export class ChannelUpdateError extends VectorError {
 
   constructor(
     public readonly message: Values<typeof ChannelUpdateError.reasons>,
+    public readonly update: ChannelUpdate<any>,
+    public readonly state?: FullChannelState,
+    public readonly context: any = undefined,
+  ) {
+    super(message, update, state, context);
+  }
+}
+
+export class UpdateValidationError extends VectorError {
+  readonly type = VectorError.errors.UpdateValidationError;
+
+  // This is the message that will be thrown by the error
+  // and all other details will be logged
+  static readonly reasons = {
+    DifferentChannelAddress: "Update has different channel address than state",
+    InvalidChannelAddress: "Channel address is not valid address",
+    DifferentIdentifiers: "Update has different identifiers than state", // See note in `processChannel`
+    StaleChannelNonce: "Nonce does not advance state",
+    InvalidAssetId: "AssetId is not valid address",
+    UnexpectedUpdateType: "Unexpected UpdateType in received update",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof UpdateValidationError.reasons>,
     public readonly update: ChannelUpdate<any>,
     public readonly state?: FullChannelState,
     public readonly context: any = undefined,

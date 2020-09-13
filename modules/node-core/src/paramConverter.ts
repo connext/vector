@@ -12,7 +12,7 @@ import {
   LinkedTransferParams,
   LinkedTransferState,
   Result,
-  DEFAULT_TRANSFER_TIMEOUT
+  DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
@@ -56,7 +56,7 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
     assetId,
     transferDefinition: transferDefinition!,
     transferInitialState,
-    timeout: DEFAULT_TRANSFER_TIMEOUT,
+    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings,
     meta,
   });

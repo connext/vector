@@ -1,4 +1,11 @@
-import { UpdateType, ChannelUpdate, FullChannelState, IEngineStore } from "@connext/vector-types";
+import {
+  UpdateType,
+  ChannelUpdate,
+  FullChannelState,
+  IEngineStore,
+  Result,
+  UpdateValidationError,
+} from "@connext/vector-types";
 import { utils } from "ethers";
 
 import { logger } from "./utils";
@@ -19,7 +26,7 @@ export async function validate<T extends UpdateType = any>(
   state: FullChannelState,
   storeService: IEngineStore,
   providerUrl: string,
-): Promise<void> {
+): Promise<Result<void, UpdateValidationError>> {
   // There is no need to validate items in the state since this will always
   // be a double signed state
 
@@ -28,27 +35,27 @@ export async function validate<T extends UpdateType = any>(
 
   // The channel address should not change from the state
   if (channelAddress !== state.channelAddress) {
-    throw new Error(`Update has different channel address than state`);
+    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.DifferentChannelAddress, update, state));
   }
 
   // Channel address should be an address
   if (!isAddress(channelAddress)) {
-    throw new Error(`Channel address is not valid address`);
+    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.InvalidChannelAddress, update, state));
   }
 
   // The identifiers should be the same
   if (JSON.stringify([fromIdentifier, toIdentifier].sort()) !== JSON.stringify(state.publicIdentifiers.sort())) {
-    throw new Error(`Update has different identifiers than state`);
+    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.DifferentIdentifiers, update, state));
   }
 
   // The update nonce should be exactly one more than the state nonce
   if (nonce !== state.nonce + 1) {
-    throw new Error(`Nonce does not advance state`);
+    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.StaleChannelNonce, update, state));
   }
 
   // Make sure the assetId is a valid address
   if (!isAddress(assetId)) {
-    throw new Error(`AssetId is not valid address`);
+    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.InvalidAssetId, update, state));
   }
 
   // TODO: Validate any signatures that exist
@@ -79,7 +86,10 @@ export async function validate<T extends UpdateType = any>(
 // NOTE: all the below helpers should validate the `details` field
 // of the specific update. See the `ChannelUpdateDetailsMap` type
 
-function validateSetup(update: ChannelUpdate<"setup">, state: FullChannelState<"setup">): void {
+function validateSetup(
+  update: ChannelUpdate<"setup">,
+  state: FullChannelState<"setup">,
+): Result<undefined, UpdateValidationError> {
   // Validate channel doesnt exist in storage
 
   // Validate it is the correct channel address
@@ -99,18 +109,26 @@ function validateSetup(update: ChannelUpdate<"setup">, state: FullChannelState<"
 
   // Validate merkle root is empty hash, assetIds are empty
   logger.error("validateSetup not implemented", { update, state });
+  return Result.ok(undefined);
 }
 
-function validateDeposit(update: ChannelUpdate<"deposit">, state: FullChannelState<"deposit">): void {
+function validateDeposit(
+  update: ChannelUpdate<"deposit">,
+  state: FullChannelState<"deposit">,
+): Result<undefined, UpdateValidationError> {
   // Validate the latest deposit nonce from chain
 
   // TODO: Best way to reconcile on and offchain balances?
   // Should we check the state balances + lockedVal + update.amount
   // === currentMultisigBalance?
   logger.error("validateDeposit not implemented", { update, state });
+  return Result.ok(undefined);
 }
 
-function validateCreate(update: ChannelUpdate<"create">, state: FullChannelState<"create">): void {
+function validateCreate(
+  update: ChannelUpdate<"create">,
+  state: FullChannelState<"create">,
+): Result<undefined, UpdateValidationError> {
   // Validate transfer id
 
   // Validate transfer definition
@@ -128,9 +146,13 @@ function validateCreate(update: ChannelUpdate<"create">, state: FullChannelState
   // Recalculate + validate merkle root
   // TODO: this will require all transfer initial states!
   logger.error("validateCreate not implemented", { update, state });
+  return Result.ok(undefined);
 }
 
-function validateResolve(update: ChannelUpdate<"resolve">, state: FullChannelState<"resolve">): void {
+function validateResolve(
+  update: ChannelUpdate<"resolve">,
+  state: FullChannelState<"resolve">,
+): Result<undefined, UpdateValidationError> {
   // Validate transfer id
 
   // Validate transfer definition
@@ -143,6 +165,7 @@ function validateResolve(update: ChannelUpdate<"resolve">, state: FullChannelSta
   // Recalculate + validate merkle root
   // TODO: this will require all transfer initial states!
   logger.error("validateResolve not implemented", { update, state });
+  return Result.ok(undefined);
 }
 
 function isAddress(addr: any): boolean {
