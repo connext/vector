@@ -219,20 +219,4 @@ export class Vector {
   }
 
   public async off() {}
-
-  // JSON RPC interface -- this will accept:
-  // - "vector_deposit"
-  // - "vector_createTransfer"
-  // - "vector_resolveTransfer"
-  // TODO add rpc request type
-  public async request(payload: any) {
-    if (!payload.method.startsWith(`vector_`)) {
-      throw new Error(`TODO`);
-    }
-    const methodName = payload.method.replace("vector_", "");
-    if (typeof this[methodName] !== "function") {
-      throw new Error(`TODO`);
-    }
-    await this[methodName](payload.params);
-  }
 }
