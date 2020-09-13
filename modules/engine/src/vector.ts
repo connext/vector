@@ -11,7 +11,9 @@ import {
   IChannelSigner,
   FullChannelState,
   SetupParams,
-  ChainAddresses,
+  ChannelUpdateEvent,
+  EngineEventName,
+  EngineEventPayloadsMap,
 } from "@connext/vector-types";
 import { providers } from "ethers";
 import { Evt } from "evt";
@@ -23,17 +25,10 @@ import { VectorMessage } from "./types";
 import { generateUpdate } from "./update";
 import { InboundChannelError, logger } from "./utils";
 
-export type UpdateEvent = {
-  direction: "inbound" | "outbound";
-  updatedChannelState: FullChannelState;
-};
-
-export type EngineEventNames = "CHANNEL_UPDATE_EVENT" | "PROTOCOL_MESSAGE_EVENT" | "PROTOCOL_ERROR_EVENT";
-
 export class Vector {
   private protocolChannelStateEvt = Evt.create<FullChannelState>();
   private protocolChannelErrorEvt = Evt.create<InboundChannelError>();
-  private channelUpdateEvt = Evt.create<UpdateEvent>();
+  private channelUpdateEvt = Evt.create<ChannelUpdateEvent>();
   private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
 
   // make it private so the only way to create the class is to use `connect`
@@ -42,8 +37,7 @@ export class Vector {
     private readonly lockService: ILockService,
     private readonly storeService: IEngineStore,
     private readonly signer: IChannelSigner,
-    private readonly chainProviderUrls: ChainProviders,
-    // private readonly chainAddresses: ChainAddresses,
+    private readonly chainProviderUrls: ChainProviders, // private readonly chainAddresses: ChainAddresses,
   ) {
     Object.entries(chainProviderUrls).forEach(([chainId, providerUrl]) => {
       this.chainProviders.set(parseInt(chainId), new providers.JsonRpcProvider(providerUrl));
@@ -201,6 +195,31 @@ export class Vector {
 
     return this.executeUpdate(updateParams);
   }
+
+  ///////////////////////////////////
+  // EVENT METHODS
+
+  public on<T extends EngineEventName>(
+    event: T,
+    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+  ): void {}
+
+  public once<T extends EngineEventName>(
+    event: T,
+    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+  ): void {}
+
+  public waitFor<T extends EngineEventName>(
+    event: T,
+    timeout: number,
+    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+  ): Promise<EngineEventPayloadsMap[T]> {
+    return {} as any;
+  }
+
+  public async off() {}
 
   // JSON RPC interface -- this will accept:
   // - "vector_deposit"
