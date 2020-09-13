@@ -16,12 +16,12 @@ type StringifyBigNumberAmount<T> = Omit<T, "amount"> & { amount: string };
 
 const server = fastify();
 
-let vectorEngine: NodeCore;
+let vectorNode: NodeCore;
 const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic!).privateKey);
 server.addHook("onReady", async () => {
   const messaging = new TempNatsMessagingService("nats://localhost:4222");
   await messaging.connect();
-  vectorEngine = await NodeCore.connect(
+  vectorNode = await NodeCore.connect(
     messaging,
     new LockService(),
     new PrismaStore(),
@@ -43,11 +43,10 @@ server.post<{ Body: SetupInput }>(
   { schema: Routes.post.setup.schema },
   async (request, reply) => {
     request.body.counterpartyIdentifier;
-    const res = await vectorEngine.setup({
+    const res = await vectorNode.setup({
       counterpartyIdentifier: request.body.counterpartyIdentifier,
-      // TODO: fix casting
-      networkContext: (request.body as any).networkContext,
       timeout: request.body.timeout,
+      chainId: request.body.chainId,
     });
     if (res.isError) {
       return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });

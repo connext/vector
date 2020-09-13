@@ -57,6 +57,7 @@ export class NodeCore {
   }
 
   public async setupListener(): Promise<void> {
+    // unlock transfer if encrypted preimage exists
     this.engine.on(
       EngineEventName.CHANNEL_UPDATE_EVENT,
       (data) => {
@@ -65,6 +66,8 @@ export class NodeCore {
       },
       (data) => data.updatedChannelState.meta.recipient === this.engine.publicIdentifier,
     );
+
+    // subscribe to isAlive
   }
 
   public async setup(params: SetupInput): Promise<Result<any>> {
@@ -138,7 +141,7 @@ export class NodeCore {
   }
 
   public async addToQueuedUpdates(params: any): Promise<Result<any>> {
-    return;
+    return Result.ok(undefined);
     // TODO what kinds of params do we want this to accept?
     // First convert the update into correct type
     // Then store in queued updates table
