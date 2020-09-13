@@ -15,6 +15,9 @@ export interface IEngineStore {
   // TODO: best interface?
   saveTransferToChannel(channelAddress: string, transfer: CoreTransferState, state: TransferState): Promise<void>;
   removeTransferFromChannel(channelAddress: string, transferId: string, state: TransferState): Promise<void>;
+
+  getSchemaVersion(): Promise<number>;
+  updateSchemaVersion(version?: number): Promise<void>;
 }
 
 export interface INodeCoreStore extends IEngineStore {}

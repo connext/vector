@@ -235,4 +235,6 @@ export class Vector {
     }
     await this[methodName](payload.params);
   }
+
+  public rpcRouter = {};
 }
