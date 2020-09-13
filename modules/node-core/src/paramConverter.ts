@@ -12,10 +12,10 @@ import {
   LinkedTransferParams,
   LinkedTransferState,
   Result,
+  DEFAULT_TRANSFER_TIMEOUT
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
-import { DEFAULT_TRANSFER_TIMEOUT } from "./constants";
 import { InvalidTransferType } from "./errors";
 
 export function convertConditionalTransferParams<T extends ConditionalTransferType>(
