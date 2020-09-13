@@ -1,0 +1,38 @@
+{
+  "name": "@connext/vector-node-core",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "rm -rf ./dist/* && npm run build:ts -b .",
+    "build:ts": "node_modules/.bin/tsc -b .",
+    "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
+    "test": "exec ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
+    "watch": "ts-mocha --bail --check-leaks --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/**/*.spec.ts'"
+  },
+  "author": "Arjun Bhuptani",
+  "license": "MIT",
+  "dependencies": {
+    "@connext/vector-contracts": "0.0.1",
+    "@connext/vector-engine": "0.0.1",
+    "@connext/vector-types": "0.0.1",
+    "@connext/vector-utils": "0.0.1",
+    "ethers": "5.0.12",
+    "evt": "1.8.9"
+  },
+  "devDependencies": {
+    "@types/chai": "4.2.12",
+    "@types/chai-as-promised": "7.1.3",
+    "@types/chai-subset": "1.3.3",
+    "@types/mocha": "8.0.3",
+    "chai": "4.2.0",
+    "chai-as-promised": "7.1.1",
+    "mocha": "8.1.3",
+    "ts-mocha": "7.0.0",
+    "typescript": "4.0.2"
+  }
+}
