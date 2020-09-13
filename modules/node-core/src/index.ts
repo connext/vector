@@ -16,7 +16,6 @@ import {
   ResolveTransferParams,
 } from "@connext/vector-types";
 
-import { setupEngineProvider } from "./engineProvider";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
@@ -40,10 +39,7 @@ export class NodeCore {
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
   ): Promise<NodeCore> {
-    // TODO write this
-    const engine = await setupEngineProvider(messaging, lock, store as IEngineStore, signer, chainProviders);
-    // TODO look at what was done for SDK to relay events
-
+    const engine = await Vector.connect(messaging, lock, store as IEngineStore, signer, chainProviders);
     const nodeCore = new NodeCore(messaging, store, engine, chainProviders, chainAddresses);
     await nodeCore.setupListener();
     return nodeCore;

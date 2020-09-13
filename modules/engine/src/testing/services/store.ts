@@ -1,6 +1,12 @@
 import { FullChannelState, CoreTransferState, IEngineStore, TransferState } from "@connext/vector-types";
 
 export class MemoryStoreService implements IEngineStore {
+  getSchemaVersion(): Promise<number> {
+    throw new Error("Method not implemented.");
+  }
+  updateSchemaVersion(version?: number): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
   // Map<channelAddress, transferId[]>
   private transfersInChannel: Map<string, string[]> = new Map();
 
