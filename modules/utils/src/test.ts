@@ -230,7 +230,7 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
   return createTestChannelUpdate(type, signerOverrides);
 }
 
-export const createTestLinkedTransferState = (overrides: PartialTransferOverrides = {}): LinkedTransferState => {
+export const createTestLinkedTransferState = (overrides: PartialTransferOverrides & { linkedHash?: string } = {}): LinkedTransferState => {
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {

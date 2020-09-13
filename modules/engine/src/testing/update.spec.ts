@@ -1,4 +1,5 @@
-import { IEngineStore, UpdateType } from "@connext/vector-types";
+import { LinkedTransfer } from "@connext/vector-contracts";
+import { IEngineStore, JsonRpcProvider, UpdateType } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
   createTestChannelState,
@@ -11,9 +12,12 @@ import {
   hashLinkedTransferState,
   createCoreTransferState,
   hashCoreTransferState,
+  createLinkedHash,
+  encodeLinkedTransferResolver,
+  encodeLinkedTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import { constants } from "ethers";
+import { constants, Contract, utils } from "ethers";
 
 import { applyUpdate } from "../../src/update";
 import { MerkleTree } from "../merkleTree";
@@ -21,20 +25,25 @@ import { MerkleTree } from "../merkleTree";
 import { config } from "./services/config";
 import { MemoryStoreService } from "./services/store";
 
+const { hexlify, randomBytes } = utils;
+
 // Should test that the application of an update results in the correct
 // final state. While this function *will* fail if validation fails,
 // the validation function is tested elsewhere
 describe.only("applyUpdate", () => {
   const chainProviders = config.chainProviders;
-  const [providerUrl] = Object.values(chainProviders) as string[];
+  const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
+  const provider = new JsonRpcProvider(providerUrl);
   const signers = Array(2)
     .fill(0)
     .map((v) => getRandomChannelSigner(providerUrl));
 
   let store: IEngineStore;
+  let linkedTransferApp: string;
 
   beforeEach(() => {
     store = new MemoryStoreService();
+    linkedTransferApp = global["networkContext"].linkedTransferApp;
   });
 
   it("should fail for an unrecognized update type", async () => {
@@ -64,7 +73,7 @@ describe.only("applyUpdate", () => {
       lockedValue: [],
       assetIds: [],
       merkleRoot: mkHash(),
-      latestUpdate: undefined,
+      latestUpdate: update,
       networkContext: update.details.networkContext,
     });
   });
@@ -95,6 +104,7 @@ describe.only("applyUpdate", () => {
       latestDepositNonce: update.details.latestDepositNonce,
       balances: [balance],
       assetIds: [assetId],
+      latestUpdate: update,
     });
   });
 
@@ -122,6 +132,7 @@ describe.only("applyUpdate", () => {
       nonce: update.nonce,
       latestDepositNonce: update.details.latestDepositNonce,
       balances: [update.balance],
+      latestUpdate: update,
     });
   });
 
@@ -150,8 +161,8 @@ describe.only("applyUpdate", () => {
       balance: transferInitialState.balance,
       details: {
         ...coreState,
-        transferInitialState, 
-        merkleRoot: tree.root, 
+        transferInitialState,
+        merkleRoot: tree.root,
         merkleProofData: tree.proof(hash),
       },
     });
@@ -163,12 +174,67 @@ describe.only("applyUpdate", () => {
       lockedValue: [{ amount: "1" }],
       nonce: update.nonce,
       merkleRoot: update.details.merkleRoot,
+      latestUpdate: update,
     });
   });
 
-  // it("should work for resolve", () => {});
+  it("should work for resolve", async () => {
+    const preImage = hexlify(randomBytes(32));
+    const linkedHash = createLinkedHash(preImage);
+    const transferInitialState = createTestLinkedTransferState({
+      balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
+      linkedHash,
+    });
+    const assetId = constants.AddressZero;
 
-  // it("should fail for resolve if the initial state is not included", () => {});
+    const ret = await new Contract(linkedTransferApp, LinkedTransfer.abi, provider).resolve(
+      encodeLinkedTransferState(transferInitialState),
+      encodeLinkedTransferResolver({ preImage }),
+    );
+    const balance = {
+      to: ret.to,
+      amount: ret.amount.map(a => a.toString()),
+    };
+
+    // Create the channel state
+    const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+      nonce: 3,
+      lockedValue: [{ amount: "1" }],
+      balances: [{ to: signers.map(s => s.address), amount: ["0", "0"]}],
+      assetIds: [assetId],
+      latestDepositNonce: 1,
+    });
+
+    // Create the transfer update
+    const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
+    const emptyTree = new MerkleTree([]);
+    const update = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
+      nonce: state.nonce + 1,
+      assetId,
+      balance,
+      details: {
+        transferId: coreState.transferId,
+        transferEncodings: coreState.transferEncodings,
+        transferDefinition: coreState.transferDefinition,
+        transferResolver: { preImage },
+        merkleRoot: emptyTree.root,
+      },
+    });
+
+    // Load the store
+    await store.saveChannelState(state);
+    await store.saveTransferToChannel(state.channelAddress, coreState, transferInitialState);
+
+    const newState = await applyUpdate(update, state, store);
+    expect(newState).to.containSubset({
+      ...state,
+      balances: [{ ...transferInitialState.balance, amount: ["1", "0"] }],
+      lockedValue: [{ amount: "0" }],
+      nonce: update.nonce,
+      merkleRoot: emptyTree.root,
+      latestUpdate: update,
+    });
+  });
 });
 
 // describe("generateUpdate", () => {});

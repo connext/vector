@@ -12,6 +12,9 @@ export interface IEngineStore {
   getActiveTransfers(channelAddress: string): Promise<CoreTransferState[]>;
   getCoreTransferState(transferId: string): Promise<CoreTransferState | undefined>;
   getTransferState(transferId: string): Promise<TransferState | undefined>;
+  // TODO: best interface?
+  saveTransferToChannel(channelAddress: string, transfer: CoreTransferState, state: TransferState): Promise<void>;
+  removeTransferFromChannel(channelAddress: string, transferId: string, state: TransferState): Promise<void>;
 }
 
 export interface INodeCoreStore extends IEngineStore {}

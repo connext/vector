@@ -29,8 +29,6 @@ ethprovider_url="http://172.17.0.1:$ethprovider_port"
 bash ops/start-chain.sh $chain_id
 CHAIN_PROVIDERS="{\"$chain_id\":\"$ethprovider_url\"}"
 
-echo "CHAIN_PROVIDERS" $CHAIN_PROVIDERS
-
 ########################################
 # Launch tests
 

@@ -129,6 +129,9 @@ export type ContractAddresses = {
   channelFactoryAddress: Address;
   vectorChannelMastercopyAddress: Address;
   adjudicatorAddress: Address;
+  transferDefinition?: Address;
+  linkedTransferApp?: Address;
+  withdrawApp?: Address;
 };
 
 export type NetworkContext = ContractAddresses & {
@@ -174,7 +177,6 @@ export type ResolveUpdateDetails = {
   transferDefinition: Address;
   transferResolver: any; //TODO
   transferEncodings: string[]; // Initial state, resolver state
-  merkleProofData: any; //TODO
   merkleRoot: string;
 };
 

@@ -49,7 +49,7 @@ export async function applyUpdate<T extends UpdateType>(
         lockedValue: [],
         assetIds: [],
         merkleRoot: constants.HashZero,
-        latestUpdate: undefined,
+        latestUpdate: update,
         networkContext,
         publicIdentifiers,
       };
@@ -66,6 +66,7 @@ export async function applyUpdate<T extends UpdateType>(
           : [...state.assetIds, update.assetId],
         nonce: update.nonce,
         latestDepositNonce,
+        latestUpdate: update,
       };
     }
     case UpdateType.create: {
@@ -85,6 +86,7 @@ export async function applyUpdate<T extends UpdateType>(
         lockedValue,
         nonce: update.nonce,
         merkleRoot,
+        latestUpdate: update,
       };
     }
     case UpdateType.resolve: {
@@ -92,7 +94,7 @@ export async function applyUpdate<T extends UpdateType>(
       const transfer = await storeService.getCoreTransferState(transferId);
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       const lockedValue = reconcileLockedValue(
-        UpdateType.create,
+        UpdateType.resolve,
         transfer.initialBalance,
         update.assetId,
         state.lockedValue,
@@ -104,6 +106,7 @@ export async function applyUpdate<T extends UpdateType>(
         lockedValue,
         nonce: update.nonce,
         merkleRoot,
+        latestUpdate: update,
       };
     }
     default: {
@@ -290,7 +293,7 @@ async function generateCreateUpdate(
     initialStateHash: hashGenericTransferState(transferInitialState),
   };
   const transferHash = hashCoreTransferState(coreTransferState);
-  const hashes = [...transfers.map((t) => t.initialStateHash), transferHash];
+  const hashes = [...transfers, coreTransferState].map(hashCoreTransferState);
   const merkle = new MerkleTree(hashes);
 
   // Create the update from the user provided params
@@ -330,7 +333,10 @@ async function generateResolveUpdate(
 
   // First generate latest merkle tree data
   const coreTransfer = transfers.find((x) => x.transferId === params.details.transferId);
-  const hashes = transfers.filter((x) => x.transferId !== params.details.transferId).map((x) => x.initialStateHash);
+  // TODO: is merkle tree hash of initial states or core transfer
+  const hashes = transfers
+    .filter((x) => x.transferId !== params.details.transferId)
+    .map((x) => hashCoreTransferState(x));
   const merkle = new MerkleTree(hashes);
 
   // Get the final transfer balance from contract
@@ -349,7 +355,6 @@ async function generateResolveUpdate(
       transferDefinition: coreTransfer.transferDefinition,
       transferResolver: params.details.transferResolver,
       transferEncodings: coreTransfer.transferEncodings,
-      merkleProofData: merkle.proof(coreTransfer.initialStateHash),
       merkleRoot: merkle.root,
     },
     signatures: [],
@@ -508,7 +513,7 @@ function reconcileLockedValue(
 
   // Find the total amount locked in the transfer initial
   // state
-  const transferLocked = BigNumber.from(transferBalanceToReconcile.amount[0]).add(transferBalanceToReconcile.amount[1]);
+  const transferLocked = transferBalanceToReconcile.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
 
   // Update the locked value by the balance difference
   // Locked values should increase during transfer creation

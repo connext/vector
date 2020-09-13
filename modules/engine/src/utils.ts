@@ -87,5 +87,11 @@ export const resolve = async (
       logger.debug(`Failed to create with pure-evm`, { error: e.message });
     }
   }
-  return contract.resolve(encodedState, encodedResolver);
+  const ret = await contract.resolve(encodedState, encodedResolver);
+  // NOTE: contract values are returned as an array type, so transform the
+  // returned value to the proper object
+  return {
+    to: ret.to,
+    amount: ret.amount.map(a => a.toString()),
+  };
 };

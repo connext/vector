@@ -11,6 +11,8 @@ import {
   WithdrawStateEncoding,
   LinkedTransferStateEncoding,
   CoreTransferStateEncoding,
+  LinkedTransferResolverEncoding,
+  LinkedTransferResolver,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
@@ -26,13 +28,11 @@ export const isLinkedTransferState = (state: any): state is LinkedTransferState 
 };
 
 export const encodeLinkedTransferState = (state: LinkedTransferState): string => {
-  return defaultAbiCoder.encode([LinkedTransferStateEncoding], [{
-    ...state,
-    balance: {
-      ...state.balance,
-      amount: (state.balance.amount.map(a => BigNumber.from(a))),
-    },
-  }]);
+  return defaultAbiCoder.encode([LinkedTransferStateEncoding], [state]);
+};
+
+export const encodeLinkedTransferResolver = (resoler: LinkedTransferResolver): string => {
+  return defaultAbiCoder.encode([LinkedTransferResolverEncoding], [resoler]);
 };
 
 export const encodeWithdrawTransferState = (state: WithdrawState): string => {
@@ -85,9 +85,18 @@ export function hashTransferState(name: TransferName, state: TransferNameToState
 // TODO: how to include the merkle proof in the hash?
 export const hashCoreTransferState = (state: CoreTransferState): string => {
   return keccak256(
-    solidityPack(["address", "address", "bytes32", "address", "bytes32", "uint256"],
-    [state.assetId, state.channelAddress, state.transferId, state.transferDefinition, state.initialStateHash, state.transferTimeout]
-  ));
+    solidityPack(
+      ["address", "address", "bytes32", "address", "bytes32", "uint256"],
+      [
+        state.assetId,
+        state.channelAddress,
+        state.transferId,
+        state.transferDefinition,
+        state.initialStateHash,
+        state.transferTimeout,
+      ],
+    ),
+  );
 };
 
 // TODO: correct implementation?
@@ -100,4 +109,8 @@ export const hashLinkedTransferState = (state: LinkedTransferState): string => {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const hashWithdrawState = (state: WithdrawState): string => {
   return keccak256(solidityPack(["bytes"], [encodeWithdrawTransferState(state)]));
+};
+
+export const createLinkedHash = (preImage: string): string => {
+  return utils.soliditySha256(["bytes32"], [preImage]);
 };
