@@ -1,14 +1,21 @@
-import { CreateTransferParams, DepositParams, FullChannelState, ResolveTransferParams, SetupParams } from "./channel";
-import { GenericError, Result } from "./error";
+import {
+  CreateTransferParams,
+  DepositParams,
+  FullChannelState,
+  ResolveTransferParams,
+  SetupParams,
+  UpdateType,
+} from "./channel";
+import { ChannelUpdateError, InboundChannelError, Result } from "./error";
 import { EngineEventName, EngineEventPayloadsMap } from "./event";
 
 export interface IVectorEngine {
   signerAddress: string;
   publicIdentifier: string;
-  setup(params: SetupParams): Result<any, GenericError>;
-  deposit(params: DepositParams): Result<FullChannelState, GenericError>;
-  createTransfer(params: CreateTransferParams): Result<FullChannelState, GenericError>;
-  resolveTransfer(params: ResolveTransferParams): Result<FullChannelState, GenericError>;
+  setup(params: SetupParams): Promise<Result<any, ChannelUpdateError>>;
+  deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
+  createTransfer(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
+  resolveTransfer(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
   on<T extends EngineEventName>(
     event: T,
     callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
@@ -25,3 +32,18 @@ export interface IVectorEngine {
     filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
   ): Promise<EngineEventPayloadsMap[T]>;
 }
+
+export type VectorChannelMessage<T extends UpdateType = any> = {
+  to: string;
+  from: string;
+  data: T | any; // TODO: Should be typed based on message
+};
+
+export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
+  error: InboundChannelError;
+};
+
+export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
+
+// TODO: fix these interfaces!
+export type IOnchainService = any;

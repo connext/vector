@@ -18,8 +18,8 @@ import {
   ILoggerService,
   ConditionalTransferType,
   Result,
+  IVectorEngine,
 } from "@connext/vector-types";
-import { constants } from "ethers";
 
 import {
   convertConditionalTransferParams,
@@ -31,7 +31,7 @@ export class NodeCore {
   private constructor(
     private readonly messaging: IMessagingService,
     private readonly store: INodeCoreStore,
-    private readonly engine: Vector,
+    private readonly engine: IVectorEngine,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: ILoggerService,
@@ -84,7 +84,11 @@ export class NodeCore {
       return createResult;
     }
     const createParams = createResult.getValue();
-    const res = await this.engine.createTransfer(createParams);
+    const engineResult = await this.engine.createTransfer(createParams);
+    if (engineResult.isError) {
+      return engineResult;
+    }
+    const res = engineResult.getValue();
     return Result.ok(undefined);
   }
 

@@ -14,6 +14,11 @@ import {
   ChannelUpdateEvent,
   EngineEventName,
   EngineEventPayloadsMap,
+  IVectorEngine,
+  Result,
+  InboundChannelError,
+  ChannelUpdateError,
+  VectorMessage,
 } from "@connext/vector-types";
 import { providers } from "ethers";
 import { Evt } from "evt";
@@ -21,11 +26,10 @@ import { VectorChannel, ChannelFactory } from "@connext/vector-contracts";
 
 import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
-import { VectorMessage } from "./types";
 import { generateUpdate } from "./update";
-import { InboundChannelError, logger } from "./utils";
+import { logger } from "./utils";
 
-export class Vector {
+export class Vector implements IVectorEngine {
   private protocolChannelStateEvt = Evt.create<FullChannelState>();
   private protocolChannelErrorEvt = Evt.create<InboundChannelError>();
   private channelUpdateEvt = Evt.create<ChannelUpdateEvent>();
@@ -67,7 +71,7 @@ export class Vector {
   }
 
   // Primary protocol execution from the leader side
-  private async executeUpdate(params: UpdateParams<any>): Promise<FullChannelState> {
+  private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
     logger.info(`Start executeUpdate`, { params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
@@ -76,19 +80,24 @@ export class Vector {
       throw new Error(`Channel not found ${params.channelAddress}`);
     }
     const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
-    const update = await generateUpdate(params, this.storeService, this.signer);
-    const updatedChannelState = await sync.outbound(
-      update,
+    const updateRes = await generateUpdate(params, this.storeService, this.signer);
+    if (updateRes.isError) {
+      return Result.fail(updateRes.getError()!);
+    }
+    const outboundRes = await sync.outbound(
+      updateRes.getValue(),
       providerUrl,
       this.storeService,
       this.messagingService,
       this.protocolChannelStateEvt,
       this.protocolChannelErrorEvt,
     );
-    this.channelUpdateEvt.post({
-      direction: "outbound",
-      updatedChannelState,
-    });
+
+    if (outboundRes)
+      this.channelUpdateEvt.post({
+        direction: "outbound",
+        updatedChannelState,
+      });
     await this.lockService.releaseLock(params.channelAddress, key);
     return updatedChannelState;
   }
@@ -142,7 +151,7 @@ export class Vector {
    * ***************************
    */
 
-  public async setup(params: SetupParams): Promise<any> {
+  public async setup(params: SetupParams): Promise<Result<any>> {
     if (!this.chainProviders.has(params.networkContext.chainId)) {
       throw new Error(`No chain provider for chainId ${params.networkContext.chainId}`);
     }
@@ -165,7 +174,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async deposit(params: DepositParams): Promise<FullChannelState> {
+  public async deposit(params: DepositParams): Promise<Result<FullChannelState>> {
     // TODO validate deposit params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -176,7 +185,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async createTransfer(params: CreateTransferParams): Promise<FullChannelState> {
+  public async createTransfer(params: CreateTransferParams): Promise<Result<Promise<FullChannelState>>> {
     // TODO validate create params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -187,7 +196,7 @@ export class Vector {
     return this.executeUpdate(updateParams);
   }
 
-  public async resolveTransfer(params: ResolveTransferParams): Promise<FullChannelState> {
+  public async resolveTransfer(params: ResolveTransferParams): Promise<Result<Promise<FullChannelState>>> {
     // TODO validate resolve params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,

@@ -8,9 +8,6 @@ const { defaultAbiCoder } = utils;
 
 // import { VectorChannelMessage, ChannelState } from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type InboundChannelError = any;
-
 // NOTE: These are very simple type-specific utils
 // To prevent cyclic dependencies, these should not be moved to the utils module
 export const tidy = (str: string): string => `${str.replace(/\n/g, "").replace(/ +/g, " ")}`;
@@ -92,6 +89,6 @@ export const resolve = async (
   // returned value to the proper object
   return {
     to: ret.to,
-    amount: ret.amount.map(a => a.toString()),
+    amount: ret.amount.map((a) => a.toString()),
   };
 };

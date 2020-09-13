@@ -19,6 +19,8 @@ import {
   CoreTransferState,
   IEngineStore,
   TransferState,
+  ChannelUpdateError,
+  Result,
 } from "@connext/vector-types";
 
 import { MerkleTree } from "./merkleTree";
@@ -134,13 +136,13 @@ export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   storeService: IEngineStore,
   signer: IChannelSigner,
-): Promise<ChannelUpdate<T>> {
+): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
   // Get the channel state
   const state = await storeService.getChannelState(params.channelAddress);
 
   // Only in the case of setup should the state be undefined
   if (!state && params.type !== UpdateType.setup) {
-    throw new Error(`Could not find channel in store to update`);
+    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, {} as any));
   }
 
   // Create the update from user parameters based on type
@@ -184,10 +186,10 @@ export async function generateUpdate<T extends UpdateType>(
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   // Return the validated update to send to counterparty
-  return {
+  return Result.ok({
     ...unsigned,
     signatures: commitment.signatures,
-  };
+  });
 }
 
 async function generateSetupUpdate(
