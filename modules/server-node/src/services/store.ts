@@ -1,5 +1,4 @@
 import {
-  IStoreService,
   FullChannelState,
   CoreTransferState,
   Balance,
@@ -8,8 +7,8 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  LinkedTransferState,
-  WithdrawState,
+  IEngineStore,
+  TransferState,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
@@ -17,7 +16,7 @@ import {
   PrismaClient,
 } from "@prisma/client";
 
-export class PrismaStore implements IStoreService {
+export class PrismaStore implements IEngineStore {
   public prisma: PrismaClient;
 
   constructor() {
@@ -305,7 +304,11 @@ export class PrismaStore implements IStoreService {
     throw new Error("Method not implemented.");
   }
 
-  getTransferState(transferId: string): Promise<LinkedTransferState | WithdrawState | undefined> {
+  getTransferState(transferId: string): Promise<TransferState | undefined> {
+    throw new Error("Method not implemented.");
+  }
+
+  getCoreTransferState(transferId: string): Promise<CoreTransferState | undefined> {
     throw new Error("Method not implemented.");
   }
 }

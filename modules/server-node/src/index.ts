@@ -1,5 +1,6 @@
 import fastify from "fastify";
 import { Vector } from "@connext/vector-engine";
+import { DepositInput, CreateTransferInput } from "@connext/vector-types";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
 
@@ -35,7 +36,8 @@ server.post<{ Body: SetupInput }>(
     request.body.counterpartyIdentifier;
     const res = await vectorEngine.setup({
       counterpartyIdentifier: request.body.counterpartyIdentifier,
-      networkContext,
+      // TODO: fix casting
+      networkContext: (request.body as any).networkContext,
       timeout: request.body.timeout,
     });
     if (res.isError) {
@@ -49,6 +51,8 @@ server.post<{ Body: StringifyBigNumberAmount<DepositInput> }>(
   Routes.post.deposit.route,
   { schema: Routes.post.deposit.schema },
   async (request, reply) => {
+    // TODO: Fix isoNode!
+    const isoNode = {} as any;
     const res = await isoNode.deposit({
       amount: request.body.amount,
       assetId: request.body.assetId,
@@ -65,6 +69,8 @@ server.post<{ Body: StringifyBigNumberAmount<CreateTransferInput> }>(
   Routes.post.createTransfer.route,
   { schema: Routes.post.deposit.schema },
   async (request, reply) => {
+    // TODO: Fix isoNode!
+    const isoNode = {} as any;
     const res = await isoNode.createTransfer({
       amount: request.body.amount,
       assetId: request.body.assetId,

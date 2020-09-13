@@ -1,6 +1,9 @@
 import { FullChannelState, CoreTransferState, IEngineStore, TransferState } from "@connext/vector-types";
 
 export class MemoryStoreService implements IEngineStore {
+  getCoreTransferState(transferId: string): Promise<CoreTransferState> {
+    throw new Error("Method not implemented.");
+  }
   connect(): Promise<void> {
     throw new Error("Method not implemented.");
   }
