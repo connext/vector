@@ -4,6 +4,7 @@ export * from "./constants";
 export * from "./contracts";
 export * from "./core";
 export * from "./crypto";
+export * from "./engine";
 export * from "./engineProvider";
 export * from "./error";
 export * from "./event";

@@ -16,7 +16,10 @@ import {
   ResolveTransferParams,
   EngineEventName,
   ILoggerService,
+  ConditionalTransferType,
+  Result,
 } from "@connext/vector-types";
+import { constants } from "ethers";
 
 import {
   convertConditionalTransferParams,
@@ -65,7 +68,9 @@ export class NodeCore {
     return this.engine.deposit(params);
   }
 
-  public async conditionalTransfer(params: ConditionalTransferParams<any>): Promise<any> {
+  public async conditionalTransfer<T extends ConditionalTransferType = any>(
+    params: ConditionalTransferParams<T>,
+  ): Promise<Result<any>> {
     // TODO types
     // TODO input validation
     const channel = await this.store.getChannelState(params.channelAddress);
@@ -74,12 +79,13 @@ export class NodeCore {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createParams: CreateTransferParams = await convertConditionalTransferParams(
-      params,
-      this.chainAddresses,
-      channel!,
-    );
-    return this.engine.createTransfer(createParams);
+    const createResult = convertConditionalTransferParams(params, this.chainAddresses, channel!);
+    if (createResult.isError) {
+      return createResult;
+    }
+    const createParams = createResult.getValue();
+    const res = await this.engine.createTransfer(createParams);
+    return Result.ok(undefined);
   }
 
   public async resolveCondition(params: ResolveConditionParams): Promise<any> {

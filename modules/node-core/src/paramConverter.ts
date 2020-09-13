@@ -10,33 +10,38 @@ import {
   LinkedTransferResolverEncoding,
   WithdrawParams,
   LinkedTransferParams,
+  LinkedTransferState,
+  Result,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
 import { DEFAULT_TRANSFER_TIMEOUT } from "./constants";
+import { InvalidTransferType } from "./errors";
 
-export async function convertConditionalTransferParams<T extends ConditionalTransferType>(
+export function convertConditionalTransferParams<T extends ConditionalTransferType>(
   params: ConditionalTransferParams<T>,
   chainAddresses: ChainAddresses,
   channel: FullChannelState,
-): Promise<CreateTransferParams> {
+): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, amount, assetId, recipient, paymentId, details } = params;
   const chainId = channel.networkContext.chainId;
   const participants = channel.participants;
-  let transferDefinition;
-  let transferInitialState;
-  let encodings;
+  let transferDefinition: string | undefined;
+  let transferInitialState: LinkedTransferState;
+  let encodings: string[];
 
   if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
     transferDefinition = chainAddresses[chainId].linkedTransferDefinition;
     transferInitialState = {
       balance: {
-        amount: [amount, 0],
+        amount: [amount, "0"],
         to: participants,
       },
       linkedHash: utils.soliditySha256(["bytes32"], [(details as LinkedTransferParams).preImage]),
     };
     encodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
+  } else {
+    return Result.fail(new InvalidTransferType(params.conditionType));
   }
 
   const meta = {
@@ -45,16 +50,16 @@ export async function convertConditionalTransferParams<T extends ConditionalTran
     meta: params.meta,
   };
 
-  return {
+  return Result.ok({
     channelAddress,
     amount,
     assetId,
-    transferDefinition,
+    transferDefinition: transferDefinition!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT,
     encodings,
     meta,
-  };
+  });
 }
 
 export async function convertResolveConditionParams(params: ResolveConditionParams): Promise<ResolveTransferParams> {
