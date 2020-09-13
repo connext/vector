@@ -193,14 +193,14 @@ describe.only("applyUpdate", () => {
     );
     const balance = {
       to: ret.to,
-      amount: ret.amount.map(a => a.toString()),
+      amount: ret.amount.map((a) => a.toString()),
     };
 
     // Create the channel state
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,
       lockedValue: [{ amount: "1" }],
-      balances: [{ to: signers.map(s => s.address), amount: ["0", "0"]}],
+      balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
       assetIds: [assetId],
       latestDepositNonce: 1,
     });

@@ -1,5 +1,7 @@
 // TODO: Fix all placeholders!
 
+import { Address, Bytes32, PublicIdentifier } from "./basic";
+
 export const ConditionalTransferType = {
   LinkedTransfer: "LinkedTransfer",
 } as const;
@@ -14,14 +16,18 @@ export type LinkedTransferParams = {
 };
 
 export type ConditionalTransferParams<T extends ConditionalTransferType> = {
-  channelAddress: string;
+  channelAddress: Address;
   amount: string;
-  assetId: string;
-  recipient?: string;
+  assetId: Address;
+  recipient?: PublicIdentifier;
   conditionType: T;
-  paymentId: string; // This is needed for hopped transfers, but it might get confusing against transferId
+  paymentId: Bytes32; // This is needed for hopped transfers, but it might get confusing against transferId
   details: TransferParamsMap[T];
   meta?: any;
+};
+
+export type ConditionalTransferResponse = {
+  paymentId: Bytes32;
 };
 
 export type ResolveConditionParams = any;

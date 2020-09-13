@@ -19,8 +19,11 @@ import {
   ConditionalTransferType,
   Result,
   IVectorEngine,
+  ChannelUpdateError,
+  ConditionalTransferResponse,
 } from "@connext/vector-types";
 
+import { InvalidTransferType } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
@@ -70,7 +73,7 @@ export class NodeCore {
 
   public async conditionalTransfer<T extends ConditionalTransferType = any>(
     params: ConditionalTransferParams<T>,
-  ): Promise<Result<any>> {
+  ): Promise<Result<ConditionalTransferResponse, InvalidTransferType | ChannelUpdateError>> {
     // TODO types
     // TODO input validation
     const channel = await this.store.getChannelState(params.channelAddress);
@@ -81,15 +84,15 @@ export class NodeCore {
     // First, get translated `create` params using the passed in conditional transfer ones
     const createResult = convertConditionalTransferParams(params, this.chainAddresses, channel!);
     if (createResult.isError) {
-      return createResult;
+      return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
     const engineResult = await this.engine.createTransfer(createParams);
     if (engineResult.isError) {
-      return engineResult;
+      return Result.fail(engineResult.getError()!);
     }
     const res = engineResult.getValue();
-    return Result.ok(undefined);
+    return Result.ok({ paymentId: params.paymentId });
   }
 
   public async resolveCondition(params: ResolveConditionParams): Promise<any> {
