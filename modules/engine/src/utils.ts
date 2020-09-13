@@ -73,8 +73,7 @@ export const resolve = async (
 ): Promise<Balance> => {
   const encodedState = defaultAbiCoder.encode([core.transferEncodings[0]], [state]);
   const encodedResolver = defaultAbiCoder.encode([core.transferEncodings[1]], [resolver]);
-  const contract = new Contract(core.transferId, TransferDefinition.abi, signer);
-  // TODO: use pure-evm
+  const contract = new Contract(core.transferDefinition, TransferDefinition.abi, signer);
   if (bytecode) {
     try {
       const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);

@@ -30,7 +30,7 @@ const { hexlify, randomBytes } = utils;
 // Should test that the application of an update results in the correct
 // final state. While this function *will* fail if validation fails,
 // the validation function is tested elsewhere
-describe.only("applyUpdate", () => {
+describe("applyUpdate", () => {
   const chainProviders = config.chainProviders;
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const provider = new JsonRpcProvider(providerUrl);
@@ -39,11 +39,11 @@ describe.only("applyUpdate", () => {
     .map((v) => getRandomChannelSigner(providerUrl));
 
   let store: IEngineStore;
-  let linkedTransferApp: string;
+  let linkedTransferDefinition: string;
 
   beforeEach(() => {
     store = new MemoryStoreService();
-    linkedTransferApp = global["networkContext"].linkedTransferApp;
+    linkedTransferDefinition = global["networkContext"].linkedTransferDefinition;
   });
 
   it("should fail for an unrecognized update type", async () => {
@@ -187,7 +187,7 @@ describe.only("applyUpdate", () => {
     });
     const assetId = constants.AddressZero;
 
-    const ret = await new Contract(linkedTransferApp, LinkedTransfer.abi, provider).resolve(
+    const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
       encodeLinkedTransferState(transferInitialState),
       encodeLinkedTransferResolver({ preImage }),
     );

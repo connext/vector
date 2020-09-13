@@ -2,7 +2,6 @@ import {
   Adjudicator,
   ChannelFactory,
   LinkedTransfer,
-  TransferDefinition,
   VectorChannel,
   Withdraw,
 } from "@connext/vector-contracts";
@@ -62,12 +61,6 @@ const deployArtifactsToChain = async (wallet: Wallet): Promise<ContractAddresses
   );
 
   const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, wallet).deploy();
-
-  const transferDefinition = await new ContractFactory(
-    TransferDefinition.abi,
-    TransferDefinition.bytecode,
-    wallet,
-  ).deploy();
 
   // Deploy app contracts
   const linkedTransfer = await new ContractFactory(LinkedTransfer.abi, LinkedTransfer.bytecode, wallet).deploy();
