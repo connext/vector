@@ -248,7 +248,7 @@ describe("applyUpdate", () => {
   });
 });
 
-describe.only("generateUpdate", () => {
+describe("generateUpdate", () => {
   const chainProviders = config.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
