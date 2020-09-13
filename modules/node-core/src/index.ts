@@ -16,21 +16,12 @@ import {
   ResolveTransferParams,
 } from "@connext/vector-types";
 
+import { setupEngineProvider } from "./engineProvider";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "./paramConverter";
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const setupEngineProvider = async (vector: Vector) => {
-  throw new Error("implement setupEngineProvider");
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const setupListener = async (engineProvider: any) => {
-  throw new Error("implement setupListener");
-};
 
 export class NodeCore {
   private constructor(
@@ -49,16 +40,16 @@ export class NodeCore {
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
   ): Promise<NodeCore> {
-    const vector = await Vector.connect(messaging, lock, store as IEngineStore, signer, chainProviders);
-
     // TODO write this
-    const engineProvider = await setupEngineProvider(vector);
+    const engineProvider = await setupEngineProvider(messaging, lock, store as IEngineStore, signer, chainProviders);
     // TODO look at what was done for SDK to relay events
-    await setupListener(engineProvider);
 
     const nodeCore = new NodeCore(messaging, store, engineProvider, chainProviders, chainAddresses);
+    await nodeCore.setupListener();
     return nodeCore;
   }
+
+  public async setupListener(): Promise<void> {}
 
   public async deposit(params: DepositParams): Promise<any> {
     // TODO we need a deposit response here

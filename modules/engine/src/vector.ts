@@ -50,7 +50,6 @@ export class Vector {
     storeService: IEngineStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
-    // chainAddresses: ChainAddresses,
   ): Promise<Vector> {
     const node = new Vector(messagingService, lockService, storeService, signer, chainProviders);
 
