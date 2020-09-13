@@ -1,17 +1,57 @@
 import {
   CreateTransferParams,
+  ConditionalTransferType,
   ResolveTransferParams,
   ChainAddresses,
   ConditionalTransferParams,
+  FullChannelState,
   ResolveConditionParams,
+  LinkedTransferStateEncoding,
+  LinkedTransferResolverEncoding,
   WithdrawParams,
+  DEFAULT_TRANSFER_TIMEOUT
 } from "@connext/vector-types";
 
+import {utils} from "ethers";
+
 export async function convertConditionalTransferParams(
-  params: ConditionalTransferParams,
+  params: ConditionalTransferParams<any>,
   chainAddresses: ChainAddresses,
+  channel: FullChannelState,
 ): Promise<CreateTransferParams> {
-  throw new Error("implement convertConditionalTransferParams");
+  const { channelAddress, amount, assetId, recipient, paymentId, details } = params;
+  const chainId = channel.networkContext.chainId;
+  const participants = channel.participants;
+  let transferDefinition, transferInitialState, encodings;
+
+  if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
+    transferDefinition = chainAddresses[chainId].linkedTransferApp;
+    transferInitialState = {
+      balance: {
+        amount: [amount, 0],
+        to: participants
+      },
+      linkedHash: utils.soliditySha256(["bytes32"], [details.preImage])
+    }
+    encodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding]
+  }
+
+  const meta = {
+    recipient,
+    paymentId,
+    meta: params.meta
+  }
+
+  return {
+    channelAddress,
+    amount,
+    assetId,
+    transferDefinition,
+    transferInitialState,
+    timeout: DEFAULT_TRANSFER_TIMEOUT,
+    encodings,
+    meta
+  };
 }
 
 export async function convertResolveConditionParams(params: ResolveConditionParams): Promise<ResolveTransferParams> {

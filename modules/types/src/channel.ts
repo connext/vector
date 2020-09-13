@@ -129,9 +129,8 @@ export type ContractAddresses = {
   channelFactoryAddress: Address;
   vectorChannelMastercopyAddress: Address;
   adjudicatorAddress: Address;
-  transferDefinition?: Address;
-  linkedTransferApp?: Address;
-  withdrawApp?: Address;
+  linkedTransferDefinition?: Address;
+  withdrawDefinition?: Address;
 };
 
 export type NetworkContext = ContractAddresses & {
