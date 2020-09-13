@@ -5,7 +5,10 @@ import {
   ILockService,
   IMessagingService,
   INodeCoreStore,
-  IEngineProvider,, IRpcConnection, JsonRpcRequest, ChannelMethods
+  IEngineProvider,
+  IRpcConnection,
+  JsonRpcRequest,
+  ChannelMethods,
 } from "@connext/vector-types";
 import { Vector } from "@connext/vector-engine";
 
@@ -22,12 +25,7 @@ export const setupEngineProvider = async (
 export class VectorEngineRpcConnection implements IRpcConnection {
   public connected: boolean = true;
 
-  constructor(
-    readonly vector: Vector,
-    readonly store: IEngineStore,
-    readonly signer: IChannelSigner,
-  ) {
-  }
+  constructor(readonly vector: Vector, readonly store: IEngineStore, readonly signer: IChannelSigner) {}
 
   public async send<T extends ChannelMethods>(payload: JsonRpcRequest): Promise<any> {
     const { method, params } = payload;
