@@ -1,0 +1,1 @@
+export const DEFAULT_TRANSFER_TIMEOUT = "100";

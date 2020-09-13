@@ -14,6 +14,8 @@ import {
   DepositParams,
   CreateTransferParams,
   ResolveTransferParams,
+  EngineEventName,
+  ILoggerService,
 } from "@connext/vector-types";
 
 import {
@@ -29,6 +31,7 @@ export class NodeCore {
     private readonly engine: Vector,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
+    private readonly logger: ILoggerService,
   ) {}
 
   static async connect(
@@ -38,26 +41,44 @@ export class NodeCore {
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
+    logger: ILoggerService,
   ): Promise<NodeCore> {
     const engine = await Vector.connect(messaging, lock, store as IEngineStore, signer, chainProviders);
-    const nodeCore = new NodeCore(messaging, store, engine, chainProviders, chainAddresses);
+    const nodeCore = new NodeCore(messaging, store, engine, chainProviders, chainAddresses, logger);
     await nodeCore.setupListener();
     return nodeCore;
   }
 
-  public async setupListener(): Promise<void> {}
+  public async setupListener(): Promise<void> {
+    this.engine.on(
+      EngineEventName.CHANNEL_UPDATE_EVENT,
+      (data) => {
+        if (!data.updatedChannelState.meta.encryptedPreImage) {
+        }
+      },
+      (data) => data.updatedChannelState.meta.recipient === this.engine.publicIdentifier,
+    );
+  }
 
   public async deposit(params: DepositParams): Promise<any> {
     // TODO we need a deposit response here
     return this.engine.deposit(params);
   }
 
-  public async conditionalTransfer(params: ConditionalTransferParams): Promise<any> {
+  public async conditionalTransfer(params: ConditionalTransferParams<any>): Promise<any> {
     // TODO types
     // TODO input validation
+    const channel = await this.store.getChannelState(params.channelAddress);
+    if (!channel) {
+      // error
+    }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createParams: CreateTransferParams = await convertConditionalTransferParams(params, this.chainAddresses);
+    const createParams: CreateTransferParams = await convertConditionalTransferParams(
+      params,
+      this.chainAddresses,
+      channel!,
+    );
     return this.engine.createTransfer(createParams);
   }
 
@@ -87,10 +108,8 @@ export class NodeCore {
   }
 
   public async addToQueuedUpdates(params: any): Promise<void> {
-    // TODO what kinds of params do we want this to accept? 
-
+    // TODO what kinds of params do we want this to accept?
     // First convert the update into correct type
-  
     // Then store in queued updates table
     // return this.store.addToQueuedUpdates();
   }

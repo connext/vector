@@ -92,6 +92,9 @@ export async function applyUpdate<T extends UpdateType>(
     case UpdateType.resolve: {
       const { merkleRoot, transferId } = (update as ChannelUpdate<"resolve">).details;
       const transfer = await storeService.getCoreTransferState(transferId);
+      if (!transfer) {
+        throw new Error("Transfer not found");
+      }
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       const lockedValue = reconcileLockedValue(
         UpdateType.resolve,
@@ -148,19 +151,22 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      unsigned = await generateDepositUpdate(state, params as UpdateParams<"deposit">, signer);
+      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer);
       break;
     }
     case UpdateType.create: {
       const transfers = await storeService.getActiveTransfers(params.channelAddress);
-      unsigned = await generateCreateUpdate(state, params as UpdateParams<"create">, signer, transfers);
+      unsigned = await generateCreateUpdate(state!, params as UpdateParams<"create">, signer, transfers);
       break;
     }
     case UpdateType.resolve: {
       const transfers = await storeService.getActiveTransfers(params.channelAddress);
       const transferState = await storeService.getTransferState((params as UpdateParams<"resolve">).details.transferId);
+      if (!transferState) {
+        throw new Error(`Could not find transfer state for ${(params as UpdateParams<"resolve">).details.transferId}`);
+      }
       unsigned = await generateResolveUpdate(
-        state,
+        state!,
         params as UpdateParams<"resolve">,
         signer,
         transfers,
@@ -174,7 +180,7 @@ export async function generateUpdate<T extends UpdateType>(
   }
 
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state, storeService);
+  const newState = await applyUpdate(unsigned, state!, storeService);
   const commitment = await generateSignedChannelCommitment(newState, signer);
 
   // Return the validated update to send to counterparty
@@ -333,6 +339,9 @@ async function generateResolveUpdate(
 
   // First generate latest merkle tree data
   const coreTransfer = transfers.find((x) => x.transferId === params.details.transferId);
+  if (!coreTransfer) {
+    throw new Error(`Could not find transfer for id ${params.details.transferId}`);
+  }
   // TODO: is merkle tree hash of initial states or core transfer
   const hashes = transfers
     .filter((x) => x.transferId !== params.details.transferId)
@@ -400,16 +409,16 @@ function generateBaseUpdate<T extends UpdateType>(
 ): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
   // Create the update with all the things that are constant
   // between update types
-  const publicIdentifiers = state.publicIdentifiers ?? [
+  const publicIdentifiers = state?.publicIdentifiers ?? [
     signer.publicIdentifier,
     (params as UpdateParams<"setup">).details.counterpartyIdentifier,
   ];
   return {
-    nonce: (state.nonce ?? 0) + 1,
-    channelAddress: state.channelAddress ?? params.channelAddress,
+    nonce: (state?.nonce ?? 0) + 1,
+    channelAddress: state?.channelAddress ?? params.channelAddress,
     type: params.type,
     fromIdentifier: signer.publicIdentifier,
-    toIdentifier: publicIdentifiers.find((id) => id !== signer.publicIdentifier),
+    toIdentifier: publicIdentifiers.find((id) => id !== signer.publicIdentifier)!,
   };
 }
 
@@ -459,7 +468,7 @@ function getUpdatedChannelBalance(
       const balanceIdx = balanceToReconcile.to.findIndex((a) => a === existing.to[existingIdx]);
       return updateExistingAmount(existing.amount[existingIdx], balanceToReconcile.amount[balanceIdx]);
     })
-    .filter((x) => !!x);
+    .filter((x) => !!x) as string[];
 
   // TODO: this calculation assumes ordering between the `to` in the
   // channel balance and transfer balance are the same, verify!

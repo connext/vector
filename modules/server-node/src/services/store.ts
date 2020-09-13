@@ -22,6 +22,12 @@ export class PrismaStore implements IEngineStore {
   constructor() {
     this.prisma = new PrismaClient();
   }
+  getSchemaVersion(): Promise<number> {
+    throw new Error("Method not implemented.");
+  }
+  updateSchemaVersion(version?: number): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
   saveTransferToChannel(channelAddress: string, transfer: CoreTransferState, state: TransferState): Promise<void> {
     throw new Error("Method not implemented.");
   }

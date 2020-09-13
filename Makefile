@@ -156,6 +156,11 @@ engine: utils contracts $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
+channel-lock-bundle: utils $(shell find modules/channel-lock $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/channel-lock && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 node-core-bundle: utils engine $(shell find modules/node-core $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/node-core && npm run build"
@@ -179,6 +184,12 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+channel-lock: channel-lock-bundle $(shell find modules/channel-lock/ops $(find_options))
+	$(log_start)
+	docker build --file modules/channel-lock/ops/Dockerfile $(image_cache) --tag $(project)_channel-lock modules/channel-lock
+	docker tag $(project)_channel-lock $(project)_channel-lock:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))

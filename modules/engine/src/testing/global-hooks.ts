@@ -1,4 +1,11 @@
-import { Adjudicator, ChannelFactory, LinkedTransfer, TransferDefinition, VectorChannel, Withdraw } from "@connext/vector-contracts";
+import {
+  Adjudicator,
+  ChannelFactory,
+  LinkedTransfer,
+  TransferDefinition,
+  VectorChannel,
+  Withdraw,
+} from "@connext/vector-contracts";
 import { Wallet, providers, utils, ContractFactory } from "ethers";
 import { ContractAddresses, NetworkContext } from "@connext/vector-types";
 
@@ -35,7 +42,7 @@ async function globalSetup(): Promise<void> {
     chainId: parseInt(chainIdString),
   };
   global["wallet"] = fundedAccount;
-  global["networkContext"] = {...context};
+  global["networkContext"] = { ...context };
   console.log(`Done setting up global stuff`);
 }
 
@@ -50,23 +57,28 @@ const deployArtifactsToChain = async (wallet: Wallet): Promise<ContractAddresses
   // Deploy core contracts
   const vectorChannelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, wallet).deploy();
 
-  const channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, wallet).deploy(vectorChannelMastercopy.address);
+  const channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, wallet).deploy(
+    vectorChannelMastercopy.address,
+  );
 
   const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, wallet).deploy();
 
-  const transferDefinition = await new ContractFactory(TransferDefinition.abi, TransferDefinition.bytecode, wallet).deploy();
+  const transferDefinition = await new ContractFactory(
+    TransferDefinition.abi,
+    TransferDefinition.bytecode,
+    wallet,
+  ).deploy();
 
   // Deploy app contracts
   const linkedTransfer = await new ContractFactory(LinkedTransfer.abi, LinkedTransfer.bytecode, wallet).deploy();
 
   const withdraw = await new ContractFactory(Withdraw.abi, Withdraw.bytecode, wallet).deploy();
 
-  return { 
+  return {
     channelFactoryAddress: channelFactory.address,
     vectorChannelMastercopyAddress: vectorChannelMastercopy.address,
     adjudicatorAddress: adjudicator.address,
-    linkedTransferApp: linkedTransfer.address,
-    transferDefinition: transferDefinition.address,
-    withdrawApp: withdraw.address,
+    linkedTransferDefinition: linkedTransfer.address,
+    withdrawDefinition: withdraw.address,
   };
 };

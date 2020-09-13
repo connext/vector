@@ -18,7 +18,7 @@ export abstract class VectorError extends Error {
   constructor(
     public readonly message: Values<typeof VectorError.reasons>,
     public readonly update: ChannelUpdate<any>,
-    public readonly state: FullChannelState,
+    public readonly state?: FullChannelState,
     public readonly context: any = undefined,
   ) {
     super(message);
@@ -46,7 +46,7 @@ export class ChannelUpdateError extends VectorError {
   constructor(
     public readonly message: Values<typeof ChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
-    public readonly state: FullChannelState,
+    public readonly state?: FullChannelState,
     public readonly context: any = undefined,
   ) {
     super(message, update, state, context);

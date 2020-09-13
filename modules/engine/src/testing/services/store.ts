@@ -28,7 +28,7 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve();
   }
 
-  getChannelState(channelAddress: string): Promise<FullChannelState<any>> {
+  getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
     return Promise.resolve(this.channelStates.get(channelAddress));
   }
 
@@ -38,9 +38,14 @@ export class MemoryStoreService implements IEngineStore {
   }
 
   getActiveTransfers(channelAddress: string): Promise<CoreTransferState[]> {
-    const active = [...this.transfersInChannel.get(channelAddress)];
+    const active = [...(this.transfersInChannel.get(channelAddress) ?? [])];
     const all = active.map((id) => this.transfers.get(id));
-    return Promise.resolve(all.filter((x) => !!x).map((x) => x.core));
+    return Promise.resolve(
+      all
+        .filter((x) => !!x)
+        .map((x) => x?.core)
+        .filter((x) => !!x),
+    ) as Promise<CoreTransferState[]>;
   }
 
   getTransferState(transferId: string): Promise<TransferState | undefined> {

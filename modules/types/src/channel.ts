@@ -76,7 +76,7 @@ export type LockedValueType = {
 
 // Array ordering should always correspond to the channel
 // participants array ordering (but value in `to` field may
-// not always be the particpants addresses)
+// not always be the participants addresses)
 export interface CoreChannelState {
   channelAddress: Address;
   participants: Address[]; // Signer keys
@@ -87,6 +87,7 @@ export interface CoreChannelState {
   nonce: number;
   latestDepositNonce: number;
   merkleRoot: string;
+  meta?: any;
 }
 
 export interface CoreTransferState {
@@ -98,6 +99,7 @@ export interface CoreTransferState {
   transferTimeout: string;
   initialStateHash: string;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
+  meta?: any;
 }
 
 export interface ChannelCommitmentData {

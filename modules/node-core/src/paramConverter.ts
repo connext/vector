@@ -1,46 +1,49 @@
 import {
   CreateTransferParams,
   ConditionalTransferType,
+  ConditionalTransferParams,
   ResolveTransferParams,
   ChainAddresses,
-  ConditionalTransferParams,
   FullChannelState,
   ResolveConditionParams,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
   WithdrawParams,
-  DEFAULT_TRANSFER_TIMEOUT
+  LinkedTransferParams,
 } from "@connext/vector-types";
+import { utils } from "ethers";
 
-import {utils} from "ethers";
+import { DEFAULT_TRANSFER_TIMEOUT } from "./constants";
 
-export async function convertConditionalTransferParams(
-  params: ConditionalTransferParams<any>,
+export async function convertConditionalTransferParams<T extends ConditionalTransferType>(
+  params: ConditionalTransferParams<T>,
   chainAddresses: ChainAddresses,
   channel: FullChannelState,
 ): Promise<CreateTransferParams> {
   const { channelAddress, amount, assetId, recipient, paymentId, details } = params;
   const chainId = channel.networkContext.chainId;
   const participants = channel.participants;
-  let transferDefinition, transferInitialState, encodings;
+  let transferDefinition;
+  let transferInitialState;
+  let encodings;
 
   if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
-    transferDefinition = chainAddresses[chainId].linkedTransferApp;
+    transferDefinition = chainAddresses[chainId].linkedTransferDefinition;
     transferInitialState = {
       balance: {
         amount: [amount, 0],
-        to: participants
+        to: participants,
       },
-      linkedHash: utils.soliditySha256(["bytes32"], [details.preImage])
-    }
-    encodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding]
+      linkedHash: utils.soliditySha256(["bytes32"], [(details as LinkedTransferParams).preImage]),
+    };
+    encodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
   }
 
   const meta = {
     recipient,
     paymentId,
-    meta: params.meta
-  }
+    meta: params.meta,
+  };
 
   return {
     channelAddress,
@@ -50,7 +53,7 @@ export async function convertConditionalTransferParams(
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT,
     encodings,
-    meta
+    meta,
   };
 }
 

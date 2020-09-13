@@ -35,7 +35,7 @@ export async function outbound(
     // NOTE: IFF creating a channel, the initial channel state should be
     // created and saved using `generate` (i.e. before it gets to this
     // function call)
-    throw new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, update, storedChannel);
+    throw new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, update);
   }
   // Create a helper function that will create a function that properly
   // sets up the promise handlers. The only time this promise should
@@ -102,7 +102,7 @@ export async function outbound(
   // update nonce == their latest update nonce
 
   // Make sure the update exists
-  if (!channelError.state.latestUpdate) {
+  if (!channelError.state?.latestUpdate) {
     throw new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonceNoUpdate, update, storedChannel);
   }
 
@@ -218,7 +218,7 @@ async function processChannelMessage(
 
   // Get our latest stored state + active transfers
   const transferInitialStates = await storeService.getActiveTransfers(requestedUpdate.channelAddress);
-  let storedState: FullChannelState = await storeService.getChannelState(requestedUpdate.channelAddress);
+  let storedState = await storeService.getChannelState(requestedUpdate.channelAddress);
   if (!storedState) {
     // NOTE: the creation update MUST have a nonce of 1 not 0!
     // You may not be able to find a channel state IFF the channel is
@@ -349,7 +349,7 @@ async function processChannelMessage(
   try {
     response = await mergeUpdate(requestedUpdate, previousState, storeService, providerUrl);
   } catch (e) {
-    handleError(
+    await handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, requestedUpdate, previousState, {
         counterpartyLatestUpdate,
         error: e.message,
@@ -365,7 +365,7 @@ async function processChannelMessage(
     try {
       // const sig = await signer.signMessage(requestedUpdate.commitment.getHash());
       // signed = requestedUpdate.commitment.addSignature(sig);
-      await storeService.saveChannelState(response);
+      await storeService.saveChannelState(response!);
     } catch (e) {
       return handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.SaveChannelFailed, requestedUpdate, previousState, {
@@ -377,15 +377,15 @@ async function processChannelMessage(
     // Send the latest update to the node
     await messagingService.publish(from, {
       update: { ...requestedUpdate, commitment: signed },
-      latestUpdate: response.latestUpdate,
+      latestUpdate: response!.latestUpdate,
     });
-    return response;
+    return response!;
   }
 
   // Otherwise, we are receiving an ack, and we should save the
   // update to store and post to the EVT
   try {
-    await storeService.saveChannelState(response);
+    await storeService.saveChannelState(response!);
   } catch (e) {
     return handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.SaveChannelFailed, requestedUpdate, previousState, {
@@ -393,8 +393,8 @@ async function processChannelMessage(
       }),
     );
   }
-  stateEvt.post(response);
-  return response;
+  stateEvt.post(response!);
+  return response!;
 }
 
 const mergeUpdate = async (

@@ -72,6 +72,9 @@ export class Vector {
 
     const key = await this.lockService.acquireLock(params.channelAddress);
     const state = await this.storeService.getChannelState(params.channelAddress);
+    if (!state) {
+      throw new Error(`Channel not found ${params.channelAddress}`);
+    }
     const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
     const update = await generateUpdate(params, this.storeService, this.signer);
     const updatedChannelState = await sync.outbound(
@@ -91,7 +94,7 @@ export class Vector {
   }
 
   private async setupServices() {
-    this.messagingService.subscribe(this.publicIdentifier, async (err: Error, msg: VectorMessage) => {
+    this.messagingService.subscribe(this.publicIdentifier, async (err: Error | null, msg: VectorMessage) => {
       try {
         if (err) {
           throw err;
@@ -107,7 +110,7 @@ export class Vector {
         );
         this.channelUpdateEvt.post({
           direction: "inbound",
-          updatedChannelState,
+          updatedChannelState: updatedChannelState!,
         });
       } catch (e) {
         // No need to crash the entire vector core if we receive an invalid
@@ -150,7 +153,7 @@ export class Vector {
       ChannelFactory.abi,
       params.networkContext.vectorChannelMastercopyAddress,
       VectorChannel.abi,
-      this.chainProviders.get(params.networkContext.chainId),
+      this.chainProviders.get(params.networkContext.chainId)!,
     );
     // TODO validate setup params for completeness
     const updateParams = {
