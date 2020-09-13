@@ -9,7 +9,10 @@ import {
   FullChannelState,
   IChannelSigner,
   ChannelUpdateError,
-  Result,, VectorMessage, VectorChannelMessage, VectorErrorMessage
+  Result,
+  VectorMessage,
+  VectorChannelMessage,
+  VectorErrorMessage,
 } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
@@ -116,13 +119,8 @@ export async function outbound(
   }
 
   // Apply the update, and retry the update
-  let newState: string | FullChannelState;
-  try {
-    newState = await mergeUpdate(channelError.state.latestUpdate, storedChannel, storeService, providerUrl);
-  } catch (e) {
-    newState = e.message;
-  }
-  if (typeof newState === "string") {
+  const mergeRes = await mergeUpdate(channelError.state.latestUpdate, storedChannel, storeService, providerUrl);
+  if (mergeRes.isError) {
     return Result.fail(
       new ChannelUpdateError(
         ChannelUpdateError.reasons.applyUpdateFailed,
@@ -131,6 +129,8 @@ export async function outbound(
       ),
     );
   }
+
+  const newState = mergeRes.getValue();
 
   // Save the updated state before retrying the update
   try {
@@ -224,8 +224,10 @@ async function processChannelMessage(
     // being created for the first time. If this is the case, create an
     // empty channel and continue through the function
     if (requestedUpdate.type !== UpdateType.setup) {
-      const error = await handleError(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState));
-      return Result.fail(error)
+      const error = await handleError(
+        new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState),
+      );
+      return Result.fail(error);
     }
     requestedUpdate.details as SetupUpdateDetails;
     // Create an empty channel state
@@ -301,7 +303,7 @@ async function processChannelMessage(
         counterpartyLatestUpdate,
       }),
     );
-    return Result.fail(error)
+    return Result.fail(error);
   }
 
   // If we are behind by more than 3, we cannot sync from their latest
@@ -312,7 +314,7 @@ async function processChannelMessage(
         counterpartyLatestUpdate,
       }),
     );
-    return Result.fail(error)
+    return Result.fail(error);
   }
 
   // If the update nonce is ahead of the store nonce by 2, we are
@@ -332,34 +334,34 @@ async function processChannelMessage(
           { requestedUpdate },
         ),
       );
-      return Result.fail(error)
+      return Result.fail(error);
     }
     const mergeRes = await mergeUpdate(counterpartyLatestUpdate, storedState, storeService, providerUrl);
     if (mergeRes.isError) {
       const error = await handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, counterpartyLatestUpdate, storedState, {
           requestedUpdate,
-          error: mergeRes.getError().message,
-          stack: mergeRes.getError().stack,
+          error: mergeRes.getError()!.message,
+          stack: mergeRes.getError()!.stack,
         }),
       );
-      return Result.fail(error)
+      return Result.fail(error);
     }
-    previousState = mergeRes.getValue()
+    previousState = mergeRes.getValue();
   }
 
   // We now have the latest state for the update, and should be
   // able to play it on top of the update
   let response: FullChannelState;
-  try {
-    response = await mergeUpdate(requestedUpdate, previousState, storeService, providerUrl);
-  } catch (e) {
-    await handleError(
+  const mergeRes = await mergeUpdate(requestedUpdate, previousState, storeService, providerUrl);
+  if (mergeRes.isError) {
+    const error = await handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, requestedUpdate, previousState, {
         counterpartyLatestUpdate,
-        error: e.message,
+        error: mergeRes.getError()!.message,
       }),
     );
+    return Result.fail(error);
   }
 
   // If the update was single signed, the counterparty is proposing
@@ -377,7 +379,7 @@ async function processChannelMessage(
           error: e.message,
         }),
       );
-      return Result.fail(error)
+      return Result.fail(error);
     }
 
     // Send the latest update to the node
@@ -398,7 +400,7 @@ async function processChannelMessage(
         error: e.message,
       }),
     );
-    return Result.fail(error)
+    return Result.fail(error);
   }
   stateEvt.post(response!);
   return Result.ok(response!);

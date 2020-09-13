@@ -93,39 +93,41 @@ export class Vector implements IVectorEngine {
       this.protocolChannelErrorEvt,
     );
 
-    if (outboundRes)
-      this.channelUpdateEvt.post({
-        direction: "outbound",
-        updatedChannelState,
-      });
+    if (outboundRes.isError) {
+      return outboundRes;
+    }
+
+    const updatedChannelState = outboundRes.getValue();
+    this.channelUpdateEvt.post({
+      direction: "outbound",
+      updatedChannelState,
+    });
     await this.lockService.releaseLock(params.channelAddress, key);
-    return updatedChannelState;
+    return outboundRes;
   }
 
-  private async setupServices() {
+  private async setupServices(): Promise<Vector> {
     this.messagingService.subscribe(this.publicIdentifier, async (err: Error | null, msg: VectorMessage) => {
-      try {
-        if (err) {
-          throw err;
-        }
-        const updatedChannelState = await sync.inbound(
-          msg,
-          this.storeService,
-          this.messagingService,
-          this.signer,
-          this.chainProviderUrls,
-          this.protocolChannelStateEvt,
-          this.protocolChannelErrorEvt,
-        );
-        this.channelUpdateEvt.post({
-          direction: "inbound",
-          updatedChannelState: updatedChannelState!,
-        });
-      } catch (e) {
-        // No need to crash the entire vector core if we receive an invalid
-        // message. Just log & wait for the next one
-        logger.error(`Failed to handle message`, { msg });
+      if (err) {
+        // this.logger.error(err)
       }
+      const inboundRes = await sync.inbound(
+        msg,
+        this.storeService,
+        this.messagingService,
+        this.signer,
+        this.chainProviderUrls,
+        this.protocolChannelStateEvt,
+        this.protocolChannelErrorEvt,
+      );
+      if (inboundRes.isError) {
+        // this.logger.error(inboundRes.getError())
+      }
+      const updatedChannelState = inboundRes.getValue();
+      this.channelUpdateEvt.post({
+        direction: "inbound",
+        updatedChannelState: updatedChannelState!,
+      });
     });
 
     // TODO run setup updates if the channel is not already setup
@@ -185,7 +187,7 @@ export class Vector implements IVectorEngine {
     return this.executeUpdate(updateParams);
   }
 
-  public async createTransfer(params: CreateTransferParams): Promise<Result<Promise<FullChannelState>>> {
+  public async createTransfer(params: CreateTransferParams): Promise<Result<FullChannelState>> {
     // TODO validate create params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
@@ -196,7 +198,7 @@ export class Vector implements IVectorEngine {
     return this.executeUpdate(updateParams);
   }
 
-  public async resolveTransfer(params: ResolveTransferParams): Promise<Result<Promise<FullChannelState>>> {
+  public async resolveTransfer(params: ResolveTransferParams): Promise<Result<FullChannelState>> {
     // TODO validate resolve params for completeness
     const updateParams = {
       channelAddress: params.channelAddress,
