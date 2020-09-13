@@ -35,13 +35,13 @@ export async function applyUpdate<T extends UpdateType>(
   storeService: IEngineStore,
   // Initial state of resolved transfer for calculating
   // updates to locked value needed from store
-): Promise<FullChannelState<T>> {
+): Promise<Result<FullChannelState<T>, ChannelUpdateError>> {
   switch (update.type) {
     case UpdateType.setup: {
       const { timeout, networkContext } = (update as ChannelUpdate<"setup">).details;
       const publicIdentifiers = [update.fromIdentifier, update.toIdentifier];
       const participants: string[] = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
-      return {
+      return Result.ok({
         nonce: 1,
         latestDepositNonce: 0,
         channelAddress: update.channelAddress,
@@ -54,13 +54,13 @@ export async function applyUpdate<T extends UpdateType>(
         latestUpdate: update,
         networkContext,
         publicIdentifiers,
-      };
+      });
     }
     case UpdateType.deposit: {
       // Generate the new balance field for the channel
       const { latestDepositNonce } = (update as ChannelUpdate<"deposit">).details;
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      return {
+      return Result.ok({
         ...state,
         balances,
         assetIds: !!state.assetIds.find((a) => a === update.assetId)
@@ -69,7 +69,7 @@ export async function applyUpdate<T extends UpdateType>(
         nonce: update.nonce,
         latestDepositNonce,
         latestUpdate: update,
-      };
+      });
     }
     case UpdateType.create: {
       const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
@@ -82,20 +82,20 @@ export async function applyUpdate<T extends UpdateType>(
         state.lockedValue,
         state.assetIds,
       );
-      return {
+      return Result.ok({
         ...state,
         balances,
         lockedValue,
         nonce: update.nonce,
         merkleRoot,
         latestUpdate: update,
-      };
+      });
     }
     case UpdateType.resolve: {
       const { merkleRoot, transferId } = (update as ChannelUpdate<"resolve">).details;
       const transfer = await storeService.getCoreTransferState(transferId);
       if (!transfer) {
-        throw new Error("Transfer not found");
+        return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update, state));
       }
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       const lockedValue = reconcileLockedValue(
@@ -105,17 +105,17 @@ export async function applyUpdate<T extends UpdateType>(
         state.lockedValue,
         state.assetIds,
       );
-      return {
+      return Result.ok({
         ...state,
         balances,
         lockedValue,
         nonce: update.nonce,
         merkleRoot,
         latestUpdate: update,
-      };
+      });
     }
     default: {
-      throw new Error(`Unexpected UpdateType in received update: ${update.type}`);
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, update, state));
     }
   }
 }
@@ -165,7 +165,13 @@ export async function generateUpdate<T extends UpdateType>(
       const transfers = await storeService.getActiveTransfers(params.channelAddress);
       const transferState = await storeService.getTransferState((params as UpdateParams<"resolve">).details.transferId);
       if (!transferState) {
-        throw new Error(`Could not find transfer state for ${(params as UpdateParams<"resolve">).details.transferId}`);
+        return Result.fail(
+          new ChannelUpdateError(
+            ChannelUpdateError.reasons.TransferNotFound,
+            { ...params, nonce: state!.nonce + 1 },
+            state,
+          ),
+        );
       }
       unsigned = await generateResolveUpdate(
         state!,
@@ -177,13 +183,18 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     default: {
-      throw new Error(`Unrecognized channel update type: ${params.type}`);
+      return Result.fail(
+        new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, { ...params, nonce: state!.nonce + 1 }, state),
+      );
     }
   }
 
   // Create a signed commitment for the new state
-  const newState = await applyUpdate(unsigned, state!, storeService);
-  const commitment = await generateSignedChannelCommitment(newState, signer);
+  const result = await applyUpdate(unsigned, state!, storeService);
+  if (result.isError) {
+    return Result.fail(result.getError()!);
+  }
+  const commitment = await generateSignedChannelCommitment(result.getValue(), signer);
 
   // Return the validated update to send to counterparty
   return Result.ok({
@@ -249,8 +260,11 @@ async function generateDepositUpdate(
   // Determine the latest deposit nonce from chain using
   // the provided assetId from the params
   const multisig = new Contract(channelAddress, VectorChannel.abi, signer.provider);
-  const deposits = await multisig.latestDepositByAssetId();
-  const latestDepositNonce = deposits[params.details.assetId].nonce || 0;
+  let deposit: { amount: string; nonce: string } | undefined;
+  try {
+    deposit = await multisig.latestDepositByAssetId(params.details.assetId);
+  } catch (e) {}
+  const latestDepositNonce = parseInt(deposit?.nonce.toString() ?? "0");
 
   const depositBalance = {
     to: state.participants,
@@ -351,7 +365,13 @@ async function generateResolveUpdate(
   const merkle = new MerkleTree(hashes);
 
   // Get the final transfer balance from contract
-  const transferBalance = await resolve(coreTransfer, transfer, params.details.transferResolver, signer);
+  // TODO: use evm by supplying bytecode!
+  const transferBalance = await resolve(
+    coreTransfer,
+    transfer,
+    params.details.transferResolver,
+    signer,
+  );
 
   // Convert transfer balance to channel update balance
   const balance = getUpdatedChannelBalance(UpdateType.resolve, coreTransfer.assetId, transferBalance, state);

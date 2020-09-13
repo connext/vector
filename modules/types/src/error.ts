@@ -1,4 +1,4 @@
-import { ChannelUpdate, FullChannelState } from "./channel";
+import { ChannelUpdate, FullChannelState, UpdateParams } from "./channel";
 export class Result<T, Y = any> {
   private value?: T;
   private error?: Y;
@@ -57,7 +57,7 @@ export abstract class VectorError extends Error {
 
   constructor(
     public readonly message: Values<typeof VectorError.reasons>,
-    public readonly update: ChannelUpdate<any>,
+    public readonly update: ChannelUpdate<any> | UpdateParams<any> & { nonce: number },
     public readonly state?: FullChannelState,
     public readonly context: any = undefined,
   ) {
@@ -81,11 +81,13 @@ export class ChannelUpdateError extends VectorError {
     SaveChannelFailed: "Failed to save channel",
     StaleChannelNonceNoUpdate: "Stored nonce is one behind, no latest update from counterparty",
     MessageFailed: "Failed to send message",
+    TransferNotFound: "No transfer found in storage",
+    BadUpdateType: "Unrecognized update type",
   } as const;
 
   constructor(
     public readonly message: Values<typeof ChannelUpdateError.reasons>,
-    public readonly update: ChannelUpdate<any>,
+    public readonly update: ChannelUpdate<any> | UpdateParams<any> & { nonce: number },
     public readonly state?: FullChannelState,
     public readonly context: any = undefined,
   ) {

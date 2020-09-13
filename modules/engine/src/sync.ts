@@ -413,8 +413,11 @@ const mergeUpdate = async (
   providerUrl: string,
 ): Promise<Result<FullChannelState, ChannelUpdateError>> => {
   await validate(update, state, storeService, providerUrl);
-  const newState = await applyUpdate(update, state, storeService);
+  const result = await applyUpdate(update, state, storeService);
+  if (result.isError) {
+    return Result.fail(result.getError()!);
+  }
 
   // Return the validated update to send to counterparty
-  return Result.ok(newState);
+  return Result.ok(result.getValue());
 };

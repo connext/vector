@@ -12,10 +12,12 @@ export const hashLockedValues = (values: LockedValueType[]): string => {
 };
 
 export const hashBalance = (balance: Balance): string => {
-  return keccak256(solidityPack(["bytes32, bytes32"], [
-    keccak256(solidityPack(["uint256"], [balance.amount])),
-    keccak256(solidityPack(["address[]"], [balance.to])),
-  ]));
+  return keccak256(
+    solidityPack(
+      ["bytes32", "bytes32"],
+      [keccak256(solidityPack(["uint256[]"], [balance.amount])), keccak256(solidityPack(["address[]"], [balance.to]))],
+    ),
+  );
 };
 
 export const hashBalances = (balances: Balance[]): string => {
@@ -33,8 +35,8 @@ export const hashCoreChannelState = (state: CoreChannelState): string => {
         hashBalances(state.balances),
         hashLockedValues(state.lockedValue),
         keccak256(solidityPack(["address[]"], [state.assetIds])),
-        state.nonce,
-        state.latestDepositNonce,
+        state.nonce.toString(),
+        state.latestDepositNonce.toString(),
         state.merkleRoot,
       ],
     ),
@@ -46,8 +48,8 @@ export const hashChannelCommitment = (commitment: ChannelCommitmentData): string
   const channelStateHash = hashCoreChannelState(commitment.state);
   return keccak256(
     solidityPack(
-      ["bytes32", "bytes[]", "address", "uint26"],
-      [channelStateHash, commitment.signatures, commitment.adjudicatorAddress, commitment.chainId],
+      ["bytes32", "bytes[]", "address", "uint256"],
+      [channelStateHash, commitment.signatures, commitment.adjudicatorAddress, commitment.chainId.toString()],
     ),
   );
 };

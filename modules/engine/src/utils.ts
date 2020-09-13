@@ -78,7 +78,11 @@ export const resolve = async (
     try {
       const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);
       const output = await execEvmBytecode(bytecode, data);
-      return contract.interface.decodeFunctionResult("resolve", output)[0];
+      const ret = contract.interface.decodeFunctionResult("resolve", output)[0];
+      return {
+        to: ret.to,
+        amount: ret.amount,
+      };
     } catch (e) {
       logger.debug(`Failed to create with pure-evm`, { error: e.message });
     }

@@ -49,7 +49,7 @@ export const UpdateType = {
 } as const;
 export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 
-interface ParamsMap {
+export interface UpdateParamsMap {
   [UpdateType.create]: CreateTransferParams;
   [UpdateType.deposit]: DepositParams;
   [UpdateType.resolve]: ResolveTransferParams;
@@ -60,7 +60,7 @@ interface ParamsMap {
 export type UpdateParams<T extends UpdateType> = {
   channelAddress: string;
   type: T;
-  details: ParamsMap[T];
+  details: UpdateParamsMap[T];
 };
 
 // TODO update this in contracts

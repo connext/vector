@@ -11,13 +11,15 @@ import {
   CoreTransferState,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
+  UpdateParams,
+  UpdateParamsMap,
 } from "@connext/vector-types";
 
 import { Balance, TransferState } from "../../types/dist/src";
 
 import { ChannelSigner } from "./channelSigner";
 
-export const mkAddress = (prefix = "0xa"): string => {
+export const mkAddress = (prefix = "0x0"): string => {
   return prefix.padEnd(42, "0");
 };
 
@@ -43,6 +45,73 @@ type PartialFullChannelState<T extends UpdateType> = Partial<
 >;
 
 type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
+
+type PartialUpdateParams<T extends UpdateType> = Partial<
+  Omit<UpdateParams<T>, "details"> & { details?: Partial<UpdateParamsMap[T]> }
+>;
+
+export function createTestUpdateParams<T extends UpdateType>(
+  type: T,
+  overrides: PartialUpdateParams<T>,
+): UpdateParams<T> {
+  const base = {
+    channelAddress: mkAddress("0xccc"),
+    type,
+  };
+
+  let details: any;
+  switch (type) {
+    case UpdateType.setup:
+      details = {
+        counterpartyIdentifier: mkPublicIdentifier("0xbbb"),
+        timeout: "1200",
+        networkContext: {
+          channelFactoryAddress: mkAddress("0xcha"),
+          vectorChannelMastercopyAddress: mkAddress("0xcccaaa"),
+          adjudicatorAddress: mkAddress("0xaaaddd"),
+        },
+      };
+      break;
+    case UpdateType.deposit:
+      details = {
+        channelAddress: base.channelAddress,
+        amount: "10",
+        assetId: mkAddress(),
+      };
+      break;
+    case UpdateType.create:
+      details = {
+        channelAddress: mkAddress("0xccc"),
+        amount: "15",
+        assetId: mkAddress("0x0"),
+        transferDefinition: mkAddress("0xdef"),
+        transferInitialState: createTestLinkedTransferState(),
+        timeout: "1",
+        encodings: ["state", "resolver"],
+        meta: { test: "meta" },
+      };
+      break;
+    case UpdateType.resolve:
+      details = {
+        channelAddress: mkAddress("0xccc"),
+        transferId: mkBytes32("0xabcdef"),
+        transferResolver: { preImage: mkBytes32("0xcdef") },
+        meta: { test: "meta" },
+      };
+      break;
+  }
+
+  const { details: detailOverrides, ...defaultOverrides } = overrides;
+
+  return {
+    ...base,
+    details: {
+      ...details,
+      ...(detailOverrides ?? {}),
+    },
+    ...defaultOverrides,
+  };
+}
 
 export function createTestChannelUpdate<T extends UpdateType>(
   type: T,
@@ -72,7 +141,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
     case UpdateType.setup:
       details = {
         networkContext: {
-          adjudicatorAddress: mkAddress("0xadj"),
+          adjudicatorAddress: mkAddress("0xaaaddd"),
           chainId: 1337,
           channelFactoryAddress: mkAddress("0xcha"),
           providerUrl: "http://localhost:8545",
@@ -87,7 +156,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
       } as DepositUpdateDetails;
       break;
     case UpdateType.create:
-      const state = (details = {
+      details = {
         merkleProofData: mkBytes32("0xproof"),
         merkleRoot: mkBytes32("0xroot"),
         transferDefinition: mkAddress("0xdef"),
@@ -101,11 +170,10 @@ export function createTestChannelUpdate<T extends UpdateType>(
           linkedHash: mkBytes32("0xlinkedhash"),
         } as LinkedTransferState,
         transferTimeout: "0",
-      } as CreateUpdateDetails);
+      } as CreateUpdateDetails;
       break;
     case UpdateType.resolve:
       details = {
-        merkleProofData: mkBytes32("0xproof1"),
         merkleRoot: mkBytes32("0xroot1"),
         transferDefinition: mkAddress("0xdef"),
         transferEncodings: ["create", "resolve"],
@@ -170,7 +238,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     }) as any,
     merkleRoot: mkHash(),
     networkContext: {
-      adjudicatorAddress: mkAddress("0xadj"),
+      adjudicatorAddress: mkAddress("0xaaaddd"),
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xcha"),
       providerUrl: "http://localhost:8545",
@@ -230,7 +298,9 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
   return createTestChannelUpdate(type, signerOverrides);
 }
 
-export const createTestLinkedTransferState = (overrides: PartialTransferOverrides & { linkedHash?: string } = {}): LinkedTransferState => {
+export const createTestLinkedTransferState = (
+  overrides: PartialTransferOverrides & { linkedHash?: string } = {},
+): LinkedTransferState => {
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {
@@ -257,7 +327,7 @@ export const createTestLinkedTransferStates = (
 export function createCoreTransferState(overrides: Partial<CoreTransferState> = {}): CoreTransferState {
   // TODO: make dependent on transfer def/name
   return {
-    initialBalance: {to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"]},
+    initialBalance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
     assetId: mkAddress(),
     channelAddress: mkAddress("0xccc"),
     transferId: mkBytes32("0xeeefff"),
