@@ -9,7 +9,6 @@ export * from "./engineProvider";
 export * from "./error";
 export * from "./event";
 export * from "./lock";
-export * from "./logger";
 export * from "./messaging";
 export * from "./network";
 export * from "./rpc";

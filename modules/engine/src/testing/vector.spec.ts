@@ -17,6 +17,7 @@ describe("Vector.connect", () => {
       new MemoryStoreService(),
       signer,
       config.chainProviders,
+      {} as any,
     );
     expect(node).to.be.instanceOf(Vector);
     expect(node.publicIdentifier).to.be.eq(signer.publicIdentifier);

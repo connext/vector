@@ -23,6 +23,7 @@ import {
 import { providers } from "ethers";
 import { Evt } from "evt";
 import { VectorChannel, ChannelFactory } from "@connext/vector-contracts";
+import Pino from "pino";
 
 import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
@@ -41,7 +42,8 @@ export class Vector implements IVectorEngine {
     private readonly lockService: ILockService,
     private readonly storeService: IEngineStore,
     private readonly signer: IChannelSigner,
-    private readonly chainProviderUrls: ChainProviders, // private readonly chainAddresses: ChainAddresses,
+    private readonly chainProviderUrls: ChainProviders,
+    private readonly logger: Pino.BaseLogger,
   ) {
     Object.entries(chainProviderUrls).forEach(([chainId, providerUrl]) => {
       this.chainProviders.set(parseInt(chainId), new providers.JsonRpcProvider(providerUrl));
@@ -54,8 +56,9 @@ export class Vector implements IVectorEngine {
     storeService: IEngineStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
+    logger: Pino.BaseLogger,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders);
+    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders, logger);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute

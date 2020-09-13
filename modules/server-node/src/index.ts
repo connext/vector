@@ -1,5 +1,6 @@
 import fastify from "fastify";
-import { Vector } from "@connext/vector-engine";
+import pino from "pino";
+import { NodeCore } from "@connext/vector-node-core";
 import { DepositInput, CreateTransferInput } from "@connext/vector-types";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
@@ -15,12 +16,20 @@ type StringifyBigNumberAmount<T> = Omit<T, "amount"> & { amount: string };
 
 const server = fastify();
 
-let vectorEngine: Vector;
+let vectorEngine: NodeCore;
 const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic!).privateKey);
 server.addHook("onReady", async () => {
   const messaging = new TempNatsMessagingService("nats://localhost:4222");
   await messaging.connect();
-  vectorEngine = await Vector.connect(messaging, new LockService(), new PrismaStore(), signer, config.chainProviders);
+  vectorEngine = await NodeCore.connect(
+    messaging,
+    new LockService(),
+    new PrismaStore(),
+    signer,
+    config.chainProviders,
+    {},
+    pino(),
+  );
 });
 
 server.get("/ping", async (request, reply) => {

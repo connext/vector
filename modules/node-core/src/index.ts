@@ -15,13 +15,13 @@ import {
   CreateTransferParams,
   ResolveTransferParams,
   EngineEventName,
-  ILoggerService,
   ConditionalTransferType,
   Result,
   IVectorEngine,
   ChannelUpdateError,
   ConditionalTransferResponse,
 } from "@connext/vector-types";
+import Pino from "pino";
 
 import { InvalidTransferType } from "./errors";
 import {
@@ -29,6 +29,7 @@ import {
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "./paramConverter";
+import { SetupInput } from "./types";
 
 export class NodeCore {
   private constructor(
@@ -37,7 +38,7 @@ export class NodeCore {
     private readonly engine: IVectorEngine,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
-    private readonly logger: ILoggerService,
+    private readonly logger: Pino.BaseLogger,
   ) {}
 
   static async connect(
@@ -47,9 +48,9 @@ export class NodeCore {
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
-    logger: ILoggerService,
+    logger: Pino.BaseLogger,
   ): Promise<NodeCore> {
-    const engine = await Vector.connect(messaging, lock, store as IEngineStore, signer, chainProviders);
+    const engine = await Vector.connect(messaging, lock, store as IEngineStore, signer, chainProviders, logger);
     const nodeCore = new NodeCore(messaging, store, engine, chainProviders, chainAddresses, logger);
     await nodeCore.setupListener();
     return nodeCore;
@@ -66,7 +67,23 @@ export class NodeCore {
     );
   }
 
-  public async deposit(params: DepositParams): Promise<any> {
+  public async setup(params: SetupInput): Promise<Result<any>> {
+    return this.engine.setup({
+      counterpartyIdentifier: params.counterpartyIdentifier,
+      timeout: params.timeout,
+      networkContext: {
+        adjudicatorAddress: this.chainAddresses[params.chainId].adjudicatorAddress,
+        linkedTransferDefinition: this.chainAddresses[params.chainId].linkedTransferDefinition,
+        withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
+        vectorChannelMastercopyAddress: this.chainAddresses[params.chainId].vectorChannelMastercopyAddress,
+        channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
+        chainId: params.chainId,
+        providerUrl: this.chainProviders[params.chainId],
+      },
+    });
+  }
+
+  public async deposit(params: DepositParams): Promise<Result<any>> {
     // TODO we need a deposit response here
     return this.engine.deposit(params);
   }
@@ -95,7 +112,7 @@ export class NodeCore {
     return Result.ok({ paymentId: params.paymentId });
   }
 
-  public async resolveCondition(params: ResolveConditionParams): Promise<any> {
+  public async resolveCondition(params: ResolveConditionParams): Promise<Result<any>> {
     // TODO types
     // TODO input validation
 
@@ -104,7 +121,7 @@ export class NodeCore {
     return this.engine.resolveTransfer(resolveParams);
   }
 
-  public async withdraw(params: WithdrawParams): Promise<any> {
+  public async withdraw(params: WithdrawParams): Promise<Result<any>> {
     // TODO types
     // TODO input validation
 
@@ -112,7 +129,7 @@ export class NodeCore {
     return this.engine.createTransfer(withdrawParams);
   }
 
-  public async transfer(params: TransferParams): Promise<any> {
+  public async transfer(params: TransferParams): Promise<Result<any>> {
     // TODO input validation
 
     // TODO convert this into linked transfer to recipient params in conditionalTransfer
@@ -120,7 +137,8 @@ export class NodeCore {
     return this.conditionalTransfer(updatedParams);
   }
 
-  public async addToQueuedUpdates(params: any): Promise<void> {
+  public async addToQueuedUpdates(params: any): Promise<Result<any>> {
+    return;
     // TODO what kinds of params do we want this to accept?
     // First convert the update into correct type
     // Then store in queued updates table

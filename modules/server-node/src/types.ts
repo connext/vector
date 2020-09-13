@@ -13,9 +13,3 @@ export type SetupInput = {
   chainId: number;
   timeout: string;
 };
-
-export type CreateChannelInput = {
-  counterpartyIdentifier: PublicIdentifier;
-  chainId: number;
-  timeout: string;
-};
