@@ -1,0 +1,8 @@
+{
+  "title": "Get Auth Params Schema",
+  "type": "object",
+  "required": ["userIdentifier"],
+  "properties": {
+    "userIdentifier": { "type": "string" }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Post Auth Body Schema",
+  "type": "object",
+  "required": ["userIdentifier", "sig"],
+  "properties": {
+    "sig": { "type": "string" },
+    "userIdentifier": { "type": "string" },
+    "adminToken": { "type": "string" }
+  }
+}

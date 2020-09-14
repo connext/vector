@@ -3,7 +3,10 @@ import pino from "pino";
 
 import { MessagingAuthService } from "./auth/messaging-auth-service";
 import { config } from "./config";
-import { Routes } from "./schema";
+import GetAuthParamsSchema from "./schemas/getNonce/params.json";
+import { GetAuthParamsSchema as GetAuthParamsSchemaInterface } from "./types/getNonce/params";
+import PostAuthBodySchema from "./schemas/postAuth/body.json";
+import { PostAuthBodySchema as PostAuthBodySchemaInterface } from "./types/postAuth/body";
 
 const logger = pino({
   level: "info",
@@ -16,23 +19,38 @@ const server = fastify({
 const messagingService = new MessagingAuthService(
   {
     messagingUrl: config.messagingUrl,
-    privateKey: config.privateKey,
-    publicKey: config.publicKey,
+    privateKey: config.privateKey!,
+    publicKey: config.publicKey!,
   },
   logger.child({ module: "MessagingAuthService" }),
   config.adminToken,
 );
 
-server.get("/ping", async (request, reply) => {
+server.get("/ping", async () => {
   return "pong\n";
 });
 
-server.get(Routes.get.getNonce.route, { schema: Routes.get.getNonce.schema }, async (request, reply) => {
-  if (res.isError) {
-    return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
-  }
-  return reply.status(200).send(res.getValue());
-});
+server.get<{ Params: GetAuthParamsSchemaInterface }>(
+  "auth/:publicIdentifier",
+  { schema: { params: GetAuthParamsSchema } },
+  async (request, reply) => {
+    const nonce = await messagingService.getNonce(request.params.userIdentifier);
+    return reply.status(200).send(nonce);
+  },
+);
+
+server.post<{ Body: PostAuthBodySchemaInterface }>(
+  "auth",
+  { schema: { body: PostAuthBodySchema } },
+  async (request, reply) => {
+    const nonce = await messagingService.verifyAndVend(
+      request.body.sig,
+      request.body.userIdentifier,
+      request.body.adminToken,
+    );
+    return reply.status(200).send(nonce);
+  },
+);
 
 server.listen(8080, (err, address) => {
   if (err) {
