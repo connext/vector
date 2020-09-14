@@ -5,8 +5,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   recoverAddressFromChannelMessage,
 } from "@connext/vector-utils";
-
-import { MessagingConfig } from "../types";
+import { MessagingConfig } from "@connext/vector-types";
 
 const nonceTTL = 24 * 60 * 60 * 1000; // 1 day
 

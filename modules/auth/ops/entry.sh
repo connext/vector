@@ -43,7 +43,7 @@ then
     --polling-interval 1000 \
     --watch src \
     --exec ts-node \
-    ./src/index.ts
+    ./src/index.ts | ./node_modules/.bin/pino-pretty
 else
   echo "Starting indra node in prod-mode"
   exec node --no-deprecation dist/bundle.js

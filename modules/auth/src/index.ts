@@ -31,7 +31,7 @@ server.get("/ping", async () => {
 });
 
 server.get<{ Params: GetAuthParamsSchemaInterface }>(
-  "auth/:publicIdentifier",
+  "/auth/:publicIdentifier",
   { schema: { params: GetAuthParamsSchema } },
   async (request, reply) => {
     const nonce = await messagingService.getNonce(request.params.userIdentifier);
@@ -40,7 +40,7 @@ server.get<{ Params: GetAuthParamsSchemaInterface }>(
 );
 
 server.post<{ Body: PostAuthBodySchemaInterface }>(
-  "auth",
+  "/auth",
   { schema: { body: PostAuthBodySchema } },
   async (request, reply) => {
     const nonce = await messagingService.verifyAndVend(
@@ -57,5 +57,4 @@ server.listen(config.port, (err, address) => {
     console.error(err);
     process.exit(1);
   }
-  console.log(`Server listening at ${address}`);
 });

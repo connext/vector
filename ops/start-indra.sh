@@ -140,7 +140,7 @@ echo "Node configured"
 ########################################
 ## Auth Service config
 
-auth_port="8889"
+auth_port="5040"
 
 if [[ $INDRA_ENV == "prod" ]]
 then
