@@ -84,13 +84,13 @@ node_port="8888"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
-  node_image_name="${project}_rest-api-node"
+  node_image_name="${project}_node"
   bash ops/pull-images.sh $version $node_image_name
   node_image="image: '$node_image_name:$version'"
 else
   echo "Running dev mode"
   node_image="image: '${project}_builder'
-    entrypoint: 'bash modules/rest-api-node/ops/entry.sh'
+    entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
@@ -99,6 +99,31 @@ else
 fi
 
 echo "Node configured"
+
+########################################
+## Channel Lock config
+
+lock_port="8888"
+
+if [[ $INDRA_ENV == "prod" ]]
+then
+  channel_lock_image_name="${project}_channel-lock:$version"
+  pull_if_unavailable "$channel_lock_image_name"
+  channel_lock
+channel_lock
+channel_lock_image="image: '$channel_lock_image_name'"
+else
+  echo "Running dev mode"
+  channel_lock_image="image: '${project}_builder'
+    entrypoint: 'bash modules/channel-lock/ops/entry.sh'
+    volumes:
+      - '$root:/root'
+    ports:
+      - '$lock_port:$lock_port'
+      - '9229:9229'"
+fi
+
+echo "Channel lock configured"
 
 ########################################
 ## Database config
@@ -233,6 +258,27 @@ services:
       VECTOR_REDIS_URL: '$redis_url'
       NODE_ENV: '`
         if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
+      `'
+    secrets:
+      - '$db_secret'
+      - '$mnemonic_secret_name'
+
+  channel-lock:
+    $common
+    $channel_lock_image
+    ports:
+      '$lock_port:$lock_port'
+    environment:
+      INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
+      INDRA_MNEMONIC_FILE: '$INDRA_MNEMONIC_FILE'
+      INDRA_NATS_JWT_SIGNER_PRIVATE_KEY: '$INDRA_NATS_JWT_SIGNER_PRIVATE_KEY'
+      INDRA_NATS_JWT_SIGNER_PUBLIC_KEY: '$INDRA_NATS_JWT_SIGNER_PUBLIC_KEY'
+      INDRA_NATS_SERVERS: 'nats://nats:$nats_port'
+      INDRA_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
+      INDRA_PORT: '$lock_port'
+      INDRA_REDIS_URL: '$redis_url'
+      NODE_ENV: '`
+        if [[ "$INDRA_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
       `'
     secrets:
       - '$db_secret'
