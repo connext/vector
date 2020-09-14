@@ -17,7 +17,7 @@ then export VECTOR_MNEMONIC="`cat $VECTOR_MNEMONIC_FILE`"
 fi
 
 ########################################
-# Wait for indra stack dependencies
+# Wait for dependencies to wake up
 
 function wait_for {
   name=$1
@@ -45,7 +45,7 @@ wait_for "database" "$VECTOR_PG_HOST:$VECTOR_PG_PORT"
 
 if [[ "$NODE_ENV" == "development" ]]
 then
-  echo "Starting indra node in dev-mode"
+  echo "Starting node in dev-mode"
   exec ./node_modules/.bin/nodemon \
     --delay 1 \
     --exitcrash \
@@ -57,7 +57,7 @@ then
     --exec ts-node \
     ./src/main.ts
 else
-  echo "Starting indra node in prod-mode"
+  echo "Starting node in prod-mode"
   exec node --no-deprecation dist/bundle.js
 fi
 

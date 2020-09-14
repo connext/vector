@@ -33,25 +33,25 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: indra
-indra: database proxy server-node
+default: vector
+vector: database proxy server-node
 extras: ethprovider
-all: indra extras
+all: vector extras
 
 ########################################
 # Command & Control Shortcuts
 
-start: indra
-	bash ops/start-indra.sh
+start: vector
+	bash ops/start-node.sh
 
 start-testnet: ethprovider
 	VECTOR_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
 
 stop:
-	bash ops/stop.sh indra
+	bash ops/stop.sh vector
 
 stop-all:
-	bash ops/stop.sh indra
+	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
 
 clean: stop-all

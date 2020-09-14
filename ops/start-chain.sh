@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-## This script will start a testnet chain & store that chain's data in indra/.chaindata/${chain_id}
+## This script will start a testnet chain & store that chain's data in vector/.chaindata/${chain_id}
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
@@ -31,9 +31,9 @@ mkdir -p $chain_data
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
-  git_tag="`git tag --points-at HEAD | grep "indra-" | head -n 1`"
+  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
   if [[ -n "$git_tag" ]]
-  then version="`echo $git_tag | sed 's/indra-//'`"
+  then version="`echo $git_tag | sed 's/vector-//'`"
   else version="`git rev-parse HEAD | head -c 8`"
   fi
   image="${project}_ethprovider:$version"
