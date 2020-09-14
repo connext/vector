@@ -22,6 +22,13 @@ export function isChannelMessage(msg: any): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export function isErrorMessage(msg: any): boolean {
+  if (msg?.data) return false;
+  if (!msg?.error) return false;
+  return true;
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function isChannelState(blob: any): boolean {
   if (!blob?.channelId) return false;
   if (!blob?.participants) return false;

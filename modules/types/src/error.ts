@@ -38,8 +38,6 @@ export class Result<T, Y = any> {
   }
 }
 
-export type InboundChannelError = any;
-
 export type Values<E> = E[keyof E];
 
 // Abstract error for package
@@ -65,7 +63,7 @@ export abstract class VectorError extends Error {
   }
 }
 
-// Error type returned by the `processChannelMethod` function
+// Thrown by the `generateUpdate`
 export class ChannelUpdateError extends VectorError {
   readonly type = VectorError.errors.ChannelUpdateError;
 
@@ -95,6 +93,7 @@ export class ChannelUpdateError extends VectorError {
   }
 }
 
+// Thrown by validate.ts
 export class UpdateValidationError extends VectorError {
   readonly type = VectorError.errors.UpdateValidationError;
 

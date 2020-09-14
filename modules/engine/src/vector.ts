@@ -16,7 +16,6 @@ import {
   EngineEventPayloadsMap,
   IVectorEngine,
   Result,
-  InboundChannelError,
   ChannelUpdateError,
   VectorMessage,
 } from "@connext/vector-types";
@@ -32,7 +31,7 @@ import { logger } from "./utils";
 
 export class Vector implements IVectorEngine {
   private protocolChannelStateEvt = Evt.create<FullChannelState>();
-  private protocolChannelErrorEvt = Evt.create<InboundChannelError>();
+  private protocolChannelErrorEvt = Evt.create<ChannelUpdateError>();
   private channelUpdateEvt = Evt.create<ChannelUpdateEvent>();
   private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
 

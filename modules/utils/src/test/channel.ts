@@ -18,7 +18,7 @@ import { createTestLinkedTransferState } from "./transfers";
 import { mkAddress, mkPublicIdentifier, mkBytes32, mkHash } from "./util";
 
 // Helper partial types for test helpers
-type PartialChannelUpdate<T extends UpdateType> = Partial<
+export type PartialChannelUpdate<T extends UpdateType> = Partial<
   Omit<ChannelUpdate<T>, "details"> & { details: Partial<ChannelUpdateDetailsMap[T]> }
 >;
 
