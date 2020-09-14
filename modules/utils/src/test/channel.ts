@@ -1,39 +1,21 @@
 import {
-  FullChannelState,
-  ChannelUpdate,
   UpdateType,
+  ChannelUpdate,
+  ChannelUpdateDetailsMap,
+  FullChannelState,
+  UpdateParams,
+  UpdateParamsMap,
   CreateUpdateDetails,
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
   LinkedTransferState,
-  ChannelUpdateDetailsMap,
-  CoreTransferState,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
-  UpdateParams,
-  UpdateParamsMap,
 } from "@connext/vector-types";
 
-import { Balance, TransferState } from "../../types/dist/src";
+import { ChannelSigner } from "../channelSigner";
 
-import { ChannelSigner } from "./channelSigner";
-
-export const mkAddress = (prefix = "0x0"): string => {
-  return prefix.padEnd(42, "0");
-};
-
-export const mkPublicIdentifier = (prefix = "indraA"): string => {
-  return prefix.padEnd(55, "0");
-};
-
-export const mkHash = (prefix = "0x"): string => {
-  return prefix.padEnd(66, "0");
-};
-
-export const mkBytes32 = (prefix = "0xa"): string => {
-  return prefix.padEnd(66, "0");
-};
+import { createTestLinkedTransferState } from "./transfers";
+import { mkAddress, mkPublicIdentifier, mkBytes32, mkHash } from "./util";
 
 // Helper partial types for test helpers
 type PartialChannelUpdate<T extends UpdateType> = Partial<
@@ -43,8 +25,6 @@ type PartialChannelUpdate<T extends UpdateType> = Partial<
 type PartialFullChannelState<T extends UpdateType> = Partial<
   Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
 >;
-
-type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
 
 type PartialUpdateParams<T extends UpdateType> = Partial<
   Omit<UpdateParams<T>, "details"> & { details?: Partial<UpdateParamsMap[T]> }
@@ -296,45 +276,4 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
   };
 
   return createTestChannelUpdate(type, signerOverrides);
-}
-
-export const createTestLinkedTransferState = (
-  overrides: PartialTransferOverrides & { linkedHash?: string } = {},
-): LinkedTransferState => {
-  const { balance: balanceOverrides, ...defaultOverrides } = overrides;
-  return {
-    balance: {
-      to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
-      amount: ["1", "0"],
-      ...(balanceOverrides ?? {}),
-    },
-    linkedHash: mkHash("0xeee"),
-    ...defaultOverrides,
-  };
-};
-
-export const createTestLinkedTransferStates = (
-  count = 2,
-  overrides: PartialTransferOverrides[] = [],
-): TransferState[] => {
-  return Array(count)
-    .fill(0)
-    .map((val, idx) => {
-      return createTestLinkedTransferState({ ...(overrides[idx] ?? {}) });
-    });
-};
-
-export function createCoreTransferState(overrides: Partial<CoreTransferState> = {}): CoreTransferState {
-  // TODO: make dependent on transfer def/name
-  return {
-    initialBalance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
-    assetId: mkAddress(),
-    channelAddress: mkAddress("0xccc"),
-    transferId: mkBytes32("0xeeefff"),
-    transferDefinition: mkAddress("0xdef"),
-    transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-    initialStateHash: mkBytes32("0xabcdef"),
-    transferTimeout: "1",
-    ...overrides,
-  };
 }
