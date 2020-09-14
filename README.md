@@ -19,4 +19,4 @@ make start
 //TODO
 
 ## Architecture
-// TODO
+![alt](https://i.ibb.co/2K4sBRD/Vector-System-Architecture-1.png)
