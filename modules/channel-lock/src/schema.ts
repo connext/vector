@@ -1,52 +1,36 @@
 import { FastifySchema } from "fastify";
 
-export type RoutesSchema = { post: { [routeName: string]: { route: string; schema: FastifySchema } } };
+export type RoutesSchema = {
+  post: { [routeName: string]: { route: string; schema: FastifySchema } };
+  get: { [routeName: string]: { route: string; schema: FastifySchema } };
+};
 
 export const Routes: RoutesSchema = {
-  post: {
-    setup: {
+  get: {
+    getNonce: {
       route: "auth/:userIdentifier",
       schema: {
-        params: {},
-        body: {
+        params: {
           type: "object",
-          required: ["counterpartyIdentifier", "chainId", "timeout"],
+          required: ["userIdentifier"],
           properties: {
-            counterpartyIdentifier: { type: "string" },
-            chainId: { type: "number" },
-            timeout: { type: "string" },
+            userIdentifier: { type: "string" },
           },
         },
       },
     },
-    deposit: {
-      route: "deposit",
+  },
+  post: {
+    verifyNonce: {
+      route: "auth",
       schema: {
         body: {
           type: "object",
-          required: ["channelId", "amount", "assetId"],
+          required: ["userIdentifier", "sig"],
           properties: {
-            channelId: { type: "string" },
-            amount: { type: "string" },
-            assetId: { type: "string" },
-          },
-        },
-      },
-    },
-    createTransfer: {
-      route: "create-transfer",
-      schema: {
-        body: {
-          type: "object",
-          required: ["channelId", "amount", "assetId", "paymentId", "preImage"],
-          properties: {
-            channelId: { type: "string" },
-            amount: { type: "string" },
-            assetId: { type: "string" },
-            recipient: { type: "string" },
-            paymentId: { type: "string" },
-            preImage: { type: "string" },
-            meta: { type: "object" },
+            sig: { type: "string" },
+            userIdentifier: { type: "string" },
+            adminToken: { type: "string" },
           },
         },
       },
