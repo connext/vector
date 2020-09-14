@@ -1,19 +1,8 @@
 #!/bin/bash
 set -e
 
-if [[ -d "modules/server-node" ]]
-then cd modules/server-node
-fi
-
-########################################
-# Convert secrets to env vars
-
-if [[ -z "$INDRA_PG_PASSWORD" && -n "$INDRA_PG_PASSWORD_FILE" ]]
-then export INDRA_PG_PASSWORD="`cat $INDRA_PG_PASSWORD_FILE`"
-fi
-
-if [[ -z "$INDRA_MNEMONIC" && -n "$INDRA_MNEMONIC_FILE" ]]
-then export INDRA_MNEMONIC="`cat $INDRA_MNEMONIC_FILE`"
+if [[ -d "modules/auth" ]]
+then cd modules/auth
 fi
 
 ########################################
@@ -38,10 +27,8 @@ function wait_for {
   wait-for -t 60 $host 2> /dev/null
 }
 
-wait_for "database" "$INDRA_PG_HOST:$INDRA_PG_PORT"
-
 ########################################
-# Launch Node
+# Launch Auth
 
 if [[ "$NODE_ENV" == "development" ]]
 then

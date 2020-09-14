@@ -77,6 +77,12 @@ echo "Using docker images ${project}_name:${version} "
 
 builder_image="${project}_builder"
 
+redis_image="redis:5-alpine";
+pull_if_unavailable "$redis_image"
+
+# to access from other containers
+redis_url="redis://redis:6379"
+
 common="networks:
       - '$project'
     logging:
@@ -134,7 +140,7 @@ echo "Node configured"
 ########################################
 ## Auth Service config
 
-auth_port="8888"
+auth_port="5040"
 
 if [[ $INDRA_ENV == "prod" ]]
 then
@@ -150,7 +156,7 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$lock_port:$lock_port'
+      - '$auth_port:$auth_port'
       - '9229:9229'"
 fi
 
@@ -266,9 +272,10 @@ services:
     $common
     $node_image
     ports:
-      '$node_port:$node_port'
+      - '$node_port:$node_port'
     environment:
       INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
+      INDRA_AUTH_URL: 'http://auth:$auth_port'
       INDRA_CHAIN_PROVIDERS: '$INDRA_CHAIN_PROVIDERS'
       INDRA_CONTRACT_ADDRESSES: '$INDRA_CONTRACT_ADDRESSES'
       INDRA_LOG_LEVEL: '$INDRA_LOG_LEVEL'
@@ -292,14 +299,14 @@ services:
     $common
     $auth_image
     ports:
-      '$lock_port:$lock_port'
+      - '$auth_port:$auth_port'
     environment:
       INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
       INDRA_NATS_JWT_SIGNER_PRIVATE_KEY: '$INDRA_NATS_JWT_SIGNER_PRIVATE_KEY'
       INDRA_NATS_JWT_SIGNER_PUBLIC_KEY: '$INDRA_NATS_JWT_SIGNER_PUBLIC_KEY'
       INDRA_NATS_SERVERS: 'nats://nats:$nats_port'
       INDRA_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
-      INDRA_PORT: '$lock_port'
+      INDRA_PORT: '$auth_port'
       NODE_ENV: '`
         if [[ "$INDRA_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
       `'
@@ -323,6 +330,10 @@ services:
     volumes:
       - '$db_volume:/var/lib/postgresql/data'
       - '$snapshots_dir:/root/snapshots'
+
+  redis:
+    $common
+    image: '$redis_image'
 
 EOF
 

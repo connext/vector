@@ -23,4 +23,5 @@ export const config = {
   privateKey,
   publicKey,
   adminToken,
+  port: parseInt(process.env.INDRA_PORT ?? "5040"),
 };
