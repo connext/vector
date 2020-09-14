@@ -77,6 +77,12 @@ echo "Using docker images ${project}_name:${version} "
 
 builder_image="${project}_builder"
 
+redis_image="redis:5-alpine";
+pull_if_unavailable "$redis_image"
+
+# to access from other containers
+redis_url="redis://redis:6379"
+
 common="networks:
       - '$project'
     logging:
@@ -323,6 +329,10 @@ services:
     volumes:
       - '$db_volume:/var/lib/postgresql/data'
       - '$snapshots_dir:/root/snapshots'
+
+  redis:
+    $common
+    image: '$redis_image'
 
 EOF
 

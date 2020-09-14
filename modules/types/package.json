@@ -16,7 +16,7 @@
     "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'"
   },
   "dependencies": {
-    "ethers": "5.0.12",
+    "ethers": "5.0.13",
     "evt": "1.8.9"
   },
   "devDependencies": {

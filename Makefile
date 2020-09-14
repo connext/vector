@@ -54,6 +54,9 @@ stop-all:
 	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
 
+restart: indra stop
+	bash ops/start-indra.sh
+
 clean: stop-all
 	docker container prune -f
 	rm -rf .flags/*

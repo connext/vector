@@ -4,7 +4,6 @@ import { NodeCore } from "@connext/vector-node-core";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
 
-import { GenericErrorResponse } from "./types";
 import { TempNatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
@@ -39,14 +38,13 @@ server.get("/ping", async () => {
 });
 
 server.post<{ Body: ISetupBodySchema }>("/setup", { schema: { body: SetupBodySchema } }, async (request, reply) => {
-  request.body.counterpartyIdentifier;
   const res = await vectorNode.setup({
     counterpartyIdentifier: request.body.counterpartyIdentifier,
     timeout: request.body.timeout,
     chainId: request.body.chainId,
   });
   if (res.isError) {
-    return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
+    return reply.status(400).send({ message: res.getError()?.message ?? "" });
   }
   return reply.status(200).send(res.getValue());
 });
@@ -62,14 +60,14 @@ server.post<{ Body: IDepositBodySchema }>(
       channelAddress: request.body.channelId,
     });
     if (res.isError) {
-      return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
+      return reply.status(400).send({ message: res.getError()?.message ?? "" });
     }
     return reply.status(200).send(res.getValue());
   },
 );
 
 server.post<{ Body: ILinkedTransferBodySchema }>(
-  "linked-transfer",
+  "/linked-transfer",
   { schema: { body: LinkedTransferBodySchema } },
   async (request, reply) => {
     const res = await vectorNode.conditionalTransfer({
@@ -85,7 +83,7 @@ server.post<{ Body: ILinkedTransferBodySchema }>(
       },
     });
     if (res.isError) {
-      return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
+      return reply.status(400).send({ message: res.getError()?.message ?? "" });
     }
     return reply.status(200).send(res.getValue());
   },

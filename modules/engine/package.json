@@ -22,7 +22,7 @@
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
     "async-mutex": "0.2.4",
-    "ethers": "5.0.12",
+    "ethers": "5.0.13",
     "evt": "1.8.9",
     "pino": "6.6.0"
   },
