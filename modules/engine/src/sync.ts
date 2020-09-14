@@ -259,7 +259,7 @@ async function processChannelMessage(
       nonce: 0,
       publicIdentifiers: [requestedUpdate.fromIdentifier, signer.publicIdentifier],
       timeout: (requestedUpdate.details as SetupUpdateDetails).timeout,
-      latestUpdate: undefined,
+      latestUpdate: {} as any, // There is no latest update on setup
       latestDepositNonce: 0,
     };
   }
@@ -316,8 +316,8 @@ async function processChannelMessage(
 
     // FIXME: We don't need to pass everything over the wire here, fix that
     const error = await handleError(
-      new ChannelUpdateError(ChannelUpdateError.reasons.StaleUpdateNonce, requestedUpdate, storedState, {
-        counterpartyLatestUpdate,
+      new ChannelUpdateError(ChannelUpdateError.reasons.StaleUpdateNonce, storedState.latestUpdate, storedState, {
+        requestedUpdate,
       }),
     );
     return Result.fail(error);

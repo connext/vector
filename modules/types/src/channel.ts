@@ -119,7 +119,7 @@ export interface TransferCommitmentData {
 // Includes any additional info that doesn't need to be sent to chain
 export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   publicIdentifiers: string[];
-  latestUpdate?: ChannelUpdate<T>;
+  latestUpdate: ChannelUpdate<T>;
   networkContext: NetworkContext;
 };
 

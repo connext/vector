@@ -39,7 +39,7 @@ model Channel {
   adjudicatorAddress             String
   chainId                        Int
   providerUrl                    String
-  latestUpdate                   Update?
+  latestUpdate                   Update
 }
 
 model Update {

@@ -137,22 +137,20 @@ export class PrismaStore implements IEngineStore {
       participants: [channelEntity.participantA, channelEntity.participantB],
       publicIdentifiers: [channelEntity.publicIdentifierA, channelEntity.publicIdentifierB],
       timeout: channelEntity.timeout,
-      latestUpdate: channelEntity.latestUpdate
-        ? {
-            assetId: channelEntity.latestUpdate.assetId,
-            balance: {
-              amount: [channelEntity.latestUpdate.amountA, channelEntity.latestUpdate.amountB],
-              to: [channelEntity.latestUpdate.toA, channelEntity.latestUpdate.toB],
-            },
-            channelAddress,
-            details,
-            fromIdentifier: channelEntity.latestUpdate.fromIdentifier,
-            nonce: channelEntity.latestUpdate.nonce,
-            signatures: [channelEntity.latestUpdate.signatureA!, channelEntity.latestUpdate.signatureB!],
-            toIdentifier: channelEntity.latestUpdate.toIdentifier,
-            type: channelEntity.latestUpdate.type,
-          }
-        : undefined,
+      latestUpdate: {
+        assetId: channelEntity.latestUpdate.assetId,
+        balance: {
+          amount: [channelEntity.latestUpdate.amountA, channelEntity.latestUpdate.amountB],
+          to: [channelEntity.latestUpdate.toA, channelEntity.latestUpdate.toB],
+        },
+        channelAddress,
+        details,
+        fromIdentifier: channelEntity.latestUpdate.fromIdentifier,
+        nonce: channelEntity.latestUpdate.nonce,
+        signatures: [channelEntity.latestUpdate.signatureA!, channelEntity.latestUpdate.signatureB!],
+        toIdentifier: channelEntity.latestUpdate.toIdentifier,
+        type: channelEntity.latestUpdate.type,
+      },
     };
   }
 
