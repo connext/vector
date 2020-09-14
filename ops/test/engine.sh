@@ -24,7 +24,7 @@ function cleanup {
 trap cleanup EXIT SIGINT SIGTERM
 
 echo "Starting $ethprovider_host.."
-export INDRA_MNEMONIC=$eth_mnemonic
+export VECTOR_MNEMONIC=$eth_mnemonic
 ethprovider_url="http://172.17.0.1:$ethprovider_port"
 bash ops/start-chain.sh $chain_id
 CHAIN_PROVIDERS="{\"$chain_id\":\"$ethprovider_url\"}"

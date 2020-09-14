@@ -13,11 +13,11 @@ docker network create --attachable --driver overlay $project 2> /dev/null || tru
 
 chain_id="${1:-1337}"
 
-port="${INDRA_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
-tag="${INDRA_TAG:-$chain_id}"
-mnemonic="${INDRA_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-engine="${INDRA_EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
-logLevel="${INDRA_CHAIN_LOG_LEVEL:0}"
+port="${VECTOR_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
+tag="${VECTOR_TAG:-$chain_id}"
+mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
+engine="${VECTOR_EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
+logLevel="${VECTOR_CHAIN_LOG_LEVEL:0}"
 
 ethprovider_host="testnet_$tag"
 
@@ -29,7 +29,7 @@ chain_data="$root/.chaindata/$chain_id"
 mkdir -p $chain_data
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$INDRA_ENV" == "prod" ]]
+if [[ "$VECTOR_ENV" == "prod" ]]
 then
   git_tag="`git tag --points-at HEAD | grep "indra-" | head -n 1`"
   if [[ -n "$git_tag" ]]
@@ -44,7 +44,7 @@ else
   opts="--entrypoint bash --mount type=bind,source=$root,target=/root"
 fi
 
-echo "Running ${INDRA_ENV:-dev}-mode image for testnet ${chain_id}: ${image}"
+echo "Running ${VECTOR_ENV:-dev}-mode image for testnet ${chain_id}: ${image}"
 
 docker run $opts \
   --detach \

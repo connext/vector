@@ -45,7 +45,7 @@ start: indra
 	bash ops/start-indra.sh
 
 start-testnet: ethprovider
-	INDRA_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
+	VECTOR_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
 
 stop:
 	bash ops/stop.sh indra

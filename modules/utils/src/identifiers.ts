@@ -9,7 +9,7 @@ import { getRandomPublicKey, getAddressFromPublicKey } from "./crypto";
 
 const { getAddress } = utils;
 
-export const INDRA_PUB_ID_PREFIX = "indra";
+export const VECTOR_PUB_ID_PREFIX = "indra";
 
 const cache = new LimitedCache(200);
 
@@ -17,11 +17,11 @@ const cache = new LimitedCache(200);
 // Conversions
 
 export const getPublicIdentifierFromPublicKey = (publicKey: PublicKey): PublicIdentifier =>
-  INDRA_PUB_ID_PREFIX + bs58check.encode(compress(hexToBuffer(publicKey)));
+  VECTOR_PUB_ID_PREFIX + bs58check.encode(compress(hexToBuffer(publicKey)));
 
 export const getPublicKeyFromPublicIdentifier = (publicIdentifier: PublicIdentifier): string =>
   `0x${bufferToHex(
-    decompress(bs58check.decode(publicIdentifier.replace(INDRA_PUB_ID_PREFIX, ""))),
+    decompress(bs58check.decode(publicIdentifier.replace(VECTOR_PUB_ID_PREFIX, ""))),
   )}`;
 
 export const getSignerAddressFromPublicIdentifier = (
@@ -55,8 +55,8 @@ export const getPublicIdentifierError = (value: any): string | undefined => {
   try {
     if (typeof value !== "string") {
       return `Invalid public identifier. Expected a string, got ${typeof value}`;
-    } else if (!value.startsWith(INDRA_PUB_ID_PREFIX)) {
-      return `Invalid public identifier. Expected ${value} to start with ${INDRA_PUB_ID_PREFIX}`;
+    } else if (!value.startsWith(VECTOR_PUB_ID_PREFIX)) {
+      return `Invalid public identifier. Expected ${value} to start with ${VECTOR_PUB_ID_PREFIX}`;
     }
     const addressError = getAddressError(getSignerAddressFromPublicIdentifier(value));
     return addressError
