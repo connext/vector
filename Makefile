@@ -48,10 +48,10 @@ start-testnet: ethprovider
 	INDRA_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
 
 stop:
-	bash ops/stop.sh indra
+	bash ops/stop.sh vector
 
 stop-all:
-	bash ops/stop.sh indra
+	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
 
 clean: stop-all

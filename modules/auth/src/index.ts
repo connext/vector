@@ -52,7 +52,7 @@ server.post<{ Body: PostAuthBodySchemaInterface }>(
   },
 );
 
-server.listen(8080, (err, address) => {
+server.listen(config.port, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

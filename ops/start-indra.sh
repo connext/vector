@@ -134,7 +134,7 @@ echo "Node configured"
 ########################################
 ## Auth Service config
 
-auth_port="8888"
+auth_port="8889"
 
 if [[ $INDRA_ENV == "prod" ]]
 then
@@ -150,7 +150,7 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$lock_port:$lock_port'
+      - '$auth_port:$auth_port'
       - '9229:9229'"
 fi
 
@@ -266,7 +266,7 @@ services:
     $common
     $node_image
     ports:
-      '$node_port:$node_port'
+      - '$node_port:$node_port'
     environment:
       INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
       INDRA_CHAIN_PROVIDERS: '$INDRA_CHAIN_PROVIDERS'
@@ -292,14 +292,14 @@ services:
     $common
     $auth_image
     ports:
-      '$lock_port:$lock_port'
+      - '$auth_port:$auth_port'
     environment:
       INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
       INDRA_NATS_JWT_SIGNER_PRIVATE_KEY: '$INDRA_NATS_JWT_SIGNER_PRIVATE_KEY'
       INDRA_NATS_JWT_SIGNER_PUBLIC_KEY: '$INDRA_NATS_JWT_SIGNER_PUBLIC_KEY'
       INDRA_NATS_SERVERS: 'nats://nats:$nats_port'
       INDRA_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
-      INDRA_PORT: '$lock_port'
+      INDRA_PORT: '$auth_port'
       NODE_ENV: '`
         if [[ "$INDRA_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
       `'
