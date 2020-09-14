@@ -1,18 +1,20 @@
 import fastify from "fastify";
 import pino from "pino";
 import { NodeCore } from "@connext/vector-node-core";
-import { DepositInput, CreateTransferInput } from "@connext/vector-types";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
 
-import { SetupInput, GenericErrorResponse } from "./types";
-import { Routes } from "./schema";
+import { GenericErrorResponse } from "./types";
 import { TempNatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-
-type StringifyBigNumberAmount<T> = Omit<T, "amount"> & { amount: string };
+import { SetupBodySchema as ISetupBodySchema } from "./generated-types/setup/body";
+import SetupBodySchema from "./schemas/setup/body.json";
+import { DepositBodySchema as IDepositBodySchema } from "./generated-types/deposit/body";
+import DepositBodySchema from "./schemas/deposit/body.json";
+import { LinkedTransferBodySchema as ILinkedTransferBodySchema } from "./generated-types/linkedTransfer/body";
+import LinkedTransferBodySchema from "./schemas/linkedTransfer/body.json";
 
 const server = fastify();
 
@@ -32,21 +34,32 @@ server.addHook("onReady", async () => {
   );
 });
 
-server.get("/ping", async (request, reply) => {
+server.get("/ping", async () => {
   return "pong\n";
 });
 
-// isAlive NATS
+server.post<{ Body: ISetupBodySchema }>("/setup", { schema: { body: SetupBodySchema } }, async (request, reply) => {
+  request.body.counterpartyIdentifier;
+  const res = await vectorNode.setup({
+    counterpartyIdentifier: request.body.counterpartyIdentifier,
+    timeout: request.body.timeout,
+    chainId: request.body.chainId,
+  });
+  if (res.isError) {
+    return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
+  }
+  return reply.status(200).send(res.getValue());
+});
 
-server.post<{ Body: SetupInput }>(
-  Routes.post.setup.route,
-  { schema: Routes.post.setup.schema },
+server.post<{ Body: IDepositBodySchema }>(
+  "/deposit",
+  { schema: { body: DepositBodySchema } },
   async (request, reply) => {
-    request.body.counterpartyIdentifier;
-    const res = await vectorNode.setup({
-      counterpartyIdentifier: request.body.counterpartyIdentifier,
-      timeout: request.body.timeout,
-      chainId: request.body.chainId,
+    // TODO: Fix isoNode!
+    const res = await vectorNode.deposit({
+      amount: request.body.amount,
+      assetId: request.body.assetId,
+      channelAddress: request.body.channelId,
     });
     if (res.isError) {
       return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
@@ -55,38 +68,21 @@ server.post<{ Body: SetupInput }>(
   },
 );
 
-server.post<{ Body: StringifyBigNumberAmount<DepositInput> }>(
-  Routes.post.deposit.route,
-  { schema: Routes.post.deposit.schema },
+server.post<{ Body: ILinkedTransferBodySchema }>(
+  "linked-transfer",
+  { schema: { body: LinkedTransferBodySchema } },
   async (request, reply) => {
-    // TODO: Fix isoNode!
-    const isoNode = {} as any;
-    const res = await isoNode.deposit({
+    const res = await vectorNode.conditionalTransfer({
       amount: request.body.amount,
       assetId: request.body.assetId,
-      channelId: request.body.channelId,
-    });
-    if (res.isError) {
-      return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
-    }
-    return reply.status(200).send(res.getValue());
-  },
-);
-
-server.post<{ Body: StringifyBigNumberAmount<CreateTransferInput> }>(
-  Routes.post.createTransfer.route,
-  { schema: Routes.post.deposit.schema },
-  async (request, reply) => {
-    // TODO: Fix isoNode!
-    const isoNode = {} as any;
-    const res = await isoNode.createTransfer({
-      amount: request.body.amount,
-      assetId: request.body.assetId,
-      channelId: request.body.channelId,
+      channelAddress: request.body.channelId,
       paymentId: request.body.paymentId,
-      preImage: request.body.preImage,
       meta: request.body.meta,
       recipient: request.body.recipient,
+      conditionType: "LinkedTransfer",
+      details: {
+        preImage: request.body.preImage,
+      },
     });
     if (res.isError) {
       return reply.status(400).send<GenericErrorResponse>({ message: res.getError()?.message ?? "" });
