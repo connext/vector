@@ -1,5 +1,5 @@
 {
-  "name": "@connext/vector-channel-lock",
+  "name": "@connext/vector-auth",
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
