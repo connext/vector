@@ -132,21 +132,21 @@ fi
 echo "Node configured"
 
 ########################################
-## Channel Lock config
+## Auth Service config
 
-lock_port="8888"
+auth_port="8888"
 
 if [[ $INDRA_ENV == "prod" ]]
 then
-  channel_lock_image_name="${project}_channel-lock:$version"
-  pull_if_unavailable "$channel_lock_image_name"
-  channel_lock
-channel_lock
-channel_lock_image="image: '$channel_lock_image_name'"
+  auth_image_name="${project}_auth:$version"
+  pull_if_unavailable "$auth_image_name"
+  auth
+auth
+auth_image="image: '$auth_image_name'"
 else
   echo "Running dev mode"
-  channel_lock_image="image: '${project}_builder'
-    entrypoint: 'bash modules/channel-lock/ops/entry.sh'
+  auth_image="image: '${project}_builder'
+    entrypoint: 'bash modules/auth/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
@@ -293,9 +293,9 @@ services:
       - '$db_secret'
       - '$mnemonic_secret_name'
 
-  channel-lock:
+  auth:
     $common
-    $channel_lock_image
+    $auth_image
     ports:
       '$lock_port:$lock_port'
     environment:

@@ -75,7 +75,7 @@ export class MemoLock {
     this.subConn = this.redis.duplicate();
 
     await new Promise((resolve, reject) =>
-      this.subConn!.subscribe("memolock:acquire", (err) => {
+      this.subConn!.subscribe("memolock:acquire", (err: any) => {
         if (err) {
           return reject(err);
         }
@@ -83,7 +83,7 @@ export class MemoLock {
       }),
     );
     await new Promise((resolve, reject) =>
-      this.subConn!.subscribe("memolock:expire", (err) => {
+      this.subConn!.subscribe("memolock:expire", (err: any) => {
         if (err) {
           return reject(err);
         }
@@ -91,7 +91,7 @@ export class MemoLock {
       }),
     );
 
-    this.subConn.on("message", (channel, message) => {
+    this.subConn.on("message", (channel: any, message: string | number) => {
       const awaiter = this.awaiters[message];
       if (!awaiter) {
         return;

@@ -1,4 +1,5 @@
 import { getRandomChannelSigner } from "@connext/vector-utils";
+import pino from "pino";
 
 import { Vector } from "../vector";
 
@@ -17,7 +18,7 @@ describe("Vector.connect", () => {
       new MemoryStoreService(),
       signer,
       config.chainProviders,
-      {} as any,
+      pino(),
     );
     expect(node).to.be.instanceOf(Vector);
     expect(node.publicIdentifier).to.be.eq(signer.publicIdentifier);

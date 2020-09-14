@@ -1,5 +1,5 @@
 {
-  "name": "@connext/vector-channel-lock",
+  "name": "@connext/vector-auth",
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
@@ -9,32 +9,32 @@
   },
   "scripts": {
     "build": "rm -rf ./dist/* && npm run build:ts -b .",
-    "build:ts": "node_modules/.bin/tsc -b .",
+    "build:ts": "npm run compile-schemas && node_modules/.bin/tsc -b .",
     "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
     "test": "exec ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
-    "watch": "ts-mocha --bail --check-leaks --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/**/*.spec.ts'"
+    "watch": "ts-mocha --bail --check-leaks --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/**/*.spec.ts'",
+    "compile-schemas": "json2ts -i src/schemas -o src/types"
   },
   "author": "Arjun Bhuptani",
   "license": "MIT",
   "dependencies": {
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
-    "crypto": "^1.0.1",
+    "crypto": "1.0.1",
     "ethers": "5.0.12",
     "fastify": "^3.3.0",
-    "ioredis": "^4.17.3",
-    "pino": "^6.6.1",
-    "ts-natsutil": "^1.1.1"
+    "pino": "6.6.1",
+    "ts-natsutil": "1.1.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",
     "@types/chai-as-promised": "7.1.3",
     "@types/chai-subset": "1.3.3",
-    "@types/ioredis": "^4.17.4",
     "@types/mocha": "8.0.3",
     "@types/pino": "^6.3.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
+    "json-schema-to-typescript": "^9.1.1",
     "mocha": "8.1.3",
     "ts-mocha": "7.0.0",
     "typescript": "4.0.2"
