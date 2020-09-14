@@ -81,16 +81,16 @@ export class Vector implements IVectorEngine {
     if (!state) {
       throw new Error(`Channel not found ${params.channelAddress}`);
     }
-    const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
     const updateRes = await generateUpdate(params, this.storeService, this.signer);
     if (updateRes.isError) {
       return Result.fail(updateRes.getError()!);
     }
     const outboundRes = await sync.outbound(
       updateRes.getValue(),
-      providerUrl,
       this.storeService,
       this.messagingService,
+      this.signer,
+      this.chainProviderUrls,
       this.protocolChannelStateEvt,
       this.protocolChannelErrorEvt,
     );
