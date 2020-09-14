@@ -1,4 +1,4 @@
-import { UpdateType, VectorChannelMessage } from "@connext/vector-types";
+import { ChannelUpdateError, UpdateType, VectorChannelMessage, VectorErrorMessage, VectorMessage } from "@connext/vector-types";
 
 import { createTestChannelUpdate, PartialChannelUpdate } from "./channel";
 import { mkPublicIdentifier } from "./util";
@@ -37,4 +37,20 @@ export function createVectorChannelMessage(overrides: PartialVectorChannelMessag
     },
     ...defaults,
   };
+}
+
+export function createVectorErrorMessage(overrides: Partial<VectorErrorMessage> = {}): VectorErrorMessage {
+  return {
+    to: mkPublicIdentifier("indraBBB"),
+    from: mkPublicIdentifier("indraAAA"),
+    error: new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, createTestChannelUpdate("setup")),
+    ...overrides,
+  };
+}
+
+export function createVectorMessage(type: "channel" | "error" = "channel", overrides: PartialVectorChannelMessage | Partial<VectorErrorMessage>): VectorMessage {
+  if (type === "channel") {
+    return createVectorChannelMessage(overrides);
+  }
+  return createVectorErrorMessage(overrides);
 }
