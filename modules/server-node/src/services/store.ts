@@ -9,6 +9,7 @@ import {
   SetupUpdateDetails,
   IEngineStore,
   TransferState,
+  ChannelCommitmentData,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
@@ -21,6 +22,9 @@ export class PrismaStore implements IEngineStore {
 
   constructor() {
     this.prisma = new PrismaClient();
+  }
+  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
+    throw new Error("Method not implemented.");
   }
   getSchemaVersion(): Promise<number> {
     throw new Error("Method not implemented.");
