@@ -4,7 +4,6 @@ import {
   hashCoreTransferState,
   hashTransferState,
   getTransferNameFromState,
-  hashChannelCommitment,
 } from "@connext/vector-utils";
 import { Contract, BigNumber, utils, constants } from "ethers";
 import {
@@ -12,7 +11,6 @@ import {
   ChannelUpdate,
   FullChannelState,
   UpdateParams,
-  ChannelCommitmentData,
   Balance,
   IChannelSigner,
   LockedValueType,
@@ -24,7 +22,7 @@ import {
 } from "@connext/vector-types";
 
 import { MerkleTree } from "./merkleTree";
-import { resolve } from "./utils";
+import { generateSignedChannelCommitment, resolve } from "./utils";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -392,29 +390,6 @@ async function generateResolveUpdate(
   };
 
   return unsigned;
-}
-
-// This function signs the state after the update is applied,
-// not for the update that exists
-async function generateSignedChannelCommitment(
-  newState: FullChannelState,
-  signer: IChannelSigner,
-): Promise<ChannelCommitmentData> {
-  const { publicIdentifiers, networkContext, ...core } = newState;
-  const unsigned: ChannelCommitmentData = {
-    chainId: networkContext.chainId,
-    state: core,
-    adjudicatorAddress: newState.networkContext.adjudicatorAddress,
-    signatures: [],
-  };
-  const sig = await signer.signMessage(hashChannelCommitment(unsigned));
-  const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
-  return {
-    ...unsigned,
-    signatures: idx === 0 ? [sig, ""] : ["", sig],
-    // TODO: see notes in ChannelUpdate type re: single-signed state
-    // convention
-  };
 }
 
 // TODO: signature assertion helpers for commitment data

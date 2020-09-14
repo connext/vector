@@ -1,8 +1,9 @@
 import pino from "pino";
 import * as evm from "@connext/pure-evm-wasm";
-import { Contract, CoreTransferState, TransferState, TransferResolver, Balance } from "@connext/vector-types";
+import { Contract, CoreTransferState, TransferState, TransferResolver, Balance, ChannelCommitmentData, FullChannelState, IChannelSigner } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { Signer, utils } from "ethers";
+import { hashChannelCommitment } from "@connext/vector-utils";
 
 const { defaultAbiCoder } = utils;
 
@@ -18,6 +19,7 @@ export const logger = pino();
 export function isChannelMessage(msg: any): boolean {
   if (msg?.error) return false;
   if (!msg?.data) return false;
+  if (!msg?.data.update) return false;
   return true;
 }
 
@@ -49,6 +51,30 @@ export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =
     Uint8Array.from(Buffer.from(bytecode.replace(/^0x/, ""), "hex")),
     Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
   );
+
+// This function signs the state after the update is applied,
+// not for the update that exists
+export async function generateSignedChannelCommitment(
+  newState: FullChannelState,
+  signer: IChannelSigner,
+  counterpartySignature = "",
+): Promise<ChannelCommitmentData> {
+  const { publicIdentifiers, networkContext, ...core } = newState;
+  const unsigned: ChannelCommitmentData = {
+    chainId: networkContext.chainId,
+    state: core,
+    adjudicatorAddress: newState.networkContext.adjudicatorAddress,
+    signatures: [],
+  };
+  const sig = await signer.signMessage(hashChannelCommitment(unsigned));
+  const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
+  return {
+    ...unsigned,
+    signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
+    // TODO: see notes in ChannelUpdate type re: single-signed state
+    // convention
+  };
+}
 
 export const create = async (
   core: CoreTransferState,
