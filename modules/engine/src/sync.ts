@@ -17,7 +17,7 @@ import {
 import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
 
-import { delay, logger, isChannelMessage, isChannelState } from "./utils";
+import { delay, logger, isChannelMessage, isChannelState, isErrorMessage } from "./utils";
 import { applyUpdate } from "./update";
 import { validate } from "./validate";
 
@@ -166,9 +166,6 @@ export async function inbound(
     return Result.ok(undefined);
   }
 
-  // TODO: If it is not a channel or error message,
-  // ignore the message
-
   // If it is a response, process the response
   if (isChannelMessage(message)) {
     return processChannelMessage(
@@ -180,12 +177,16 @@ export async function inbound(
       stateEvt,
       errorEvt,
     );
+  } else if (isErrorMessage(message)) {
+    // It is an error message from a counterparty. An `outbound` promise
+    // may be waiting to resolve, so post to the errorEvt
+    const errorMessage = message as VectorErrorMessage;
+    errorEvt.post(errorMessage.error);
+    return Result.fail(new ChannelUpdateError(errorMessage.error.message, errorMessage.error.update));
   }
 
-  // It is an error message from a counterparty. An `outbound` promise
-  // may be waiting to resolve, so post to the errorEvt
-  errorEvt.post((message as VectorErrorMessage).error);
-  return Result.fail(new ChannelUpdateError((message as VectorErrorMessage).error, {} as any));
+  // Otherwise, it is an unrecognized message format. do nothing
+  return Result.ok(undefined);
 }
 
 // This function is responsible for handling any inbound state requests.

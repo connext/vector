@@ -1,5 +1,5 @@
 import { FullChannelState } from "./channel";
-import { InboundChannelError } from "./error";
+import { ChannelUpdateError } from "./error";
 
 export type ChannelUpdateEvent = {
   direction: "inbound" | "outbound";
@@ -16,5 +16,5 @@ export type EngineEventName = typeof EngineEventName[keyof typeof EngineEventNam
 export type EngineEventPayloadsMap = {
   [EngineEventName.CHANNEL_UPDATE_EVENT]: ChannelUpdateEvent;
   [EngineEventName.PROTOCOL_MESSAGE_EVENT]: FullChannelState;
-  [EngineEventName.PROTOCOL_ERROR_EVENT]: InboundChannelError;
+  [EngineEventName.PROTOCOL_ERROR_EVENT]: ChannelUpdateError;
 };
