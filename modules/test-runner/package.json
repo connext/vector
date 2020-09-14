@@ -1,0 +1,27 @@
+{
+  "name": "@connext/test-runner",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --config ops/webpack.config.js",
+    "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
+    "test": "bash ops/entry.sh"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/chai": "4.2.12",
+    "@types/chai-as-promised": "7.1.3",
+    "@types/chai-subset": "1.3.3",
+    "@types/mocha": "8.0.3",
+    "babel-loader": "8.1.0",
+    "copy-webpack-plugin": "6.1.0",
+    "ts-loader": "8.0.3",
+    "ts-mocha": "7.0.0",
+    "typescript": "4.0.2",
+    "webpack": "4.44.1",
+    "webpack-cli": "3.3.12"
+  }
+}

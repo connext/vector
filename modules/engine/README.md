@@ -34,7 +34,7 @@ At the core of Vector lies the `sync` protocol. Unlike in CounterFactual, there 
 For this reason, `sync` takes a higher degree of control over message delivery than CF does. Outbound messages are retried on a timer if they fail, inbound onces are idempotent. Higher-nonced inbound messages are checked against the `ChannelState` latest nonce and dropped if they are duplicates, or saved to store if they aren't.
 
 ## Update Types
-All channel updates fall into one of 4 types. Each update type is responsible for generating and storing one or two [double-signed commitments](https://github.com/connext/vector/blob/master/modules/contracts/README.md#commitments).
+All channel updates fall into one of 4 types. Each update type is responsible for generating and storing one [double-signed commitment](https://github.com/connext/vector/blob/master/modules/contracts/README.md#commitments).
 
 Note that there is no specific update for `Withdraw`. That is because a withdraw op can be constructed in an easy and generalizeable way using `Create` and `Resolve` similar to what we currently do in CF.
 
