@@ -23,7 +23,7 @@ server.addHook("onReady", async () => {
   await messaging.connect();
   vectorNode = await NodeCore.connect(
     messaging,
-    new LockService(),
+    new LockService(config.redisUrl),
     new PrismaStore(),
     signer,
     config.chainProviders,
