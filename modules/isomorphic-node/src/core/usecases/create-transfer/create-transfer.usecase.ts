@@ -53,6 +53,6 @@ export class CreateTransferUseCase implements UseCase<CreateTransferInput, Creat
       return Result.fail(createResult.getError()!);
     }
 
-    return Result.ok({ channelId: request.channelId, paymentId: request.paymentId, preImage: request.preImage });
+    return Result.ok({ channelId: request.channelId, routingId: request.routingId, preImage: request.preImage });
   }
 }

@@ -112,7 +112,7 @@ export class NodeCore {
       return Result.fail(engineResult.getError()!);
     }
     const res = engineResult.getValue();
-    return Result.ok({ paymentId: params.paymentId });
+    return Result.ok({ routingId: params.routingId });
   }
 
   public async resolveCondition(params: ResolveConditionParams): Promise<Result<any>> {

@@ -6,7 +6,7 @@ import { CreateTransferInvalidRequest } from "./errors/invalid-request";
 export type CreateTransferOutput = Result<
   {
     channelId: string;
-    paymentId: string;
+    routingId: string;
     preImage: string;
   },
   CreateTransferInvalidRequest | WalletError

@@ -5,7 +5,7 @@ export interface CreateTransferInput extends Input {
   amount: string;
   assetId: string;
   recipient?: string;
-  paymentId: string;
+  routingId: string;
   preImage: string;
   meta?: Record<string, unknown>;
   receiverChainId?: number;

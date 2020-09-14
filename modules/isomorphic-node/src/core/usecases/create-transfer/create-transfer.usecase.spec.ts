@@ -47,7 +47,7 @@ describe("create transfer usecase", () => {
         amount: "1",
         assetId: constants.AddressZero,
         channelId: constants.AddressZero,
-        paymentId: constants.HashZero,
+        routingId: constants.HashZero,
         preImage: constants.HashZero,
         meta: {},
         recipient: getRandomIdentifier(),

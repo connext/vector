@@ -21,13 +21,13 @@ export type ConditionalTransferParams<T extends ConditionalTransferType> = {
   assetId: Address;
   recipient?: PublicIdentifier;
   conditionType: T;
-  paymentId: Bytes32; // This is needed for hopped transfers, but it might get confusing against transferId
+  routingId: Bytes32; // This is needed for hopped transfers, but it might get confusing against transferId
   details: TransferParamsMap[T];
   meta?: any;
 };
 
 export type ConditionalTransferResponse = {
-  paymentId: Bytes32;
+  routingId: Bytes32;
 };
 
 export type ResolveConditionParams = any;

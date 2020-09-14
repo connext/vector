@@ -23,7 +23,7 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
   chainAddresses: ChainAddresses,
   channel: FullChannelState,
 ): Result<CreateTransferParams, InvalidTransferType> {
-  const { channelAddress, amount, assetId, recipient, paymentId, details } = params;
+  const { channelAddress, amount, assetId, recipient, routingId, details } = params;
   const chainId = channel.networkContext.chainId;
   const participants = channel.participants;
   let transferDefinition: string | undefined;
@@ -46,7 +46,7 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
 
   const meta = {
     recipient,
-    paymentId,
+    routingId,
     meta: params.meta,
   };
 

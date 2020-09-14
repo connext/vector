@@ -83,7 +83,7 @@ server.post<{ Body: StringifyBigNumberAmount<CreateTransferInput> }>(
       amount: request.body.amount,
       assetId: request.body.assetId,
       channelId: request.body.channelId,
-      paymentId: request.body.paymentId,
+      routingId: request.body.routingId,
       preImage: request.body.preImage,
       meta: request.body.meta,
       recipient: request.body.recipient,

@@ -37,13 +37,13 @@ export const Routes: RoutesSchema = {
       schema: {
         body: {
           type: "object",
-          required: ["channelId", "amount", "assetId", "paymentId", "preImage"],
+          required: ["channelId", "amount", "assetId", "routingId", "preImage"],
           properties: {
             channelId: { type: "string" },
             amount: { type: "string" },
             assetId: { type: "string" },
             recipient: { type: "string" },
-            paymentId: { type: "string" },
+            routingId: { type: "string" },
             preImage: { type: "string" },
             meta: { type: "object" },
           },
