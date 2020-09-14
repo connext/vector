@@ -1,20 +1,35 @@
-import { ILockService } from "@connext/vector-types";
-import Redis from "ioredis";
+import fastify from "fastify";
+import pino from "pino";
 
-import { MemoLock } from "./lock/memo-lock";
+import { MessagingAuthService } from "./auth/messaging-auth-service";
+import { config } from "./config";
 
-export class LockService implements ILockService {
-  private memoLock: MemoLock;
-  constructor(redisUrl: string) {
-    const redis = new Redis(redisUrl);
-    this.memoLock = new MemoLock(redis);
+const logger = pino({
+  level: "info",
+});
+
+const server = fastify({
+  logger,
+});
+
+const messagingService = new MessagingAuthService(
+  {
+    messagingUrl: config.messagingUrl,
+    privateKey: config.privateKey,
+    publicKey: config.publicKey,
+  },
+  logger.child({ module: "MessagingAuthService" }),
+  config.adminToken,
+);
+
+server.get("/ping", async (request, reply) => {
+  return "pong\n";
+});
+
+server.listen(8080, (err, address) => {
+  if (err) {
+    console.error(err);
+    process.exit(1);
   }
-
-  acquireLock(lockName: string): Promise<string> {
-    return this.memoLock.acquireLock(lockName);
-  }
-
-  releaseLock(lockName: string, lockValue: string): Promise<void> {
-    return this.memoLock.releaseLock(lockName, lockValue);
-  }
-}
+  console.log(`Server listening at ${address}`);
+});
