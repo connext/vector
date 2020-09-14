@@ -275,6 +275,7 @@ services:
       - '$node_port:$node_port'
     environment:
       INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
+      INDRA_AUTH_URL: 'http://auth:$auth_port'
       INDRA_CHAIN_PROVIDERS: '$INDRA_CHAIN_PROVIDERS'
       INDRA_CONTRACT_ADDRESSES: '$INDRA_CONTRACT_ADDRESSES'
       INDRA_LOG_LEVEL: '$INDRA_LOG_LEVEL'

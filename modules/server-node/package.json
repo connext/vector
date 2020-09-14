@@ -17,6 +17,7 @@
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
     "@prisma/client": "2.6.2",
+    "axios": "^0.20.0",
     "ethers": "5.0.13",
     "fastify": "3.4.1",
     "ioredis": "4.17.3",

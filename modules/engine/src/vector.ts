@@ -109,10 +109,7 @@ export class Vector implements IVectorEngine {
   }
 
   private async setupServices(): Promise<Vector> {
-    this.messagingService.subscribe(this.publicIdentifier, async (err: Error | null, msg: VectorMessage) => {
-      if (err) {
-        // this.logger.error(err)
-      }
+    this.messagingService.subscribe(this.publicIdentifier, async (msg: VectorMessage) => {
       const inboundRes = await sync.inbound(
         msg,
         this.storeService,

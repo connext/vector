@@ -3,8 +3,9 @@ import pino from "pino";
 import { NodeCore } from "@connext/vector-node-core";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
+import axios from "axios";
 
-import { TempNatsMessagingService } from "./services/messaging";
+import { NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -17,10 +18,20 @@ import LinkedTransferBodySchema from "./schemas/linkedTransfer/body.json";
 
 const server = fastify();
 
+const logger = pino();
 let vectorNode: NodeCore;
 const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic!).privateKey);
 server.addHook("onReady", async () => {
-  const messaging = new TempNatsMessagingService("nats://localhost:4222");
+  const messaging = new NatsMessagingService(
+    {
+      messagingUrl: config.natsUrl,
+    },
+    logger.child({ module: "NatsMessagingService" }),
+    async () => {
+      const r = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
+      return r.data;
+    },
+  );
   await messaging.connect();
   vectorNode = await NodeCore.connect(
     messaging,
@@ -29,7 +40,7 @@ server.addHook("onReady", async () => {
     signer,
     config.chainProviders,
     {},
-    pino(),
+    logger.child({ module: "NodeCore" }),
   );
 });
 
