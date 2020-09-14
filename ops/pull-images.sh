@@ -5,20 +5,38 @@ root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 
-extra="$1"
-
-images="builder database ethprovider node proxy"
-
 commit="`git rev-parse HEAD | head -c 8`"
 semver="`cat package.json | grep '"version":' | head -n 1 | cut -d '"' -f 4`"
 
+default_images="`echo 'builder database ethprovider node proxy' | sed "s/^/${project}_/"`"
+
+versions="${1:-latest $commit $semver}"
+images="${2:-$default_images}"
+
 for image in $images
 do
-  for version in $extra latest $commit $semver
+  for version in $versions
   do
-    echo "Pulling image: $registry/${project}_$image:$version"
-    docker pull $registry/${project}_$image:$version || true
-    echo "Tagging image $registry/${project}_$image:$version as ${project}_$image:$version"
-    docker tag $registry/${project}_$image:$version ${project}_$image:$version || true
+    name="$image:$version"
+    if [[ -n "`docker image ls | grep "$image" | grep "$version"`" ]]
+    then
+      echo "Image $name already exists locally"
+    else
+
+      if [[ -n "`echo $name | grep "${project}_"`" ]]
+      then full_name="${registry%/}/$name"
+      else full_name="$name"
+      fi
+
+      echo "Pulling image: $full_name"
+      docker pull $full_name || true
+
+      if [[ "$name" != "$full_name" ]]
+      then
+        echo "Tagging image $full_name as $name"
+        docker tag $full_name $name || true
+      fi
+
+    fi
   done
 done
