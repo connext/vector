@@ -126,14 +126,14 @@ test-protocol: protocol
 watch-protocol: contracts
 	bash ops/test/unit.sh protocol watch 1340
 
-test-engine: engine-bundle
+test-engine: engine
 	bash ops/test/unit.sh engine test 1341
 watch-engine: protocol
 	bash ops/test/unit.sh engine watch 1341
 
 test-server-node: server-node
 	bash ops/test/server-node.sh test
-watch-server-node: engine-bundle
+watch-server-node: engine
 	bash ops/test/server-node.sh watch
 
 ########################################
@@ -180,19 +180,24 @@ protocol: utils contracts $(shell find modules/protocol $(find_options))
 	$(docker_run) "cd modules/protocol && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
+engine: utils protocol $(shell find modules/engine $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/engine && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 auth-bundle: utils $(shell find modules/auth $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-engine-bundle: utils protocol $(shell find modules/engine $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/engine && npm run build"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-server-node-bundle: engine-bundle $(shell find modules/server-node $(find_options))
+server-node-bundle: engine $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+test-runner-bundle: engine $(shell find modules/test-runner $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/test-runner && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
@@ -232,4 +237,10 @@ proxy: $(shell find ops/proxy $(find_options))
 	$(log_start)
 	docker build $(image_cache) --tag $(project)_proxy ops/proxy
 	docker tag $(project)_proxy $(project)_proxy:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+test-runner: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
+	$(log_start)
+	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner
+	docker tag $(project)_test_runner $(project)_test_runner:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
