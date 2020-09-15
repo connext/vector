@@ -14,13 +14,12 @@ import {
   VectorErrorMessage,
   ChannelCommitmentData,
 } from "@connext/vector-types";
-import { getTransferNameFromState, hashTransferState } from "@connext/vector-utils";
+import { delay, getTransferNameFromState, hashTransferState } from "@connext/vector-utils";
 import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
+import Pino from "pino";
 
 import {
-  delay,
-  logger,
   isChannelMessage,
   isChannelState,
   isErrorMessage,
@@ -41,6 +40,7 @@ export async function outbound(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
+  logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   const storedChannel = await storeService.getChannelState(update.channelAddress);
   if (!storedChannel) {
@@ -191,6 +191,7 @@ export async function inbound(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
+  logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<FullChannelState | undefined, ChannelUpdateError>> {
   // If the message is from us, ignore
   if (message.from === signer.publicIdentifier) {
@@ -207,6 +208,7 @@ export async function inbound(
       chainProviders,
       stateEvt,
       errorEvt,
+      logger,
     );
   } else if (isErrorMessage(message)) {
     // It is an error message from a counterparty. An `outbound` promise
@@ -229,6 +231,7 @@ async function processChannelMessage(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
+  logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   const { from, data } = message;
   const requestedUpdate = data.update as ChannelUpdate<any>;

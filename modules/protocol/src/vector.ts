@@ -27,12 +27,16 @@ import Pino from "pino";
 import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
 import { generateUpdate } from "./update";
-import { logger } from "./utils";
+
+type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
 export class Vector implements IVectorProtocol {
-  private protocolChannelStateEvt = Evt.create<FullChannelState>();
-  private protocolChannelErrorEvt = Evt.create<ChannelUpdateError>();
-  private channelUpdateEvt = Evt.create<ChannelUpdateEvent>();
+  private evts: EvtContainer = {
+    [ProtocolEventName.CHANNEL_UPDATE_EVENT]: Evt.create<ChannelUpdateEvent>(),
+    [ProtocolEventName.PROTOCOL_ERROR_EVENT]: Evt.create<ChannelUpdateError>(),
+    [ProtocolEventName.PROTOCOL_MESSAGE_EVENT]: Evt.create<FullChannelState>(),
+  };
+
   private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
 
   // make it private so the only way to create the class is to use `connect`
@@ -74,14 +78,14 @@ export class Vector implements IVectorProtocol {
 
   // Primary protocol execution from the leader side
   private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
-    logger.info(`Start executeUpdate`, { params });
+    this.logger.info(`Start executeUpdate`, { params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
     const state = await this.storeService.getChannelState(params.channelAddress);
     if (!state) {
       throw new Error(`Channel not found ${params.channelAddress}`);
     }
-    const updateRes = await generateUpdate(params, this.storeService, this.signer);
+    const updateRes = await generateUpdate(params, this.storeService, this.signer, this.logger);
     if (updateRes.isError) {
       return Result.fail(updateRes.getError()!);
     }
@@ -91,8 +95,9 @@ export class Vector implements IVectorProtocol {
       this.messagingService,
       this.signer,
       this.chainProviderUrls,
-      this.protocolChannelStateEvt,
-      this.protocolChannelErrorEvt,
+      this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
+      this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
+      this.logger,
     );
 
     if (outboundRes.isError) {
@@ -100,7 +105,7 @@ export class Vector implements IVectorProtocol {
     }
 
     const updatedChannelState = outboundRes.getValue();
-    this.channelUpdateEvt.post({
+    this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
       direction: "outbound",
       updatedChannelState,
     });
@@ -116,14 +121,15 @@ export class Vector implements IVectorProtocol {
         this.messagingService,
         this.signer,
         this.chainProviderUrls,
-        this.protocolChannelStateEvt,
-        this.protocolChannelErrorEvt,
+        this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
+        this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
+        this.logger,
       );
       if (inboundRes.isError) {
         // this.logger.error(inboundRes.getError())
       }
       const updatedChannelState = inboundRes.getValue();
-      this.channelUpdateEvt.post({
+      this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
         direction: "inbound",
         updatedChannelState: updatedChannelState!,
       });
@@ -214,22 +220,38 @@ export class Vector implements IVectorProtocol {
   public on<T extends ProtocolEventName>(
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
-  ): void {}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: ProtocolEventPayloadsMap[T]) => boolean = (_payload: ProtocolEventPayloadsMap[T]) => true,
+  ): void {
+    this.evts[event].pipe(filter).attach(callback);
+  }
 
   public once<T extends ProtocolEventName>(
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
-  ): void {}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: ProtocolEventPayloadsMap[T]) => boolean = (_payload: ProtocolEventPayloadsMap[T]) => true,
+  ): void {
+    this.evts[event].pipe(filter).attachOnce(callback);
+  }
 
   public waitFor<T extends ProtocolEventName>(
     event: T,
     timeout: number,
-    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: ProtocolEventPayloadsMap[T]) => boolean = (_payload: ProtocolEventPayloadsMap[T]) => true,
   ): Promise<ProtocolEventPayloadsMap[T]> {
-    return {} as any;
+    return this.evts[event].pipe(filter).waitFor(timeout);
   }
 
-  public async off() {}
+  public off<T extends ProtocolEventName>(
+    event?: T,
+  ): void {
+    if (event) {
+      this.evts[event].detach();
+      return;
+    }
+
+    Object.keys(ProtocolEventName).forEach(k => this.evts[k].detach());
+  }
 }

@@ -1,22 +1,27 @@
-import pino from "pino";
 import * as evm from "@connext/pure-evm-wasm";
-import { Contract, CoreTransferState, TransferState, TransferResolver, Balance, ChannelCommitmentData, FullChannelState, IChannelSigner } from "@connext/vector-types";
+import {
+  Contract,
+  CoreTransferState,
+  TransferState,
+  TransferResolver,
+  Balance,
+  ChannelCommitmentData,
+  FullChannelState,
+  IChannelSigner,
+  CoreChannelState,
+  VectorChannelMessage,
+  VectorErrorMessage,
+} from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { Signer, utils } from "ethers";
 import { hashChannelCommitment } from "@connext/vector-utils";
+import { Evt } from "evt";
+import Pino from "pino";
 
 const { defaultAbiCoder } = utils;
 
-// import { VectorChannelMessage, ChannelState } from "./types";
-
-// NOTE: These are very simple type-specific utils
-// To prevent cyclic dependencies, these should not be moved to the utils module
-export const tidy = (str: string): string => `${str.replace(/\n/g, "").replace(/ +/g, " ")}`;
-
-export const logger = pino();
-
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isChannelMessage(msg: any): boolean {
+export function isChannelMessage(msg: any): msg is VectorChannelMessage {
   if (msg?.error) return false;
   if (!msg?.data) return false;
   if (!msg?.data.update) return false;
@@ -24,14 +29,14 @@ export function isChannelMessage(msg: any): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isErrorMessage(msg: any): boolean {
+export function isErrorMessage(msg: any): msg is VectorErrorMessage {
   if (msg?.data) return false;
   if (!msg?.error) return false;
   return true;
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isChannelState(blob: any): boolean {
+export function isChannelState(blob: any): blob is CoreChannelState {
   if (!blob?.channelAddress) return false;
   if (!blob?.participants) return false;
   if (!blob?.timeout) return false;
@@ -44,10 +49,19 @@ export function isChannelState(blob: any): boolean {
   return true;
 }
 
-export const delay = (ms: number): Promise<void> => new Promise((res: any): any => setTimeout(res, ms));
-
-export const delayAndThrow = (ms: number, msg = ""): Promise<undefined> =>
-  new Promise((res: any, rej: any): any => setTimeout((): undefined => rej(new Error(msg)), ms));
+// Adds a handler to an evt instance and returns the result
+// based on the input arguments
+export function addEvtHandler<T = any>(
+  evt: Evt<T>,
+  callback: (event: T) => void | Promise<void>,
+  filter?: (event: T) => boolean,
+  timeout?: number,
+): Evt<T> | Promise<T> {
+  // NOTE: If this type is not an array with a length, then using
+  // the spread operator will cause errors on the evt package
+  const attachArgs = [filter, timeout, callback].filter(x => !!x) as [any, any, any];
+  return evt.attach(...attachArgs);
+};
 
 // We might need to convert this file to JS...
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
@@ -71,7 +85,7 @@ export async function generateSignedChannelCommitment(
     state: core,
     adjudicatorAddress: networkContext.adjudicatorAddress,
   };
-  const filteredSigs = updateSignatures.filter(x => !!x);
+  const filteredSigs = updateSignatures.filter((x) => !!x);
   if (filteredSigs.length === 2) {
     // No need to sign, we have already signed
     return {
@@ -82,7 +96,7 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
-  const sig = await signer.signMessage(hashChannelCommitment({...unsigned, signatures: []}));
+  const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
@@ -95,6 +109,7 @@ export const create = async (
   state: TransferState,
   signer: Signer,
   bytecode?: string,
+  logger: Pino.BaseLogger = Pino(),
 ): Promise<boolean> => {
   const encodedState = defaultAbiCoder.encode([core.transferEncodings[0]], [state]);
   const contract = new Contract(core.transferId, TransferDefinition.abi, signer);
@@ -117,6 +132,7 @@ export const resolve = async (
   resolver: TransferResolver,
   signer: Signer,
   bytecode?: string,
+  logger: Pino.BaseLogger = Pino(),
 ): Promise<Balance> => {
   const encodedState = defaultAbiCoder.encode([core.transferEncodings[0]], [state]);
   const encodedResolver = defaultAbiCoder.encode([core.transferEncodings[1]], [resolver]);

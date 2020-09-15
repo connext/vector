@@ -1,4 +1,4 @@
-import { VectorChannel } from "@connext/vector-contracts";
+import { LinkedTransfer, VectorChannel } from "@connext/vector-contracts";
 import {
   getSignerAddressFromPublicIdentifier,
   hashCoreTransferState,
@@ -20,6 +20,7 @@ import {
   ChannelUpdateError,
   Result,
 } from "@connext/vector-types";
+import Pino from "pino";
 
 import { MerkleTree } from "./merkleTree";
 import { generateSignedChannelCommitment, resolve } from "./utils";
@@ -134,6 +135,7 @@ export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   storeService: IVectorStore,
   signer: IChannelSigner,
+  logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
   // Get the channel state
   const state = await storeService.getChannelState(params.channelAddress);
@@ -177,6 +179,7 @@ export async function generateUpdate<T extends UpdateType>(
         signer,
         transfers,
         transferState,
+        logger,
       );
       break;
     }
@@ -343,6 +346,7 @@ async function generateResolveUpdate(
   signer: IChannelSigner,
   transfers: CoreTransferState[],
   transfer: TransferState,
+  logger: Pino.BaseLogger,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
   // channel fields:
@@ -369,6 +373,8 @@ async function generateResolveUpdate(
     transfer,
     params.details.transferResolver,
     signer,
+    LinkedTransfer.bytecode,
+    logger,
   );
 
   // Convert transfer balance to channel update balance

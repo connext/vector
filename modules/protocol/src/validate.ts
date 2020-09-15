@@ -7,8 +7,8 @@ import {
   UpdateValidationError,
 } from "@connext/vector-types";
 import { utils } from "ethers";
+import Pino from "pino";
 
-import { logger } from "./utils";
 
 const { getAddress } = utils;
 
@@ -26,6 +26,7 @@ export async function validate<T extends UpdateType = any>(
   state: FullChannelState,
   storeService: IVectorStore,
   providerUrl: string,
+  logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<void, UpdateValidationError>> {
   // There is no need to validate items in the state since this will always
   // be a double signed state
@@ -66,16 +67,16 @@ export async function validate<T extends UpdateType = any>(
   // Then break out into type-specific validation
   switch (update.type) {
     case UpdateType.setup: {
-      return validateSetup(update as ChannelUpdate<"setup">, state as FullChannelState<"setup">);
+      return validateSetup(update as ChannelUpdate<"setup">, state as FullChannelState<"setup">, logger);
     }
     case UpdateType.deposit: {
-      return validateDeposit(update as ChannelUpdate<"deposit">, state as FullChannelState<"deposit">);
+      return validateDeposit(update as ChannelUpdate<"deposit">, state as FullChannelState<"deposit">, logger);
     }
     case UpdateType.create: {
-      return validateCreate(update as ChannelUpdate<"create">, state as FullChannelState<"create">);
+      return validateCreate(update as ChannelUpdate<"create">, state as FullChannelState<"create">, logger);
     }
     case UpdateType.resolve: {
-      return validateResolve(update as ChannelUpdate<"resolve">, state as FullChannelState<"resolve">);
+      return validateResolve(update as ChannelUpdate<"resolve">, state as FullChannelState<"resolve">, logger);
     }
     default: {
       throw new Error(`Unexpected UpdateType in received update: ${update.type}`);
@@ -89,6 +90,7 @@ export async function validate<T extends UpdateType = any>(
 function validateSetup(
   update: ChannelUpdate<"setup">,
   state: FullChannelState<"setup">,
+  logger: Pino.BaseLogger = Pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate channel doesnt exist in storage
 
@@ -115,6 +117,7 @@ function validateSetup(
 function validateDeposit(
   update: ChannelUpdate<"deposit">,
   state: FullChannelState<"deposit">,
+  logger: Pino.BaseLogger = Pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate the latest deposit nonce from chain
 
@@ -128,6 +131,7 @@ function validateDeposit(
 function validateCreate(
   update: ChannelUpdate<"create">,
   state: FullChannelState<"create">,
+  logger: Pino.BaseLogger = Pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate transfer id
 
@@ -152,6 +156,7 @@ function validateCreate(
 function validateResolve(
   update: ChannelUpdate<"resolve">,
   state: FullChannelState<"resolve">,
+  logger: Pino.BaseLogger = Pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate transfer id
 
