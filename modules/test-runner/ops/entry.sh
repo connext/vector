@@ -7,18 +7,18 @@ fi
 cmd="${1:-test}"
 
 # Set defaults in src/util/env instead of here
-export INDRA_ADMIN_TOKEN="$INDRA_ADMIN_TOKEN"
-export INDRA_CHAIN_PROVIDERS="$INDRA_CHAIN_PROVIDERS"
-export INDRA_CLIENT_LOG_LEVEL="$INDRA_CLIENT_LOG_LEVEL"
-export INDRA_LOG_LEVEL="$INDRA_LOG_LEVEL"
-export INDRA_CONTRACT_ADDRESSES="$INDRA_CONTRACT_ADDRESSES"
-export INDRA_NATS_URL="$INDRA_NATS_URL"
-export INDRA_NODE_URL="$INDRA_NODE_URL"
+export VECTOR_ADMIN_TOKEN="$VECTOR_ADMIN_TOKEN"
+export VECTOR_CHAIN_PROVIDERS="$VECTOR_CHAIN_PROVIDERS"
+export VECTOR_CLIENT_LOG_LEVEL="$VECTOR_CLIENT_LOG_LEVEL"
+export VECTOR_LOG_LEVEL="$VECTOR_LOG_LEVEL"
+export VECTOR_CONTRACT_ADDRESSES="$VECTOR_CONTRACT_ADDRESSES"
+export VECTOR_NATS_URL="$VECTOR_NATS_URL"
+export VECTOR_NODE_URL="$VECTOR_NODE_URL"
 
 export NODE_ENV="${NODE_ENV:-development}"
 
 ########################################
-# Wait for indra stack dependencies
+# Wait for dependencies to wake up
 
 function wait_for {
   name=$1
@@ -39,8 +39,8 @@ function wait_for {
   wait-for -t 60 $host 2> /dev/null
 }
 
-wait_for "node" "$INDRA_NODE_URL"
-wait_for "nats" "$INDRA_NATS_URL"
+wait_for "node" "$VECTOR_NODE_URL"
+wait_for "nats" "$VECTOR_NATS_URL"
 
 ########################################
 # Launch tests
