@@ -115,7 +115,7 @@ lint:
 
 test-utils: utils
 	bash ops/test/unit.sh utils test
-watch-utils: utils
+watch-utils: types
 	bash ops/test/unit.sh utils watch
 
 test-contracts: contracts
@@ -125,8 +125,13 @@ watch-contracts: utils
 
 test-protocol: protocol
 	bash ops/test/unit.sh protocol test 1340
-watch-protocol: protocol
+watch-protocol: contracts
 	bash ops/test/unit.sh protocol watch 1340
+
+test-engine: engine-bundle
+	bash ops/test/unit.sh engine test
+watch-engine: protocol
+	bash ops/test/unit.sh engine watch
 
 test-server-node: server-node
 	bash ops/test/server-node.sh test 1341

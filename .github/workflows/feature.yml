@@ -37,6 +37,13 @@ jobs:
       - run: make protocol
       - run: make test-protocol
 
+  test-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make engine
+      - run: make test-engine
+
   test-node-server:
     runs-on: ubuntu-latest
     steps:

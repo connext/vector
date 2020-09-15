@@ -2,20 +2,17 @@
   "name": "@connext/vector-engine",
   "version": "0.0.1",
   "description": "",
+  "author": "Arjun Bhuptani",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "build": "rm -rf ./dist/* && npm run build:ts -b .",
-    "build:ts": "node_modules/.bin/tsc -b .",
-    "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
-    "test": "exec ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
-    "watch": "ts-mocha --bail --check-leaks --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/**/*.spec.ts'"
+    "build": "rm -rf ./dist/* && tsc -b .",
+    "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
-  "author": "Arjun Bhuptani",
-  "license": "MIT",
   "dependencies": {
     "@connext/vector-contracts": "0.0.1",
     "@connext/vector-protocol": "0.0.1",
