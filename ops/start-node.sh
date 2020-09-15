@@ -91,6 +91,7 @@ echo "Proxy configured"
 ## Node config
 
 node_port="8888"
+auth_port="5040"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -109,29 +110,6 @@ else
 fi
 
 echo "Node configured"
-
-########################################
-## Auth Service config
-
-auth_port="5040"
-
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  auth_image_name="${project}_auth:$version"
-  bash ops/pull-images.sh $auth_image_name
-  auth_image="image: '$auth_image_name'"
-else
-  echo "Running dev mode"
-  auth_image="image: '${project}_builder'
-    entrypoint: 'bash modules/auth/ops/entry.sh'
-    volumes:
-      - '$root:/root'
-    ports:
-      - '$auth_port:$auth_port'
-      - '9229:9229'"
-fi
-
-echo "Channel lock configured"
 
 ########################################
 ## Database config

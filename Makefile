@@ -45,15 +45,12 @@ start: vector
 	bash ops/start-global-services.sh
 	bash ops/start-node.sh
 
-start-testnet: ethprovider
-	VECTOR_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
+start-duet: auth global-proxy
+	bash ops/start-duet.sh
 
-start-global: auth global-proxy
-	bash ops/start-global-services.sh
-
-restart-global: auth global-proxy
-	bash ops/stop.sh connext
-	bash ops/start-global-services.sh
+restart-duet: auth global-proxy
+	bash ops/stop.sh duet
+	bash ops/start-duet.sh
 
 stop:
 	bash ops/stop.sh vector
@@ -62,6 +59,7 @@ stop-all:
 	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
 	bash ops/stop.sh connext
+	bash ops/stop.sh duet
 
 restart: vector stop
 	bash ops/start-global-services.sh
