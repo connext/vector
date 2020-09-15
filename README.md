@@ -17,4 +17,4 @@ make start
 //TODO
 
 ## Architecture
-![alt](https://i.ibb.co/2K4sBRD/Vector-System-Architecture-1.png)
+![alt](https://i.ibb.co/MCCtMft/Vector-System-Architecture-2.png)
