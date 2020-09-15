@@ -27,9 +27,7 @@ async function globalSetup(): Promise<void> {
   const [chainIdString, providerUrl] = Object.entries(env.chainProviders)[0] as [string, string];
   const ethProvider = new providers.JsonRpcProvider(providerUrl, parseInt(chainIdString));
   const fundedAccount = Wallet.createRandom().connect(ethProvider);
-  const addresses = Array(3)
-    .fill(0)
-    .map((_v) => Wallet.createRandom().address);
+  const addresses = Array(3).fill(0).map(() => Wallet.createRandom().address);
   await fundAddress(addresses[0], ethProvider);
   await fundAddress(addresses[1], ethProvider);
   await fundAddress(addresses[2], ethProvider);
@@ -55,11 +53,12 @@ const deployArtifactsToChain = async (wallet: Wallet): Promise<ContractAddresses
   // Deploy core contracts
   const vectorChannelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, wallet).deploy();
 
+  const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, wallet).deploy();
+
   const channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, wallet).deploy(
     vectorChannelMastercopy.address,
+    adjudicator.address,
   );
-
-  const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, wallet).deploy();
 
   // Deploy app contracts
   const linkedTransfer = await new ContractFactory(LinkedTransfer.abi, LinkedTransfer.bytecode, wallet).deploy();

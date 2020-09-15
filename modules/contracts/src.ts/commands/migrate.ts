@@ -50,8 +50,11 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
   };
 
   const adjudicator = await deployHelper("Adjudicator", []);
-  await deployHelper("ChannelFactory", [{ name: "adjudicator", value: adjudicator.address }]);
-  await deployHelper("VectorChannel", []);
+  const mastercopy = await deployHelper("VectorChannel", []);
+  await deployHelper("ChannelFactory", [
+    { name: "adjudicator", value: adjudicator.address },
+    { name: "mastercopy", value: mastercopy.address },
+  ]);
 
   ////////////////////////////////////////
   // Print summary
