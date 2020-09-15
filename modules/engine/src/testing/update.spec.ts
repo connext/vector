@@ -233,13 +233,20 @@ describe("applyUpdate", () => {
     });
 
     // Load the store
-    await store.saveChannelState(state, {} as any, { 
+    await store.saveChannelState(state, {} as any, {
+      initialState: transferInitialState,
+      commitment: {
+        state: coreState,
+        chainId: state.networkContext.chainId,
+        adjudicatorAddress: state.networkContext.adjudicatorAddress,
+        merkleProofData: "",
+      },
       transferId: coreState.transferId,
-      resolver: update.details.transferResolver,
     });
 
-    const newState = (await applyUpdate(update, state, store)).getValue();
-    expect(newState).to.containSubset({
+    const updateRet = await applyUpdate(update, state, store);
+    expect(updateRet.isError).to.be.false;
+    expect(updateRet.getValue()).to.containSubset({
       ...state,
       balances: [{ ...transferInitialState.balance, amount: ["1", "0"] }],
       lockedValue: [{ amount: "0" }],
@@ -409,7 +416,7 @@ describe("generateUpdate", () => {
     });
 
     // Create the transfer core
-    const coreState = createCoreTransferState({ 
+    const coreState = createCoreTransferState({
       initialBalance: transferInitialState.balance,
       initialStateHash: hashLinkedTransferState(transferInitialState),
       channelAddress,
@@ -427,9 +434,15 @@ describe("generateUpdate", () => {
     });
 
     // Load the store
-    await store.saveChannelState(state, {} as any, { 
+    await store.saveChannelState(state, {} as any, {
+      initialState: transferInitialState,
+      commitment: {
+        state: coreState,
+        chainId: state.networkContext.chainId,
+        adjudicatorAddress: state.networkContext.adjudicatorAddress,
+        merkleProofData: "",
+      },
       transferId: coreState.transferId,
-      resolver: params.details.transferResolver,
     });
 
     // Get expected values
@@ -449,7 +462,8 @@ describe("generateUpdate", () => {
     });
 
     // Generate the update
-    const update = (await generateUpdate(params, store, signers[0])).getValue();
-    expect(update).to.containSubset(expected);
+    const updateRet = (await generateUpdate(params, store, signers[0]));
+    expect(updateRet.isError).to.be.false;
+    expect(updateRet.getValue()).to.containSubset(expected);
   });
 });

@@ -32,10 +32,15 @@ export function isErrorMessage(msg: any): boolean {
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function isChannelState(blob: any): boolean {
-  if (!blob?.channelId) return false;
+  if (!blob?.channelAddress) return false;
   if (!blob?.participants) return false;
-  if (!blob?.chainId) return false;
-  if (!blob?.latestNonce) return false;
+  if (!blob?.timeout) return false;
+  if (!blob?.balances) return false;
+  if (!blob?.lockedValue) return false;
+  if (!blob?.assetIds) return false;
+  if (typeof blob?.nonce !== "number") return false;
+  if (typeof blob?.latestDepositNonce !== "number") return false;
+  if (!blob?.merkleRoot) return false;
   return true;
 }
 
@@ -57,22 +62,31 @@ export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =
 export async function generateSignedChannelCommitment(
   newState: FullChannelState,
   signer: IChannelSigner,
-  counterpartySignature = "",
+  updateSignatures: string[],
 ): Promise<ChannelCommitmentData> {
   const { publicIdentifiers, networkContext, ...core } = newState;
-  const unsigned: ChannelCommitmentData = {
+
+  const unsigned = {
     chainId: networkContext.chainId,
     state: core,
-    adjudicatorAddress: newState.networkContext.adjudicatorAddress,
-    signatures: [],
+    adjudicatorAddress: networkContext.adjudicatorAddress,
   };
-  const sig = await signer.signMessage(hashChannelCommitment(unsigned));
+  const filteredSigs = updateSignatures.filter(x => !!x);
+  if (filteredSigs.length === 2) {
+    // No need to sign, we have already signed
+    return {
+      ...unsigned,
+      signatures: filteredSigs,
+    };
+  }
+
+  // Only counterparty has signed
+  const [counterpartySignature] = filteredSigs;
+  const sig = await signer.signMessage(hashChannelCommitment({...unsigned, signatures: []}));
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
     signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
-    // TODO: see notes in ChannelUpdate type re: single-signed state
-    // convention
   };
 }
 

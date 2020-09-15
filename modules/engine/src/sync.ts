@@ -59,7 +59,7 @@ export async function outbound(
       // this nonce, reject the promise
       errorEvt
         .pipe((e: ChannelUpdateError) => {
-          return e.update.nonce === updateToSend.nonce && e.update.channelAddress === updateToSend.channelAddress;
+          return e.update.channelAddress === updateToSend.channelAddress;
         })
         .attachOnce((e: ChannelUpdateError) => resolve(Result.fail(e)));
 
@@ -67,7 +67,7 @@ export async function outbound(
       // this channel update, resolve the promise
       stateEvt
         .pipe((e: FullChannelState) => {
-          return e.channelAddress === updateToSend.channelAddress && e.nonce === updateToSend.nonce;
+          return e.channelAddress === updateToSend.channelAddress;
         })
         .attachOnce((state: FullChannelState) => resolve(Result.ok(state)));
 
@@ -75,7 +75,15 @@ export async function outbound(
       // TODO: what if there is no latest update?
       messagingService
         .publish(updateToSend.toIdentifier, { update: updateToSend, latestUpdate: prevUpdate })
-        .catch((e) => resolve(Result.fail(e)));
+        .catch((e) =>
+          resolve(
+            Result.fail(
+              new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel, {
+                error: e.message,
+              }),
+            ),
+          ),
+        );
     });
 
   // Retry sending the message 5 times w/3s delay
@@ -88,6 +96,12 @@ export async function outbound(
       const result = await generatePromise(updateToSend, prevUpdate);
       if (!result.isError) {
         return result;
+      }
+      const channelError = result.getError()!;
+      // The only errors we should retry here is if the message failed
+      // to send
+      if (channelError.message !== ChannelUpdateError.reasons.MessageFailed) {
+        return Result.fail(new ChannelUpdateError(channelError.message, channelError.update, channelError.state));
       }
       logger.error(`Failed to execute helper`, { error: result.getError()?.message, stack: result.getError()?.stack });
       await delay(3_000);
@@ -224,7 +238,7 @@ async function processChannelMessage(
     // If the update is single signed, the counterparty is waiting
     // for a response.
     if (requestedUpdate.signatures.length === 1) {
-      await messagingService.publish(from, error);
+      await messagingService.publish(from, { to: from, from: signer.publicIdentifier, error });
     }
     // Post to the evt
     errorEvt.post(error);
@@ -399,8 +413,12 @@ async function processChannelMessage(
 
     // Send the latest update to the node
     await messagingService.publish(from, {
-      update: { ...requestedUpdate, commitment: signed },
-      latestUpdate: response.latestUpdate,
+      to: from,
+      from: signer.publicIdentifier,
+      data: {
+        update: { ...requestedUpdate, signatures: signed.signatures },
+        latestUpdate: response.latestUpdate,
+      },
     });
     return Result.ok(response);
   }
@@ -438,13 +456,10 @@ const signAndSaveData = async (
   signer: IChannelSigner,
   store: IEngineStore,
 ): Promise<ChannelCommitmentData> => {
-  const signed = await generateSignedChannelCommitment(
-    newState,
-    signer,
-    update.signatures.find((x) => !!x),
-  );
+  const signed = await generateSignedChannelCommitment(newState, signer, update.signatures);
 
-  const transferId = update.type === UpdateType.create || update.type === UpdateType.resolve ? update.details.transferId : undefined;
+  const transferId =
+    update.type === UpdateType.create || update.type === UpdateType.resolve ? update.details.transferId : undefined;
 
   if (!transferId) {
     // Not a transfer update, no need to include transfer
@@ -492,10 +507,7 @@ const signAndSaveData = async (
   }
 
   if (update.type === UpdateType.resolve) {
-    const {
-      transferResolver,
-      meta,
-    } = (update as ChannelUpdate<typeof UpdateType.resolve>).details;
+    const { transferResolver, meta } = (update as ChannelUpdate<typeof UpdateType.resolve>).details;
     transferDetails = {
       resolver: transferResolver,
       meta,

@@ -2,16 +2,16 @@ import { IMessagingService } from "@connext/vector-types";
 import { Evt } from "evt";
 
 export class MemoryMessagingService implements IMessagingService {
-  connect(): Promise<void> {
-    throw new Error("Method not implemented.");
+  async connect(): Promise<void> {
+    return;
   }
 
-  send(to: string, msg: any): Promise<void> {
-    throw new Error("Method not implemented.");
+  async send(to: string, msg: any): Promise<void> {
+    this.evt.post({ subject: to, data: msg });
   }
 
-  onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
-    throw new Error("Method not implemented.");
+  async onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
+    this.evt.pipe(({ subject: _subject }) => _subject === subject).attach(({ data }) => callback(data));
   }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {

@@ -192,7 +192,7 @@ export async function generateUpdate<T extends UpdateType>(
   if (result.isError) {
     return Result.fail(result.getError()!);
   }
-  const commitment = await generateSignedChannelCommitment(result.getValue(), signer);
+  const commitment = await generateSignedChannelCommitment(result.getValue(), signer, []);
 
   // Return the validated update to send to counterparty
   return Result.ok({

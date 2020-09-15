@@ -69,6 +69,8 @@ export class MemoryStoreService implements IEngineStore {
       meta,
       transferId,
     });
+    this.transfersInChannel.set(channelState.channelAddress, [...activeTransfers, transferId]);
+
     return Promise.resolve();
   }
 
