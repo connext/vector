@@ -21,9 +21,3 @@ node dist/src.ts/cli.js migrate \
   --address-book "$address_book" \
   --eth-provider "$eth_provider" \
   --mnemonic "$mnemonic"
-
-echo "Deploying testnet token.."
-node dist/src.ts/cli.js new-token \
-  --address-book "$address_book" \
-  --eth-provider "$eth_provider" \
-  --mnemonic "$mnemonic"
