@@ -8,7 +8,7 @@ export type TransferRecord = { transferId: string } & Partial<{
   meta: any;
 }>;
 
-export interface IEngineStore {
+export interface IVectorStore {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
@@ -28,5 +28,3 @@ export interface IEngineStore {
   getSchemaVersion(): Promise<number | undefined>;
   updateSchemaVersion(version?: number): Promise<void>;
 }
-
-export interface INodeCoreStore extends IEngineStore {}

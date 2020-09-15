@@ -1,13 +1,13 @@
 import {
   FullChannelState,
   CoreTransferState,
-  IEngineStore,
+  IVectorStore,
   TransferState,
   ChannelCommitmentData,
   TransferRecord,
 } from "@connext/vector-types";
 
-export class MemoryStoreService implements IEngineStore {
+export class MemoryStoreService implements IVectorStore {
   // Map<channelAddress, transferId[]>
   private transfersInChannel: Map<string, string[]> = new Map();
 

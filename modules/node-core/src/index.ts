@@ -5,8 +5,8 @@ import {
   IChannelSigner,
   ILockService,
   IMessagingService,
-  INodeCoreStore,
-  IEngineStore,
+  IVectorStore,
+  IVectorStore,
   ConditionalTransferParams,
   ResolveConditionParams,
   WithdrawParams,
@@ -34,7 +34,7 @@ import { SetupInput } from "./types";
 export class NodeCore {
   private constructor(
     private readonly messaging: IMessagingService,
-    private readonly store: INodeCoreStore,
+    private readonly store: IVectorStore,
     private readonly engine: IVectorEngine,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
@@ -44,13 +44,13 @@ export class NodeCore {
   static async connect(
     messaging: IMessagingService,
     lock: ILockService,
-    store: INodeCoreStore,
+    store: IVectorStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
     logger: Pino.BaseLogger,
   ): Promise<NodeCore> {
-    const engine = await Vector.connect(messaging, lock, store as IEngineStore, signer, chainProviders, logger);
+    const engine = await Vector.connect(messaging, lock, store as IVectorStore, signer, chainProviders, logger);
     const nodeCore = new NodeCore(messaging, store, engine, chainProviders, chainAddresses, logger);
     await nodeCore.setupListener();
     return nodeCore;

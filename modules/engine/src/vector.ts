@@ -1,5 +1,5 @@
 import {
-  IEngineStore,
+  IVectorStore,
   UpdateParams,
   DepositParams,
   UpdateType,
@@ -39,7 +39,7 @@ export class Vector implements IVectorEngine {
   private constructor(
     private readonly messagingService: IMessagingService,
     private readonly lockService: ILockService,
-    private readonly storeService: IEngineStore,
+    private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
     private readonly chainProviderUrls: ChainProviders,
     private readonly logger: Pino.BaseLogger,
@@ -52,7 +52,7 @@ export class Vector implements IVectorEngine {
   static connect(
     messagingService: IMessagingService,
     lockService: ILockService,
-    storeService: IEngineStore,
+    storeService: IVectorStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     logger: Pino.BaseLogger,

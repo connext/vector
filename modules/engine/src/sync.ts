@@ -1,6 +1,6 @@
 import {
   ChannelUpdate,
-  IEngineStore,
+  IVectorStore,
   UpdateType,
   IMessagingService,
   ChainProviders,
@@ -35,7 +35,7 @@ import { validate } from "./validate";
 // has been persisted.
 export async function outbound(
   update: ChannelUpdate<any>,
-  storeService: IEngineStore,
+  storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
   chainProviders: ChainProviders,
@@ -185,7 +185,7 @@ export async function outbound(
 // This function is expected to handle errors and updates from a counterparty.
 export async function inbound(
   message: VectorMessage,
-  storeService: IEngineStore,
+  storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
   chainProviders: ChainProviders,
@@ -223,7 +223,7 @@ export async function inbound(
 // This function is responsible for handling any inbound state requests.
 async function processChannelMessage(
   message: VectorChannelMessage,
-  storeService: IEngineStore,
+  storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
   chainProviders: ChainProviders,
@@ -442,7 +442,7 @@ async function processChannelMessage(
 const mergeUpdate = async (
   update: ChannelUpdate<any>,
   state: FullChannelState,
-  storeService: IEngineStore,
+  storeService: IVectorStore,
   providerUrl: string,
 ): Promise<Result<FullChannelState, ChannelUpdateError>> => {
   await validate(update, state, storeService, providerUrl);
@@ -454,7 +454,7 @@ const signAndSaveData = async (
   newState: FullChannelState,
   update: ChannelUpdate<any>, // Should be single- or un-signed
   signer: IChannelSigner,
-  store: IEngineStore,
+  store: IVectorStore,
 ): Promise<ChannelCommitmentData> => {
   const signed = await generateSignedChannelCommitment(newState, signer, update.signatures);
 
