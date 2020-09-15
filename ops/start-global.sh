@@ -6,8 +6,7 @@ project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 tmp="$root/.tmp"; mkdir -p $tmp
 
-# Call this global service stack 'connext' bc it could be used by many of connext's products
-stack="connext"
+stack="global"
 
 # turn on swarm mode if it's not already on
 docker swarm init 2> /dev/null || true
@@ -90,31 +89,8 @@ else
       - '$root:/root'"
 fi
 
-echo "Auth configured"
-
-####################
-# Proxy config
-
-proxy_image="${project}_msg_proxy:$version";
-bash ops/pull-images.sh "$proxy_image"
-
-if [[ -z "$VECTOR_DOMAINNAME" ]]
-then
-  public_url="http://localhost:8080"
-  proxy_ports="ports:
-      - '8080:80'
-      - '4221:4221'
-      - '4222:4222'"
-else
-  public_url="https://localhost:443"
-  proxy_ports="ports:
-      - '80:80'
-      - '443:443'
-      - '4221:4221'
-      - '4222:4222'"
-fi
-
-echo "Proxy configured"
+public_url="http://localhost:$auth_port"
+echo "Auth configured to be exposed on *:$auth_port"
 
 ####################
 # Nats config
@@ -172,19 +148,6 @@ volumes:
 
 services:
 
-  proxy:
-    $common
-    $proxy_ports
-    image: '$proxy_image'
-    environment:
-      VECTOR_DOMAINNAME: '$VECTOR_DOMAINNAME'
-      VECTOR_EMAIL: '$VECTOR_EMAIL'
-      VECTOR_AUTH_URL: 'auth:$auth_port'
-      VECTOR_MESSAGING_TCP_URL: 'nats:4222'
-      VECTOR_MESSAGING_WS_URL: 'nats:4221'
-    volumes:
-      - 'certs:/etc/letsencrypt'
-
   auth:
     $common
     $auth_image
@@ -197,6 +160,8 @@ services:
       NODE_ENV: '`
         if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
       `'
+    ports:
+      - '$auth_port:$auth_port'
 
   nats:
     $common
@@ -217,7 +182,7 @@ EOF
 
 docker stack deploy -c $root/${stack}.docker-compose.yml $stack
 
-echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
+echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
 timeout=$(expr `date +%s` + 60)
 while true
 do

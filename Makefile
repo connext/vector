@@ -34,9 +34,13 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 # Build Shortcuts
 
 default: node
+
 node: database proxy server-node
-extras: auth ethprovider global-proxy test-runner
-all: node extras
+global: auth global-proxy 
+duet: database server-node
+extras: ethprovider test-runner
+
+all: node global duet extras
 
 ########################################
 # Command & Control Shortcuts
@@ -45,28 +49,28 @@ start: start-node
 restart: restart-node
 stop: stop-node
 
-start-node: server-node
+start-node: node
 	bash ops/start-node.sh
-restart-node: server-node
+restart-node: node
 	bash ops/stop.sh node
 	bash ops/start-node.sh
-stop-node: server-node
+stop-node: node
 	bash ops/stop.sh node
 
-start-duet: auth global-proxy
+start-duet: duet
 	bash ops/start-duet.sh
-restart-duet: auth global-proxy
+restart-duet: duet
 	bash ops/stop.sh duet
 	bash ops/start-duet.sh
-stop-duet: auth global-proxy
+stop-duet: duet
 	bash ops/stop.sh duet
 
-start-global: auth global-proxy
+start-global: global
 	bash ops/start-global.sh
-restart-global: auth global-proxy
+restart-global: global
 	bash ops/stop.sh global
 	bash ops/start-global.sh
-stop-global: auth global-proxy
+stop-global: global
 	bash ops/stop.sh global
 
 stop-all:
@@ -121,6 +125,8 @@ lint:
 ########################################
 # Test Commands
 
+# Unit Tests
+
 test-utils: utils
 	bash ops/test/unit.sh utils test
 watch-utils: types
@@ -141,10 +147,21 @@ test-engine: engine
 watch-engine: protocol
 	bash ops/test/unit.sh engine watch 1341
 
+# Integration Tests
 
-test-duet: test-runner server-node
+test-global: test-runner global
+	bash ops/test/integration.sh global test
+watch-global: test-runner global
+	bash ops/test/integration.sh global watch
+
+test-node: test-runner node
+	bash ops/test/integration.sh node test
+watch-node: test-runner node
+	bash ops/test/integration.sh node watch
+
+test-duet: test-runner duet
 	bash ops/test/integration.sh duet test
-watch-duet: test-runner server-node
+watch-duet: test-runner duet
 	bash ops/test/integration.sh duet watch
 
 ########################################

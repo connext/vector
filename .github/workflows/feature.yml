@@ -16,33 +16,44 @@ jobs:
       - run: make all
       - run: bash ops/build-report.sh
 
-  test-utils:
+  utils:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-utils
 
-  test-contracts:
+  contracts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-utils
 
-  test-protocol:
+  protocol:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-protocol
 
-  test-engine:
+  engine:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-engine
 
-  test-duet:
+  global:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-global
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-node
+
+  duet:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-duet
-

@@ -5,6 +5,8 @@ root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 
+stack="node"
+
 # turn on swarm mode if it's not already on
 docker swarm init 2> /dev/null || true
 
@@ -88,30 +90,6 @@ fi
 echo "Proxy configured"
 
 ########################################
-## Node config
-
-node_port="8888"
-auth_port="5040"
-
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  node_image_name="${project}_node"
-  bash ops/pull-images.sh $version $node_image_name
-  node_image="image: '$node_image_name:$version'"
-else
-  echo "Running dev mode"
-  node_image="image: '${project}_builder'
-    entrypoint: 'bash modules/server-node/ops/entry.sh'
-    volumes:
-      - '$root:/root'
-    ports:
-      - '$node_port:$node_port'
-      - '9229:9229'"
-fi
-
-echo "Node configured"
-
-########################################
 ## Database config
 
 database_image_name="${project}_database";
@@ -146,9 +124,23 @@ pg_user="$project"
 echo "Database configured"
 
 ########################################
-# Chain provider config
+# Global services config
+# If no global service urls provided, spin up local ones & use those
 
+if [[ -z "$VECTOR_AUTH_URL" ]]
+then
+  auth_port="5040"
+  auth_url="http://auth:$auth_port"
+  bash ops/start-global.sh
+else
+  auth_url="$VECTOR_AUTH_URL"
+fi
+
+
+########################################
+# Chain provider config
 # If no chain providers provided, spin up local testnets & use those
+
 if [[ -z "$VECTOR_CHAIN_PROVIDERS" ]]
 then
   mnemonic_secret_name="${project}_mnemonic_dev"
@@ -177,13 +169,36 @@ ETH_PROVIDER_URL="`echo $VECTOR_CHAIN_PROVIDERS | tr -d "'" | jq '.[]' | head -n
 
 echo "Chain providers configured"
 
+########################################
+## Node config
+
+node_port="8888"
+
+if [[ $VECTOR_ENV == "prod" ]]
+then
+  node_image_name="${project}_node"
+  bash ops/pull-images.sh $version $node_image_name
+  node_image="image: '$node_image_name:$version'"
+else
+  echo "Running dev mode"
+  node_image="image: '${project}_builder'
+    entrypoint: 'bash modules/server-node/ops/entry.sh'
+    volumes:
+      - '$root:/root'
+    ports:
+      - '$node_port:$node_port'
+      - '9229:9229'"
+fi
+
+echo "Node configured"
+
 ####################
 # Launch Indra stack
 
 echo "Launching ${project}"
 
-rm -rf $root/docker-compose.yml $root/${project}.docker-compose.yml
-cat - > $root/docker-compose.yml <<EOF
+rm -rf $root/docker-compose.yml $root/$stack.docker-compose.yml
+cat - > $root/$stack.docker-compose.yml <<EOF
 version: '3.4'
 
 networks:
@@ -216,7 +231,7 @@ services:
     volumes:
       - 'certs:/etc/letsencrypt'
 
-  node:
+  core:
     $common
     $node_image
     ports:
@@ -262,7 +277,7 @@ services:
 
 EOF
 
-docker stack deploy -c $root/docker-compose.yml $project
+docker stack deploy -c $root/$stack.docker-compose.yml $project
 
 echo "The $project stack has been deployed, waiting for the proxy to start responding.."
 timeout=$(expr `date +%s` + 60)
