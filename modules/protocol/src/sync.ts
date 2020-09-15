@@ -154,7 +154,7 @@ export async function outbound(
   if (mergeRes.isError) {
     return Result.fail(
       new ChannelUpdateError(
-        ChannelUpdateError.reasons.applyUpdateFailed,
+        ChannelUpdateError.reasons.ApplyUpdateFailed,
         channelError.state.latestUpdate,
         storedChannel,
       ),
@@ -370,7 +370,7 @@ async function processChannelMessage(
     const mergeRes = await mergeUpdate(counterpartyLatestUpdate, storedState, storeService, providerUrl);
     if (mergeRes.isError) {
       const error = await handleError(
-        new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, counterpartyLatestUpdate, storedState, {
+        new ChannelUpdateError(ChannelUpdateError.reasons.ApplyUpdateFailed, counterpartyLatestUpdate, storedState, {
           requestedUpdate,
           error: mergeRes.getError()!.message,
           stack: mergeRes.getError()!.stack,
@@ -386,7 +386,7 @@ async function processChannelMessage(
   const mergeRes = await mergeUpdate(requestedUpdate, previousState, storeService, providerUrl);
   if (mergeRes.isError) {
     const error = await handleError(
-      new ChannelUpdateError(ChannelUpdateError.reasons.applyUpdateFailed, requestedUpdate, previousState, {
+      new ChannelUpdateError(ChannelUpdateError.reasons.ApplyUpdateFailed, requestedUpdate, previousState, {
         counterpartyLatestUpdate,
         error: mergeRes.getError()!.message,
       }),
