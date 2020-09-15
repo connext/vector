@@ -8,10 +8,19 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 commit="`git rev-parse HEAD | head -c 8`"
 semver="`cat package.json | grep '"version":' | head -n 1 | cut -d '"' -f 4`"
 
-default_images="`echo 'builder database ethprovider node proxy' | sed "s/^/${project}_/"`"
+default_images="`echo 'auth builder database ethprovider node proxy' | sed "s/^/${project}_/"`"
 
-versions="${1:-latest $commit $semver}"
-images="${2:-$default_images}"
+# If given an arg like "image_name:version", then try to pull that version of image_name
+if [[ -n "$1" && "$1" == *:* ]]
+then
+  versions="${1#*:}"
+  images="${1%:*}"
+
+# Else parse first arg as versions and second as image names
+else
+  versions="${1:-latest $commit $semver}"
+  images="${2:-$default_images}"
+fi
 
 for image in $images
 do

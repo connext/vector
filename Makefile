@@ -35,7 +35,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 
 default: vector
 vector: database proxy server-node
-extras: ethprovider
+extras: auth ethprovider
 all: vector extras
 
 ########################################
@@ -46,6 +46,9 @@ start: vector
 
 start-testnet: ethprovider
 	VECTOR_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
+
+start-messaging: auth
+	bash ops/start-messaging.sh
 
 stop:
 	bash ops/stop.sh vector
