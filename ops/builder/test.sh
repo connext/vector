@@ -9,9 +9,12 @@ fi
 
 test_cmd="`cat package.json | jq '.scripts.test' | tr -d '\n\r"' | cut -d " " -f 1`"
 
-if [[ "$test_cmd" == *mocha* && "$NODE_ENV" == prod* ]]
-then opts="--forbid-only"
-else opts="--bail"
+if [[ "$test_cmd" == *mocha* ]]
+then
+  if [[ "$NODE_ENV" == prod* ]]
+  then opts="--forbid-only"
+  else opts="--bail"
+  fi
 fi
 
 if [[ "${cmd##*-}" == "test" ]]

@@ -20,6 +20,13 @@ jobs:
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - run: make push
 
+  test-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make utils
+      - run: make test-utils
+
   test-contracts:
     runs-on: ubuntu-latest
     steps:

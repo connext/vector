@@ -113,23 +113,25 @@ lint:
 ########################################
 # Test Commands
 
+test-utils: utils
+	bash ops/test/unit.sh utils test
+watch-utils: utils
+	bash ops/test/unit.sh utils watch
+
 test-contracts: contracts
 	bash ops/test/unit.sh contracts test
-
 watch-contracts: utils
 	bash ops/test/unit.sh contracts watch
 
 test-protocol: protocol
-	bash ops/test/unit.sh protocol test 1341
-
+	bash ops/test/unit.sh protocol test 1340
 watch-protocol: protocol
-	bash ops/test/unit.sh protocol watch 1341
+	bash ops/test/unit.sh protocol watch 1340
 
 test-server-node: server-node
-	bash ops/test/server-node.sh test
-
+	bash ops/test/server-node.sh test 1341
 watch-server-node: engine-bundle
-	bash ops/test/server-node.sh watch
+	bash ops/test/server-node.sh watch 1341
 
 ########################################
 # Begin Real Build Rules

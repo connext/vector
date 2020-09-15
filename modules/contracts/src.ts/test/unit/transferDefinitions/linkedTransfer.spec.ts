@@ -118,7 +118,7 @@ describe.only("LinkedTransfer", () => {
       const preImage = getRandomBytes32();
       const initialState = await createInitialState(preImage);
       const result = await resolveTransfer(initialState, { preImage });
-      console.log(`Result: ${stringify(result)}`)
+      console.log(`Result: ${stringify(result)}`);
       await validateResult(initialState, { preImage }, result);
     });
 

@@ -16,6 +16,13 @@ jobs:
       - run: make all
       - run: make build-report
 
+  test-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make utils
+      - run: make test-utils
+
   test-contracts:
     runs-on: ubuntu-latest
     steps:
