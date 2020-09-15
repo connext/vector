@@ -5,7 +5,10 @@ module.exports = {
   mode: "development",
   target: "node",
 
-  entry: path.join(__dirname, "../src/index.ts"),
+  entry: {
+    "duet": path.join(__dirname, "../src/duet/index.ts"),
+    "routing": path.join(__dirname, "../src/routing/index.ts"),
+  },
 
   externals: {
     "mocha": "commonjs2 mocha",
@@ -26,7 +29,7 @@ module.exports = {
 
   output: {
     path: path.join(__dirname, "../dist"),
-    filename: `tests.bundle.js`,
+    filename: `[name].bundle.js`,
   },
 
   module: {
