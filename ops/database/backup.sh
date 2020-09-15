@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-project="indra"
-bucket_name=backups.indra.connext.network
+project="vector"
+bucket_name=backups.vector.connext.network
 lifecycle=backup-lifecycle.json
 
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

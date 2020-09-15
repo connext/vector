@@ -157,8 +157,8 @@ fi
 DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
 apt-get autoremove -y
 
-if [[ ! -d indra ]]
-then git clone https://github.com/ConnextProject/indra.git
+if [[ ! -d vector ]]
+then git clone https://github.com/ConnextProject/vector.git
 fi
 
 chown -R $user:$user .

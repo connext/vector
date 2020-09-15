@@ -35,7 +35,7 @@ export interface IRpcConnection {
   close(): Promise<void>;
 }
 
-export interface IEngineProvider {
+export interface IVectorProvider {
   ////////////////////////////////////////
   // Properties
 

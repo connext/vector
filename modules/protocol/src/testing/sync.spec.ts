@@ -13,7 +13,7 @@ import {
   delay,
 } from "@connext/vector-utils";
 import {
-  IEngineStore,
+  IVectorStore,
   IMessagingService,
   FullChannelState,
   ChannelUpdateError,
@@ -40,7 +40,7 @@ describe("inbound", () => {
   const errorEvt = new Evt<ChannelUpdateError>();
 
   let signers: ChannelSigner[];
-  let store: IEngineStore;
+  let store: IVectorStore;
   let messaging: IMessagingService;
 
   beforeEach(async () => {
@@ -239,7 +239,7 @@ describe("outbound", () => {
   const errorEvt = new Evt<ChannelUpdateError>();
 
   let signers: ChannelSigner[];
-  let store: IEngineStore;
+  let store: IVectorStore;
   let messaging: IMessagingService;
 
   beforeEach(async () => {

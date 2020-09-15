@@ -24,9 +24,10 @@ then
   find \
     .github/workflows/* \
     Makefile \
-    modules/*/contracts \
     modules/*/ops \
     modules/*/src \
+    modules/*/src.sol \
+    modules/*/src.ts \
     ops \
     -type f -not -name "*.swp" -exec sed -i "s|$old|$new|g" {} \;
 

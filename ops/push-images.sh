@@ -9,17 +9,17 @@ registry_url="https://index.docker.io/v1/repositories/${registry#*/}"
 images="builder database ethprovider node proxy"
 
 commit="`git rev-parse HEAD | head -c 8`"
-git_tag="`git tag --points-at HEAD | grep "indra-" | head -n 1`"
+git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
 
 # Try to get the semver from git tag or commit message
 if [[ -z "$git_tag" ]]
 then
   message="`git log --format=%B -n 1 HEAD`"
-  if [[ "$message" == "Deploy indra-"* ]]
-  then semver="${message#Deploy indra-}"
+  if [[ "$message" == "Deploy vector-"* ]]
+  then semver="${message#Deploy vector-}"
   else semver=""
   fi
-else semver="`echo $git_tag | sed 's/indra-//'`"
+else semver="`echo $git_tag | sed 's/vector-//'`"
 fi
 
 for image in $images

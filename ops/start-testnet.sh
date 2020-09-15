@@ -7,7 +7,7 @@ project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`
 chain_id_1="${1:-1337}"
 chain_id_2="${2:-1338}"
 
-mnemonic="${INDRA_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
+mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
 
 ########################################
 # Configure or launch Ethereum testnets
@@ -21,7 +21,7 @@ chain_url_2="http://$chain_host_2:8545"
 chain_providers='{"'$chain_id_1'":"'$chain_url_1'","'$chain_id_2'":"'$chain_url_2'"}'
 
 echo "Starting $chain_host_1 & $chain_host_2.."
-export INDRA_MNEMONIC=$mnemonic
+export VECTOR_MNEMONIC=$mnemonic
 
 # NOTE: Start script for buidler testnet will return before it's actually ready to go.
 # Run buidlerevm first so that it can finish while we're waiting for ganache to get set up

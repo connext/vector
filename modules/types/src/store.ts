@@ -1,14 +1,14 @@
 import { FullChannelState, CoreTransferState, ChannelCommitmentData, TransferCommitmentData } from "./channel";
 import { TransferResolver, TransferState } from "./transferDefinitions";
 
-export type TransferEngineStoreRecord = { transferId: string } & Partial<{
+export type TransferRecord = { transferId: string } & Partial<{
   initialState: TransferState;
   commitment: TransferCommitmentData;
   resolver: TransferResolver;
   meta: any;
 }>;
 
-export interface IEngineStore {
+export interface IVectorStore {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
@@ -16,7 +16,7 @@ export interface IEngineStore {
   saveChannelState(
     channelState: FullChannelState,
     commitment: ChannelCommitmentData,
-    transferRecord?: TransferEngineStoreRecord,
+    transferRecord?: TransferRecord,
   ): Promise<void>;
 
   // Should return all initial transfer state data needed to
@@ -28,5 +28,3 @@ export interface IEngineStore {
   getSchemaVersion(): Promise<number | undefined>;
   updateSchemaVersion(version?: number): Promise<void>;
 }
-
-export interface INodeCoreStore extends IEngineStore {}

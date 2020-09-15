@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-## This script will start a testnet chain & store that chain's data in indra/.chaindata/${chain_id}
+## This script will start a testnet chain & store that chain's data in vector/.chaindata/${chain_id}
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
@@ -13,11 +13,11 @@ docker network create --attachable --driver overlay $project 2> /dev/null || tru
 
 chain_id="${1:-1337}"
 
-port="${INDRA_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
-tag="${INDRA_TAG:-$chain_id}"
-mnemonic="${INDRA_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-engine="${INDRA_EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
-logLevel="${INDRA_CHAIN_LOG_LEVEL:0}"
+port="${VECTOR_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
+tag="${VECTOR_TAG:-$chain_id}"
+mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
+evm="${VECTOR_EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
+logLevel="${VECTOR_CHAIN_LOG_LEVEL:0}"
 
 ethprovider_host="testnet_$tag"
 
@@ -29,11 +29,11 @@ chain_data="$root/.chaindata/$chain_id"
 mkdir -p $chain_data
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$INDRA_ENV" == "prod" ]]
+if [[ "$VECTOR_ENV" == "prod" ]]
 then
-  git_tag="`git tag --points-at HEAD | grep "indra-" | head -n 1`"
+  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
   if [[ -n "$git_tag" ]]
-  then version="`echo $git_tag | sed 's/indra-//'`"
+  then version="`echo $git_tag | sed 's/vector-//'`"
   else version="`git rev-parse HEAD | head -c 8`"
   fi
   image="${project}_ethprovider:$version"
@@ -44,12 +44,12 @@ else
   opts="--entrypoint bash --mount type=bind,source=$root,target=/root"
 fi
 
-echo "Running ${INDRA_ENV:-dev}-mode image for testnet ${chain_id}: ${image}"
+echo "Running ${VECTOR_ENV:-dev}-mode image for testnet ${chain_id}: ${image}"
 
 docker run $opts \
   --detach \
   --env "CHAIN_ID=$chain_id" \
-  --env "ENGINE=$engine" \
+  --env "EVM=$evm" \
   --env "MNEMONIC=$mnemonic" \
   --mount "type=bind,source=$chain_data,target=/data" \
   --name "$ethprovider_host" \

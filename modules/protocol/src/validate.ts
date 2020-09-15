@@ -2,7 +2,7 @@ import {
   UpdateType,
   ChannelUpdate,
   FullChannelState,
-  IEngineStore,
+  IVectorStore,
   Result,
   UpdateValidationError,
 } from "@connext/vector-types";
@@ -24,7 +24,7 @@ const { getAddress } = utils;
 export async function validate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
-  storeService: IEngineStore,
+  storeService: IVectorStore,
   providerUrl: string,
 ): Promise<Result<void, UpdateValidationError>> {
   // There is no need to validate items in the state since this will always

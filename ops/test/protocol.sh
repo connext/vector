@@ -24,7 +24,7 @@ function cleanup {
 trap cleanup EXIT SIGINT SIGTERM
 
 echo "Starting $ethprovider_host.."
-export INDRA_MNEMONIC=$eth_mnemonic
+export VECTOR_MNEMONIC=$eth_mnemonic
 ethprovider_url="http://172.17.0.1:$ethprovider_port"
 bash ops/start-chain.sh $chain_id
 CHAIN_PROVIDERS="{\"$chain_id\":\"$ethprovider_url\"}"
@@ -45,7 +45,7 @@ docker run \
   --env="CONTRACT_ADDRESSES=$CONTRACT_ADDRESSES" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
-  --name="${project}_engine_tester" \
+  --name="${project}_protocol_tester" \
   --rm \
   --volume="$root:/root" \
-  ${project}_builder -c 'cd modules/engine && npm run '"$cmd"' -- '"$@"
+  ${project}_builder -c 'cd modules/protocol && npm run '"$cmd"' -- '"$@"
