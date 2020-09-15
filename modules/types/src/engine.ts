@@ -1,55 +1,39 @@
-import {
-  ChannelUpdate,
-  CreateTransferParams,
-  DepositParams,
-  FullChannelState,
-  ResolveTransferParams,
-  SetupParams,
-  UpdateType,
-} from "./channel";
-import { ChannelUpdateError, Result } from "./error";
-import { EngineEventName, EngineEventPayloadsMap } from "./event";
+// TODO: Fix all placeholders!
 
-export interface IVectorEngine {
-  signerAddress: string;
-  publicIdentifier: string;
-  setup(params: SetupParams): Promise<Result<any, ChannelUpdateError>>;
-  deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  createTransfer(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  resolveTransfer(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  on<T extends EngineEventName>(
-    event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
-  ): void;
-  once<T extends EngineEventName>(
-    event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
-  ): void;
-  waitFor<T extends EngineEventName>(
-    event: T,
-    timeout: number,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
-  ): Promise<EngineEventPayloadsMap[T]>;
+import { Address, Bytes32, PublicIdentifier } from "./basic";
+
+export const ConditionalTransferType = {
+  LinkedTransfer: "LinkedTransfer",
+} as const;
+export type ConditionalTransferType = typeof ConditionalTransferType[keyof typeof ConditionalTransferType];
+
+interface TransferParamsMap {
+  [ConditionalTransferType.LinkedTransfer]: LinkedTransferParams;
 }
 
-type VectorChannelMessageData<T extends UpdateType = any> = {
-  update: ChannelUpdate<T>,
-  latestUpdate: ChannelUpdate<any> | undefined,
-}
-
-export type VectorChannelMessage<T extends UpdateType = any> = {
-  to: string;
-  from: string;
-  data: VectorChannelMessageData<T>;
+export type LinkedTransferParams = {
+  preImage: string;
 };
 
-export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
-  error: ChannelUpdateError;
+export type ConditionalTransferParams<T extends ConditionalTransferType> = {
+  channelAddress: Address;
+  amount: string;
+  assetId: Address;
+  recipient?: PublicIdentifier;
+  conditionType: T;
+  routingId: Bytes32; // This is needed for hopped transfers, but it might get confusing against transferId
+  details: TransferParamsMap[T];
+  meta?: any;
 };
 
-export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
+export type ConditionalTransferResponse = {
+  routingId: Bytes32;
+};
 
-// TODO: fix these interfaces!
-export type IOnchainService = any;
+export type ResolveConditionParams = any;
+export type WithdrawParams = any;
+export type TransferParams = any;
+
+// These are from the node, may not be the right place
+export type DepositInput = any;
+export type CreateTransferInput = any;

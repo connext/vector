@@ -7,7 +7,7 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  IEngineStore,
+  IVectorStore,
   TransferState,
   ChannelCommitmentData,
 } from "@connext/vector-types";
@@ -17,7 +17,7 @@ import {
   PrismaClient,
 } from "@prisma/client";
 
-export class PrismaStore implements IEngineStore {
+export class PrismaStore implements IVectorStore {
   public prisma: PrismaClient;
 
   constructor() {

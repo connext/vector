@@ -1,6 +1,6 @@
 import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
 import {
-  IEngineStore,
+  IVectorStore,
   JsonRpcProvider,
   UpdateType,
   ChannelUpdateError,
@@ -47,7 +47,7 @@ describe("applyUpdate", () => {
     .fill(0)
     .map((v) => getRandomChannelSigner(providerUrl));
 
-  let store: IEngineStore;
+  let store: IVectorStore;
   let linkedTransferDefinition: string;
 
   beforeEach(() => {
@@ -264,7 +264,7 @@ describe("generateUpdate", () => {
   const provider = new JsonRpcProvider(providerUrl);
 
   let signers: ChannelSigner[];
-  let store: IEngineStore;
+  let store: IVectorStore;
   let linkedTransferDefinition: string;
   let channelAddress: string;
 
@@ -276,7 +276,7 @@ describe("generateUpdate", () => {
     linkedTransferDefinition = global["networkContext"].linkedTransferDefinition;
 
     // Deploy multisig
-    // TODO: in engine deployment?
+    // TODO: in channel deployment?
     const factory = new Contract(
       global["networkContext"].channelFactoryAddress,
       ChannelFactory.abi,

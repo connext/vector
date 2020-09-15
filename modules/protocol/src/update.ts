@@ -15,7 +15,7 @@ import {
   IChannelSigner,
   LockedValueType,
   CoreTransferState,
-  IEngineStore,
+  IVectorStore,
   TransferState,
   ChannelUpdateError,
   Result,
@@ -30,7 +30,7 @@ import { generateSignedChannelCommitment, resolve } from "./utils";
 export async function applyUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
-  storeService: IEngineStore,
+  storeService: IVectorStore,
   // Initial state of resolved transfer for calculating
   // updates to locked value needed from store
 ): Promise<Result<FullChannelState<T>, ChannelUpdateError>> {
@@ -132,7 +132,7 @@ export async function applyUpdate<T extends UpdateType>(
 // properly validated resultant state
 export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
-  storeService: IEngineStore,
+  storeService: IVectorStore,
   signer: IChannelSigner,
 ): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
   // Get the channel state

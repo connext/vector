@@ -8,11 +8,11 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "rm -rf ./dist/* && npm run build:ts -b .",
-    "build:ts": "node_modules/.bin/tsc -b .",
+    "build": "rm -rf ./dist/* && npm run compile-schemas && npm run transpile",
     "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
-    "test": "exec ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
-    "watch": "ts-mocha --bail --check-leaks --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/**/*.spec.ts'"
+    "test": "bash ops/test.sh",
+    "transpile": "node_modules/.bin/tsc --project tsconfig.json",
+    "watch": "bash ops/test.sh --watch"
   },
   "author": "Arjun Bhuptani",
   "license": "MIT",

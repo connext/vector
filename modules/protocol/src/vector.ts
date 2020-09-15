@@ -1,5 +1,5 @@
 import {
-  IEngineStore,
+  IVectorStore,
   UpdateParams,
   DepositParams,
   UpdateType,
@@ -12,9 +12,9 @@ import {
   FullChannelState,
   SetupParams,
   ChannelUpdateEvent,
-  EngineEventName,
-  EngineEventPayloadsMap,
-  IVectorEngine,
+  ProtocolEventName,
+  ProtocolEventPayloadsMap,
+  IVectorProtocol,
   Result,
   ChannelUpdateError,
   VectorMessage,
@@ -29,7 +29,7 @@ import * as sync from "./sync";
 import { generateUpdate } from "./update";
 import { logger } from "./utils";
 
-export class Vector implements IVectorEngine {
+export class Vector implements IVectorProtocol {
   private protocolChannelStateEvt = Evt.create<FullChannelState>();
   private protocolChannelErrorEvt = Evt.create<ChannelUpdateError>();
   private channelUpdateEvt = Evt.create<ChannelUpdateEvent>();
@@ -39,7 +39,7 @@ export class Vector implements IVectorEngine {
   private constructor(
     private readonly messagingService: IMessagingService,
     private readonly lockService: ILockService,
-    private readonly storeService: IEngineStore,
+    private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
     private readonly chainProviderUrls: ChainProviders,
     private readonly logger: Pino.BaseLogger,
@@ -52,7 +52,7 @@ export class Vector implements IVectorEngine {
   static connect(
     messagingService: IMessagingService,
     lockService: ILockService,
-    storeService: IEngineStore,
+    storeService: IVectorStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     logger: Pino.BaseLogger,
@@ -211,23 +211,23 @@ export class Vector implements IVectorEngine {
   ///////////////////////////////////
   // EVENT METHODS
 
-  public on<T extends EngineEventName>(
+  public on<T extends ProtocolEventName>(
     event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+    callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): void {}
 
-  public once<T extends EngineEventName>(
+  public once<T extends ProtocolEventName>(
     event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+    callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): void {}
 
-  public waitFor<T extends EngineEventName>(
+  public waitFor<T extends ProtocolEventName>(
     event: T,
     timeout: number,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
-  ): Promise<EngineEventPayloadsMap[T]> {
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
+  ): Promise<ProtocolEventPayloadsMap[T]> {
     return {} as any;
   }
 

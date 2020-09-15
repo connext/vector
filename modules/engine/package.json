@@ -2,8 +2,8 @@
   "name": "@connext/vector-engine",
   "version": "0.0.1",
   "description": "",
-  "main": "dist/vector.js",
-  "types": "dist/vector.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "directories": {
     "test": "tests"
   },
@@ -11,20 +11,18 @@
     "build": "rm -rf ./dist/* && npm run build:ts -b .",
     "build:ts": "node_modules/.bin/tsc -b .",
     "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
-    "test": "exec ts-mocha --bail --check-leaks --global wallet,networkContext --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/*.spec.ts'",
-    "watch": "ts-mocha --bail --check-leaks --global wallet,networkContext --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/*.spec.ts'"
+    "test": "exec ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
+    "watch": "ts-mocha --bail --check-leaks --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/**/*.spec.ts'"
   },
   "author": "Arjun Bhuptani",
   "license": "MIT",
   "dependencies": {
-    "@connext/pure-evm-wasm": "0.1.4",
     "@connext/vector-contracts": "0.0.1",
+    "@connext/vector-protocol": "0.0.1",
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
-    "async-mutex": "0.2.4",
     "ethers": "5.0.13",
-    "evt": "1.8.9",
-    "pino": "6.6.0"
+    "evt": "1.8.10"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",

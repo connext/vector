@@ -8,16 +8,16 @@ fi
 ########################################
 # Convert secrets to env vars
 
-if [[ -z "$INDRA_PG_PASSWORD" && -n "$INDRA_PG_PASSWORD_FILE" ]]
-then export INDRA_PG_PASSWORD="`cat $INDRA_PG_PASSWORD_FILE`"
+if [[ -z "$VECTOR_PG_PASSWORD" && -n "$VECTOR_PG_PASSWORD_FILE" ]]
+then export VECTOR_PG_PASSWORD="`cat $VECTOR_PG_PASSWORD_FILE`"
 fi
 
-if [[ -z "$INDRA_MNEMONIC" && -n "$INDRA_MNEMONIC_FILE" ]]
-then export INDRA_MNEMONIC="`cat $INDRA_MNEMONIC_FILE`"
+if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
+then export VECTOR_MNEMONIC="`cat $VECTOR_MNEMONIC_FILE`"
 fi
 
 ########################################
-# Wait for indra stack dependencies
+# Wait for dependencies to wake up
 
 function wait_for {
   name=$1
@@ -38,14 +38,14 @@ function wait_for {
   wait-for -t 60 $host 2> /dev/null
 }
 
-wait_for "database" "$INDRA_PG_HOST:$INDRA_PG_PORT"
+wait_for "database" "$VECTOR_PG_HOST:$VECTOR_PG_PORT"
 
 ########################################
 # Launch Node
 
 if [[ "$NODE_ENV" == "development" ]]
 then
-  echo "Starting indra node in dev-mode"
+  echo "Starting node in dev-mode"
   exec ./node_modules/.bin/nodemon \
     --delay 1 \
     --exitcrash \
@@ -58,7 +58,7 @@ then
     --exec ts-node \
     ./src/index.ts | ./node_modules/.bin/pino-pretty
 else
-  echo "Starting indra node in prod-mode"
+  echo "Starting node in prod-mode"
   exec node --no-deprecation dist/bundle.js
 fi
 

@@ -33,19 +33,26 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: indra
-indra: database proxy server-node
-extras: ethprovider
-all: indra extras
+default: vector
+vector: database proxy server-node
+extras: auth ethprovider global-proxy
+all: vector extras
 
 ########################################
 # Command & Control Shortcuts
 
-start: indra
-	bash ops/start-indra.sh
+start: vector
+	bash ops/start-node.sh
 
 start-testnet: ethprovider
-	INDRA_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
+	VECTOR_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
+
+start-global: auth global-proxy
+	bash ops/start-global-services.sh
+
+restart-global: auth global-proxy
+	bash ops/stop.sh connext
+	bash ops/start-global-services.sh
 
 stop:
 	bash ops/stop.sh vector
@@ -53,9 +60,10 @@ stop:
 stop-all:
 	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
+	bash ops/stop.sh connext
 
-restart: indra stop
-	bash ops/start-indra.sh
+restart: vector stop
+	bash ops/start-node.sh
 
 clean: stop-all
 	docker container prune -f
@@ -76,7 +84,7 @@ reset: stop-all
 	docker volume rm `docker volume ls -q -f name=$(project)_database_test_*` 2> /dev/null || true
 
 reset-images:
-	rm -f .flags/database .flags/ethprovider .flags/node .flags/proxy
+	rm -f .flags/auth .flags/database .flags/ethprovider .flags/node .flags/*proxy
 
 purge: clean reset
 
@@ -109,8 +117,8 @@ test-contracts: contracts
 watch-contracts: utils
 	bash ops/test/unit.sh contracts --watch
 
-test-engine: engine
-	bash ops/test/engine.sh test
+test-protocol: protocol
+	bash ops/test/protocol.sh test
 
 test-server-node: server-node
 	bash ops/test/server-node.sh test
@@ -154,9 +162,9 @@ contracts: utils $(shell find modules/contracts $(find_options))
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-engine: utils contracts $(shell find modules/engine $(find_options))
+protocol: utils contracts $(shell find modules/protocol $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/engine && npm run build"
+	$(docker_run) "cd modules/protocol && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 auth-bundle: utils $(shell find modules/auth $(find_options))
@@ -164,12 +172,12 @@ auth-bundle: utils $(shell find modules/auth $(find_options))
 	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node-core-bundle: utils engine $(shell find modules/node-core $(find_options))
+engine-bundle: utils protocol $(shell find modules/engine $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/node-core && npm run build"
+	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-server-node-bundle: node-core-bundle $(shell find modules/server-node $(find_options))
+server-node-bundle: engine-bundle $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
@@ -199,6 +207,12 @@ server-node: server-node-bundle $(shell find modules/server-node/ops $(find_opti
 	$(log_start)
 	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
 	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+global-proxy: $(shell find ops/global-proxy $(find_options))
+	$(log_start)
+	docker build $(image_cache) --tag $(project)_msg_proxy ops/global-proxy
+	docker tag $(project)_msg_proxy $(project)_msg_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 proxy: $(shell find ops/proxy $(find_options))

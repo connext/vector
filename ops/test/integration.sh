@@ -38,13 +38,13 @@ contract_addresses="`cat $addresses_file | jq . -c`"
 ## Launch test runner
 
 common="$interactive \
-  --env=INDRA_ADMIN_TOKEN=$INDRA_ADMIN_TOKEN \
-  --env=INDRA_CHAIN_PROVIDERS=$chain_providers \
-  --env=INDRA_TEST_LOG_LEVEL=${TEST_LOG_LEVEL:-$LOG_LEVEL} \
-  --env=INDRA_CLIENT_LOG_LEVEL=${CLIENT_LOG_LEVEL:-$LOG_LEVEL} \
-  --env=INDRA_CONTRACT_ADDRESSES=$contract_addresses \
-  --env=INDRA_NATS_URL=nats://proxy:4222 \
-  --env=INDRA_NODE_URL=http://proxy:80 \
+  --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
+  --env=VECTOR_CHAIN_PROVIDERS=$chain_providers \
+  --env=VECTOR_TEST_LOG_LEVEL=${TEST_LOG_LEVEL:-$LOG_LEVEL} \
+  --env=VECTOR_CLIENT_LOG_LEVEL=${CLIENT_LOG_LEVEL:-$LOG_LEVEL} \
+  --env=VECTOR_CONTRACT_ADDRESSES=$contract_addresses \
+  --env=VECTOR_NATS_URL=nats://proxy:4222 \
+  --env=VECTOR_NODE_URL=http://proxy:80 \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
   --name=${project}_test_runner \
   --network=$project \
@@ -52,13 +52,13 @@ common="$interactive \
   --tmpfs /tmpfs"
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$INDRA_ENV" == "prod" ]]
+if [[ "$VECTOR_ENV" == "prod" ]]
 then
-  git_tag="`git tag --points-at HEAD | grep "indra-" | head -n 1`"
+  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
   if [[ -z "$version" ]]
   then
     if [[ -n "$git_tag" ]]
-    then version="`echo $git_tag | sed 's/indra-//'`"
+    then version="`echo $git_tag | sed 's/vector-//'`"
     else version="`git rev-parse HEAD | head -c 8`"
     fi
   fi

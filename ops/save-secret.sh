@@ -1,32 +1,33 @@
 #!/bin/bash
 set -e
 
-secret_name="${1:-indra_mnemonic}";
+root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
+
+secret_name="${1:-${project}_mnemonic}";
 secret_value="$2"
 
+# NOTE: any newlines or carriage returns will be stripped out of the secret value
+
 if [[ -n "`docker secret ls | grep "$secret_name\>"`" ]]
-then echo "A secret called $secret_name already exists, skipping secret setup"
+then
+  echo "A secret called $secret_name already exists, skipping secret setup."
+  echo "To overwrite this secret, remove the existing one first: 'docker secret rm $secret_name'"
 else
 
   if [[ -z "$secret_value" ]]
   then
-
     # Prepare to load the node's private key into the server's secret store
     echo "Copy the $secret_name secret to your clipboard then paste it below & hit enter (no echo)"
     echo -n "> "
-    read -s secret
+    read -s secret_value
     echo
-
-    if [[ -z "$secret" ]]
-    then echo "No secret provided, skipping secret creation" && exit 0;
+    if [[ -z "$secret_value" ]]
+    then echo "No secret_value provided, skipping secret creation" && exit 0;
     fi
-
-  elif [[ "$secret_value" == "random" ]]
-  then secret=`head -c 32 /dev/urandom | xxd -plain -c 32 | tr -d '\n\r'`
-  else secret=$secret_value
   fi
 
-  id="`echo $secret | tr -d '\n\r' | docker secret create $secret_name -`"
+  id="`echo $secret_value | tr -d '\n\r' | docker secret create $secret_name -`"
   if [[ "$?" == "0" ]]
   then
     echo "Successfully saved secret $secret_name w id $id"

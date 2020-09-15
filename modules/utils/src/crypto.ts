@@ -29,7 +29,7 @@ import { LinkedTransferState, TransferState } from "@connext/vector-types";
 
 const { arrayify, getAddress, hexlify, randomBytes, toUtf8String } = utils;
 
-export const INDRA_SIGN_PREFIX = "\x15Indra Signed Message:\n";
+export const VECTOR_SIGN_PREFIX = "\x15Indra Signed Message:\n";
 
 ////////////////////////////////////////
 // Misc
@@ -118,7 +118,7 @@ export const hashChannelMessage = (message: string): Bytes32 =>
   hexlify(
     keccak256(
       concatBuffers(
-        bufferify(INDRA_SIGN_PREFIX),
+        bufferify(VECTOR_SIGN_PREFIX),
         bufferify(`${bufferify(message).length}`),
         bufferify(message),
       ),

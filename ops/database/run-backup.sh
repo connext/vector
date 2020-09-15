@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-project="indra"
+project="vector"
 service=${project}_database
 service_id="`docker service ps -q $service | head -n 1`"
 id="`docker inspect --format '{{.Status.ContainerStatus.ContainerID}}' $service_id`"

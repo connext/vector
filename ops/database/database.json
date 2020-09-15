@@ -1,11 +1,11 @@
 {
   "test": {
     "driver": "pg",
-    "database": "indra"
+    "database": "vector"
   },
 
   "dev": {
     "driver": "pg",
-    "database": "indra"
+    "database": "vector"
   }
 }

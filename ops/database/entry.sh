@@ -8,7 +8,7 @@ set -e
 backup_frequency="1800"
 mkdir -p snapshots
 backup_file="snapshots/`ls snapshots | sort -r | head -n 1`"
-readonly_password="${INDRA_ADMIN_TOKEN:-cxt1234}"
+readonly_password="${VECTOR_ADMIN_TOKEN:-cxt1234}"
 
 ########################################
 ## Helper functions
@@ -65,13 +65,13 @@ done
 log "Good morning, Postgres!"
 
 # Is this a fresh database? Should we restore data from a snapshot?
-if [[ "$isFresh" == "true" && -f "$backup_file" && "$INDRA_ENV" == "prod" ]]
+if [[ "$isFresh" == "true" && -f "$backup_file" && "$VECTOR_ENV" == "prod" ]]
 then 
   log "Fresh postgres db started w backup present, we'll restore: $backup_file"
   psql --username=$POSTGRES_USER $POSTGRES_DB < $backup_file
   log "Done restoring db snapshot"
 else
-  log "Not restoring: Database exists ($isFresh) or no snapshots found ($backup_file) or not in prod-mode ($INDRA_ENV)"
+  log "Not restoring: Database exists ($isFresh) or no snapshots found ($backup_file) or not in prod-mode ($VECTOR_ENV)"
 fi
 
 # Create a readonly user

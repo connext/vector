@@ -1,7 +1,7 @@
 import fastify from "fastify";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
-import { NodeCore } from "@connext/vector-node-core";
+import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
 import axios from "axios";
@@ -34,7 +34,7 @@ server.register(fastifyOas, {
 });
 
 const logger = pino();
-let vectorNode: NodeCore;
+let vectorNode: VectorEngine;
 const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic!).privateKey);
 server.addHook("onReady", async () => {
   const messaging = new NatsMessagingService(
@@ -48,14 +48,14 @@ server.addHook("onReady", async () => {
     },
   );
   await messaging.connect();
-  vectorNode = await NodeCore.connect(
+  vectorNode = await VectorEngine.connect(
     messaging,
     new LockService(config.redisUrl),
     new PrismaStore(),
     signer,
     config.chainProviders,
     {},
-    logger.child({ module: "NodeCore" }),
+    logger.child({ module: "VectorEngine" }),
   );
 });
 
@@ -106,7 +106,7 @@ server.post<{ Body: PostLinkedTransferRequestBody }>(
       paymentId: request.body.routingId,
       meta: request.body.meta,
       recipient: request.body.recipient,
-      conditionType: "LinkedTransfer",
+      routingId: request.body.routingId,
       details: {
         preImage: request.body.preImage,
       },
