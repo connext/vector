@@ -71,13 +71,12 @@ do
   fi
 done
 
-# TODO: Fix contract migrations!
-# while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep '"Token":' || true`" ]]
-# do
-#   if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
-#   then echo "$ethprovider_host was not able to start up successfully" && exit 1
-#   else sleep 1
-#   fi
-# done
+while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep '"Token":' || true`" ]]
+do
+  if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
+  then echo "$ethprovider_host was not able to start up successfully" && exit 1
+  else sleep 1
+  fi
+done
 
 echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
