@@ -84,64 +84,19 @@ database_env="environment:
       POSTGRES_PASSWORD: '$project'
       POSTGRES_USER: '$project'"
 
-####################
-# Auth config
+########################################
+# Global services config
 
-auth_port="5040"
-
-if [[ $VECTOR_ENV == "prod" ]]
+if [[ -z "$VECTOR_AUTH_URL" ]]
 then
-  auth_image_name="${project}_auth:$version";
-  auth_image="image: '$auth_image_name'"
-  bash ops/pull-images.sh "$auth_image_name"
+  echo 'No $VECTOR_AUTH_URL provided, spinning up a local copy of global services..'
+  auth_port="5040"
+  auth_url="http://auth:$auth_port"
+  bash ops/start-global.sh
 else
-  auth_image_name="${project}_builder:latest";
-  bash ops/pull-images.sh "$auth_image_name"
-  auth_image="image: '$auth_image_name'
-    entrypoint: 'bash modules/auth/ops/entry.sh'
-    volumes:
-      - '$root:/root'"
+  auth_url="$VECTOR_AUTH_URL"
+  echo 'Using $VECTOR_AUTH_URL='$VECTOR_AUTH_URL
 fi
-
-echo "Auth configured"
-
-####################
-# Nats config
-
-nats_image="provide/nats-server:indra";
-bash ops/pull-images.sh "$nats_image"
-
-nats_port="4222"
-nats_ws_port="4221"
-
-# Generate custom, secure JWT signing keys if we don't have any yet
-if [[ -z "$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY" ]]
-then
-  echo "WARNING: Generating new nats jwt signing keys & saving them in .env"
-  keyFile=$tmp/id_rsa
-  ssh-keygen -t rsa -b 4096 -m PEM -f $keyFile -N "" > /dev/null
-  prvKey="`cat $keyFile | tr -d '\n\r'`"
-  pubKey="`ssh-keygen -f $keyFile.pub -e -m PKCS8 | tr -d '\n\r'`"
-  touch .env
-  sed -i '/VECTOR_NATS_JWT_SIGNER_/d' .env
-  echo "export VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY=\"$pubKey\"" >> .env
-  echo "export VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY=\"$prvKey\"" >> .env
-  export VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY="$pubKey"
-  export VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY="$prvKey"
-  rm $keyFile $keyFile.pub
-fi
-
-# Ensure keys have proper newlines inserted (bc newlines are stripped from GitHub secrets)
-export VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY=`
-  echo $VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY | tr -d '\n\r' |\
-  sed 's/-----BEGIN RSA PRIVATE KEY-----/\\\n-----BEGIN RSA PRIVATE KEY-----\\\n/' |\
-  sed 's/-----END RSA PRIVATE KEY-----/\\\n-----END RSA PRIVATE KEY-----\\\n/'`
-export VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY=`
-  echo $VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY | tr -d '\n\r' |\
-  sed 's/-----BEGIN PUBLIC KEY-----/\\\n-----BEGIN PUBLIC KEY-----\\\n/' | \
-  sed 's/-----END PUBLIC KEY-----/\\\n-----END PUBLIC KEY-----\\\n/'`
-
-echo "Nats configured"
 
 ########################################
 # Chain provider config
@@ -167,8 +122,7 @@ alice_database="database_a"
 bob_port="8002"
 bob_database="database_b"
 
-
-public_url="http://127.0.0.1:$alice_port"
+public_url="http://localhost:$alice_port"
 
 node_env="environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
@@ -217,30 +171,6 @@ networks:
 
 services:
 
-  redis:
-    $common
-    image: '$redis_image'
-
-  nats:
-    $common
-    image: '$nats_image'
-    command: '-D -V'
-    environment:
-      JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
-
-  auth:
-    $common
-    $auth_image
-    environment:
-      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
-      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
-      VECTOR_PORT: '$auth_port'
-      NODE_ENV: '`
-        if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
-      `'
-
   alice:
     $common
     $node_image
@@ -275,7 +205,7 @@ EOF
 
 docker stack deploy -c $root/${stack}.docker-compose.yml $stack
 
-echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
+echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
 timeout=$(expr `date +%s` + 60)
 while true
 do

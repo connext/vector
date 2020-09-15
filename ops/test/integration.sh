@@ -47,14 +47,16 @@ then stack_env=" \
 fi
 
 common="$interactive $stack_env \
-  --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
-  --env=VECTOR_CHAIN_PROVIDERS=$chain_providers \
-  --env=VECTOR_TEST_LOG_LEVEL=${TEST_LOG_LEVEL:-$LOG_LEVEL} \
-  --env=VECTOR_CLIENT_LOG_LEVEL=${CLIENT_LOG_LEVEL:-$LOG_LEVEL} \
-  --env=VECTOR_CONTRACT_ADDRESSES=$contract_addresses \
-  --env=VECTOR_NATS_URL=nats://proxy:4222 \
-  --env=VECTOR_NODE_URL=http://proxy:80 \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
+  --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
+  --env=VECTOR_ALICE_URL=nats://alice:8000 \
+  --env=VECTOR_AUTH_URL=nats://auth:5040 \
+  --env=VECTOR_BOB_URL=nats://bob:8000 \
+  --env=VECTOR_CHAIN_PROVIDERS=$chain_providers \
+  --env=VECTOR_CONTRACT_ADDRESSES=$contract_addresses \
+  --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-0} \
+  --env=VECTOR_NATS_URL=nats://nats:4222 \
+  --env=VECTOR_NODE_URL=http://node:8000 \
   --name=${project}_test_runner \
   --network=$project \
   --rm \

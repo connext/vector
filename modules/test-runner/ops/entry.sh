@@ -5,7 +5,7 @@ then cd modules/test-runner
 fi
 
 cmd="${1:-test}"
-stack="${2:-duet}"
+stack="${2:-node}"
 
 # Set defaults in src/util/env instead of here
 export VECTOR_ADMIN_TOKEN="$VECTOR_ADMIN_TOKEN"
@@ -40,7 +40,15 @@ function wait_for {
   wait-for -t 60 $host 2> /dev/null
 }
 
-if [[ "$stack" == "duet" ]]
+if [[ "$stack" == "global" ]]
+then
+  wait_for "auth" "$VECTOR_AUTH_URL"
+
+elif [[ "$stack" == "node" ]]
+then
+  wait_for "node" "$VECTOR_NODE_URL"
+
+elif [[ "$stack" == "duet" ]]
 then
   wait_for "bob" "$VECTOR_ALICE_URL"
   wait_for "alice" "$VECTOR_BOB_URL"

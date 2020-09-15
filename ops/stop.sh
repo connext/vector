@@ -26,20 +26,6 @@ then
   exit
 fi
 
-# If a service matches, restart it instead of stopping
-service_id="`docker service ls --format '{{.ID}} {{.Name}}' |\
-  grep "_$target" |\
-  head -n 1 |\
-  cut -d " " -f 1
-`"
-if [[ -n "$service_id" ]]
-then
-  echo "Restarting service $service_id"
-  docker service scale $service_id=0
-  docker service scale $service_id=1
-  exit
-fi
-
 # If any container names match, stop all of them
 container_ids="`docker container ls --filter 'status=running' --format '{{.ID}} {{.Names}}' |\
   cut -d "." -f 1 |\

@@ -29,9 +29,7 @@ else
 
   id="`echo $secret_value | tr -d '\n\r' | docker secret create $secret_name -`"
   if [[ "$?" == "0" ]]
-  then
-    echo "Successfully saved secret $secret_name w id $id"
-    echo
+  then echo "Successfully saved secret $secret_name w id $id"
   else echo "Something went wrong creating a secret called $secret_name"
   fi
 

@@ -1,12 +1,13 @@
+import axios from "axios";
 
-import { expect } from "../utils";
+import { env, expect } from "../utils";
 
 describe("Global Auth Service", () => {
-  it.skip("should dispense a nonce", async () => {
-    expect(false).to.be.ok;
+
+  it("should ping when we pong", async () => {
+    const res = await axios.get(`${env.authUrl}/ping`);
+    expect(res.data).to.equal("pong\n");
   });
-  it.skip("should verify the sig on a nonce", async () => {
-    expect(false).to.be.ok;
-  });
+
 });
 

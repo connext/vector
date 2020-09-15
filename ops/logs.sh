@@ -8,7 +8,7 @@ target=$1
 shift
 
 service_id="`docker service ls --format '{{.ID}} {{.Name}}' |\
-  grep "$target" |\
+  grep "_$target" |\
   head -n 1 |\
   cut -d " " -f 1
 `"
@@ -22,7 +22,7 @@ fi
 
 container_id="`docker container ls --filter 'status=running' --format '{{.ID}} {{.Names}}' |\
   cut -d "." -f 1 |\
-  grep "$target" |\
+  grep "_$target" |\
   sort |\
   head -n 1 |\
   cut -d " " -f 1

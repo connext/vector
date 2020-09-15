@@ -13,8 +13,8 @@ docker swarm init 2> /dev/null || true
 # make sure a network for this project has been created
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$project"`" ]]
-then echo "A $project stack is already running" && exit 0;
+if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
+then echo "A $stack stack is already running" && exit 0;
 fi
 
 ####################
@@ -27,7 +27,7 @@ if [[ -f "${VECTOR_ENV}.env" ]]
 then source "${VECTOR_ENV}.env"
 fi
 
-# Load instance-specific env vars & overrides
+# Load private env vars & instance-specific overrides
 if [[ -f ".env" ]]
 then source .env
 fi
@@ -129,13 +129,14 @@ echo "Database configured"
 
 if [[ -z "$VECTOR_AUTH_URL" ]]
 then
+  echo 'No $VECTOR_AUTH_URL provided, spinning up a local copy of global services..'
   auth_port="5040"
   auth_url="http://auth:$auth_port"
   bash ops/start-global.sh
 else
   auth_url="$VECTOR_AUTH_URL"
+  echo 'Using $VECTOR_AUTH_URL='$VECTOR_AUTH_URL
 fi
-
 
 ########################################
 # Chain provider config
@@ -172,7 +173,7 @@ echo "Chain providers configured"
 ########################################
 ## Node config
 
-node_port="8888"
+node_port="8000"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -195,7 +196,7 @@ echo "Node configured"
 ####################
 # Launch Indra stack
 
-echo "Launching ${project}"
+echo "Launching ${stack} stack"
 
 rm -rf $root/docker-compose.yml $root/$stack.docker-compose.yml
 cat - > $root/$stack.docker-compose.yml <<EOF
@@ -231,7 +232,7 @@ services:
     volumes:
       - 'certs:/etc/letsencrypt'
 
-  core:
+  node:
     $common
     $node_image
     ports:
@@ -277,9 +278,9 @@ services:
 
 EOF
 
-docker stack deploy -c $root/$stack.docker-compose.yml $project
+docker stack deploy -c $root/$stack.docker-compose.yml $stack
 
-echo "The $project stack has been deployed, waiting for the proxy to start responding.."
+echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
 timeout=$(expr `date +%s` + 60)
 while true
 do

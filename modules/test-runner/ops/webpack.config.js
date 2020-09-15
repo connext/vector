@@ -9,7 +9,6 @@ module.exports = {
     "duet": path.join(__dirname, "../src/duet/index.ts"),
     "global": path.join(__dirname, "../src/global/index.ts"),
     "node": path.join(__dirname, "../src/node/index.ts"),
-    "routing": path.join(__dirname, "../src/routing/index.ts"),
   },
 
   externals: {

@@ -1,8 +1,13 @@
-import { expect } from "../utils";
+import axios from "axios";
+
+import { env, expect } from "../utils";
 
 describe("Node Config", () => {
-  it.skip("should expose some config", async () => {
-    expect(true).to.be.ok;
+
+  it("should ping when we pong", async () => {
+    const res = await axios.get(`${env.nodeUrl}/ping`);
+    expect(res.data).to.equal("pong\n");
   });
+
 });
 
