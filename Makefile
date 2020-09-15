@@ -33,37 +33,51 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: vector
-vector: database proxy server-node
-extras: auth ethprovider global-proxy
-all: vector extras
+default: node
+
+node: database proxy server-node
+global: auth global-proxy 
+duet: database server-node
+extras: ethprovider test-runner
+
+all: node global duet extras
 
 ########################################
 # Command & Control Shortcuts
 
-start: vector
+start: start-node
+restart: restart-node
+stop: stop-node
+
+start-node: node
 	bash ops/start-node.sh
+restart-node: node
+	bash ops/stop.sh node
+	bash ops/start-node.sh
+stop-node: node
+	bash ops/stop.sh node
 
-start-testnet: ethprovider
-	VECTOR_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
+start-duet: duet
+	bash ops/start-duet.sh
+restart-duet: duet
+	bash ops/stop.sh duet
+	bash ops/start-duet.sh
+stop-duet: duet
+	bash ops/stop.sh duet
 
-start-global: auth global-proxy
-	bash ops/start-global-services.sh
-
-restart-global: auth global-proxy
-	bash ops/stop.sh connext
-	bash ops/start-global-services.sh
-
-stop:
-	bash ops/stop.sh vector
+start-global: global
+	bash ops/start-global.sh
+restart-global: global
+	bash ops/stop.sh global
+	bash ops/start-global.sh
+stop-global: global
+	bash ops/stop.sh global
 
 stop-all:
-	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
-	bash ops/stop.sh connext
-
-restart: vector stop
-	bash ops/start-node.sh
+	bash ops/stop.sh global
+	bash ops/stop.sh node
+	bash ops/stop.sh duet
 
 clean: stop-all
 	docker container prune -f
@@ -88,6 +102,9 @@ reset-images:
 
 purge: clean reset
 
+########################################
+# Misc Shortcuts
+
 push:
 	bash ops/push-images.sh
 
@@ -96,9 +113,6 @@ pull:
 
 pull-latest:
 	bash ops/pull-images.sh latest
-
-build-report:
-	bash ops/build-report.sh
 
 dls:
 	@docker service ls
@@ -111,17 +125,44 @@ lint:
 ########################################
 # Test Commands
 
-test-contracts: contracts
-	bash ops/test/unit.sh contracts
+# Unit Tests
 
+test-utils: utils
+	bash ops/test/unit.sh utils test
+watch-utils: types
+	bash ops/test/unit.sh utils watch
+
+test-contracts: contracts
+	bash ops/test/unit.sh contracts test
 watch-contracts: utils
-	bash ops/test/unit.sh contracts --watch
+	bash ops/test/unit.sh contracts watch
 
 test-protocol: protocol
-	bash ops/test/protocol.sh test
+	bash ops/test/unit.sh protocol test 1340
+watch-protocol: contracts
+	bash ops/test/unit.sh protocol watch 1340
 
-test-server-node: server-node
-	bash ops/test/server-node.sh test
+test-engine: engine
+	bash ops/test/unit.sh engine test 1341
+watch-engine: protocol
+	bash ops/test/unit.sh engine watch 1341
+
+# Integration Tests
+
+test-global: test-runner global
+	bash ops/test/integration.sh global test
+watch-global: test-runner global
+	bash ops/test/integration.sh global watch
+
+test-node: test-runner node
+	bash ops/test/integration.sh node test
+watch-node: test-runner node
+	bash ops/test/integration.sh node watch
+
+test-duet: test-runner duet
+	bash ops/test/integration.sh duet test
+watch-duet: test-runner duet
+	bash ops/test/integration.sh duet watch
 
 ########################################
 # Begin Real Build Rules
@@ -167,23 +208,43 @@ protocol: utils contracts $(shell find modules/protocol $(find_options))
 	$(docker_run) "cd modules/protocol && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-auth-bundle: utils $(shell find modules/auth $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/auth && npm run build"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-engine-bundle: utils protocol $(shell find modules/engine $(find_options))
+engine: utils protocol $(shell find modules/engine $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-server-node-bundle: engine-bundle $(shell find modules/server-node $(find_options))
+auth-bundle: utils $(shell find modules/auth $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/auth && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+auth: auth-bundle $(shell find modules/auth/ops $(find_options))
+	$(log_start)
+	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
+	docker tag $(project)_auth $(project)_auth:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+server-node-bundle: engine $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
+	$(log_start)
+	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
+	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+test-runner-bundle: engine $(shell find modules/test-runner/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/test-runner && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+test-runner: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
+	$(log_start)
+	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner
+	docker tag $(project)_test_runner $(project)_test_runner:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
-# Build Docker Images
+# Build More Docker Images
 
 database: $(shell find ops/database $(find_options))
 	$(log_start)
@@ -195,18 +256,6 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-auth: auth-bundle $(shell find modules/auth/ops $(find_options))
-	$(log_start)
-	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
-	docker tag $(project)_auth $(project)_auth:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
-	$(log_start)
-	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
-	docker tag $(project)_server-node $(project)_server-node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 global-proxy: $(shell find ops/global-proxy $(find_options))

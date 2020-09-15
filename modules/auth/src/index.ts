@@ -56,7 +56,7 @@ server.post<{ Body: PostAuthRequestBody }>(
   },
 );
 
-server.listen(config.port, "0.0.0.0", (err, address) => {
+server.listen(config.port, "0.0.0.0", (err) => {
   if (err) {
     console.error(err);
     process.exit(1);

@@ -2,20 +2,15 @@
   "name": "@connext/vector-auth",
   "version": "0.0.1",
   "description": "",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "directories": {
-    "test": "tests"
-  },
-  "scripts": {
-    "build": "rm -rf ./dist/* && npm run compile-schemas && npm run transpile",
-    "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
-    "test": "bash ops/test.sh",
-    "transpile": "node_modules/.bin/tsc --project tsconfig.json",
-    "watch": "bash ops/test.sh --watch"
-  },
   "author": "Arjun Bhuptani",
   "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rm -rf ./dist/* && npm run transpile",
+    "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
+    "transpile": "tsc --project tsconfig.json"
+  },
   "dependencies": {
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",

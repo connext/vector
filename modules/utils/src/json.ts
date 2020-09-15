@@ -8,7 +8,9 @@ export function bigNumberifyJson<T = any>(json: any): T {
   return typeof json === "string"
     ? json
     : JSON.parse(JSON.stringify(json), (key: string, value: any): any =>
-        value && value._hex ? toBN(value._hex) : value,
+        (value && value._hex && value._isBigNumber) ? toBN(value._hex)
+        : (value && value.hex && value.type === "BigNumber") ? toBN(value.hex)
+        : value,
       );
 }
 
@@ -42,7 +44,7 @@ export const safeJsonStringify = (value: any): string => {
   try {
     return typeof value === "string" ? value : JSON.stringify(value, nullify);
   } catch (e) {
-    console.log(`Failed to safeJsonstringify value ${value}: ${e.message}`);
+    // console.log(`Failed to safeJsonstringify value ${value}: ${e.message}`);
     return value;
   }
 };
@@ -52,7 +54,7 @@ export function safeJsonParse<T = any>(value: any): T {
   try {
     return typeof value === "string" ? JSON.parse(value, nullify) : value;
   } catch (e) {
-    console.log(`Failed to safeJsonParse value ${value}: ${e.message}`);
+    // console.log(`Failed to safeJsonParse value ${value}: ${e.message}`);
     return value;
   }
 }

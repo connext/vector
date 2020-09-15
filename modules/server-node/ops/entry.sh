@@ -39,6 +39,7 @@ function wait_for {
 }
 
 wait_for "database" "$VECTOR_PG_HOST:$VECTOR_PG_PORT"
+wait_for "auth" "$VECTOR_AUTH_URL"
 
 ########################################
 # Launch Node

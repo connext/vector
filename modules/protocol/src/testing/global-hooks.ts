@@ -42,7 +42,6 @@ async function globalSetup(): Promise<void> {
   };
   global["wallet"] = fundedAccount;
   global["networkContext"] = { ...context };
-  console.log(`Done setting up global stuff`);
 }
 
 export const mochaHooks = {

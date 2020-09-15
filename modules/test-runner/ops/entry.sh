@@ -5,6 +5,7 @@ then cd modules/test-runner
 fi
 
 cmd="${1:-test}"
+stack="${2:-node}"
 
 # Set defaults in src/util/env instead of here
 export VECTOR_ADMIN_TOKEN="$VECTOR_ADMIN_TOKEN"
@@ -39,13 +40,22 @@ function wait_for {
   wait-for -t 60 $host 2> /dev/null
 }
 
-wait_for "node" "$VECTOR_NODE_URL"
-wait_for "nats" "$VECTOR_NATS_URL"
+if [[ "$stack" == "global" ]]
+then
+  wait_for "auth" "$VECTOR_AUTH_URL"
+
+elif [[ "$stack" == "node" ]]
+then
+  wait_for "node" "$VECTOR_NODE_URL"
+
+elif [[ "$stack" == "duet" ]]
+then
+  wait_for "bob" "$VECTOR_ALICE_URL"
+  wait_for "alice" "$VECTOR_BOB_URL"
+fi
 
 ########################################
 # Launch tests
-
-bundle=dist/tests.bundle.js
 
 if [[ "$NODE_ENV" == "production" ]]
 then opts="--forbid-only"
@@ -55,6 +65,7 @@ fi
 if [[ "$cmd" == "watch" ]]
 then
   echo "Starting test-watcher"
+  target=src/$stack/index.ts
 
   prev_checksum=""
   while true
@@ -75,7 +86,7 @@ then
       fi
 
       echo "Re-running tests..."
-      ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit src/index.ts &
+      ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target &
       prev_checksum=$checksum
 
     # If no changes, do nothing
@@ -84,11 +95,12 @@ then
   done
 
 else
+  echo "Starting test-runner"
+  target=dist/$stack.bundle.js
 
-  if [[ ! -f "$bundle" ]]
+  if [[ ! -f "$target" ]]
   then webpack --config ops/webpack.config.js
   fi
 
-  echo "Starting test-runner"
-  mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $bundle
+  mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target
 fi

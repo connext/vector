@@ -16,13 +16,48 @@ jobs:
       - uses: actions/checkout@v1
       - run: make pull-latest
       - run: make all
-      - run: make build-report
+      - run: bash ops/build-report.sh
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - run: make push
 
-  test-contracts:
+  utils:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make
-      - run: make test-contracts
+      - run: make test-utils
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-utils
+
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-protocol
+
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-engine
+
+  global:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-global
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-node
+
+  duet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-duet
