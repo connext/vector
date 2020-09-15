@@ -16,7 +16,7 @@ chain_id="${1:-1337}"
 port="${VECTOR_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
 tag="${VECTOR_TAG:-$chain_id}"
 mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-engine="${VECTOR_EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
+evm="${VECTOR_EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
 logLevel="${VECTOR_CHAIN_LOG_LEVEL:0}"
 
 ethprovider_host="testnet_$tag"
@@ -49,7 +49,7 @@ echo "Running ${VECTOR_ENV:-dev}-mode image for testnet ${chain_id}: ${image}"
 docker run $opts \
   --detach \
   --env "CHAIN_ID=$chain_id" \
-  --env "ENGINE=$engine" \
+  --env "EVM=$evm" \
   --env "MNEMONIC=$mnemonic" \
   --mount "type=bind,source=$chain_data,target=/data" \
   --name "$ethprovider_host" \

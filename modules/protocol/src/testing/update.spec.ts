@@ -276,7 +276,7 @@ describe("generateUpdate", () => {
     linkedTransferDefinition = global["networkContext"].linkedTransferDefinition;
 
     // Deploy multisig
-    // TODO: in engine deployment?
+    // TODO: in channel deployment?
     const factory = new Contract(
       global["networkContext"].channelFactoryAddress,
       ChannelFactory.abi,

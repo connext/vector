@@ -109,8 +109,8 @@ test-contracts: contracts
 watch-contracts: utils
 	bash ops/test/unit.sh contracts --watch
 
-test-engine: engine
-	bash ops/test/engine.sh test
+test-protocol: protocol
+	bash ops/test/protocol.sh test
 
 test-server-node: server-node
 	bash ops/test/server-node.sh test
@@ -154,9 +154,9 @@ contracts: utils $(shell find modules/contracts $(find_options))
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-engine: utils contracts $(shell find modules/engine $(find_options))
+protocol: utils contracts $(shell find modules/protocol $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/engine && npm run build"
+	$(docker_run) "cd modules/protocol && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 auth-bundle: utils $(shell find modules/auth $(find_options))
@@ -164,7 +164,7 @@ auth-bundle: utils $(shell find modules/auth $(find_options))
 	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node-core-bundle: utils engine $(shell find modules/node-core $(find_options))
+node-core-bundle: utils protocol $(shell find modules/node-core $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/node-core && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@

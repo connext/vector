@@ -11,7 +11,7 @@ address_book="${ADDRESS_BOOK:-/data/address-book.json}"
 data_dir="${DATA_DIR:-/tmpfs}"
 chain_id="${CHAIN_ID:-1337}"
 mnemonic="${MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-engine="${ENGINE:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
+evm="${EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
 
 cwd="`pwd`"
 mkdir -p $data_dir /data /tmpfs
@@ -19,9 +19,9 @@ touch $address_book
 
 # TODO: the gasLimit shouldn't need to be 1000x higher than mainnet but cf tests fail otherwise..
 
-if [[ "$engine" == "buidler" ]]
+if [[ "$evm" == "buidler" ]]
 then
-  echo "Using buidler EVM engine"  
+  echo "Using buidler EVM"  
   echo 'module.exports = {
     defaultNetwork: "buidlerevm",
     networks: {
@@ -40,9 +40,9 @@ then
   launch="$cwd/node_modules/.bin/buidler node --config /tmpfs/buidler.config.js --hostname 0.0.0.0 --port 8545 "
   cd /tmpfs # bc we need to run buidler node in same dir as buidler.config.js
 
-elif [[ "$engine" == "ganache" ]]
+elif [[ "$evm" == "ganache" ]]
 then
-  echo "Using ganache EVM engine"  
+  echo "Using ganache EVM"  
   launch=$cwd'/node_modules/.bin/ganache-cli \
     --db='$data_dir' \
     --defaultBalanceEther=2000000000 \
@@ -53,7 +53,7 @@ then
     --port=8545 '
   expose="--host 0.0.0.0"
 else
-  echo 'Expected $ENGINE to be either "ganache" or "buidler"'
+  echo 'Expected $EVM to be either "ganache" or "buidler"'
   exit 1
 fi
 
@@ -75,7 +75,7 @@ node $cwd/dist/cli.js new-token --address-book "$address_book" --mnemonic "$mnem
 
 # Buidler does not persist chain data: it will start with a fresh chain every time
 # Ganache persists chain data so we can restart it & this time we'll expose it to the outside world
-if [[ "$engine" == "ganache" ]]
+if [[ "$evm" == "ganache" ]]
 then
   kill $pid
   echo "Starting publically available testnet.."

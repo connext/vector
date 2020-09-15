@@ -45,7 +45,7 @@ docker run \
   --env="CONTRACT_ADDRESSES=$CONTRACT_ADDRESSES" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
-  --name="${project}_engine_tester" \
+  --name="${project}_protocol_tester" \
   --rm \
   --volume="$root:/root" \
-  ${project}_builder -c 'cd modules/engine && npm run '"$cmd"' -- '"$@"
+  ${project}_builder -c 'cd modules/protocol && npm run '"$cmd"' -- '"$@"

@@ -1,25 +1,24 @@
-import { Vector } from "@connext/vector-engine";
+import { Vector } from "@connext/vector-protocol";
 import {
   ChainAddresses,
   ChainProviders,
+  ChannelUpdateError,
+  ConditionalTransferParams,
+  ConditionalTransferResponse,
+  ConditionalTransferType,
+  CreateTransferParams,
+  DepositParams,
   IChannelSigner,
   ILockService,
   IMessagingService,
-  IVectorStore,
-  IVectorStore,
-  ConditionalTransferParams,
-  ResolveConditionParams,
-  WithdrawParams,
-  TransferParams,
-  DepositParams,
-  CreateTransferParams,
-  ResolveTransferParams,
-  ProtocolEventName,
-  ConditionalTransferType,
-  Result,
   IVectorProtocol,
-  ChannelUpdateError,
-  ConditionalTransferResponse,
+  IVectorStore,
+  ProtocolEventName,
+  ResolveConditionParams,
+  ResolveTransferParams,
+  Result,
+  TransferParams,
+  WithdrawParams,
 } from "@connext/vector-types";
 import Pino from "pino";
 
@@ -35,7 +34,7 @@ export class NodeCore {
   private constructor(
     private readonly messaging: IMessagingService,
     private readonly store: IVectorStore,
-    private readonly engine: IVectorProtocol,
+    private readonly vector: IVectorProtocol,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: Pino.BaseLogger,
@@ -50,28 +49,28 @@ export class NodeCore {
     chainAddresses: ChainAddresses,
     logger: Pino.BaseLogger,
   ): Promise<NodeCore> {
-    const engine = await Vector.connect(messaging, lock, store as IVectorStore, signer, chainProviders, logger);
-    const nodeCore = new NodeCore(messaging, store, engine, chainProviders, chainAddresses, logger);
+    const vector = await Vector.connect(messaging, lock, store as IVectorStore, signer, chainProviders, logger);
+    const nodeCore = new NodeCore(messaging, store, vector, chainProviders, chainAddresses, logger);
     await nodeCore.setupListener();
     return nodeCore;
   }
 
   public async setupListener(): Promise<void> {
     // unlock transfer if encrypted preimage exists
-    this.engine.on(
+    this.vector.on(
       ProtocolEventName.CHANNEL_UPDATE_EVENT,
       (data) => {
         if (!data.updatedChannelState.meta.encryptedPreImage) {
         }
       },
-      (data) => data.updatedChannelState.meta.recipient === this.engine.publicIdentifier,
+      (data) => data.updatedChannelState.meta.recipient === this.vector.publicIdentifier,
     );
 
     // subscribe to isAlive
   }
 
   public async setup(params: SetupInput): Promise<Result<any>> {
-    return this.engine.setup({
+    return this.vector.setup({
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
@@ -88,7 +87,7 @@ export class NodeCore {
 
   public async deposit(params: DepositParams): Promise<Result<any>> {
     // TODO we need a deposit response here
-    return this.engine.deposit(params);
+    return this.vector.deposit(params);
   }
 
   public async conditionalTransfer<T extends ConditionalTransferType = any>(
@@ -107,11 +106,11 @@ export class NodeCore {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
-    const engineResult = await this.engine.createTransfer(createParams);
-    if (engineResult.isError) {
-      return Result.fail(engineResult.getError()!);
+    const protocolRes = await this.vector.createTransfer(createParams);
+    if (protocolRes.isError) {
+      return Result.fail(protocolRes.getError()!);
     }
-    const res = engineResult.getValue();
+    const res = protocolRes.getValue();
     return Result.ok({ routingId: params.routingId });
   }
 
@@ -121,7 +120,7 @@ export class NodeCore {
 
     // First, get translated `resolve` params using the passed in resolve condition ones
     const resolveParams: ResolveTransferParams = await convertResolveConditionParams(params);
-    return this.engine.resolveTransfer(resolveParams);
+    return this.vector.resolveTransfer(resolveParams);
   }
 
   public async withdraw(params: WithdrawParams): Promise<Result<any>> {
@@ -129,7 +128,7 @@ export class NodeCore {
     // TODO input validation
 
     const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses);
-    return this.engine.createTransfer(withdrawParams);
+    return this.vector.createTransfer(withdrawParams);
   }
 
   public async transfer(params: TransferParams): Promise<Result<any>> {
