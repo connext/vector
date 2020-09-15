@@ -103,7 +103,7 @@ server.post<{ Body: PostLinkedTransferRequestBody }>(
       amount: request.body.amount,
       assetId: request.body.assetId,
       channelAddress: request.body.channelAddress,
-      paymentId: request.body.routingId,
+      conditionType: "LinkedTransfer",
       meta: request.body.meta,
       recipient: request.body.recipient,
       routingId: request.body.routingId,
