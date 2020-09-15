@@ -4,10 +4,6 @@ if [[ -d "modules/test-runner" ]]
 then cd modules/test-runner
 fi
 
-echo "Let's freaking go"
-pwd
-which mocha
-
 cmd="${1:-test}"
 stack="${2:-duet}"
 
@@ -53,8 +49,6 @@ fi
 ########################################
 # Launch tests
 
-bundle=dist/$stack.bundle.js
-
 if [[ "$NODE_ENV" == "production" ]]
 then opts="--forbid-only"
 else opts="--bail"
@@ -63,6 +57,7 @@ fi
 if [[ "$cmd" == "watch" ]]
 then
   echo "Starting test-watcher"
+  target=src/$stack/index.ts
 
   prev_checksum=""
   while true
@@ -83,7 +78,7 @@ then
       fi
 
       echo "Re-running tests..."
-      ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit src/index.ts &
+      ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target &
       prev_checksum=$checksum
 
     # If no changes, do nothing
@@ -92,11 +87,12 @@ then
   done
 
 else
+  echo "Starting test-runner"
+  target=dist/$stack.bundle.js
 
-  if [[ ! -f "$bundle" ]]
+  if [[ ! -f "$target" ]]
   then webpack --config ops/webpack.config.js
   fi
 
-  echo "Starting test-runner"
-  mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $bundle
+  mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target
 fi

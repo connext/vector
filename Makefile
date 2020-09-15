@@ -51,7 +51,7 @@ restart-node: server-node
 	bash ops/stop.sh node
 	bash ops/start-node.sh
 stop-node: server-node
-	bash ops/stop-node.sh
+	bash ops/stop.sh node
 
 start-duet: auth global-proxy
 	bash ops/start-duet.sh
@@ -59,7 +59,7 @@ restart-duet: auth global-proxy
 	bash ops/stop.sh duet
 	bash ops/start-duet.sh
 stop-duet: auth global-proxy
-	bash ops/stop-duet.sh
+	bash ops/stop.sh duet
 
 start-global: auth global-proxy
 	bash ops/start-global.sh
@@ -67,11 +67,12 @@ restart-global: auth global-proxy
 	bash ops/stop.sh global
 	bash ops/start-global.sh
 stop-global: auth global-proxy
-	bash ops/stop-global.sh
+	bash ops/stop.sh global
 
 stop-all:
-	bash ops/stop.sh node
 	bash ops/stop.sh testnet
+	bash ops/stop.sh global
+	bash ops/stop.sh node
 	bash ops/stop.sh duet
 
 clean: stop-all
