@@ -5,13 +5,17 @@ if [[ -d "modules/auth" ]]
 then cd modules/auth
 fi
 
+node_bin="`pwd`/node_modules/.bin"
+nodemon="$node_bin/nodemon"
+pino="$node_bin/pino-pretty"
+
 ########################################
 # Launch Auth
 
 if [[ "$NODE_ENV" == "development" ]]
 then
   echo "Starting node in dev-mode"
-  exec ./node_modules/.bin/nodemon \
+  exec $nodemon \
     --delay 1 \
     --exitcrash \
     --ignore *.test.ts \
@@ -21,7 +25,8 @@ then
     --polling-interval 1000 \
     --watch src \
     --exec ts-node \
-    ./src/index.ts | ./node_modules/.bin/pino-pretty
+    ./src/index.ts | $pino
+
 else
   echo "Starting node in prod-mode"
   exec node --no-deprecation dist/bundle.js

@@ -35,7 +35,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 
 default: vector
 vector: database proxy server-node
-extras: auth ethprovider
+extras: auth ethprovider global-proxy
 all: vector extras
 
 ########################################
@@ -47,8 +47,12 @@ start: vector
 start-testnet: ethprovider
 	VECTOR_CHAIN_LOG_LEVEL=1 bash ops/start-testnet.sh
 
-start-messaging: auth
-	bash ops/start-messaging.sh
+start-global: auth global-proxy
+	bash ops/start-global-services.sh
+
+restart-global: auth global-proxy
+	bash ops/stop.sh connext
+	bash ops/start-global-services.sh
 
 stop:
 	bash ops/stop.sh vector
@@ -56,6 +60,7 @@ stop:
 stop-all:
 	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
+	bash ops/stop.sh connext
 
 restart: vector stop
 	bash ops/start-node.sh
@@ -79,7 +84,7 @@ reset: stop-all
 	docker volume rm `docker volume ls -q -f name=$(project)_database_test_*` 2> /dev/null || true
 
 reset-images:
-	rm -f .flags/database .flags/ethprovider .flags/node .flags/proxy
+	rm -f .flags/auth .flags/database .flags/ethprovider .flags/node .flags/*proxy
 
 purge: clean reset
 
@@ -202,6 +207,12 @@ server-node: server-node-bundle $(shell find modules/server-node/ops $(find_opti
 	$(log_start)
 	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
 	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+global-proxy: $(shell find ops/global-proxy $(find_options))
+	$(log_start)
+	docker build $(image_cache) --tag $(project)_msg_proxy ops/global-proxy
+	docker tag $(project)_msg_proxy $(project)_msg_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 proxy: $(shell find ops/proxy $(find_options))

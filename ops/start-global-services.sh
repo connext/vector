@@ -6,6 +6,9 @@ project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 tmp="$root/.tmp"; mkdir -p $tmp
 
+# Call this global service stack 'connext' bc it could be used by many of connext's products
+stack="connext"
+
 # turn on swarm mode if it's not already on
 docker swarm init 2> /dev/null || true
 
@@ -67,22 +70,35 @@ common="networks:
 ####################
 # Auth config
 
-auth_image="${project}_auth:$version";
-bash ops/pull-images.sh "$auth_image"
-
 auth_port="8080"
+
+if [[ $VECTOR_ENV == "prod" ]]
+then
+  auth_image_name="${project}_auth:$version";
+  auth_image="image: '$auth_image_name'"
+  bash ops/pull-images.sh "$auth_image_name"
+else
+  auth_image_name="${project}_builder:latest";
+  bash ops/pull-images.sh "$auth_image_name"
+  auth_image="image: '$auth_image_name'
+    entrypoint: 'bash modules/auth/ops/entry.sh'
+    volumes:
+      - '$root:/root'"
+fi
+
+echo "Auth configured"
 
 ####################
 # Proxy config
 
-proxy_image="${project}_proxy:$version";
+proxy_image="${project}_msg_proxy:$version";
 bash ops/pull-images.sh "$proxy_image"
 
 if [[ -z "$VECTOR_DOMAINNAME" ]]
 then
-  public_url="http://localhost:3000"
+  public_url="http://localhost:8080"
   proxy_ports="ports:
-      - '3000:80'
+      - '8080:80'
       - '4221:4221'
       - '4222:4222'"
 else
@@ -137,10 +153,10 @@ echo "Nats configured"
 ####################
 # Launch stack
 
-echo "Launching ${project}"
+echo "Launching global $stack services"
 
-rm -rf $root/docker-compose.yml $root/${project}.docker-compose.yml
-cat - > $root/docker-compose.yml <<EOF
+rm -rf $root/${stack}.docker-compose.yml
+cat - > $root/${stack}.docker-compose.yml <<EOF
 version: '3.4'
 
 networks:
@@ -167,7 +183,7 @@ services:
 
   auth:
     $common
-    image: '$auth_image'
+    $auth_image
     environment:
       VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
       VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
@@ -181,6 +197,8 @@ services:
   nats:
     $common
     image: '$nats_image'
+    deploy:
+      mode: global
     command: '-D -V'
     environment:
       JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
@@ -188,12 +206,14 @@ services:
   redis:
     $common
     image: '$redis_image'
+    deploy:
+      mode: global
 
 EOF
 
-docker stack deploy -c $root/docker-compose.yml messaging
+docker stack deploy -c $root/${stack}.docker-compose.yml $stack
 
-echo "The $project stack has been deployed, waiting for the proxy to start responding.."
+echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
 timeout=$(expr `date +%s` + 60)
 while true
 do
