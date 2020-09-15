@@ -8,7 +8,7 @@ import {
   UpdateType,
 } from "./channel";
 import { ChannelUpdateError, Result } from "./error";
-import { EngineEventName, EngineEventPayloadsMap } from "./event";
+import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";
 
 export interface IVectorEngine {
   signerAddress: string;
@@ -17,21 +17,21 @@ export interface IVectorEngine {
   deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
   createTransfer(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
   resolveTransfer(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  on<T extends EngineEventName>(
+  on<T extends ProtocolEventName>(
     event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+    callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): void;
-  once<T extends EngineEventName>(
+  once<T extends ProtocolEventName>(
     event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+    callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): void;
-  waitFor<T extends EngineEventName>(
+  waitFor<T extends ProtocolEventName>(
     event: T,
     timeout: number,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
-  ): Promise<EngineEventPayloadsMap[T]>;
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
+  ): Promise<ProtocolEventPayloadsMap[T]>;
 }
 
 type VectorChannelMessageData<T extends UpdateType = any> = {

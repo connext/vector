@@ -12,8 +12,8 @@ import {
   FullChannelState,
   SetupParams,
   ChannelUpdateEvent,
-  EngineEventName,
-  EngineEventPayloadsMap,
+  ProtocolEventName,
+  ProtocolEventPayloadsMap,
   IVectorEngine,
   Result,
   ChannelUpdateError,
@@ -211,23 +211,23 @@ export class Vector implements IVectorEngine {
   ///////////////////////////////////
   // EVENT METHODS
 
-  public on<T extends EngineEventName>(
+  public on<T extends ProtocolEventName>(
     event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+    callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): void {}
 
-  public once<T extends EngineEventName>(
+  public once<T extends ProtocolEventName>(
     event: T,
-    callback: (payload: EngineEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
+    callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): void {}
 
-  public waitFor<T extends EngineEventName>(
+  public waitFor<T extends ProtocolEventName>(
     event: T,
     timeout: number,
-    filter?: (payload: EngineEventPayloadsMap[T]) => boolean,
-  ): Promise<EngineEventPayloadsMap[T]> {
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
+  ): Promise<ProtocolEventPayloadsMap[T]> {
     return {} as any;
   }
 

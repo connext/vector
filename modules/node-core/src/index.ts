@@ -14,7 +14,7 @@ import {
   DepositParams,
   CreateTransferParams,
   ResolveTransferParams,
-  EngineEventName,
+  ProtocolEventName,
   ConditionalTransferType,
   Result,
   IVectorEngine,
@@ -59,7 +59,7 @@ export class NodeCore {
   public async setupListener(): Promise<void> {
     // unlock transfer if encrypted preimage exists
     this.engine.on(
-      EngineEventName.CHANNEL_UPDATE_EVENT,
+      ProtocolEventName.CHANNEL_UPDATE_EVENT,
       (data) => {
         if (!data.updatedChannelState.meta.encryptedPreImage) {
         }
