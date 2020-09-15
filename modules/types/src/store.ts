@@ -1,7 +1,7 @@
 import { FullChannelState, CoreTransferState, ChannelCommitmentData, TransferCommitmentData } from "./channel";
 import { TransferResolver, TransferState } from "./transferDefinitions";
 
-export type TransferEngineStoreRecord = { transferId: string } & Partial<{
+export type TransferRecord = { transferId: string } & Partial<{
   initialState: TransferState;
   commitment: TransferCommitmentData;
   resolver: TransferResolver;
@@ -16,7 +16,7 @@ export interface IEngineStore {
   saveChannelState(
     channelState: FullChannelState,
     commitment: ChannelCommitmentData,
-    transferRecord?: TransferEngineStoreRecord,
+    transferRecord?: TransferRecord,
   ): Promise<void>;
 
   // Should return all initial transfer state data needed to

@@ -4,7 +4,7 @@ import {
   IEngineStore,
   TransferState,
   ChannelCommitmentData,
-  TransferEngineStoreRecord,
+  TransferRecord,
 } from "@connext/vector-types";
 
 export class MemoryStoreService implements IEngineStore {
@@ -12,7 +12,7 @@ export class MemoryStoreService implements IEngineStore {
   private transfersInChannel: Map<string, string[]> = new Map();
 
   // Map<transferId, transferState>
-  private transfers: Map<string, TransferEngineStoreRecord> = new Map();
+  private transfers: Map<string, TransferRecord> = new Map();
 
   // Map<channelAddress, channelState>
   private channelStates: Map<string, { state: FullChannelState; commitment: ChannelCommitmentData }> = new Map();
@@ -39,7 +39,7 @@ export class MemoryStoreService implements IEngineStore {
   saveChannelState(
     channelState: FullChannelState,
     commitment: ChannelCommitmentData,
-    transferRecord?: TransferEngineStoreRecord,
+    transferRecord?: TransferRecord,
   ): Promise<void> {
     this.channelStates.set(channelState.channelAddress, { state: channelState, commitment });
     if (!transferRecord) {
