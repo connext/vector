@@ -42,6 +42,7 @@ all: vector extras
 # Command & Control Shortcuts
 
 start: vector
+	bash ops/start-global-services.sh
 	bash ops/start-node.sh
 
 start-testnet: ethprovider
@@ -63,6 +64,7 @@ stop-all:
 	bash ops/stop.sh connext
 
 restart: vector stop
+	bash ops/start-global-services.sh
 	bash ops/start-node.sh
 
 clean: stop-all

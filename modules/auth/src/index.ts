@@ -31,7 +31,7 @@ server.get("/ping", async () => {
 });
 
 server.get<{ Params: GetAuthParamsSchemaInterface }>(
-  "/auth/:publicIdentifier",
+  "/auth/:userIdentifier",
   { schema: { params: GetAuthParamsSchema } },
   async (request, reply) => {
     const nonce = await messagingService.getNonce(request.params.userIdentifier);
@@ -52,7 +52,7 @@ server.post<{ Body: PostAuthBodySchemaInterface }>(
   },
 );
 
-server.listen(config.port, "0.0.0.0", (err, address) => {
+server.listen(config.port, "0.0.0.0", (err) => {
   if (err) {
     console.error(err);
     process.exit(1);

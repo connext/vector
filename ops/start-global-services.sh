@@ -15,6 +15,10 @@ docker swarm init 2> /dev/null || true
 # make sure a network for this project has been created
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
+if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
+then echo "A $stack stack is already running" && exit 0;
+fi
+
 ####################
 # Load env vars
 
@@ -70,7 +74,7 @@ common="networks:
 ####################
 # Auth config
 
-auth_port="8080"
+auth_port="5040"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -175,7 +179,7 @@ services:
     environment:
       VECTOR_DOMAINNAME: '$VECTOR_DOMAINNAME'
       VECTOR_EMAIL: '$VECTOR_EMAIL'
-      VECTOR_AUTH_URL: 'auth:8080'
+      VECTOR_AUTH_URL: 'auth:$auth_port'
       VECTOR_MESSAGING_TCP_URL: 'nats:4222'
       VECTOR_MESSAGING_WS_URL: 'nats:4221'
     volumes:

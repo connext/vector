@@ -11,6 +11,10 @@ docker swarm init 2> /dev/null || true
 # make sure a network for this project has been created
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
+if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$project"`" ]]
+then echo "A $project stack is already running" && exit 0;
+fi
+
 ####################
 # Load env vars
 
@@ -50,7 +54,7 @@ builder_image="$builder_image_name:$version";
 bash ops/pull-images.sh $version $builder_image_name
 
 redis_image="redis:5-alpine";
-pull_if_unavailable "$redis_image"
+bash ops/pull-images.sh "$redis_image"
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -114,10 +118,8 @@ auth_port="5040"
 if [[ $VECTOR_ENV == "prod" ]]
 then
   auth_image_name="${project}_auth:$version"
-  pull_if_unavailable "$auth_image_name"
-  auth
-auth
-auth_image="image: '$auth_image_name'"
+  bash ops/pull-images.sh $auth_image_name
+  auth_image="image: '$auth_image_name'"
 else
   echo "Running dev mode"
   auth_image="image: '${project}_builder'
@@ -175,7 +177,7 @@ then
   echo 'No $VECTOR_CHAIN_PROVIDERS provided, spinning up local testnets & using those.'
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
   bash ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic"
-  bash ops/pull-images.sh $version "${project}_ethprovider:"
+  bash ops/pull-images.sh $version "${project}_ethprovider"
   chain_id_1=1337; chain_id_2=1338;
   bash ops/start-testnet.sh $chain_id_1 $chain_id_2
   VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/providers/${chain_id_1}-${chain_id_2}.json`"
@@ -265,25 +267,6 @@ services:
       - '$db_secret'
       - '$mnemonic_secret_name'
 
-  auth:
-    $common
-    $auth_image
-    ports:
-      - '$auth_port:$auth_port'
-    environment:
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
-      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
-      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
-      VECTOR_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
-      VECTOR_PORT: '$auth_port'
-      NODE_ENV: '`
-        if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
-      `'
-    secrets:
-      - '$db_secret'
-      - '$mnemonic_secret_name'
-
   database:
     $common
     $database_image
@@ -300,10 +283,6 @@ services:
     volumes:
       - '$db_volume:/var/lib/postgresql/data'
       - '$snapshots_dir:/root/snapshots'
-
-  redis:
-    $common
-    image: '$redis_image'
 
 EOF
 
