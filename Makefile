@@ -54,6 +54,9 @@ stop-all:
 	bash ops/stop.sh vector
 	bash ops/stop.sh testnet
 
+restart: indra stop
+	bash ops/start-indra.sh
+
 clean: stop-all
 	docker container prune -f
 	rm -rf .flags/*
@@ -156,9 +159,9 @@ engine: utils contracts $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-channel-lock-bundle: utils $(shell find modules/channel-lock $(find_options))
+auth-bundle: utils $(shell find modules/auth $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/channel-lock && npm run build"
+	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 node-core-bundle: utils engine $(shell find modules/node-core $(find_options))
@@ -186,10 +189,10 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-channel-lock: channel-lock-bundle $(shell find modules/channel-lock/ops $(find_options))
+auth: auth-bundle $(shell find modules/auth/ops $(find_options))
 	$(log_start)
-	docker build --file modules/channel-lock/ops/Dockerfile $(image_cache) --tag $(project)_channel-lock modules/channel-lock
-	docker tag $(project)_channel-lock $(project)_channel-lock:$(commit)
+	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
+	docker tag $(project)_auth $(project)_auth:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))

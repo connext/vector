@@ -1,23 +1,26 @@
-import { FullChannelState, CoreTransferState, IEngineStore, TransferState } from "@connext/vector-types";
+import {
+  FullChannelState,
+  CoreTransferState,
+  IEngineStore,
+  TransferState,
+  ChannelCommitmentData,
+  TransferEngineStoreRecord,
+} from "@connext/vector-types";
 
 export class MemoryStoreService implements IEngineStore {
-  getSchemaVersion(): Promise<number> {
-    throw new Error("Method not implemented.");
-  }
-  updateSchemaVersion(version?: number): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
   // Map<channelAddress, transferId[]>
   private transfersInChannel: Map<string, string[]> = new Map();
 
   // Map<transferId, transferState>
-  private transfers: Map<string, { state: TransferState; core: CoreTransferState }> = new Map();
+  private transfers: Map<string, TransferEngineStoreRecord> = new Map();
 
   // Map<channelAddress, channelState>
-  private channelStates: Map<string, FullChannelState> = new Map();
+  private channelStates: Map<string, { state: FullChannelState; commitment: ChannelCommitmentData }> = new Map();
+
+  private schemaVersion: number | undefined = undefined;
 
   getCoreTransferState(transferId: string): Promise<CoreTransferState | undefined> {
-    return Promise.resolve(this.transfers.get(transferId)?.core);
+    return Promise.resolve(this.transfers.get(transferId)?.commitment?.state);
   }
 
   connect(): Promise<void> {
@@ -29,11 +32,45 @@ export class MemoryStoreService implements IEngineStore {
   }
 
   getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
-    return Promise.resolve(this.channelStates.get(channelAddress));
+    const { state } = this.channelStates.get(channelAddress) ?? {};
+    return Promise.resolve(state);
   }
 
-  saveChannelState(channelState: FullChannelState<any>): Promise<void> {
-    this.channelStates.set(channelState.channelAddress, channelState);
+  saveChannelState(
+    channelState: FullChannelState,
+    commitment: ChannelCommitmentData,
+    transferRecord?: TransferEngineStoreRecord,
+  ): Promise<void> {
+    this.channelStates.set(channelState.channelAddress, { state: channelState, commitment });
+    if (!transferRecord) {
+      return Promise.resolve();
+    }
+    const { initialState, commitment: transferCommitment, resolver, meta, transferId } = transferRecord;
+
+    const existingRecord = this.transfers.get(transferId) ?? {};
+    const activeTransfers = this.transfersInChannel.get(channelState.channelAddress) ?? [];
+
+    if (resolver) {
+      // This is a `resolve` update, so remove from channel
+      this.transfersInChannel.set(
+        channelState.channelAddress,
+        activeTransfers.filter((x) => x !== transferId),
+      );
+
+      // Update the transfer value
+      this.transfers.set(transferId, { ...existingRecord, resolver, meta, transferId });
+      return Promise.resolve();
+    }
+
+    // Otherwise, it is a `create` update, add to channel
+    this.transfers.set(transferId, {
+      initialState,
+      commitment: transferCommitment,
+      meta,
+      transferId,
+    });
+    this.transfersInChannel.set(channelState.channelAddress, [...activeTransfers, transferId]);
+
     return Promise.resolve();
   }
 
@@ -43,37 +80,25 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve(
       all
         .filter((x) => !!x)
-        .map((x) => x?.core)
+        .map((x) => x?.commitment?.state)
         .filter((x) => !!x),
     ) as Promise<CoreTransferState[]>;
   }
 
   getTransferState(transferId: string): Promise<TransferState | undefined> {
-    return Promise.resolve(this.transfers.get(transferId)?.state);
+    return Promise.resolve(this.transfers.get(transferId)?.initialState);
   }
 
-  removeTransferFromChannel(channelAddress: string, transferId: string, state: TransferState): Promise<void> {
-    // Update existing transfer record with final state
-    const record = this.transfers.get(transferId)!;
-    this.transfers.set(transferId, { ...record, state });
-
-    // Remove from active
-    const previouslyActive = this.transfersInChannel.get(channelAddress) || [];
-    this.transfersInChannel.set(
-      channelAddress,
-      [...previouslyActive].filter((x) => x === transferId),
-    );
-    return Promise.resolve();
+  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
+    return Promise.resolve(this.channelStates.get(channelAddress)?.commitment);
   }
 
-  saveTransferToChannel(channelAddress: string, transfer: CoreTransferState, state: TransferState): Promise<void> {
-    // Save record
-    this.transfers.set(transfer.transferId, { core: transfer, state });
+  getSchemaVersion(): Promise<number | undefined> {
+    return Promise.resolve(this.schemaVersion);
+  }
 
-    // Add to active
-    const existing = this.transfersInChannel.get(channelAddress) || [];
-    this.transfersInChannel.set(channelAddress, [...existing, transfer.transferId]);
-
+  updateSchemaVersion(version?: number): Promise<void> {
+    this.schemaVersion = version;
     return Promise.resolve();
   }
 }

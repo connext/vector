@@ -233,11 +233,20 @@ describe("applyUpdate", () => {
     });
 
     // Load the store
-    await store.saveChannelState(state);
-    await store.saveTransferToChannel(state.channelAddress, coreState, transferInitialState);
+    await store.saveChannelState(state, {} as any, {
+      initialState: transferInitialState,
+      commitment: {
+        state: coreState,
+        chainId: state.networkContext.chainId,
+        adjudicatorAddress: state.networkContext.adjudicatorAddress,
+        merkleProofData: "",
+      },
+      transferId: coreState.transferId,
+    });
 
-    const newState = (await applyUpdate(update, state, store)).getValue();
-    expect(newState).to.containSubset({
+    const updateRet = await applyUpdate(update, state, store);
+    expect(updateRet.isError).to.be.false;
+    expect(updateRet.getValue()).to.containSubset({
       ...state,
       balances: [{ ...transferInitialState.balance, amount: ["1", "0"] }],
       lockedValue: [{ amount: "0" }],
@@ -306,7 +315,7 @@ describe("generateUpdate", () => {
       latestDepositNonce: 0,
       channelAddress,
     });
-    await store.saveChannelState(state);
+    await store.saveChannelState(state, {} as any);
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
       details: { amount: "1", channelAddress },
@@ -336,7 +345,7 @@ describe("generateUpdate", () => {
       assetIds: [assetId],
       latestDepositNonce: 1,
     });
-    await store.saveChannelState(state);
+    await store.saveChannelState(state, {} as any);
 
     // Create the params
     const params = createTestUpdateParams(UpdateType.create, {
@@ -407,7 +416,7 @@ describe("generateUpdate", () => {
     });
 
     // Create the transfer core
-    const coreState = createCoreTransferState({ 
+    const coreState = createCoreTransferState({
       initialBalance: transferInitialState.balance,
       initialStateHash: hashLinkedTransferState(transferInitialState),
       channelAddress,
@@ -425,8 +434,16 @@ describe("generateUpdate", () => {
     });
 
     // Load the store
-    await store.saveChannelState(state);
-    await store.saveTransferToChannel(state.channelAddress, coreState, transferInitialState);
+    await store.saveChannelState(state, {} as any, {
+      initialState: transferInitialState,
+      commitment: {
+        state: coreState,
+        chainId: state.networkContext.chainId,
+        adjudicatorAddress: state.networkContext.adjudicatorAddress,
+        merkleProofData: "",
+      },
+      transferId: coreState.transferId,
+    });
 
     // Get expected values
     const emptyTree = new MerkleTree([]);
@@ -445,7 +462,8 @@ describe("generateUpdate", () => {
     });
 
     // Generate the update
-    const update = (await generateUpdate(params, store, signers[0])).getValue();
-    expect(update).to.containSubset(expected);
+    const updateRet = (await generateUpdate(params, store, signers[0]));
+    expect(updateRet.isError).to.be.false;
+    expect(updateRet.getValue()).to.containSubset(expected);
   });
 });

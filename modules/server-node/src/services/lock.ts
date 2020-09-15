@@ -1,10 +1,20 @@
 import { ILockService } from "@connext/vector-types";
+import Redis from "ioredis";
+
+import { MemoLock } from "./memo-lock";
 
 export class LockService implements ILockService {
-  acquireLock(lockName: string): Promise<string> {
-    throw new Error("Method not implemented.");
+  private memoLock: MemoLock;
+  constructor(redisUrl: string) {
+    const redis = new Redis(redisUrl);
+    this.memoLock = new MemoLock(redis);
   }
+
+  acquireLock(lockName: string): Promise<string> {
+    return this.memoLock.acquireLock(lockName);
+  }
+
   releaseLock(lockName: string, lockValue: string): Promise<void> {
-    throw new Error("Method not implemented.");
+    return this.memoLock.releaseLock(lockName, lockValue);
   }
 }

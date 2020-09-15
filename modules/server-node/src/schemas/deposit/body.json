@@ -1,0 +1,10 @@
+{
+  "title": "DepositBodySchema",
+  "type": "object",
+  "required": ["channelId", "amount", "assetId"],
+  "properties": {
+    "channelId": { "type": "string" },
+    "amount": { "type": "string" },
+    "assetId": { "type": "string" }
+  }
+}

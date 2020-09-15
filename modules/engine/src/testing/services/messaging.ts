@@ -2,9 +2,22 @@ import { IMessagingService } from "@connext/vector-types";
 import { Evt } from "evt";
 
 export class MemoryMessagingService implements IMessagingService {
-  connect(natsUrl: string): Promise<void> {
-    throw new Error("Method not implemented.");
+  async connect(): Promise<void> {
+    return;
   }
+
+  async send(to: string, msg: any): Promise<void> {
+    this.evt.post({ subject: to, data: msg });
+  }
+
+  async onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
+    this.evt.pipe(({ subject: _subject }) => _subject === subject).attach(({ data }) => callback(data));
+  }
+
+  async subscribe(subject: string, callback: (data: any) => void): Promise<void> {
+    this.evt.pipe(({ subject: _subject }) => _subject === subject).attach(({ data }) => callback(data));
+  }
+
   request(subject: string, timeout: number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
     throw new Error("Method not implemented.");
   }
@@ -13,12 +26,7 @@ export class MemoryMessagingService implements IMessagingService {
     this.evt.post({ subject, data });
   }
 
-  async subscribe(subject: string, callback: (err: Error | null, data: any) => void): Promise<number> {
-    this.evt.pipe(({ subject: _subject }) => _subject === subject).attach(({ data }) => callback(null, data));
-    return 0; // TODO: return id for unsubscribing
-  }
-
-  unsubscribe(sid: number): Promise<void> {
+  unsubscribe(subject: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
   private readonly evt: Evt<{ subject: string; data: any }> = Evt.create<{ subject: string; data: any }>();

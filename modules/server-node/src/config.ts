@@ -13,8 +13,26 @@ if (!chainProviders) {
   throw new Error("VECTOR_CHAIN_PROVIDERS is a required config item");
 }
 
+const redisUrl = process.env.VECTOR_REDIS_URL;
+if (!redisUrl) {
+  throw new Error("VECTOR_REDIS_URL is a required config item");
+}
+
+const natsUrl = process.env.VECTOR_NATS_SERVERS;
+if (!natsUrl) {
+  throw new Error("VECTOR_NATS_SERVERS is a required config item");
+}
+
+const authUrl = process.env.VECTOR_AUTH_URL;
+if (!authUrl) {
+  throw new Error("VECTOR_AUTH_URL is a required config item");
+}
+
 export const config = {
-  port: process.env.VECTOR_PORT ?? 5040,
-  mnemonic,
+  authUrl,
   chainProviders,
+  mnemonic,
+  natsUrl,
+  port: parseInt(process.env.VECTOR_PORT ?? "5040"),
+  redisUrl,
 };

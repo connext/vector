@@ -1,8 +1,9 @@
 import pino from "pino";
 import * as evm from "@connext/pure-evm-wasm";
-import { Contract, CoreTransferState, TransferState, TransferResolver, Balance } from "@connext/vector-types";
+import { Contract, CoreTransferState, TransferState, TransferResolver, Balance, ChannelCommitmentData, FullChannelState, IChannelSigner } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { Signer, utils } from "ethers";
+import { hashChannelCommitment } from "@connext/vector-utils";
 
 const { defaultAbiCoder } = utils;
 
@@ -18,15 +19,28 @@ export const logger = pino();
 export function isChannelMessage(msg: any): boolean {
   if (msg?.error) return false;
   if (!msg?.data) return false;
+  if (!msg?.data.update) return false;
+  return true;
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export function isErrorMessage(msg: any): boolean {
+  if (msg?.data) return false;
+  if (!msg?.error) return false;
   return true;
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function isChannelState(blob: any): boolean {
-  if (!blob?.channelId) return false;
+  if (!blob?.channelAddress) return false;
   if (!blob?.participants) return false;
-  if (!blob?.chainId) return false;
-  if (!blob?.latestNonce) return false;
+  if (!blob?.timeout) return false;
+  if (!blob?.balances) return false;
+  if (!blob?.lockedValue) return false;
+  if (!blob?.assetIds) return false;
+  if (typeof blob?.nonce !== "number") return false;
+  if (typeof blob?.latestDepositNonce !== "number") return false;
+  if (!blob?.merkleRoot) return false;
   return true;
 }
 
@@ -42,6 +56,39 @@ export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =
     Uint8Array.from(Buffer.from(bytecode.replace(/^0x/, ""), "hex")),
     Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
   );
+
+// This function signs the state after the update is applied,
+// not for the update that exists
+export async function generateSignedChannelCommitment(
+  newState: FullChannelState,
+  signer: IChannelSigner,
+  updateSignatures: string[],
+): Promise<ChannelCommitmentData> {
+  const { publicIdentifiers, networkContext, ...core } = newState;
+
+  const unsigned = {
+    chainId: networkContext.chainId,
+    state: core,
+    adjudicatorAddress: networkContext.adjudicatorAddress,
+  };
+  const filteredSigs = updateSignatures.filter(x => !!x);
+  if (filteredSigs.length === 2) {
+    // No need to sign, we have already signed
+    return {
+      ...unsigned,
+      signatures: filteredSigs,
+    };
+  }
+
+  // Only counterparty has signed
+  const [counterpartySignature] = filteredSigs;
+  const sig = await signer.signMessage(hashChannelCommitment({...unsigned, signatures: []}));
+  const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
+  return {
+    ...unsigned,
+    signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
+  };
+}
 
 export const create = async (
   core: CoreTransferState,

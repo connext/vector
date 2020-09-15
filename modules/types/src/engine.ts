@@ -1,4 +1,5 @@
 import {
+  ChannelUpdate,
   CreateTransferParams,
   DepositParams,
   FullChannelState,
@@ -6,7 +7,7 @@ import {
   SetupParams,
   UpdateType,
 } from "./channel";
-import { ChannelUpdateError, InboundChannelError, Result } from "./error";
+import { ChannelUpdateError, Result } from "./error";
 import { EngineEventName, EngineEventPayloadsMap } from "./event";
 
 export interface IVectorEngine {
@@ -33,14 +34,19 @@ export interface IVectorEngine {
   ): Promise<EngineEventPayloadsMap[T]>;
 }
 
+type VectorChannelMessageData<T extends UpdateType = any> = {
+  update: ChannelUpdate<T>,
+  latestUpdate: ChannelUpdate<any> | undefined,
+}
+
 export type VectorChannelMessage<T extends UpdateType = any> = {
   to: string;
   from: string;
-  data: T | any; // TODO: Should be typed based on message
+  data: VectorChannelMessageData<T>;
 };
 
 export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
-  error: InboundChannelError;
+  error: ChannelUpdateError;
 };
 
 export type VectorMessage = VectorChannelMessage | VectorErrorMessage;

@@ -1,5 +1,5 @@
 import { Address } from "./basic";
-import { TransferState } from "./transferDefinitions";
+import { TransferResolver, TransferState } from "./transferDefinitions";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
 export type ContextualAddress = {
@@ -113,13 +113,13 @@ export interface TransferCommitmentData {
   state: CoreTransferState;
   adjudicatorAddress: Address;
   chainId: number;
-  merkleProofData: any; //TODO
+  merkleProofData: any; // TODO
 }
 
 // Includes any additional info that doesn't need to be sent to chain
 export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   publicIdentifiers: string[];
-  latestUpdate?: ChannelUpdate<T>;
+  latestUpdate: ChannelUpdate<T>;
   networkContext: NetworkContext;
 };
 
@@ -165,10 +165,11 @@ export type CreateUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
   transferTimeout: string;
-  transferInitialState: TransferState; //TODO
+  transferInitialState: TransferState;
   transferEncodings: string[]; // Initial state, resolver state
   merkleProofData: string;
   merkleRoot: string;
+  meta?: any;
 };
 
 // NOTE: proof data can be reconstructed, do we need to pass it around?
@@ -176,9 +177,10 @@ export type CreateUpdateDetails = {
 export type ResolveUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
-  transferResolver: any; //TODO
+  transferResolver: TransferResolver;
   transferEncodings: string[]; // Initial state, resolver state
   merkleRoot: string;
+  meta?: any;
 };
 
 export type DepositUpdateDetails = {

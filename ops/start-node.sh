@@ -49,6 +49,12 @@ builder_image_name="${project}_builder";
 builder_image="$builder_image_name:$version";
 bash ops/pull-images.sh $version $builder_image_name
 
+redis_image="redis:5-alpine";
+pull_if_unavailable "$redis_image"
+
+# to access from other containers
+redis_url="redis://redis:6379"
+
 common="networks:
       - '$project'
     logging:
@@ -101,25 +107,25 @@ fi
 echo "Node configured"
 
 ########################################
-## Channel Lock config
+## Auth Service config
 
-lock_port="8888"
+auth_port="5040"
 
-if [[ $INDRA_ENV == "prod" ]]
+if [[ $VECTOR_ENV == "prod" ]]
 then
-  channel_lock_image_name="${project}_channel-lock:$version"
-  pull_if_unavailable "$channel_lock_image_name"
-  channel_lock
-channel_lock
-channel_lock_image="image: '$channel_lock_image_name'"
+  auth_image_name="${project}_auth:$version"
+  pull_if_unavailable "$auth_image_name"
+  auth
+auth
+auth_image="image: '$auth_image_name'"
 else
   echo "Running dev mode"
-  channel_lock_image="image: '${project}_builder'
-    entrypoint: 'bash modules/channel-lock/ops/entry.sh'
+  auth_image="image: '${project}_builder'
+    entrypoint: 'bash modules/auth/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
-      - '$lock_port:$lock_port'
+      - '$auth_port:$auth_port'
       - '9229:9229'"
 fi
 
@@ -236,19 +242,15 @@ services:
     $common
     $node_image
     ports:
-      '$node_port:$node_port'
+      - '$node_port:$node_port'
     environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_AUTH_URL: 'http://auth:$auth_port'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
-      VECTOR_DEFAULT_REBALANCE_PROFILE_ETH: '$VECTOR_DEFAULT_REBALANCE_PROFILE_ETH'
-      VECTOR_DEFAULT_REBALANCE_PROFILE_TOKEN: '$VECTOR_DEFAULT_REBALANCE_PROFILE_TOKEN'
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
       VECTOR_MNEMONIC_FILE: '$VECTOR_MNEMONIC_FILE'
-      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
-      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
       VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
-      VECTOR_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: '$pg_host'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
@@ -263,22 +265,20 @@ services:
       - '$db_secret'
       - '$mnemonic_secret_name'
 
-  channel-lock:
+  auth:
     $common
-    $channel_lock_image
+    $auth_image
     ports:
-      '$lock_port:$lock_port'
+      - '$auth_port:$auth_port'
     environment:
-      INDRA_ADMIN_TOKEN: '$INDRA_ADMIN_TOKEN'
-      INDRA_MNEMONIC_FILE: '$INDRA_MNEMONIC_FILE'
-      INDRA_NATS_JWT_SIGNER_PRIVATE_KEY: '$INDRA_NATS_JWT_SIGNER_PRIVATE_KEY'
-      INDRA_NATS_JWT_SIGNER_PUBLIC_KEY: '$INDRA_NATS_JWT_SIGNER_PUBLIC_KEY'
-      INDRA_NATS_SERVERS: 'nats://nats:$nats_port'
-      INDRA_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
-      INDRA_PORT: '$lock_port'
-      INDRA_REDIS_URL: '$redis_url'
+      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
+      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
+      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
+      VECTOR_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
+      VECTOR_PORT: '$auth_port'
       NODE_ENV: '`
-        if [[ "$INDRA_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
+        if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
       `'
     secrets:
       - '$db_secret'
@@ -300,6 +300,10 @@ services:
     volumes:
       - '$db_volume:/var/lib/postgresql/data'
       - '$snapshots_dir:/root/snapshots'
+
+  redis:
+    $common
+    image: '$redis_image'
 
 EOF
 

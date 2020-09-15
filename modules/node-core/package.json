@@ -21,7 +21,7 @@
     "@connext/vector-engine": "0.0.1",
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
-    "ethers": "5.0.12",
+    "ethers": "5.0.13",
     "evt": "1.8.9"
   },
   "devDependencies": {

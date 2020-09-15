@@ -39,7 +39,7 @@
     "@nomiclabs/buidler": "1.4.5",
     "@openzeppelin/contracts": "3.1.0",
     "ganache-cli": "6.10.2",
-    "ethers": "5.0.12",
+    "ethers": "5.0.13",
     "keccak": "3.0.1",
     "yargs": "16.0.0"
   },

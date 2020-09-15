@@ -16,7 +16,6 @@ import {
   EngineEventPayloadsMap,
   IVectorEngine,
   Result,
-  InboundChannelError,
   ChannelUpdateError,
   VectorMessage,
 } from "@connext/vector-types";
@@ -32,7 +31,7 @@ import { logger } from "./utils";
 
 export class Vector implements IVectorEngine {
   private protocolChannelStateEvt = Evt.create<FullChannelState>();
-  private protocolChannelErrorEvt = Evt.create<InboundChannelError>();
+  private protocolChannelErrorEvt = Evt.create<ChannelUpdateError>();
   private channelUpdateEvt = Evt.create<ChannelUpdateEvent>();
   private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
 
@@ -82,16 +81,16 @@ export class Vector implements IVectorEngine {
     if (!state) {
       throw new Error(`Channel not found ${params.channelAddress}`);
     }
-    const providerUrl = this.chainProviderUrls[state.networkContext.chainId];
     const updateRes = await generateUpdate(params, this.storeService, this.signer);
     if (updateRes.isError) {
       return Result.fail(updateRes.getError()!);
     }
     const outboundRes = await sync.outbound(
       updateRes.getValue(),
-      providerUrl,
       this.storeService,
       this.messagingService,
+      this.signer,
+      this.chainProviderUrls,
       this.protocolChannelStateEvt,
       this.protocolChannelErrorEvt,
     );
@@ -110,10 +109,7 @@ export class Vector implements IVectorEngine {
   }
 
   private async setupServices(): Promise<Vector> {
-    this.messagingService.subscribe(this.publicIdentifier, async (err: Error | null, msg: VectorMessage) => {
-      if (err) {
-        // this.logger.error(err)
-      }
+    this.messagingService.subscribe(this.publicIdentifier, async (msg: VectorMessage) => {
       const inboundRes = await sync.inbound(
         msg,
         this.storeService,
