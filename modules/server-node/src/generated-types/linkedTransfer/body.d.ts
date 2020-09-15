@@ -10,7 +10,7 @@ export interface LinkedTransferBodySchema {
   amount: string;
   assetId: string;
   recipient?: string;
-  paymentId: string;
+  routingId: string;
   preImage: string;
   recipientChainId?: string;
   recipientAssetId?: string;
