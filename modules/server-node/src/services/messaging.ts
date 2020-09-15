@@ -51,7 +51,6 @@ export class NatsMessagingService implements IMessagingService {
     }
   }
 
-  // Engine methods
   public async onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
     this.assertConnected();
     await this.connection!.subscribe(`${subject}.>`, (msg: any, err?: any): void => {

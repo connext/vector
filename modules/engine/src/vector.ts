@@ -14,7 +14,7 @@ import {
   ChannelUpdateEvent,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
-  IVectorEngine,
+  IVectorProtocol,
   Result,
   ChannelUpdateError,
   VectorMessage,
@@ -29,7 +29,7 @@ import * as sync from "./sync";
 import { generateUpdate } from "./update";
 import { logger } from "./utils";
 
-export class Vector implements IVectorEngine {
+export class Vector implements IVectorProtocol {
   private protocolChannelStateEvt = Evt.create<FullChannelState>();
   private protocolChannelErrorEvt = Evt.create<ChannelUpdateError>();
   private channelUpdateEvt = Evt.create<ChannelUpdateEvent>();

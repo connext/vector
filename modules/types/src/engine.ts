@@ -10,7 +10,7 @@ import {
 import { ChannelUpdateError, Result } from "./error";
 import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";
 
-export interface IVectorEngine {
+export interface IVectorProtocol {
   signerAddress: string;
   publicIdentifier: string;
   setup(params: SetupParams): Promise<Result<any, ChannelUpdateError>>;

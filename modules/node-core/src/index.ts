@@ -17,7 +17,7 @@ import {
   ProtocolEventName,
   ConditionalTransferType,
   Result,
-  IVectorEngine,
+  IVectorProtocol,
   ChannelUpdateError,
   ConditionalTransferResponse,
 } from "@connext/vector-types";
@@ -35,7 +35,7 @@ export class NodeCore {
   private constructor(
     private readonly messaging: IMessagingService,
     private readonly store: IVectorStore,
-    private readonly engine: IVectorEngine,
+    private readonly engine: IVectorProtocol,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: Pino.BaseLogger,
