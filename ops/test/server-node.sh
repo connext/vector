@@ -28,6 +28,11 @@ export VECTOR_MNEMONIC=$eth_mnemonic
 # bash ops/start-chain.sh $chain_id
 
 ########################################
+# Make sure global helper services are running
+
+make start-global
+
+########################################
 # Launch tests
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
@@ -39,7 +44,7 @@ fi
 docker run \
   $interactive \
   --entrypoint="bash" \
-  --name="${project}_server_node_tester" \
+  --name="${project}_test_server_node" \
   --rm \
   --volume="$root:/root" \
-  ${project}_builder -c 'cd modules/server-node && npm run '"$cmd"' -- '"$@"
+  ${project}_builder "/test.sh" "server-node" "$cmd"

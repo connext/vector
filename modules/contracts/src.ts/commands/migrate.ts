@@ -1,19 +1,14 @@
 import { getEthProvider } from "@connext/vector-utils";
-import { Wallet, constants, providers, utils } from "ethers";
+import { constants, Contract, providers, utils, Wallet } from "ethers";
 import { Argv } from "yargs";
 
 import { getAddressBook } from "../address-book";
-import { cliOpts } from "../constants";
+import { artifacts } from "../artifacts";
+import { cliOpts, ConstructorArgs } from "../constants";
 import { isContractDeployed, deployContract } from "../deploy";
 
 const { EtherSymbol, Zero } = constants;
 const { formatEther } = utils;
-
-export const coreContracts = [
-  "Adjudicator",
-  "Channel",
-  "ChannelFactory",
-];
 
 export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<void> => {
   ////////////////////////////////////////
@@ -40,7 +35,7 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
   ////////////////////////////////////////
   // Deploy contracts
 
-  for (const name of coreContracts) {
+  const deployHelper = async (name: string, args: ConstructorArgs): Promise<Contract> => {
     const savedAddress = addressBook.getEntry(name)["address"];
     if (
       savedAddress &&
@@ -48,10 +43,15 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
     ) {
       console.log(`${name} is up to date, no action required`);
       console.log(`Address: ${savedAddress}\n`);
+      return new Contract(savedAddress, artifacts[name].abi, wallet);
     } else {
-      await deployContract(name, [], wallet, addressBook);
+      return await deployContract(name, args || [], wallet, addressBook);
     }
-  }
+  };
+
+  const adjudicator = await deployHelper("Adjudicator", []);
+  await deployHelper("ChannelFactory", [{ name: "adjudicator", value: adjudicator.address }]);
+  await deployHelper("VectorChannel", []);
 
   ////////////////////////////////////////
   // Print summary

@@ -70,9 +70,6 @@ export REAL_CHAIN_ID=$chain_id
 echo "Deploying contracts.."
 node $cwd/dist/cli.js migrate --address-book "$address_book" --mnemonic "$mnemonic"
 
-echo "Deploying testnet token.."
-node $cwd/dist/cli.js new-token --address-book "$address_book" --mnemonic "$mnemonic"
-
 # Buidler does not persist chain data: it will start with a fresh chain every time
 # Ganache persists chain data so we can restart it & this time we'll expose it to the outside world
 if [[ "$evm" == "ganache" ]]

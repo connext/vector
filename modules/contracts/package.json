@@ -29,7 +29,7 @@
     "lint": "npm run lint-ts && npm run lint-sol",
     "lint-sol": "solium -d .",
     "lint-ts": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'test/**/*' 'index.ts'",
-    "test": "bash ops/test.sh",
+    "test": "npx buidler test",
     "transpile": "tsc -p tsconfig.json"
   },
   "dependencies": {

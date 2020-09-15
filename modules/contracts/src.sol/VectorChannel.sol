@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./shared/LibCommitment.sol";
 import "./shared/LibChannelCrypto.sol";
+import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./shared/IERC20.sol";
 
@@ -24,13 +25,13 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
 
     using LibChannelCrypto for bytes32;
 
-    address internal masterCopy;
+    address public masterCopy;
 
     mapping(bytes32 => bool) isExecuted;
 
-    address[] private _owners;
+    address[2] private _owners;
 
-    address public _adjudicatorAddress;
+    IAdjudicator public _adjudicator;
 
     enum Operation {
         Call,
@@ -43,6 +44,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
     // to let me override the getter in the interface with the
     // auto-generated getter of an overriding state variable
     // if said variable is a mapping with a struct as value type.
+    // In other words, I had to write the getter myself...
     mapping(address => LatestDeposit) internal _latestDepositByAssetId;
     function latestDepositByAssetId(address assetId) public override view returns (LatestDeposit memory) {
         return _latestDepositByAssetId[assetId];
@@ -52,37 +54,23 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
     receive() external payable {}
 
     modifier onlyAdjudicator {
-        require(msg.sender == _adjudicatorAddress, "msg.sender is not the adjudicator");
+        require(msg.sender == address(_adjudicator), "msg.sender is not the adjudicator");
         _;
     }
 
     /// @notice Contract constructor
     /// @param owners An array of unique addresses representing the participants of the channel
-    /// @param adjudicatorAddress Address of associated Adjudicator that we can call to
-    function setup(address[] memory owners, address adjudicatorAddress) public {
-        require(_owners.length == 0, "Contract has been set up before");
-        _adjudicatorAddress = adjudicatorAddress;
-        _owners = owners;
-    }
-
-    /// @notice Alternative contract constructor that also allows for a deposit -- Perhaps merge into above?
-    /// @param owners An array of unique addresses representing the multisig owners
-    /// @param adjudicatorAddress Address of associated Adjudicator that we can call to
-    /// @param amount Deposit amount for owners[0]
-    /// @param assetId Asset for deposit
-    function setupWithDepositA(
-        address[] memory owners,
-        address adjudicatorAddress,
-        uint256 amount,
-        address assetId
+    /// @param adjudicator Address of associated Adjudicator that we can call to
+    function setup(
+        address[2] memory owners,
+        IAdjudicator adjudicator
     )
         public
+        override
     {
-        // TODO -- setting up with deposit params will change the calculated CREATE2 address
         require(_owners.length == 0, "Contract has been set up before");
-        _adjudicatorAddress = adjudicatorAddress;
         _owners = owners;
-        depositA(amount, assetId);
+        _adjudicator = adjudicator;
     }
 
     function getBalance(
@@ -99,8 +87,8 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
     }
 
     function depositA(
-        uint256 amount,
-        address assetId
+        address assetId,
+        uint256 amount
         // bytes memory signature
     )
         public
@@ -110,6 +98,17 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         // TODO: Does this really need to validate signature against _owners[0]?
         //       Or can owners[0] just call this method directly?
         // This should save/upsert latestDepositByAssetId
+
+        // TODO: current version just for basic testing
+
+        if (assetId == address(0)) {
+            require(msg.value == amount);
+        } else {
+            require(IERC20(assetId).transferFrom(msg.sender, address(this), amount));
+        }
+
+        _latestDepositByAssetId[assetId].amount = amount;
+        _latestDepositByAssetId[assetId].nonce++;
     }
 
     // TODO gets called by the adjudicator contract in the event of a dispute to push out funds
@@ -130,7 +129,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
     function updateAdjudicator(
         bytes[] memory signatures,
         uint256 nonce,
-        address newAdjudicator
+        IAdjudicator newAdjudicator
     )
         public
     {
@@ -146,7 +145,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         // TODO validate signatures
 
         adjudicatorNonce = nonce;
-        _adjudicatorAddress = newAdjudicator;
+        _adjudicator = newAdjudicator;
     }
 
   /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
@@ -221,7 +220,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
     function getOwners()
         public
         view
-        returns (address[] memory)
+        returns (address[2] memory)
     {
         return _owners;
     }

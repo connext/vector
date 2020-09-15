@@ -5,11 +5,17 @@ root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 
+stack="node"
+
 # turn on swarm mode if it's not already on
 docker swarm init 2> /dev/null || true
 
 # make sure a network for this project has been created
 docker network create --attachable --driver overlay $project 2> /dev/null || true
+
+if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
+then echo "A $stack stack is already running" && exit 0;
+fi
 
 ####################
 # Load env vars
@@ -21,7 +27,7 @@ if [[ -f "${VECTOR_ENV}.env" ]]
 then source "${VECTOR_ENV}.env"
 fi
 
-# Load instance-specific env vars & overrides
+# Load private env vars & instance-specific overrides
 if [[ -f ".env" ]]
 then source .env
 fi
@@ -50,7 +56,7 @@ builder_image="$builder_image_name:$version";
 bash ops/pull-images.sh $version $builder_image_name
 
 redis_image="redis:5-alpine";
-pull_if_unavailable "$redis_image"
+bash ops/pull-images.sh "$redis_image"
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -82,54 +88,6 @@ else
 fi
 
 echo "Proxy configured"
-
-########################################
-## Node config
-
-node_port="8888"
-
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  node_image_name="${project}_node"
-  bash ops/pull-images.sh $version $node_image_name
-  node_image="image: '$node_image_name:$version'"
-else
-  echo "Running dev mode"
-  node_image="image: '${project}_builder'
-    entrypoint: 'bash modules/server-node/ops/entry.sh'
-    volumes:
-      - '$root:/root'
-    ports:
-      - '$node_port:$node_port'
-      - '9229:9229'"
-fi
-
-echo "Node configured"
-
-########################################
-## Auth Service config
-
-auth_port="5040"
-
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  auth_image_name="${project}_auth:$version"
-  pull_if_unavailable "$auth_image_name"
-  auth
-auth
-auth_image="image: '$auth_image_name'"
-else
-  echo "Running dev mode"
-  auth_image="image: '${project}_builder'
-    entrypoint: 'bash modules/auth/ops/entry.sh'
-    volumes:
-      - '$root:/root'
-    ports:
-      - '$auth_port:$auth_port'
-      - '9229:9229'"
-fi
-
-echo "Channel lock configured"
 
 ########################################
 ## Database config
@@ -166,16 +124,31 @@ pg_user="$project"
 echo "Database configured"
 
 ########################################
-# Chain provider config
+# Global services config
+# If no global service urls provided, spin up local ones & use those
 
+if [[ -z "$VECTOR_AUTH_URL" ]]
+then
+  echo 'No $VECTOR_AUTH_URL provided, spinning up a local copy of global services..'
+  auth_port="5040"
+  auth_url="http://auth:$auth_port"
+  bash ops/start-global.sh
+else
+  auth_url="$VECTOR_AUTH_URL"
+  echo 'Using $VECTOR_AUTH_URL='$VECTOR_AUTH_URL
+fi
+
+########################################
+# Chain provider config
 # If no chain providers provided, spin up local testnets & use those
+
 if [[ -z "$VECTOR_CHAIN_PROVIDERS" ]]
 then
   mnemonic_secret_name="${project}_mnemonic_dev"
   echo 'No $VECTOR_CHAIN_PROVIDERS provided, spinning up local testnets & using those.'
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
   bash ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic"
-  bash ops/pull-images.sh $version "${project}_ethprovider:"
+  bash ops/pull-images.sh $version "${project}_ethprovider"
   chain_id_1=1337; chain_id_2=1338;
   bash ops/start-testnet.sh $chain_id_1 $chain_id_2
   VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/providers/${chain_id_1}-${chain_id_2}.json`"
@@ -195,17 +168,38 @@ fi
 VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
 ETH_PROVIDER_URL="`echo $VECTOR_CHAIN_PROVIDERS | tr -d "'" | jq '.[]' | head -n 1 | tr -d '"'`"
 
-# TODO: filter out extra contract addresses that we don't have any chain providers for?
-
 echo "Chain providers configured"
+
+########################################
+## Node config
+
+node_port="8000"
+
+if [[ $VECTOR_ENV == "prod" ]]
+then
+  node_image_name="${project}_node"
+  bash ops/pull-images.sh $version $node_image_name
+  node_image="image: '$node_image_name:$version'"
+else
+  echo "Running dev mode"
+  node_image="image: '${project}_builder'
+    entrypoint: 'bash modules/server-node/ops/entry.sh'
+    volumes:
+      - '$root:/root'
+    ports:
+      - '$node_port:$node_port'
+      - '9229:9229'"
+fi
+
+echo "Node configured"
 
 ####################
 # Launch Indra stack
 
-echo "Launching ${project}"
+echo "Launching ${stack} stack"
 
-rm -rf $root/docker-compose.yml $root/${project}.docker-compose.yml
-cat - > $root/docker-compose.yml <<EOF
+rm -rf $root/docker-compose.yml $root/$stack.docker-compose.yml
+cat - > $root/$stack.docker-compose.yml <<EOF
 version: '3.4'
 
 networks:
@@ -265,25 +259,6 @@ services:
       - '$db_secret'
       - '$mnemonic_secret_name'
 
-  auth:
-    $common
-    $auth_image
-    ports:
-      - '$auth_port:$auth_port'
-    environment:
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
-      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
-      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
-      VECTOR_NATS_WS_ENDPOINT: 'wss://nats:$nats_ws_port'
-      VECTOR_PORT: '$auth_port'
-      NODE_ENV: '`
-        if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
-      `'
-    secrets:
-      - '$db_secret'
-      - '$mnemonic_secret_name'
-
   database:
     $common
     $database_image
@@ -301,15 +276,11 @@ services:
       - '$db_volume:/var/lib/postgresql/data'
       - '$snapshots_dir:/root/snapshots'
 
-  redis:
-    $common
-    image: '$redis_image'
-
 EOF
 
-docker stack deploy -c $root/docker-compose.yml $project
+docker stack deploy -c $root/$stack.docker-compose.yml $stack
 
-echo "The $project stack has been deployed, waiting for the proxy to start responding.."
+echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
 timeout=$(expr `date +%s` + 60)
 while true
 do

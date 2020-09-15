@@ -2,7 +2,7 @@ import { Contract, ContractFactory, Wallet, providers, utils, BigNumber } from "
 
 import { AddressBook } from "./address-book";
 import { artifacts } from "./artifacts";
-// import { stringify } from "@connext/vector-utils";
+import { ConstructorArgs } from "./constants";
 
 const { keccak256 } = utils;
 
@@ -21,6 +21,9 @@ export const isContractDeployed = async (
     return false;
   }
   const savedCreationCodeHash = addressBook.getEntry(name).creationCodeHash;
+  if (!artifacts || !artifacts[name]) {
+    throw new Error(`No contract artifacts are available for ${name}`);
+  }
   const creationCodeHash = hash(artifacts[name].bytecode);
   if (!savedCreationCodeHash || savedCreationCodeHash !== creationCodeHash) {
     console.log(`creationCodeHash in our address book doen't match ${name} artifacts`);
@@ -43,7 +46,7 @@ export const isContractDeployed = async (
 
 export const deployContract = async (
   name: string,
-  args: Array<{ name: string; value: string }>,
+  args: ConstructorArgs,
   wallet: Wallet,
   addressBook: AddressBook,
 ): Promise<Contract> => {
@@ -56,9 +59,7 @@ export const deployContract = async (
     gasLimit: BigNumber.from("5000000"),
   });
   console.log(`Sent transaction to deploy ${name}, txHash: ${tx.hash}`);
-  const receipt = await tx.wait();
-  // const { gasUsed, cumulativeGasUsed } = receipt;
-  // console.log(`Gas from deploy:`, stringify({ gasUsed, cumulativeGasUsed }));
+  await tx.wait();
   const address = Contract.getContractAddress(tx);
   const contract = new Contract(address, artifacts[name].abi, wallet);
   console.log(`${name} has been deployed to address: ${address}\n`);
