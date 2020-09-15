@@ -44,9 +44,9 @@ jobs:
       - run: make engine
       - run: make test-engine
 
-  test-node-server:
+  test-server-node:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make node-server
-      - run: make test-node-server
+      - run: make server-node
+      - run: make test-server-node
