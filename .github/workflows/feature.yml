@@ -8,10 +8,31 @@ on:
 
 jobs:
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make all
+      - run: make build-report
+
   test-contracts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make
-      - run: make all
+      - run: make contracts
       - run: make test-contracts
+
+  test-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make protocol
+      - run: make test-protocol
+
+  test-node-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make node-server
+      - run: make test-node-server

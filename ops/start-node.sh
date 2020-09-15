@@ -197,8 +197,6 @@ fi
 VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
 ETH_PROVIDER_URL="`echo $VECTOR_CHAIN_PROVIDERS | tr -d "'" | jq '.[]' | head -n 1 | tr -d '"'`"
 
-# TODO: filter out extra contract addresses that we don't have any chain providers for?
-
 echo "Chain providers configured"
 
 ####################

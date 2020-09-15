@@ -44,9 +44,7 @@ describe("inbound", () => {
   let messaging: IMessagingService;
 
   beforeEach(async () => {
-    signers = Array(2)
-      .fill(0)
-      .map((v) => getRandomChannelSigner(providerUrl));
+    signers = Array(2).fill(0).map(() => getRandomChannelSigner(providerUrl));
     store = new MemoryStoreService();
     messaging = new MemoryMessagingService();
   });
@@ -81,6 +79,7 @@ describe("inbound", () => {
       nonce: 1,
       signatures: [mkBytes32("0xsig1")],
     });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { signatures, ...unsigned } = update;
     const message = createVectorChannelMessage({
       from: signers[0].publicIdentifier,
@@ -243,9 +242,7 @@ describe("outbound", () => {
   let messaging: IMessagingService;
 
   beforeEach(async () => {
-    signers = Array(2)
-      .fill(0)
-      .map((v) => getRandomChannelSigner(providerUrl));
+    signers = Array(2).fill(0).map(() => getRandomChannelSigner(providerUrl));
     store = new MemoryStoreService();
     messaging = new MemoryMessagingService();
   });

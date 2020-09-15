@@ -28,6 +28,11 @@ export VECTOR_MNEMONIC=$eth_mnemonic
 # bash ops/start-chain.sh $chain_id
 
 ########################################
+# Make sure global helper services are running
+
+make start-global
+
+########################################
 # Launch tests
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
