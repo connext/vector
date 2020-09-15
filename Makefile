@@ -33,37 +33,46 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: vector
-vector: database proxy server-node
-extras: auth ethprovider global-proxy
-all: vector extras
+default: node
+node: database proxy server-node
+extras: auth ethprovider global-proxy test-runner
+all: node extras
 
 ########################################
 # Command & Control Shortcuts
 
-start: vector
-	bash ops/start-global-services.sh
+start: start-node
+restart: restart-node
+stop: stop-node
+
+start-node: server-node
 	bash ops/start-node.sh
+restart-node: server-node
+	bash ops/stop.sh node
+	bash ops/start-node.sh
+stop-node: server-node
+	bash ops/stop-node.sh
 
 start-duet: auth global-proxy
 	bash ops/start-duet.sh
-
 restart-duet: auth global-proxy
 	bash ops/stop.sh duet
 	bash ops/start-duet.sh
+stop-duet: auth global-proxy
+	bash ops/stop-duet.sh
 
-stop:
-	bash ops/stop.sh vector
+start-global: auth global-proxy
+	bash ops/start-global.sh
+restart-global: auth global-proxy
+	bash ops/stop.sh global
+	bash ops/start-global.sh
+stop-global: auth global-proxy
+	bash ops/stop-global.sh
 
 stop-all:
-	bash ops/stop.sh vector
+	bash ops/stop.sh node
 	bash ops/stop.sh testnet
-	bash ops/stop.sh connext
 	bash ops/stop.sh duet
-
-restart: vector stop
-	bash ops/start-global-services.sh
-	bash ops/start-node.sh
 
 clean: stop-all
 	docker container prune -f
@@ -88,6 +97,9 @@ reset-images:
 
 purge: clean reset
 
+########################################
+# Misc Shortcuts
+
 push:
 	bash ops/push-images.sh
 
@@ -96,9 +108,6 @@ pull:
 
 pull-latest:
 	bash ops/pull-images.sh latest
-
-build-report:
-	bash ops/build-report.sh
 
 dls:
 	@docker service ls
@@ -131,10 +140,11 @@ test-engine: engine
 watch-engine: protocol
 	bash ops/test/unit.sh engine watch 1341
 
-test-server-node: server-node
-	bash ops/test/server-node.sh test
-watch-server-node: engine
-	bash ops/test/server-node.sh watch
+
+test-duet: test-runner server-node
+	bash ops/test/integration.sh duet test
+watch-duet: test-runner server-node
+	bash ops/test/integration.sh duet watch
 
 ########################################
 # Begin Real Build Rules
@@ -189,19 +199,34 @@ auth-bundle: utils $(shell find modules/auth $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+auth: auth-bundle $(shell find modules/auth/ops $(find_options))
+	$(log_start)
+	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
+	docker tag $(project)_auth $(project)_auth:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 server-node-bundle: engine $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
+	$(log_start)
+	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
+	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-test-runner-bundle: engine $(shell find modules/test-runner $(find_options))
+test-runner-bundle: engine $(shell find modules/test-runner/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/test-runner && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+test-runner: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
+	$(log_start)
+	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner
+	docker tag $(project)_test_runner $(project)_test_runner:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
-# Build Docker Images
+# Build More Docker Images
 
 database: $(shell find ops/database $(find_options))
 	$(log_start)
@@ -215,18 +240,6 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-auth: auth-bundle $(shell find modules/auth/ops $(find_options))
-	$(log_start)
-	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
-	docker tag $(project)_auth $(project)_auth:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
-	$(log_start)
-	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
-	docker tag $(project)_server-node $(project)_server-node:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
 global-proxy: $(shell find ops/global-proxy $(find_options))
 	$(log_start)
 	docker build $(image_cache) --tag $(project)_msg_proxy ops/global-proxy
@@ -237,10 +250,4 @@ proxy: $(shell find ops/proxy $(find_options))
 	$(log_start)
 	docker build $(image_cache) --tag $(project)_proxy ops/proxy
 	docker tag $(project)_proxy $(project)_proxy:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-test-runner: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
-	$(log_start)
-	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner
-	docker tag $(project)_test_runner $(project)_test_runner:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@

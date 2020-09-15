@@ -8,8 +8,10 @@ project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-version="$1"
+stack="${1:-duet}"
 cmd="${2:-test}"
+
+make start-$stack
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
@@ -38,7 +40,13 @@ contract_addresses="`cat $addresses_file | jq . -c`"
 ########################################
 ## Launch test runner
 
-common="$interactive \
+if [[ "$stack" == "duet" ]]
+then stack_env=" \
+  --env=VECTOR_ALICE_URL=http://alice:8000 \
+  --env=VECTOR_BOB_URL=http://bob:8000"
+fi
+
+common="$interactive $stack_env \
   --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
   --env=VECTOR_CHAIN_PROVIDERS=$chain_providers \
   --env=VECTOR_TEST_LOG_LEVEL=${TEST_LOG_LEVEL:-$LOG_LEVEL} \
@@ -65,7 +73,7 @@ then
   fi
   image=${project}_test_runner:$version
   echo "Executing $cmd w image $image"
-  exec docker run --env=NODE_ENV=production $common $image $cmd
+  exec docker run --env=NODE_ENV=production $common $image $cmd $stack
 
 else
   echo "Executing $cmd w image ${project}_builder"
@@ -73,5 +81,5 @@ else
     $common \
     --entrypoint=bash \
     --volume="$root:/root" \
-    ${project}_builder -c "cd modules/test-runner && bash ops/entry.sh $cmd"
+    ${project}_builder -c "bash modules/test-runner/ops/entry.sh $cmd $stack"
 fi

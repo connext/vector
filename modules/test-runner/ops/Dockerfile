@@ -8,5 +8,6 @@ RUN curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721
 RUN npm install mocha sequelize sqlite3
 COPY ops ops
 COPY dist dist
-ENV PATH="./node_modules/.bin:${PATH}"
+ENV PATH="/root/node_modules/.bin:${PATH}"
+RUN which mocha
 ENTRYPOINT ["bash", "ops/entry.sh"]

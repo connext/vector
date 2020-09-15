@@ -159,7 +159,7 @@ VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/addresses/${chain_id_1}-${chain
 ########################################
 ## Node config
 
-node_port="8000"
+node_port="8888"
 
 alice_port="8001"
 alice_database="database_a"
