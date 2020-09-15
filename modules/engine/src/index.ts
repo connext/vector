@@ -30,7 +30,7 @@ import {
 } from "./paramConverter";
 import { SetupInput } from "./types";
 
-export class NodeCore {
+export class VectorEngine {
   private constructor(
     private readonly messaging: IMessagingService,
     private readonly store: IVectorStore,
@@ -48,11 +48,11 @@ export class NodeCore {
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
     logger: Pino.BaseLogger,
-  ): Promise<NodeCore> {
+  ): Promise<VectorEngine> {
     const vector = await Vector.connect(messaging, lock, store as IVectorStore, signer, chainProviders, logger);
-    const nodeCore = new NodeCore(messaging, store, vector, chainProviders, chainAddresses, logger);
-    await nodeCore.setupListener();
-    return nodeCore;
+    const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger);
+    await engine.setupListener();
+    return engine;
   }
 
   public async setupListener(): Promise<void> {

@@ -164,12 +164,12 @@ auth-bundle: utils $(shell find modules/auth $(find_options))
 	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-node-core-bundle: utils protocol $(shell find modules/node-core $(find_options))
+engine-bundle: utils protocol $(shell find modules/engine $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/node-core && npm run build"
+	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-server-node-bundle: node-core-bundle $(shell find modules/server-node $(find_options))
+server-node-bundle: engine-bundle $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@

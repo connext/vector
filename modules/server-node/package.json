@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@connext/vector-node-core": "0.0.1",
+    "@connext/vector-engine": "0.0.1",
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
     "@prisma/client": "2.6.2",

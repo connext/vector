@@ -1,5 +1,5 @@
 {
-  "name": "@connext/vector-node-core",
+  "name": "@connext/vector-engine",
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
