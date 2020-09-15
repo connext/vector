@@ -5,7 +5,7 @@ export class Result<T, Y = any> {
 
   public isError: boolean;
 
-  constructor(error?: Y, value?: T) {
+  private constructor(error?: Y, value?: T) {
     if (error) {
       this.isError = true;
       this.error = error;
@@ -47,6 +47,7 @@ export abstract class VectorError extends Error {
     ChannelUpdateError: "ChannelUpdateError",
     DepositError: "DepositError",
     UpdateValidationError: "UpdateValidationError",
+    OnchainTransactionError: "OnchainTransactionError",
     // etc.
   } as const;
 
@@ -55,9 +56,9 @@ export abstract class VectorError extends Error {
 
   constructor(
     public readonly message: Values<typeof VectorError.reasons>,
-    public readonly update: ChannelUpdate<any> | UpdateParams<any> & { nonce: number },
+    public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
     public readonly state?: FullChannelState,
-    public readonly context: any = undefined,
+    public readonly context?: any,
   ) {
     super(message);
   }
@@ -85,9 +86,9 @@ export class ChannelUpdateError extends VectorError {
 
   constructor(
     public readonly message: Values<typeof ChannelUpdateError.reasons>,
-    public readonly update: ChannelUpdate<any> | UpdateParams<any> & { nonce: number },
+    public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
     public readonly state?: FullChannelState,
-    public readonly context: any = undefined,
+    public readonly context?: any,
   ) {
     super(message, update, state, context);
   }

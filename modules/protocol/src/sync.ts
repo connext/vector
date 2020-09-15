@@ -59,7 +59,7 @@ export async function outbound(
       // this nonce, reject the promise
       errorEvt
         .pipe((e: ChannelUpdateError) => {
-          return e.update.channelAddress === updateToSend.channelAddress;
+          return e.update?.channelAddress === updateToSend.channelAddress;
         })
         .attachOnce((e: ChannelUpdateError) => resolve(Result.fail(e)));
 
