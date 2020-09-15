@@ -18,6 +18,8 @@
     "@connext/vector-protocol": "0.0.1",
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
+    "@sinclair/typebox": "0.10.1",
+    "ajv": "6.12.5",
     "ethers": "5.0.13",
     "evt": "1.8.10"
   },

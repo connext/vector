@@ -71,7 +71,8 @@ export class ChannelUpdateError extends VectorError {
   // This is the message that will be thrown by the error
   // and all other details will be logged
   static readonly reasons = {
-    applyUpdateFailed: "Failed to apply update",
+    InvalidParams: "Invalid params",
+    ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
     ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     StaleUpdateNonce: "Update does not progress state nonce",

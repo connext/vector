@@ -21,6 +21,7 @@ import {
   PostSetupRequestBody,
   postSetupResponseSchema,
 } from "./schema";
+import { MultichainTransactionService, VectorTransactionService } from "./services/onchain";
 
 const server = fastify();
 server.register(fastifyOas, {
@@ -34,8 +35,13 @@ server.register(fastifyOas, {
 });
 
 const logger = pino();
-let vectorNode: VectorEngine;
-const signer = new ChannelSigner(Wallet.fromMnemonic(config.mnemonic!).privateKey);
+let vectorEngine: VectorEngine;
+const pk = Wallet.fromMnemonic(config.mnemonic!).privateKey;
+const signer = new ChannelSigner(pk);
+
+const multichainTx = new MultichainTransactionService(config.chainProviders, pk);
+const vectorTx = new VectorTransactionService(multichainTx, logger.child({ module: "VectorTransactionService" }));
+const store = new PrismaStore();
 server.addHook("onReady", async () => {
   const messaging = new NatsMessagingService(
     {
@@ -48,10 +54,10 @@ server.addHook("onReady", async () => {
     },
   );
   await messaging.connect();
-  vectorNode = await VectorEngine.connect(
+  vectorEngine = await VectorEngine.connect(
     messaging,
     new LockService(config.redisUrl),
-    new PrismaStore(),
+    store,
     signer,
     config.chainProviders,
     {},
@@ -67,7 +73,7 @@ server.post<{ Body: PostSetupRequestBody }>(
   "/setup",
   { schema: { body: postSetupBodySchema, response: postSetupResponseSchema } },
   async (request, reply) => {
-    const res = await vectorNode.setup({
+    const res = await vectorEngine.setup({
       counterpartyIdentifier: request.body.counterpartyIdentifier,
       timeout: request.body.timeout,
       chainId: request.body.chainId,
@@ -83,7 +89,17 @@ server.post<{ Body: PostDepositRequestBody }>(
   "/deposit",
   { schema: { body: postDepositBodySchema, response: postDepositResponseSchema } },
   async (request, reply) => {
-    const res = await vectorNode.deposit({
+    const channelState = await store.getChannelState(request.body.channelAddress);
+    if (!channelState) {
+      return reply.status(404).send({ message: "Channel not found" });
+    }
+    const depositRes = await vectorTx.sendDepositTx(
+      channelState,
+      signer.address,
+      request.body.amount,
+      request.body.assetId,
+    );
+    const res = await vectorEngine.deposit({
       amount: request.body.amount,
       assetId: request.body.assetId,
       channelAddress: request.body.channelAddress,
@@ -99,7 +115,7 @@ server.post<{ Body: PostLinkedTransferRequestBody }>(
   "/linked-transfer",
   { schema: { body: postLinkedTransferBodySchema, response: postLinkedTransferResponseSchema } },
   async (request, reply) => {
-    const res = await vectorNode.conditionalTransfer({
+    const res = await vectorEngine.conditionalTransfer({
       amount: request.body.amount,
       assetId: request.body.assetId,
       channelAddress: request.body.channelAddress,

@@ -7,7 +7,7 @@ import {
   ConditionalTransferResponse,
   ConditionalTransferType,
   CreateTransferParams,
-  DepositParams,
+  FullChannelState,
   IChannelSigner,
   ILockService,
   IMessagingService,
@@ -21,6 +21,7 @@ import {
   WithdrawParams,
 } from "@connext/vector-types";
 import Pino from "pino";
+import Ajv from "ajv";
 
 import { InvalidTransferType } from "./errors";
 import {
@@ -28,7 +29,9 @@ import {
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "./paramConverter";
-import { SetupInput } from "./types";
+import { SetupInput, SetupInputSchema, DepositInputSchema, DepositInput } from "./types";
+
+const ajv = new Ajv();
 
 export class VectorEngine {
   private constructor(
@@ -69,7 +72,13 @@ export class VectorEngine {
     // subscribe to isAlive
   }
 
-  public async setup(params: SetupInput): Promise<Result<any>> {
+  public async setup(params: SetupInput): Promise<Result<any, ChannelUpdateError | Error>> {
+    const validate = ajv.compile(SetupInputSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
+
     return this.vector.setup({
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
@@ -85,8 +94,13 @@ export class VectorEngine {
     });
   }
 
-  public async deposit(params: DepositParams): Promise<Result<any>> {
-    // TODO we need a deposit response here
+  public async deposit(params: DepositInput): Promise<Result<FullChannelState, ChannelUpdateError | Error>> {
+    const validate = ajv.compile(DepositInputSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
+
     return this.vector.deposit(params);
   }
 
@@ -97,7 +111,7 @@ export class VectorEngine {
     // TODO input validation
     const channel = await this.store.getChannelState(params.channelAddress);
     if (!channel) {
-      // error
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
