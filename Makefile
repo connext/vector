@@ -129,14 +129,14 @@ watch-protocol: contracts
 	bash ops/test/unit.sh protocol watch 1340
 
 test-engine: engine-bundle
-	bash ops/test/unit.sh engine test
+	bash ops/test/unit.sh engine test 1341
 watch-engine: protocol
-	bash ops/test/unit.sh engine watch
+	bash ops/test/unit.sh engine watch 1341
 
 test-server-node: server-node
-	bash ops/test/server-node.sh test 1341
+	bash ops/test/server-node.sh test
 watch-server-node: engine-bundle
-	bash ops/test/server-node.sh watch 1341
+	bash ops/test/server-node.sh watch
 
 ########################################
 # Begin Real Build Rules

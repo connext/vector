@@ -44,7 +44,7 @@ fi
 docker run \
   $interactive \
   --entrypoint="bash" \
-  --name="${project}_server_node_tester" \
+  --name="${project}_test_server_node" \
   --rm \
   --volume="$root:/root" \
-  ${project}_builder -c 'cd modules/server-node && npm run '"$cmd"' -- '"$@"
+  ${project}_builder "/test.sh" "server-node" "$cmd"

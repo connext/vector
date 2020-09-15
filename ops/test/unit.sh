@@ -15,7 +15,7 @@ else echo "Running in non-interactive mode"
 fi
 
 ########################################
-# If we need a chain these tests, start the testnet & stop it when we're done
+# If we need a chain for these tests, start the testnet & stop it when we're done
 
 eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 CHAIN_PROVIDERS="{}"
