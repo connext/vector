@@ -23,8 +23,8 @@
     "@connext/vector-utils": "0.0.1",
     "async-mutex": "0.2.4",
     "ethers": "5.0.13",
-    "evt": "1.8.9",
-    "pino": "6.6.0"
+    "evt": "1.8.10",
+    "pino": "6.6.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",
