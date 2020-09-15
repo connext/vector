@@ -2,21 +2,32 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./IVectorChannel.sol";
+
 
 interface IChannelFactory {
 
-    function getChannelAddress(
-        address initiator,
-        address responder
-    ) external returns (address channel);
-
-    function createChannel(
-        address initiator,
-        address responder
-    ) external returns (address channel);
+    event ChannelCreation(IVectorChannel channel);
 
     function proxyCreationCode() external pure returns (bytes memory);
 
     function proxyRuntimeCode() external pure returns (bytes memory);
+
+    function getChannelAddress(
+        address initiator,
+        address responder
+    ) external;
+
+    function createChannel(
+        address initiator,
+        address responder
+    ) external returns (IVectorChannel);
+
+    function createChannelAndDepositA(
+        address initiator,
+        address responder,
+        address assetId,
+        uint256 amount
+    ) external payable returns (IVectorChannel);
 
 }

@@ -1,26 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.1;
+pragma experimental ABIEncoderV2;
 
-import "./Proxy.sol";
 import "./interfaces/IChannelFactory.sol";
+import "./interfaces/IVectorChannel.sol";
+import "./interfaces/IAdjudicator.sol";
+import "./Proxy.sol";
+import "./shared/IERC20.sol";
 
 
-/// @title Channel Factory - Allows us to create new channel proxy contact
+/// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
 
-    address mastercopy;
-    string domainSalt = "vector";
+    IVectorChannel immutable public masterCopy;
+    IAdjudicator immutable public adjudicator;
 
-    event ChannelCreation(address channel);
+    string constant domainSalt = "vector";
 
-    constructor(address _mastercopy) {
-        mastercopy = _mastercopy;
-    }
-
-    /// @dev Allows us to retrieve the runtime code of a deployed Proxy.
-    /// @dev This can be used to check that the expected Proxy was deployed.
-    function proxyRuntimeCode() public override pure returns (bytes memory) {
-        return type(Proxy).runtimeCode;
+    constructor(IVectorChannel _masterCopy, IAdjudicator _adjudicator) {
+        masterCopy = _masterCopy;
+        adjudicator = _adjudicator;
     }
 
     /// @dev Allows us to retrieve the creation code used for the Proxy deployment.
@@ -29,7 +28,13 @@ contract ChannelFactory is IChannelFactory {
         return type(Proxy).creationCode;
     }
 
-    /// @dev Allows us to get the address for a new channel contact created via `createChannel`
+    /// @dev Allows us to retrieve the runtime code of a deployed Proxy.
+    /// @dev This can be used to check that the expected Proxy was deployed.
+    function proxyRuntimeCode() public override pure returns (bytes memory) {
+        return type(Proxy).runtimeCode;
+    }
+
+    /// @dev Allows us to get the address for a new channel contract created via `createChannel`
     /// @dev When calling this method set `from` to the address of the channel factory.
     /// @param initiator address of one of the two participants in the channel
     /// @param responder address of the other channel participant
@@ -39,13 +44,12 @@ contract ChannelFactory is IChannelFactory {
     )
         public
         override
-        returns (address channel)
     {
-        channel = deployChannelProxy(initiator, responder);
+        IVectorChannel channel = deployChannelProxy(initiator, responder);
         revert(string(abi.encodePacked(channel)));
     }
 
-    /// @dev Allows us to create new channel contact and get it all set up in one transaction
+    /// @dev Allows us to create new channel contract and get it all set up in one transaction
     /// @param initiator address of one of the two participants in the channel
     /// @param responder address of the other channel participant
     function createChannel(
@@ -54,11 +58,46 @@ contract ChannelFactory is IChannelFactory {
     )
         public
         override
-        returns (address channel)
+        returns (IVectorChannel channel)
     {
         channel = deployChannelProxy(initiator, responder);
-        // TODO: call channel.setup()? Do any other channel initialization chores?
+        channel.setup([initiator, responder], adjudicator);
         emit ChannelCreation(channel);
+    }
+
+    /// @dev Allows us to create new channel contract, get it set up, and fund it
+    /// with a call to `depositA` in one transaction
+    /// @param initiator address of one of the two participants in the channel
+    /// @param responder address of the other channel participant
+    function createChannelAndDepositA(
+        address initiator,
+        address responder,
+        address assetId,
+        uint256 amount
+    )
+        public
+        payable
+        override
+        returns (IVectorChannel channel)
+    {
+        channel = createChannel(initiator, responder);
+
+        // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
+        // Do we want to keep it this way?
+
+        if (assetId != address(0)) {
+            require(
+                IERC20(assetId).transferFrom(msg.sender, address(this), amount),
+                "ChannelFactory: token transferFrom failed"
+            );
+            require(
+                IERC20(assetId).approve(address(channel), amount),
+                "ChannelFactory: token approve failed"
+            );
+
+        }
+
+        channel.depositA{value: msg.value}(assetId, amount);
     }
 
     /// @dev Allows us to create new channel contact using CREATE2
@@ -70,15 +109,14 @@ contract ChannelFactory is IChannelFactory {
         address responder
     )
         internal
-        returns (address channel)
+        returns (IVectorChannel)
     {
-        // TODO: include chainId in the create2 salt
-        bytes32 salt = keccak256(
-            abi.encodePacked(initiator, responder, domainSalt)
-        );
-
+        bytes32 salt = generateSalt(initiator, responder);
+        Proxy proxy = deployProxy(address(masterCopy), salt);
+        return IVectorChannel(address(proxy));
+        /*
         bytes memory deploymentData = abi.encodePacked(
-            type(Proxy).creationCode, uint256(mastercopy)
+            type(Proxy).creationCode, uint256(masterCopy)
         );
 
         // solium-disable-next-line security/no-inline-assembly
@@ -87,8 +125,45 @@ contract ChannelFactory is IChannelFactory {
             let codeSize := extcodesize(channel)
             if eq(codeSize, 0) { revert(0, 0) }
         }
+        */
 
         // TODO: finish deployment by calling setup([initiator, responder], adjudicatorAddress)
+    }
+
+    function deployProxy(
+        address _masterCopy,
+        bytes32 salt
+    )
+        internal
+        returns (Proxy)
+    {
+        return new Proxy{salt: salt}(_masterCopy);
+    }
+
+    // TODO: discuss actual salt generation with team
+    function generateSalt(
+        address initiator,
+        address responder
+    )
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                domainSalt,
+                chainId(),
+                initiator,
+                responder
+            )
+        );
+    }
+
+    function chainId() internal pure returns (uint256 id) {
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            id := chainid()
+        }
     }
 
 }

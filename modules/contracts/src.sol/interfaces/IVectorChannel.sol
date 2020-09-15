@@ -2,6 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./IAdjudicator.sol";
 import "./Types.sol";
 
 
@@ -15,9 +16,14 @@ interface IVectorChannel {
         address assetId
     ) external view returns (LatestDeposit memory);
 
+    function setup(
+        address[2] memory owners,
+        IAdjudicator adjudicator
+    ) external;
+
     function depositA(
-        uint256 amount,
-        address assetId
+        address assetId,
+        uint256 amount
         // bytes memory signature
     ) external payable;
 
