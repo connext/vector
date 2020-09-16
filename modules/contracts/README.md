@@ -127,6 +127,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 - [ ] Circumvent sig verificatin in `depositA` if being called by `owners[0]` (we still need possible sig to handle the case where it is called by the `ChannelFactory`)
 - [ ] Write the `adjudicatorTransfer` fn
 - [ ] Update `getTransactionHash` to use nonce-based replay protection
+- [X] Clean up + add missing functions to interface
 
 #### ChannelFactory
 - [ ] Combine this into the `Adjudicator` to avoid cyclic dependency issue
