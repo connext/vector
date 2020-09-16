@@ -9,8 +9,6 @@ import "./shared/LibChannelCrypto.sol";
 import "./shared/MerkleProof.sol";
 import "./shared/SafeMath.sol";
 
-
-// Called directly by a VectorChannel.sol instance
 contract Adjudicator is IAdjudicator {
 
     using LibChannelCrypto for bytes32;
@@ -22,7 +20,7 @@ contract Adjudicator is IAdjudicator {
         bytes32 merkleRoot;
         uint256 consensusExpiry;
         uint256 defundExpiry;
-        // iterable_mapping(address => bool) assetDefunded;
+        // iterable_mapping(address => bool) assetDefunded; // Disabled because we now withdraw all assets
         bool isDefunded;
     }
 
@@ -97,12 +95,10 @@ contract Adjudicator is IAdjudicator {
         dispute.consensusExpiry = block.number.add(ccs.timeout); // TODO: offchain-ensure that there can't be an overflow
         dispute.defundExpiry = block.number.add(ccs.timeout.mul(2)); // TODO: offchain-ensure that there can't be an overflow
 
-        // TODO: Can everybody who has the signatures do that, or should we restrict it to the participants?
     }
 
     function defundChannel(
         CoreChannelState memory ccs,
-        address[] memory assetIds  // TODO: For now, we ignore this argument and defund all assets
     )
         public
         override
