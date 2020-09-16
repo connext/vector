@@ -120,7 +120,7 @@ export class VectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
-    const protocolRes = await this.vector.createTransfer(createParams);
+    const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
     }
@@ -134,7 +134,7 @@ export class VectorEngine {
 
     // First, get translated `resolve` params using the passed in resolve condition ones
     const resolveParams: ResolveTransferParams = await convertResolveConditionParams(params);
-    return this.vector.resolveTransfer(resolveParams);
+    return this.vector.resolve(resolveParams);
   }
 
   public async withdraw(params: WithdrawParams): Promise<Result<any>> {
@@ -142,7 +142,7 @@ export class VectorEngine {
     // TODO input validation
 
     const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses);
-    return this.vector.createTransfer(withdrawParams);
+    return this.vector.create(withdrawParams);
   }
 
   public async transfer(params: TransferParams): Promise<Result<any>> {

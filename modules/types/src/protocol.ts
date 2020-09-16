@@ -13,10 +13,10 @@ import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";
 export interface IVectorProtocol {
   signerAddress: string;
   publicIdentifier: string;
-  setup(params: SetupParams): Promise<Result<any, ChannelUpdateError>>;
+  setup(params: SetupParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
   deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  createTransfer(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  resolveTransfer(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
+  create(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
+  resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
   on<T extends ProtocolEventName>(
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
