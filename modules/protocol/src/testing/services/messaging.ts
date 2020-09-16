@@ -27,7 +27,7 @@ export class MemoryMessagingService implements IMessagingService {
     this.evt.pipe(({ subject: _subject }) => _subject === subject).attach(({ data }) => callback(data));
   }
 
-  request(subject: string, timeout: number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  request(subject: string, timeout: number, data: any): Promise<any> {
     throw new Error("Method not implemented.");
   }
 

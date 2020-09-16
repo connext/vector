@@ -65,15 +65,21 @@ export async function outbound(
 
       // TODO: turn `update` into a DTO before sending?
       // TODO: what if there is no latest update?
-      messagingService.send(updateToSend.toIdentifier, { update: updateToSend, latestUpdate: prevUpdate }).catch((e) =>
-        resolve(
-          Result.fail(
-            new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel, {
-              error: e.message,
-            }),
+      messagingService
+        .send(updateToSend.toIdentifier, {
+          to: updateToSend.toIdentifier,
+          from: updateToSend.fromIdentifier,
+          data: { update: updateToSend, latestUpdate: prevUpdate },
+        })
+        .catch((e) =>
+          resolve(
+            Result.fail(
+              new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel, {
+                error: e.message,
+              }),
+            ),
           ),
-        ),
-      );
+        );
     });
 
   // Retry sending the message 5 times w/3s delay

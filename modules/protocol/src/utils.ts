@@ -23,13 +23,14 @@ const { defaultAbiCoder } = utils;
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function isChannelMessage(msg: any): msg is VectorChannelMessage {
   if (msg?.error) return false;
-  if (!msg?.update) return false;
+  if (!msg?.data?.update) return false;
   return true;
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function isErrorMessage(msg: any): msg is VectorErrorMessage {
   if (!msg?.error) return false;
+  if (msg?.data) return false;
   return true;
 }
 
