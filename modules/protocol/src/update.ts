@@ -4,8 +4,9 @@ import {
   hashCoreTransferState,
   hashTransferState,
   getTransferNameFromState,
+  getTransferId,
 } from "@connext/vector-utils";
-import { Contract, BigNumber, utils, constants } from "ethers";
+import { Contract, BigNumber, constants } from "ethers";
 import {
   UpdateType,
   ChannelUpdate,
@@ -307,8 +308,7 @@ async function generateCreateUpdate(
   const coreTransferState: CoreTransferState = {
     initialBalance: transferInitialState.balance,
     assetId,
-    // TODO: Should we pass in a transfer id?
-    transferId: utils.hexlify(utils.randomBytes(32)),
+    transferId: getTransferId(state.channelAddress, state.nonce, transferDefinition, timeout),
     channelAddress: state.channelAddress,
     transferDefinition,
     transferEncodings: encodings,

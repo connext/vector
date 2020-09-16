@@ -12,12 +12,27 @@ import {
   CoreTransferStateEncoding,
   LinkedTransferResolverEncoding,
   LinkedTransferResolver,
+  Address,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
 import { stringify } from "./json";
 
 const { keccak256, solidityPack, defaultAbiCoder } = utils;
+
+export const getTransferId = (
+  channelAddress: Address,
+  channelNonce: string,
+  transferDefinition: Address,
+  transferTimeout: string,
+): string => {
+  return keccak256(
+    solidityPack(
+      ["address", "address", "uint256", "uint256"],
+      [transferDefinition, channelAddress, transferTimeout, channelNonce],
+    ),
+  );
+};
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isLinkedTransferState = (state: any): state is LinkedTransferState => {

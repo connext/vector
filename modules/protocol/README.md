@@ -102,7 +102,7 @@ Should do the exact oppositve of the `create` update above.
 #### Update.ts
 
 - [ ] Check onchain deposit balance in `generateDepositUpdate`
-- [ ] Calculate `transferId` programmatically using `nonce`, `channelAddress`, `transferDefinition`, `transferTimeout`, etc. (just check how we do it for appIdHash) -- note that we need to validate that this is derived correctly on responder side
+- [x] Calculate `transferId` programmatically using `nonce`, `channelAddress`, `transferDefinition`, `transferTimeout`, etc. (just check how we do it for appIdHash) -- note that we need to validate that this is derived correctly on responder side
 - [ ] Verify hashing + signing functions with what is onchain
 - [x] Fix ordering of `to` in `getUpdatedChannelBalance` (and verify that transfer/channel `to` ordering _can_ be different elsewhere)
 
