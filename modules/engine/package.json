@@ -21,7 +21,9 @@
     "@sinclair/typebox": "0.10.1",
     "ajv": "6.12.5",
     "ethers": "5.0.13",
-    "evt": "1.8.10"
+    "evt": "1.8.10",
+    "pino": "6.6.1",
+    "pino-pretty": "^4.2.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",
