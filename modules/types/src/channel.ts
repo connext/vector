@@ -7,9 +7,6 @@ export type ContextualAddress = {
   chainId: number;
 };
 
-// TODO: replace these placeholders w real types
-export type MultisigCommitment = any;
-
 // Method params
 export type SetupParams = {
   counterpartyIdentifier: string;
@@ -28,7 +25,7 @@ export type CreateTransferParams = {
   amount: string;
   assetId: string;
   transferDefinition: string;
-  transferInitialState: TransferState; // TODO (solidityvaluetype?)
+  transferInitialState: TransferState;
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
   meta?: any;
@@ -37,7 +34,7 @@ export type CreateTransferParams = {
 export type ResolveTransferParams = {
   channelAddress: string;
   transferId: string;
-  transferResolver: any; // TODO (solidityvaluetype?)
+  transferResolver: TransferResolver;
   meta?: any;
 };
 
@@ -101,7 +98,6 @@ export interface CoreTransferState {
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   meta?: any;
 }
-
 export interface ChannelCommitmentData {
   state: CoreChannelState;
   signatures: string[];
@@ -149,9 +145,7 @@ export type ChannelUpdate<T extends UpdateType> = {
   balance: Balance;
   assetId: Address;
   details: ChannelUpdateDetailsMap[T];
-  signatures: string[]; // [from, to]
-  // TODO: convention around single signed states?
-  // Do the sigs *have* to be an array?
+  signatures: string[]; // same participants ordering
 };
 
 export interface ChannelUpdateDetailsMap {
@@ -187,7 +181,6 @@ export type DepositUpdateDetails = {
   latestDepositNonce: number;
 };
 
-// TODO: verify these are correct
 export type SetupUpdateDetails = {
   timeout: string;
   networkContext: NetworkContext;
