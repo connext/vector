@@ -22,6 +22,6 @@ describe("TransferDefinition", () => {
   });
 
   it("should revert on resolve", async () => {
-    await expect(definition.functions.resolve(utils.randomBytes(64))).revertedWith("The resolve method has no implementation for this TransferDefinition");
+    await expect(definition.functions.resolve(utils.randomBytes(64), utils.randomBytes(64))).revertedWith("The resolve method has no implementation for this TransferDefinition");
   });
 });

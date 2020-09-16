@@ -1,6 +1,5 @@
-// TODO do we need this?
-
 import fs from "fs";
+
 import { AddressBookEntry, AddressBook as AddressBookJson } from "@connext/types";
 import { constants } from "ethers";
 
@@ -12,10 +11,23 @@ export interface AddressBook {
 }
 
 export const getAddressBook = (path: string, chainId: string): AddressBook => {
-  if (!path) throw new Error(`A path the the address book file is required.`);
+  if (!path) throw new Error(`A path to the address book file is required.`);
   if (!chainId) throw new Error(`A chainId is required.`);
 
-  const addressBook = JSON.parse(fs.readFileSync(path, "utf8") || "{}") as AddressBookJson;
+  let addressBook: AddressBookJson = { [chainId]: {} };
+  try {
+    addressBook = JSON.parse(fs.readFileSync(path, "utf8") || "{}") as AddressBookJson;
+  } catch (e) {
+    if (e.message.includes("ENOENT: no such file")) {
+      fs.writeFileSync(path, `{"${chainId}":{}}`);
+    } else {
+      throw e;
+    }
+  }
+
+  if (!addressBook) {
+    addressBook = {};
+  }
 
   if (!addressBook[chainId]) {
     addressBook[chainId] = {};

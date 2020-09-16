@@ -8,13 +8,13 @@ then cd modules/contracts
 fi
 
 address_book="${ADDRESS_BOOK:-/data/address-book.json}"
-data_dir="${DATA_DIR:-/tmpfs}"
+data_dir="${DATA_DIR:-/tmp}"
 chain_id="${CHAIN_ID:-1337}"
 mnemonic="${MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
 evm="${EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
 
 cwd="`pwd`"
-mkdir -p $data_dir /data /tmpfs
+mkdir -p $data_dir /data /tmp
 touch $address_book
 
 # TODO: the gasLimit shouldn't need to be 1000x higher than mainnet but cf tests fail otherwise..
@@ -36,9 +36,9 @@ then
         gasPrice: 1000000000,
       },
     },
-  }' > /tmpfs/buidler.config.js
-  launch="$cwd/node_modules/.bin/buidler node --config /tmpfs/buidler.config.js --hostname 0.0.0.0 --port 8545 "
-  cd /tmpfs # bc we need to run buidler node in same dir as buidler.config.js
+  }' > /tmp/buidler.config.js
+  launch="$cwd/node_modules/.bin/buidler node --config /tmp/buidler.config.js --hostname 0.0.0.0 --port 8545 "
+  cd /tmp # bc we need to run buidler node in same dir as buidler.config.js
 
 elif [[ "$evm" == "ganache" ]]
 then
@@ -78,7 +78,7 @@ if [[ "$evm" == "ganache" ]]
 then
   kill $pid
   echo "Starting publically available testnet.."
-  eval "$launch $expose > /tmpfs/ganache.log"
+  eval "$launch $expose > /tmp/ganache.log"
 else
   wait $pid
 fi

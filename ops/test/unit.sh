@@ -45,5 +45,6 @@ exec docker run \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --name="${project}_test_$unit" \
   --rm \
+  --tmpfs="/tmp" \
   --volume="$root:/root" \
   ${project}_builder "/test.sh" "$unit" "$cmd"

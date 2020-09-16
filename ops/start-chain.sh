@@ -56,25 +56,31 @@ docker run $opts \
   --network "$project" \
   --publish "$port:8545" \
   --rm \
-  --tmpfs "/tmpfs" \
+  --tmpfs "/tmp" \
   $image $arg
 
 if [[ "$logLevel" -gt "0" ]]
 then docker container logs --follow $ethprovider_host &
 fi
 
+function abort {
+  echo "$ethprovider_host was not able to start up successfully"
+  docker container logs --tail 100 $ethprovider_host
+  exit 1
+}
+
 while ! curl -s http://localhost:$port > /dev/null
 do
   if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
-  then echo "$ethprovider_host was not able to start up successfully" && exit 1
+  then abort
   else sleep 1
   fi
 done
 
-while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep '"Token":' || true`" ]]
+while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep 'Token":' || true`" ]]
 do
   if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
-  then echo "$ethprovider_host was not able to start up successfully" && exit 1
+  then abort
   else sleep 1
   fi
 done

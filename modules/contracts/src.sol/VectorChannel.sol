@@ -68,7 +68,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         public
         override
     {
-        require(_owners.length == 0, "Contract has been set up before");
+        require(address(_adjudicator) == address(0), "Contract has already been setup");
         _owners = owners;
         _adjudicator = adjudicator;
     }
