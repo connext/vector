@@ -14,7 +14,7 @@ interface IChannelFactory {
     function getChannelAddress(
         address initiator,
         address responder
-    ) external;
+    ) external view returns (address);
 
     function createChannel(
         address initiator,

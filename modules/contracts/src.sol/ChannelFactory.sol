@@ -16,16 +16,11 @@ contract ChannelFactory is IChannelFactory {
     IAdjudicator immutable public adjudicator;
 
     bytes32 private constant domainSalt = keccak256("vector");
+    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
     constructor(IVectorChannel _masterCopy, IAdjudicator _adjudicator) {
         masterCopy = _masterCopy;
         adjudicator = _adjudicator;
-    }
-
-    /// @dev Allows us to retrieve the creation code used for the Proxy deployment.
-    /// @dev With this it is easily possible to calculate predicted address.
-    function proxyCreationCode() public override pure returns (bytes memory) {
-        return type(Proxy).creationCode;
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
@@ -37,9 +32,17 @@ contract ChannelFactory is IChannelFactory {
     )
         public
         override
+        view
+        returns (address)
     {
-        IVectorChannel channel = deployChannelProxy(initiator, responder);
-        revert(string(abi.encodePacked(channel)));
+        bytes32 salt = generateSalt(initiator, responder);
+        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, masterCopy));
+
+        return address(uint256(
+            keccak256(abi.encodePacked(
+                byte(0xff), address(this), salt, initCodeHash
+            ))
+        ));
     }
 
     /// @dev Allows us to create new channel contract and get it all set up in one transaction
