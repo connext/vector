@@ -111,11 +111,18 @@ contract VectorChannel is IVectorChannel {
         public
         override
         onlyAdjudicator
-        view
     {
-        // TODO: replace w real logic
-        require(balances.amount[0] > 0, "oh boy");
-        require(assetId != address(0), "oh boy");
+        // TODO: This is quick-and-dirty to allow for basic testing.
+        // We should add dealing with non-standard-conforming tokens,
+        // unexpected reverts, avoid reentrancy, etc.
+
+        if (assetId == address(0)) {
+            balances.to[0].transfer(balances.amount[0]);
+            balances.to[1].transfer(balances.amount[1]);
+        } else {
+            require(IERC20(assetId).transfer(balances.to[0], balances.amount[0]));
+            require(IERC20(assetId).transfer(balances.to[1], balances.amount[1]));
+        }
     }
 
     function updateAdjudicator(

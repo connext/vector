@@ -125,7 +125,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 #### VectorChannel
 - [ ] Add events/event listening for deposits
 - [ ] Circumvent sig verificatin in `depositA` if being called by `owners[0]` (we still need possible sig to handle the case where it is called by the `ChannelFactory`)
-- [ ] Write the `adjudicatorTransfer` fn
+- [X] Write the `adjudicatorTransfer` fn
 - [ ] Update `getTransactionHash` to use nonce-based replay protection
 - [X] Clean up + add missing functions to interface
 
@@ -137,3 +137,6 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 - [ ] Do we want to downgrade to 0.6? Possibly not -- TODO/open an issue
 - [ ] Change encoding of `Balance` offchain to be fixed size arrays
 - [ ] Remove transfer encodings from CoreTransferState offchain and onchain
+
+#### Later
+- [ ] Solidify asset handling: deal with non-standard-conforming tokens, reverts, reentrancy, etc.

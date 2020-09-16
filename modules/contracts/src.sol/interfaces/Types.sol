@@ -10,5 +10,5 @@ struct LatestDeposit {
 
 struct Balance {
     uint256[2] amount;
-    address[2] to;
+    address payable[2] to;
 }
