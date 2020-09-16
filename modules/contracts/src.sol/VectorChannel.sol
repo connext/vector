@@ -16,10 +16,7 @@ import "./shared/IERC20.sol";
 /// (b) Executes transactions dispute logic on a hardcoded Adjudicator.sol
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
-
-// TODO how will this connect to the adjudicator?
-
-contract VectorChannel is IVectorChannel { //TODO write this interface
+contract VectorChannel is IVectorChannel {
     // Note: this is the mastercopy of channel logic, this address is managed by the ProxyFactory
     // TODO: decide which variables should be public
 
@@ -48,7 +45,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
     mapping(address => LatestDeposit) internal _latestDepositByAssetId;
     function latestDepositByAssetId(address assetId) public override view returns (LatestDeposit memory) {
         return _latestDepositByAssetId[assetId];
-    }
+    } 
 
     // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
@@ -158,6 +155,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         address to,
         uint256 value,
         bytes memory data,
+        uint256 nonce,
         bytes[] memory signatures
     )
         public
@@ -167,7 +165,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
             to,
             value,
             data,
-            Operation.Call // or delegatecall?
+            nonce,
         );
         require(
             !isExecuted[transactionHash],
@@ -198,7 +196,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
         address to,
         uint256 value,
         bytes memory data,
-        Operation operation
+        uint256 nonce
     )
         public
         view
@@ -210,7 +208,7 @@ contract VectorChannel is IVectorChannel { //TODO write this interface
                 to,
                 value,
                 keccak256(data),
-                uint8(operation)
+                nonce
             )
         );
     }

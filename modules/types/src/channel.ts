@@ -78,7 +78,7 @@ export interface CoreChannelState {
   channelAddress: Address;
   participants: Address[]; // Signer keys
   timeout: string;
-  balances: Balance[]; // initiator, responder
+  balances: Balance[]; // Indexed by assetId
   lockedValue: LockedValueType[]; // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
   nonce: number;

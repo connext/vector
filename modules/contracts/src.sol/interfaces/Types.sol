@@ -9,6 +9,6 @@ struct LatestDeposit {
 }
 
 struct Balance {
-    uint256[] amount;
-    address[] to;
+    uint256[2] amount;
+    address[2] to;
 }
