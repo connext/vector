@@ -1,3 +1,4 @@
+import { VectorChannel, ChannelFactory } from "@connext/vector-contracts";
 import {
   IVectorStore,
   UpdateParams,
@@ -10,7 +11,6 @@ import {
   ChainProviders,
   IChannelSigner,
   FullChannelState,
-  SetupParams,
   ChannelUpdateEvent,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
@@ -18,17 +18,21 @@ import {
   Result,
   ChannelUpdateError,
   VectorMessage,
+  SetupParams,
 } from "@connext/vector-types";
+import Ajv from "ajv";
 import { providers } from "ethers";
 import { Evt } from "evt";
-import { VectorChannel, ChannelFactory } from "@connext/vector-contracts";
 import Pino from "pino";
 
 import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
+import { CreateParamsSchema, DepositParamsSchema, ResolveParamsSchema, SetupParamsSchema } from "./types";
 import { generateUpdate } from "./update";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
+
+const ajv = new Ajv();
 
 export class Vector implements IVectorProtocol {
   private evts: EvtContainer = {
@@ -152,13 +156,28 @@ export class Vector implements IVectorProtocol {
     return this;
   }
 
+  private validateParams(params: any, schema: any): undefined | ChannelUpdateError {
+    const validate = ajv.compile(schema);
+    const valid = validate(params);
+    if (!valid) {
+      return new ChannelUpdateError(ChannelUpdateError.reasons.InvalidParams, undefined, undefined, {
+        errors: validate.errors?.map(e => e.message).join(),
+      });
+    }
+    return undefined;
+  }
+
   /*
    * ***************************
    * *** CORE PUBLIC METHODS ***
    * ***************************
    */
 
-  public async setup(params: SetupParams): Promise<Result<any>> {
+  public async setup(params: SetupParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    const error = this.validateParams(params, SetupParamsSchema);
+    if (error) {
+      return Result.fail(error);
+    }
     if (!this.chainProviders.has(params.networkContext.chainId)) {
       throw new Error(`No chain provider for chainId ${params.networkContext.chainId}`);
     }
@@ -171,45 +190,53 @@ export class Vector implements IVectorProtocol {
       VectorChannel.abi,
       this.chainProviders.get(params.networkContext.chainId)!,
     );
-    // TODO validate setup params for completeness
-    const updateParams = {
+    const updateParams: UpdateParams<"setup"> = {
       channelAddress,
       details: params,
       type: UpdateType.setup,
-    } as UpdateParams<"setup">;
+    };
 
     return this.executeUpdate(updateParams);
   }
 
-  public async deposit(params: DepositParams): Promise<Result<FullChannelState>> {
-    // TODO validate deposit params for completeness
-    const updateParams = {
+  public async deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    const error = this.validateParams(params, DepositParamsSchema);
+    if (error) {
+      return Result.fail(error);
+    }
+    const updateParams: UpdateParams<"deposit"> = {
       channelAddress: params.channelAddress,
       type: UpdateType.deposit,
       details: params,
-    } as UpdateParams<"deposit">;
+    };
 
     return this.executeUpdate(updateParams);
   }
 
-  public async createTransfer(params: CreateTransferParams): Promise<Result<FullChannelState>> {
-    // TODO validate create params for completeness
-    const updateParams = {
+  public async create(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    const error = this.validateParams(params, CreateParamsSchema);
+    if (error) {
+      return Result.fail(error);
+    }
+    const updateParams: UpdateParams<"create"> = {
       channelAddress: params.channelAddress,
       type: UpdateType.create,
       details: params,
-    } as UpdateParams<"create">;
+    };
 
     return this.executeUpdate(updateParams);
   }
 
-  public async resolveTransfer(params: ResolveTransferParams): Promise<Result<FullChannelState>> {
-    // TODO validate resolve params for completeness
-    const updateParams = {
+  public async resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    const error = this.validateParams(params, ResolveParamsSchema);
+    if (error) {
+      return Result.fail(error);
+    }
+    const updateParams: UpdateParams<"resolve"> = {
       channelAddress: params.channelAddress,
       type: UpdateType.resolve,
       details: params,
-    } as UpdateParams<"resolve">;
+    };
 
     return this.executeUpdate(updateParams);
   }
@@ -244,14 +271,12 @@ export class Vector implements IVectorProtocol {
     return this.evts[event].pipe(filter).waitFor(timeout);
   }
 
-  public off<T extends ProtocolEventName>(
-    event?: T,
-  ): void {
+  public off<T extends ProtocolEventName>(event?: T): void {
     if (event) {
       this.evts[event].detach();
       return;
     }
 
-    Object.keys(ProtocolEventName).forEach(k => this.evts[k].detach());
+    Object.keys(ProtocolEventName).forEach((k) => this.evts[k].detach());
   }
 }

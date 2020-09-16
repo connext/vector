@@ -13,3 +13,7 @@ export const mkHash = (prefix = "0x"): string => {
 export const mkBytes32 = (prefix = "0xa"): string => {
   return prefix.padEnd(66, "0");
 };
+
+export const mkSig = (prefix = "0xa"): string => {
+  return prefix.padEnd(130, "0");
+};
