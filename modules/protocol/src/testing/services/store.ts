@@ -36,8 +36,16 @@ export class MemoryStoreService implements IVectorStore {
     return Promise.resolve(state);
   }
 
+  getChannelStateByCounterparty(counterpartyIdentifier: string): Promise<FullChannelState | undefined> {
+    return Promise.resolve(
+      [...this.channelStates.values()].find(
+        (v) => v.state.publicIdentifiers.findIndex((i) => i === counterpartyIdentifier) !== -1,
+      )?.state,
+    );
+  }
+
   getChannelStates(): Promise<FullChannelState[]> {
-    return Promise.resolve([...this.channelStates.values()].map(c => c.state));
+    return Promise.resolve([...this.channelStates.values()].map((c) => c.state));
   }
 
   saveChannelState(

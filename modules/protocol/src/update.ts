@@ -24,6 +24,7 @@ import Pino from "pino";
 
 import { MerkleTree } from "./merkleTree";
 import { generateSignedChannelCommitment, resolve } from "./utils";
+import { validateParams } from "./validate";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -138,9 +139,10 @@ export async function generateUpdate<T extends UpdateType>(
   signer: IChannelSigner,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
-  // Only in the case of setup should the state be undefined
-  if (!state && params.type !== UpdateType.setup) {
-    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
+  // Performs all update initiator-side validation
+  const error = await validateParams(params, state, storeService, signer, logger);
+  if (error) {
+    return Result.fail(error);
   }
 
   // Create the update from user parameters based on type

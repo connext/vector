@@ -23,6 +23,9 @@ export class PrismaStore implements IVectorStore {
   constructor() {
     this.prisma = new PrismaClient();
   }
+  getChannelStateByCounterparty(counterpartyId: string): Promise<FullChannelState<any> | undefined> {
+    throw new Error("Method not implemented.");
+  }
   getChannelStates(): Promise<FullChannelState<any>[]> {
     throw new Error("Method not implemented.");
   }

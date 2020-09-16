@@ -21,7 +21,7 @@ import Pino from "pino";
 
 import { isChannelMessage, isChannelState, isErrorMessage, generateSignedChannelCommitment } from "./utils";
 import { applyUpdate } from "./update";
-import { validate } from "./validate";
+import { validateUpdate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
 // These updates will be single signed, the function should dispatch the
@@ -449,7 +449,7 @@ const mergeUpdate = async (
   storeService: IVectorStore,
   providerUrl: string,
 ): Promise<Result<FullChannelState, ChannelUpdateError>> => {
-  await validate(update, state, storeService, providerUrl);
+  await validateUpdate(update, state, storeService, providerUrl);
   const result = await applyUpdate(update, state, storeService);
   return result;
 };

@@ -218,18 +218,13 @@ export class Vector implements IVectorProtocol {
       );
     }
 
-    // TODO: We can either check by counterparty identfier or by
-    // generated channel address. If we use the `counterpartyIdentifier`
-    // then we will have to add that getter to the store interface,
-    // but we will have the advantage of not setting up two channels
-    // between the same counterparties on the same chain EVEN IF
-    // the multisig address is derived differently. Additionally,
-    // you do not have to make the `getCreate2MultisigAddress` call
-
-    // TODO: Is there any validation on the validity of the addresses
-    // provided aside from the fact that they *are* addresses? maybe we
-    // will need this comparison in the `validate` function, and instantiate
-    // vector with an address book
+    // TODO: move to within lock!
+    const existing = await this.storeService.getChannelStateByCounterparty(params.counterpartyIdentifier);
+    if (existing) {
+      // TODO: should this return an error here, or simply the already setup
+      // channel?
+      return Result.ok(existing);
+    }
 
     let channelAddress: string;
     try {
@@ -250,15 +245,6 @@ export class Vector implements IVectorProtocol {
       );
     }
 
-    // Before sending the update to the counterparty, verify this
-    // channel does not exist in the store
-    const existing = await this.storeService.getChannelState(channelAddress);
-    if (existing) {
-      // TODO: should this return an error here, or simply the already setup
-      // channel?
-      return Result.ok(existing);
-    }
-
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"setup"> = {
       channelAddress,
@@ -275,15 +261,6 @@ export class Vector implements IVectorProtocol {
     const error = this.validateParams(params, DepositParamsSchema);
     if (error) {
       return Result.fail(error);
-    }
-
-    // Should have an existing channel
-    // NOTE: this is checked in `outbound` as well, adding some overhead
-    // to the db queries. This can be made more efficient by passing in
-    // a channel state to the `outbound` function
-    const existing = await this.storeService.getChannelState(params.channelAddress);
-    if (!existing) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, undefined, existing));
     }
 
     // Make sure the amount declared has in fact been deposited
@@ -309,21 +286,6 @@ export class Vector implements IVectorProtocol {
       return Result.fail(error);
     }
 
-    // Should have an existing channel
-    // NOTE: see efficiency note in deposit
-    const existing = await this.storeService.getChannelState(params.channelAddress);
-    if (!existing) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, undefined, existing));
-    }
-
-    // Make sure there are sufficient funds in channel to create
-    // transfer
-
-    // Make sure transfer state properly matches the encoding
-
-    // Make sure timeout is reasonable
-    // TODO: should this be enforced here?
-
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"create"> = {
       channelAddress: params.channelAddress,
@@ -340,19 +302,6 @@ export class Vector implements IVectorProtocol {
     if (error) {
       return Result.fail(error);
     }
-
-    // Should have an existing channel
-    // NOTE: see efficiency note in deposit
-    const existing = await this.storeService.getChannelState(params.channelAddress);
-    if (!existing) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, undefined, existing));
-    }
-
-    // Should have an existing transfer
-    // NOTE: same efficiency concerns apply here with transfers in addition
-    // to channels
-
-    // Make sure resolver is correctly formatted for transfer def
 
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"resolve"> = {

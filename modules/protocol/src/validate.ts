@@ -5,23 +5,70 @@ import {
   IVectorStore,
   Result,
   UpdateValidationError,
+  ChannelUpdateError,
+  IChannelSigner,
+  UpdateParams,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 import Pino from "pino";
 
-
 const { getAddress } = utils;
 
-// This function is used to validate any update before signing it into your
-// state. This function may be called by functions that need to be ack-d
-// or when you are initiating an update.
+// This function performs all update *initiator* side validation
+// and is called from within the `update.generateUpdate` function
+// NOTE: The presence and proper validity of user API inputs has
+// been performed before getting to this function (see the vector)
+// class parameter validation
+export async function validateParams<T extends UpdateType = any>(
+  params: UpdateParams<T>,
+  state: FullChannelState | undefined,
+  storeService: IVectorStore,
+  signer: IChannelSigner,
+  logger: Pino.BaseLogger = Pino(),
+): Promise<ChannelUpdateError | undefined> {
+  // Only in the case of setup should the state be undefined
+  if (!state && params.type !== UpdateType.setup) {
+    return new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound);
+  }
 
-// Called from within the `applyUpdate` function
+  switch (params.type) {
+    case UpdateType.setup: {
+      // Make sure channel does not exist with counterparty
+      break;
+    }
+    case UpdateType.deposit: {
+      break;
+    }
+    case UpdateType.create: {
+      // Make sure there are sufficient funds in channel to create
+      // transfer
 
-// NOTE: there is an argument that this should not be applied when
-// generating an update, and only when ack-ing. I think doing that *could*
-// lead to duplicate code, but we can always change it back
-export async function validate<T extends UpdateType = any>(
+      // Make sure transfer state properly matches the encoding
+
+      // Make sure timeout is reasonable
+      // TODO: should this be enforced here?
+      break;
+    }
+    case UpdateType.resolve: {
+      // Should have an existing transfer
+      // NOTE: same efficiency concerns apply here with transfers in addition
+      // to channels
+
+      // Make sure resolver is correctly formatted for transfer def
+      break;
+    }
+    default: {
+      throw new Error(`Unexpected UpdateType in received params: ${params.type}`);
+    }
+  }
+
+  logger.error("validateParams not implemented");
+  return Promise.resolve(undefined);
+}
+
+// This function performs all update *responder* side validation
+// and is called from within the `sync.mergeUpdate` function
+export async function validateUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
   storeService: IVectorStore,

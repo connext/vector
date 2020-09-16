@@ -91,7 +91,7 @@ Should do the exact oppositve of the `create` update above.
 #### Vector.ts
 
 - [ ] Add try/catch around everything inside lock so it always releases the lock instead of timing it out -- or whatever, we just **need** to release the lock!!!
-- [ ] Move validation (including checking if StateChannel exists) inside the lock
+- [x] Move validation (including checking if StateChannel exists) inside the lock
 - [x] Pass channel state into `generateUpdate` and `sync.outbound` to reduce a couple of db queries.
 - [x] Remove posting outbound evt event in `executeUpdate`
 - [x] Add sync on connect for now, we can take it out later if connecting takes too long.
