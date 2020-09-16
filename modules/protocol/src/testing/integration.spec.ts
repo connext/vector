@@ -56,12 +56,10 @@ describe("Happy case integration tests", () => {
       timeout: "3600",
     });
     expect(channel.isError).to.not.be.ok;
-    console.log(channel.getValue());
 
     const aliceChannel = await alice.getChannelState(channel.getValue().channelAddress);
-    console.log("aliceChannel: ", aliceChannel);
     const bobChannel = await bob.getChannelState(channel.getValue().channelAddress);
-    console.log("bobChannel: ", bobChannel);
-    // TODO: expects
+
+    expect(aliceChannel).to.deep.eq(bobChannel);
   });
 });
