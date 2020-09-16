@@ -464,10 +464,12 @@ const signAndSaveData = async (
   const transferId =
     update.type === UpdateType.create || update.type === UpdateType.resolve ? update.details.transferId : undefined;
 
+  const signedUpdate = { ...update, signatures: signed.signatures };
+
   if (!transferId) {
     // Not a transfer update, no need to include transfer
     // record details
-    await store.saveChannelState(newState, signed);
+    await store.saveChannelState({...newState, latestUpdate: signedUpdate }, signed);
     return signed;
   }
 
@@ -517,7 +519,7 @@ const signAndSaveData = async (
     };
   }
 
-  await store.saveChannelState(newState, signed, {
+  await store.saveChannelState({...newState, latestUpdate: signedUpdate}, signed, {
     transferId,
     ...(transferDetails ?? {}),
   });
