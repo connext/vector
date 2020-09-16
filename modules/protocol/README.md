@@ -93,7 +93,7 @@ Should do the exact oppositve of the `create` update above.
 - [ ] Add try/catch around everything inside lock so it always releases the lock instead of timing it out -- or whatever, we just **need** to release the lock!!!
 - [ ] Move validation (including checking if StateChannel exists) inside the lock
 - [x] Pass channel state into `generateUpdate` and `sync.outbound` to reduce a couple of db queries.
-- [ ] Remove posting outbound evt event in `executeUpdate`
+- [x] Remove posting outbound evt event in `executeUpdate`
 - [x] Add sync on connect for now, we can take it out later if connecting takes too long.
 - [x] Add exception case for null channel for setup
 - [ ] Remove `amount` from depositParams.
@@ -104,7 +104,7 @@ Should do the exact oppositve of the `create` update above.
 - [ ] Check onchain deposit balance in `generateDepositUpdate`
 - [ ] Calculate `transferId` programmatically using `nonce`, `channelAddress`, `transferDefinition`, `transferTimeout`, etc. (just check how we do it for appIdHash) -- note that we need to validate that this is derived correctly on responder side
 - [ ] Verify hashing + signing functions with what is onchain
-- [ ] Fix ordering of `to` in `getUpdatedChannelBalance` (and verify that transfer/channel `to` ordering _can_ be different elsewhere)
+- [x] Fix ordering of `to` in `getUpdatedChannelBalance` (and verify that transfer/channel `to` ordering _can_ be different elsewhere)
 
 #### Create2
 

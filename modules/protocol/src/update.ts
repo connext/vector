@@ -470,11 +470,12 @@ function getUpdatedChannelBalance(
     })
     .filter((x) => !!x) as string[];
 
-  // TODO: this calculation assumes ordering between the `to` in the
-  // channel balance and transfer balance are the same, verify!
-  // FIXME Fix ordering of to (transfer and channel may be different!)
+  // NOTE: you should *always* use the existing balance because you are
+  // reconciling a transfer balance with a channel balance. The reconciled
+  // balance `to` ordering should correspond to the existing state ordering
+  // not the transfer.to ordering
   return {
-    to: [...existing.to], // Always use channel ordering for update
+    to: [...existing.to],
     amount: updatedAmount,
   };
 }
