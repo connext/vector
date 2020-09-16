@@ -30,7 +30,6 @@ interface IAdjudicator {
         address transferDefinition;
         uint256 transferTimeout;
         bytes32 initialStateHash;
-        bytes[] encodings; // Initial state, resolver state
     }
 
     function forceChannelConsensus(

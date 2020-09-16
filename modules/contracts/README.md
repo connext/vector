@@ -136,7 +136,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 #### Other
 - [ ] Do we want to downgrade to 0.6? Possibly not -- TODO/open an issue
 - [ ] Change encoding of `Balance` offchain to be fixed size arrays
-- [ ] Remove transfer encodings from CoreTransferState offchain and onchain
+- [ ] Remove transfer encodings from CoreTransferState offchain
 
 #### Later
 - [ ] Solidify asset handling: deal with non-standard-conforming tokens, reverts, reentrancy, etc.
