@@ -13,7 +13,7 @@ import { expect, provider } from "../../utils";
 
 const { HashZero, Zero } = constants;
 
-describe.only("LinkedTransfer", () => {
+describe("LinkedTransfer", () => {
   let deployer: Wallet;
   let definition: Contract;
 

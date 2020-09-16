@@ -60,7 +60,7 @@ common="$interactive $stack_env \
   --name=${project}_test_runner \
   --network=$project \
   --rm \
-  --tmpfs /tmpfs"
+  --tmpfs /tmp"
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$VECTOR_ENV" == "prod" ]]

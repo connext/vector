@@ -1,10 +1,12 @@
 import { waffle } from "@nomiclabs/buidler";
 import { use } from "chai";
-import { solidity } from "ethereum-waffle";
+import promised from "chai-as-promised";
 import subset from "chai-subset";
+import { solidity } from "ethereum-waffle";
 
-use(subset);
+use(promised);
 use(solidity);
+use(subset);
 
 export const expect = use(solidity).expect;
 

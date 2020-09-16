@@ -10,7 +10,11 @@ const initialSupply = utils.parseEther("100000000");
 
 const name = "TestToken";
 
-const newToken = async (wallet: Wallet, addressBookPath: string, force: boolean) => {
+export const newToken = async (
+  wallet: Wallet,
+  addressBookPath: string,
+  force = false,
+): Promise<void> => {
   const chainId = process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId;
   if (chainId === 1 && !force) {
     console.log(`Will not deploy new token to mainnet`);
@@ -23,12 +27,10 @@ const newToken = async (wallet: Wallet, addressBookPath: string, force: boolean)
     const constructorArgs = [
       { name: "symbol", value: "TEST" },
       { name: "name", value: name },
-      { name: "version", value: "1.0" },
-      { name: "chainId", value: chainId.toString() },
     ];
     const token = await deployContract(name, constructorArgs, wallet, addressBook);
     console.log(`Success!`);
-    await token.ownerMint(wallet.address, initialSupply);
+    await token.mint(wallet.address, initialSupply);
     console.log(
       `Minted ${utils.formatEther(initialSupply)} tokens & gave them all to ${wallet.address}`,
     );

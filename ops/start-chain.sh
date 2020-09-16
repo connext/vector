@@ -56,7 +56,7 @@ docker run $opts \
   --network "$project" \
   --publish "$port:8545" \
   --rm \
-  --tmpfs "/tmpfs" \
+  --tmpfs "/tmp" \
   $image $arg
 
 if [[ "$logLevel" -gt "0" ]]

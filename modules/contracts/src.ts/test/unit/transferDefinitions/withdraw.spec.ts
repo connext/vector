@@ -89,7 +89,7 @@ describe("Withdraw", () => {
   });
 
   describe("Create", () => {
-    it.only("should create successfully", async () => {
+    it("should create successfully", async () => {
       const data = getRandomBytes32();
       const initialState = await createInitialState(data);
       expect(await createTransfer(initialState)).to.be.true;
