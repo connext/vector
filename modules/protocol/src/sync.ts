@@ -19,12 +19,7 @@ import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
 import Pino from "pino";
 
-import {
-  isChannelMessage,
-  isChannelState,
-  isErrorMessage,
-  generateSignedChannelCommitment,
-} from "./utils";
+import { isChannelMessage, isChannelState, isErrorMessage, generateSignedChannelCommitment } from "./utils";
 import { applyUpdate } from "./update";
 import { validate } from "./validate";
 
@@ -43,11 +38,8 @@ export async function outbound(
   logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   const storedChannel = await storeService.getChannelState(update.channelAddress);
-  if (!storedChannel) {
-    // NOTE: IFF creating a channel, the initial channel state should be
-    // created and saved using `generate` (i.e. before it gets to this
-    // function call)
-    throw new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, update);
+  if (!storedChannel && update.type !== UpdateType.setup) {
+    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, update));
   }
   // Create a helper function that will create a function that properly
   // sets up the promise handlers. The only time this promise should
@@ -73,17 +65,15 @@ export async function outbound(
 
       // TODO: turn `update` into a DTO before sending?
       // TODO: what if there is no latest update?
-      messagingService
-        .publish(updateToSend.toIdentifier, { update: updateToSend, latestUpdate: prevUpdate })
-        .catch((e) =>
-          resolve(
-            Result.fail(
-              new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel, {
-                error: e.message,
-              }),
-            ),
+      messagingService.send(updateToSend.toIdentifier, { update: updateToSend, latestUpdate: prevUpdate }).catch((e) =>
+        resolve(
+          Result.fail(
+            new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel, {
+              error: e.message,
+            }),
           ),
-        );
+        ),
+      );
     });
 
   // Retry sending the message 5 times w/3s delay
@@ -95,6 +85,7 @@ export async function outbound(
     for (const _ of Array(5).fill(0)) {
       const result = await generatePromise(updateToSend, prevUpdate);
       if (!result.isError) {
+        logger.info({ method: "sendWithRetry", step: "Got result", result: result.getValue() });
         return result;
       }
       const channelError = result.getError()!;
@@ -107,10 +98,10 @@ export async function outbound(
       await delay(3_000);
     }
 
-    throw new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel);
+    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel));
   };
 
-  const result = await sendWithRetry(update, storedChannel.latestUpdate);
+  const result = await sendWithRetry(update, storedChannel?.latestUpdate);
   if (!result.isError && isChannelState(result.getValue())) {
     // No error returned, successfully updated state
     return Result.ok(result.getValue());
@@ -147,9 +138,9 @@ export async function outbound(
   // Apply the update, and retry the update
   const mergeRes = await mergeUpdate(
     channelError.state.latestUpdate,
-    storedChannel,
+    storedChannel!,
     storeService,
-    chainProviders[storedChannel.networkContext.chainId],
+    chainProviders[storedChannel!.networkContext.chainId],
   );
   if (mergeRes.isError) {
     return Result.fail(
@@ -200,6 +191,7 @@ export async function inbound(
 
   // If it is a response, process the response
   if (isChannelMessage(message)) {
+    logger.info({ method: "inbound", step: "Detected channel message" });
     return processChannelMessage(
       message as VectorChannelMessage,
       storeService,
@@ -213,11 +205,13 @@ export async function inbound(
   } else if (isErrorMessage(message)) {
     // It is an error message from a counterparty. An `outbound` promise
     // may be waiting to resolve, so post to the errorEvt
+    logger.warn({ method: "inbound", step: "Detected error message" });
     const errorMessage = message as VectorErrorMessage;
     errorEvt.post(errorMessage.error);
     return Result.fail(new ChannelUpdateError(errorMessage.error.message, errorMessage.error.update));
   }
 
+  logger.info({ method: "inbound", step: "Unrecognized message" });
   // Otherwise, it is an unrecognized message format. do nothing
   return Result.ok(undefined);
 }
