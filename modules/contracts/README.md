@@ -140,3 +140,4 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 
 #### Later
 - [ ] Solidify asset handling: deal with non-standard-conforming tokens, reverts, reentrancy, etc.
+- [ ] Allow to selectively defund assets (?)
