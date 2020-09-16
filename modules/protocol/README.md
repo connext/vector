@@ -72,3 +72,30 @@ The create update must do the following:
 A resolve update should occur when both parties want to resolve a conditional transfer and reintroduce it's balances back to the main channel balance.
 
 Should do the exact oppositve of the `create` update above.
+
+## Protocol TODOs
+
+#### Vector.ts
+- [ ] Add try/catch around everything inside lock so it always releases the lock instead of timing it out -- or whatever, we just **need** to release the lock!!!
+- [ ] Move validation (including checking if StateChannel exists) inside the lock
+- [ ] Pass channel state into `generateUpdate` and `sync.outbound` to reduce a couple of db queries.
+- [ ] Remove posting outbound evt event in `executeUpdate`
+- [ ] Add sync on connect for now, we can take it out later if connecting takes too long.
+- [ ] Add exception case for null channel for setup
+- [ ] Remove `amount` from depositParams.
+- [ ] Validate timeout >= minimum timeout from types/constants
+
+#### Update.ts
+- [ ] Check onchain deposit balance in `generateDepositUpdate`
+- [ ] Calculate `transferId` programmatically using `nonce`, `channelAddress`, `transferDefinition`, `transferTimeout`, etc. (just check how we do it for appIdHash) -- note that we need to validate that this is derived correctly on responder side
+- [ ] Verify hashing + signing functions with what is onchain
+- [ ] Fix ordering of `to` in `getUpdatedChannelBalance` (and verify that transfer/channel `to` ordering *can* be different elsewhere)
+
+#### Create2
+- [ ] Tell heiko to keep `proxyFactory.proxyCreationCode()` in the ChannelFactory. If we don't allow this to be called from the contract, there's a lot more storage overhead to deal with old bytecode.
+
+#### Types
+- [ ] Remove encodings from core transfer type
+
+#### Other
+- [ ] Replace `merkleTree.ts` with external dep

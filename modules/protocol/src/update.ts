@@ -367,7 +367,6 @@ async function generateResolveUpdate(
   const merkle = new MerkleTree(hashes);
 
   // Get the final transfer balance from contract
-  // TODO: use evm by supplying bytecode!
   const transferBalance = await resolve(
     coreTransfer,
     transfer,
@@ -383,7 +382,7 @@ async function generateResolveUpdate(
   // Generate the unsigned update from the params
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
-    balance, // TODO: this is not
+    balance,
     assetId: coreTransfer.assetId,
     details: {
       transferId: params.details.transferId,
@@ -475,6 +474,7 @@ function getUpdatedChannelBalance(
 
   // TODO: this calculation assumes ordering between the `to` in the
   // channel balance and transfer balance are the same, verify!
+  // FIXME Fix ordering of to (transfer and channel may be different!)
   return {
     to: [...existing.to], // Always use channel ordering for update
     amount: updatedAmount,

@@ -89,10 +89,12 @@ export class Vector implements IVectorProtocol {
     const key = await this.lockService.acquireLock(params.channelAddress);
     const state = await this.storeService.getChannelState(params.channelAddress);
     if (!state) {
+      await this.lockService.releaseLock(params.channelAddress, key);
       throw new Error(`Channel not found ${params.channelAddress}`);
     }
     const updateRes = await generateUpdate(params, this.storeService, this.signer, this.logger);
     if (updateRes.isError) {
+      await this.lockService.releaseLock(params.channelAddress, key);
       return Result.fail(updateRes.getError()!);
     }
     const outboundRes = await sync.outbound(
@@ -107,6 +109,7 @@ export class Vector implements IVectorProtocol {
     );
 
     if (outboundRes.isError) {
+      await this.lockService.releaseLock(params.channelAddress, key);
       return outboundRes;
     }
 
@@ -303,9 +306,6 @@ export class Vector implements IVectorProtocol {
     // transfer
 
     // Make sure transfer state properly matches the encoding
-
-    // Make sure transfer definition is in address book
-    // TODO: should this be enforced here?
 
     // Make sure timeout is reasonable
     // TODO: should this be enforced here?
