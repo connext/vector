@@ -8,6 +8,8 @@ import { isContractDeployed, deployContract } from "../deploy";
 
 const initialSupply = utils.parseEther("100000000");
 
+const name = "TestToken";
+
 const newToken = async (wallet: Wallet, addressBookPath: string, force: boolean) => {
   const chainId = process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId;
   if (chainId === 1 && !force) {
@@ -15,16 +17,16 @@ const newToken = async (wallet: Wallet, addressBookPath: string, force: boolean)
     return;
   }
   const addressBook = getAddressBook(addressBookPath, chainId.toString());
-  const savedAddress = addressBook.getEntry("Token").address;
-  if (force || !(await isContractDeployed("Token", savedAddress, addressBook, wallet.provider))) {
+  const savedAddress = addressBook.getEntry(name).address;
+  if (force || !(await isContractDeployed(name, savedAddress, addressBook, wallet.provider))) {
     console.log(`Preparing to deploy new token to chain w id: ${chainId}\n`);
     const constructorArgs = [
-      { name: "symbol", value: "CXT" },
-      { name: "name", value: "ConnextToken" },
+      { name: "symbol", value: "TEST" },
+      { name: "name", value: name },
       { name: "version", value: "1.0" },
       { name: "chainId", value: chainId.toString() },
     ];
-    const token = await deployContract("Token", constructorArgs, wallet, addressBook);
+    const token = await deployContract(name, constructorArgs, wallet, addressBook);
     console.log(`Success!`);
     await token.ownerMint(wallet.address, initialSupply);
     console.log(
