@@ -77,7 +77,7 @@ do
   fi
 done
 
-while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep '"Token":' || true`" ]]
+while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep 'Token":' || true`" ]]
 do
   if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
   then abort

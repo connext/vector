@@ -1,10 +1,11 @@
-import { Contract, ContractFactory, Wallet, providers, utils, BigNumber } from "ethers";
+import { constants, Contract, ContractFactory, Wallet, providers, utils, BigNumber } from "ethers";
 
 import { AddressBook } from "./address-book";
 import { artifacts } from "./artifacts";
 import { ConstructorArgs } from "./constants";
 
-const { keccak256 } = utils;
+const { EtherSymbol } = constants;
+const { formatEther, keccak256 } = utils;
 
 const hash = (input: string): string => keccak256(`0x${input.replace(/^0x/, "")}`);
 
@@ -15,7 +16,7 @@ export const isContractDeployed = async (
   addressBook: AddressBook,
   provider: providers.Provider,
 ): Promise<boolean> => {
-  console.log(`Checking for valid ${name} contract...`);
+  console.log(`\nChecking for valid ${name} contract...`);
   if (!address || address === "") {
     console.log("This contract is not in our address book.");
     return false;
@@ -24,10 +25,9 @@ export const isContractDeployed = async (
   if (!artifacts || !artifacts[name]) {
     throw new Error(`No contract artifacts are available for ${name}`);
   }
-  const creationCodeHash = hash(artifacts[name].bytecode);
+  const creationCodeHash = hash(artifacts[name].bytecode || "0x00");
   if (!savedCreationCodeHash || savedCreationCodeHash !== creationCodeHash) {
     console.log(`creationCodeHash in our address book doen't match ${name} artifacts`);
-    console.log(`${savedCreationCodeHash} !== ${creationCodeHash}`);
     return false;
   }
   const savedRuntimeCodeHash = addressBook.getEntry(name).runtimeCodeHash;
@@ -38,7 +38,6 @@ export const isContractDeployed = async (
   }
   if (savedRuntimeCodeHash !== runtimeCodeHash) {
     console.log(`runtimeCodeHash for ${address} does not match what's in our address book`);
-    console.log(`${savedRuntimeCodeHash} !== ${runtimeCodeHash}`);
     return false;
   }
   return true;
@@ -59,10 +58,14 @@ export const deployContract = async (
     gasLimit: BigNumber.from("5000000"),
   });
   console.log(`Sent transaction to deploy ${name}, txHash: ${tx.hash}`);
-  await tx.wait();
+  const receipt = await tx.wait();
   const address = Contract.getContractAddress(tx);
   const contract = new Contract(address, artifacts[name].abi, wallet);
-  console.log(`${name} has been deployed to address: ${address}\n`);
+
+  // const { gasUsed, cumulativeGasUsed } = receipt;
+  // console.log(`Gas from deploy:`, stringify({ gasUsed, cumulativeGasUsed }));
+
+  console.log(`Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${utils.formatEther(receipt.gasUsed.mul(tx.gasPrice))} deploying ${name} to address: ${address}`);
   const runtimeCodeHash = hash(await wallet.provider.getCode(address));
   const creationCodeHash = hash(artifacts[name].bytecode);
   addressBook.setEntry(name, {

@@ -23,7 +23,7 @@ contract TestToken {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor (string memory name, string memory symbol) public {
+    constructor (string memory name, string memory symbol) {
         _name = name;
         _symbol = symbol;
         _decimals = 18;

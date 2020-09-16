@@ -1,7 +1,7 @@
 import { getRandomPrivateKey } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet } from "ethers";
 
-import { VectorChannel, ChannelFactory } from "../../artifacts";
+import { Adjudicator, VectorChannel, ChannelFactory } from "../../artifacts";
 import { expect, provider } from "../utils";
 
 describe("ChannelFactory", () => {
@@ -10,10 +10,15 @@ describe("ChannelFactory", () => {
 
   beforeEach(async () => {
     deployer = (await provider.getWallets())[0];
+    const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, deployer).deploy();
+    await adjudicator.deployed();
+
     const channelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, deployer).deploy();
     await channelMastercopy.deployed();
+
     channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer).deploy(
       channelMastercopy.address,
+      adjudicator.address,
     );
     await channelFactory.deployed();
   });

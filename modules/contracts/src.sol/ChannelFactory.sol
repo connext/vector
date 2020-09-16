@@ -30,12 +30,12 @@ contract ChannelFactory is IChannelFactory {
 
     /// @dev Allows us to retrieve the runtime code of a deployed Proxy.
     /// @dev This can be used to check that the expected Proxy was deployed.
+    /// @dev TODO: Deployment will use 5% less gas if we rm this, do we really need it?
     function proxyRuntimeCode() public override pure returns (bytes memory) {
         return type(Proxy).runtimeCode;
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
-    /// @dev When calling this method set `from` to the address of the channel factory.
     /// @param initiator address of one of the two participants in the channel
     /// @param responder address of the other channel participant
     function getChannelAddress(
@@ -114,20 +114,6 @@ contract ChannelFactory is IChannelFactory {
         bytes32 salt = generateSalt(initiator, responder);
         Proxy proxy = deployProxy(address(masterCopy), salt);
         return IVectorChannel(address(proxy));
-        /*
-        bytes memory deploymentData = abi.encodePacked(
-            type(Proxy).creationCode, uint256(masterCopy)
-        );
-
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            channel := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
-            let codeSize := extcodesize(channel)
-            if eq(codeSize, 0) { revert(0, 0) }
-        }
-        */
-
-        // TODO: finish deployment by calling setup([initiator, responder], adjudicatorAddress)
     }
 
     function deployProxy(

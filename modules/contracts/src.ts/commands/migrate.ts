@@ -21,7 +21,7 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
 
   console.log(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
   console.log(
-    `Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}\n`,
+    `Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`,
   );
 
   if (balance.eq(Zero)) {
@@ -41,8 +41,7 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
       savedAddress &&
       (await isContractDeployed(name, savedAddress, addressBook, wallet.provider))
     ) {
-      console.log(`${name} is up to date, no action required`);
-      console.log(`Address: ${savedAddress}\n`);
+      console.log(`${name} is up to date, no action required. Address: ${savedAddress}`);
       return new Contract(savedAddress, artifacts[name].abi, wallet);
     } else {
       return await deployContract(name, args || [], wallet, addressBook);
@@ -59,7 +58,7 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
   ////////////////////////////////////////
   // Print summary
 
-  console.log("All done!");
+  console.log("\nAll done!");
   const spent = formatEther(balance.sub(await wallet.getBalance()));
   const nTx = (await wallet.getTransactionCount()) - nonce;
   console.log(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);
