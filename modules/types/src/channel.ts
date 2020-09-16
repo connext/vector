@@ -1,5 +1,7 @@
 import { Address } from "./basic";
+import { BalanceEncoding } from "./contracts";
 import { TransferResolver, TransferState } from "./transferDefinitions";
+import { tidy } from "./utils";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
 export type ContextualAddress = {
@@ -69,6 +71,19 @@ export type Balance = {
 export type LockedValueType = {
   amount: string;
 };
+
+
+export const CoreChannelStateEncoding = tidy(`tuple(
+  ${BalanceEncoding}[] balances,
+  uint256[] lockedBalance,
+  address[] assetIds,
+  address channelAddress,
+  address[] participants,
+  uint256 timeout,
+  uint256 nonce,
+  uint256 latestDepositNonce,
+  bytes32 merkleRoot
+)`);
 
 // Array ordering should always correspond to the channel
 // participants array ordering (but value in `to` field may

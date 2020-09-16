@@ -98,19 +98,7 @@ export function hashTransferState(name: TransferName, state: TransferNameToState
 
 // TODO: how to include the merkle proof in the hash?
 export const hashCoreTransferState = (state: CoreTransferState): string => {
-  return keccak256(
-    solidityPack(
-      ["address", "address", "bytes32", "address", "bytes32", "uint256"],
-      [
-        state.assetId,
-        state.channelAddress,
-        state.transferId,
-        state.transferDefinition,
-        state.initialStateHash,
-        state.transferTimeout,
-      ],
-    ),
-  );
+  return keccak256(solidityPack(["bytes"], [encodeCoreTransferState(state)]));
 };
 
 // TODO: correct implementation?
