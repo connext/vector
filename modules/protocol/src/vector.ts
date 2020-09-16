@@ -114,7 +114,6 @@ export class Vector implements IVectorProtocol {
 
     const updatedChannelState = outboundRes.getValue();
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-      direction: "outbound",
       updatedChannelState,
     });
     await this.lockService.releaseLock(params.channelAddress, key);
@@ -139,7 +138,6 @@ export class Vector implements IVectorProtocol {
       }
       const updatedChannelState = inboundRes.getValue();
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        direction: "inbound",
         updatedChannelState: updatedChannelState!,
       });
     });

@@ -2,7 +2,6 @@ import { FullChannelState } from "./channel";
 import { ChannelUpdateError } from "./error";
 
 export type ChannelUpdateEvent = {
-  direction: "inbound" | "outbound";
   updatedChannelState: FullChannelState;
 };
 
