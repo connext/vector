@@ -12,8 +12,8 @@ import "./shared/IERC20.sol";
 /// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
 
-    IVectorChannel immutable public masterCopy;
-    IAdjudicator immutable public adjudicator;
+    IVectorChannel public immutable masterCopy;
+    IAdjudicator public immutable adjudicator;
 
     bytes32 private constant domainSalt = keccak256("vector");
     bytes public constant override proxyCreationCode = type(Proxy).creationCode;
@@ -108,18 +108,8 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel)
     {
         bytes32 salt = generateSalt(initiator, responder);
-        Proxy proxy = deployProxy(address(masterCopy), salt);
+        Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
         return IVectorChannel(address(proxy));
-    }
-
-    function deployProxy(
-        address _masterCopy,
-        bytes32 salt
-    )
-        internal
-        returns (Proxy)
-    {
-        return new Proxy{salt: salt}(_masterCopy);
     }
 
     function generateSalt(
