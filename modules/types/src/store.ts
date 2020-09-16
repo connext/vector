@@ -18,6 +18,7 @@ export interface IVectorStore {
     commitment: ChannelCommitmentData,
     transferRecord?: TransferRecord,
   ): Promise<void>;
+  // getChannelStateByCounterparty(counterpartyIdentifier: string): Promise<FullChannelState | undefined>;
 
   // Should return all initial transfer state data needed to
   // create the merkle root

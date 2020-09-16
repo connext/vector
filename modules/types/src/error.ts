@@ -83,6 +83,7 @@ export class ChannelUpdateError extends VectorError {
     MessageFailed: "Failed to send message",
     TransferNotFound: "No transfer found in storage",
     BadUpdateType: "Unrecognized update type",
+    Create2Failed: "Failed to get create2 address",
   } as const;
 
   constructor(

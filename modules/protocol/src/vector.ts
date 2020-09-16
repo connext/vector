@@ -161,7 +161,7 @@ export class Vector implements IVectorProtocol {
     const valid = validate(params);
     if (!valid) {
       return new ChannelUpdateError(ChannelUpdateError.reasons.InvalidParams, undefined, undefined, {
-        errors: validate.errors?.map(e => e.message).join(),
+        errors: validate.errors?.map((e) => e.message).join(),
       });
     }
     return undefined;
@@ -172,24 +172,72 @@ export class Vector implements IVectorProtocol {
    * *** CORE PUBLIC METHODS ***
    * ***************************
    */
+  // NOTE: The following top-level methods are called by users when
+  // they are initiating a channel update. This means that any updates
+  // generated using this code path will *not* pass through the validation
+  // function. Instead, all validation must be done upfront before
+  // calling `this.executeUpdate`. This includes all parameter validation,
+  // as well as contextual validation (i.e. do I have sufficient funds to
+  // create this transfer, is the channel in dispute, etc.)
 
   public async setup(params: SetupParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    // Validate all parameters
     const error = this.validateParams(params, SetupParamsSchema);
     if (error) {
       return Result.fail(error);
     }
+
+    // Should have chainprovider for this channel
     if (!this.chainProviders.has(params.networkContext.chainId)) {
-      throw new Error(`No chain provider for chainId ${params.networkContext.chainId}`);
+      return Result.fail(
+        new ChannelUpdateError(ChannelUpdateError.reasons.InvalidParams, undefined, undefined, {
+          error: `No chain provider for chainId ${params.networkContext.chainId}`,
+        }),
+      );
     }
-    const channelAddress = await getCreate2MultisigAddress(
-      this.publicIdentifier,
-      params.counterpartyIdentifier,
-      params.networkContext.channelFactoryAddress,
-      ChannelFactory.abi,
-      params.networkContext.vectorChannelMastercopyAddress,
-      VectorChannel.abi,
-      this.chainProviders.get(params.networkContext.chainId)!,
-    );
+    
+    // TODO: We can either check by counterparty identfier or by
+    // generated channel address. If we use the `counterpartyIdentifier`
+    // then we will have to add that getter to the store interface,
+    // but we will have the advantage of not setting up two channels
+    // between the same counterparties on the same chain EVEN IF
+    // the multisig address is derived differently. Additionally,
+    // you do not have to make the `getCreate2MultisigAddress` call
+
+    // TODO: Is there any validation on the validity of the addresses
+    // provided aside from the fact that they *are* addresses? maybe we
+    // will need this comparison in the `validate` function, and instantiate
+    // vector with an address book
+
+    let channelAddress: string;
+    try {
+      channelAddress = await getCreate2MultisigAddress(
+        this.publicIdentifier,
+        params.counterpartyIdentifier,
+        params.networkContext.channelFactoryAddress,
+        ChannelFactory.abi,
+        params.networkContext.vectorChannelMastercopyAddress,
+        VectorChannel.abi,
+        this.chainProviders.get(params.networkContext.chainId)!,
+      );
+    } catch (e) {
+      return Result.fail(
+        new ChannelUpdateError(ChannelUpdateError.reasons.Create2Failed, undefined, undefined, {
+          error: e.message,
+        }),
+      );
+    }
+
+    // Before sending the update to the counterparty, verify this
+    // channel does not exist in the store
+    const existing = await this.storeService.getChannelState(channelAddress);
+    if (existing) {
+      // TODO: should this return an error here, or simply the already setup
+      // channel?
+      return Result.ok(existing);
+    }
+
+    // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"setup"> = {
       channelAddress,
       details: params,
@@ -199,11 +247,30 @@ export class Vector implements IVectorProtocol {
     return this.executeUpdate(updateParams);
   }
 
+  // Adds a deposit that has *already occurred* onchain into the multisig
   public async deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    // Validate all input
     const error = this.validateParams(params, DepositParamsSchema);
     if (error) {
       return Result.fail(error);
     }
+
+    // Should have an existing channel
+    // NOTE: this is checked in `outbound` as well, adding some overhead
+    // to the db queries. This can be made more efficient by passing in
+    // a channel state to the `outbound` function
+    const existing = await this.storeService.getChannelState(params.channelAddress);
+    if (!existing) {
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, undefined, existing));
+    }
+
+    // Make sure the amount declared has in fact been deposited
+    // onchain
+    // TODO: is there a good way to validate ^^? The total in channel +
+    // the amount locked + `amount` == `params.amount`? What if a user and
+    // a node deposited simultaneously, how is that handled onchain?
+
+    // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"deposit"> = {
       channelAddress: params.channelAddress,
       type: UpdateType.deposit,
@@ -214,10 +281,31 @@ export class Vector implements IVectorProtocol {
   }
 
   public async create(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    // Validate all input
     const error = this.validateParams(params, CreateParamsSchema);
     if (error) {
       return Result.fail(error);
     }
+
+    // Should have an existing channel
+    // NOTE: see efficiency note in deposit
+    const existing = await this.storeService.getChannelState(params.channelAddress);
+    if (!existing) {
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, undefined, existing));
+    }
+
+    // Make sure there are sufficient funds in channel to create
+    // transfer
+
+    // Make sure transfer state properly matches the encoding
+
+    // Make sure transfer definition is in address book
+    // TODO: should this be enforced here?
+
+    // Make sure timeout is reasonable
+    // TODO: should this be enforced here?
+
+    // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"create"> = {
       channelAddress: params.channelAddress,
       type: UpdateType.create,
@@ -228,10 +316,26 @@ export class Vector implements IVectorProtocol {
   }
 
   public async resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    // Validate all input
     const error = this.validateParams(params, ResolveParamsSchema);
     if (error) {
       return Result.fail(error);
     }
+
+    // Should have an existing channel
+    // NOTE: see efficiency note in deposit
+    const existing = await this.storeService.getChannelState(params.channelAddress);
+    if (!existing) {
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, undefined, existing));
+    }
+
+    // Should have an existing transfer
+    // NOTE: same efficiency concerns apply here with transfers in addition
+    // to channels
+
+    // Make sure resolver is correctly formatted for transfer def
+
+    // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"resolve"> = {
       channelAddress: params.channelAddress,
       type: UpdateType.resolve,
