@@ -9,18 +9,25 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async send(to: string, msg: any): Promise<void> {
+    console.log("**************send to: ", to);
+    console.log("msg: ", msg);
     this.evt.post({ subject: to, data: msg });
   }
 
   async onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
-    this.evt.pipe(({ subject: _subject }) => _subject === subject).attach(({ data }) => callback(data));
+    this.evt
+      .pipe(({ subject: _subject }) => _subject === subject)
+      .attach(({ data }) => {
+        console.log("***********onReceive data: ", data);
+        callback(data);
+      });
   }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {
     this.evt.pipe(({ subject: _subject }) => _subject === subject).attach(({ data }) => callback(data));
   }
 
-  request(subject: string, timeout: number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  request(subject: string, timeout: number, data: any): Promise<any> {
     throw new Error("Method not implemented.");
   }
 

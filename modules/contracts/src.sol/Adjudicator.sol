@@ -98,8 +98,7 @@ contract Adjudicator is IAdjudicator {
     }
 
     function defundChannel(
-        CoreChannelState memory ccs,
-        address[] memory assetIds
+        CoreChannelState memory ccs
     )
         public
         override

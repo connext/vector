@@ -15,7 +15,7 @@ contract ChannelFactory is IChannelFactory {
     IVectorChannel immutable public masterCopy;
     IAdjudicator immutable public adjudicator;
 
-    string constant domainSalt = "vector";
+    bytes32 private constant domainSalt = keccak256("vector");
 
     constructor(IVectorChannel _masterCopy, IAdjudicator _adjudicator) {
         masterCopy = _masterCopy;
@@ -126,7 +126,6 @@ contract ChannelFactory is IChannelFactory {
         return new Proxy{salt: salt}(_masterCopy);
     }
 
-    // TODO: discuss actual salt generation with team
     function generateSalt(
         address initiator,
         address responder
@@ -137,10 +136,10 @@ contract ChannelFactory is IChannelFactory {
     {
         return keccak256(
             abi.encodePacked(
-                domainSalt,
-                chainId(),
                 initiator,
-                responder
+                responder,
+                chainId(),
+                domainSalt
             )
         );
     }

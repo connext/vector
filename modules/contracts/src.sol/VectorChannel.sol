@@ -30,11 +30,6 @@ contract VectorChannel is IVectorChannel {
 
     IAdjudicator public _adjudicator;
 
-    enum Operation {
-        Call,
-        DelegateCall
-    }
-
     uint256 private adjudicatorNonce;
 
     // Workaround, because I was not able to convince the compiler
@@ -45,7 +40,7 @@ contract VectorChannel is IVectorChannel {
     mapping(address => LatestDeposit) internal _latestDepositByAssetId;
     function latestDepositByAssetId(address assetId) public override view returns (LatestDeposit memory) {
         return _latestDepositByAssetId[assetId];
-    } 
+    }
 
     // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
@@ -116,11 +111,18 @@ contract VectorChannel is IVectorChannel {
         public
         override
         onlyAdjudicator
-        view
     {
-        // TODO: replace w real logic
-        require(balances.amount[0] > 0, "oh boy");
-        require(assetId != address(0), "oh boy");
+        // TODO: This is quick-and-dirty to allow for basic testing.
+        // We should add dealing with non-standard-conforming tokens,
+        // unexpected reverts, avoid reentrancy, etc.
+
+        if (assetId == address(0)) {
+            balances.to[0].transfer(balances.amount[0]);
+            balances.to[1].transfer(balances.amount[1]);
+        } else {
+            require(IERC20(assetId).transfer(balances.to[0], balances.amount[0]));
+            require(IERC20(assetId).transfer(balances.to[1], balances.amount[1]));
+        }
     }
 
     function updateAdjudicator(
@@ -129,6 +131,7 @@ contract VectorChannel is IVectorChannel {
         IAdjudicator newAdjudicator
     )
         public
+        override
     {
         require(
             nonce > adjudicatorNonce,
@@ -198,7 +201,7 @@ contract VectorChannel is IVectorChannel {
         bytes memory data,
         uint256 nonce
     )
-        public
+        internal
         view
         returns (bytes32)
     {
@@ -217,6 +220,7 @@ contract VectorChannel is IVectorChannel {
     /// @return An array of addresses representing the owners
     function getOwners()
         public
+        override
         view
         returns (address[2] memory)
     {

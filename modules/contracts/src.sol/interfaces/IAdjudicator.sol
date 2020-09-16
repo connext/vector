@@ -30,7 +30,6 @@ interface IAdjudicator {
         address transferDefinition;
         uint256 transferTimeout;
         bytes32 initialStateHash;
-        bytes[] encodings; // Initial state, resolver state
     }
 
     function forceChannelConsensus(
@@ -40,8 +39,7 @@ interface IAdjudicator {
 
 
     function defundChannel(
-        CoreChannelState memory ccs,
-        address[] memory assetIds
+        CoreChannelState memory ccs
     ) external;
 
 

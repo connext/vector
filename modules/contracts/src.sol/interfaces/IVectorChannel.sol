@@ -8,6 +8,11 @@ import "./Types.sol";
 
 interface IVectorChannel {
 
+    function setup(
+        address[2] memory owners,
+        IAdjudicator adjudicator
+    ) external;
+
     function getBalance(
         address assetId
     ) external view returns (uint256);
@@ -15,11 +20,6 @@ interface IVectorChannel {
     function latestDepositByAssetId(
         address assetId
     ) external view returns (LatestDeposit memory);
-
-    function setup(
-        address[2] memory owners,
-        IAdjudicator adjudicator
-    ) external;
 
     function depositA(
         address assetId,
@@ -32,6 +32,12 @@ interface IVectorChannel {
         address assetId
     ) external;
 
+    function updateAdjudicator(
+        bytes[] memory signatures,
+        uint256 nonce,
+        IAdjudicator newAdjudicator
+    ) external;
+
     function execTransaction(
         address to,
         uint256 value,
@@ -39,5 +45,8 @@ interface IVectorChannel {
         uint256 nonce,
         bytes[] memory signatures
     ) external;
+
+    function getOwners(
+    ) external view returns (address[2] memory);
 
 }

@@ -1,4 +1,4 @@
-import { VectorChannel, ChannelFactory } from "@connext/vector-contracts";
+import { ChannelFactory } from "@connext/vector-contracts";
 import {
   IVectorStore,
   UpdateParams,
@@ -84,17 +84,23 @@ export class Vector implements IVectorProtocol {
 
   // Primary protocol execution from the leader side
   private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
-    this.logger.info(`Start executeUpdate`, { params });
+    this.logger.info({ method: "executeUpdate", step: "start", params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
     const state = await this.storeService.getChannelState(params.channelAddress);
-    if (!state) {
+    if (!state && params.type !== UpdateType.setup) {
       await this.lockService.releaseLock(params.channelAddress, key);
-      throw new Error(`Channel not found ${params.channelAddress}`);
+      this.logger.error({
+        method: "executeUpdate",
+        variable: "state",
+        error: ChannelUpdateError.reasons.ChannelNotFound,
+      });
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
     }
     const updateRes = await generateUpdate(params, this.storeService, this.signer, this.logger);
     if (updateRes.isError) {
       await this.lockService.releaseLock(params.channelAddress, key);
+      this.logger.error({ method: "executeUpdate", variable: "updateRes", error: updateRes.getError()?.message });
       return Result.fail(updateRes.getError()!);
     }
     const outboundRes = await sync.outbound(
@@ -110,6 +116,7 @@ export class Vector implements IVectorProtocol {
 
     if (outboundRes.isError) {
       await this.lockService.releaseLock(params.channelAddress, key);
+      this.logger.error({ method: "executeUpdate", error: outboundRes.getError()?.message });
       return outboundRes;
     }
 
@@ -123,7 +130,8 @@ export class Vector implements IVectorProtocol {
   }
 
   private async setupServices(): Promise<Vector> {
-    this.messagingService.subscribe(this.publicIdentifier, async (msg: VectorMessage) => {
+    this.messagingService.onReceive(this.publicIdentifier, async (msg: VectorMessage) => {
+      this.logger.info({ method: "onReceive", step: "Received inbound", msg });
       const inboundRes = await sync.inbound(
         msg,
         this.storeService,
@@ -135,7 +143,7 @@ export class Vector implements IVectorProtocol {
         this.logger,
       );
       if (inboundRes.isError) {
-        // this.logger.error(inboundRes.getError())
+        this.logger.error({ method: "inbound", error: inboundRes.getError()?.message });
       }
       const updatedChannelState = inboundRes.getValue();
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
