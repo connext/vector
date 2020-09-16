@@ -11,8 +11,6 @@ interface IChannelFactory {
 
     function proxyCreationCode() external pure returns (bytes memory);
 
-    function proxyRuntimeCode() external pure returns (bytes memory);
-
     function getChannelAddress(
         address initiator,
         address responder
