@@ -186,14 +186,17 @@ export class Vector implements IVectorProtocol {
     // Validate all parameters
     const error = this.validateParams(params, SetupParamsSchema);
     if (error) {
+      this.logger.error({ method: "setup", params, error });
       return Result.fail(error);
     }
 
     // Should have chainprovider for this channel
     if (!this.chainProviders.has(params.networkContext.chainId)) {
+      const error = `No chain provider for chainId ${params.networkContext.chainId}`;
+      this.logger.error({ method: "setup", params, error });
       return Result.fail(
         new ChannelUpdateError(ChannelUpdateError.reasons.InvalidParams, undefined, undefined, {
-          error: `No chain provider for chainId ${params.networkContext.chainId}`,
+          error,
         }),
       );
     }
@@ -223,6 +226,7 @@ export class Vector implements IVectorProtocol {
         this.chainProviders.get(params.networkContext.chainId)!,
       );
     } catch (e) {
+      this.logger.error({ method: "setup", step: "getCreate2MultisigAddress", error: e.message, stack: e.stack });
       return Result.fail(
         new ChannelUpdateError(ChannelUpdateError.reasons.Create2Failed, undefined, undefined, {
           error: e.message,
@@ -345,6 +349,10 @@ export class Vector implements IVectorProtocol {
     };
 
     return this.executeUpdate(updateParams);
+  }
+
+  public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
+    return this.storeService.getChannelState(channelAddress);
   }
 
   ///////////////////////////////////

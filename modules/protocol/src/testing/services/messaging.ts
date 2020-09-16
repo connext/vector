@@ -2,6 +2,8 @@ import { IMessagingService } from "@connext/vector-types";
 import { Evt } from "evt";
 
 export class MemoryMessagingService implements IMessagingService {
+  private readonly evt: Evt<{ subject: string; data: any }> = Evt.create<{ subject: string; data: any }>();
+
   async connect(): Promise<void> {
     return;
   }
@@ -29,5 +31,4 @@ export class MemoryMessagingService implements IMessagingService {
   unsubscribe(subject: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  private readonly evt: Evt<{ subject: string; data: any }> = Evt.create<{ subject: string; data: any }>();
 }

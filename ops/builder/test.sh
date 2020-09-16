@@ -20,7 +20,7 @@ fi
 if [[ "${cmd##*-}" == "test" ]]
 then
   echo "Starting $unit tester"
-  exec npm run test -- $opts
+  exec npm run test -- $opts | node_modules/.bin/pino-pretty
 
 elif [[ "${cmd##*-}" == "watch" ]]
 then
