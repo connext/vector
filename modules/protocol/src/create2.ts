@@ -21,13 +21,13 @@ import { providers, utils } from "ethers";
  * NOTE: if the encoding of the multisig owners is changed YOU WILL break all
  * existing channels
  */
+// keccak256( 0xff ++ address ++ salt ++ keccak256(init_code))[12:]
 export const getCreate2MultisigAddress = async (
   initiatorIdentifier: PublicIdentifier,
   responderIdentifier: PublicIdentifier,
   channelFactoryAddress: string,
   channelFactoryAbi: any,
   vectorChannelMastercopyAddress: string,
-  vectorChannelMastercopyAddressAbi: any,
   ethProvider: providers.JsonRpcProvider,
 ): Promise<string> => {
   const proxyFactory = new Contract(channelFactoryAddress, channelFactoryAbi, ethProvider);
@@ -41,20 +41,14 @@ export const getCreate2MultisigAddress = async (
         [
           "0xff",
           channelFactoryAddress,
+          // salt
           utils.solidityKeccak256(
-            ["bytes32", "uint256"],
+            ["address", "address", "uint256", "bytes32"],
             [
-              utils.keccak256(
-                // see encoding notes
-                new utils.Interface(vectorChannelMastercopyAddressAbi).encodeFunctionData("setup", [
-                  [
-                    getSignerAddressFromPublicIdentifier(initiatorIdentifier),
-                    getSignerAddressFromPublicIdentifier(responderIdentifier),
-                  ],
-                ]),
-              ),
-              // hash chainId + saltNonce to ensure multisig addresses are *always* unique
-              utils.solidityKeccak256(["uint256", "uint256"], [ethProvider.network.chainId, 0]),
+              getSignerAddressFromPublicIdentifier(initiatorIdentifier),
+              getSignerAddressFromPublicIdentifier(responderIdentifier),
+              ethProvider.network.chainId,
+              utils.keccak256(utils.toUtf8Bytes("vector")),
             ],
           ),
           utils.solidityKeccak256(

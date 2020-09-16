@@ -222,7 +222,6 @@ export class Vector implements IVectorProtocol {
         params.networkContext.channelFactoryAddress,
         ChannelFactory.abi,
         params.networkContext.vectorChannelMastercopyAddress,
-        VectorChannel.abi,
         this.chainProviders.get(params.networkContext.chainId)!,
       );
     } catch (e) {

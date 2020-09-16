@@ -36,6 +36,7 @@ interface IVectorChannel {
         address to,
         uint256 value,
         bytes memory data,
+        uint256 nonce,
         bytes[] memory signatures
     ) external;
 

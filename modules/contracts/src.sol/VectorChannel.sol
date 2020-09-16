@@ -165,7 +165,7 @@ contract VectorChannel is IVectorChannel {
             to,
             value,
             data,
-            nonce,
+            nonce
         );
         require(
             !isExecuted[transactionHash],
