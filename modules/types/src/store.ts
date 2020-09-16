@@ -11,6 +11,7 @@ export type TransferRecord = { transferId: string } & Partial<{
 export interface IVectorStore {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
+  getChannelStates(): Promise<FullChannelState[]>
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined>;
   saveChannelState(

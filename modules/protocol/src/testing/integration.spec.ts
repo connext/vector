@@ -42,7 +42,7 @@ describe("Happy case integration tests", () => {
     });
   });
 
-  it.only("should setup a channel between Alice and Bob", async () => {
+  it("should setup a channel between Alice and Bob", async () => {
     const chainId = parseInt(Object.keys(config.chainProviders)[0]);
     const channel = await alice.setup({
       counterpartyIdentifier: bob.publicIdentifier,

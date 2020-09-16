@@ -36,6 +36,10 @@ export class MemoryStoreService implements IVectorStore {
     return Promise.resolve(state);
   }
 
+  getChannelStates(): Promise<FullChannelState[]> {
+    return Promise.resolve([...this.channelStates.values()].map(c => c.state));
+  }
+
   saveChannelState(
     channelState: FullChannelState,
     commitment: ChannelCommitmentData,

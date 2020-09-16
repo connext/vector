@@ -55,36 +55,83 @@ describe("Vector.setup", () => {
   });
 
   describe("should validate parameters", () => {
-    const validParams = {
-      counterpartyIdentifer: mkPublicIdentifier(),
+    const network = {
       chainId: 2,
+      providerUrl: "http://eth.com",
+      channelFactoryAddress: mkAddress("0xccc"),
+      vectorChannelMastercopyAddress: mkAddress("0xeee"),
+      adjudicatorAddress: mkAddress("0xaaa"),
+    };
+    const validParams = {
+      counterpartyIdentifier: mkPublicIdentifier(),
+      networkContext: { ...network },
       timeout: "1000",
     };
     const tests: ParamValidationTest[] = [
       {
         name: "should fail if there is no counterparty",
-        params: { ...validParams, counterpartyIdentifer: undefined },
-        error: "should have required property 'counterpartyIdentifer'",
+        params: { ...validParams, counterpartyIdentifier: undefined },
+        error: "should have required property 'counterpartyIdentifier'",
       },
       {
         name: "should fail if there is an invalid counterparty",
-        params: { ...validParams, counterpartyIdentifer: "fail" },
+        params: { ...validParams, counterpartyIdentifier: "fail" },
         error: 'should match pattern "^indra([a-zA-Z0-9]{50})$"',
       },
       {
         name: "should fail if there is no chainId",
-        params: { ...validParams, chainId: undefined },
+        params: { ...validParams, networkContext: { ...network, chainId: undefined } },
         error: "should have required property 'chainId'",
       },
       {
         name: "should fail if there is an invalid chainId (is a string)",
-        params: { ...validParams, chainId: "fail" },
+        params: { ...validParams, networkContext: { ...network, chainId: "fail" } },
         error: "should be number",
       },
       {
         name: "should fail if the chainId is below the minimum",
-        params: { ...validParams, chainId: 0 },
+        params: { ...validParams, networkContext: { ...network, chainId: 0 } },
         error: "should be >= 1",
+      },
+      {
+        name: "should fail if there is no providerUrl",
+        params: { ...validParams, networkContext: { ...network, providerUrl: undefined } },
+        error: "should have required property 'providerUrl'",
+      },
+      {
+        name: "should fail if there is an invalid providerUrl",
+        params: { ...validParams, networkContext: { ...network, providerUrl: 0 } },
+        error: "should be string",
+      },
+      {
+        name: "should fail if there is no channelFactoryAddress",
+        params: { ...validParams, networkContext: { ...network, channelFactoryAddress: undefined } },
+        error: "should have required property 'channelFactoryAddress'",
+      },
+      {
+        name: "should fail if there is an invalid channelFactoryAddress",
+        params: { ...validParams, networkContext: { ...network, channelFactoryAddress: "fail" } },
+        error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
+      },
+      {
+        name: "should fail if there is no vectorChannelMastercopyAddress",
+        params: { ...validParams, networkContext: { ...network, vectorChannelMastercopyAddress: undefined } },
+        error: "should have required property 'vectorChannelMastercopyAddress'",
+      },
+      {
+        name: "should fail if there is an invalid vectorChannelMastercopyAddress",
+        params: { ...validParams, networkContext: { ...network, vectorChannelMastercopyAddress: "fail" } },
+        error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
+      },
+      {
+        name: "should fail if there is no adjudicatorAddress",
+        params: { ...validParams, networkContext: { ...network, adjudicatorAddress: undefined } },
+        error: "should have required property 'adjudicatorAddress'",
+      },
+      {
+        name: "should fail if there is an invalid adjudicatorAddress",
+        params: { ...validParams, networkContext: { ...network, adjudicatorAddress: "fail" } },
+        error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {
         name: "should fail if there is no timeout",
@@ -253,7 +300,8 @@ describe("Vector.create", () => {
       {
         name: "should fail if transferInitialState is invalid",
         params: { ...validParams, transferInitialState: {} },
-        error: "should have required property \'balance\',should have required property \'balance\',should match exactly one schema in oneOf",
+        error:
+          "should have required property 'balance',should have required property 'balance',should match exactly one schema in oneOf",
       },
       {
         name: "should fail if timeout is undefined",

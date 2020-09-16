@@ -157,15 +157,20 @@ export class Vector implements IVectorProtocol {
     // TODO validate that the channel is not currently in dispute/checkpoint state
 
     // sync latest state before starting
-    // TODO: How to get channelId on startup? should we sync *all* channels?
-    // const channelState = this.storeService.getChannelState(msg.data.channelId);
-    // await sync.outbound(
-    //   channelState.latestUpdate,
-    //   this.storeService,
-    //   this.messagingService,
-    //   this.channelStateEvt,
-    //   this.channelErrorEvt,
-    // );
+    const channels = await this.storeService.getChannelStates();
+    await Promise.all(channels.map(channel => {
+      return new Promise((resolve) => {
+        try {
+          sync.outbound(channel.latestUpdate, this.storeService, this.messagingService, this.signer, this.chainProviderUrls,
+            this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
+            this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
+            this.logger).then(resolve);
+        } catch (e) {
+          this.logger.error(`Failed to sync channel`, { channel: channel.channelAddress });
+          resolve(undefined);
+        }
+      });
+    }));
     return this;
   }
 

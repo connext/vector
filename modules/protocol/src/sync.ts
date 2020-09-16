@@ -63,8 +63,6 @@ export async function outbound(
         })
         .attachOnce((state: FullChannelState) => resolve(Result.ok(state)));
 
-      // TODO: turn `update` into a DTO before sending?
-      // TODO: what if there is no latest update?
       messagingService
         .send(updateToSend.toIdentifier, {
           to: updateToSend.toIdentifier,
