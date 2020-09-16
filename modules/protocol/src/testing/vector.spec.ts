@@ -191,16 +191,6 @@ describe("Vector.deposit", () => {
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {
-        name: "should fail if amount is undefined",
-        params: { ...validParams, amount: undefined },
-        error: "should have required property 'amount'",
-      },
-      {
-        name: "should fail if amount is invalid",
-        params: { ...validParams, amount: "fail" },
-        error: 'should match pattern "^([0-9])*$"',
-      },
-      {
         name: "should fail if assetId is undefined",
         params: { ...validParams, assetId: undefined },
         error: "should have required property 'assetId'",

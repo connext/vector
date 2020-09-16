@@ -3,7 +3,6 @@ export * from "./chainId";
 export * from "./channel";
 export * from "./channelSigner";
 export * from "./comparisons";
-export * from "./contracts";
 export * from "./crypto";
 export * from "./currency";
 export * from "./delay";

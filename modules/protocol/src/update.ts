@@ -259,6 +259,8 @@ async function generateDepositUpdate(
   // sent to the multisig. This means that the `latestDepositByAssetId`
   // will include the latest nonce needed
 
+  // TODO: PROPERLY CALCULATE DEPOSIT AMOUNT FROM CHAIN!!!
+
   // Determine the latest deposit nonce from chain using
   // the provided assetId from the params
   const multisig = new Contract(channelAddress, VectorChannel.abi, signer.provider);
@@ -270,7 +272,10 @@ async function generateDepositUpdate(
 
   const depositBalance = {
     to: state.participants,
-    amount: signer.address === state.participants[0] ? [params.details.amount, "0"] : ["0", params.details.amount],
+    amount:
+      signer.address === state.participants[0]
+        ? [deposit?.amount.toString() ?? "0", "0"]
+        : ["0", deposit?.amount.toString() ?? "0"],
   };
   const balance = getUpdatedChannelBalance(UpdateType.deposit, params.details.assetId, depositBalance, state);
 
@@ -308,7 +313,7 @@ async function generateCreateUpdate(
   const coreTransferState: CoreTransferState = {
     initialBalance: transferInitialState.balance,
     assetId,
-    transferId: getTransferId(state.channelAddress, state.nonce, transferDefinition, timeout),
+    transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
     channelAddress: state.channelAddress,
     transferDefinition,
     transferEncodings: encodings,

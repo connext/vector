@@ -16,7 +16,6 @@ export type SetupParams = {
 
 export type DepositParams = {
   channelAddress: string;
-  amount: string; // TODO we actually dont need this?
   assetId: string;
 };
 

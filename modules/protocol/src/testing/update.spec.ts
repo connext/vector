@@ -320,7 +320,7 @@ describe.skip("generateUpdate", () => {
     await store.saveChannelState(state, {} as any);
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { amount: "1", channelAddress },
+      details: { channelAddress },
     });
     const update = (await generateUpdate(params, state, store, signers[0])).getValue();
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {

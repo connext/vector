@@ -79,7 +79,6 @@ export type SetupParams = Static<typeof SetupParamsSchema>;
 
 export const DepositParamsSchema = Type.Object({
   channelAddress: TAddress,
-  amount: TIntegerString,
   assetId: TAddress,
 });
 
