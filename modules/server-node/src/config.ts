@@ -28,9 +28,20 @@ if (!authUrl) {
   throw new Error("VECTOR_AUTH_URL is a required config item");
 }
 
+let contractAddresses;
+try {
+  contractAddresses = JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES!);
+} catch (e) {
+  throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
+}
+if (!chainProviders) {
+  throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
+}
+
 export const config = {
   authUrl,
   chainProviders,
+  contractAddresses,
   mnemonic,
   natsUrl,
   port: parseInt(process.env.VECTOR_PORT ?? "5040"),

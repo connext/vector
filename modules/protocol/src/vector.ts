@@ -57,7 +57,7 @@ export class Vector implements IVectorProtocol {
     });
   }
 
-  static connect(
+  static async connect(
     messagingService: IMessagingService,
     lockService: ILockService,
     storeService: IVectorStore,
@@ -69,7 +69,9 @@ export class Vector implements IVectorProtocol {
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
-    return node.setupServices();
+    await node.setupServices();
+    logger.info("Vector Protocol connected 🚀!");
+    return node;
   }
 
   get signerAddress(): string {
@@ -195,7 +197,7 @@ export class Vector implements IVectorProtocol {
         }),
       );
     }
-    
+
     // TODO: We can either check by counterparty identfier or by
     // generated channel address. If we use the `counterpartyIdentifier`
     // then we will have to add that getter to the store interface,

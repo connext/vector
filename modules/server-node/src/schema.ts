@@ -1,4 +1,27 @@
+import { EthAddressSchema } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
+
+// GET CHANNEL STATE
+export const getChannelStateParamsSchema = Type.Object({
+  channelAddress: EthAddressSchema,
+});
+export type GetChannelStateParams = Static<typeof getChannelStateParamsSchema>;
+
+export const getChannelStateResponseSchema = {
+  200: Type.Any(),
+};
+export type GetChannelStateResponseBody = Static<typeof getChannelStateResponseSchema["200"]>;
+
+// GET CONFIG
+export const getConfigResponseSchema = {
+  200: Type.Object({
+    publicIdentifier: Type.String({
+      example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
+    }),
+    signerAddress: EthAddressSchema,
+  }),
+};
+export type GetConfigResponseBody = Static<typeof getConfigResponseSchema["200"]>;
 
 // POST SETUP
 export const postSetupBodySchema = Type.Object({
@@ -27,37 +50,31 @@ export type PostSetupResponseBody = Static<typeof postSetupResponseSchema["200"]
 
 // POST DEPOSIT
 export const postDepositBodySchema = Type.Object({
-  channelAddress: Type.String({ example: "0x", description: "Channel address" }),
+  channelAddress: EthAddressSchema,
   amount: Type.String({
     example: "100000",
     description: "Amount in real units",
   }),
-  assetId: Type.String({
-    example: "0x",
-    description: "ERC20-compatible token address, AddressZero for native currency (i.e. ETH)",
-  }),
+  assetId: EthAddressSchema,
 });
 
 export type PostDepositRequestBody = Static<typeof postDepositBodySchema>;
 
 export const postDepositResponseSchema = {
   200: Type.Object({
-    channelAddress: Type.String({ example: "0x", description: "Channel address" }),
+    channelAddress: EthAddressSchema,
   }),
 };
 export type PostDepositResponseBody = Static<typeof postDepositResponseSchema["200"]>;
 
 // POST LINKED TRANSFER
 export const postLinkedTransferBodySchema = Type.Object({
-  channelAddress: Type.String({ example: "0x", description: "Channel address" }),
+  channelAddress: EthAddressSchema,
   amount: Type.String({
     example: "100000",
     description: "Amount in real units",
   }),
-  assetId: Type.String({
-    example: "0x",
-    description: "ERC20-compatible token address, AddressZero for native currency (i.e. ETH)",
-  }),
+  assetId: EthAddressSchema,
   preImage: Type.String({
     example: "0x",
     description: "Bytes32 secret used to lock transfer",
@@ -78,20 +95,15 @@ export const postLinkedTransferBodySchema = Type.Object({
       description: "Recipient chain ID, if on another chain",
     }),
   ),
-  recipientAssetId: Type.Optional(
-    Type.Number({
-      example: "0x",
-      description: "ERC20-compatible token address, AddressZero for native currency (i.e. ETH)",
-    }),
-  ),
-  meta: Type.Optional(Type.Object({})),
+  recipientAssetId: Type.Optional(EthAddressSchema),
+  meta: Type.Optional(Type.Any()),
 });
 
 export type PostLinkedTransferRequestBody = Static<typeof postLinkedTransferBodySchema>;
 
 export const postLinkedTransferResponseSchema = {
   200: Type.Object({
-    channelAddress: Type.String({ example: "0x", description: "Channel address" }),
+    channelAddress: EthAddressSchema,
   }),
 };
 export type PostLinkedTransferResponseBody = Static<typeof postLinkedTransferResponseSchema["200"]>;

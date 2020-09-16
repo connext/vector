@@ -1,0 +1,10 @@
+@aliceUrl = http://localhost:8001
+@bobUrl = http://localhost:8002
+
+##############
+### GET CONFIG
+### Alice
+GET {{aliceUrl}}/config
+
+### Bob
+GET {{bobUrl}}/config

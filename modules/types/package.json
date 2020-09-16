@@ -16,6 +16,7 @@
     "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'"
   },
   "dependencies": {
+    "@sinclair/typebox": "0.10.1",
     "ethers": "5.0.13",
     "evt": "1.8.10"
   },

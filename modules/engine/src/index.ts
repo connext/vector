@@ -1,5 +1,6 @@
 import { Vector } from "@connext/vector-protocol";
 import {
+  Address,
   ChainAddresses,
   ChainProviders,
   ChannelUpdateError,
@@ -19,6 +20,12 @@ import {
   Result,
   TransferParams,
   WithdrawParams,
+  SetupInput,
+  SetupInputSchema,
+  DepositInputSchema,
+  DepositInput,
+  RpcRequestInput,
+  EthAddressSchema,
 } from "@connext/vector-types";
 import Pino from "pino";
 import Ajv from "ajv";
@@ -29,7 +36,6 @@ import {
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "./paramConverter";
-import { SetupInput, SetupInputSchema, DepositInputSchema, DepositInput } from "./types";
 
 const ajv = new Ajv();
 
@@ -52,9 +58,17 @@ export class VectorEngine {
     chainAddresses: ChainAddresses,
     logger: Pino.BaseLogger,
   ): Promise<VectorEngine> {
-    const vector = await Vector.connect(messaging, lock, store as IVectorStore, signer, chainProviders, logger);
+    const vector = await Vector.connect(
+      messaging,
+      lock,
+      store as IVectorStore,
+      signer,
+      chainProviders,
+      logger.child({ module: "VectorProtocol" }),
+    );
     const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger);
     await engine.setupListener();
+    logger.info("Vector Engine connected 🚀!");
     return engine;
   }
 
@@ -128,6 +142,19 @@ export class VectorEngine {
     return Result.ok({ routingId: params.routingId });
   }
 
+  public async getChannelState(channelAddress: Address): Promise<Result<FullChannelState, Error | ChannelUpdateError>> {
+    const validate = ajv.compile(EthAddressSchema);
+    const valid = validate(channelAddress);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
+    const channel = await this.store.getChannelState(channelAddress);
+    if (!channel) {
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
+    }
+    return Result.ok(channel);
+  }
+
   public async resolveCondition(params: ResolveConditionParams): Promise<Result<any>> {
     // TODO types
     // TODO input validation
@@ -166,14 +193,26 @@ export class VectorEngine {
   // - "vector_createTransfer"
   // - "vector_resolveTransfer"
   // TODO add rpc request type
-  public async request(payload: any) {
-    if (!payload.method.startsWith(`vector_`)) {
-      throw new Error(`TODO`);
+  public async request(payload: RpcRequestInput): Promise<any> {
+    const validate = ajv.compile(DepositInputSchema);
+    const valid = validate(payload);
+    if (!valid) {
+      // dont use result type since this could go over the wire
+      // TODO: how to represent errors over the wire?
+      this.logger.error(validate.errors || {});
+      throw new Error(validate.errors?.join());
     }
-    const methodName = payload.method.replace("vector_", "");
+
+    const methodName = payload.method.replace("chan_", "");
     if (typeof this[methodName] !== "function") {
-      throw new Error(`TODO`);
+      throw new Error(`Invalid method: ${methodName}`);
     }
-    await this[methodName](payload.params);
+
+    // every method must be a result type
+    const res = await this[methodName](payload.params);
+    if (res.isError) {
+      throw res.getError();
+    }
+    return res.getValue();
   }
 }

@@ -57,7 +57,9 @@ then
     --polling-interval 1000 \
     --watch src \
     --exec ts-node \
-    ./src/index.ts | ./node_modules/.bin/pino-pretty
+    ./src/index.ts \
+    | ./node_modules/.bin/pino-pretty \
+    && ./node_modules/.bin/prisma studio --experimental
 else
   echo "Starting node in prod-mode"
   exec node --no-deprecation dist/bundle.js

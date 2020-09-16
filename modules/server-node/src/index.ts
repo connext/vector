@@ -5,12 +5,18 @@ import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
 import axios from "axios";
+import { ChannelRpcMethods } from "@connext/vector-types";
 
 import { NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import {
+  GetChannelStateParams,
+  getChannelStateParamsSchema,
+  getChannelStateResponseSchema,
+  GetConfigResponseBody,
+  getConfigResponseSchema,
   postDepositBodySchema,
   PostDepositRequestBody,
   postDepositResponseSchema,
@@ -22,6 +28,7 @@ import {
   postSetupResponseSchema,
 } from "./schema";
 import { MultichainTransactionService, VectorTransactionService } from "./services/onchain";
+import { constructRpcRequest } from "./helpers/rpc";
 
 const server = fastify();
 server.register(fastifyOas, {
@@ -60,7 +67,7 @@ server.addHook("onReady", async () => {
     store,
     signer,
     config.chainProviders,
-    {},
+    config.contractAddresses,
     logger.child({ module: "VectorEngine" }),
   );
 });
@@ -69,19 +76,43 @@ server.get("/ping", async () => {
   return "pong\n";
 });
 
+server.get("/config", { schema: { response: getConfigResponseSchema } }, async (request, reply) => {
+  return reply.status(200).send({
+    publicIdentifier: signer.publicIdentifier,
+    signerAddress: signer.address,
+  } as GetConfigResponseBody);
+});
+
+server.get<{ Params: GetChannelStateParams }>(
+  "/channel/:channelAddress",
+  { schema: { params: getChannelStateParamsSchema, response: getChannelStateResponseSchema } },
+  async (request, reply) => {
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params.channelAddress);
+    try {
+      const res = await vectorEngine.request(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Channel not found", channelAddress: request.params.channelAddress });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {}
+  },
+);
+
 server.post<{ Body: PostSetupRequestBody }>(
   "/setup",
   { schema: { body: postSetupBodySchema, response: postSetupResponseSchema } },
   async (request, reply) => {
-    const res = await vectorEngine.setup({
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_setup, {
+      chainId: request.body.chainId,
       counterpartyIdentifier: request.body.counterpartyIdentifier,
       timeout: request.body.timeout,
-      chainId: request.body.chainId,
     });
-    if (res.isError) {
-      return reply.status(400).send({ message: res.getError()?.message ?? "" });
+    try {
+      const res = await vectorEngine.request(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
     }
-    return reply.status(200).send(res.getValue());
   },
 );
 
@@ -99,13 +130,17 @@ server.post<{ Body: PostDepositRequestBody }>(
       request.body.amount,
       request.body.assetId,
     );
+    if (depositRes.isError) {
+      return reply.status(400).send({ message: depositRes.getError()!.message ?? "" });
+    }
+    await depositRes.getValue().wait();
     const res = await vectorEngine.deposit({
       amount: request.body.amount,
       assetId: request.body.assetId,
       channelAddress: request.body.channelAddress,
     });
     if (res.isError) {
-      return reply.status(400).send({ message: res.getError()?.message ?? "" });
+      return reply.status(400).send({ message: res.getError()!.message ?? "" });
     }
     return reply.status(200).send(res.getValue());
   },

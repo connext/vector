@@ -1,0 +1,14 @@
+@aliceUrl = http://localhost:8001
+@bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@chainId = 1337
+
+##############
+### Setup Channel
+POST {{aliceUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{bobPublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "3600"
+}
