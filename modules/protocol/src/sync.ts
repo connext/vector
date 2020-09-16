@@ -29,6 +29,7 @@ import { validate } from "./validate";
 // has been persisted.
 export async function outbound(
   update: ChannelUpdate<any>,
+  storedChannel: FullChannelState<any> | undefined,
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
@@ -37,10 +38,12 @@ export async function outbound(
   errorEvt: Evt<ChannelUpdateError>,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
-  const storedChannel = await storeService.getChannelState(update.channelAddress);
+  // NOTE: This is checked in `generateUpdate` as well, so this is unnecessary
+  // but allows us to not have to force unwrap
   if (!storedChannel && update.type !== UpdateType.setup) {
     return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, update));
   }
+
   // Create a helper function that will create a function that properly
   // sets up the promise handlers. The only time this promise should
   // reject instead of resolve is if *sending* the message failed. In

@@ -9,8 +9,6 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async send(to: string, msg: any): Promise<void> {
-    console.log("**************send to: ", to);
-    console.log("msg: ", msg);
     this.evt.post({ subject: to, data: msg });
   }
 
@@ -18,7 +16,6 @@ export class MemoryMessagingService implements IMessagingService {
     this.evt
       .pipe(({ subject: _subject }) => _subject === subject)
       .attach(({ data }) => {
-        console.log("***********onReceive data: ", data);
         callback(data);
       });
   }

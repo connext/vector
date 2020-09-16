@@ -44,7 +44,9 @@ describe("inbound", () => {
   let messaging: IMessagingService;
 
   beforeEach(async () => {
-    signers = Array(2).fill(0).map(() => getRandomChannelSigner(providerUrl));
+    signers = Array(2)
+      .fill(0)
+      .map(() => getRandomChannelSigner(providerUrl));
     store = new MemoryStoreService();
     messaging = new MemoryMessagingService();
   });
@@ -242,7 +244,9 @@ describe("outbound", () => {
   let messaging: IMessagingService;
 
   beforeEach(async () => {
-    signers = Array(2).fill(0).map(() => getRandomChannelSigner(providerUrl));
+    signers = Array(2)
+      .fill(0)
+      .map(() => getRandomChannelSigner(providerUrl));
     store = new MemoryStoreService();
     messaging = new MemoryMessagingService();
   });
@@ -255,7 +259,9 @@ describe("outbound", () => {
     const error = new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update);
 
     const res = (await new Promise((resolve, reject) => {
-      outbound(update, store, messaging, signers[0], chainProviders, stateEvt, errorEvt).then(resolve).catch(reject);
+      outbound(update, channel, store, messaging, signers[0], chainProviders, stateEvt, errorEvt)
+        .then(resolve)
+        .catch(reject);
 
       // First post error. use timeout to allow listeners to register
       setTimeout(() => {
@@ -279,7 +285,7 @@ describe("outbound", () => {
 
     // Send `outbound` call with deposit update and post to the error evt
     const res = (await new Promise((resolve, reject) => {
-      outbound(depositUpdate, store, messaging, signers[0], chainProviders, stateEvt, errorEvt)
+      outbound(depositUpdate, staleChannel, store, messaging, signers[0], chainProviders, stateEvt, errorEvt)
         .then(resolve)
         .catch(reject);
 
@@ -311,7 +317,9 @@ describe("outbound", () => {
 
     // Send `outbound` call with deposit update and post to the error evt
     const res = (await new Promise((resolve, reject) => {
-      outbound(update, store, messaging, signers[0], chainProviders, stateEvt, errorEvt).then(resolve).catch(reject);
+      outbound(update, channel, store, messaging, signers[0], chainProviders, stateEvt, errorEvt)
+        .then(resolve)
+        .catch(reject);
 
       // Then, post state evt with proper state for updating
       setTimeout(() => stateEvt.post({ ...channel, latestUpdate: update, nonce: 3 }), 5000);

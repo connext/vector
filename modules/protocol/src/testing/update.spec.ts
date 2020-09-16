@@ -43,7 +43,9 @@ describe("applyUpdate", () => {
   const chainProviders = config.chainProviders;
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const provider = new JsonRpcProvider(providerUrl);
-  const signers = Array(2).fill(0).map(() => getRandomChannelSigner(providerUrl));
+  const signers = Array(2)
+    .fill(0)
+    .map(() => getRandomChannelSigner(providerUrl));
 
   let store: IVectorStore;
   let linkedTransferDefinition: string;
@@ -269,7 +271,9 @@ describe.skip("generateUpdate", () => {
   let channelAddress: string;
 
   beforeEach(async () => {
-    signers = Array(2).fill(0).map(() => getRandomChannelSigner(providerUrl));
+    signers = Array(2)
+      .fill(0)
+      .map(() => getRandomChannelSigner(providerUrl));
     store = new MemoryStoreService();
     linkedTransferDefinition = global["networkContext"].linkedTransferDefinition;
 
@@ -294,7 +298,7 @@ describe.skip("generateUpdate", () => {
     const params = createTestUpdateParams(UpdateType.setup, {
       details: { counterpartyIdentifier: signers[1].publicIdentifier, networkContext: { ...global["networkContext"] } },
     });
-    const update = (await generateUpdate(params, store, signers[0])).getValue();
+    const update = (await generateUpdate(params, undefined, store, signers[0])).getValue();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.setup, {
       balance: { to: signers.map((a) => a.address), amount: ["0", "0"] },
@@ -318,7 +322,7 @@ describe.skip("generateUpdate", () => {
       channelAddress,
       details: { amount: "1", channelAddress },
     });
-    const update = (await generateUpdate(params, store, signers[0])).getValue();
+    const update = (await generateUpdate(params, state, store, signers[0])).getValue();
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       details: { latestDepositNonce: 0 },
@@ -357,7 +361,7 @@ describe.skip("generateUpdate", () => {
     });
 
     // Test update
-    const update = (await generateUpdate(params, store, signers[0])).getValue();
+    const update = (await generateUpdate(params, state, store, signers[0])).getValue();
 
     // Get expected value
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
@@ -460,7 +464,7 @@ describe.skip("generateUpdate", () => {
     });
 
     // Generate the update
-    const updateRet = (await generateUpdate(params, store, signers[0]));
+    const updateRet = await generateUpdate(params, state, store, signers[0]);
     expect(updateRet.isError).to.be.false;
     expect(updateRet.getValue()).to.containSubset(expected);
   });

@@ -92,10 +92,10 @@ Should do the exact oppositve of the `create` update above.
 
 - [ ] Add try/catch around everything inside lock so it always releases the lock instead of timing it out -- or whatever, we just **need** to release the lock!!!
 - [ ] Move validation (including checking if StateChannel exists) inside the lock
-- [ ] Pass channel state into `generateUpdate` and `sync.outbound` to reduce a couple of db queries.
+- [x] Pass channel state into `generateUpdate` and `sync.outbound` to reduce a couple of db queries.
 - [ ] Remove posting outbound evt event in `executeUpdate`
 - [x] Add sync on connect for now, we can take it out later if connecting takes too long.
-- [ ] Add exception case for null channel for setup
+- [x] Add exception case for null channel for setup
 - [ ] Remove `amount` from depositParams.
 - [ ] Validate timeout >= minimum timeout from types/constants
 

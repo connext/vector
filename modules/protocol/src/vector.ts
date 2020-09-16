@@ -88,16 +88,7 @@ export class Vector implements IVectorProtocol {
 
     const key = await this.lockService.acquireLock(params.channelAddress);
     const state = await this.storeService.getChannelState(params.channelAddress);
-    if (!state && params.type !== UpdateType.setup) {
-      await this.lockService.releaseLock(params.channelAddress, key);
-      this.logger.error({
-        method: "executeUpdate",
-        variable: "state",
-        error: ChannelUpdateError.reasons.ChannelNotFound,
-      });
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
-    }
-    const updateRes = await generateUpdate(params, this.storeService, this.signer, this.logger);
+    const updateRes = await generateUpdate(params, state, this.storeService, this.signer, this.logger);
     if (updateRes.isError) {
       await this.lockService.releaseLock(params.channelAddress, key);
       this.logger.error({ method: "executeUpdate", variable: "updateRes", error: updateRes.getError()?.message });
@@ -105,6 +96,7 @@ export class Vector implements IVectorProtocol {
     }
     const outboundRes = await sync.outbound(
       updateRes.getValue(),
+      state,
       this.storeService,
       this.messagingService,
       this.signer,
@@ -158,19 +150,30 @@ export class Vector implements IVectorProtocol {
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
-    await Promise.all(channels.map(channel => {
-      return new Promise((resolve) => {
-        try {
-          sync.outbound(channel.latestUpdate, this.storeService, this.messagingService, this.signer, this.chainProviderUrls,
-            this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
-            this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
-            this.logger).then(resolve);
-        } catch (e) {
-          this.logger.error(`Failed to sync channel`, { channel: channel.channelAddress });
-          resolve(undefined);
-        }
-      });
-    }));
+    await Promise.all(
+      channels.map((channel) => {
+        return new Promise((resolve) => {
+          try {
+            sync
+              .outbound(
+                channel.latestUpdate,
+                channel,
+                this.storeService,
+                this.messagingService,
+                this.signer,
+                this.chainProviderUrls,
+                this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
+                this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
+                this.logger,
+              )
+              .then(resolve);
+          } catch (e) {
+            this.logger.error(`Failed to sync channel`, { channel: channel.channelAddress });
+            resolve(undefined);
+          }
+        });
+      }),
+    );
     return this;
   }
 

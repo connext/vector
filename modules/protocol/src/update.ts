@@ -133,16 +133,14 @@ export async function applyUpdate<T extends UpdateType>(
 // properly validated resultant state
 export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
+  state: FullChannelState | undefined,
   storeService: IVectorStore,
   signer: IChannelSigner,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
-  // Get the channel state
-  const state = await storeService.getChannelState(params.channelAddress);
-
   // Only in the case of setup should the state be undefined
   if (!state && params.type !== UpdateType.setup) {
-    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, {} as any));
+    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
   }
 
   // Create the update from user parameters based on type
