@@ -125,6 +125,10 @@ lint:
 ########################################
 # Test Commands
 
+test-units: test-utils test-contracts test-protocol test-engine
+test-integrations: test-utils test-contracts test-protocol test-engine
+test-all: test-units test-integrations
+
 # Unit Tests
 
 test-utils: utils

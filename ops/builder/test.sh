@@ -12,15 +12,18 @@ test_cmd="`cat package.json | jq '.scripts.test' | tr -d '\n\r"' | cut -d " " -f
 if [[ "$test_cmd" == *mocha* ]]
 then
   if [[ "$NODE_ENV" == prod* ]]
-  then opts="--forbid-only"
-  else opts="--bail"
+  then opts="--color --forbid-only"
+  else opts="--color --bail"
   fi
 fi
 
 if [[ "${cmd##*-}" == "test" ]]
 then
   echo "Starting $unit tester"
-  exec npm run test -- $opts | node_modules/.bin/pino-pretty
+  if [[ -n "`which pino-pretty`" ]]
+  then exec npm run test -- $opts | pino-pretty --colorize
+  else exec npm run test -- $opts
+  fi
 
 elif [[ "${cmd##*-}" == "watch" ]]
 then

@@ -38,7 +38,6 @@
     "@connext/vector-utils": "0.0.1",
     "@nomiclabs/buidler": "1.4.7",
     "@openzeppelin/contracts": "3.1.0",
-    "ganache-cli": "6.10.2",
     "ethers": "5.0.14",
     "keccak": "3.0.1",
     "yargs": "16.0.3"
