@@ -336,6 +336,8 @@ export class Vector implements IVectorProtocol {
     return this.executeUpdate(updateParams);
   }
 
+  ///////////////////////////////////
+  // STORE METHODS
   public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     return this.storeService.getChannelState(channelAddress);
   }

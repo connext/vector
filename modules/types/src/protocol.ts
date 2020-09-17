@@ -32,6 +32,8 @@ export interface IVectorProtocol {
     timeout: number,
     filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): Promise<ProtocolEventPayloadsMap[T]>;
+
+  getChannelState(channelAddress: string): Promise<FullChannelState | undefined>
 }
 
 type VectorChannelMessageData<T extends UpdateType = any> = {
