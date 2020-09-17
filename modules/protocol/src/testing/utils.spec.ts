@@ -30,7 +30,7 @@ describe("utils", () => {
 
     async function depositB(amount: string, assetId: string): Promise<void> {
       if (assetId === constants.AddressZero) {
-        await wallet.sendTransaction({ to: state.channelAddress, value: amount });
+        await wallet.sendTransaction({ to: state.channelAddress, value: BigNumber.from(amount) });
       } else {
         console.log("TODO UNIMPLEMENTED");
       }
@@ -42,7 +42,13 @@ describe("utils", () => {
       amount: string[],
       initialBalance: Balance,
     ): Promise<void> {
-      const onchainDepNonce = await channelContract.functions.latestDepositByAssetId(assetId);
+        let onchainDepositA: { nonce: BigNumber; amount: BigNumber; };
+        try {
+            onchainDepositA = await channelContract.latestDepositByAssetId(assetId);
+        } catch (e) {
+            // Channel contract was not deployed, use 0 value
+            onchainDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) }
+        }
       const expectedBalance = {
         ...initialBalance,
         amount: [
@@ -50,10 +56,8 @@ describe("utils", () => {
           BigNumber.from(initialBalance.amount[1]).add(amount[1]).toString(),
         ],
       };
-      console.log(`expectedBalance: ${stringify(expectedBalance)}`);
-      console.log(`returned balance: ${stringify(ret.balance)}`);
       expect(expectedBalance).deep.eq(ret.balance);
-      expect(onchainDepNonce.nonce.toNumber()).to.eq(ret.latestDepositNonce);
+      expect(onchainDepositA.nonce.toNumber()).to.eq(ret.latestDepositNonce);
     }
 
     beforeEach(async () => {
@@ -95,13 +99,13 @@ describe("utils", () => {
       await validateRet(ret, assetId, amount, state.balances[0]);
     });
 
-    it("should work for Alice Token deposit", async () => {});
+    it.skip("should work for Alice Token deposit", async () => {});
 
     it("should work for Bob Eth deposit", async () => {
       const assetId = constants.AddressZero;
       const amount = ["0", "7"];
 
-      await depositB(amount[0], assetId);
+      await depositB(amount[1], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
         state.balances[0],
@@ -110,17 +114,17 @@ describe("utils", () => {
         assetId,
         signer,
       );
-
       await validateRet(ret, assetId, amount, state.balances[0]);
     });
 
-    it("should work for Bob Eth deposit", async () => {});
+    it.skip("should work for Bob Eth deposit", async () => {});
 
     it("should work for both Eth deposit", async () => {
       const assetId = constants.AddressZero;
       const amount = ["7", "5"];
 
       await depositA(amount[0], assetId);
+      await depositB(amount[1], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
         state.balances[0],
@@ -133,6 +137,6 @@ describe("utils", () => {
       await validateRet(ret, assetId, amount, state.balances[0]);
     });
 
-    it("should work for both token deposit", async () => {});
+    it.skip("should work for both token deposit", async () => {});
   });
 });
