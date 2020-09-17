@@ -142,8 +142,10 @@ chain_data_1="$chain_data/$chain_id_1"
 chain_data_2="$chain_data/$chain_id_2"
 mkdir -p $chain_data_1 $chain_data_2
 
+address_book="$chain_data/address-book.json"
 address_book_1="$chain_data_1/address-book.json"
 address_book_2="$chain_data_2/address-book.json"
+rm -rf $address_book $address_book_1 $address_book_2
 
 mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
 
@@ -229,35 +231,41 @@ docker stack deploy -c $root/${stack}.docker-compose.yml $stack
 echo "The $stack stack has been deployed."
 
 timeout=$(expr `date +%s` + 60)
-for address_book in $address_book_1 $address_book_2
-do
-  echo "Waiting for evm_`dirname $address_book` to wake up.."
-  while true
-  do
-    if [[ -z "`cat $address_book | grep 'TestToken'`" ]]
-    then
-      if [[ "`date +%s`" -gt "$timeout" ]]
-      then echo "Timed out waiting for evm_$chain_id to wake up.." && exit
-      else sleep 1
-      fi
-    else
-      break
-    fi
-  done
-done
-
-cat $address_book_1 $address_book_2 | jq -s '.[0] * .[1]' > $chain_data/address-book.json
-
-echo "Waiting for $public_url to wake up.."
+public_auth_url="http://localhost:5040"
+echo "Waiting for $public_auth_url to wake up.."
 while true
 do
-  res="`curl -k -m 5 -s $public_url || true`"
-  if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
+  res="`curl -k -m 5 -s $public_auth_url || true`"
+  if [[ -z "$res" ]]
   then
     if [[ "`date +%s`" -gt "$timeout" ]]
-    then echo "Timed out waiting for proxy to respond.." && exit
+    then echo "Timed out waiting for $stack stack to wake up.." && exit
     else sleep 1
     fi
-  else echo "Good Morning!" && exit;
+  else
+    break
   fi
 done
+
+echo "Waiting for evms to wake up.."
+while true
+do
+  if [[ \
+    -z "`(cat $address_book_1 | grep 'TestToken') 2> /dev/null`" || \
+    -z "`(cat $address_book_2 | grep 'TestToken') 2> /dev/null`" \
+  ]]
+  then
+    if [[ "`date +%s`" -gt "$timeout" ]]
+    then echo "Timed out waiting for $stack stack to wake up.." && exit
+    else sleep 1
+    fi
+  else
+    break
+  fi
+done
+
+cat $address_book_1 $address_book_2 | jq -s '.[0] * .[1]' > $address_book
+
+echo '{"'$chain_id_1'":"http://evm_'$chain_id_1':8545","'$chain_id_2'":"http://evm_'$chain_id_2':8545"}' > $chain_data/chain-providers.json
+
+echo "Good Morning!"

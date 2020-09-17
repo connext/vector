@@ -133,16 +133,13 @@ if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
 then
   echo "Env vars required to connect to external global services have not all been provided"
   echo "Spinning up a local set of global services & configuring those now.."
-  auth_url="http://auth:5040"
   bash ops/start-global.sh
+  auth_url="http://auth:5040"
   mnemonic_secret_name="${project}_mnemonic_dev"
-  echo 'No $VECTOR_CHAIN_PROVIDERS provided, spinning up local testnets & using those.'
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
   bash ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic"
-  bash ops/pull-images.sh $version "${project}_ethprovider"
-  chain_id_1=1337; chain_id_2=1338;
-  VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/providers/${chain_id_1}-${chain_id_2}.json`"
-  VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/addresses/${chain_id_1}-${chain_id_2}.json`"
+  VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
+  VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
 
 else
   echo "Connecting to external global servies"

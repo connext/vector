@@ -27,32 +27,16 @@ CONTRACT_ADDRESSES="{}"
 
 if [[ -n "$chain_id" ]]
 then
-
   port="${VECTOR_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
   ethprovider_host="evm_$chain_id"
+  chain_data="$root/.chaindata/$chain_id"
+  mkdir -p $chain_data
 
   function cleanup {
     echo "Tests finished, stopping evm.."
     docker container stop $ethprovider_host 2> /dev/null || true
   }
   trap cleanup EXIT SIGINT SIGTERM
-
-  chain_data="$root/.chaindata/$chain_id"
-  mkdir -p $chain_data
-
-  # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-  if [[ "$VECTOR_ENV" == "prod" ]]
-  then
-    git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
-    if [[ -n "$git_tag" ]]
-    then version="`echo $git_tag | sed 's/vector-//'`"
-    else version="`git rev-parse HEAD | head -c 8`"
-    fi
-  else
-    version="latest"
-  fi
-
-  image="${project}_ethprovider:$version"
 
   docker run $opts \
     --detach \
@@ -65,17 +49,9 @@ then
     --publish "$port:8545" \
     --rm \
     --tmpfs "/tmp" \
-    $image $arg
+    ${project}_ethprovider
 
-  while ! curl -s http://localhost:$port > /dev/null
-  do
-    if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
-    then echo "$ethprovider_host was not able to start up successfully" && exit 1
-    else sleep 1
-    fi
-  done
-
-  while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep 'Token":' || true`" ]]
+  while [[ -z "`cat $chain_data/address-book.json | grep 'TestToken' || true`" ]]
   do
     if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
     then echo "$ethprovider_host was not able to start up successfully" && exit 1
@@ -84,9 +60,8 @@ then
   done
   echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
 
-  CHAIN_PROVIDERS="{\"$chain_id\":\"http://evm_$chain_id:8545\"}"
-  CONTRACT_ADDRESSES="`cat $root/.chaindata/${chain_id}/address-book.json`"
-
+  CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
+  CONTRACT_ADDRESSES="`cat $chain_data/address-book.json`"
 fi
 
 docker run \
