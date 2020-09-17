@@ -176,7 +176,7 @@ contract Adjudicator is IAdjudicator {
 
             transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
 
-            channel.adjudicatorTransfer(transfer, assetId);
+            channel.managedTransfer(transfer, assetId);
         }
     }
 
@@ -299,7 +299,7 @@ contract Adjudicator is IAdjudicator {
         }
 
         IVectorChannel channel = IVectorChannel(cts.channelAddress);
-        channel.adjudicatorTransfer(finalBalance, cts.assetId);
+        channel.managedTransfer(finalBalance, cts.assetId);
     }
 
 

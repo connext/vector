@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IVectorChannel.sol";
-import "./interfaces/IAdjudicator.sol";
 import "./Proxy.sol";
 import "./shared/IERC20.sol";
 
@@ -13,14 +12,12 @@ import "./shared/IERC20.sol";
 contract ChannelFactory is IChannelFactory {
 
     IVectorChannel public immutable masterCopy;
-    IAdjudicator public immutable adjudicator;
 
     bytes32 private constant domainSalt = keccak256("vector");
     bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
-    constructor(IVectorChannel _masterCopy, IAdjudicator _adjudicator) {
+    constructor(IVectorChannel _masterCopy) {
         masterCopy = _masterCopy;
-        adjudicator = _adjudicator;
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
@@ -57,7 +54,7 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel channel)
     {
         channel = deployChannelProxy(initiator, responder);
-        channel.setup([initiator, responder], adjudicator);
+        channel.setup([initiator, responder]);
         emit ChannelCreation(channel);
     }
 

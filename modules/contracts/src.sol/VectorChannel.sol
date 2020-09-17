@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 
 import "./shared/LibCommitment.sol";
 import "./shared/LibChannelCrypto.sol";
-import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./shared/IERC20.sol";
 
@@ -13,7 +12,7 @@ import "./shared/IERC20.sol";
 /// @author Arjun Bhuptani <arjun@connext.network>
 /// @notice
 /// (a) A proxy to this contract is deployed per-channel using the ChannelFactory.sol contract
-/// (b) Executes transactions dispute logic on a hardcoded Adjudicator.sol
+/// (b) Executes transactions dispute logic on a hardcoded channel manager
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
 contract VectorChannel is IVectorChannel {
@@ -28,7 +27,7 @@ contract VectorChannel is IVectorChannel {
 
     address[2] private _owners;
 
-    IAdjudicator public _adjudicator;
+    address public _manager;
 
     // Workaround, because I was not able to convince the compiler
     // to let me override the getter in the interface with the
@@ -43,24 +42,22 @@ contract VectorChannel is IVectorChannel {
     // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
 
-    modifier onlyAdjudicator {
-        require(msg.sender == address(_adjudicator), "msg.sender is not the adjudicator");
+    modifier onlyManager {
+        require(msg.sender == _manager, "msg.sender is not the manager");
         _;
     }
 
     /// @notice Contract constructor
     /// @param owners An array of unique addresses representing the participants of the channel
-    /// @param adjudicator Address of associated Adjudicator that we can call to
     function setup(
-        address[2] memory owners,
-        IAdjudicator adjudicator
+        address[2] memory owners
     )
         public
         override
     {
-        require(address(_adjudicator) == address(0), "Contract has already been setup");
+        require(_manager == address(0), "Contract has already been setup");
         _owners = owners;
-        _adjudicator = adjudicator;
+        _manager = msg.sender;
     }
 
     function getBalance(
@@ -101,14 +98,13 @@ contract VectorChannel is IVectorChannel {
         _latestDepositByAssetId[assetId].nonce++;
     }
 
-    // TODO gets called by the adjudicator contract in the event of a dispute to push out funds
-    function adjudicatorTransfer(
+    function managedTransfer(
         Balance memory balances,
         address assetId
     )
         public
         override
-        onlyAdjudicator
+        onlyManager
     {
         // TODO: This is quick-and-dirty to allow for basic testing.
         // We should add dealing with non-standard-conforming tokens,

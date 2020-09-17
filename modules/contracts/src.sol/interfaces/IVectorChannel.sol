@@ -2,15 +2,13 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./IAdjudicator.sol";
 import "./Types.sol";
 
 
 interface IVectorChannel {
 
     function setup(
-        address[2] memory owners,
-        IAdjudicator adjudicator
+        address[2] memory owners
     ) external;
 
     function getBalance(
@@ -27,7 +25,7 @@ interface IVectorChannel {
         // bytes memory signature
     ) external payable;
 
-    function adjudicatorTransfer(
+    function managedTransfer(
         Balance memory balances,
         address assetId
     ) external;
