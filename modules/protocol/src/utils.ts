@@ -12,7 +12,7 @@ import {
 } from "@connext/vector-types";
 import { TransferDefinition, VectorChannel } from "@connext/vector-contracts";
 import { BigNumber, Signer, utils } from "ethers";
-import { hashChannelCommitment, stringify } from "@connext/vector-utils";
+import { hashChannelCommitment } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -94,8 +94,6 @@ export async function generateSignedChannelCommitment(
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
   const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
-  console.log("4.10.2")
-  console.log(sig)
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
@@ -161,40 +159,22 @@ export const reconcileDeposit = async (
   latestDepositNonce: number,
   lockedBalance: string,
   assetId: string,
-): Promise<Balance> => {
+): Promise<{ balance: Balance; latestDepositNonce: number }> => {
   const channelContract = new Contract(channelAddress, VectorChannel.abi);
   const onchainBalance = await channelContract.function.getBalance(assetId);
   const latestDepositA = await channelContract.latestDepositByAssetId(assetId);
 
-  let balanceA = initialBalance.amount[0];
-  if(latestDepositA.nonce.gt(latestDepositNonce)) {
-    balanceA = BigNumber.from(initialBalance.amount[0]).add(latestDepositA.amount);
-  }
+  const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
+    ? latestDepositA.amount.add(initialBalance.amount[0]).toString()
+    : initialBalance.amount[0];
+
+  const balance = {
+    ...initialBalance,
+    amount: [balanceA, BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
+  };
 
   return {
-    ...initialBalance,
-    amount: [
-      balanceA.toString(),
-      BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()
-    ]
-  }
-
-/*
-  LatestDeposit memory latestDeposit = channel.latestDepositByAssetId(assetId);
-
-  Balance memory transfer;
-
-  transfer.to[0] = balance.to[0];
-  transfer.to[1] = balance.to[1];
-
-  transfer.amount[0] = balance.amount[0];
-
-  if (latestDeposit.nonce > ccs.latestDepositNonce) {
-      transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
-  }
-
-  transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
-
-  channel.adjudicatorTransfer(transfer, assetId);
-  */
-}
+    balance,
+    latestDepositNonce: latestDepositA.nonce.toNumber(),
+  };
+};
