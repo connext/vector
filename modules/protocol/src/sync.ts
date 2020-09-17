@@ -17,7 +17,7 @@ import {
 import { delay, getTransferNameFromState, hashTransferState } from "@connext/vector-utils";
 import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
-import Pino from "pino";
+import pino from "pino";
 
 import { isChannelMessage, isChannelState, isErrorMessage, generateSignedChannelCommitment } from "./utils";
 import { applyUpdate } from "./update";
@@ -36,7 +36,7 @@ export async function outbound(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   // NOTE: This is checked in `generateUpdate` as well, so this is unnecessary
   // but allows us to not have to force unwrap
@@ -189,7 +189,7 @@ export async function inbound(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<Result<FullChannelState | undefined, ChannelUpdateError>> {
   // If the message is from us, ignore
   if (message.from === signer.publicIdentifier) {
@@ -232,7 +232,7 @@ async function processChannelMessage(
   chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   const { from, data } = message;
   const requestedUpdate = data.update as ChannelUpdate<any>;

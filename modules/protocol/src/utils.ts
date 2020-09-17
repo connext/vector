@@ -8,13 +8,13 @@ import {
   CoreChannelState,
   VectorChannelMessage,
   VectorErrorMessage,
-  FullTransferState
+  FullTransferState,
 } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { Signer, utils } from "ethers";
 import { hashChannelCommitment } from "@connext/vector-utils";
 import { Evt } from "evt";
-import Pino from "pino";
+import pino from "pino";
 
 const { defaultAbiCoder } = utils;
 
@@ -105,7 +105,7 @@ export const create = async (
   transfer: FullTransferState,
   signer: Signer,
   bytecode?: string,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<boolean> => {
   const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
   const contract = new Contract(transfer.transferId, TransferDefinition.abi, signer);
@@ -126,7 +126,7 @@ export const resolve = async (
   transfer: FullTransferState,
   signer: Signer,
   bytecode?: string,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<Balance> => {
   const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
   const encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);

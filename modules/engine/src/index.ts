@@ -27,7 +27,7 @@ import {
   RpcRequestInput,
   EthAddressSchema,
 } from "@connext/vector-types";
-import Pino from "pino";
+import pino from "pino";
 import Ajv from "ajv";
 
 import { InvalidTransferType } from "./errors";
@@ -46,7 +46,7 @@ export class VectorEngine {
     private readonly vector: IVectorProtocol,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
-    private readonly logger: Pino.BaseLogger,
+    private readonly logger: pino.BaseLogger,
   ) {}
 
   static async connect(
@@ -56,7 +56,7 @@ export class VectorEngine {
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
-    logger: Pino.BaseLogger,
+    logger: pino.BaseLogger,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
       messaging,

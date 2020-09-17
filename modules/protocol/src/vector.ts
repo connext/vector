@@ -23,7 +23,7 @@ import {
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { Evt } from "evt";
-import Pino from "pino";
+import pino from "pino";
 
 import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
@@ -50,7 +50,7 @@ export class Vector implements IVectorProtocol {
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
     private readonly chainProviderUrls: ChainProviders,
-    private readonly logger: Pino.BaseLogger,
+    private readonly logger: pino.BaseLogger,
   ) {
     Object.entries(chainProviderUrls).forEach(([chainId, providerUrl]) => {
       this.chainProviders.set(parseInt(chainId), new providers.JsonRpcProvider(providerUrl));
@@ -63,7 +63,7 @@ export class Vector implements IVectorProtocol {
     storeService: IVectorStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
-    logger: Pino.BaseLogger,
+    logger: pino.BaseLogger,
   ): Promise<Vector> {
     const node = new Vector(messagingService, lockService, storeService, signer, chainProviders, logger);
 

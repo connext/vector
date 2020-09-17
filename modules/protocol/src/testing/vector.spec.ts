@@ -13,8 +13,7 @@ import { Vector } from "../vector";
 import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 import { MemoryStoreService } from "./services/store";
-import { expect } from "./utils/assert";
-import { config } from "./services/config";
+import { env, expect } from "./utils";
 
 describe("Vector.connect", () => {
   it("can be created", async () => {
@@ -24,7 +23,7 @@ describe("Vector.connect", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      config.chainProviders,
+      env.chainProviders,
       pino(),
     );
     expect(node).to.be.instanceOf(Vector);
@@ -49,7 +48,7 @@ describe("Vector.setup", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      config.chainProviders,
+      env.chainProviders,
       pino(),
     );
   });
@@ -167,7 +166,7 @@ describe("Vector.deposit", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      config.chainProviders,
+      env.chainProviders,
       pino(),
     );
   });
@@ -225,7 +224,7 @@ describe("Vector.create", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      config.chainProviders,
+      env.chainProviders,
       pino(),
     );
   });
@@ -338,7 +337,7 @@ describe("Vector.resolve", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      config.chainProviders,
+      env.chainProviders,
       pino(),
     );
   });

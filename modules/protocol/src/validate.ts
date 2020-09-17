@@ -10,7 +10,7 @@ import {
   UpdateParams,
 } from "@connext/vector-types";
 import { utils } from "ethers";
-import Pino from "pino";
+import pino from "pino";
 
 const { getAddress } = utils;
 
@@ -24,7 +24,7 @@ export async function validateParams<T extends UpdateType = any>(
   state: FullChannelState | undefined,
   storeService: IVectorStore,
   signer: IChannelSigner,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<ChannelUpdateError | undefined> {
   // Only in the case of setup should the state be undefined
   if (!state && params.type !== UpdateType.setup) {
@@ -73,7 +73,7 @@ export async function validateUpdate<T extends UpdateType = any>(
   state: FullChannelState,
   storeService: IVectorStore,
   providerUrl: string,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<Result<void, UpdateValidationError>> {
   // There is no need to validate items in the state since this will always
   // be a double signed state
@@ -137,7 +137,7 @@ export async function validateUpdate<T extends UpdateType = any>(
 function validateSetup(
   update: ChannelUpdate<"setup">,
   state: FullChannelState<"setup">,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate channel doesnt exist in storage
 
@@ -164,7 +164,7 @@ function validateSetup(
 function validateDeposit(
   update: ChannelUpdate<"deposit">,
   state: FullChannelState<"deposit">,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate the latest deposit nonce from chain
 
@@ -178,7 +178,7 @@ function validateDeposit(
 function validateCreate(
   update: ChannelUpdate<"create">,
   state: FullChannelState<"create">,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate transfer id
 
@@ -203,7 +203,7 @@ function validateCreate(
 function validateResolve(
   update: ChannelUpdate<"resolve">,
   state: FullChannelState<"resolve">,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Result<undefined, UpdateValidationError> {
   // Validate transfer id
 

@@ -58,9 +58,12 @@ then
 
       sleep 2
       echo "Re-running tests..."
-      checksum="`find $src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
-      npm run test -- $opts &
-      prev_checksum=$checksum
+
+      prev_checksum="`find $src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
+      if [[ -n "`which pino-pretty`" ]]
+      then (npm run test -- $opts | pino-pretty --colorize &)
+      else (npm run test -- $opts &)
+      fi
 
     # If no changes, do nothing
     else sleep 2

@@ -28,12 +28,12 @@ import { MerkleTree } from "merkletreejs";
 
 import { inbound, outbound } from "../sync";
 
-import { config } from "./services/config";
 import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";
+import { env } from "./utils";
 
 describe("inbound", () => {
-  const chainProviders = config.chainProviders;
+  const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const stateEvt = new Evt<FullChannelState>();
@@ -233,7 +233,7 @@ describe("inbound", () => {
 });
 
 describe("outbound", () => {
-  const chainProviders = config.chainProviders;
+  const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const stateEvt = new Evt<FullChannelState>();

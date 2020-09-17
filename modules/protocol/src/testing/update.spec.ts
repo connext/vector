@@ -6,7 +6,7 @@ import {
   ChannelUpdateError,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
-  LinkedTransferName
+  LinkedTransferName,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -30,10 +30,10 @@ import { expect } from "chai";
 import { constants, Contract, utils } from "ethers";
 import { MerkleTree } from "merkletreejs";
 
-import { applyUpdate, generateUpdate } from "../../src/update";
+import { applyUpdate, generateUpdate } from "../update";
 
-import { config } from "./services/config";
 import { MemoryStoreService } from "./services/store";
+import { env } from "./utils";
 
 const { hexlify, randomBytes } = utils;
 
@@ -41,7 +41,7 @@ const { hexlify, randomBytes } = utils;
 // final state. While this function *will* fail if validation fails,
 // the validation function is tested elsewhere
 describe("applyUpdate", () => {
-  const chainProviders = config.chainProviders;
+  const chainProviders = env.chainProviders;
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const provider = new JsonRpcProvider(providerUrl);
   const signers = Array(2)
@@ -260,7 +260,7 @@ describe("applyUpdate", () => {
 
 // TODO: unskip once channel creation is working again
 describe.skip("generateUpdate", () => {
-  const chainProviders = config.chainProviders;
+  const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const provider = new JsonRpcProvider(providerUrl);

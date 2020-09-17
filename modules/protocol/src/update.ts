@@ -21,7 +21,7 @@ import {
   Result,
   FullTransferState,
 } from "@connext/vector-types";
-import Pino from "pino";
+import pino from "pino";
 import { MerkleTree } from "merkletreejs";
 
 import { generateSignedChannelCommitment, resolve } from "./utils";
@@ -138,7 +138,7 @@ export async function generateUpdate<T extends UpdateType>(
   state: FullChannelState | undefined,
   storeService: IVectorStore,
   signer: IChannelSigner,
-  logger: Pino.BaseLogger = Pino(),
+  logger: pino.BaseLogger = pino(),
 ): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
   // Performs all update initiator-side validation
   const error = await validateParams(params, state, storeService, signer, logger);
@@ -356,7 +356,7 @@ async function generateResolveUpdate(
   params: UpdateParams<"resolve">,
   signer: IChannelSigner,
   transfers: FullTransferState[],
-  logger: Pino.BaseLogger,
+  logger: pino.BaseLogger,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
   // channel fields:
