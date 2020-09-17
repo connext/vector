@@ -518,7 +518,7 @@ function reconcilelockedBalance(
 
   // Get the appropriate locked value for the asset
   // The locked value array may have empty/undefined values
-  const locked = existingLocked[assetIdx] ?? { amount: "0" };
+  const locked = existingLocked[assetIdx] ?? "0";
 
   // Find the total amount locked in the transfer initial
   // state
@@ -530,7 +530,7 @@ function reconcilelockedBalance(
   const updated = [...existingLocked];
   // If there is no value at updated[idx], make sure to add it
   if (!updated[assetIdx]) {
-    updated[assetIdx] = "0" ;
+    updated[assetIdx] = "0";
   }
   updated[assetIdx] =
     type === UpdateType.create
