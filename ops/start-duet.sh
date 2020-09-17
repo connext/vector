@@ -115,11 +115,14 @@ VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/addresses/${chain_id_1}-${chain
 ## Node config
 
 node_port="8000"
+prisma_studio_port="5555"
 
 alice_port="8001"
+alice_prisma_port="5555"
 alice_database="database_a"
 
 bob_port="8002"
+bob_prisma_port="5556"
 bob_database="database_b"
 
 public_url="http://localhost:$alice_port"
@@ -180,6 +183,7 @@ services:
       VECTOR_SUGAR_DADDY: '$sugardaddy_mnemonic'
     ports:
       - '$alice_port:$node_port'
+      - '$alice_prisma_port:$prisma_studio_port'
 
   bob:
     $common
@@ -190,6 +194,7 @@ services:
       VECTOR_SUGAR_DADDY: '$sugardaddy_mnemonic'
     ports:
       - '$bob_port:$node_port'
+      - '$bob_prisma_port:$prisma_studio_port'
 
   $alice_database:
     $common
