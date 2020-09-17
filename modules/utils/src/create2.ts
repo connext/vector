@@ -1,6 +1,6 @@
 import { Contract, PublicIdentifier } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { providers, utils } from "ethers";
+import { getSignerAddressFromPublicIdentifier } from "./identifiers";
 
 /**
  * Computes the address of a counterfactual MinimumViableMultisig contract

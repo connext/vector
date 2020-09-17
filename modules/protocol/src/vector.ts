@@ -20,13 +20,12 @@ import {
   VectorMessage,
   SetupParams,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier, getCreate2MultisigAddress } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { Evt } from "evt";
 import pino from "pino";
 
-import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
 import { CreateParamsSchema, DepositParamsSchema, ResolveParamsSchema, SetupParamsSchema } from "./types";
 import { generateUpdate } from "./update";
