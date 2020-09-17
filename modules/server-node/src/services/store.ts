@@ -11,6 +11,7 @@ import {
   TransferState,
   ChannelCommitmentData,
   FullTransferState,
+  UpdateType,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
@@ -19,6 +20,7 @@ import {
   PrismaClient,
   Update,
   Balance as BalanceEntity,
+  UpdateCreateInput,
 } from "@prisma/client";
 
 const convertChannelEntityToFullChannelState = (
@@ -130,15 +132,10 @@ const convertChannelEntityToFullChannelState = (
 export class PrismaStore implements IVectorStore {
   public prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
+  constructor(private readonly dbUrl?: string) {
+    this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
   }
-  getChannelStateByCounterparty(counterpartyId: string): Promise<FullChannelState<any> | undefined> {
-    throw new Error("Method not implemented.");
-  }
-  getChannelStates(): Promise<FullChannelState<any>[]> {
-    throw new Error("Method not implemented.");
-  }
+
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
     throw new Error("Method not implemented.");
   }
@@ -173,9 +170,40 @@ export class PrismaStore implements IVectorStore {
     return convertChannelEntityToFullChannelState(channelEntity);
   }
 
-  async saveChannelState(channelState: FullChannelState<any>): Promise<void> {
+  async getChannelStateByParticipants(
+    participantA: string,
+    participantB: string,
+    chainId: number,
+  ): Promise<FullChannelState<any> | undefined> {
+    const channelEntity = await this.prisma.channel.findOne({
+      where: {
+        participantA_participantB_chainId: {
+          chainId,
+          participantA,
+          participantB,
+        },
+      },
+      include: { balances: true, latestUpdate: true },
+    });
+    if (!channelEntity) {
+      return undefined;
+    }
+
+    return convertChannelEntityToFullChannelState(channelEntity);
+  }
+
+  async getChannelStates(): Promise<FullChannelState<any>[]> {
+    const channelEntities = await this.prisma.channel.findMany({ include: { balances: true, latestUpdate: true } });
+    return channelEntities.map(convertChannelEntityToFullChannelState);
+  }
+
+  async saveChannelState(
+    channelState: FullChannelState,
+    commitment: ChannelCommitmentData,
+    transfer?: FullTransferState,
+  ): Promise<void> {
     // create the latest update db structure from the input data
-    let latestUpdateModel: any;
+    let latestUpdateModel: UpdateCreateInput | undefined;
     if (channelState.latestUpdate) {
       latestUpdateModel = {
         channelAddressId: channelState.channelAddress,
@@ -205,6 +233,31 @@ export class PrismaStore implements IVectorStore {
 
         // resolve transfer
         transferResolver: JSON.stringify(channelState.latestUpdate!.details.transferResolver),
+
+        // if create, add createdTransfer
+        createdTransfer:
+          transfer?.meta?.routingId && channelState.latestUpdate.type === UpdateType.create
+            ? {
+                connectOrCreate: {
+                  where: {
+                    routingId: transfer.meta.routingId,
+                  },
+                  create: {
+                    routingId: transfer.meta.routingId,
+                  },
+                },
+              }
+            : undefined,
+
+        // if resolve, add resolvedTransfer by routingId
+        resolvedTransfer:
+          transfer?.meta?.routingId && channelState.latestUpdate.type === UpdateType.resolve
+            ? {
+                connect: {
+                  routingId: transfer?.meta?.routingId,
+                },
+              }
+            : undefined,
       };
     }
 
@@ -273,7 +326,7 @@ export class PrismaStore implements IVectorStore {
                 nonce: channelState.latestUpdate!.nonce,
               },
             },
-            create: latestUpdateModel,
+            create: latestUpdateModel!,
           },
         },
         balances: {

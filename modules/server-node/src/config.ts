@@ -38,6 +38,14 @@ if (!chainProviders) {
   throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
 }
 
+const dbDb = process.env.VECTOR_PG_DATABASE;
+const dbHost = process.env.VECTOR_PG_HOST;
+const dbPort = process.env.VECTOR_PG_PORT;
+const dbUser = process.env.VECTOR_PG_USERNAME;
+const dbPassword = process.env.VECTOR_PG_PASSWORD;
+
+const dbUrl = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbDb}`;
+
 export const config = {
   authUrl,
   chainProviders,
@@ -46,4 +54,5 @@ export const config = {
   natsUrl,
   port: parseInt(process.env.VECTOR_PORT ?? "5040"),
   redisUrl,
+  dbUrl,
 };

@@ -1,9 +1,4 @@
-import {
-  FullChannelState,
-  IVectorStore,
-  ChannelCommitmentData,
-  FullTransferState,
-} from "@connext/vector-types";
+import { FullChannelState, IVectorStore, ChannelCommitmentData, FullTransferState } from "@connext/vector-types";
 
 export class MemoryStoreService implements IVectorStore {
   // Map<channelAddress, transferId[]>
@@ -30,11 +25,17 @@ export class MemoryStoreService implements IVectorStore {
     return Promise.resolve(state);
   }
 
-  getChannelStateByCounterparty(counterpartyIdentifier: string): Promise<FullChannelState | undefined> {
+  getChannelStateByParticipants(
+    participantA: string,
+    participantB: string,
+    chainId: number,
+  ): Promise<FullChannelState<any> | undefined> {
     return Promise.resolve(
-      [...this.channelStates.values()].find(
-        (v) => v.state.publicIdentifiers.findIndex((i) => i === counterpartyIdentifier) !== -1,
-      )?.state,
+      [...this.channelStates.values()].find((channelState) => {
+        channelState.state.participants[0] === participantA &&
+          channelState.state.participants[1] === participantB &&
+          channelState.state.networkContext.chainId === chainId;
+      })?.state,
     );
   }
 

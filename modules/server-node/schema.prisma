@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = ["sqlite", "postgresql"]
+  provider = ["sqlite"]
   url      = "file:./connext-store.db"
 }
 
@@ -40,14 +40,17 @@ model Channel {
   chainId                        Int
   providerUrl                    String
   latestUpdate                   Update
+
+  @@unique([publicIdentifierA, publicIdentifierB, chainId])
+  @@unique([participantA, participantB, chainId])
 }
 
 model Update {
   @@map(name: "update")
   // COMMON PARAMS
-  channelAddress    String?
-  channel           Channel? @relation(fields: [channelAddress], references: [channelAddress])
-  channelAddressId  String // required for ID so that relation can be removed
+  channelAddress   String?
+  channel          Channel? @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddressId String // required for ID so that relation can be removed
 
   fromIdentifier String
   toIdentifier   String
@@ -82,5 +85,24 @@ model Update {
 
   // setup inferred from channel params
 
+  // transfers are linked to their own object
+  createdTransfer  Transfer? @relation("CreatedTransfer")
+  resolvedTransfer Transfer? @relation("ResolvedTransfer")
+
   @@id([channelAddressId, nonce])
+}
+
+model Transfer {
+  @@map(name: "transfer")
+  routingId     String  @id
+  createUpdate  Update  @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
+  resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
+
+  // created will always exist
+  createUpdateChannelAddressId String
+  createUpdateNonce            Int
+
+  // resolved will not always exist
+  resolveUpdateChannelAddressId String?
+  resolveUpdateNonce            Int?
 }

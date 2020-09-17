@@ -12,7 +12,7 @@
         "source": "db"
       },
       "argument": "provider",
-      "value": "[\"sqlite\", \"postgresql\"]"
+      "value": "[\"sqlite\"]"
     },
     {
       "tag": "CreateArgument",
@@ -293,7 +293,7 @@
       "model": "Channel",
       "field": "latestUpdate",
       "type": "Update",
-      "arity": "Optional"
+      "arity": "Required"
     },
     {
       "tag": "CreateDirective",
@@ -317,6 +317,38 @@
       },
       "argument": "name",
       "value": "\"channel\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Channel",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[publicIdentifierA, publicIdentifierB, chainId]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Channel",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[participantA, participantB, chainId]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
     },
     {
       "tag": "CreateModel",
@@ -523,6 +555,70 @@
       "arity": "Optional"
     },
     {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "createdTransfer",
+      "type": "Transfer",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "createdTransfer"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "createdTransfer"
+        },
+        "directive": "relation"
+      },
+      "argument": "",
+      "value": "\"CreatedTransfer\""
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "resolvedTransfer",
+      "type": "Transfer",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "resolvedTransfer"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "resolvedTransfer"
+        },
+        "directive": "relation"
+      },
+      "argument": "",
+      "value": "\"ResolvedTransfer\""
+    },
+    {
       "tag": "CreateDirective",
       "location": {
         "path": {
@@ -567,6 +663,199 @@
       },
       "argument": "",
       "value": "[channelAddressId, nonce]"
+    },
+    {
+      "tag": "CreateModel",
+      "model": "Transfer"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "routingId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "routingId"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "createUpdate",
+      "type": "Update",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "name",
+      "value": "\"CreatedTransfer\""
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[createUpdateChannelAddressId, createUpdateNonce]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddressId, nonce]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "resolveUpdate",
+      "type": "Update",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "name",
+      "value": "\"ResolvedTransfer\""
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[resolveUpdateChannelAddressId, resolveUpdateNonce]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddressId, nonce]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "createUpdateChannelAddressId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "createUpdateNonce",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "resolveUpdateChannelAddressId",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "resolveUpdateNonce",
+      "type": "Int",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Transfer"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Transfer"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"transfer\""
     }
   ]
 }
