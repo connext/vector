@@ -10,8 +10,8 @@ import {
   VectorErrorMessage,
   FullTransferState,
 } from "@connext/vector-types";
-import { TransferDefinition } from "@connext/vector-contracts";
-import { Signer, utils } from "ethers";
+import { TransferDefinition, VectorChannel } from "@connext/vector-contracts";
+import { BigNumber, Signer, utils } from "ethers";
 import { hashChannelCommitment, stringify } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
@@ -93,9 +93,9 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
-  console.log(stringify({ ...unsigned, signatures: [] }))
   const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
   console.log("4.10.2")
+  console.log(sig)
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
@@ -154,3 +154,47 @@ export const resolve = async (
     amount: ret.amount.map((a) => a.toString()),
   };
 };
+
+export const reconcileDeposit = async (
+  channelAddress: string,
+  initialBalance: Balance,
+  latestDepositNonce: number,
+  lockedBalance: string,
+  assetId: string,
+): Promise<Balance> => {
+  const channelContract = new Contract(channelAddress, VectorChannel.abi);
+  const onchainBalance = await channelContract.function.getBalance(assetId);
+  const latestDepositA = await channelContract.latestDepositByAssetId(assetId);
+
+  let balanceA = initialBalance.amount[0];
+  if(latestDepositA.nonce.gt(latestDepositNonce)) {
+    balanceA = BigNumber.from(initialBalance.amount[0]).add(latestDepositA.amount);
+  }
+
+  return {
+    ...initialBalance,
+    amount: [
+      balanceA.toString(),
+      BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()
+    ]
+  }
+
+/*
+  LatestDeposit memory latestDeposit = channel.latestDepositByAssetId(assetId);
+
+  Balance memory transfer;
+
+  transfer.to[0] = balance.to[0];
+  transfer.to[1] = balance.to[1];
+
+  transfer.amount[0] = balance.amount[0];
+
+  if (latestDeposit.nonce > ccs.latestDepositNonce) {
+      transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
+  }
+
+  transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
+
+  channel.adjudicatorTransfer(transfer, assetId);
+  */
+}

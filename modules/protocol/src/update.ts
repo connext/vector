@@ -22,7 +22,7 @@ import {
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
 
-import { generateSignedChannelCommitment, resolve } from "./utils";
+import { generateSignedChannelCommitment, reconcileDeposit, resolve } from "./utils";
 import { validateParams } from "./validate";
 
 // Should return a state with the given update applied
@@ -244,31 +244,15 @@ async function generateDepositUpdate(
   // - latestDepositNonce
   // while the remaining fields are consistent
 
-  const { channelAddress } = state;
 
   // Initiating a deposit update should happen *after* money is
   // sent to the multisig. This means that the `latestDepositByAssetId`
   // will include the latest nonce needed
 
-  // TODO: PROPERLY CALCULATE DEPOSIT AMOUNT FROM CHAIN!!!
-
   // Determine the latest deposit nonce from chain using
   // the provided assetId from the params
-  const multisig = new Contract(channelAddress, VectorChannel.abi, signer.provider);
-  let deposit: { amount: string; nonce: string } | undefined;
-  try {
-    deposit = await multisig.latestDepositByAssetId(params.details.assetId);
-  } catch (e) {}
-  const latestDepositNonce = parseInt(deposit?.nonce.toString() ?? "0");
 
-  const depositBalance = {
-    to: state.participants,
-    amount:
-      signer.address === state.participants[0]
-        ? [deposit?.amount.toString() ?? "0", "0"]
-        : ["0", deposit?.amount.toString() ?? "0"],
-  };
-  const balance = getUpdatedChannelBalance(UpdateType.deposit, params.details.assetId, depositBalance, state);
+  const balance = await getUpdatedChannelBalance(UpdateType.deposit, params.details.assetId, state);
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
@@ -321,7 +305,7 @@ async function generateCreateUpdate(
   const merkle = new MerkleTree(hashes, hashCoreTransferState);
 
   // Create the update from the user provided params
-  const balance = getUpdatedChannelBalance(UpdateType.create, assetId, transferInitialState.balance, state);
+  const balance = getUpdatedChannelBalance(UpdateType.create, assetId, state, transferInitialState.balance);
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
@@ -424,18 +408,26 @@ function generateBaseUpdate<T extends UpdateType>(
   };
 }
 
-function getUpdatedChannelBalance(
+async function getUpdatedChannelBalance(
   type: typeof UpdateType.create | typeof UpdateType.resolve | typeof UpdateType.deposit,
   assetId: string,
-  balanceToReconcile: Balance,
   state: FullChannelState,
-): Balance {
+  balanceToReconcile?: Balance,
+): Promise<Balance> {
   // Get the existing balances to update
   const assetIdx = state.assetIds.findIndex((a) => a === assetId);
   if (assetIdx === -1 && type !== UpdateType.deposit) {
     throw new Error(`Asset id not found in channel ${assetId}`);
   }
+  if (!balanceToReconcile && type !== UpdateType.deposit) {
+    throw new Error(`No balanceToReconcile was passed into getUpdatedChannelBalance`)
+  }
   const existing = state.balances[assetIdx] || { to: state.participants, amount: ["0", "0"] };
+
+  if(type === UpdateType.deposit) {
+    const existingLockedBalance = state.lockedBalance[assetIdx] || "0";
+    return reconcileDeposit(state.channelAddress, existing, state.latestDepositNonce, existingLockedBalance, assetId);
+  }
 
   // Create a helper to update some existing balance amount
   // based on the transfer amount using the update type

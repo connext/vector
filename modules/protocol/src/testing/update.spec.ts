@@ -1,4 +1,4 @@
-import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
+import { LinkedTransfer, ChannelFactory, VectorChannel } from "@connext/vector-contracts";
 import {
   IVectorStore,
   JsonRpcProvider,
@@ -6,7 +6,6 @@ import {
   ChannelUpdateError,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
-  LinkedTransferName,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -25,9 +24,10 @@ import {
   createTestUpdateParams,
   ChannelSigner,
   hashTransferState,
+  stringify
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import { constants, Contract, utils } from "ethers";
+import { BigNumber, constants, Contract, utils } from "ethers";
 import { MerkleTree } from "merkletreejs";
 
 import { applyUpdate, generateUpdate } from "../update";
@@ -311,8 +311,13 @@ describe.only("generateUpdate", () => {
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });
 
-  it.only("should work for deposit", async () => {
-    // First, deploy a multisig
+  it.only("should work for deposit for Alice with eth", async () => {
+    const assetId = constants.AddressZero;
+
+    // Send Alice's deposit to chain
+    const channelContract = new Contract(channelAddress, VectorChannel.abi, provider);
+    channelContract.depositA(assetId, BigNumber.from("10"), {value: BigNumber.from("10")});
+
     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       nonce: 1,
       balances: [],
@@ -323,14 +328,17 @@ describe.only("generateUpdate", () => {
     await store.saveChannelState(state, {} as any);
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { channelAddress },
+      details: { channelAddress, assetId },
     });
+    console.log(`params: ${stringify(params)}`)
     const update = (await generateUpdate(params, state, store, signers[0])).getValue();
+    console.log(`update: ${stringify(update)}`)
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       details: { latestDepositNonce: 0 },
       nonce: state.nonce + 1,
     });
+    console.log(`generatedUpdate: ${stringify(expected)}`)
     expect(update).to.containSubset(expected);
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });
