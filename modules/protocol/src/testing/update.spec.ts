@@ -90,7 +90,7 @@ describe("applyUpdate", () => {
     });
   });
 
-  it("should work for deposit (adding a new assetId)", async () => {
+  it.skip("should work for deposit (adding a new assetId)", async () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       nonce: 1,
       balances: [],
@@ -120,7 +120,7 @@ describe("applyUpdate", () => {
     });
   });
 
-  it("should work for deposit (existing assetId)", async () => {
+  it.skip("should work for deposit (existing assetId)", async () => {
     const initialBalanceAmt = ["1", "0"];
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,

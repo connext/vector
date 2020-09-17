@@ -4,7 +4,7 @@ import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers"
 import { Adjudicator, VectorChannel, ChannelFactory } from "../../artifacts";
 import { expect, provider } from "../utils";
 
-describe.only("ChannelFactory", () => {
+describe("ChannelFactory", () => {
   let deployer: Wallet;
   let channelFactory: Contract;
   let channelMastercopy: Contract;

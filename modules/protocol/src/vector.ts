@@ -85,7 +85,20 @@ export class Vector implements IVectorProtocol {
   // separate out this function so that we can atomically return and release the lock
   private async lockedOperation(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
     const state = await this.storeService.getChannelState(params.channelAddress);
-    const updateRes = await generateUpdate(params, state, this.storeService, this.signer, this.logger);
+
+    // Connect the signer if possible
+    if (state && this.chainProviders.has(state.networkContext.chainId)) {
+      await this.signer.connectProvider(this.chainProviders.get(state.networkContext.chainId)!);
+    }
+
+    // Generate the update
+    const updateRes = await generateUpdate(
+      params,
+      state,
+      this.storeService,
+      this.signer,
+      this.logger,
+    );
     if (updateRes.isError) {
       this.logger.error({ method: "lockedOperation", variable: "updateRes", error: updateRes.getError()?.message });
       return Result.fail(updateRes.getError()!);

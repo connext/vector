@@ -10,9 +10,9 @@ import {
   VectorErrorMessage,
   FullTransferState,
 } from "@connext/vector-types";
-import { TransferDefinition, VectorChannel } from "@connext/vector-contracts";
-import { BigNumber, Signer, utils } from "ethers";
-import { hashChannelCommitment, stringify } from "@connext/vector-utils";
+import { TestToken, TransferDefinition, VectorChannel } from "@connext/vector-contracts";
+import { BigNumber, constants, Signer, utils } from "ethers";
+import { hashChannelCommitment } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -159,19 +159,34 @@ export const reconcileDeposit = async (
   latestDepositNonce: number,
   lockedBalance: string,
   assetId: string,
-  signer: IChannelSigner
+  signer: IChannelSigner,
 ): Promise<{ balance: Balance; latestDepositNonce: number }> => {
   const channelContract = new Contract(channelAddress, VectorChannel.abi, signer);
-  const onchainBalance = await channelContract.getBalance(assetId);
-  const latestDepositA = await channelContract.latestDepositByAssetId(assetId);
+  let onchainBalance: BigNumber;
+  try {
+    onchainBalance = await channelContract.getBalance(assetId);
+  } catch (e) {
+    // Likely means channel contract was not deployed
+    onchainBalance = assetId === constants.AddressZero
+      ? await signer.provider!.getBalance(channelAddress)
+      : await new Contract(assetId, TestToken.abi, signer).balanceOf(channelAddress);
+  }
 
-  const balanceA: string = latestDepositA.nonce.gt(latestDepositNonce)
-    ? latestDepositA.amount.add(initialBalance.amount[0]).toString()
-    : initialBalance.amount[0];
+  let latestDepositA: { nonce: BigNumber; amount: BigNumber; };
+  try {
+    latestDepositA = await channelContract.latestDepositByAssetId(assetId);
+  } catch (e) {
+    // Channel contract was not deployed, use 0 value
+    latestDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) }
+  }
+
+  const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
+    ? latestDepositA.amount.add(initialBalance.amount[0])
+    : BigNumber.from(initialBalance.amount[0]);
 
   const balance = {
     ...initialBalance,
-    amount: [balanceA, BigNumber.from(onchainBalance).sub(BigNumber.from(balanceA).add(lockedBalance)).toString()],
+    amount: [balanceA.toString(), BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
   };
 
   return {

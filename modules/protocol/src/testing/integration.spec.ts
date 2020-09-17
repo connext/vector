@@ -9,6 +9,7 @@ import { MemoryLockService } from "./services/lock";
 import { MemoryMessagingService } from "./services/messaging";
 import { MemoryStoreService } from "./services/store";
 import { env, expect, getTestLoggers } from "./utils";
+import { setupChannel } from "./utils/channel";
 
 const testName = "Happy Integrations";
 const { log } = getTestLoggers(testName);
@@ -18,7 +19,8 @@ describe(testName, () => {
 
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
-  const wallet = env.sugarDaddy.connect(new JsonRpcProvider(providerUrl));
+  const provider = new JsonRpcProvider(providerUrl);
+  const wallet = env.sugarDaddy.connect(provider);
 
   beforeEach(async () => {
     const messaging = new MemoryMessagingService();
@@ -37,7 +39,7 @@ describe(testName, () => {
       messaging,
       lock,
       new MemoryStoreService(),
-      getRandomChannelSigner(),
+      getRandomChannelSigner(providerUrl),
       env.chainProviders,
       log.child({ participant: "Bob" }),
     );
@@ -49,44 +51,22 @@ describe(testName, () => {
   });
 
   it("should setup a channel between Alice and Bob", async () => {
-    const channel = await alice.setup({
-      counterpartyIdentifier: bob.publicIdentifier,
-      networkContext: {
-        adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
-        chainId,
-        channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-        providerUrl,
-        vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
-      },
-      timeout: "3600",
-    });
-    expect(channel.isError).to.not.be.ok;
+    const channel = await setupChannel(alice, bob);
 
-    const aliceChannel = await alice.getChannelState(channel.getValue().channelAddress);
-    const bobChannel = await bob.getChannelState(channel.getValue().channelAddress);
+    const aliceChannel = await alice.getChannelState(channel.channelAddress);
+    const bobChannel = await bob.getChannelState(channel.channelAddress);
 
     expect(aliceChannel).to.deep.eq(bobChannel);
   });
 
-  // TODO: the following deposit test cases are *extremely* simple tests
+  // NOTE: the following deposit test cases are *extremely* simple tests
   // and do not represent a complete deposit tests
   it("should deposit eth for Alice (depositA)", async () => {
     // Setup the channel
-    const channel = await alice.setup({
-      counterpartyIdentifier: bob.publicIdentifier,
-      networkContext: {
-        adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
-        chainId,
-        channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-        providerUrl,
-        vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
-      },
-      timeout: "3600",
-    });
-    expect(channel.isError).to.not.be.ok;
+    const channel = await setupChannel(alice, bob);
 
-    const aliceChannel = await alice.getChannelState(channel.getValue().channelAddress);
-    const bobChannel = await bob.getChannelState(channel.getValue().channelAddress);
+    const aliceChannel = await alice.getChannelState(channel.channelAddress);
+    const bobChannel = await bob.getChannelState(channel.channelAddress);
 
     expect(aliceChannel).to.deep.eq(bobChannel);
 
@@ -95,14 +75,11 @@ describe(testName, () => {
 
     // Deploy the multisig with a deposit
     const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, wallet);
-    const tx = await factory.createChannelAndDepositA(
-      alice.signerAddress,
-      bob.signerAddress,
-      constants.AddressZero,
-      depositAmount,
-      { value: depositAmount.toString(), gasLimit: BigNumber.from(9_000_000) },
-    );
+    const tx = await factory.createChannelAndDepositA(alice.signerAddress, bob.signerAddress, assetId, depositAmount, {
+      value: depositAmount,
+    });
     await tx.wait();
+    expect(await provider.getBalance(aliceChannel!.channelAddress)).to.be.eq(depositAmount);
 
     // Reconcile the depositA
     const depositRet = await alice.deposit({
@@ -111,12 +88,14 @@ describe(testName, () => {
     });
     expect(depositRet.isError).to.be.false;
 
-    const aliceDeposited = await alice.getChannelState(channel.getValue().channelAddress);
-    expect(aliceDeposited?.balances).to.containSubset({
-      to: aliceChannel?.participants,
-      amount: [depositAmount.toString(), "0"],
-    });
-    expect(aliceDeposited?.latestDepositNonce).to.be.eq(aliceChannel!.nonce + 1);
+    const aliceDeposited = await alice.getChannelState(channel.channelAddress);
+    expect(aliceDeposited?.balances).to.containSubset([
+      {
+        to: aliceChannel?.participants,
+        amount: [depositAmount.toString(), "0"],
+      },
+    ]);
+    expect(aliceDeposited?.latestDepositNonce).to.be.eq(aliceChannel!.latestDepositNonce + 1);
     expect(aliceDeposited?.assetIds).to.containSubset([constants.AddressZero]);
     expect(await bob.getChannelState(aliceChannel!.channelAddress)).to.containSubset(aliceDeposited);
   });
