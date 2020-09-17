@@ -123,7 +123,7 @@ contract VectorChannel is IVectorChannel {
         }
     }
 
-  /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
+    /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
     /// This transaction is a message CALL
     /// @param to The destination address of the message call
     /// @param value The amount of ETH being forwarded in the message call
