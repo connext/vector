@@ -3,7 +3,6 @@ import {
   getSignerAddressFromPublicIdentifier,
   hashCoreTransferState,
   hashTransferState,
-  getTransferNameFromState,
   getTransferId,
 } from "@connext/vector-utils";
 import { Contract, BigNumber, constants } from "ethers";
@@ -174,13 +173,7 @@ export async function generateUpdate<T extends UpdateType>(
           ),
         );
       }
-      unsigned = await generateResolveUpdate(
-        state!,
-        params as UpdateParams<"resolve">,
-        signer,
-        transfers,
-        logger,
-      );
+      unsigned = await generateResolveUpdate(state!, params as UpdateParams<"resolve">, signer, transfers, logger);
       break;
     }
     default: {
@@ -317,14 +310,13 @@ async function generateCreateUpdate(
     transferDefinition,
     transferEncodings: encodings,
     transferTimeout: timeout,
-    name: getTransferNameFromState(transferInitialState),
-    initialStateHash: hashGenericTransferState(transferInitialState),
+    initialStateHash: hashTransferState(transferInitialState, encodings[0]),
     transferState: transferInitialState,
     adjudicatorAddress: state.networkContext.adjudicatorAddress,
     chainId: state.networkContext.chainId,
   };
   const transferHash = hashCoreTransferState(transferState);
-  const hashes: Buffer[] = [...transfers, transferState].map(state => {
+  const hashes: Buffer[] = [...transfers, transferState].map((state) => {
     const hash = hashCoreTransferState(state);
     return Buffer.from(hash);
   });
@@ -372,7 +364,7 @@ async function generateResolveUpdate(
   }
   const hashes: Buffer[] = transfers
     .filter((x) => x.transferId !== params.details.transferId)
-    .map(state => {
+    .map((state) => {
       const hash = hashCoreTransferState(state);
       return Buffer.from(hash);
     });
@@ -432,10 +424,6 @@ function generateBaseUpdate<T extends UpdateType>(
     fromIdentifier: signer.publicIdentifier,
     toIdentifier: publicIdentifiers.find((id) => id !== signer.publicIdentifier)!,
   };
-}
-
-function hashGenericTransferState(state: any): string {
-  return hashTransferState(getTransferNameFromState(state), state);
 }
 
 function getUpdatedChannelBalance(

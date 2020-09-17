@@ -82,16 +82,12 @@ export class Vector implements IVectorProtocol {
     return this.signer.publicIdentifier;
   }
 
-  // Primary protocol execution from the leader side
-  private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
-    this.logger.info({ method: "executeUpdate", step: "start", params });
-
-    const key = await this.lockService.acquireLock(params.channelAddress);
+  // separate out this function so that we can atomically return and release the lock
+  private async lockedOperation(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
     const state = await this.storeService.getChannelState(params.channelAddress);
     const updateRes = await generateUpdate(params, state, this.storeService, this.signer, this.logger);
     if (updateRes.isError) {
-      await this.lockService.releaseLock(params.channelAddress, key);
-      this.logger.error({ method: "executeUpdate", variable: "updateRes", error: updateRes.getError()?.message });
+      this.logger.error({ method: "lockedOperation", variable: "updateRes", error: updateRes.getError()?.message });
       return Result.fail(updateRes.getError()!);
     }
     const outboundRes = await sync.outbound(
@@ -107,8 +103,7 @@ export class Vector implements IVectorProtocol {
     );
 
     if (outboundRes.isError) {
-      await this.lockService.releaseLock(params.channelAddress, key);
-      this.logger.error({ method: "executeUpdate", error: outboundRes.getError()?.message });
+      this.logger.error({ method: "lockedOperation", variable: "outboundRes", error: outboundRes.getError()?.message });
       return outboundRes;
     }
 
@@ -116,7 +111,18 @@ export class Vector implements IVectorProtocol {
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
       updatedChannelState,
     });
+
+    return outboundRes;
+  }
+
+  // Primary protocol execution from the leader side
+  private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
+    this.logger.info({ method: "executeUpdate", step: "start", params });
+
+    const key = await this.lockService.acquireLock(params.channelAddress);
+    const outboundRes = this.lockedOperation(params);
     await this.lockService.releaseLock(params.channelAddress, key);
+
     return outboundRes;
   }
 

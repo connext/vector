@@ -135,7 +135,6 @@ export interface CoreTransferState {
 }
 
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
-  name: T;
   adjudicatorAddress: string; // networkContext?
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding

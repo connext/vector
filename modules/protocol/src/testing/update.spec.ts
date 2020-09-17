@@ -6,7 +6,7 @@ import {
   ChannelUpdateError,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
-  LinkedTransferName
+  LinkedTransferName,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -17,7 +17,6 @@ import {
   createTestChannelStateWithSigners,
   createTestChannelUpdateWithSigners,
   createTestLinkedTransferState,
-  hashLinkedTransferState,
   createCoreTransferState,
   hashCoreTransferState,
   createLinkedHash,
@@ -25,6 +24,7 @@ import {
   encodeLinkedTransferState,
   createTestUpdateParams,
   ChannelSigner,
+  hashTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { constants, Contract, utils } from "ethers";
@@ -164,7 +164,9 @@ describe("applyUpdate", () => {
     });
 
     // Create the transfer update
-    const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
+    const coreState = createCoreTransferState({
+      initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
+    });
     const hash = Buffer.from(hashCoreTransferState(coreState));
     const tree = new MerkleTree([hash], hashCoreTransferState);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
@@ -219,7 +221,9 @@ describe("applyUpdate", () => {
     });
 
     // Create the transfer update
-    const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
+    const coreState = createCoreTransferState({
+      initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
+    });
     const emptyTree = new MerkleTree([], hashCoreTransferState);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
       nonce: state.nonce + 1,
@@ -242,7 +246,6 @@ describe("applyUpdate", () => {
       adjudicatorAddress: state.networkContext.adjudicatorAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-      name: LinkedTransferName
     });
 
     const updateRet = await applyUpdate(update, state, store);
@@ -420,7 +423,7 @@ describe.skip("generateUpdate", () => {
     // Create the transfer core
     const coreState = createCoreTransferState({
       initialBalance: transferInitialState.balance,
-      initialStateHash: hashLinkedTransferState(transferInitialState),
+      initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
       channelAddress,
       transferDefinition: linkedTransferDefinition,
     });
@@ -443,7 +446,6 @@ describe.skip("generateUpdate", () => {
       adjudicatorAddress: state.networkContext.adjudicatorAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-      name: LinkedTransferName
     });
 
     // Get expected values

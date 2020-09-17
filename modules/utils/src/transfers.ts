@@ -58,58 +58,13 @@ export const encodeCoreTransferState = (state: CoreTransferState): string => {
   return defaultAbiCoder.encode([CoreTransferStateEncoding], [state]);
 };
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export const isWithdrawState = (state: any): state is WithdrawState => {
-  if (!state?.balance) return false;
-  if (typeof state?.initiatorSignature !== "string") return false;
-  if (!state?.signers || !Array.isArray(state?.signers)) return false;
-  if (typeof state?.data !== "string") return false;
-  if (typeof state?.nonce !== "string") return false;
-  if (typeof state?.fee !== "string") return false;
-  return true;
-};
-
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export const isTransferState = (state: any): state is TransferState => {
-  return isLinkedTransferState(state) || isWithdrawState(state);
-};
-
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export const getTransferNameFromState = (state: any): TransferName => {
-  if (isLinkedTransferState(state)) return LinkedTransferName;
-  if (isWithdrawState(state)) return WithdrawName;
-  throw new Error(`Unable to determine transfer name from state ${stringify(state)}`);
-};
-
-export function hashTransferState(name: TransferName, state: TransferNameToStateMap[typeof name]): string {
-  switch (name) {
-    case TransferName.LinkedTransfer: {
-      return hashLinkedTransferState(state as LinkedTransferState);
-    }
-    case TransferName.Withdraw: {
-      return hashWithdrawState(state as WithdrawState);
-    }
-    default: {
-      throw new Error(`Unrecognized transfer name: ${name}`);
-    }
-  }
+export function hashTransferState(state: TransferState, encoding: string): string {
+  return keccak256(solidityPack(["bytes"], [defaultAbiCoder.encode([encoding], [state])]));
 }
 
 // TODO: how to include the merkle proof in the hash?
 export const hashCoreTransferState = (state: CoreTransferState): string => {
   return keccak256(solidityPack(["bytes"], [encodeCoreTransferState(state)]));
-};
-
-// TODO: correct implementation?
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const hashLinkedTransferState = (state: LinkedTransferState): string => {
-  return keccak256(solidityPack(["bytes"], [encodeLinkedTransferState(state)]));
-};
-
-// TODO: correct implementation?
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const hashWithdrawState = (state: WithdrawState): string => {
-  return keccak256(solidityPack(["bytes"], [encodeWithdrawTransferState(state)]));
 };
 
 export const createLinkedHash = (preImage: string): string => {
