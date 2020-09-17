@@ -1,6 +1,6 @@
 import { ChannelFactory } from "@connext/vector-contracts";
 import { JsonRpcProvider } from "@connext/vector-types";
-import { ChannelSigner, getRandomChannelSigner } from "@connext/vector-utils";
+import { ChannelSigner, getRandomChannelSigner, getGasPrice } from "@connext/vector-utils";
 import { BigNumber, constants, Contract } from "ethers";
 
 import { Vector } from "../vector";
@@ -18,7 +18,8 @@ describe(testName, () => {
 
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
-  const wallet = env.sugarDaddy.connect(new JsonRpcProvider(providerUrl));
+  const provider = new JsonRpcProvider(providerUrl);
+  const wallet = env.sugarDaddy.connect(provider);
 
   beforeEach(async () => {
     const messaging = new MemoryMessagingService();
@@ -68,9 +69,9 @@ describe(testName, () => {
     expect(aliceChannel).to.deep.eq(bobChannel);
   });
 
-  // TODO: the following deposit test cases are *extremely* simple tests
+  // NOTE: the following deposit test cases are *extremely* simple tests
   // and do not represent a complete deposit tests
-  it("should deposit eth for Alice (depositA)", async () => {
+  it.only("should deposit eth for Alice (depositA)", async () => {
     // Setup the channel
     const channel = await alice.setup({
       counterpartyIdentifier: bob.publicIdentifier,
@@ -94,15 +95,20 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
 
     // Deploy the multisig with a deposit
-    const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, wallet);
-    const tx = await factory.createChannelAndDepositA(
-      alice.signerAddress,
-      bob.signerAddress,
-      constants.AddressZero,
-      depositAmount,
-      { value: depositAmount.toString(), gasLimit: BigNumber.from(9_000_000) },
-    );
+    console.log(`proxy addr`, env.chainAddresses[chainId].ChannelFactory.address);
+    console.log(`initiator addr`, alice.signerAddress);
+    console.log(`responder addr`, bob.signerAddress);
+    const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi);
+    const tx = await factory
+      .connect(wallet)
+      .createChannel(alice.signerAddress, bob.signerAddress);
+    // .createChannelAndDepositA(alice.signerAddress, bob.signerAddress, constants.AddressZero, depositAmount, {
+    //   value: depositAmount,
+    //   gasLimit: BigNumber.from(500_000),
+    //   gasPrice: getGasPrice(new JsonRpcProvider(providerUrl)),
+    // });
     await tx.wait();
+    expect(await provider.getBalance(aliceChannel!.channelAddress)).to.be.eq(depositAmount);
 
     // Reconcile the depositA
     const depositRet = await alice.deposit({
