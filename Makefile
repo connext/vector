@@ -153,9 +153,10 @@ watch-engine: protocol
 	bash ops/test-unit.sh engine watch 1341
 
 test-server-node: node
-	bash ops/test-unit.sh server-node test 1342
+	bash ops/test-server-node.sh
+# TODO
 watch-server-node: node
-	bash ops/test-unit.sh server-node watch 1342
+	bash ops/test-server-node.sh
 
 # Integration Tests
 

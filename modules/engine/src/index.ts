@@ -77,10 +77,10 @@ export class VectorEngine {
     this.vector.on(
       ProtocolEventName.CHANNEL_UPDATE_EVENT,
       (data) => {
-        if (!data.updatedChannelState.meta.encryptedPreImage) {
+        if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
         }
       },
-      (data) => data.updatedChannelState.meta.recipient === this.vector.publicIdentifier,
+      (data) => data.updatedChannelState.latestUpdate?.details.meta.recipient === this.vector.publicIdentifier,
     );
 
     // subscribe to isAlive

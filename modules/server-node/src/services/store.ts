@@ -2,7 +2,6 @@ import {
   FullChannelState,
   CoreTransferState,
   Balance,
-  lockedBalanceType,
   CreateUpdateDetails,
   DepositUpdateDetails,
   ResolveUpdateDetails,
@@ -33,7 +32,7 @@ const convertChannelEntityToFullChannelState = (
   const assetIds = channelEntity!.assetIds.split(",");
 
   // get balances and locked value for each assetId
-  const lockedBalance: lockedBalanceType[] = [];
+  const lockedBalance: string[] = [];
   const balances: Balance[] = assetIds.map((assetId) => {
     const balanceA = channelEntity.balances.find(
       (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantA,
@@ -41,7 +40,7 @@ const convertChannelEntityToFullChannelState = (
     const balanceB = channelEntity.balances.find(
       (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
-    lockedBalance.push({ amount: balanceA!.lockedBalance });
+    lockedBalance.push(balanceA!.lockedBalance);
     return {
       amount: [balanceA!.amount, balanceB!.amount],
       to: [balanceA!.to, balanceB!.to],
@@ -291,14 +290,14 @@ export class PrismaStore implements IVectorStore {
                 ...create,
                 {
                   amount: channelState.balances[index].amount[0],
-                  lockedBalance: channelState.lockedBalance[index].amount,
+                  lockedBalance: channelState.lockedBalance[index],
                   participant: channelState.participants[0],
                   to: channelState.balances[index].to[0],
                   assetId,
                 },
                 {
                   amount: channelState.balances[index].amount[1],
-                  lockedBalance: channelState.lockedBalance[index].amount,
+                  lockedBalance: channelState.lockedBalance[index],
                   participant: channelState.participants[1],
                   to: channelState.balances[index].to[1],
                   assetId,
@@ -337,14 +336,14 @@ export class PrismaStore implements IVectorStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[0],
-                    lockedBalance: channelState.lockedBalance[index].amount,
+                    lockedBalance: channelState.lockedBalance[index],
                     participant: channelState.participants[0],
                     to: channelState.balances[index].to[0],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[0],
-                    lockedBalance: channelState.lockedBalance[index].amount,
+                    lockedBalance: channelState.lockedBalance[index],
                     to: channelState.balances[index].to[0],
                   },
                   where: {
@@ -358,14 +357,14 @@ export class PrismaStore implements IVectorStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[1],
-                    lockedBalance: channelState.lockedBalance[index].amount,
+                    lockedBalance: channelState.lockedBalance[index],
                     participant: channelState.participants[1],
                     to: channelState.balances[index].to[1],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[1],
-                    lockedBalance: channelState.lockedBalance[index].amount,
+                    lockedBalance: channelState.lockedBalance[index],
                     to: channelState.balances[index].to[1],
                   },
                   where: {
