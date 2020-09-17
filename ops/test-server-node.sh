@@ -3,94 +3,120 @@ set -e
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
+registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 
 # make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-stack="${1:-node}"
-cmd="${2:-test}"
+####################
+# Load env vars
 
-bash $root/ops/start-$stack.sh
+VECTOR_ENV="${VECTOR_ENV:-dev}"
 
-# If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
-if [[ -t 0 && -t 1 && -t 2 ]]
-then interactive="--interactive --tty"
-else echo "Running in non-interactive mode"
+# Load the default env
+if [[ -f "${VECTOR_ENV}.env" ]]
+then source "${VECTOR_ENV}.env"
 fi
 
-source $root/dev.env
+# Load instance-specific env vars & overrides
+if [[ -f ".env" ]]
+then source .env
+fi
+
+# log level alias can override default for easy `LOG_LEVEL=5 make start`
+VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
 
 ########################################
-## Launch test node
+## Docker registry & image version config
 
-postgres_db="${project}"
-postgres_host="${project}_database"
-postgres_password="$project"
-postgres_port="5432"
-postgres_user="$project"
+version="latest"
 
-extra_env="--env=VECTOR_PG_DATABASE='$postgres_db'
-    --env=VECTOR_PG_HOST='$postgres_host'
-    --env=VECTOR_PG_PASSWORD='$postgres_password'
-    --env=VECTOR_PG_PORT='$postgres_port'
-    --env=VECTOR_PG_USERNAME='$postgres_user'"
+####################
+# Misc Config
 
+redis_image="redis:5-alpine";
+bash $root/ops/pull-images.sh $redis_image > /dev/null
+
+# to access from other containers
+redis_url="redis://redis:6379"
+
+common="networks:
+      - '$project'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '100m'"
+
+########################################
+## Database config
+
+database_image="${project}_database:$version"
+bash $root/ops/pull-images.sh $database_image > /dev/null
+
+pg_port="5432"
+
+########################################
+# Global services / chain provider config
+
+alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
+bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
+sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+
+auth_url="http://auth:5040"
+bash $root/ops/start-global.sh
+
+VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
+VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
+VECTOR_MNEMONIC_FILE="/run/secrets/${project}_mnemonic_dev"
+
+########################################
+## Node config
+
+node_port="8000"
+prisma_studio_port="5555"
+
+public_url="http://localhost:$alice_port"
+
+####################
+# Launch stack
 function cleanup {
-  echo "Tests finished, stopping evm.."
+  echo "Tests finished, stopping database.."
   docker container stop $postgres_host 2> /dev/null || true
 }
 trap cleanup EXIT SIGINT SIGTERM
-
+postgres_host="${project}_database"
 echo "Starting $postgres_host.."
+  docker run \
+    --detach \
+    --env="POSTGRES_DB=$project" \
+    --env="POSTGRES_PASSWORD=$project" \
+    --env="POSTGRES_USER=$project" \
+    --name="$postgres_host" \
+    --network="$project" \
+    --rm \
+    --tmpfs="/var/lib/postgresql/data" \
+    postgres:12-alpine
+
+echo "postgresql://$project:$project@${project}_database:$pg_port/$project"
 docker run \
-  --detach \
-  --env="POSTGRES_DB=$postgres_db" \
-  --env="POSTGRES_PASSWORD=$postgres_password" \
-  --env="POSTGRES_USER=$postgres_user" \
-  --name="$postgres_host" \
-  --network="$network" \
+  $interactive \
+  --entrypoint="bash" \
+  --env="VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN" \
+  --env="VECTOR_AUTH_URL=$auth_url" \
+  --env="VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS" \
+  --env="VECTOR_CONTRACT_ADDRESSES=$VECTOR_CONTRACT_ADDRESSES" \
+  --env="VECTOR_ENV=$VECTOR_ENV" \
+  --env="VECTOR_LOG_LEVEL=$VECTOR_LOG_LEVEL" \
+  --env="VECTOR_NATS_SERVERS=$nats://nats:$nats_port" \
+  --env="VECTOR_DATABASE_URL=postgresql://$project:$project@${project}_database:$pg_port/$project" \
+  --env="VECTOR_MNEMONIC=$alice_mnemonic" \
+  --env="VECTOR_PORT=$node_port" \
+  --env="VECTOR_REDIS_URL=$redis_url" \
+  --env="VECTOR_SUGAR_DADDY=$sugardaddy_mnemonic" \
+  --name="${project}_test_$unit" \
+  --network "$project" \
   --rm \
-  --tmpfs="/var/lib/postgresql/data" \
-  postgres:12-alpine
-
-common="$interactive $stack_env \
-  --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
-  --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
-  --env=VECTOR_ALICE_URL=nats://alice:8000 \
-  --env=VECTOR_AUTH_URL=nats://auth:5040 \
-  --env=VECTOR_BOB_URL=nats://bob:8000 \
-  --env=VECTOR_CHAIN_PROVIDERS=`cat $root/.chaindata/chain-providers.json | tr -d ' \n'` \
-  --env=VECTOR_CONTRACT_ADDRESSES=`cat $root/.chaindata/address-book.json | tr -d ' \n'` \
-  --env=VECTOR_ENV=${ENV:-dev} \
-  --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-0} \
-  --env=VECTOR_NATS_URL=nats://nats:4222 \
-  --env=VECTOR_NODE_URL=http://node:8000 \
-  --name=${project}_test_runner \
-  --network=$project \
-  --rm \
-  --tmpfs /tmp"
-
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_ENV" == "prod" ]]
-then
-  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
-  if [[ -z "$version" ]]
-  then
-    if [[ -n "$git_tag" ]]
-    then version="`echo $git_tag | sed 's/vector-//'`"
-    else version="`git rev-parse HEAD | head -c 8`"
-    fi
-  fi
-  image=${project}_test_runner:$version
-  echo "Executing $cmd w image $image"
-  exec docker run $common $image $cmd $stack
-
-else
-  echo "Executing $cmd w image ${project}_builder"
-  exec docker run \
-    $common \
-    --entrypoint=bash \
-    --volume="$root:/root" \
-    ${project}_builder -c "bash modules/test-runner/ops/entry.sh $cmd $stack"
-fi
+  --tmpfs="/tmp" \
+  --volume="$root:/root" \
+  ${project}_builder "/test.sh" "server-node" "$cmd"

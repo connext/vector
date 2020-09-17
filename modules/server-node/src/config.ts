@@ -44,7 +44,10 @@ const dbPort = process.env.VECTOR_PG_PORT;
 const dbUser = process.env.VECTOR_PG_USERNAME;
 const dbPassword = process.env.VECTOR_PG_PASSWORD;
 
-const dbUrl = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbDb}`;
+const dbUrl = process.env.VECTOR_DATABASE_URL || `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbDb}`;
+if (!dbUrl) {
+  throw new Error("VECTOR_DATABASE_URL is a required config item");
+}
 
 export const config = {
   authUrl,

@@ -81,7 +81,7 @@ const convertChannelEntityToFullChannelState = (
         break;
       case "resolve":
         details = {
-          merkleProofData: channelEntity.latestUpdate.merkleProofData!,
+          merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
           transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
@@ -224,7 +224,7 @@ export class PrismaStore implements IVectorStore {
         // create transfer
         transferInitialState: JSON.stringify(channelState.latestUpdate!.details.transferInitialState),
         merkleRoot: channelState.latestUpdate!.details.merkleRoot,
-        merkleProofData: channelState.latestUpdate!.details.merkleProofData,
+        merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData.join(),
         transferDefinition: channelState.latestUpdate!.details.transferDefinition,
         transferEncodings: JSON.stringify(channelState.latestUpdate!.details.transferEncodings),
         transferId: channelState.latestUpdate!.details.transferId,
