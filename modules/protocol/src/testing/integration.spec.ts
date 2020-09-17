@@ -102,5 +102,37 @@ describe(testName, () => {
 
   // TODO: the following deposit test cases are *extremely* simple tests
   // and do not represent a complete deposit tests
-  it("should deposit eth for Bob (multisig deposit)", async () => {});
+  it("should deposit eth for Bob (multisig deposit)", async () => {
+    // Setup the channel
+    const channel = await setupChannel(alice, bob);
+
+    const aliceChannel = await alice.getChannelState(channel.channelAddress);
+    const bobChannel = await bob.getChannelState(channel.channelAddress);
+
+    expect(aliceChannel).to.deep.eq(bobChannel);
+
+    const depositAmount = BigNumber.from("1000");
+    const assetId = constants.AddressZero;
+
+    // Send funds to channel address without deploying
+    await wallet.sendTransaction({ value: depositAmount, to: bobChannel!.channelAddress });
+
+    // Reconcile the depositA
+    const depositRet = await bob.deposit({
+      channelAddress: bobChannel!.channelAddress,
+      assetId,
+    });
+    expect(depositRet.isError).to.be.false;
+
+    const aliceDeposited = await alice.getChannelState(channel.channelAddress);
+    expect(aliceDeposited?.balances).to.containSubset([
+      {
+        to: aliceChannel?.participants,
+        amount: ["0", depositAmount.toString()],
+      },
+    ]);
+    expect(aliceDeposited?.latestDepositNonce).to.be.eq(aliceChannel!.latestDepositNonce);
+    expect(aliceDeposited?.assetIds).to.containSubset([constants.AddressZero]);
+    expect(await bob.getChannelState(aliceChannel!.channelAddress)).to.containSubset(aliceDeposited);
+  });
 });

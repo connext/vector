@@ -167,6 +167,7 @@ export const reconcileDeposit = async (
     onchainBalance = await channelContract.getBalance(assetId);
   } catch (e) {
     // Likely means channel contract was not deployed
+    // TODO: check for reason?
     onchainBalance = assetId === constants.AddressZero
       ? await signer.provider!.getBalance(channelAddress)
       : await new Contract(assetId, TestToken.abi, signer).balanceOf(channelAddress);
@@ -176,6 +177,7 @@ export const reconcileDeposit = async (
   try {
     latestDepositA = await channelContract.latestDepositByAssetId(assetId);
   } catch (e) {
+    // TODO: check for reason?
     // Channel contract was not deployed, use 0 value
     latestDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) }
   }
