@@ -77,11 +77,6 @@ export type Balance = {
   to: Address[];
 };
 
-// TODO update this in contracts
-export type LockedValueType = {
-  amount: string;
-};
-
 export const CoreChannelStateEncoding = tidy(`tuple(
   ${BalanceEncoding}[] balances,
   uint256[] lockedBalance,
@@ -102,12 +97,11 @@ export interface CoreChannelState {
   participants: Address[]; // Signer keys
   timeout: string;
   balances: Balance[]; // Indexed by assetId
-  lockedValue: LockedValueType[]; // Indexed by assetId -- should always be changed in lockstep with transfers
+  lockedBalance: string[]; // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
   nonce: number;
   latestDepositNonce: number;
   merkleRoot: string;
-  meta?: any;
 }
 
 // Includes any additional info that doesn't need to be sent to chain

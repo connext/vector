@@ -2,19 +2,18 @@ import {
   Balance,
   ChannelCommitmentData,
   CoreChannelState,
-  LockedValueType,
   CoreChannelStateEncoding,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
 const { keccak256, solidityPack, defaultAbiCoder } = utils;
 
-export const hashLockedValue = (value: LockedValueType): string => {
-  return keccak256(solidityPack(["uint256"], [value.amount]));
+export const hashlockedBalance = (value: string): string => {
+  return keccak256(solidityPack(["uint256"], [value]));
 };
 
-export const hashLockedValues = (values: LockedValueType[]): string => {
-  return keccak256(solidityPack(["bytes32[]"], [values.map(hashLockedValue)]));
+export const hashlockedBalances = (values: string[]): string => {
+  return keccak256(solidityPack(["bytes32[]"], [values.map(hashlockedBalance)]));
 };
 
 export const hashBalance = (balance: Balance): string => {
@@ -31,13 +30,9 @@ export const hashBalances = (balances: Balance[]): string => {
 };
 
 export const encodeCoreChannelState = (state: CoreChannelState): string => {
-  const { lockedValue } = state;
   return defaultAbiCoder.encode(
     [CoreChannelStateEncoding],
-    [{
-      ...state,
-      lockedBalance: lockedValue, // TODO: rename in types!
-    }],
+    [state],
   );
 };
 

@@ -11,7 +11,7 @@ CREATE TABLE "balance" (
     "assetId" TEXT NOT NULL,
     "to" TEXT NOT NULL,
     "amount" TEXT NOT NULL,
-    "lockedValue" TEXT NOT NULL,
+    "lockedBalance" TEXT NOT NULL,
     "channelAddress" TEXT NOT NULL,
 
     FOREIGN KEY ("channelAddress") REFERENCES "channel"("channelAddress") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -93,7 +93,7 @@ migration ..20200911164403-init
 +  assetId        String
 +  to             String
 +  amount         String
-+  lockedValue    String
++  lockedBalance    String
 +  Channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 +  channelAddress String
 +  @@id([participant, channelAddress, assetId])

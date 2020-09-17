@@ -274,7 +274,7 @@ async function processChannelMessage(
       networkContext: (requestedUpdate.details as SetupUpdateDetails).networkContext,
       assetIds: [],
       balances: [],
-      lockedValue: [],
+      lockedBalance: [],
       merkleRoot: constants.HashZero,
       nonce: 0,
       publicIdentifiers: [requestedUpdate.fromIdentifier, signer.publicIdentifier],

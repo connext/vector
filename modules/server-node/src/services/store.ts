@@ -2,7 +2,7 @@ import {
   FullChannelState,
   CoreTransferState,
   Balance,
-  LockedValueType,
+  lockedBalanceType,
   CreateUpdateDetails,
   DepositUpdateDetails,
   ResolveUpdateDetails,
@@ -31,7 +31,7 @@ const convertChannelEntityToFullChannelState = (
   const assetIds = channelEntity!.assetIds.split(",");
 
   // get balances and locked value for each assetId
-  const lockedValue: LockedValueType[] = [];
+  const lockedBalance: lockedBalanceType[] = [];
   const balances: Balance[] = assetIds.map((assetId) => {
     const balanceA = channelEntity.balances.find(
       (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantA,
@@ -39,7 +39,7 @@ const convertChannelEntityToFullChannelState = (
     const balanceB = channelEntity.balances.find(
       (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
-    lockedValue.push({ amount: balanceA!.lockedValue });
+    lockedBalance.push({ amount: balanceA!.lockedBalance });
     return {
       amount: [balanceA!.amount, balanceB!.amount],
       to: [balanceA!.to, balanceB!.to],
@@ -96,7 +96,7 @@ const convertChannelEntityToFullChannelState = (
     balances,
     channelAddress: channelEntity.channelAddress,
     latestDepositNonce: channelEntity.latestDepositNonce,
-    lockedValue,
+    lockedBalance,
     merkleRoot: channelEntity.merkleRoot,
     networkContext: {
       adjudicatorAddress: channelEntity.adjudicatorAddress,
@@ -238,14 +238,14 @@ export class PrismaStore implements IVectorStore {
                 ...create,
                 {
                   amount: channelState.balances[index].amount[0],
-                  lockedValue: channelState.lockedValue[index].amount,
+                  lockedBalance: channelState.lockedBalance[index].amount,
                   participant: channelState.participants[0],
                   to: channelState.balances[index].to[0],
                   assetId,
                 },
                 {
                   amount: channelState.balances[index].amount[1],
-                  lockedValue: channelState.lockedValue[index].amount,
+                  lockedBalance: channelState.lockedBalance[index].amount,
                   participant: channelState.participants[1],
                   to: channelState.balances[index].to[1],
                   assetId,
@@ -284,14 +284,14 @@ export class PrismaStore implements IVectorStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[0],
-                    lockedValue: channelState.lockedValue[index].amount,
+                    lockedBalance: channelState.lockedBalance[index].amount,
                     participant: channelState.participants[0],
                     to: channelState.balances[index].to[0],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[0],
-                    lockedValue: channelState.lockedValue[index].amount,
+                    lockedBalance: channelState.lockedBalance[index].amount,
                     to: channelState.balances[index].to[0],
                   },
                   where: {
@@ -305,14 +305,14 @@ export class PrismaStore implements IVectorStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[1],
-                    lockedValue: channelState.lockedValue[index].amount,
+                    lockedBalance: channelState.lockedBalance[index].amount,
                     participant: channelState.participants[1],
                     to: channelState.balances[index].to[1],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[1],
-                    lockedValue: channelState.lockedValue[index].amount,
+                    lockedBalance: channelState.lockedBalance[index].amount,
                     to: channelState.balances[index].to[1],
                   },
                   where: {
