@@ -261,6 +261,7 @@ async function generateDepositUpdate(
     state.latestDepositNonce,
     existingLockedBalance,
     assetId,
+    signer,
   );
 
   const unsigned = {
