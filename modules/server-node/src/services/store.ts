@@ -9,14 +9,123 @@ import {
   SetupUpdateDetails,
   IVectorStore,
   TransferState,
-  ChannelCommitmentData, 
+  ChannelCommitmentData,
   FullTransferState,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
+  Channel,
   PrismaClient,
+  Update,
+  Balance as BalanceEntity,
 } from "@prisma/client";
+
+const convertChannelEntityToFullChannelState = (
+  channelEntity: Channel & {
+    balances: BalanceEntity[];
+    latestUpdate: Update;
+  },
+): FullChannelState => {
+  // use the inputted assetIds to preserve order
+  const assetIds = channelEntity!.assetIds.split(",");
+
+  // get balances and locked value for each assetId
+  const lockedValue: LockedValueType[] = [];
+  const balances: Balance[] = assetIds.map((assetId) => {
+    const balanceA = channelEntity.balances.find(
+      (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantA,
+    );
+    const balanceB = channelEntity.balances.find(
+      (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantB,
+    );
+    lockedValue.push({ amount: balanceA!.lockedValue });
+    return {
+      amount: [balanceA!.amount, balanceB!.amount],
+      to: [balanceA!.to, balanceB!.to],
+    };
+  });
+
+  // convert db representation into details for the particular update
+  let details: SetupUpdateDetails | DepositUpdateDetails | CreateUpdateDetails | ResolveUpdateDetails | undefined;
+  if (channelEntity.latestUpdate) {
+    switch (channelEntity.latestUpdate.type) {
+      case "setup":
+        details = {
+          networkContext: {
+            adjudicatorAddress: channelEntity.adjudicatorAddress,
+            chainId: channelEntity.chainId,
+            channelFactoryAddress: channelEntity.channelFactoryAddress,
+            providerUrl: channelEntity.providerUrl,
+            vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
+          },
+          timeout: channelEntity.timeout,
+        } as SetupUpdateDetails;
+        break;
+      case "deposit":
+        details = {
+          latestDepositNonce: channelEntity.latestUpdate.latestDepositNonce,
+        } as DepositUpdateDetails;
+        break;
+      case "create":
+        details = {
+          merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
+          merkleRoot: channelEntity.latestUpdate.merkleRoot!,
+          transferDefinition: channelEntity.latestUpdate.transferDefinition!,
+          transferTimeout: channelEntity.latestUpdate.transferTimeout!,
+          transferId: channelEntity.latestUpdate.transferId!,
+          transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
+          transferInitialState: JSON.parse(channelEntity.latestUpdate.transferInitialState!),
+        } as CreateUpdateDetails;
+        break;
+      case "resolve":
+        details = {
+          merkleProofData: channelEntity.latestUpdate.merkleProofData!,
+          merkleRoot: channelEntity.latestUpdate.merkleRoot!,
+          transferDefinition: channelEntity.latestUpdate.transferDefinition!,
+          transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
+          transferId: channelEntity.latestUpdate.transferId!,
+          transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
+        } as ResolveUpdateDetails;
+        break;
+    }
+  }
+
+  const channel = {
+    assetIds,
+    balances,
+    channelAddress: channelEntity.channelAddress,
+    latestDepositNonce: channelEntity.latestDepositNonce,
+    lockedValue,
+    merkleRoot: channelEntity.merkleRoot,
+    networkContext: {
+      adjudicatorAddress: channelEntity.adjudicatorAddress,
+      chainId: channelEntity.chainId,
+      channelFactoryAddress: channelEntity.channelFactoryAddress,
+      providerUrl: channelEntity.providerUrl,
+      vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
+    },
+    nonce: channelEntity.nonce,
+    participants: [channelEntity.participantA, channelEntity.participantB],
+    publicIdentifiers: [channelEntity.publicIdentifierA, channelEntity.publicIdentifierB],
+    timeout: channelEntity.timeout,
+    latestUpdate: {
+      assetId: channelEntity.latestUpdate.assetId,
+      balance: {
+        amount: [channelEntity.latestUpdate.amountA, channelEntity.latestUpdate.amountB],
+        to: [channelEntity.latestUpdate.toA, channelEntity.latestUpdate.toB],
+      },
+      channelAddress: channelEntity.channelAddress,
+      details,
+      fromIdentifier: channelEntity.latestUpdate.fromIdentifier,
+      nonce: channelEntity.latestUpdate.nonce,
+      signatures: [channelEntity.latestUpdate.signatureA!, channelEntity.latestUpdate.signatureB!],
+      toIdentifier: channelEntity.latestUpdate.toIdentifier,
+      type: channelEntity.latestUpdate.type,
+    },
+  };
+  return channel;
+};
 
 export class PrismaStore implements IVectorStore {
   public prisma: PrismaClient;
@@ -61,104 +170,7 @@ export class PrismaStore implements IVectorStore {
       return undefined;
     }
 
-    // use the inputted assetIds to preserve order
-    const assetIds = channelEntity!.assetIds.split(",");
-
-    // get balances and locked value for each assetId
-    const lockedValue: LockedValueType[] = [];
-    const balances: Balance[] = assetIds.map((assetId) => {
-      const balanceA = channelEntity.balances.find(
-        (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantA,
-      );
-      const balanceB = channelEntity.balances.find(
-        (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantB,
-      );
-      lockedValue.push({ amount: balanceA!.lockedValue });
-      return {
-        amount: [balanceA!.amount, balanceB!.amount],
-        to: [balanceA!.to, balanceB!.to],
-      };
-    });
-
-    // convert db representation into details for the particular update
-    let details: SetupUpdateDetails | DepositUpdateDetails | CreateUpdateDetails | ResolveUpdateDetails | undefined;
-    if (channelEntity.latestUpdate) {
-      switch (channelEntity.latestUpdate.type) {
-        case "setup":
-          details = {
-            networkContext: {
-              adjudicatorAddress: channelEntity.adjudicatorAddress,
-              chainId: channelEntity.chainId,
-              channelFactoryAddress: channelEntity.channelFactoryAddress,
-              providerUrl: channelEntity.providerUrl,
-              vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
-            },
-            timeout: channelEntity.timeout,
-          } as SetupUpdateDetails;
-          break;
-        case "deposit":
-          details = {
-            latestDepositNonce: channelEntity.latestUpdate.latestDepositNonce,
-          } as DepositUpdateDetails;
-          break;
-        case "create":
-          details = {
-            merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
-            merkleRoot: channelEntity.latestUpdate.merkleRoot!,
-            transferDefinition: channelEntity.latestUpdate.transferDefinition!,
-            transferTimeout: channelEntity.latestUpdate.transferTimeout!,
-            transferId: channelEntity.latestUpdate.transferId!,
-            transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
-            transferInitialState: JSON.parse(channelEntity.latestUpdate.transferInitialState!),
-          } as CreateUpdateDetails;
-          break;
-        case "resolve":
-          details = {
-            merkleProofData: channelEntity.latestUpdate.merkleProofData!,
-            merkleRoot: channelEntity.latestUpdate.merkleRoot!,
-            transferDefinition: channelEntity.latestUpdate.transferDefinition!,
-            transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
-            transferId: channelEntity.latestUpdate.transferId!,
-            transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
-          } as ResolveUpdateDetails;
-          break;
-      }
-    }
-
-    // return as FullChannelState
-    return {
-      assetIds,
-      balances,
-      channelAddress,
-      latestDepositNonce: channelEntity.latestDepositNonce,
-      lockedValue,
-      merkleRoot: channelEntity.merkleRoot,
-      networkContext: {
-        adjudicatorAddress: channelEntity.adjudicatorAddress,
-        chainId: channelEntity.chainId,
-        channelFactoryAddress: channelEntity.channelFactoryAddress,
-        providerUrl: channelEntity.providerUrl,
-        vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
-      },
-      nonce: channelEntity.nonce,
-      participants: [channelEntity.participantA, channelEntity.participantB],
-      publicIdentifiers: [channelEntity.publicIdentifierA, channelEntity.publicIdentifierB],
-      timeout: channelEntity.timeout,
-      latestUpdate: {
-        assetId: channelEntity.latestUpdate.assetId,
-        balance: {
-          amount: [channelEntity.latestUpdate.amountA, channelEntity.latestUpdate.amountB],
-          to: [channelEntity.latestUpdate.toA, channelEntity.latestUpdate.toB],
-        },
-        channelAddress,
-        details,
-        fromIdentifier: channelEntity.latestUpdate.fromIdentifier,
-        nonce: channelEntity.latestUpdate.nonce,
-        signatures: [channelEntity.latestUpdate.signatureA!, channelEntity.latestUpdate.signatureB!],
-        toIdentifier: channelEntity.latestUpdate.toIdentifier,
-        type: channelEntity.latestUpdate.type,
-      },
-    };
+    return convertChannelEntityToFullChannelState(channelEntity);
   }
 
   async saveChannelState(channelState: FullChannelState<any>): Promise<void> {

@@ -8,9 +8,9 @@ import {
   createTestLinkedTransferState,
   createCoreTransferState,
   hashCoreTransferState,
-  hashLinkedTransferState,
   mkBytes32,
   delay,
+  hashTransferState,
 } from "@connext/vector-utils";
 import {
   IVectorStore,
@@ -20,6 +20,7 @@ import {
   UpdateType,
   Result,
   VectorChannelMessage,
+  LinkedTransferStateEncoding,
 } from "@connext/vector-types";
 import { constants } from "ethers";
 import { expect } from "chai";
@@ -154,7 +155,9 @@ describe("inbound", () => {
       balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
     });
     const assetId = constants.AddressZero;
-    const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
+    const coreState = createCoreTransferState({
+      initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
+    });
     const hash = Buffer.from(hashCoreTransferState(coreState));
     const tree = new MerkleTree([hash], hashCoreTransferState);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {

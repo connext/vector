@@ -13,8 +13,10 @@ import {
   VectorChannelMessage,
   VectorErrorMessage,
   ChannelCommitmentData,
+  FullTransferState,
+  TransferCommitmentData,
 } from "@connext/vector-types";
-import { delay, getTransferNameFromState, hashTransferState } from "@connext/vector-utils";
+import { delay, hashTransferState } from "@connext/vector-utils";
 import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
 import pino from "pino";
@@ -470,7 +472,7 @@ const signAndSaveData = async (
   if (!transferId) {
     // Not a transfer update, no need to include transfer
     // record details
-    await store.saveChannelState({...newState, latestUpdate: signedUpdate }, signed);
+    await store.saveChannelState({ ...newState, latestUpdate: signedUpdate }, signed);
     return signed;
   }
 
@@ -479,7 +481,7 @@ const signAndSaveData = async (
   // let commitment: TransferCommitmentData | undefined;
   // let resolver: TransferResolver | undefined;
   // let meta: any;
-  let transferDetails;
+  let transferDetails: FullTransferState | undefined;
   if (update.type === UpdateType.create) {
     const {
       merkleProofData,
@@ -490,40 +492,66 @@ const signAndSaveData = async (
       transferTimeout,
       meta,
     } = (update as ChannelUpdate<typeof UpdateType.create>).details;
-    const commitment = {
+    const commitment: TransferCommitmentData = {
       state: {
         initialBalance: transferInitialState.balance,
         assetId: update.assetId,
         channelAddress: update.channelAddress,
         transferId,
         transferTimeout,
-        transferEncodings,
         transferDefinition,
-        initialStateHash: hashTransferState(getTransferNameFromState(transferInitialState), transferInitialState),
+        initialStateHash: hashTransferState(transferInitialState, transferEncodings[0]),
       },
       adjudicatorAddress: newState.networkContext.adjudicatorAddress,
       chainId: newState.networkContext.chainId,
       merkleProofData,
     };
     transferDetails = {
-      initialState: transferInitialState,
-      commitment,
+      transferEncodings,
+      transferState: transferInitialState,
       meta,
+      ...commitment.state,
+      adjudicatorAddress: commitment.adjudicatorAddress,
+      chainId: commitment.chainId,
     };
   }
 
   if (update.type === UpdateType.resolve) {
+    const transfer = await store.getTransferState(transferId);
+    if (!transfer) {
+      throw new Error("Transfer not found");
+    }
+    const {
+      initialBalance,
+      assetId,
+      transferDefinition,
+      transferTimeout,
+      initialStateHash,
+      adjudicatorAddress,
+      channelAddress,
+      chainId,
+      transferEncodings,
+      transferState,
+    } = transfer;
     const { transferResolver, meta } = (update as ChannelUpdate<typeof UpdateType.resolve>).details;
     transferDetails = {
-      resolver: transferResolver,
+      transferResolver: transferResolver,
       meta,
+      initialBalance,
+      transferId,
+      assetId,
+      channelAddress,
+      transferDefinition,
+      transferTimeout,
+      initialStateHash,
+      adjudicatorAddress,
+      chainId,
+      transferEncodings,
+      transferState,
     };
   }
 
-  await store.saveChannelState({...newState, latestUpdate: signedUpdate}, signed, {
-    transferId,
-    ...(transferDetails ?? {}),
-  });
+  await store.saveChannelState({ ...newState, latestUpdate: signedUpdate }, signed, transferDetails);
 
   return signed;
 };
