@@ -30,8 +30,6 @@ contract VectorChannel is IVectorChannel {
 
     IAdjudicator public _adjudicator;
 
-    uint256 private adjudicatorNonce;
-
     // Workaround, because I was not able to convince the compiler
     // to let me override the getter in the interface with the
     // auto-generated getter of an overriding state variable
@@ -123,29 +121,6 @@ contract VectorChannel is IVectorChannel {
             require(IERC20(assetId).transfer(balances.to[0], balances.amount[0]));
             require(IERC20(assetId).transfer(balances.to[1], balances.amount[1]));
         }
-    }
-
-    function updateAdjudicator(
-        bytes[] memory signatures,
-        uint256 nonce,
-        IAdjudicator newAdjudicator
-    )
-        public
-        override
-    {
-        require(
-            nonce > adjudicatorNonce,
-            "Already upgraded using this nonce"
-        );
-        require(
-            signatures.length > 0,
-            "More than 0 signatures must be provided"
-        );
-
-        // TODO validate signatures
-
-        adjudicatorNonce = nonce;
-        _adjudicator = newAdjudicator;
     }
 
   /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple

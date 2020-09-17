@@ -32,12 +32,6 @@ interface IVectorChannel {
         address assetId
     ) external;
 
-    function updateAdjudicator(
-        bytes[] memory signatures,
-        uint256 nonce,
-        IAdjudicator newAdjudicator
-    ) external;
-
     function execTransaction(
         address to,
         uint256 value,

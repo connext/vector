@@ -128,6 +128,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 - [X] Write the `adjudicatorTransfer` fn
 - [ ] Update `getTransactionHash` to use nonce-based replay protection
 - [X] Clean up + add missing functions to interface
+- [X] Remove update functionality for adjudicator
 
 #### ChannelFactory
 - [ ] Combine this into the `Adjudicator` to avoid cyclic dependency issue
