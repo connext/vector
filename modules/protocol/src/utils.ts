@@ -159,18 +159,19 @@ export const reconcileDeposit = async (
   latestDepositNonce: number,
   lockedBalance: string,
   assetId: string,
+  signer: IChannelSigner,
 ): Promise<{ balance: Balance; latestDepositNonce: number }> => {
-  const channelContract = new Contract(channelAddress, VectorChannel.abi);
-  const onchainBalance = await channelContract.function.getBalance(assetId);
+  const channelContract = new Contract(channelAddress, VectorChannel.abi, signer);
+  const onchainBalance = await channelContract.getBalance(assetId);
   const latestDepositA = await channelContract.latestDepositByAssetId(assetId);
 
   const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
-    ? latestDepositA.amount.add(initialBalance.amount[0]).toString()
-    : initialBalance.amount[0];
+    ? latestDepositA.amount.add(initialBalance.amount[0])
+    : BigNumber.from(initialBalance.amount[0]);
 
   const balance = {
     ...initialBalance,
-    amount: [balanceA, BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
+    amount: [balanceA.toString(), BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
   };
 
   return {
