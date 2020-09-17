@@ -227,6 +227,21 @@ EOF
 docker stack deploy -c $root/${stack}.docker-compose.yml $stack
 echo "The $stack stack has been deployed."
 
+function abort {
+  echo "Timed out waiting for $stack stack to wake up.."
+  echo
+  docker service ls
+  echo "====="
+  docker container ls -a
+  echo "====="
+  docker service logs --tail 100 --raw global_auth || true
+  echo "====="
+  docker service logs --tail 100 --raw global_evm_1337 || true
+  echo "====="
+  docker service logs --tail 100 --raw global_evm_1338 || true
+  exit 1
+}
+
 timeout=$(expr `date +%s` + 60)
 public_auth_url="http://localhost:5040"
 echo "Waiting for $public_auth_url to wake up.."
@@ -236,7 +251,7 @@ do
   if [[ -z "$res" ]]
   then
     if [[ "`date +%s`" -gt "$timeout" ]]
-    then echo "Timed out waiting for $stack stack to wake up.." && exit
+    then abort
     else sleep 1
     fi
   else
@@ -253,7 +268,7 @@ do
   ]]
   then
     if [[ "`date +%s`" -gt "$timeout" ]]
-    then echo "Timed out waiting for $stack stack to wake up.." && exit
+    then abort
     else sleep 1
     fi
   else
