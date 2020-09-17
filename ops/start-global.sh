@@ -246,7 +246,7 @@ function abort {
   exit
 }
 
-timeout=$(expr `date +%s` + 1)
+timeout=$(expr `date +%s` + 60)
 public_auth_url="http://localhost:5040"
 echo "Waiting for $public_auth_url to wake up.."
 while true
