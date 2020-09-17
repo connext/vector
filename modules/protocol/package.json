@@ -23,6 +23,7 @@
     "async-mutex": "0.2.4",
     "ethers": "5.0.13",
     "evt": "1.8.10",
+    "merkletreejs": "0.2.9",
     "pino": "6.6.1",
     "pino-pretty": "^4.2.1"
   },

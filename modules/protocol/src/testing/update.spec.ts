@@ -28,9 +28,9 @@ import {
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { constants, Contract, utils } from "ethers";
+import { MerkleTree } from "merkletreejs";
 
 import { applyUpdate, generateUpdate } from "../../src/update";
-import { MerkleTree } from "../merkleTree";
 
 import { config } from "./services/config";
 import { MemoryStoreService } from "./services/store";
@@ -165,8 +165,8 @@ describe("applyUpdate", () => {
 
     // Create the transfer update
     const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
-    const hash = hashCoreTransferState(coreState);
-    const tree = new MerkleTree([hash]);
+    const hash = Buffer.from(hashCoreTransferState(coreState));
+    const tree = new MerkleTree([hash], hashCoreTransferState);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
       nonce: state.nonce + 1,
       assetId,
@@ -174,8 +174,8 @@ describe("applyUpdate", () => {
       details: {
         ...coreState,
         transferInitialState,
-        merkleRoot: tree.root,
-        merkleProofData: tree.proof(hash),
+        merkleRoot: tree.getHexRoot(),
+        merkleProofData: tree.getHexProof(hash),
       },
     });
 
@@ -220,7 +220,7 @@ describe("applyUpdate", () => {
 
     // Create the transfer update
     const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
-    const emptyTree = new MerkleTree([]);
+    const emptyTree = new MerkleTree([], hashCoreTransferState);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
       nonce: state.nonce + 1,
       assetId,
@@ -230,7 +230,7 @@ describe("applyUpdate", () => {
         transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         transferDefinition: coreState.transferDefinition,
         transferResolver: { preImage },
-        merkleRoot: emptyTree.root,
+        merkleRoot: emptyTree.getHexRoot(),
       },
     });
 
@@ -252,7 +252,7 @@ describe("applyUpdate", () => {
       balances: [{ ...transferInitialState.balance, amount: ["1", "0"] }],
       lockedValue: [{ amount: "0" }],
       nonce: update.nonce,
-      merkleRoot: emptyTree.root,
+      merkleRoot: emptyTree.getHexRoot(),
       latestUpdate: update,
     });
   });
@@ -447,7 +447,7 @@ describe.skip("generateUpdate", () => {
     });
 
     // Get expected values
-    const emptyTree = new MerkleTree([]);
+    const emptyTree = new MerkleTree([], hashCoreTransferState);
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
       channelAddress,
       nonce: state.nonce + 1,
@@ -458,7 +458,7 @@ describe.skip("generateUpdate", () => {
         transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         transferDefinition: coreState.transferDefinition,
         transferResolver: { preImage },
-        merkleRoot: emptyTree.root,
+        merkleRoot: emptyTree.getHexRoot(),
       },
     });
 

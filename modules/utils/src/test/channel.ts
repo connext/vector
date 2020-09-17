@@ -137,7 +137,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
       break;
     case UpdateType.create:
       details = {
-        merkleProofData: mkBytes32("0xproof"),
+        merkleProofData: [mkBytes32("0xproof")],
         merkleRoot: mkBytes32("0xroot"),
         transferDefinition: mkAddress("0xdef"),
         transferEncodings: ["create", "resolve"],

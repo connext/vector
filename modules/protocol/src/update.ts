@@ -17,14 +17,13 @@ import {
   LockedValueType,
   CoreTransferState,
   IVectorStore,
-  TransferState,
   ChannelUpdateError,
   Result,
   FullTransferState,
 } from "@connext/vector-types";
 import Pino from "pino";
+import { MerkleTree } from "merkletreejs";
 
-import { MerkleTree } from "./merkleTree";
 import { generateSignedChannelCommitment, resolve } from "./utils";
 import { validateParams } from "./validate";
 
@@ -325,8 +324,11 @@ async function generateCreateUpdate(
     chainId: state.networkContext.chainId,
   };
   const transferHash = hashCoreTransferState(transferState);
-  const hashes: string[] = [...transfers, transferState].map(hashCoreTransferState);
-  const merkle = new MerkleTree(hashes);
+  const hashes: Buffer[] = [...transfers, transferState].map(state => {
+    const hash = hashCoreTransferState(state);
+    return Buffer.from(hash);
+  });
+  const merkle = new MerkleTree(hashes, hashCoreTransferState);
 
   // Create the update from the user provided params
   const balance = getUpdatedChannelBalance(UpdateType.create, assetId, transferInitialState.balance, state);
@@ -340,8 +342,8 @@ async function generateCreateUpdate(
       transferTimeout: timeout,
       transferInitialState,
       transferEncodings: encodings,
-      merkleProofData: merkle.proof(transferHash),
-      merkleRoot: merkle.root,
+      merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
+      merkleRoot: merkle.getHexRoot(),
     },
     signatures: [],
   };
@@ -368,11 +370,13 @@ async function generateResolveUpdate(
   if (!transferState) {
     throw new Error(`Could not find transfer for id ${params.details.transferId}`);
   }
-  // TODO: is merkle tree hash of initial states or core transfer
-  const hashes = transfers
+  const hashes: Buffer[] = transfers
     .filter((x) => x.transferId !== params.details.transferId)
-    .map((x) => hashCoreTransferState(x));
-  const merkle = new MerkleTree(hashes);
+    .map(state => {
+      const hash = hashCoreTransferState(state);
+      return Buffer.from(hash);
+    });
+  const merkle = new MerkleTree(hashes, hashCoreTransferState);
 
   // Get the final transfer balance from contract
   const transferBalance = await resolve(
@@ -395,7 +399,7 @@ async function generateResolveUpdate(
       transferDefinition: transferState.transferDefinition,
       transferResolver: params.details.transferResolver,
       transferEncodings: transferState.transferEncodings,
-      merkleRoot: merkle.root,
+      merkleRoot: merkle.getHexRoot(),
     },
     signatures: [],
   };

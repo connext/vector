@@ -71,7 +71,7 @@ model Update {
   transferTimeout      String?
   transferInitialState String? // JSON string
   transferEncodings    String?
-  merkleProofData      String?
+  merkleProofData      String? // proofs.join(",")
 
   // resolve details
   transferResolver String?

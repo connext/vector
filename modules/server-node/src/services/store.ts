@@ -103,7 +103,7 @@ export class PrismaStore implements IVectorStore {
           break;
         case "create":
           details = {
-            merkleProofData: channelEntity.latestUpdate.merkleProofData!,
+            merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
             merkleRoot: channelEntity.latestUpdate.merkleRoot!,
             transferDefinition: channelEntity.latestUpdate.transferDefinition!,
             transferTimeout: channelEntity.latestUpdate.transferTimeout!,

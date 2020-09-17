@@ -122,4 +122,4 @@ Should do the exact oppositve of the `create` update above.
 
 #### Other
 
-- [ ] Replace `merkleTree.ts` with external dep
+- [x] Replace `merkleTree.ts` with external dep

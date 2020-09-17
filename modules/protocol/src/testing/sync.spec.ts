@@ -24,9 +24,9 @@ import {
 import { constants } from "ethers";
 import { expect } from "chai";
 import { Evt } from "evt";
+import { MerkleTree } from "merkletreejs";
 
 import { inbound, outbound } from "../sync";
-import { MerkleTree } from "../merkleTree";
 
 import { config } from "./services/config";
 import { MemoryStoreService } from "./services/store";
@@ -155,8 +155,8 @@ describe("inbound", () => {
     });
     const assetId = constants.AddressZero;
     const coreState = createCoreTransferState({ initialStateHash: hashLinkedTransferState(transferInitialState) });
-    const hash = hashCoreTransferState(coreState);
-    const tree = new MerkleTree([hash]);
+    const hash = Buffer.from(hashCoreTransferState(coreState));
+    const tree = new MerkleTree([hash], hashCoreTransferState);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
       nonce: 3,
       assetId,
@@ -164,8 +164,8 @@ describe("inbound", () => {
       details: {
         ...coreState,
         transferInitialState,
-        merkleRoot: tree.root,
-        merkleProofData: tree.proof(hash),
+        merkleRoot: tree.getHexRoot(),
+        merkleProofData: tree.getHexProof(hash),
       },
     });
 

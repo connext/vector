@@ -148,7 +148,7 @@ export interface TransferCommitmentData {
   state: CoreTransferState;
   adjudicatorAddress: Address;
   chainId: number;
-  merkleProofData: any; // TODO
+  merkleProofData: string[];
 }
 
 export type ChainAddresses = {
@@ -193,7 +193,7 @@ export type CreateUpdateDetails = {
   transferTimeout: string;
   transferInitialState: TransferState;
   transferEncodings: string[]; // Initial state, resolver state
-  merkleProofData: string;
+  merkleProofData: string[];
   merkleRoot: string;
   meta?: any;
 };
