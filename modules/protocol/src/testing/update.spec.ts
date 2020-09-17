@@ -289,7 +289,7 @@ describe("generateUpdate", () => {
       global["wallet"].connect(provider),
     );
     const created = new Promise((resolve) => {
-      manager.once(factory.filters.ChannelCreation(), (data) => {
+      manager.once(manager.filters.ChannelCreation(), (data) => {
         resolve(data);
       });
     });
