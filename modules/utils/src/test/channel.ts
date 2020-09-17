@@ -55,7 +55,6 @@ export function createTestUpdateParams<T extends UpdateType>(
     case UpdateType.deposit:
       details = {
         channelAddress: base.channelAddress,
-        amount: "10",
         assetId: mkAddress(),
       };
       break;

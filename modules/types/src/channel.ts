@@ -1,15 +1,11 @@
-import { Address, Network } from "./basic";
+import { Address } from "./basic";
 import { BalanceEncoding } from "./contracts";
 import {
-  LinkedTransferResolver,
-  LinkedTransferState,
   TransferName,
   TransferResolver,
   TransferResolverMap,
   TransferState,
   TransferStateMap,
-  WithdrawResolver,
-  WithdrawState,
 } from "./transferDefinitions";
 import { tidy } from "./utils";
 

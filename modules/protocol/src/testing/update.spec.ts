@@ -24,6 +24,7 @@ import {
   createTestUpdateParams,
   ChannelSigner,
   hashTransferState,
+  stringify,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { BigNumber, constants, Contract, utils } from "ethers";
@@ -321,17 +322,21 @@ describe("generateUpdate", () => {
       latestDepositNonce: 0,
       channelAddress,
     });
+    const assetId = constants.AddressZero;
     await store.saveChannelState(state, {} as any);
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { channelAddress },
+      details: { channelAddress, assetId },
     });
+    console.log(`params: ${stringify(params)}`);
     const update = (await generateUpdate(params, state, store, signers[0])).getValue();
+    console.log(`update: ${stringify(update)}`);
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       details: { latestDepositNonce: 0 },
       nonce: state.nonce + 1,
     });
+    console.log(`generatedUpdate: ${stringify(expected)}`);
     expect(update).to.containSubset(expected);
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });

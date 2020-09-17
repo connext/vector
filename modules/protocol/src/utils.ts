@@ -10,9 +10,9 @@ import {
   VectorErrorMessage,
   FullTransferState,
 } from "@connext/vector-types";
-import { TransferDefinition } from "@connext/vector-contracts";
-import { Signer, utils } from "ethers";
-import { hashChannelCommitment, stringify } from "@connext/vector-utils";
+import { TransferDefinition, VectorChannel } from "@connext/vector-contracts";
+import { BigNumber, Signer, utils } from "ethers";
+import { hashChannelCommitment } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -93,9 +93,7 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
-  console.log(stringify({ ...unsigned, signatures: [] }))
   const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
-  console.log("4.10.2")
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
@@ -152,5 +150,31 @@ export const resolve = async (
   return {
     to: ret.to,
     amount: ret.amount.map((a) => a.toString()),
+  };
+};
+
+export const reconcileDeposit = async (
+  channelAddress: string,
+  initialBalance: Balance,
+  latestDepositNonce: number,
+  lockedBalance: string,
+  assetId: string,
+): Promise<{ balance: Balance; latestDepositNonce: number }> => {
+  const channelContract = new Contract(channelAddress, VectorChannel.abi);
+  const onchainBalance = await channelContract.function.getBalance(assetId);
+  const latestDepositA = await channelContract.latestDepositByAssetId(assetId);
+
+  const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
+    ? latestDepositA.amount.add(initialBalance.amount[0]).toString()
+    : initialBalance.amount[0];
+
+  const balance = {
+    ...initialBalance,
+    amount: [balanceA, BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
+  };
+
+  return {
+    balance,
+    latestDepositNonce: latestDepositA.nonce.toNumber(),
   };
 };
