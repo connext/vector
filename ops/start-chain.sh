@@ -36,13 +36,11 @@ then
   then version="`echo $git_tag | sed 's/vector-//'`"
   else version="`git rev-parse HEAD | head -c 8`"
   fi
-  image="${project}_ethprovider:$version"
-
 else
-  image="${project}_builder"
-  arg="modules/contracts/ops/entry.sh"
-  opts="--entrypoint bash --mount type=bind,source=$root,target=/root"
+  version="latest"
 fi
+
+image="${project}_ethprovider:$version"
 
 echo "Running ${VECTOR_ENV:-dev}-mode image for testnet ${chain_id}: ${image}"
 
@@ -61,26 +59,21 @@ docker run $opts \
 
 if [[ "$logLevel" -gt "0" ]]
 then docker container logs --follow $ethprovider_host &
+else docker container logs --follow $ethprovider_host &
 fi
-
-function abort {
-  echo "$ethprovider_host was not able to start up successfully"
-  docker container logs --tail 100 $ethprovider_host
-  exit 1
-}
 
 while ! curl -s http://localhost:$port > /dev/null
 do
   if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
-  then abort
+  then echo "$ethprovider_host was not able to start up successfully" && exit 1
   else sleep 1
   fi
 done
 
-while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep 'Token":' || true`" ]]
+while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep '"Token":' || true`" ]]
 do
   if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
-  then abort
+  then echo "$ethprovider_host was not able to start up successfully" && exit 1
   else sleep 1
   fi
 done

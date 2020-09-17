@@ -36,9 +36,9 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 default: node
 
 node: database proxy server-node
-global: auth
+global: auth ethprovider
 duet: database server-node
-extras: ethprovider test-runner
+extras: test-runner
 
 all: node global duet extras
 
@@ -74,10 +74,10 @@ stop-global:
 	bash ops/stop.sh global
 
 stop-all:
-	bash ops/stop.sh testnet
-	bash ops/stop.sh global
-	bash ops/stop.sh node
 	bash ops/stop.sh duet
+	bash ops/stop.sh node
+	bash ops/stop.sh global
+	bash ops/stop.sh evm
 
 clean: stop-all
 	docker container prune -f
@@ -96,6 +96,7 @@ reset: stop-all
 	docker secret rm $(project)_database_dev 2> /dev/null || true
 	docker volume rm $(project)_database_dev  2> /dev/null || true
 	docker volume rm `docker volume ls -q -f name=$(project)_database_test_*` 2> /dev/null || true
+	rm -rf .chaindata/*
 
 reset-images:
 	rm -f .flags/auth .flags/database .flags/ethprovider .flags/node .flags/*proxy
@@ -221,6 +222,7 @@ auth-bundle: utils $(shell find modules/auth $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 auth: auth-bundle $(shell find modules/auth/ops $(find_options))
 	$(log_start)
 	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
@@ -231,6 +233,7 @@ server-node-bundle: engine $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
 	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
@@ -241,6 +244,7 @@ test-runner-bundle: engine $(shell find modules/test-runner/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/test-runner && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 test-runner: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
 	$(log_start)
 	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner

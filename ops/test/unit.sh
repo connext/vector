@@ -4,6 +4,10 @@ set -e
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 
+# make sure a network for this project has been created
+docker swarm init 2> /dev/null || true
+docker network create --attachable --driver overlay $project 2> /dev/null || true
+
 unit=$1
 cmd=$2
 chain_id=$3
@@ -15,7 +19,7 @@ else echo "Running in non-interactive mode"
 fi
 
 ########################################
-# If we need a chain for these tests, start the testnet & stop it when we're done
+# If we need a chain for these tests, start the evm & stop it when we're done
 
 eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 CHAIN_PROVIDERS="{}"
@@ -23,19 +27,69 @@ CONTRACT_ADDRESSES="{}"
 
 if [[ -n "$chain_id" ]]
 then
-  ethprovider_host="testnet_$chain_id"
-  bash ops/start-chain.sh $chain_id
-  CHAIN_PROVIDERS="{\"$chain_id\":\"http://172.17.0.1:`expr 8545 - 1337 + $chain_id`\"}"
-  CONTRACT_ADDRESSES="`cat $root/.chaindata/${chain_id}/address-book.json`"
+
+  port="${VECTOR_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
+  ethprovider_host="evm_$chain_id"
 
   function cleanup {
-    echo "Tests finished, stopping testnet.."
+    echo "Tests finished, stopping evm.."
     docker container stop $ethprovider_host 2> /dev/null || true
   }
   trap cleanup EXIT SIGINT SIGTERM
+
+  chain_data="$root/.chaindata/$chain_id"
+  mkdir -p $chain_data
+
+  # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
+  if [[ "$VECTOR_ENV" == "prod" ]]
+  then
+    git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
+    if [[ -n "$git_tag" ]]
+    then version="`echo $git_tag | sed 's/vector-//'`"
+    else version="`git rev-parse HEAD | head -c 8`"
+    fi
+  else
+    version="latest"
+  fi
+
+  image="${project}_ethprovider:$version"
+
+  docker run $opts \
+    --detach \
+    --env "CHAIN_ID=$chain_id" \
+    --env "EVM=buidler" \
+    --env "MNEMONIC=$eth_mnemonic" \
+    --mount "type=bind,source=$chain_data,target=/data" \
+    --name "$ethprovider_host" \
+    --network "$project" \
+    --publish "$port:8545" \
+    --rm \
+    --tmpfs "/tmp" \
+    $image $arg
+
+  while ! curl -s http://localhost:$port > /dev/null
+  do
+    if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
+    then echo "$ethprovider_host was not able to start up successfully" && exit 1
+    else sleep 1
+    fi
+  done
+
+  while [[ -z "`docker exec $ethprovider_host cat /data/address-book.json | grep 'Token":' || true`" ]]
+  do
+    if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
+    then echo "$ethprovider_host was not able to start up successfully" && exit 1
+    else sleep 1
+    fi
+  done
+  echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
+
+  CHAIN_PROVIDERS="{\"$chain_id\":\"http://evm_$chain_id:8545\"}"
+  CONTRACT_ADDRESSES="`cat $root/.chaindata/${chain_id}/address-book.json`"
+
 fi
 
-exec docker run \
+docker run \
   $interactive \
   --entrypoint="bash" \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
@@ -44,6 +98,7 @@ exec docker run \
   --env="NODE_ENV=$VECTOR_ENV" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --name="${project}_test_$unit" \
+  --network "$project" \
   --rm \
   --tmpfs="/tmp" \
   --volume="$root:/root" \

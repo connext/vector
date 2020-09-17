@@ -7,6 +7,9 @@ if [[ -d "modules/contracts" ]]
 then cd modules/contracts
 fi
 
+ls
+pwd
+
 address_book="${ADDRESS_BOOK:-/data/address-book.json}"
 data_dir="${DATA_DIR:-/tmp}"
 chain_id="${CHAIN_ID:-1337}"
@@ -33,7 +36,7 @@ then
           balance: "1000000000000000000000000000"
         }],
         blockGasLimit: 9000000000,
-        gasPrice: 1000000000,
+        gasPrice: 100000000000,
       },
     },
   }' > /tmp/buidler.config.js
@@ -47,19 +50,19 @@ then
     --db='$data_dir' \
     --defaultBalanceEther=2000000000 \
     --gasLimit=9000000000 \
-    --gasPrice=1000000000 \
+    --gasPrice=100000000000 \
     --mnemonic="'"$mnemonic"'" \
     --networkId='$chain_id' \
+    --host 0.0.0.0 \
     --port=8545 '
-  expose="--host 0.0.0.0"
+  expose=""
 else
   echo 'Expected $EVM to be either "ganache" or "buidler"'
   exit 1
 fi
 
-# TODO: Fix contract migrations!
 echo "Starting isolated testnet to migrate contracts.."
-eval "$launch > /dev/null &"
+eval "$launch > /tmp/evm.log &"
 pid=$!
 
 wait-for localhost:8545
@@ -72,13 +75,4 @@ node $cwd/dist/cli.js migrate --address-book "$address_book" --mnemonic "$mnemon
 
 node $cwd/dist/cli.js new-token --address-book "$address_book" --mnemonic "$mnemonic"
 
-# Buidler does not persist chain data: it will start with a fresh chain every time
-# Ganache persists chain data so we can restart it & this time we'll expose it to the outside world
-if [[ "$evm" == "ganache" ]]
-then
-  kill $pid
-  echo "Starting publically available testnet.."
-  eval "$launch $expose > /tmp/ganache.log"
-else
-  wait $pid
-fi
+wait $pid

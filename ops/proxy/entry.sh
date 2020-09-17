@@ -1,29 +1,8 @@
 #!/bin/bash
 
-if [[ "${VECTOR_ETH_PROVIDER_URL%%://*}" == "https" ]]
-then export VECTOR_ETH_PROVIDER_PROTOCOL="ssl"
-else export VECTOR_ETH_PROVIDER_PROTOCOL=""
-fi
-
-VECTOR_ETH_PROVIDER_URL=${VECTOR_ETH_PROVIDER_URL#*://}
-
-if [[ "$VECTOR_ETH_PROVIDER_PROTOCOL" == "ssl" ]]
-then export VECTOR_ETH_PROVIDER_HOST="${VECTOR_ETH_PROVIDER_URL%%/*}:443"
-else export VECTOR_ETH_PROVIDER_HOST="${VECTOR_ETH_PROVIDER_URL%%/*}"
-fi
-
-if [[ "$VECTOR_ETH_PROVIDER_URL" == *"/"* ]]
-then export VECTOR_ETH_PROVIDER_PATH="/${VECTOR_ETH_PROVIDER_URL#*/}"
-else export VECTOR_ETH_PROVIDER_PATH="/"
-fi
-
 echo "Proxy container launched in env:"
-echo "VECTOR_ETH_PROVIDER_HOST=$VECTOR_ETH_PROVIDER_HOST"
-echo "VECTOR_ETH_PROVIDER_PATH=$VECTOR_ETH_PROVIDER_PATH"
-echo "VECTOR_ETH_PROVIDER_PROTOCOL=$VECTOR_ETH_PROVIDER_PROTOCOL"
 echo "VECTOR_DOMAINNAME=$VECTOR_DOMAINNAME"
 echo "VECTOR_EMAIL=$VECTOR_EMAIL"
-echo "VECTOR_ETH_PROVIDER_URL=$VECTOR_ETH_PROVIDER_URL"
 echo "VECTOR_MESSAGING_TCP_URL=$VECTOR_MESSAGING_TCP_URL"
 echo "VECTOR_MESSAGING_WS_URL=$VECTOR_MESSAGING_WS_URL"
 echo "VECTOR_NODE_URL=$VECTOR_NODE_URL"
@@ -40,12 +19,6 @@ loading_pid="$!"
 ########################################
 # Wait for downstream services to wake up
 # Define service hostnames & ports we depend on
-
-echo "waiting for $VECTOR_ETH_PROVIDER_HOST..."
-wait-for -t 60 $VECTOR_ETH_PROVIDER_HOST 2> /dev/null
-while ! curl -s $VECTOR_ETH_PROVIDER_HOST > /dev/null
-do sleep 2
-done
 
 echo "waiting for $VECTOR_MESSAGING_WS_URL..."
 wait-for -t 60 $VECTOR_MESSAGING_WS_URL 2> /dev/null

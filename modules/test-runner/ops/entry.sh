@@ -86,8 +86,12 @@ then
       fi
 
       echo "Re-running tests..."
-      ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target &
-      prev_checksum=$checksum
+
+      prev_checksum="`find src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
+      if [[ -n "`which pino-pretty`" ]]
+      then (ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target | pino-pretty --colorize &)
+      else (ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target &)
+      fi
 
     # If no changes, do nothing
     else sleep 2
@@ -102,5 +106,9 @@ else
   then webpack --config ops/webpack.config.js
   fi
 
-  mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target
+  if [[ -n "`which pino-pretty`" ]]
+  then mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target | pino-pretty --colorize
+  else mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target
+  fi
+
 fi

@@ -85,20 +85,6 @@ database_env="environment:
       POSTGRES_USER: '$project'"
 
 ########################################
-# Global services config
-
-if [[ -z "$VECTOR_AUTH_URL" ]]
-then
-  echo 'No $VECTOR_AUTH_URL provided, spinning up a local copy of global services..'
-  auth_port="5040"
-  auth_url="http://auth:$auth_port"
-  bash ops/start-global.sh
-else
-  auth_url="$VECTOR_AUTH_URL"
-  echo 'Using $VECTOR_AUTH_URL='$VECTOR_AUTH_URL
-fi
-
-########################################
 # Chain provider config
 
 alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
@@ -107,9 +93,29 @@ sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crum
 
 bash ops/pull-images.sh $version "${project}_ethprovider"
 chain_id_1=1337; chain_id_2=1338;
-bash ops/start-testnet.sh $chain_id_1 $chain_id_2
 VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/providers/${chain_id_1}-${chain_id_2}.json`"
 VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/addresses/${chain_id_1}-${chain_id_2}.json`"
+
+########################################
+# Global services / chain provider config
+# If no global service urls provided, spin up local ones & use those
+# If no chain providers provided, spin up local testnets & use those
+
+auth_url="http://auth:5040"
+bash ops/start-global.sh
+mnemonic_secret_name="${project}_mnemonic_dev"
+echo 'No $VECTOR_CHAIN_PROVIDERS provided, spinning up local testnets & using those.'
+eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+bash ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic"
+bash ops/pull-images.sh $version "${project}_ethprovider"
+chain_id_1=1337; chain_id_2=1338;
+VECTOR_CHAIN_PROVIDERS='{"1337":"http://evm_1337:8545","1338":"http://evm_1338:8545"}'
+
+# TODO: fix this
+VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/addresses/${chain_id_1}-${chain_id_2}.json`"
+
+VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
+echo "Global services configured"
 
 ########################################
 ## Node config

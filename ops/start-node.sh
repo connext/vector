@@ -124,41 +124,31 @@ pg_user="$project"
 echo "Database configured"
 
 ########################################
-# Global services config
+# Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
-
-if [[ -z "$VECTOR_AUTH_URL" ]]
-then
-  echo 'No $VECTOR_AUTH_URL provided, spinning up a local copy of global services..'
-  auth_port="5040"
-  auth_url="http://auth:$auth_port"
-  bash ops/start-global.sh
-else
-  auth_url="$VECTOR_AUTH_URL"
-  echo 'Using $VECTOR_AUTH_URL='$VECTOR_AUTH_URL
-fi
-
-########################################
-# Chain provider config
 # If no chain providers provided, spin up local testnets & use those
 
-if [[ -z "$VECTOR_CHAIN_PROVIDERS" ]]
+echo "\$VECTOR_AUTH_URL=$VECTOR_AUTH_URL | \$VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS"
+if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
 then
+  echo "Env vars required to connect to external global services have not all been provided"
+  echo "Spinning up a local set of global services & configuring those now.."
+  auth_url="http://auth:5040"
+  bash ops/start-global.sh
   mnemonic_secret_name="${project}_mnemonic_dev"
   echo 'No $VECTOR_CHAIN_PROVIDERS provided, spinning up local testnets & using those.'
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
   bash ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic"
   bash ops/pull-images.sh $version "${project}_ethprovider"
   chain_id_1=1337; chain_id_2=1338;
-  bash ops/start-testnet.sh $chain_id_1 $chain_id_2
   VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/providers/${chain_id_1}-${chain_id_2}.json`"
   VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/addresses/${chain_id_1}-${chain_id_2}.json`"
 
-# If chain providers are provided, use those
 else
+  echo "Connecting to external global servies"
+  auth_url="$VECTOR_AUTH_URL"
   mnemonic_secret_name="${project}_mnemonic"
-  echo "Using chain providers:" $VECTOR_CHAIN_PROVIDERS
-  # Prefer top-level address-book override otherwise default to one in contracts
+  # Prefer top-level address-book otherwise default to one in contracts
   if [[ -f address-book.json ]]
   then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
   else VECTOR_CONTRACT_ADDRESSES="`cat modules/contracts/address-book.json | tr -d ' \n\r'`"
@@ -166,9 +156,7 @@ else
 fi
 
 VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
-ETH_PROVIDER_URL="`echo $VECTOR_CHAIN_PROVIDERS | tr -d "'" | jq '.[]' | head -n 1 | tr -d '"'`"
-
-echo "Chain providers configured"
+echo "Global services configured"
 
 ########################################
 ## Node config
@@ -225,9 +213,6 @@ services:
     environment:
       VECTOR_DOMAINNAME: '$VECTOR_DOMAINNAME'
       VECTOR_EMAIL: '$VECTOR_EMAIL'
-      VECTOR_ETH_PROVIDER_URL: '$ETH_PROVIDER_URL'
-      VECTOR_MESSAGING_TCP_URL: 'nats:4222'
-      VECTOR_MESSAGING_WS_URL: 'nats:4221'
       VECTOR_NODE_URL: 'node:$node_port'
     volumes:
       - 'certs:/etc/letsencrypt'
@@ -239,7 +224,7 @@ services:
       - '$node_port:$node_port'
     environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
-      VECTOR_AUTH_URL: 'http://auth:$auth_port'
+      VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'

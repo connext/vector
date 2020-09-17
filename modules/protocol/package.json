@@ -25,7 +25,7 @@
     "evt": "1.8.10",
     "merkletreejs": "0.2.9",
     "pino": "6.6.1",
-    "tty": "^4.2.1"
+    "tty": "1.0.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",

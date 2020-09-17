@@ -25,8 +25,6 @@ source $root/dev.env
 ## Retrieve testnet env vars
 
 chain_id_1=1337; chain_id_2=1338;
-bash ops/start-testnet.sh $chain_id_1 $chain_id_2
-
 providers_file="$root/.chaindata/providers/${chain_id_1}-${chain_id_2}.json"
 addresses_file="$root/.chaindata/addresses/${chain_id_1}-${chain_id_2}.json"
 if [[ ! -f "$providers_file" ]]

@@ -7,6 +7,8 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 tmp="$root/.tmp"; mkdir -p $tmp
 
 stack="global"
+echo
+echo "Preparing to launch $stack stack"
 
 # turn on swarm mode if it's not already on
 docker swarm init 2> /dev/null || true
@@ -50,15 +52,13 @@ then
 else version="latest"
 fi
 
-echo "Using docker images ${project}_name:${version} "
-
 ####################
 # Misc Config
 
 builder_image="${project}_builder"
 
 redis_image="redis:5-alpine";
-bash ops/pull-images.sh $redis_image
+bash ops/pull-images.sh $redis_image > /dev/null
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -79,10 +79,10 @@ if [[ $VECTOR_ENV == "prod" ]]
 then
   auth_image_name="${project}_auth:$version";
   auth_image="image: '$auth_image_name'"
-  bash ops/pull-images.sh "$auth_image_name"
+  bash ops/pull-images.sh "$auth_image_name" > /dev/null
 else
   auth_image_name="${project}_builder:latest";
-  bash ops/pull-images.sh "$auth_image_name"
+  bash ops/pull-images.sh "$auth_image_name" > /dev/null
   auth_image="image: '$auth_image_name'
     entrypoint: 'bash modules/auth/ops/entry.sh'
     volumes:
@@ -96,7 +96,7 @@ echo "Auth configured to be exposed on *:$auth_port"
 # Nats config
 
 nats_image="provide/nats-server:indra";
-bash ops/pull-images.sh "$nats_image"
+bash ops/pull-images.sh "$nats_image" > /dev/null
 
 nats_port="4222"
 nats_ws_port="4221"
@@ -128,12 +128,35 @@ export VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY=`
   sed 's/-----BEGIN PUBLIC KEY-----/\\\n-----BEGIN PUBLIC KEY-----\\\n/' | \
   sed 's/-----END PUBLIC KEY-----/\\\n-----END PUBLIC KEY-----\\\n/'`
 
-echo "Nats configured"
+####################
+# Eth Provider config
+
+chain_id_1="1337"
+chain_id_2="1338"
+
+evm_port_1="8545"
+evm_port_2="8546"
+
+chain_data="$root/.chaindata"
+chain_data_1="$chain_data/$chain_id_1"
+chain_data_2="$chain_data/$chain_id_2"
+mkdir -p $chain_data_1 $chain_data_2
+
+address_book_1="$chain_data_1/address-book.json"
+address_book_2="$chain_data_2/address-book.json"
+
+mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
+
+evm_image_name="${project}_ethprovider:$version";
+evm_image="image: '$evm_image_name'
+    tmpfs: /tmp"
+bash ops/pull-images.sh "$evm_image_name" > /dev/null
+
+public_url="http://localhost:$evm_port_1"
+echo "EVMs configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
 
 ####################
 # Launch stack
-
-echo "Launching global $stack services"
 
 rm -rf $root/${stack}.docker-compose.yml
 cat - > $root/${stack}.docker-compose.yml <<EOF
@@ -178,12 +201,54 @@ services:
     deploy:
       mode: global
 
+  evm_$chain_id_1:
+    $common
+    $evm_image
+    environment:
+      MNEMONIC: '$mnemonic'
+      CHAIN_ID: '$chain_id_1'
+    ports:
+      - '$evm_port_1:8545'
+    volumes:
+      - '$chain_data_1:/data'
+
+  evm_$chain_id_2:
+    $common
+    $evm_image
+    environment:
+      MNEMONIC: '$mnemonic'
+      CHAIN_ID: '$chain_id_2'
+    ports:
+      - '$evm_port_2:8545'
+    volumes:
+      - '$chain_data_2:/data'
+
 EOF
 
 docker stack deploy -c $root/${stack}.docker-compose.yml $stack
+echo "The $stack stack has been deployed."
 
-echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
 timeout=$(expr `date +%s` + 60)
+for address_book in $address_book_1 $address_book_2
+do
+  echo "Waiting for evm_`dirname $address_book` to wake up.."
+  while true
+  do
+    if [[ -z "`cat $address_book | grep 'TestToken'`" ]]
+    then
+      if [[ "`date +%s`" -gt "$timeout" ]]
+      then echo "Timed out waiting for evm_$chain_id to wake up.." && exit
+      else sleep 1
+      fi
+    else
+      break
+    fi
+  done
+done
+
+cat $address_book_1 $address_book_2 | jq -s '.[0] * .[1]' > $chain_data/address-book.json
+
+echo "Waiting for $public_url to wake up.."
 while true
 do
   res="`curl -k -m 5 -s $public_url || true`"
@@ -191,9 +256,8 @@ do
   then
     if [[ "`date +%s`" -gt "$timeout" ]]
     then echo "Timed out waiting for proxy to respond.." && exit
-    else sleep 2
+    else sleep 1
     fi
   else echo "Good Morning!" && exit;
   fi
 done
-
