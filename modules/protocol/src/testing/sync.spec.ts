@@ -142,7 +142,7 @@ describe("inbound", () => {
     expect(event.update).to.containSubset(channel.latestUpdate);
   });
 
-  it("should work if stored state is behind (update nonce = stored nonce + 2)", async () => {
+  it.skip("should work if stored state is behind (update nonce = stored nonce + 2)", async () => {
     // Load store with channel at nonce = 1
     const channel = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 1 });
     await store.saveChannelState(channel, {} as any);

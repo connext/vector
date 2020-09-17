@@ -35,9 +35,9 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 
 default: node
 
-node: database proxy server-node
 global: auth ethprovider
-duet: database server-node
+node: global database proxy server-node
+duet: global database server-node
 extras: test-runner
 
 all: node global duet extras

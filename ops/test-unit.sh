@@ -40,16 +40,18 @@ then
 
   docker run $opts \
     --detach \
+    --entrypoint bash \
     --env "CHAIN_ID=$chain_id" \
     --env "EVM=buidler" \
     --env "MNEMONIC=$eth_mnemonic" \
     --mount "type=bind,source=$chain_data,target=/data" \
+    --mount "type=bind,source=$root,target=/root" \
     --name "$ethprovider_host" \
     --network "$project" \
     --publish "$port:8545" \
     --rm \
     --tmpfs "/tmp" \
-    ${project}_ethprovider
+    ${project}_builder modules/contracts/ops/entry.sh
 
   while [[ -z "`cat $chain_data/address-book.json | grep 'TestToken' || true`" ]]
   do
