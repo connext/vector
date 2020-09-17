@@ -57,9 +57,8 @@ describe("Vector.setup", () => {
     const network = {
       chainId: 2,
       providerUrl: "http://eth.com",
-      channelFactoryAddress: mkAddress("0xccc"),
+      channelManagerAddress: mkAddress("0xccc"),
       vectorChannelMastercopyAddress: mkAddress("0xeee"),
-      adjudicatorAddress: mkAddress("0xaaa"),
     };
     const validParams = {
       counterpartyIdentifier: mkPublicIdentifier(),
@@ -103,13 +102,13 @@ describe("Vector.setup", () => {
         error: "should be string",
       },
       {
-        name: "should fail if there is no channelFactoryAddress",
-        params: { ...validParams, networkContext: { ...network, channelFactoryAddress: undefined } },
-        error: "should have required property 'channelFactoryAddress'",
+        name: "should fail if there is no channelManagerAddress",
+        params: { ...validParams, networkContext: { ...network, channelManagerAddress: undefined } },
+        error: "should have required property 'channelManagerAddress'",
       },
       {
-        name: "should fail if there is an invalid channelFactoryAddress",
-        params: { ...validParams, networkContext: { ...network, channelFactoryAddress: "fail" } },
+        name: "should fail if there is an invalid channelManagerAddress",
+        params: { ...validParams, networkContext: { ...network, channelManagerAddress: "fail" } },
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {
@@ -120,16 +119,6 @@ describe("Vector.setup", () => {
       {
         name: "should fail if there is an invalid vectorChannelMastercopyAddress",
         params: { ...validParams, networkContext: { ...network, vectorChannelMastercopyAddress: "fail" } },
-        error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
-      },
-      {
-        name: "should fail if there is no adjudicatorAddress",
-        params: { ...validParams, networkContext: { ...network, adjudicatorAddress: undefined } },
-        error: "should have required property 'adjudicatorAddress'",
-      },
-      {
-        name: "should fail if there is an invalid adjudicatorAddress",
-        params: { ...validParams, networkContext: { ...network, adjudicatorAddress: "fail" } },
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {

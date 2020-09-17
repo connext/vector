@@ -310,7 +310,7 @@ async function generateCreateUpdate(
     transferTimeout: timeout,
     initialStateHash: hashTransferState(transferInitialState, encodings[0]),
     transferState: transferInitialState,
-    adjudicatorAddress: state.networkContext.adjudicatorAddress,
+    channelManagerAddress: state.networkContext.channelManagerAddress,
     chainId: state.networkContext.chainId,
   };
   const transferHash = hashCoreTransferState(transferState);

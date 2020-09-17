@@ -25,12 +25,12 @@ import { providers, utils } from "ethers";
 export const getCreate2MultisigAddress = async (
   initiatorIdentifier: PublicIdentifier,
   responderIdentifier: PublicIdentifier,
-  channelFactoryAddress: string,
-  channelFactoryAbi: any,
+  channelManagerAddress: string,
+  channelManagerAbi: any,
   vectorChannelMastercopyAddress: string,
   ethProvider: providers.JsonRpcProvider,
 ): Promise<string> => {
-  const proxyFactory = new Contract(channelFactoryAddress, channelFactoryAbi, ethProvider);
+  const proxyFactory = new Contract(channelManagerAddress, channelManagerAbi, ethProvider);
 
   const proxyBytecode = await proxyFactory.proxyCreationCode();
 
@@ -40,7 +40,7 @@ export const getCreate2MultisigAddress = async (
         ["bytes1", "address", "uint256", "bytes32"],
         [
           "0xff",
-          channelFactoryAddress,
+          channelManagerAddress,
           // salt
           utils.solidityKeccak256(
             ["address", "address", "uint256", "bytes32"],

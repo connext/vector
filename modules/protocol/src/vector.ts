@@ -1,4 +1,4 @@
-import { ChannelFactory } from "@connext/vector-contracts";
+import { ChannelManager } from "@connext/vector-contracts";
 import {
   IVectorStore,
   UpdateParams,
@@ -242,8 +242,8 @@ export class Vector implements IVectorProtocol {
       channelAddress = await getCreate2MultisigAddress(
         this.publicIdentifier,
         params.counterpartyIdentifier,
-        params.networkContext.channelFactoryAddress,
-        ChannelFactory.abi,
+        params.networkContext.channelManagerAddress,
+        ChannelManager.abi,
         params.networkContext.vectorChannelMastercopyAddress,
         this.chainProviders.get(params.networkContext.chainId)!,
       );

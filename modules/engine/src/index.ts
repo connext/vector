@@ -97,11 +97,10 @@ export class VectorEngine {
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
-        adjudicatorAddress: this.chainAddresses[params.chainId].adjudicatorAddress,
         linkedTransferDefinition: this.chainAddresses[params.chainId].linkedTransferDefinition,
         withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
         vectorChannelMastercopyAddress: this.chainAddresses[params.chainId].vectorChannelMastercopyAddress,
-        channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
+        channelManagerAddress: this.chainAddresses[params.chainId].channelManagerAddress,
         chainId: params.chainId,
         providerUrl: this.chainProviders[params.chainId],
       },

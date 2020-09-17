@@ -46,7 +46,7 @@ export const hashChannelCommitment = (commitment: ChannelCommitmentData): string
   return keccak256(
     solidityPack(
       ["bytes32", "bytes[]", "address", "uint256"],
-      [channelStateHash, commitment.signatures, commitment.adjudicatorAddress, commitment.chainId.toString()],
+      [channelStateHash, commitment.signatures, commitment.channelManagerAddress, commitment.chainId.toString()],
     ),
   );
 };

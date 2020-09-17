@@ -27,7 +27,7 @@ describe("store", () => {
   it("should save and retrieve all update types and keep updating the channel", async () => {
     const setupState = createTestChannelState("setup");
     await store.saveChannelState(setupState, {
-      adjudicatorAddress: setupState.networkContext.adjudicatorAddress,
+      channelManagerAddress: setupState.networkContext.channelManagerAddress,
       chainId: setupState.networkContext.chainId,
       signatures: setupState.latestUpdate.signatures,
       state: setupState,
@@ -42,7 +42,7 @@ describe("store", () => {
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
     });
     await store.saveChannelState(depositState, {
-      adjudicatorAddress: depositState.networkContext.adjudicatorAddress,
+      channelManagerAddress: depositState.networkContext.channelManagerAddress,
       chainId: depositState.networkContext.chainId,
       signatures: depositState.latestUpdate.signatures,
       state: depositState,
@@ -55,7 +55,7 @@ describe("store", () => {
       nonce: depositState.nonce + 1,
     });
     await store.saveChannelState(createState, {
-      adjudicatorAddress: createState.networkContext.adjudicatorAddress,
+      channelManagerAddress: createState.networkContext.channelManagerAddress,
       chainId: createState.networkContext.chainId,
       signatures: createState.latestUpdate.signatures,
       state: createState,
@@ -68,7 +68,7 @@ describe("store", () => {
       nonce: createState.nonce + 1,
     });
     await store.saveChannelState(resolveState, {
-      adjudicatorAddress: resolveState.networkContext.adjudicatorAddress,
+      channelManagerAddress: resolveState.networkContext.channelManagerAddress,
       chainId: resolveState.networkContext.chainId,
       signatures: resolveState.latestUpdate.signatures,
       state: resolveState,

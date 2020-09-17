@@ -1,6 +1,5 @@
 import {
-  Adjudicator,
-  ChannelFactory,
+  ChannelManager,
   LinkedTransfer,
   VectorChannel,
   Withdraw,
@@ -53,11 +52,8 @@ const deployArtifactsToChain = async (wallet: Wallet): Promise<ContractAddresses
   // Deploy core contracts
   const vectorChannelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, wallet).deploy();
 
-  const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, wallet).deploy();
-
-  const channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, wallet).deploy(
+  const channelManager = await new ContractFactory(ChannelManager.abi, ChannelManager.bytecode, wallet).deploy(
     vectorChannelMastercopy.address,
-    adjudicator.address,
   );
 
   // Deploy app contracts
@@ -66,9 +62,8 @@ const deployArtifactsToChain = async (wallet: Wallet): Promise<ContractAddresses
   const withdraw = await new ContractFactory(Withdraw.abi, Withdraw.bytecode, wallet).deploy();
 
   return {
-    channelFactoryAddress: channelFactory.address,
+    channelManagerAddress: channelManager.address,
     vectorChannelMastercopyAddress: vectorChannelMastercopy.address,
-    adjudicatorAddress: adjudicator.address,
     linkedTransferDefinition: linkedTransfer.address,
     withdrawDefinition: withdraw.address,
   };

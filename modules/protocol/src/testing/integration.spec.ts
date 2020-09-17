@@ -46,9 +46,8 @@ describe(testName, () => {
     const channel = await alice.setup({
       counterpartyIdentifier: bob.publicIdentifier,
       networkContext: {
-        adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
         chainId,
-        channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
+        channelManagerAddress: env.chainAddresses[chainId].ChannelManager.address,
         providerUrl: env.chainProviders[chainId],
         vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
       },

@@ -46,9 +46,8 @@ export function createTestUpdateParams<T extends UpdateType>(
         counterpartyIdentifier: mkPublicIdentifier("0xbbb"),
         timeout: "1200",
         networkContext: {
-          channelFactoryAddress: mkAddress("0xcha"),
+          channelManagerAddress: mkAddress("0xcha"),
           vectorChannelMastercopyAddress: mkAddress("0xcccaaa"),
-          adjudicatorAddress: mkAddress("0xaaaddd"),
         },
       };
       break;
@@ -121,9 +120,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
     case UpdateType.setup:
       details = {
         networkContext: {
-          adjudicatorAddress: mkAddress("0xaaaddd"),
           chainId: 1337,
-          channelFactoryAddress: mkAddress("0xcha"),
+          channelManagerAddress: mkAddress("0xcha"),
           providerUrl: "http://localhost:8545",
           vectorChannelMastercopyAddress: mkAddress("0xmast"),
         },
@@ -211,9 +209,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     }) as any,
     merkleRoot: mkHash(),
     networkContext: {
-      adjudicatorAddress: mkAddress("0xaaaddd"),
       chainId: 1337,
-      channelFactoryAddress: mkAddress("0xcha"),
+      channelManagerAddress: mkAddress("0xcha"),
       providerUrl: "http://localhost:8545",
       vectorChannelMastercopyAddress: mkAddress("0xmast"),
     },

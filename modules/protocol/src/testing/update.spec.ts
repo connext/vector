@@ -1,4 +1,4 @@
-import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
+import { LinkedTransfer, ChannelManager } from "@connext/vector-contracts";
 import {
   IVectorStore,
   JsonRpcProvider,
@@ -244,7 +244,7 @@ describe("applyUpdate", () => {
       ...coreState,
       transferState: transferInitialState,
       chainId: state.networkContext.chainId,
-      adjudicatorAddress: state.networkContext.adjudicatorAddress,
+      channelManagerAddress: state.networkContext.channelManagerAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     });
@@ -283,17 +283,17 @@ describe("generateUpdate", () => {
 
     // Deploy multisig
     // TODO: in channel deployment?
-    const factory = new Contract(
-      global["networkContext"].channelFactoryAddress,
-      ChannelFactory.abi,
+    const manager = new Contract(
+      global["networkContext"].channelManagerAddress,
+      ChannelManager.abi,
       global["wallet"].connect(provider),
     );
     const created = new Promise((resolve) => {
-      factory.once(factory.filters.ChannelCreation(), (data) => {
+      manager.once(factory.filters.ChannelCreation(), (data) => {
         resolve(data);
       });
     });
-    const tx = await factory.createChannel(signers[0].address, signers[1].address);
+    const tx = await manager.createChannel(signers[0].address, signers[1].address);
     await tx.wait();
     channelAddress = (await created) as string;
   });
@@ -444,7 +444,7 @@ describe("generateUpdate", () => {
       ...coreState,
       transferState: transferInitialState,
       chainId: state.networkContext.chainId,
-      adjudicatorAddress: state.networkContext.adjudicatorAddress,
+      channelManagerAddress: state.networkContext.channelManagerAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     });

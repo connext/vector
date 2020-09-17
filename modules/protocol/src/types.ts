@@ -65,9 +65,8 @@ export const SetupParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   timeout: TIntegerString,
   networkContext: Type.Object({
-    channelFactoryAddress: TAddress,
+    channelManagerAddress: TAddress,
     vectorChannelMastercopyAddress: TAddress,
-    adjudicatorAddress: TAddress,
     linkedTransferDefinition: Type.Optional(TAddress),
     withdrawDefinition: Type.Optional(TAddress),
     chainId: Type.Number({ minimum: 1 }),
