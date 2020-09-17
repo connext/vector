@@ -20,6 +20,7 @@ import {
   VectorMessage,
   SetupParams,
 } from "@connext/vector-types";
+import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { Evt } from "evt";
@@ -225,7 +226,11 @@ export class Vector implements IVectorProtocol {
     }
 
     // TODO: move to within lock!
-    const existing = await this.storeService.getChannelStateByCounterparty(params.counterpartyIdentifier);
+    const existing = await this.storeService.getChannelStateByParticipants(
+      this.signerAddress,
+      getSignerAddressFromPublicIdentifier(params.counterpartyIdentifier),
+      params.networkContext.chainId,
+    );
     if (existing) {
       // TODO: should this return an error here, or simply the already setup
       // channel?

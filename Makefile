@@ -152,6 +152,11 @@ test-engine: engine
 watch-engine: protocol
 	bash ops/test-unit.sh engine watch 1341
 
+test-server-node: node
+	bash ops/test-unit.sh server-node test 1342
+watch-server-node: node
+	bash ops/test-unit.sh server-node watch 1342
+
 # Integration Tests
 
 test-global: test-runner global
