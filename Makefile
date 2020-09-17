@@ -36,7 +36,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 default: node
 
 node: database proxy server-node
-global: auth global-proxy 
+global: auth
 duet: database server-node
 extras: ethprovider test-runner
 
@@ -260,12 +260,6 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-global-proxy: $(shell find ops/global-proxy $(find_options))
-	$(log_start)
-	docker build $(image_cache) --tag $(project)_msg_proxy ops/global-proxy
-	docker tag $(project)_msg_proxy $(project)_msg_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 proxy: $(shell find ops/proxy $(find_options))
