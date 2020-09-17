@@ -85,7 +85,6 @@ else
       - '$root:/root'"
 fi
 
-public_url="http://localhost:$auth_port"
 echo "Auth configured to be exposed on *:$auth_port"
 
 ####################
@@ -152,7 +151,6 @@ evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
 bash $root/ops/pull-images.sh "$evm_image_name" > /dev/null
 
-public_url="http://localhost:$evm_port_1"
 echo "EVMs configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
 
 
@@ -226,6 +224,7 @@ EOF
 
 docker stack deploy -c $root/${stack}.docker-compose.yml $stack
 echo "The $stack stack has been deployed."
+public_auth_url="http://127.0.0.1:5040"
 
 function abort {
   echo
@@ -241,13 +240,14 @@ function abort {
   echo "====="
   docker service ps global_evm_1338 || true
   docker service logs --tail 50 --raw global_evm_1338 || true
-  echo
+  echo "====="
+  curl $public_auth_url || true
+  echo "====="
   echo "Timed out waiting for $stack stack to wake up, see above for diagnostic info."
   exit
 }
 
 timeout=$(expr `date +%s` + 60)
-public_auth_url="http://localhost:5040"
 echo "Waiting for $public_auth_url to wake up.."
 while true
 do
