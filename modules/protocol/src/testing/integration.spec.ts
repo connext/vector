@@ -18,7 +18,7 @@ describe(testName, () => {
 
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
-  const wallet = global["wallet"].connect(new JsonRpcProvider(providerUrl));
+  const wallet = env.sugarDaddy.connect(new JsonRpcProvider(providerUrl));
 
   beforeEach(async () => {
     const messaging = new MemoryMessagingService();
@@ -91,27 +91,34 @@ describe(testName, () => {
     expect(aliceChannel).to.deep.eq(bobChannel);
 
     const depositAmount = BigNumber.from("1000");
+    const assetId = constants.AddressZero;
 
     // Deploy the multisig with a deposit
     const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, wallet);
-    const created = new Promise((resolve) => {
-      factory.once(factory.filters.ChannelCreation(), (data) => {
-        resolve(data);
-      });
-    });
     const tx = await factory.createChannelAndDepositA(
       alice.signerAddress,
       bob.signerAddress,
       constants.AddressZero,
       depositAmount,
-      { value: depositAmount.toString() },
+      { value: depositAmount.toString(), gasLimit: BigNumber.from(9_000_000) },
     );
     await tx.wait();
-    const channelAddress = (await created) as string;
-    expect(channelAddress).to.be.eq(aliceChannel?.channelAddress);
 
-    // Deposit into channel
-    
+    // Reconcile the depositA
+    const depositRet = await alice.deposit({
+      channelAddress: aliceChannel!.channelAddress,
+      assetId,
+    });
+    expect(depositRet.isError).to.be.false;
+
+    const aliceDeposited = await alice.getChannelState(channel.getValue().channelAddress);
+    expect(aliceDeposited?.balances).to.containSubset({
+      to: aliceChannel?.participants,
+      amount: [depositAmount.toString(), "0"],
+    });
+    expect(aliceDeposited?.latestDepositNonce).to.be.eq(aliceChannel!.nonce + 1);
+    expect(aliceDeposited?.assetIds).to.containSubset([constants.AddressZero]);
+    expect(await bob.getChannelState(channelAddress)).to.containSubset(aliceDeposited);
   });
 
   // TODO: the following deposit test cases are *extremely* simple tests
