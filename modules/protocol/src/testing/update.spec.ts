@@ -6,7 +6,6 @@ import {
   ChannelUpdateError,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
-  LinkedTransferName,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -27,7 +26,7 @@ import {
   hashTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import { constants, Contract, utils } from "ethers";
+import { BigNumber, constants, Contract, utils } from "ethers";
 import { MerkleTree } from "merkletreejs";
 
 import { applyUpdate, generateUpdate } from "../update";
@@ -193,7 +192,7 @@ describe("applyUpdate", () => {
   });
 
   // TODO: revert, wtf?
-  it.skip("should work for resolve", async () => {
+  it.only("should work for resolve", async () => {
     const preImage = hexlify(randomBytes(32));
     const linkedHash = createLinkedHash(preImage);
     const transferInitialState = createTestLinkedTransferState({
@@ -202,13 +201,18 @@ describe("applyUpdate", () => {
     });
     const assetId = constants.AddressZero;
 
+    const encodedState = encodeLinkedTransferState(transferInitialState);
+    console.log("transferInitialState: ", transferInitialState);
+    console.log("encodedState: ", encodedState);
+    const encodedResolver = encodeLinkedTransferResolver({ preImage });
+    console.log("encodedResolver: ", encodedResolver);
     const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
-      encodeLinkedTransferState(transferInitialState),
-      encodeLinkedTransferResolver({ preImage }),
+      encodedState,
+      encodedResolver,
     );
     const balance = {
       to: ret.to,
-      amount: ret.amount.map((a) => a.toString()),
+      amount: ret.amount.map((a: BigNumber) => a.toString()),
     };
 
     // Create the channel state

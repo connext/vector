@@ -2,10 +2,6 @@ import {
   LinkedTransferState,
   WithdrawState,
   TransferState,
-  TransferName,
-  WithdrawName,
-  LinkedTransferName,
-  TransferNameToStateMap,
   CoreTransferState,
   WithdrawStateEncoding,
   LinkedTransferStateEncoding,
@@ -15,8 +11,6 @@ import {
   Address,
 } from "@connext/vector-types";
 import { utils } from "ethers";
-
-import { stringify } from "./json";
 
 const { keccak256, solidityPack, defaultAbiCoder } = utils;
 
