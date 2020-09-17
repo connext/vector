@@ -1,4 +1,4 @@
-import { LinkedTransfer, ChannelFactory, VectorChannel } from "@connext/vector-contracts";
+import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
 import {
   IVectorStore,
   JsonRpcProvider,
