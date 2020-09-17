@@ -4,20 +4,16 @@ set -e
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
-tmp="$root/.tmp"; mkdir -p $tmp
-
-stack="global"
-echo
-echo "Preparing to launch $stack stack"
-
-# turn on swarm mode if it's not already on
-docker swarm init 2> /dev/null || true
 
 # make sure a network for this project has been created
+docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
+
+stack="global"
 
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit 0;
+else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
@@ -58,7 +54,7 @@ fi
 builder_image="${project}_builder"
 
 redis_image="redis:5-alpine";
-bash ops/pull-images.sh $redis_image > /dev/null
+bash $root/ops/pull-images.sh $redis_image > /dev/null
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -79,10 +75,10 @@ if [[ $VECTOR_ENV == "prod" ]]
 then
   auth_image_name="${project}_auth:$version";
   auth_image="image: '$auth_image_name'"
-  bash ops/pull-images.sh "$auth_image_name" > /dev/null
+  bash $root/ops/pull-images.sh "$auth_image_name" > /dev/null
 else
   auth_image_name="${project}_builder:latest";
-  bash ops/pull-images.sh "$auth_image_name" > /dev/null
+  bash $root/ops/pull-images.sh "$auth_image_name" > /dev/null
   auth_image="image: '$auth_image_name'
     entrypoint: 'bash modules/auth/ops/entry.sh'
     volumes:
@@ -96,7 +92,7 @@ echo "Auth configured to be exposed on *:$auth_port"
 # Nats config
 
 nats_image="provide/nats-server:indra";
-bash ops/pull-images.sh "$nats_image" > /dev/null
+bash $root/ops/pull-images.sh "$nats_image" > /dev/null
 
 nats_port="4222"
 nats_ws_port="4221"
@@ -105,6 +101,7 @@ nats_ws_port="4221"
 if [[ -z "$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY" ]]
 then
   echo "WARNING: Generating new nats jwt signing keys & saving them in .env"
+  tmp="$root/.tmp"; mkdir -p $tmp
   keyFile=$tmp/id_rsa
   ssh-keygen -t rsa -b 4096 -m PEM -f $keyFile -N "" > /dev/null
   prvKey="`cat $keyFile | tr -d '\n\r'`"
@@ -148,14 +145,16 @@ address_book_2="$chain_data_2/address-book.json"
 rm -rf $address_book $address_book_1 $address_book_2
 
 mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
+bash $root/ops/save-secret.sh "${project}_mnemonic_dev" "$mnemonic" > /dev/null
 
 evm_image_name="${project}_ethprovider:$version";
 evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
-bash ops/pull-images.sh "$evm_image_name" > /dev/null
+bash $root/ops/pull-images.sh "$evm_image_name" > /dev/null
 
 public_url="http://localhost:$evm_port_1"
 echo "EVMs configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
+
 
 ####################
 # Launch stack
@@ -182,9 +181,7 @@ services:
       VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_PORT: '$auth_port'
-      NODE_ENV: '`
-        if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
-      `'
+      VECTOR_ENV: '$VECTOR_ENV'
     ports:
       - '$auth_port:$auth_port'
 

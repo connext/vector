@@ -9,10 +9,7 @@ node_bin="`pwd`/node_modules/.bin"
 nodemon="$node_bin/nodemon"
 pino="$node_bin/pino-pretty"
 
-########################################
-# Launch Auth
-
-if [[ "$NODE_ENV" == "development" ]]
+if [[ "$VECTOR_ENV" == "dev" ]]
 then
   echo "Starting node in dev-mode"
   exec $nodemon \

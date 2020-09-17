@@ -16,7 +16,7 @@ export VECTOR_CONTRACT_ADDRESSES="$VECTOR_CONTRACT_ADDRESSES"
 export VECTOR_NATS_URL="$VECTOR_NATS_URL"
 export VECTOR_NODE_URL="$VECTOR_NODE_URL"
 
-export NODE_ENV="${NODE_ENV:-development}"
+export VECTOR_ENV="${VECTOR_ENV:-dev}"
 
 ########################################
 # Wait for dependencies to wake up
@@ -57,7 +57,7 @@ fi
 ########################################
 # Launch tests
 
-if [[ "$NODE_ENV" == "production" ]]
+if [[ "$VECTOR_ENV" == "prod" ]]
 then opts="--forbid-only"
 else opts="--bail"
 fi

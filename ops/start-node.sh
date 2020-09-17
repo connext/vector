@@ -5,16 +5,15 @@ root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 
-stack="node"
-
-# turn on swarm mode if it's not already on
-docker swarm init 2> /dev/null || true
-
 # make sure a network for this project has been created
+docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
+
+stack="node"
 
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit 0;
+else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
@@ -49,14 +48,12 @@ then
 else version="latest"
 fi
 
-echo "Using docker images ${project}_name:${version} "
-
 builder_image_name="${project}_builder";
 builder_image="$builder_image_name:$version";
-bash ops/pull-images.sh $version $builder_image_name
+bash $root/ops/pull-images.sh $version $builder_image_name > /dev/null
 
 redis_image="redis:5-alpine";
-bash ops/pull-images.sh "$redis_image"
+bash $root/ops/pull-images.sh "$redis_image" > /dev/null
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -73,7 +70,7 @@ common="networks:
 
 proxy_image_name="${project}_proxy";
 proxy_image="$proxy_image_name:$version";
-bash ops/pull-images.sh $version $proxy_image_name
+bash $root/ops/pull-images.sh $version $proxy_image_name > /dev/null
 
 if [[ -z "$VECTOR_DOMAINNAME" ]]
 then
@@ -87,14 +84,12 @@ else
       - '443:443'"
 fi
 
-echo "Proxy configured"
-
 ########################################
 ## Database config
 
 database_image_name="${project}_database";
 database_image="$database_image_name:$version"
-bash ops/pull-images.sh $version $database_image_name
+bash $root/ops/pull-images.sh $version $database_image_name > /dev/null
 
 snapshots_dir="$root/.db-snapshots"
 mkdir -p $snapshots_dir
@@ -104,14 +99,14 @@ then
   database_image="image: '$database_image'"
   db_volume="database"
   db_secret="${project}_database"
-  bash ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
+  bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`" > /dev/null
 else
   database_image="image: '$database_image'
     ports:
       - '5432:5432'"
   db_volume="database_dev"
   db_secret="${project}_database_dev"
-  bash ops/save-secret.sh "$db_secret" "$project"
+  bash $root/ops/save-secret.sh "$db_secret" "$project" > /dev/null
 fi
 
 # database connection settings
@@ -121,28 +116,24 @@ pg_password_file="/run/secrets/$db_secret"
 pg_port="5432"
 pg_user="$project"
 
-echo "Database configured"
-
 ########################################
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 # If no chain providers provided, spin up local testnets & use those
 
-echo "\$VECTOR_AUTH_URL=$VECTOR_AUTH_URL | \$VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS"
 if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
 then
-  echo "Env vars required to connect to external global services have not all been provided"
-  echo "Spinning up a local set of global services & configuring those now.."
-  bash ops/start-global.sh
+  echo "\$VECTOR_AUTH_URL or \$VECTOR_CHAIN_PROVIDERS is missing, starting global services"
+  bash $root/ops/start-global.sh
   auth_url="http://auth:5040"
   mnemonic_secret_name="${project}_mnemonic_dev"
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-  bash ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic"
+  bash $root/ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic" > /dev/null
   VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
   VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
 
 else
-  echo "Connecting to external global servies"
+  echo "Connecting to external global servies: $VECTOR_AUTH_URL & $VECTOR_CHAIN_PROVIDERS"
   auth_url="$VECTOR_AUTH_URL"
   mnemonic_secret_name="${project}_mnemonic"
   # Prefer top-level address-book otherwise default to one in contracts
@@ -153,35 +144,30 @@ else
 fi
 
 VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
-echo "Global services configured"
 
 ########################################
 ## Node config
 
 node_port="8000"
+prisma_port="5555"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
   node_image_name="${project}_node"
-  bash ops/pull-images.sh $version $node_image_name
+  bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
   node_image="image: '$node_image_name:$version'"
 else
-  echo "Running dev mode"
   node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
       - '$node_port:$node_port'
-      - '9229:9229'"
+      - '$prisma_port:$prisma_port'"
 fi
-
-echo "Node configured"
 
 ####################
 # Launch Indra stack
-
-echo "Launching ${stack} stack"
 
 rm -rf $root/docker-compose.yml $root/$stack.docker-compose.yml
 cat - > $root/$stack.docker-compose.yml <<EOF
@@ -234,9 +220,7 @@ services:
       VECTOR_PG_USERNAME: '$pg_user'
       VECTOR_PORT: '$node_port'
       VECTOR_REDIS_URL: '$redis_url'
-      NODE_ENV: '`
-        if [[ "$VECTOR_ENV" == "prod" ]]; then echo "production"; else echo "development"; fi
-      `'
+      VECTOR_ENV: '$VECTOR_ENV'
     secrets:
       - '$db_secret'
       - '$mnemonic_secret_name'

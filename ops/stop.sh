@@ -13,14 +13,15 @@ shift
 stack_name="`docker stack ls --format '{{.Name}}' | grep "$target"`"
 if [[ -n "$stack_name" ]]
 then
+  echo
   echo "Stopping stack $stack_name"
   docker stack rm $stack_name
-  echo "Waiting for the $stack_name stack to shutdown.."
+  echo "Waiting for the $stack_name stack to completely shutdown.."
   while [[ -n "`docker container ls -q --filter label=com.docker.stack.namespace=$stack_name`" ]]
-  do sleep 3 # wait until there are no more containers in this stack
+  do sleep 2 # wait until there are no more containers in this stack
   done
   while [[ -n "`docker network ls -q --filter label=com.docker.stack.namespace=$stack_name`" ]]
-  do sleep 3 # wait until the stack's network has been removed
+  do sleep 2 # wait until the stack's network has been removed
   done
   echo "Goodnight $stack_name!"
   exit

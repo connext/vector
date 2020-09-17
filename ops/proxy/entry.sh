@@ -3,8 +3,6 @@
 echo "Proxy container launched in env:"
 echo "VECTOR_DOMAINNAME=$VECTOR_DOMAINNAME"
 echo "VECTOR_EMAIL=$VECTOR_EMAIL"
-echo "VECTOR_MESSAGING_TCP_URL=$VECTOR_MESSAGING_TCP_URL"
-echo "VECTOR_MESSAGING_WS_URL=$VECTOR_MESSAGING_WS_URL"
 echo "VECTOR_NODE_URL=$VECTOR_NODE_URL"
 
 # Provide a message indicating that we're still waiting for everything to wake up
@@ -19,12 +17,6 @@ loading_pid="$!"
 ########################################
 # Wait for downstream services to wake up
 # Define service hostnames & ports we depend on
-
-echo "waiting for $VECTOR_MESSAGING_WS_URL..."
-wait-for -t 60 $VECTOR_MESSAGING_WS_URL 2> /dev/null
-
-echo "waiting for $VECTOR_MESSAGING_TCP_URL..."
-wait-for -t 60 $VECTOR_MESSAGING_TCP_URL 2> /dev/null
 
 echo "waiting for $VECTOR_NODE_URL..."
 wait-for -t 60 $VECTOR_NODE_URL 2> /dev/null

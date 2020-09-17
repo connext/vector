@@ -61,6 +61,7 @@ server.addHook("onReady", async () => {
     },
   );
   await messaging.connect();
+  return; // TODO: rm this once the below command works w/out error
   vectorEngine = await VectorEngine.connect(
     messaging,
     new LockService(config.redisUrl),

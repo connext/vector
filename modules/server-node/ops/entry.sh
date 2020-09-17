@@ -44,8 +44,14 @@ wait_for "auth" "$VECTOR_AUTH_URL"
 ########################################
 # Launch Node
 
-if [[ "$NODE_ENV" == "development" ]]
+if [[ "$VECTOR_ENV" == "dev" ]]
 then
+
+  # TODO: how do we expose prisma studio on all interfaces (ie 0.0.0.0) instead of just localhost?
+  echo "Starting prisma studio in the background"
+  ./node_modules/.bin/prisma studio --experimental &
+  sleep 3 # give prisma a sec to start up & log it's endpoint
+
   echo "Starting node in dev-mode"
   exec ./node_modules/.bin/nodemon \
     --delay 1 \
@@ -58,8 +64,8 @@ then
     --watch src \
     --exec ts-node \
     ./src/index.ts \
-    | ./node_modules/.bin/pino-pretty \
-    && ./node_modules/.bin/prisma studio --experimental
+    | ./node_modules/.bin/pino-pretty
+
 else
   echo "Starting node in prod-mode"
   exec node --no-deprecation dist/bundle.js

@@ -50,34 +50,34 @@ restart: restart-node
 stop: stop-node
 
 start-node: node
-	bash ops/start-node.sh
+	@bash ops/start-node.sh
 restart-node:
-	bash ops/stop.sh node
-	bash ops/start-node.sh
+	@bash ops/stop.sh node
+	@bash ops/start-node.sh
 stop-node:
-	bash ops/stop.sh node
+	@bash ops/stop.sh node
 
 start-duet: duet
-	bash ops/start-duet.sh
+	@bash ops/start-duet.sh
 restart-duet:
-	bash ops/stop.sh duet
-	bash ops/start-duet.sh
+	@bash ops/stop.sh duet
+	@bash ops/start-duet.sh
 stop-duet:
-	bash ops/stop.sh duet
+	@bash ops/stop.sh duet
 
 start-global: global
-	bash ops/start-global.sh
+	@bash ops/start-global.sh
 restart-global:
-	bash ops/stop.sh global
-	bash ops/start-global.sh
+	@bash ops/stop.sh global
+	@bash ops/start-global.sh
 stop-global:
-	bash ops/stop.sh global
+	@bash ops/stop.sh global
 
 stop-all:
-	bash ops/stop.sh duet
-	bash ops/stop.sh node
-	bash ops/stop.sh global
-	bash ops/stop.sh evm
+	@bash ops/stop.sh duet
+	@bash ops/stop.sh node
+	@bash ops/stop.sh global
+	@bash ops/stop.sh evm
 
 clean: stop-all
 	docker container prune -f
@@ -133,41 +133,41 @@ test-all: test-units test-integrations
 # Unit Tests
 
 test-utils: utils
-	bash ops/test/unit.sh utils test
+	bash ops/test-unit.sh utils test
 watch-utils: types
-	bash ops/test/unit.sh utils watch
+	bash ops/test-unit.sh utils watch
 
 test-contracts: contracts
-	bash ops/test/unit.sh contracts test
+	bash ops/test-unit.sh contracts test
 watch-contracts: utils
-	bash ops/test/unit.sh contracts watch
+	bash ops/test-unit.sh contracts watch
 
 test-protocol: protocol
-	bash ops/test/unit.sh protocol test 1340
+	bash ops/test-unit.sh protocol test 1340
 watch-protocol: contracts
-	bash ops/test/unit.sh protocol watch 1340
+	bash ops/test-unit.sh protocol watch 1340
 
 test-engine: engine
-	bash ops/test/unit.sh engine test 1341
+	bash ops/test-unit.sh engine test 1341
 watch-engine: protocol
-	bash ops/test/unit.sh engine watch 1341
+	bash ops/test-unit.sh engine watch 1341
 
 # Integration Tests
 
 test-global: test-runner global
-	bash ops/test/integration.sh global test
+	bash ops/test-integration.sh global test
 watch-global: test-runner global
-	bash ops/test/integration.sh global watch
+	bash ops/test-integration.sh global watch
 
 test-node: test-runner node
-	bash ops/test/integration.sh node test
+	bash ops/test-integration.sh node test
 watch-node: test-runner node
-	bash ops/test/integration.sh node watch
+	bash ops/test-integration.sh node watch
 
 test-duet: test-runner duet
-	bash ops/test/integration.sh duet test
+	bash ops/test-integration.sh duet test
 watch-duet: test-runner duet
-	bash ops/test/integration.sh duet watch
+	bash ops/test-integration.sh duet watch
 
 ########################################
 # Begin Real Build Rules

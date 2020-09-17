@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
+root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 
 # make sure a network for this project has been created
@@ -70,7 +70,7 @@ docker run \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
   --env="CONTRACT_ADDRESSES=$CONTRACT_ADDRESSES" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
-  --env="NODE_ENV=$VECTOR_ENV" \
+  --env="VECTOR_ENV=$VECTOR_ENV" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --name="${project}_test_$unit" \
   --network "$project" \
