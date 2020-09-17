@@ -2,7 +2,7 @@
 
 Core channel state:
     Balance[][] balances; // TODO index by assetId? // initiator, responder
-    uint256[] lockedValue; // Indexed by assetId -- should always be changed in lockstep with transfers
+    uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
     address[] assetIds;
     bytes32 channelId;
     address[] participants; // Signer keys -- does NOT have to be the same as balances.to[]

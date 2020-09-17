@@ -1,12 +1,12 @@
 import { Contract, ContractFactory, Wallet, utils, constants } from "ethers";
+import { LinkedTransferState, LinkedTransferResolver, Balance } from "@connext/vector-types";
 import {
-  LinkedTransferState,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
-  LinkedTransferResolver,
-  Balance,
-} from "@connext/vector-types";
-import { getRandomAddress, getRandomBytes32, stringify, keyify } from "@connext/vector-utils";
+  encodeLinkedTransferResolver,
+  encodeLinkedTransferState,
+  getRandomAddress,
+  getRandomBytes32,
+  keyify,
+} from "@connext/vector-utils";
 
 import { LinkedTransfer } from "../../../artifacts";
 import { expect, provider } from "../../utils";
@@ -16,14 +16,6 @@ const { HashZero, Zero } = constants;
 describe("LinkedTransfer", () => {
   let deployer: Wallet;
   let definition: Contract;
-
-  const encodeTransferState = (state: LinkedTransferState): string => {
-    return utils.defaultAbiCoder.encode([LinkedTransferStateEncoding], [state]);
-  };
-
-  const encodeTransferResolver = (resolver: LinkedTransferResolver): string => {
-    return utils.defaultAbiCoder.encode([LinkedTransferResolverEncoding], [resolver]);
-  };
 
   const createLinkedHash = (preImage: string): string => {
     return utils.soliditySha256(["bytes32"], [preImage]);
@@ -50,7 +42,7 @@ describe("LinkedTransfer", () => {
   };
 
   const createTransfer = async (initialState: LinkedTransferState): Promise<boolean> => {
-    const encodedState = encodeTransferState(initialState);
+    const encodedState = encodeLinkedTransferState(initialState);
     return definition.functions.create(encodedState);
   };
 
@@ -58,8 +50,8 @@ describe("LinkedTransfer", () => {
     initialState: LinkedTransferState,
     resolver: LinkedTransferResolver,
   ): Promise<Balance> => {
-    const encodedState = encodeTransferState(initialState);
-    const encodedResolver = encodeTransferResolver(resolver);
+    const encodedState = encodeLinkedTransferState(initialState);
+    const encodedResolver = encodeLinkedTransferResolver(resolver);
     const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };

@@ -15,7 +15,7 @@ model Balance {
   assetId        String
   to             String
   amount         String
-  lockedValue    String
+  lockedBalance    String
   Channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
   channelAddress String
   @@id([participant, channelAddress, assetId])

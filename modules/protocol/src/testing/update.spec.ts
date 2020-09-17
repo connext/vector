@@ -6,7 +6,6 @@ import {
   ChannelUpdateError,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
-  LinkedTransferName,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -27,7 +26,7 @@ import {
   hashTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import { constants, Contract, utils } from "ethers";
+import { BigNumber, constants, Contract, utils } from "ethers";
 import { MerkleTree } from "merkletreejs";
 
 import { applyUpdate, generateUpdate } from "../update";
@@ -82,7 +81,7 @@ describe("applyUpdate", () => {
       timeout: update.details.timeout,
       participants: signers.map((s) => s.address),
       balances: [],
-      lockedValue: [],
+      lockedBalance: [],
       assetIds: [],
       merkleRoot: mkHash(),
       latestUpdate: update,
@@ -157,7 +156,7 @@ describe("applyUpdate", () => {
     // Create the channel state
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,
-      lockedValue: [],
+      lockedBalance: [],
       balances: [transferInitialState.balance],
       assetIds: [assetId],
       latestDepositNonce: 1,
@@ -185,7 +184,7 @@ describe("applyUpdate", () => {
     expect(newState).to.containSubset({
       ...state,
       balances: [{ ...transferInitialState.balance, amount: ["0", "0"] }],
-      lockedValue: [{ amount: "1" }],
+      lockedBalance: ["1"],
       nonce: update.nonce,
       merkleRoot: update.details.merkleRoot,
       latestUpdate: update,
@@ -193,7 +192,7 @@ describe("applyUpdate", () => {
   });
 
   // TODO: revert, wtf?
-  it.skip("should work for resolve", async () => {
+  it("should work for resolve", async () => {
     const preImage = hexlify(randomBytes(32));
     const linkedHash = createLinkedHash(preImage);
     const transferInitialState = createTestLinkedTransferState({
@@ -202,19 +201,21 @@ describe("applyUpdate", () => {
     });
     const assetId = constants.AddressZero;
 
+    const encodedState = encodeLinkedTransferState(transferInitialState);
+    const encodedResolver = encodeLinkedTransferResolver({ preImage });
     const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
-      encodeLinkedTransferState(transferInitialState),
-      encodeLinkedTransferResolver({ preImage }),
+      encodedState,
+      encodedResolver,
     );
     const balance = {
       to: ret.to,
-      amount: ret.amount.map((a) => a.toString()),
+      amount: ret.amount.map((a: BigNumber) => a.toString()),
     };
 
     // Create the channel state
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,
-      lockedValue: [{ amount: "1" }],
+      lockedBalance: ["1"],
       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
       assetIds: [assetId],
       latestDepositNonce: 1,
@@ -253,7 +254,7 @@ describe("applyUpdate", () => {
     expect(updateRet.getValue()).to.containSubset({
       ...state,
       balances: [{ ...transferInitialState.balance, amount: ["1", "0"] }],
-      lockedValue: [{ amount: "0" }],
+      lockedBalance: ["0"],
       nonce: update.nonce,
       merkleRoot: emptyTree.getHexRoot(),
       latestUpdate: update,
@@ -262,7 +263,7 @@ describe("applyUpdate", () => {
 });
 
 // TODO: unskip once channel creation is working again
-describe.skip("generateUpdate", () => {
+describe("generateUpdate", () => {
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
@@ -345,7 +346,7 @@ describe.skip("generateUpdate", () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       nonce: 3,
-      lockedValue: [],
+      lockedBalance: [],
       balances: [transferInitialState.balance],
       assetIds: [assetId],
       latestDepositNonce: 1,
@@ -414,7 +415,7 @@ describe.skip("generateUpdate", () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       nonce: 3,
-      lockedValue: [{ amount: "1" }],
+      lockedBalance: ["1"],
       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
       assetIds: [assetId],
       latestDepositNonce: 1,
