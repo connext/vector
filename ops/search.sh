@@ -11,7 +11,9 @@ grep "$@" --exclude=*.swp --exclude=*.pdf --color=auto -r "$target" \
   .github/workflows/* \
   Makefile \
   modules/*/ops \
+  modules/*/package.json \
   modules/*/src \
   modules/*/src.sol \
   modules/*/src.ts \
-  ops
+  ops \
+  package.json

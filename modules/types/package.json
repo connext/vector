@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@sinclair/typebox": "0.10.1",
-    "ethers": "5.0.13",
+    "ethers": "5.0.14",
     "evt": "1.8.10"
   },
   "devDependencies": {
-    "rollup": "2.26.11",
+    "rollup": "2.27.0",
     "rollup-plugin-typescript2": "0.27.2",
     "typescript": "4.0.2"
   }

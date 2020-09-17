@@ -20,10 +20,10 @@
     "@connext/vector-utils": "0.0.1",
     "@sinclair/typebox": "0.10.1",
     "ajv": "6.12.5",
-    "ethers": "5.0.13",
+    "ethers": "5.0.14",
     "evt": "1.8.10",
     "pino": "6.6.1",
-    "pino-pretty": "^4.2.1"
+    "pino-pretty": "4.2.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",
