@@ -10,7 +10,7 @@ import { env } from "./utils";
 import { reconcileDeposit } from "../utils";
 
 describe("utils", () => {
-  describe.only("reconcileDeposit", () => {
+  describe("reconcileDeposit", () => {
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const providerUrl = env.chainProviders[chainId];
     const provider = new JsonRpcProvider(providerUrl);
