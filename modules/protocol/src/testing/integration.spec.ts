@@ -9,6 +9,7 @@ import { MemoryLockService } from "./services/lock";
 import { MemoryMessagingService } from "./services/messaging";
 import { MemoryStoreService } from "./services/store";
 import { env, expect, getTestLoggers } from "./utils";
+import { setupChannel } from "./utils/channel";
 
 const testName = "Happy Integrations";
 const { log } = getTestLoggers(testName);
@@ -50,21 +51,10 @@ describe(testName, () => {
   });
 
   it("should setup a channel between Alice and Bob", async () => {
-    const channel = await alice.setup({
-      counterpartyIdentifier: bob.publicIdentifier,
-      networkContext: {
-        adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
-        chainId,
-        channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-        providerUrl,
-        vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
-      },
-      timeout: "3600",
-    });
-    expect(channel.isError).to.not.be.ok;
+    const channel = await setupChannel(alice, bob);
 
-    const aliceChannel = await alice.getChannelState(channel.getValue().channelAddress);
-    const bobChannel = await bob.getChannelState(channel.getValue().channelAddress);
+    const aliceChannel = await alice.getChannelState(channel.channelAddress);
+    const bobChannel = await bob.getChannelState(channel.channelAddress);
 
     expect(aliceChannel).to.deep.eq(bobChannel);
   });
@@ -73,21 +63,10 @@ describe(testName, () => {
   // and do not represent a complete deposit tests
   it.only("should deposit eth for Alice (depositA)", async () => {
     // Setup the channel
-    const channel = await alice.setup({
-      counterpartyIdentifier: bob.publicIdentifier,
-      networkContext: {
-        adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
-        chainId,
-        channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-        providerUrl,
-        vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
-      },
-      timeout: "3600",
-    });
-    expect(channel.isError).to.not.be.ok;
+    const channel = await setupChannel(alice, bob);
 
-    const aliceChannel = await alice.getChannelState(channel.getValue().channelAddress);
-    const bobChannel = await bob.getChannelState(channel.getValue().channelAddress);
+    const aliceChannel = await alice.getChannelState(channel.channelAddress);
+    const bobChannel = await bob.getChannelState(channel.channelAddress);
 
     expect(aliceChannel).to.deep.eq(bobChannel);
 
@@ -117,7 +96,7 @@ describe(testName, () => {
     });
     expect(depositRet.isError).to.be.false;
 
-    const aliceDeposited = await alice.getChannelState(channel.getValue().channelAddress);
+    const aliceDeposited = await alice.getChannelState(channel.channelAddress);
     expect(aliceDeposited?.balances).to.containSubset({
       to: aliceChannel?.participants,
       amount: [depositAmount.toString(), "0"],
