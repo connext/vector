@@ -51,26 +51,26 @@ stop: stop-node
 
 start-node: node
 	bash ops/start-node.sh
-restart-node: node
+restart-node:
 	bash ops/stop.sh node
 	bash ops/start-node.sh
-stop-node: node
+stop-node:
 	bash ops/stop.sh node
 
 start-duet: duet
 	bash ops/start-duet.sh
-restart-duet: duet
+restart-duet:
 	bash ops/stop.sh duet
 	bash ops/start-duet.sh
-stop-duet: duet
+stop-duet:
 	bash ops/stop.sh duet
 
 start-global: global
 	bash ops/start-global.sh
-restart-global: global
+restart-global:
 	bash ops/stop.sh global
 	bash ops/start-global.sh
-stop-global: global
+stop-global:
 	bash ops/stop.sh global
 
 stop-all:

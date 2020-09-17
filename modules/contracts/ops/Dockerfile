@@ -7,5 +7,4 @@ RUN curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721
 COPY ops/package.json package.json
 RUN npm install
 COPY ops/entry.sh entry.sh
-COPY ops/deploy.sh deploy.sh
 ENTRYPOINT ["bash", "entry.sh"]
