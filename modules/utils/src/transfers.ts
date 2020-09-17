@@ -2,10 +2,6 @@ import {
   LinkedTransferState,
   WithdrawState,
   TransferState,
-  TransferName,
-  WithdrawName,
-  LinkedTransferName,
-  TransferNameToStateMap,
   CoreTransferState,
   WithdrawStateEncoding,
   LinkedTransferStateEncoding,
@@ -15,8 +11,6 @@ import {
   Address,
 } from "@connext/vector-types";
 import { utils } from "ethers";
-
-import { stringify } from "./json";
 
 const { keccak256, solidityPack, defaultAbiCoder } = utils;
 
@@ -32,13 +26,6 @@ export const getTransferId = (
       [transferDefinition, channelAddress, transferTimeout, channelNonce],
     ),
   );
-};
-
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export const isLinkedTransferState = (state: any): state is LinkedTransferState => {
-  if (!state?.balance) return false;
-  if (!state?.linkedHash) return false;
-  return true;
 };
 
 export const encodeLinkedTransferState = (state: LinkedTransferState): string => {

@@ -24,7 +24,7 @@ import {
   createTestUpdateParams,
   ChannelSigner,
   hashTransferState,
-  stringify
+  stringify,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { BigNumber, constants, Contract, utils } from "ethers";
@@ -193,7 +193,7 @@ describe("applyUpdate", () => {
   });
 
   // TODO: revert, wtf?
-  it.skip("should work for resolve", async () => {
+  it("should work for resolve", async () => {
     const preImage = hexlify(randomBytes(32));
     const linkedHash = createLinkedHash(preImage);
     const transferInitialState = createTestLinkedTransferState({
@@ -202,13 +202,15 @@ describe("applyUpdate", () => {
     });
     const assetId = constants.AddressZero;
 
+    const encodedState = encodeLinkedTransferState(transferInitialState);
+    const encodedResolver = encodeLinkedTransferResolver({ preImage });
     const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
-      encodeLinkedTransferState(transferInitialState),
-      encodeLinkedTransferResolver({ preImage }),
+      encodedState,
+      encodedResolver,
     );
     const balance = {
       to: ret.to,
-      amount: ret.amount.map((a) => a.toString()),
+      amount: ret.amount.map((a: BigNumber) => a.toString()),
     };
 
     // Create the channel state
@@ -262,7 +264,7 @@ describe("applyUpdate", () => {
 });
 
 // TODO: unskip once channel creation is working again
-describe.only("generateUpdate", () => {
+describe("generateUpdate", () => {
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
@@ -311,13 +313,8 @@ describe.only("generateUpdate", () => {
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });
 
-  it.only("should work for deposit for Alice with eth", async () => {
-    const assetId = constants.AddressZero;
-
-    // Send Alice's deposit to chain
-    const channelContract = new Contract(channelAddress, VectorChannel.abi, provider);
-    channelContract.depositA(assetId, BigNumber.from("10"), {value: BigNumber.from("10")});
-
+  it("should work for deposit", async () => {
+    // First, deploy a multisig
     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       nonce: 1,
       balances: [],
@@ -325,20 +322,21 @@ describe.only("generateUpdate", () => {
       latestDepositNonce: 0,
       channelAddress,
     });
+    const assetId = constants.AddressZero;
     await store.saveChannelState(state, {} as any);
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
       details: { channelAddress, assetId },
     });
-    console.log(`params: ${stringify(params)}`)
+    console.log(`params: ${stringify(params)}`);
     const update = (await generateUpdate(params, state, store, signers[0])).getValue();
-    console.log(`update: ${stringify(update)}`)
+    console.log(`update: ${stringify(update)}`);
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       details: { latestDepositNonce: 0 },
       nonce: state.nonce + 1,
     });
-    console.log(`generatedUpdate: ${stringify(expected)}`)
+    console.log(`generatedUpdate: ${stringify(expected)}`);
     expect(update).to.containSubset(expected);
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });
@@ -422,7 +420,7 @@ describe.only("generateUpdate", () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       nonce: 3,
-      lockedBalance: ["1" ],
+      lockedBalance: ["1"],
       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
       assetIds: [assetId],
       latestDepositNonce: 1,
