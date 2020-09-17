@@ -9,7 +9,9 @@ commit="`git rev-parse HEAD | head -c 8`"
 semver="`cat package.json | grep '"version":' | head -n 1 | cut -d '"' -f 4`"
 
 default_images="`
-  echo 'auth builder database ethprovider node proxy msg_proxy' | sed "s/^/${project}_/"
+  echo 'auth builder database ethprovider node proxy' |\
+    sed "s/^/${project}_/g" |\
+    sed "s/ / ${project}_/g"
 `"
 
 # If given an arg like "image_name:version", then try to pull that version of image_name
