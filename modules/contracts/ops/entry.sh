@@ -7,9 +7,6 @@ if [[ -d "modules/contracts" ]]
 then cd modules/contracts
 fi
 
-ls
-pwd
-
 address_book="${ADDRESS_BOOK:-/data/address-book.json}"
 data_dir="${DATA_DIR:-/tmp}"
 chain_id="${CHAIN_ID:-1337}"

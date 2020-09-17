@@ -48,25 +48,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make pull-latest && make global
+      - run: make pull-latest
+      - run: make global
       - run: make start-global
-      - run: make dls
       - run: make test-global
 
   node:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make pull-latest && make node
+      - run: make pull-latest
+      - run: make node
       - run: make start-node
-      - run: make dls
       - run: make test-node
 
   duet:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make pull-latest && make duet
+      - run: make pull-latest
+      - run: make duet
       - run: make start-duet
-      - run: make dls
       - run: make test-duet

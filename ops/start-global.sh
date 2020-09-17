@@ -228,21 +228,25 @@ docker stack deploy -c $root/${stack}.docker-compose.yml $stack
 echo "The $stack stack has been deployed."
 
 function abort {
-  echo "Timed out waiting for $stack stack to wake up.."
   echo
   docker service ls
   echo "====="
   docker container ls -a
   echo "====="
-  docker service logs --tail 100 --raw global_auth || true
+  docker service ps global_auth || true
+  docker service logs --tail 50 --raw global_auth || true
   echo "====="
-  docker service logs --tail 100 --raw global_evm_1337 || true
+  docker service ps global_evm_1337 || true
+  docker service logs --tail 50 --raw global_evm_1337 || true
   echo "====="
-  docker service logs --tail 100 --raw global_evm_1338 || true
-  exit 1
+  docker service ps global_evm_1338 || true
+  docker service logs --tail 50 --raw global_evm_1338 || true
+  echo
+  echo "Timed out waiting for $stack stack to wake up, see above for diagnostic info."
+  exit
 }
 
-timeout=$(expr `date +%s` + 60)
+timeout=$(expr `date +%s` + 1)
 public_auth_url="http://localhost:5040"
 echo "Waiting for $public_auth_url to wake up.."
 while true
