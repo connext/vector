@@ -1,6 +1,16 @@
-import { Address } from "./basic";
+import { Address, Network } from "./basic";
 import { BalanceEncoding } from "./contracts";
-import { TransferResolver, TransferState } from "./transferDefinitions";
+import {
+  LinkedTransferResolver,
+  LinkedTransferState,
+  TransferName,
+  TransferResolver,
+  TransferResolverMap,
+  TransferState,
+  TransferStateMap,
+  WithdrawResolver,
+  WithdrawState,
+} from "./transferDefinitions";
 import { tidy } from "./utils";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
@@ -72,7 +82,6 @@ export type LockedValueType = {
   amount: string;
 };
 
-
 export const CoreChannelStateEncoding = tidy(`tuple(
   ${BalanceEncoding}[] balances,
   uint256[] lockedBalance,
@@ -101,6 +110,20 @@ export interface CoreChannelState {
   meta?: any;
 }
 
+// Includes any additional info that doesn't need to be sent to chain
+export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
+  publicIdentifiers: string[];
+  latestUpdate: ChannelUpdate<T>;
+  networkContext: NetworkContext;
+};
+
+export interface ChannelCommitmentData {
+  state: CoreChannelState;
+  signatures: string[];
+  adjudicatorAddress: Address;
+  chainId: number;
+}
+
 export interface CoreTransferState {
   initialBalance: Balance;
   assetId: Address;
@@ -109,15 +132,17 @@ export interface CoreTransferState {
   transferDefinition: Address;
   transferTimeout: string;
   initialStateHash: string;
-  transferEncodings: string[]; // Initial state encoding, resolver encoding
-  meta?: any;
 }
-export interface ChannelCommitmentData {
-  state: CoreChannelState;
-  signatures: string[];
-  adjudicatorAddress: Address;
+
+export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
+  name: T;
+  adjudicatorAddress: string; // networkContext?
   chainId: number;
-}
+  transferEncodings: string[]; // Initial state encoding, resolver encoding
+  transferState: TransferStateMap[T];
+  transferResolver?: TransferResolverMap[T]; // undefined iff not resolved
+  meta?: any;
+};
 
 export interface TransferCommitmentData {
   state: CoreTransferState;
@@ -125,13 +150,6 @@ export interface TransferCommitmentData {
   chainId: number;
   merkleProofData: any; // TODO
 }
-
-// Includes any additional info that doesn't need to be sent to chain
-export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
-  publicIdentifiers: string[];
-  latestUpdate: ChannelUpdate<T>;
-  networkContext: NetworkContext;
-};
 
 export type ChainAddresses = {
   [chainId: number]: ContractAddresses;

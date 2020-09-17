@@ -20,6 +20,7 @@ import {
   TransferState,
   ChannelUpdateError,
   Result,
+  FullTransferState,
 } from "@connext/vector-types";
 import Pino from "pino";
 
@@ -94,7 +95,7 @@ export async function applyUpdate<T extends UpdateType>(
     }
     case UpdateType.resolve: {
       const { merkleRoot, transferId } = (update as ChannelUpdate<"resolve">).details;
-      const transfer = await storeService.getCoreTransferState(transferId);
+      const transfer = await storeService.getTransferState(transferId);
       if (!transfer) {
         return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update, state));
       }
@@ -179,7 +180,6 @@ export async function generateUpdate<T extends UpdateType>(
         params as UpdateParams<"resolve">,
         signer,
         transfers,
-        transferState,
         logger,
       );
       break;
@@ -310,7 +310,7 @@ async function generateCreateUpdate(
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
-  const coreTransferState: CoreTransferState = {
+  const transferState: FullTransferState = {
     initialBalance: transferInitialState.balance,
     assetId,
     transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
@@ -318,10 +318,14 @@ async function generateCreateUpdate(
     transferDefinition,
     transferEncodings: encodings,
     transferTimeout: timeout,
+    name: getTransferNameFromState(transferInitialState),
     initialStateHash: hashGenericTransferState(transferInitialState),
+    transferState: transferInitialState,
+    adjudicatorAddress: state.networkContext.adjudicatorAddress,
+    chainId: state.networkContext.chainId,
   };
-  const transferHash = hashCoreTransferState(coreTransferState);
-  const hashes = [...transfers, coreTransferState].map(hashCoreTransferState);
+  const transferHash = hashCoreTransferState(transferState);
+  const hashes: string[] = [...transfers, transferState].map(hashCoreTransferState);
   const merkle = new MerkleTree(hashes);
 
   // Create the update from the user provided params
@@ -331,7 +335,7 @@ async function generateCreateUpdate(
     balance,
     assetId,
     details: {
-      transferId: coreTransferState.transferId,
+      transferId: transferState.transferId,
       transferDefinition,
       transferTimeout: timeout,
       transferInitialState,
@@ -349,8 +353,7 @@ async function generateResolveUpdate(
   state: FullChannelState,
   params: UpdateParams<"resolve">,
   signer: IChannelSigner,
-  transfers: CoreTransferState[],
-  transfer: TransferState,
+  transfers: FullTransferState[],
   logger: Pino.BaseLogger,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
@@ -361,8 +364,8 @@ async function generateResolveUpdate(
   // - merkle root
 
   // First generate latest merkle tree data
-  const coreTransfer = transfers.find((x) => x.transferId === params.details.transferId);
-  if (!coreTransfer) {
+  const transferState = transfers.find((x) => x.transferId === params.details.transferId);
+  if (!transferState) {
     throw new Error(`Could not find transfer for id ${params.details.transferId}`);
   }
   // TODO: is merkle tree hash of initial states or core transfer
@@ -373,27 +376,25 @@ async function generateResolveUpdate(
 
   // Get the final transfer balance from contract
   const transferBalance = await resolve(
-    coreTransfer,
-    transfer,
-    params.details.transferResolver,
+    { ...transferState, transferResolver: params.details.transferResolver },
     signer,
     LinkedTransfer.bytecode,
     logger,
   );
 
   // Convert transfer balance to channel update balance
-  const balance = getUpdatedChannelBalance(UpdateType.resolve, coreTransfer.assetId, transferBalance, state);
+  const balance = getUpdatedChannelBalance(UpdateType.resolve, transferState.assetId, transferBalance, state);
 
   // Generate the unsigned update from the params
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
-    assetId: coreTransfer.assetId,
+    assetId: transferState.assetId,
     details: {
       transferId: params.details.transferId,
-      transferDefinition: coreTransfer.transferDefinition,
+      transferDefinition: transferState.transferDefinition,
       transferResolver: params.details.transferResolver,
-      transferEncodings: coreTransfer.transferEncodings,
+      transferEncodings: transferState.transferEncodings,
       merkleRoot: merkle.root,
     },
     signatures: [],

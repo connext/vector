@@ -9,7 +9,8 @@ import {
   SetupUpdateDetails,
   IVectorStore,
   TransferState,
-  ChannelCommitmentData,
+  ChannelCommitmentData, 
+  FullTransferState,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
@@ -320,15 +321,11 @@ export class PrismaStore implements IVectorStore {
     });
   }
 
-  getActiveTransfers(channelAddress: string): Promise<CoreTransferState[]> {
+  getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
     throw new Error("Method not implemented.");
   }
 
-  getTransferState(transferId: string): Promise<TransferState | undefined> {
-    throw new Error("Method not implemented.");
-  }
-
-  getCoreTransferState(transferId: string): Promise<CoreTransferState | undefined> {
+  getTransferState(transferId: string): Promise<FullTransferState | undefined> {
     throw new Error("Method not implemented.");
   }
 }

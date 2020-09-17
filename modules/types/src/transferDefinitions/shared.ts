@@ -31,3 +31,13 @@ export const CoreTransferStateEncoding = tidy(`tuple(
   uint256 transferTimeout,
   bytes32 initialStateHash
 )`);
+
+export interface TransferStateMap {
+  [TransferName.LinkedTransfer]: LinkedTransferState,
+  [TransferName.Withdraw]: WithdrawState,
+}
+
+export interface TransferResolverMap {
+  [TransferName.LinkedTransfer]: LinkedTransferResolver,
+  [TransferName.Withdraw]: WithdrawResolver,
+}

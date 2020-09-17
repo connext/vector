@@ -117,7 +117,8 @@ Should do the exact oppositve of the `create` update above.
 
 #### Types
 
-- [ ] Remove encodings from core transfer type (NOTE: seems pretty `core` to me even though it's not explicitly included onchain..)
+- [x] Remove encodings from core transfer type
+- [ ] Review `FullTransferState` type
 
 #### Other
 

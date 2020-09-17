@@ -55,8 +55,7 @@ export const encodeWithdrawTransferState = (state: WithdrawState): string => {
 
 export const encodeCoreTransferState = (state: CoreTransferState): string => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { transferEncodings, ...toEncode } = state;
-  return defaultAbiCoder.encode([CoreTransferStateEncoding], [toEncode]);
+  return defaultAbiCoder.encode([CoreTransferStateEncoding], [state]);
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

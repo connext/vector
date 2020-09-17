@@ -1,9 +1,6 @@
 import * as evm from "@connext/pure-evm-wasm";
 import {
   Contract,
-  CoreTransferState,
-  TransferState,
-  TransferResolver,
   Balance,
   ChannelCommitmentData,
   FullChannelState,
@@ -11,6 +8,7 @@ import {
   CoreChannelState,
   VectorChannelMessage,
   VectorErrorMessage,
+  FullTransferState
 } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { Signer, utils } from "ethers";
@@ -104,14 +102,13 @@ export async function generateSignedChannelCommitment(
 }
 
 export const create = async (
-  core: CoreTransferState,
-  state: TransferState,
+  transfer: FullTransferState,
   signer: Signer,
   bytecode?: string,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<boolean> => {
-  const encodedState = defaultAbiCoder.encode([core.transferEncodings[0]], [state]);
-  const contract = new Contract(core.transferId, TransferDefinition.abi, signer);
+  const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
+  const contract = new Contract(transfer.transferId, TransferDefinition.abi, signer);
   // TODO: use pure-evm
   if (bytecode) {
     try {
@@ -126,16 +123,14 @@ export const create = async (
 };
 
 export const resolve = async (
-  core: CoreTransferState,
-  state: TransferState,
-  resolver: TransferResolver,
+  transfer: FullTransferState,
   signer: Signer,
   bytecode?: string,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<Balance> => {
-  const encodedState = defaultAbiCoder.encode([core.transferEncodings[0]], [state]);
-  const encodedResolver = defaultAbiCoder.encode([core.transferEncodings[1]], [resolver]);
-  const contract = new Contract(core.transferDefinition, TransferDefinition.abi, signer);
+  const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
+  const encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);
+  const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, signer);
   if (bytecode) {
     try {
       const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);

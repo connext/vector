@@ -6,6 +6,7 @@ import {
   ChannelUpdateError,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
+  LinkedTransferName
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -226,7 +227,7 @@ describe("applyUpdate", () => {
       balance,
       details: {
         transferId: coreState.transferId,
-        transferEncodings: coreState.transferEncodings,
+        transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         transferDefinition: coreState.transferDefinition,
         transferResolver: { preImage },
         merkleRoot: emptyTree.root,
@@ -235,14 +236,13 @@ describe("applyUpdate", () => {
 
     // Load the store
     await store.saveChannelState(state, {} as any, {
-      initialState: transferInitialState,
-      commitment: {
-        state: coreState,
-        chainId: state.networkContext.chainId,
-        adjudicatorAddress: state.networkContext.adjudicatorAddress,
-        merkleProofData: "",
-      },
+      ...coreState,
+      transferState: transferInitialState,
+      chainId: state.networkContext.chainId,
+      adjudicatorAddress: state.networkContext.adjudicatorAddress,
       transferId: coreState.transferId,
+      transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+      name: LinkedTransferName
     });
 
     const updateRet = await applyUpdate(update, state, store);
@@ -437,14 +437,13 @@ describe.skip("generateUpdate", () => {
 
     // Load the store
     await store.saveChannelState(state, {} as any, {
-      initialState: transferInitialState,
-      commitment: {
-        state: coreState,
-        chainId: state.networkContext.chainId,
-        adjudicatorAddress: state.networkContext.adjudicatorAddress,
-        merkleProofData: "",
-      },
+      ...coreState,
+      transferState: transferInitialState,
+      chainId: state.networkContext.chainId,
+      adjudicatorAddress: state.networkContext.adjudicatorAddress,
       transferId: coreState.transferId,
+      transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+      name: LinkedTransferName
     });
 
     // Get expected values
@@ -456,7 +455,7 @@ describe.skip("generateUpdate", () => {
       balance,
       details: {
         transferId: coreState.transferId,
-        transferEncodings: coreState.transferEncodings,
+        transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         transferDefinition: coreState.transferDefinition,
         transferResolver: { preImage },
         merkleRoot: emptyTree.root,

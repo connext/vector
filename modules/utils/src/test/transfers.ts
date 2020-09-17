@@ -3,8 +3,6 @@ import {
   LinkedTransferState,
   TransferState,
   CoreTransferState,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
 } from "@connext/vector-types";
 
 import { mkAddress, mkHash, mkBytes32 } from "./util";
@@ -45,7 +43,6 @@ export function createCoreTransferState(overrides: Partial<CoreTransferState> = 
     channelAddress: mkAddress("0xccc"),
     transferId: mkBytes32("0xeeefff"),
     transferDefinition: mkAddress("0xdef"),
-    transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     initialStateHash: mkBytes32("0xabcdef"),
     transferTimeout: "1",
     ...overrides,
