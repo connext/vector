@@ -66,51 +66,6 @@ then
   CONTRACT_ADDRESSES="`cat $chain_data/address-book.json`"
 fi
 
-if [[ $unit == "server_node" ]]
-then
-  postgres_db="${project}"
-  postgres_host="${project}_database"
-  postgres_password="$project"
-  postgres_port="5432"
-  postgres_user="$project"
-
-  extra_env="--env=VECTOR_PG_DATABASE='$postgres_db'
-      --env=VECTOR_PG_HOST='$postgres_host'
-      --env=VECTOR_PG_PASSWORD='$postgres_password'
-      --env=VECTOR_PG_PORT='$postgres_port'
-      --env=VECTOR_PG_USERNAME='$postgres_user'"
-
-  function cleanup {
-    echo "Tests finished, stopping evm.."
-    docker container stop $postgres_host 2> /dev/null || true
-  }
-  trap cleanup EXIT SIGINT SIGTERM
-
-  echo "Starting $postgres_host.."
-  docker run \
-    --detach \
-    --env="POSTGRES_DB=$postgres_db" \
-    --env="POSTGRES_PASSWORD=$postgres_password" \
-    --env="POSTGRES_USER=$postgres_user" \
-    --name="$postgres_host" \
-    --network="$network" \
-    --rm \
-    --tmpfs="/var/lib/postgresql/data" \
-    postgres:12-alpine
-
-  while [[ -z "`cat $chain_data/address-book.json | grep 'TestToken' || true`" ]]
-  do
-    if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
-    then echo "$ethprovider_host was not able to start up successfully" && exit 1
-    else sleep 1
-    fi
-  done
-  echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
-
-  CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
-  CONTRACT_ADDRESSES="`cat $chain_data/address-book.json`"
-fi
-
 docker run \
   $interactive \
   --entrypoint="bash" \
@@ -119,7 +74,6 @@ docker run \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="VECTOR_ENV=$VECTOR_ENV" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
-  $extra_env \
   --name="${project}_test_$unit" \
   --network "$project" \
   --rm \

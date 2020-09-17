@@ -5,8 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider = ["sqlite"]
-  url      = "file:./connext-store.db"
+  provider = ["postgresql", "sqlite"]
+  url      = env("VECTOR_DATABASE_URL")
 }
 
 model Balance {
@@ -15,7 +15,7 @@ model Balance {
   assetId        String
   to             String
   amount         String
-  lockedBalance    String
+  lockedBalance  String
   Channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
   channelAddress String
   @@id([participant, channelAddress, assetId])
