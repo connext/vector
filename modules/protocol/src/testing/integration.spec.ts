@@ -118,7 +118,7 @@ describe(testName, () => {
     });
     expect(aliceDeposited?.latestDepositNonce).to.be.eq(aliceChannel!.nonce + 1);
     expect(aliceDeposited?.assetIds).to.containSubset([constants.AddressZero]);
-    expect(await bob.getChannelState(channelAddress)).to.containSubset(aliceDeposited);
+    expect(await bob.getChannelState(aliceChannel!.channelAddress)).to.containSubset(aliceDeposited);
   });
 
   // TODO: the following deposit test cases are *extremely* simple tests
