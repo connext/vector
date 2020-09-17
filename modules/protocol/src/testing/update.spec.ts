@@ -192,7 +192,7 @@ describe("applyUpdate", () => {
   });
 
   // TODO: revert, wtf?
-  it.only("should work for resolve", async () => {
+  it("should work for resolve", async () => {
     const preImage = hexlify(randomBytes(32));
     const linkedHash = createLinkedHash(preImage);
     const transferInitialState = createTestLinkedTransferState({
@@ -202,10 +202,7 @@ describe("applyUpdate", () => {
     const assetId = constants.AddressZero;
 
     const encodedState = encodeLinkedTransferState(transferInitialState);
-    console.log("transferInitialState: ", transferInitialState);
-    console.log("encodedState: ", encodedState);
     const encodedResolver = encodeLinkedTransferResolver({ preImage });
-    console.log("encodedResolver: ", encodedResolver);
     const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
       encodedState,
       encodedResolver,
@@ -266,7 +263,7 @@ describe("applyUpdate", () => {
 });
 
 // TODO: unskip once channel creation is working again
-describe.only("generateUpdate", () => {
+describe("generateUpdate", () => {
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
@@ -315,7 +312,7 @@ describe.only("generateUpdate", () => {
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });
 
-  it.only("should work for deposit", async () => {
+  it("should work for deposit", async () => {
     // First, deploy a multisig
     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       nonce: 1,
@@ -418,7 +415,7 @@ describe.only("generateUpdate", () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       nonce: 3,
-      lockedBalance: ["1" ],
+      lockedBalance: ["1"],
       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
       assetIds: [assetId],
       latestDepositNonce: 1,
