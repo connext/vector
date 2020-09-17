@@ -73,7 +73,7 @@ A create update should occur when both parties want to create a new conditional 
 The create update must do the following:
 
 1. Decrement the channel state `balance` on one (or both) sides by the amount that will be locked in the transfer (indexed by assetId).
-2. Increase the `lockedValue` in the channel state by the total locked maount of value (indexed by assetId).
+2. Increase the `lockedBalance` in the channel state by the total locked maount of value (indexed by assetId).
 3. Update the channel nonce by 1.
 4. Create a new `TransferState` with a status of CREATED, passing in the correct params.
 5. Hash the `TransferState` and add it to the merkle root in the new channel state.

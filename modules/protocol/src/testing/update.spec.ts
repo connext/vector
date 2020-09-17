@@ -81,7 +81,7 @@ describe("applyUpdate", () => {
       timeout: update.details.timeout,
       participants: signers.map((s) => s.address),
       balances: [],
-      lockedValue: [],
+      lockedBalance: [],
       assetIds: [],
       merkleRoot: mkHash(),
       latestUpdate: update,
@@ -156,7 +156,7 @@ describe("applyUpdate", () => {
     // Create the channel state
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,
-      lockedValue: [],
+      lockedBalance: [],
       balances: [transferInitialState.balance],
       assetIds: [assetId],
       latestDepositNonce: 1,
@@ -184,7 +184,7 @@ describe("applyUpdate", () => {
     expect(newState).to.containSubset({
       ...state,
       balances: [{ ...transferInitialState.balance, amount: ["0", "0"] }],
-      lockedValue: [{ amount: "1" }],
+      lockedBalance: ["1"],
       nonce: update.nonce,
       merkleRoot: update.details.merkleRoot,
       latestUpdate: update,
@@ -218,7 +218,7 @@ describe("applyUpdate", () => {
     // Create the channel state
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       nonce: 3,
-      lockedValue: [{ amount: "1" }],
+      lockedBalance: ["1"],
       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
       assetIds: [assetId],
       latestDepositNonce: 1,
@@ -257,7 +257,7 @@ describe("applyUpdate", () => {
     expect(updateRet.getValue()).to.containSubset({
       ...state,
       balances: [{ ...transferInitialState.balance, amount: ["1", "0"] }],
-      lockedValue: [{ amount: "0" }],
+      lockedBalance: ["0"],
       nonce: update.nonce,
       merkleRoot: emptyTree.getHexRoot(),
       latestUpdate: update,
@@ -266,7 +266,7 @@ describe("applyUpdate", () => {
 });
 
 // TODO: unskip once channel creation is working again
-describe.skip("generateUpdate", () => {
+describe.only("generateUpdate", () => {
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
@@ -315,7 +315,7 @@ describe.skip("generateUpdate", () => {
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });
 
-  it("should work for deposit", async () => {
+  it.only("should work for deposit", async () => {
     // First, deploy a multisig
     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       nonce: 1,
@@ -349,7 +349,7 @@ describe.skip("generateUpdate", () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       nonce: 3,
-      lockedValue: [],
+      lockedBalance: [],
       balances: [transferInitialState.balance],
       assetIds: [assetId],
       latestDepositNonce: 1,
@@ -418,7 +418,7 @@ describe.skip("generateUpdate", () => {
     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
       nonce: 3,
-      lockedValue: [{ amount: "1" }],
+      lockedBalance: ["1" ],
       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
       assetIds: [assetId],
       latestDepositNonce: 1,

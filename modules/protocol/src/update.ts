@@ -13,7 +13,6 @@ import {
   UpdateParams,
   Balance,
   IChannelSigner,
-  LockedValueType,
   CoreTransferState,
   IVectorStore,
   ChannelUpdateError,
@@ -48,7 +47,7 @@ export async function applyUpdate<T extends UpdateType>(
         timeout,
         participants,
         balances: [],
-        lockedValue: [],
+        lockedBalance: [],
         assetIds: [],
         merkleRoot: constants.HashZero,
         latestUpdate: update,
@@ -75,17 +74,17 @@ export async function applyUpdate<T extends UpdateType>(
       const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedValue = reconcileLockedValue(
+      const lockedBalance = reconcilelockedBalance(
         UpdateType.create,
         transferInitialState.balance,
         update.assetId,
-        state.lockedValue,
+        state.lockedBalance,
         state.assetIds,
       );
       return Result.ok({
         ...state,
         balances,
-        lockedValue,
+        lockedBalance,
         nonce: update.nonce,
         merkleRoot,
         latestUpdate: update,
@@ -98,17 +97,17 @@ export async function applyUpdate<T extends UpdateType>(
         return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update, state));
       }
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedValue = reconcileLockedValue(
+      const lockedBalance = reconcilelockedBalance(
         UpdateType.resolve,
         transfer.initialBalance,
         update.assetId,
-        state.lockedValue,
+        state.lockedBalance,
         state.assetIds,
       );
       return Result.ok({
         ...state,
         balances,
-        lockedValue,
+        lockedBalance,
         nonce: update.nonce,
         merkleRoot,
         latestUpdate: update,
@@ -278,7 +277,6 @@ async function generateDepositUpdate(
     details: { latestDepositNonce },
     signatures: [],
   };
-
   return unsigned;
 }
 
@@ -295,7 +293,7 @@ async function generateCreateUpdate(
 
   // Creating a transfer is able to effect the following fields
   // on the channel state:
-  // - lockedValue
+  // - lockedBalance
   // - balances
   // - nonce (all)
   // - merkle root
@@ -353,7 +351,7 @@ async function generateResolveUpdate(
   // A transfer resolution update can effect the following
   // channel fields:
   // - balances
-  // - lockedValue
+  // - lockedBalance
   // - nonce
   // - merkle root
 
@@ -505,13 +503,13 @@ function reconcileBalanceWithExisting(
 // that the value locked during transfer creation is not added
 // back into the channel, but still needs to be removed from
 // the locked value (i.e. withdrawal)
-function reconcileLockedValue(
+function reconcilelockedBalance(
   type: typeof UpdateType.create | typeof UpdateType.resolve,
   transferBalanceToReconcile: Balance, // From transferState.balance
   assetToReconcile: string,
-  existingLocked: LockedValueType[],
+  existingLocked: string[],
   assetIds: string[],
-): LockedValueType[] {
+): string[] {
   // Get the assetId index
   const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
   if (assetIdx === -1) {
@@ -520,7 +518,7 @@ function reconcileLockedValue(
 
   // Get the appropriate locked value for the asset
   // The locked value array may have empty/undefined values
-  const locked = existingLocked[assetIdx] ?? { amount: "0" };
+  const locked = existingLocked[assetIdx] ?? "0";
 
   // Find the total amount locked in the transfer initial
   // state
@@ -532,12 +530,12 @@ function reconcileLockedValue(
   const updated = [...existingLocked];
   // If there is no value at updated[idx], make sure to add it
   if (!updated[assetIdx]) {
-    updated[assetIdx] = { amount: "0" };
+    updated[assetIdx] = "0";
   }
-  updated[assetIdx].amount =
+  updated[assetIdx] =
     type === UpdateType.create
-      ? BigNumber.from(locked.amount).add(transferLocked).toString()
-      : BigNumber.from(locked.amount).sub(transferLocked).toString();
+      ? BigNumber.from(locked).add(transferLocked).toString()
+      : BigNumber.from(locked).sub(transferLocked).toString();
 
   return updated;
 }

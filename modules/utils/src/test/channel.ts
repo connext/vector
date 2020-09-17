@@ -197,14 +197,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
         to: [...participants],
       },
     ],
-    lockedValue: [
-      {
-        amount: "1",
-      },
-      {
-        amount: "2",
-      },
-    ],
+    lockedBalance: ["1", "2"],
     channelAddress,
     latestDepositNonce: 1,
     // TODO: wtf typescript? why do i have to any cast this

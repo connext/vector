@@ -58,7 +58,7 @@
     {
       "tag": "CreateField",
       "model": "Balance",
-      "field": "lockedValue",
+      "field": "lockedBalance",
       "type": "String",
       "arity": "Required"
     },

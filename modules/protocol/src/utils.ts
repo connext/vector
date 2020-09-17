@@ -12,7 +12,7 @@ import {
 } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { Signer, utils } from "ethers";
-import { hashChannelCommitment } from "@connext/vector-utils";
+import { hashChannelCommitment, stringify } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -38,7 +38,7 @@ export function isChannelState(blob: any): blob is CoreChannelState {
   if (!blob?.participants) return false;
   if (!blob?.timeout) return false;
   if (!blob?.balances) return false;
-  if (!blob?.lockedValue) return false;
+  if (!blob?.lockedBalance) return false;
   if (!blob?.assetIds) return false;
   if (typeof blob?.nonce !== "number") return false;
   if (typeof blob?.latestDepositNonce !== "number") return false;
@@ -93,7 +93,9 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
+  console.log(stringify({ ...unsigned, signatures: [] }))
   const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
+  console.log("4.10.2")
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
