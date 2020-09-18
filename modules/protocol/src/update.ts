@@ -4,7 +4,6 @@ import {
   hashCoreTransferState,
   hashTransferState,
   getTransferId,
-  stringify
 } from "@connext/vector-utils";
 import { BigNumber, constants, utils } from "ethers";
 import {
@@ -25,6 +24,7 @@ import { MerkleTree } from "merkletreejs";
 
 import { generateSignedChannelCommitment, reconcileDeposit, resolve } from "./utils";
 import { validateParams } from "./validate";
+import { MockOnchainTransactionService } from "./testing/services/onchain";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -256,14 +256,17 @@ async function generateDepositUpdate(
   const existingLockedBalance = assetIdx === -1 ? "0" : state.lockedBalance[assetIdx] ?? "0";
   const existingChannelBalance =
     assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.balances[assetIdx];
-  const { balance, latestDepositNonce } = await reconcileDeposit(
-    state.channelAddress,
-    existingChannelBalance,
-    state.latestDepositNonce,
-    existingLockedBalance,
-    assetId,
-    signer,
-  );
+  const { balance, latestDepositNonce } = (
+    await reconcileDeposit(
+      state.channelAddress,
+      state.networkContext.chainId,
+      existingChannelBalance,
+      state.latestDepositNonce,
+      existingLockedBalance,
+      assetId,
+      new MockOnchainTransactionService(),
+    )
+  ).getValue();
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),

@@ -7,6 +7,7 @@ import { expect } from "chai";
 import { reconcileDeposit } from "../utils";
 
 import { env } from "./utils";
+import { MockOnchainTransactionService } from "./services/onchain";
 
 describe("utils", () => {
   describe("reconcileDeposit", () => {
@@ -90,14 +91,15 @@ describe("utils", () => {
       await depositA(amount[0], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
+        chainId,
         state.balances[0],
         state.latestDepositNonce,
         state.lockedBalance[0],
         assetId,
-        signer,
+        new MockOnchainTransactionService(),
       );
 
-      await validateRet(ret, assetId, amount, state.balances[0]);
+      await validateRet(ret.getValue(), assetId, amount, state.balances[0]);
     });
 
     it("should work for Alice Token deposit", async () => {
@@ -107,14 +109,15 @@ describe("utils", () => {
       await depositA(amount[0], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
+        chainId,
         state.balances[1],
         state.latestDepositNonce,
         state.lockedBalance[1],
         assetId,
-        signer,
+        new MockOnchainTransactionService(),
       );
 
-      await validateRet(ret, assetId, amount, state.balances[1]);
+      await validateRet(ret.getValue(), assetId, amount, state.balances[1]);
     });
 
     it("should work for Bob Eth deposit", async () => {
@@ -124,13 +127,14 @@ describe("utils", () => {
       await depositB(amount[1], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
+        chainId,
         state.balances[0],
         state.latestDepositNonce,
         state.lockedBalance[0],
         assetId,
-        signer,
+        new MockOnchainTransactionService(),
       );
-      await validateRet(ret, assetId, amount, state.balances[0]);
+      await validateRet(ret.getValue(), assetId, amount, state.balances[0]);
     });
 
     it("should work for Bob Token deposit", async () => {
@@ -140,14 +144,15 @@ describe("utils", () => {
       await depositB(amount[1], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
+        chainId,
         state.balances[1],
         state.latestDepositNonce,
         state.lockedBalance[1],
         assetId,
-        signer,
+        new MockOnchainTransactionService(),
       );
 
-      await validateRet(ret, assetId, amount, state.balances[1]);
+      await validateRet(ret.getValue(), assetId, amount, state.balances[1]);
     });
 
     it("should work for both Eth deposit", async () => {
@@ -158,14 +163,15 @@ describe("utils", () => {
       await depositB(amount[1], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
+        chainId,
         state.balances[0],
         state.latestDepositNonce,
         state.lockedBalance[0],
         assetId,
-        signer,
+        new MockOnchainTransactionService(),
       );
 
-      await validateRet(ret, assetId, amount, state.balances[0]);
+      await validateRet(ret.getValue(), assetId, amount, state.balances[0]);
     });
 
     it("should work for both token deposit", async () => {
@@ -176,14 +182,15 @@ describe("utils", () => {
       await depositB(amount[1], assetId);
       const ret = await reconcileDeposit(
         state.channelAddress,
+        chainId,
         state.balances[1],
         state.latestDepositNonce,
         state.lockedBalance[1],
         assetId,
-        signer,
+        new MockOnchainTransactionService(),
       );
 
-      await validateRet(ret, assetId, amount, state.balances[1]);
+      await validateRet(ret.getValue(), assetId, amount, state.balances[1]);
     });
   });
 });

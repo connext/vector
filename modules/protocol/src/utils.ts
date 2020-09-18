@@ -170,7 +170,12 @@ export const reconcileDeposit = async (
   }
   const onchainBalance = balanceRes.getValue();
 
-  const latestDepositARes = await onchainTxService.getLatestDepositByAssetId(channelAddress, chainId, assetId);
+  const latestDepositARes = await onchainTxService.getLatestDepositByAssetId(
+    channelAddress,
+    chainId,
+    assetId,
+    latestDepositNonce,
+  );
   if (latestDepositARes.isError) {
     return Result.fail(latestDepositARes.getError()!);
   }
