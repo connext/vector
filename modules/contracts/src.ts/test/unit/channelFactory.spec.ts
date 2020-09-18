@@ -2,15 +2,23 @@ import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
 import { Adjudicator, VectorChannel, ChannelFactory } from "../../artifacts";
+import { VectorOnchainTransactionService } from "../../onchainService";
+import { getOnchainTxService } from "../onchainService";
 import { expect, provider } from "../utils";
 
 describe("ChannelFactory", () => {
   let deployer: Wallet;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
+  let onchainTxService: VectorOnchainTransactionService;
+  let chainId: number;
 
   beforeEach(async () => {
-    deployer = (await provider.getWallets())[0];
+    const network = await provider.getNetwork();
+    chainId = network.chainId;
+    deployer = provider.getWallets()[0];
+    onchainTxService = await getOnchainTxService(provider);
+
     const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, deployer).deploy();
     await adjudicator.deployed();
 
@@ -43,13 +51,13 @@ describe("ChannelFactory", () => {
     const computedAddr = await getCreate2MultisigAddress(
       initiator.publicIdentifier,
       responder.publicIdentifier,
+      chainId,
       channelFactory.address,
-      ChannelFactory.abi,
       channelMastercopy.address,
-      provider,
+      onchainTxService,
     );
     expect(channelAddress).to.be.a("string");
-    expect(channelAddress).to.be.eq(computedAddr);
+    expect(channelAddress).to.be.eq(computedAddr.getValue());
   });
 
   it("should create a channel with a deposit", async () => {
@@ -71,18 +79,20 @@ describe("ChannelFactory", () => {
     const computedAddr = await getCreate2MultisigAddress(
       initiator.publicIdentifier,
       responder.publicIdentifier,
+      chainId,
       channelFactory.address,
-      ChannelFactory.abi,
       channelMastercopy.address,
-      provider,
+      onchainTxService,
     );
     expect(channelAddress).to.be.a("string");
-    expect(channelAddress).to.be.eq(computedAddr);
+    expect(channelAddress).to.be.eq(computedAddr.getValue());
 
     const balance = await provider.getBalance(channelAddress as string);
     expect(balance).to.be.eq(value);
 
-    const latestDeposit = await new Contract(channelAddress, VectorChannel.abi, deployer).latestDepositByAssetId(constants.AddressZero);
+    const latestDeposit = await new Contract(channelAddress, VectorChannel.abi, deployer).latestDepositByAssetId(
+      constants.AddressZero,
+    );
     expect(latestDeposit.nonce).to.be.eq(1);
     expect(latestDeposit.amount).to.be.eq(value);
   });

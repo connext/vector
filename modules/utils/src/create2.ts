@@ -1,5 +1,6 @@
-import { Contract, PublicIdentifier } from "@connext/vector-types";
-import { providers, utils } from "ethers";
+import { Contract, PublicIdentifier, IVectorOnchainTransactionService, Result } from "@connext/vector-types";
+import { utils } from "ethers";
+
 import { getSignerAddressFromPublicIdentifier } from "./identifiers";
 
 /**
@@ -25,38 +26,46 @@ import { getSignerAddressFromPublicIdentifier } from "./identifiers";
 export const getCreate2MultisigAddress = async (
   initiatorIdentifier: PublicIdentifier,
   responderIdentifier: PublicIdentifier,
+  chainId: number,
   channelFactoryAddress: string,
-  channelFactoryAbi: any,
   vectorChannelMastercopyAddress: string,
-  ethProvider: providers.JsonRpcProvider,
-): Promise<string> => {
-  const proxyFactory = new Contract(channelFactoryAddress, channelFactoryAbi, ethProvider);
+  onchainTxService: IVectorOnchainTransactionService,
+): Promise<Result<string, Error>> => {
+  const proxyRes = await onchainTxService.getChannelFactoryBytecode(channelFactoryAddress, chainId);
+  if (proxyRes.isError) {
+    return proxyRes;
+  }
+  const proxyBytecode = proxyRes.getValue();
 
-  const proxyBytecode = await proxyFactory.proxyCreationCode();
-
-  return utils.getAddress(
-    utils
-      .solidityKeccak256(
-        ["bytes1", "address", "uint256", "bytes32"],
-        [
-          "0xff",
-          channelFactoryAddress,
-          // salt
-          utils.solidityKeccak256(
-            ["address", "address", "uint256", "bytes32"],
+  try {
+    return Result.ok(
+      utils.getAddress(
+        utils
+          .solidityKeccak256(
+            ["bytes1", "address", "uint256", "bytes32"],
             [
-              getSignerAddressFromPublicIdentifier(initiatorIdentifier),
-              getSignerAddressFromPublicIdentifier(responderIdentifier),
-              ethProvider.network.chainId,
-              utils.keccak256(utils.toUtf8Bytes("vector")),
+              "0xff",
+              channelFactoryAddress,
+              // salt
+              utils.solidityKeccak256(
+                ["address", "address", "uint256", "bytes32"],
+                [
+                  getSignerAddressFromPublicIdentifier(initiatorIdentifier),
+                  getSignerAddressFromPublicIdentifier(responderIdentifier),
+                  chainId,
+                  utils.keccak256(utils.toUtf8Bytes("vector")),
+                ],
+              ),
+              utils.solidityKeccak256(
+                ["bytes", "uint256"],
+                [`0x${proxyBytecode.replace(/^0x/, "")}`, vectorChannelMastercopyAddress],
+              ),
             ],
-          ),
-          utils.solidityKeccak256(
-            ["bytes", "uint256"],
-            [`0x${proxyBytecode.replace(/^0x/, "")}`, vectorChannelMastercopyAddress],
-          ),
-        ],
-      )
-      .slice(-40),
-  );
+          )
+          .slice(-40),
+      ),
+    );
+  } catch (e) {
+    return Result.fail(e);
+  }
 };

@@ -9,9 +9,11 @@ import {
   VectorChannelMessage,
   VectorErrorMessage,
   FullTransferState,
+  IVectorOnchainTransactionService,
+  Result,
 } from "@connext/vector-types";
-import { TestToken, TransferDefinition, VectorChannel } from "@connext/vector-contracts";
-import { BigNumber, constants, Signer, utils } from "ethers";
+import { TransferDefinition } from "@connext/vector-contracts";
+import { BigNumber, Signer, utils } from "ethers";
 import { hashChannelCommitment } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
@@ -155,36 +157,24 @@ export const resolve = async (
 
 export const reconcileDeposit = async (
   channelAddress: string,
+  chainId: number,
   initialBalance: Balance,
   latestDepositNonce: number,
   lockedBalance: string,
   assetId: string,
-  signer: IChannelSigner,
-): Promise<{ balance: Balance; latestDepositNonce: number }> => {
-  const channelContract = new Contract(channelAddress, VectorChannel.abi, signer);
-  let onchainBalance: BigNumber;
-  try {
-    onchainBalance = await channelContract.getBalance(assetId);
-  } catch (e) {
-    // Likely means channel contract was not deployed
-    // TODO: check for reason?
-    onchainBalance =
-      assetId === constants.AddressZero
-        ? await signer.provider!.getBalance(channelAddress)
-        : await new Contract(assetId, TestToken.abi, signer).balanceOf(channelAddress);
+  onchainTxService: IVectorOnchainTransactionService,
+): Promise<Result<{ balance: Balance; latestDepositNonce: number }, Error>> => {
+  const balanceRes = await onchainTxService.getChannelOnchainBalance(channelAddress, chainId, assetId);
+  if (balanceRes.isError) {
+    return Result.fail(balanceRes.getError()!);
   }
+  const onchainBalance = balanceRes.getValue();
 
-  let latestDepositA: { nonce: BigNumber; amount: BigNumber };
-  try {
-    latestDepositA = await channelContract.latestDepositByAssetId(assetId);
-  } catch (e) {
-    if (latestDepositNonce !== 0) {
-      throw e;
-    }
-    // TODO: check for reason?
-    // Channel contract was not deployed, use 0 value
-    latestDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) };
+  const latestDepositARes = await onchainTxService.getLatestDepositByAssetId(channelAddress, chainId, assetId);
+  if (latestDepositARes.isError) {
+    return Result.fail(latestDepositARes.getError()!);
   }
+  const latestDepositA = latestDepositARes.getValue();
 
   const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
     ? latestDepositA.amount.add(initialBalance.amount[0])
@@ -195,8 +185,8 @@ export const reconcileDeposit = async (
     amount: [balanceA.toString(), BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
   };
 
-  return {
+  return Result.ok({
     balance,
     latestDepositNonce: latestDepositA.nonce.toNumber(),
-  };
+  });
 };

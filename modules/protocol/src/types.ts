@@ -1,10 +1,12 @@
 import {
   LinkedTransferResolverEncoding,
   LinkedTransferStateEncoding,
+  Result,
   WithdrawResolverEncoding,
   WithdrawStateEncoding,
 } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
+import { BigNumber } from "ethers";
 
 ////////////////////////////////////////
 // Helper schemas

@@ -75,6 +75,7 @@ model Update {
   transferInitialState String? // JSON string
   transferEncodings    String?
   merkleProofData      String? // proofs.join(",")
+  meta                 String?
 
   // resolve details
   transferResolver String?
@@ -85,7 +86,7 @@ model Update {
 
   // setup inferred from channel params
 
-  // transfers are linked to their own object
+  // transfers are linked to a separate model
   createdTransfer  Transfer? @relation("CreatedTransfer")
   resolvedTransfer Transfer? @relation("ResolvedTransfer")
 
@@ -97,6 +98,14 @@ model Transfer {
   routingId     String  @id
   createUpdate  Update  @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
+
+  // initial balance
+  initialAmountA String
+  initialAmountB String
+  initialToA     String
+  initialToB     String
+
+  initialStateHash String
 
   // created will always exist
   createUpdateChannelAddressId String

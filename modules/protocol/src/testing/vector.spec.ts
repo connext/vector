@@ -23,7 +23,6 @@ describe("Vector.connect", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      env.chainProviders,
       pino(),
     );
     expect(node).to.be.instanceOf(Vector);
@@ -48,7 +47,6 @@ describe("Vector.setup", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      env.chainProviders,
       pino(),
     );
   });
@@ -166,7 +164,6 @@ describe("Vector.deposit", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      env.chainProviders,
       pino(),
     );
   });
@@ -224,7 +221,6 @@ describe("Vector.create", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      env.chainProviders,
       pino(),
     );
   });
@@ -337,7 +333,6 @@ describe("Vector.resolve", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      env.chainProviders,
       pino(),
     );
   });
