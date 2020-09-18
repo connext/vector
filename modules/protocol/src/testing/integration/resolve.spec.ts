@@ -50,4 +50,7 @@ describe(testName, () => {
       bob,
     );
   });
+
+  // We neeed this to test whether resolve still works if the funds in the transfer are burned
+  it.skip("should work for withdraw", async () => {});
 });

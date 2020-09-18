@@ -41,9 +41,10 @@ const { hexlify, randomBytes } = utils;
 // final state. While this function *will* fail if validation fails,
 // the validation function is tested elsewhere
 describe("applyUpdate", () => {
-  const chainProviders = env.chainProviders;
-  const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
+  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+  const providerUrl = env.chainProviders[chainId];
   const provider = new JsonRpcProvider(providerUrl);
+  const wallet = env.sugarDaddy.connect(provider);
   const signers = Array(2)
     .fill(0)
     .map(() => getRandomChannelSigner(providerUrl));
@@ -53,7 +54,7 @@ describe("applyUpdate", () => {
 
   beforeEach(() => {
     store = new MemoryStoreService();
-    linkedTransferDefinition = global["networkContext"].linkedTransferDefinition;
+    linkedTransferDefinition = env.chainAddresses[chainId].LinkedTransfer.address;
   });
 
   it("should fail for an unrecognized update type", async () => {
@@ -192,7 +193,6 @@ describe("applyUpdate", () => {
     });
   });
 
-  // TODO: revert, wtf?
   it("should work for resolve", async () => {
     const preImage = hexlify(randomBytes(32));
     const linkedHash = createLinkedHash(preImage);
@@ -263,12 +263,11 @@ describe("applyUpdate", () => {
   });
 });
 
-// TODO: unskip once channel creation is working again
 describe("generateUpdate", () => {
-  const chainProviders = env.chainProviders;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
+  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+  const providerUrl = env.chainProviders[chainId];
   const provider = new JsonRpcProvider(providerUrl);
+  const wallet = env.sugarDaddy.connect(provider);
 
   let signers: ChannelSigner[];
   let store: IVectorStore;
@@ -280,15 +279,11 @@ describe("generateUpdate", () => {
       .fill(0)
       .map(() => getRandomChannelSigner(providerUrl));
     store = new MemoryStoreService();
-    linkedTransferDefinition = global["networkContext"].linkedTransferDefinition;
+    linkedTransferDefinition = env.chainAddresses[chainId].LinkedTransfer.address;
 
     // Deploy multisig
     // TODO: in channel deployment?
-    const factory = new Contract(
-      global["networkContext"].channelFactoryAddress,
-      ChannelFactory.abi,
-      global["wallet"].connect(provider),
-    );
+    const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, wallet);
     const created = new Promise((resolve) => {
       factory.once(factory.filters.ChannelCreation(), (data) => {
         resolve(data);
@@ -301,7 +296,18 @@ describe("generateUpdate", () => {
 
   it("should work for setup", async () => {
     const params = createTestUpdateParams(UpdateType.setup, {
-      details: { counterpartyIdentifier: signers[1].publicIdentifier, networkContext: { ...global["networkContext"] } },
+      details: {
+        counterpartyIdentifier: signers[1].publicIdentifier,
+        networkContext: {
+          channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
+          vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
+          adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
+          linkedTransferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
+          withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
+          chainId,
+          providerUrl,
+        },
+      },
     });
     const update = (await generateUpdate(params, undefined, store, signers[0])).getValue();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -313,7 +319,8 @@ describe("generateUpdate", () => {
     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
   });
 
-  it("should work for deposit", async () => {
+  // TODO it should first send an onchain tx -- otherwise this doesn't test anything
+  it.skip("should work for deposit", async () => {
     // First, deploy a multisig
     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       nonce: 1,
@@ -456,7 +463,7 @@ describe("generateUpdate", () => {
 
     // Get expected values
     const emptyTree = new MerkleTree([], hashCoreTransferState);
-    const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
+    const { signatures: expectedSig, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
       channelAddress,
       nonce: state.nonce + 1,
       assetId,
@@ -466,13 +473,16 @@ describe("generateUpdate", () => {
         transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         transferDefinition: coreState.transferDefinition,
         transferResolver: { preImage },
-        merkleRoot: emptyTree.getHexRoot(),
+        merkleRoot: constants.HashZero,
       },
     });
 
     // Generate the update
     const updateRet = await generateUpdate(params, state, store, signers[0]);
     expect(updateRet.isError).to.be.false;
-    expect(updateRet.getValue()).to.containSubset(expected);
+    const {signatures: returnedSig, ...returnedUnsigned} = updateRet.getValue()
+
+    // TODO check signatures!!
+    expect(returnedUnsigned).to.containSubset(expected);
   });
 });

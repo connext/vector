@@ -4,6 +4,7 @@ import {
   hashCoreTransferState,
   hashTransferState,
   getTransferId,
+  stringify
 } from "@connext/vector-utils";
 import { BigNumber, constants, utils } from "ethers";
 import {
