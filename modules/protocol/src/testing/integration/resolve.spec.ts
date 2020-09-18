@@ -4,7 +4,7 @@ import { constants } from "ethers";
 import { getTestLoggers } from "../utils";
 import { createTransfer, getFundedChannel, resolveTransfer } from "../utils/channel";
 
-const testName = "Create Integrations";
+const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName);
 describe(testName, () => {
   let alice: IVectorProtocol;
@@ -30,7 +30,7 @@ describe(testName, () => {
 
   });
 
-  it.only("should resolve an eth transfer from alice -> bob", async () => {
+  it("should resolve an eth transfer from alice -> bob", async () => {
     // Set test constants
     const assetId = constants.AddressZero;
     const transferAmount = "7";
