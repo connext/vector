@@ -315,6 +315,7 @@ async function generateCreateUpdate(
 
   // Create the update from the user provided params
   const balance = getUpdatedChannelBalance(UpdateType.create, assetId, transferInitialState.balance, state);
+  const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
@@ -326,7 +327,7 @@ async function generateCreateUpdate(
       transferInitialState,
       transferEncodings: encodings,
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
-      merkleRoot: merkle.getHexRoot(),
+      merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
     },
     signatures: [],
@@ -373,6 +374,7 @@ async function generateResolveUpdate(
   const balance = getUpdatedChannelBalance(UpdateType.resolve, transferState.assetId, transferBalance, state);
 
   // Generate the unsigned update from the params
+  const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
@@ -382,7 +384,7 @@ async function generateResolveUpdate(
       transferDefinition: transferState.transferDefinition,
       transferResolver: params.details.transferResolver,
       transferEncodings: transferState.transferEncodings,
-      merkleRoot: merkle.getHexRoot(),
+      merkleRoot: root === "0x" ? constants.HashZero : root,
     },
     signatures: [],
   };

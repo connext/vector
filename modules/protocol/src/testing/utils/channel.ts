@@ -16,6 +16,8 @@ import {
   LinkedTransferResolverEncoding,
   ChannelUpdate,
   UpdateType,
+  ResolveTransferParams,
+  TransferResolver,
 } from "@connext/vector-types";
 import {
   createLinkedHash,
@@ -316,6 +318,34 @@ export const createTransfer = async (
       transferResolver: { preImage },
     },
   };
+};
+
+export const resolveTransfer = async (
+  channelAddress: string,
+  transfer: FullTransferState,
+  redeemer: IVectorProtocol,
+  counterparty: IVectorProtocol,
+  resolver?: TransferResolver,
+): Promise<FullChannelState> => {
+  const params: ResolveTransferParams = {
+    channelAddress,
+    transferId: transfer.transferId,
+    transferResolver: resolver || transfer.transferResolver!,
+    meta: { test: "field" },
+  };
+
+  const ret = await redeemer.resolve(params);
+  expect(ret.isError).to.be.false;
+  const channel = ret.getValue();
+  const stored = await redeemer.getTransferState(transfer.transferId);
+  expect(stored!.transferResolver).to.deep.eq(params.transferResolver);
+
+  // TODO: stronger assertions here?
+
+  expect(await redeemer.getChannelState(channelAddress)).to.be.deep.eq(channel);
+  expect(await counterparty.getChannelState(channelAddress)).to.be.deep.eq(channel);
+  expect(await counterparty.getTransferState(transfer.transferId)).to.be.deep.eq(stored);
+  return channel;
 };
 
 // This function will return a setup channel between two participants

@@ -1,8 +1,7 @@
-import { delay } from "@connext/vector-utils";
 import { constants } from "ethers";
 
 import { expect, getTestLoggers } from "../utils";
-import { createTransfer, depositInChannel, getSetupChannel } from "../utils/channel";
+import { createTransfer, depositInChannel, getSetupChannel, resolveTransfer } from "../utils/channel";
 
 const testName = "Happy Integration";
 const { log } = getTestLoggers(testName);
@@ -17,21 +16,13 @@ describe(testName, () => {
 
     // Setup the channel with signers funded onchain
     log.info("Setting up channel");
-    const {
-      alice,
-      aliceSigner,
-      bob,
-      bobSigner,
-      channel,
-    } = await getSetupChannel(testName);
+    const { alice, aliceSigner, bob, bobSigner, channel } = await getSetupChannel(testName);
 
-    // User deposits
+    // User (Bob) deposits
     log.info("Bob depositing into channel", { amount: depositAmount });
     await depositInChannel(channel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
 
-    await delay(5_000);
-
-    // Node deposits
+    // Node (Alice) deposits
     log.info("Alice depositing into channel", { amount: depositAmount });
     const postDeposit = await depositInChannel(channel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
 
@@ -42,16 +33,10 @@ describe(testName, () => {
 
     // Create Alice -> Bob transfer
     log.info("Creating transfer", { amount: transferAmount });
-    const { channel: postCreate, transfer } = await createTransfer(
-      channel.channelAddress,
-      alice,
-      bob,
-      assetId,
-      transferAmount,
-    );
+    const { transfer } = await createTransfer(channel.channelAddress, alice, bob, assetId, transferAmount);
 
-    console.log(`channel postCreate`, postCreate);
-    console.log(`transfer`, transfer);
     // Resolve transfer
+    log.info("Resolving transfer", { transferId: transfer.transferId, resolver: transfer.transferResolver });
+    await resolveTransfer(channel.channelAddress, transfer, alice, bob);
   });
 });
