@@ -1,7 +1,7 @@
 import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { env, expect, getTestLoggers } from "../utils";
+import { expect, getTestLoggers } from "../utils";
 import { createTransfer, getFundedChannel } from "../utils/channel";
 
 const testName = "Create Integrations";
@@ -11,9 +11,6 @@ describe(testName, () => {
   let bob: IVectorProtocol;
 
   let preCreateChannel: FullChannelState;
-
-  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-  const providerUrl = env.chainProviders[chainId];
 
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
