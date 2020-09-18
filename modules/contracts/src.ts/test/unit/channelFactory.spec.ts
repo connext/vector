@@ -56,7 +56,7 @@ describe("ChannelFactory", () => {
     // Use funded account for initiator
     const initiator = new ChannelSigner(deployer.privateKey, provider);
     const responder = getRandomChannelSigner();
-    const created = new Promise((res) => {
+    const created = new Promise<string>((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
         res(data);
       });
@@ -81,5 +81,9 @@ describe("ChannelFactory", () => {
 
     const balance = await provider.getBalance(channelAddress as string);
     expect(balance).to.be.eq(value);
+
+    const latestDeposit = await new Contract(channelAddress, VectorChannel.abi, deployer).latestDepositByAssetId(constants.AddressZero);
+    expect(latestDeposit.nonce).to.be.eq(1);
+    expect(latestDeposit.amount).to.be.eq(value);
   });
 });
