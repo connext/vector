@@ -168,18 +168,22 @@ export const reconcileDeposit = async (
   } catch (e) {
     // Likely means channel contract was not deployed
     // TODO: check for reason?
-    onchainBalance = assetId === constants.AddressZero
-      ? await signer.provider!.getBalance(channelAddress)
-      : await new Contract(assetId, TestToken.abi, signer).balanceOf(channelAddress);
+    onchainBalance =
+      assetId === constants.AddressZero
+        ? await signer.provider!.getBalance(channelAddress)
+        : await new Contract(assetId, TestToken.abi, signer).balanceOf(channelAddress);
   }
 
-  let latestDepositA: { nonce: BigNumber; amount: BigNumber; };
+  let latestDepositA: { nonce: BigNumber; amount: BigNumber };
   try {
     latestDepositA = await channelContract.latestDepositByAssetId(assetId);
   } catch (e) {
+    if (latestDepositNonce !== 0) {
+      throw e;
+    }
     // TODO: check for reason?
     // Channel contract was not deployed, use 0 value
-    latestDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) }
+    latestDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) };
   }
 
   const balanceA = latestDepositA.nonce.gt(latestDepositNonce)

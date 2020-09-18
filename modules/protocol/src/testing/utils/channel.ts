@@ -3,14 +3,27 @@ import {
   ChainProviders,
   Contract,
   FullChannelState,
+  FullTransferState,
   IChannelSigner,
   ILockService,
   IMessagingService,
   IVectorProtocol,
   IVectorStore,
   JsonRpcProvider,
+  CreateTransferParams,
+  DEFAULT_TRANSFER_TIMEOUT,
+  LinkedTransferStateEncoding,
+  LinkedTransferResolverEncoding,
+  ChannelUpdate,
+  UpdateType,
 } from "@connext/vector-types";
-import { getRandomChannelSigner } from "@connext/vector-utils";
+import {
+  createLinkedHash,
+  createTestLinkedTransferState,
+  getRandomBytes32,
+  getRandomChannelSigner,
+  hashTransferState,
+} from "@connext/vector-utils";
 import { Wallet, utils, BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
@@ -92,11 +105,20 @@ export const createVectorInstance = async (overrides: Partial<VectorTestOverride
 };
 
 export const deployChannelWithDepositA = async (
+  channelAddress: string,
   depositAmount: BigNumber,
   assetId: string,
   alice: IChannelSigner,
   bobAddr: string,
 ): Promise<string> => {
+  await alice.connectProvider(env.chainProviders[chainId]);
+  // Get the previous balance before deploying
+  const prev =
+    assetId === constants.AddressZero
+      ? await alice.provider!.getBalance(channelAddress)
+      : await new Contract(assetId, TestToken.abi, alice).balanceOf(channelAddress);
+
+  // Deploy with deposit
   const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, alice);
   const created = new Promise<string>((res) => {
     factory.once(factory.filters.ChannelCreation(), (data) => {
@@ -107,8 +129,15 @@ export const deployChannelWithDepositA = async (
     value: depositAmount,
   });
   await tx.wait();
-  const channelAddress = await created;
-  expect(await alice.provider!.getBalance(channelAddress)).to.be.eq(depositAmount);
+  const deployedAddr = await created;
+  expect(deployedAddr).to.be.eq(channelAddress);
+
+  // Verify onchain values updated
+  const latestDeposit = await new Contract(channelAddress, VectorChannel.abi, alice).latestDepositByAssetId(assetId);
+  expect(latestDeposit.nonce).to.be.eq(1);
+  expect(latestDeposit.amount).to.be.eq(depositAmount);
+
+  expect(await alice.provider!.getBalance(channelAddress)).to.be.eq(depositAmount.add(prev));
   return channelAddress;
 };
 
@@ -134,6 +163,8 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   const bobChannel = await bob.getChannelState(channel.channelAddress);
   expect(aliceChannel).to.deep.eq(channel);
   expect(bobChannel).to.deep.eq(channel);
+  expect(channel.participants).to.be.deep.eq([alice.signerAddress, bob.signerAddress]);
+  expect(channel.publicIdentifiers).to.be.deep.eq([alice.publicIdentifier, bob.publicIdentifier]);
   return channel;
 };
 
@@ -149,10 +180,10 @@ export const depositAOnchain = async (
   if (latestDepositNonce === 0) {
     // First node deposit, must deploy channel
     // Deploy multisig with deposit
-    await deployChannelWithDepositA(value, assetId, depositorSigner, counterparty.signerAddress);
+    await deployChannelWithDepositA(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
   } else {
     // Call deposit on the multisig
-    const tx = await new Contract(channelAddress, VectorChannel.abi, depositorSigner).depositA(assetId, amount, {
+    const tx = await new Contract(channelAddress, VectorChannel.abi, depositorSigner).depositA(assetId, value, {
       value,
     });
     await tx.wait();
@@ -214,9 +245,7 @@ export const depositInChannel = async (
 
   // Make sure the onchain balance of the channel is equal to the
   // sum of the locked balance + channel balance
-  const channelTotal = BigNumber.from(postDepositLocked)
-    .add(postDepositBal.amount[0])
-    .add(postDepositBal.amount[1]);
+  const channelTotal = BigNumber.from(postDepositLocked).add(postDepositBal.amount[0]).add(postDepositBal.amount[1]);
 
   const onchainTotal =
     assetId === constants.AddressZero
@@ -225,6 +254,68 @@ export const depositInChannel = async (
 
   expect(onchainTotal).to.be.eq(channelTotal);
   return postDeposit;
+};
+
+// Will create a linked transfer in the channel, and return the full
+// transfer state (including the necessary resolver)
+// TODO: Should be improved to create any type of state, though maybe
+// this is out of scope for integration test utils
+export const createTransfer = async (
+  channelAddress: string,
+  payor: IVectorProtocol,
+  payee: IVectorProtocol,
+  assetId: string = constants.AddressZero,
+  amount: BigNumberish = 10,
+): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
+  // Create the transfer information
+  const preImage = getRandomBytes32();
+  const linkedHash = createLinkedHash(preImage);
+
+  const balance = {
+    to: [payor.signerAddress, payee.signerAddress],
+    amount: [amount.toString(), "0"],
+  };
+  const transferInitialState = createTestLinkedTransferState({ linkedHash, assetId, balance });
+
+  const params: CreateTransferParams = {
+    channelAddress,
+    amount: amount.toString(),
+    transferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
+    transferInitialState,
+    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+    meta: { test: "field" },
+    assetId,
+  };
+
+  const ret = await payor.create(params);
+  expect(ret.isError).to.be.false;
+  const channel = ret.getValue();
+  expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
+
+  const { transferId } = (channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details;
+  const transfer = (await payee.getTransferState(transferId))!;
+  expect(transfer).to.containSubset({
+    initialBalance: balance,
+    assetId,
+    channelAddress,
+    transferId,
+    initialStateHash: hashTransferState(transferInitialState, params.encodings[0]),
+    transferDefinition: params.transferDefinition,
+    adjudicatorAddress: channel.networkContext.adjudicatorAddress,
+    chainId,
+    transferEncodings: params.encodings,
+    transferState: params.transferInitialState,
+    meta: params.meta,
+  });
+
+  return {
+    channel,
+    transfer: {
+      ...transfer,
+      transferResolver: { preImage },
+    },
+  };
 };
 
 // This function will return a setup channel between two participants

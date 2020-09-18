@@ -1,13 +1,12 @@
 import { BigNumber, Contract, constants, ContractFactory, Wallet } from "ethers";
-
 import { VectorChannel, TestToken } from "@connext/vector-contracts";
 import { JsonRpcProvider, Balance, CoreChannelState, IChannelSigner } from "@connext/vector-types";
 import { createTestChannelState, getRandomChannelSigner, stringify } from "@connext/vector-utils";
-
 import { expect } from "chai";
 
-import { env } from "./utils";
 import { reconcileDeposit } from "../utils";
+
+import { env } from "./utils";
 
 describe("utils", () => {
   describe("reconcileDeposit", () => {
@@ -135,20 +134,20 @@ describe("utils", () => {
     });
 
     it("should work for Bob Token deposit", async () => {
-        const assetId = token.address;
-        const amount = ["0", "7"];
-  
-        await depositB(amount[1], assetId);
-        const ret = await reconcileDeposit(
-          state.channelAddress,
-          state.balances[1],
-          state.latestDepositNonce,
-          state.lockedBalance[1],
-          assetId,
-          signer,
-        );
-  
-        await validateRet(ret, assetId, amount, state.balances[1]);
+      const assetId = token.address;
+      const amount = ["0", "7"];
+
+      await depositB(amount[1], assetId);
+      const ret = await reconcileDeposit(
+        state.channelAddress,
+        state.balances[1],
+        state.latestDepositNonce,
+        state.lockedBalance[1],
+        assetId,
+        signer,
+      );
+
+      await validateRet(ret, assetId, amount, state.balances[1]);
     });
 
     it("should work for both Eth deposit", async () => {
@@ -170,21 +169,21 @@ describe("utils", () => {
     });
 
     it("should work for both token deposit", async () => {
-        const assetId = token.address;
-        const amount = ["7", "5"];
-  
-        await depositA(amount[0], assetId);
-        await depositB(amount[1], assetId);
-        const ret = await reconcileDeposit(
-          state.channelAddress,
-          state.balances[1],
-          state.latestDepositNonce,
-          state.lockedBalance[1],
-          assetId,
-          signer,
-        );
-  
-        await validateRet(ret, assetId, amount, state.balances[1]);
+      const assetId = token.address;
+      const amount = ["7", "5"];
+
+      await depositA(amount[0], assetId);
+      await depositB(amount[1], assetId);
+      const ret = await reconcileDeposit(
+        state.channelAddress,
+        state.balances[1],
+        state.latestDepositNonce,
+        state.lockedBalance[1],
+        assetId,
+        signer,
+      );
+
+      await validateRet(ret, assetId, amount, state.balances[1]);
     });
   });
 });

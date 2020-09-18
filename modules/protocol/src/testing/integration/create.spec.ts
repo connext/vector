@@ -1,12 +1,12 @@
 import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { env, getTestLoggers } from "../utils";
-import { getFundedChannel } from "../utils/channel";
+import { env, expect, getTestLoggers } from "../utils";
+import { createTransfer, getFundedChannel } from "../utils/channel";
 
-const testName = "Happy Integration - Create";
+const testName = "Create Integrations";
 const { log } = getTestLoggers(testName);
-describe(testName, () => {
+describe.only(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
 
@@ -32,6 +32,29 @@ describe(testName, () => {
     });
   });
 
+  it("should create an eth transfer from alice -> bob", async () => {
+    // Set test constants
+    const assetId = constants.AddressZero;
+    const transferAmount = "7";
+  
+    const { channel, transfer } = await createTransfer(
+      preCreateChannel.channelAddress,
+      alice,
+      bob,
+      assetId,
+      transferAmount,
+    );
+
+    const { transferResolver, ...toCompare } = transfer;
+
+    expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+    expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+  });
+
+  // TODO: is this important at the protocol integration layer if it has
+  // no conception of what this means?
   it.skip("should work for Alice paying Bob", async () => {});
   it.skip("should work for Bob paying Alice", async () => {});
   it.skip("should work for withdraw", async () => {});

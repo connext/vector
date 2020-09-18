@@ -19,6 +19,7 @@ import {
   ChannelUpdateError,
   VectorMessage,
   SetupParams,
+  FullTransferState,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier, getCreate2MultisigAddress } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -92,13 +93,7 @@ export class Vector implements IVectorProtocol {
     }
 
     // Generate the update
-    const updateRes = await generateUpdate(
-      params,
-      state,
-      this.storeService,
-      this.signer,
-      this.logger,
-    );
+    const updateRes = await generateUpdate(params, state, this.storeService, this.signer, this.logger);
     if (updateRes.isError) {
       this.logger.error({ method: "lockedOperation", variable: "updateRes", error: updateRes.getError()?.message });
       return Result.fail(updateRes.getError()!);
@@ -340,6 +335,10 @@ export class Vector implements IVectorProtocol {
   // STORE METHODS
   public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     return this.storeService.getChannelState(channelAddress);
+  }
+
+  public async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
+    return this.storeService.getTransferState(transferId);
   }
 
   ///////////////////////////////////

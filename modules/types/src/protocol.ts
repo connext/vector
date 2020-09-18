@@ -3,6 +3,7 @@ import {
   CreateTransferParams,
   DepositParams,
   FullChannelState,
+  FullTransferState,
   ResolveTransferParams,
   SetupParams,
   UpdateType,
@@ -34,6 +35,7 @@ export interface IVectorProtocol {
   ): Promise<ProtocolEventPayloadsMap[T]>;
 
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>
+  getTransferState(transferId: string): Promise<FullTransferState | undefined>
 }
 
 type VectorChannelMessageData<T extends UpdateType = any> = {

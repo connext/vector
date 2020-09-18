@@ -5,7 +5,7 @@ import {
   hashTransferState,
   getTransferId,
 } from "@connext/vector-utils";
-import { BigNumber, constants } from "ethers";
+import { BigNumber, constants, utils } from "ethers";
 import {
   UpdateType,
   ChannelUpdate,
@@ -282,7 +282,7 @@ async function generateCreateUpdate(
   transfers: CoreTransferState[],
 ): Promise<ChannelUpdate<"create">> {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -308,11 +308,10 @@ async function generateCreateUpdate(
     chainId: state.networkContext.chainId,
   };
   const transferHash = hashCoreTransferState(transferState);
-  const hashes: Buffer[] = [...transfers, transferState].map((state) => {
-    const hash = hashCoreTransferState(state);
-    return Buffer.from(hash);
+  const hashes = [...transfers, transferState].map((state) => {
+    return hashCoreTransferState(state);
   });
-  const merkle = new MerkleTree(hashes, hashCoreTransferState);
+  const merkle = new MerkleTree(hashes, utils.keccak256);
 
   // Create the update from the user provided params
   const balance = getUpdatedChannelBalance(UpdateType.create, assetId, transferInitialState.balance, state);
@@ -328,6 +327,7 @@ async function generateCreateUpdate(
       transferEncodings: encodings,
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: merkle.getHexRoot(),
+      meta,
     },
     signatures: [],
   };
@@ -354,11 +354,10 @@ async function generateResolveUpdate(
   if (!transferState) {
     throw new Error(`Could not find transfer for id ${params.details.transferId}`);
   }
-  const hashes: Buffer[] = transfers
+  const hashes = transfers
     .filter((x) => x.transferId !== params.details.transferId)
     .map((state) => {
-      const hash = hashCoreTransferState(state);
-      return Buffer.from(hash);
+      return hashCoreTransferState(state);
     });
   const merkle = new MerkleTree(hashes, hashCoreTransferState);
 
