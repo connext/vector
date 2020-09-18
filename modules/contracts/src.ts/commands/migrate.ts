@@ -55,6 +55,11 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
     { name: "adjudicator", value: adjudicator.address },
   ]);
 
+  // Transfers
+  await deployHelper("TransferDefinition", []);
+  await deployHelper("LinkedTransfer", []);
+  await deployHelper("Withdraw", []);
+
   ////////////////////////////////////////
   // Print summary
 
