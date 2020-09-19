@@ -28,7 +28,7 @@ import { Evt } from "evt";
 import { MerkleTree } from "merkletreejs";
 import pino from "pino";
 
-import { outbound } from "../sync";
+import { inbound, outbound } from "../sync";
 
 import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";
@@ -58,27 +58,32 @@ describe("inbound", () => {
 
   it("should return undefined if message is from us", async () => {
     const message = createVectorChannelMessage({ from: signers[0].publicIdentifier });
-    const res = await inbound(message, store, messaging, signers[0], stateEvt, errorEvt, logger);
+    const res = await inbound(
+      message.data.update,
+      message.data.latestUpdate!,
+      "test-inbox",
+      store,
+      messaging,
+      signers[0],
+      logger,
+    );
     expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.undefined;
   });
 
   it("should return undefined if message is malformed", async () => {
     const message = { should: "fail" } as any;
-    const res = await inbound(message, store, messaging, signers[0], stateEvt, errorEvt, logger);
+    const res = await inbound(
+      message.data.update,
+      message.data.latestUpdate!,
+      "test-inbox",
+      store,
+      messaging,
+      signers[0],
+      logger,
+    );
     expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.undefined;
-  });
-
-  it("should post to evt if receives an error message", async () => {
-    const message = createVectorErrorMessage();
-    const [event, res] = await Promise.all([
-      errorEvt.waitFor((e) => e.message === message.error.message, 5_000),
-      inbound(message, store, messaging, signers[0], stateEvt, errorEvt, logger),
-    ]);
-    expect(res.isError).to.be.true;
-    expect(event).to.be.instanceOf(ChannelUpdateError);
-    expect(event).to.containSubset(message.error);
   });
 
   it("should work if there is no channel state stored and you are receiving a setup update", async () => {
