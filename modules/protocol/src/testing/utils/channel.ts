@@ -219,6 +219,10 @@ export const depositInChannel = async (
   // Deploy multsig if needed
   const channel = await depositor.getChannelState(channelAddress);
   const isDepositA = channel!.publicIdentifiers[0] === depositor.publicIdentifier;
+  // NOTE: sometimes deposit fails, and it seems like its because it is
+  // not detecting depositA properly, only happens sometimes so leave
+  // this log for now!
+  console.log("******* isDepositA", isDepositA);
   if (isDepositA) {
     await depositAOnchain(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
   } else {
