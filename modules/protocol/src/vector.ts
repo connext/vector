@@ -80,7 +80,14 @@ export class Vector implements IVectorProtocol {
     const state = await this.storeService.getChannelState(params.channelAddress);
 
     // Generate the update
-    const updateRes = await generateUpdate(params, state, this.storeService, this.signer, this.logger);
+    const updateRes = await generateUpdate(
+      params,
+      state,
+      this.storeService,
+      this.onchainService,
+      this.signer,
+      this.logger,
+    );
     if (updateRes.isError) {
       this.logger.error({ method: "lockedOperation", variable: "updateRes", error: updateRes.getError()?.message });
       return Result.fail(updateRes.getError()!);

@@ -32,6 +32,7 @@ import { MerkleTree } from "merkletreejs";
 
 import { applyUpdate, generateUpdate } from "../update";
 
+import { MockOnchainServce } from "./services/onchain";
 import { MemoryStoreService } from "./services/store";
 import { env } from "./utils";
 
@@ -44,7 +45,6 @@ describe("applyUpdate", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
   const provider = new JsonRpcProvider(providerUrl);
-  const wallet = env.sugarDaddy.connect(provider);
   const signers = Array(2)
     .fill(0)
     .map(() => getRandomChannelSigner(providerUrl));
@@ -268,6 +268,7 @@ describe("generateUpdate", () => {
   const providerUrl = env.chainProviders[chainId];
   const provider = new JsonRpcProvider(providerUrl);
   const wallet = env.sugarDaddy.connect(provider);
+  const chainService = new MockOnchainServce();
 
   let signers: ChannelSigner[];
   let store: IVectorStore;
@@ -309,7 +310,7 @@ describe("generateUpdate", () => {
         },
       },
     });
-    const update = (await generateUpdate(params, undefined, store, signers[0])).getValue();
+    const update = (await generateUpdate(params, undefined, store, chainService, signers[0])).getValue();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.setup, {
       balance: { to: signers.map((a) => a.address), amount: ["0", "0"] },
@@ -336,7 +337,7 @@ describe("generateUpdate", () => {
       details: { channelAddress, assetId },
     });
     console.log(`params: ${stringify(params)}`);
-    const update = (await generateUpdate(params, state, store, signers[0])).getValue();
+    const update = (await generateUpdate(params, state, store, chainService, signers[0])).getValue();
     console.log(`update: ${stringify(update)}`);
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
       channelAddress,
@@ -377,7 +378,7 @@ describe("generateUpdate", () => {
     });
 
     // Test update
-    const update = (await generateUpdate(params, state, store, signers[0])).getValue();
+    const update = (await generateUpdate(params, state, store, chainService, signers[0])).getValue();
 
     // Get expected value
     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
@@ -478,9 +479,9 @@ describe("generateUpdate", () => {
     });
 
     // Generate the update
-    const updateRet = await generateUpdate(params, state, store, signers[0]);
+    const updateRet = await generateUpdate(params, state, store, chainService, signers[0]);
     expect(updateRet.isError).to.be.false;
-    const {signatures: returnedSig, ...returnedUnsigned} = updateRet.getValue()
+    const { signatures: returnedSig, ...returnedUnsigned } = updateRet.getValue();
 
     // TODO check signatures!!
     expect(returnedUnsigned).to.containSubset(expected);

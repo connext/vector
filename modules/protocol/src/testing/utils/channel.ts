@@ -1,6 +1,5 @@
-import { ChannelFactory, TestToken, VectorChannel } from "@connext/vector-contracts";
+import { ChannelFactory, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import {
-  ChainProviders,
   Contract,
   FullChannelState,
   FullTransferState,
@@ -18,6 +17,7 @@ import {
   UpdateType,
   ResolveTransferParams,
   TransferResolver,
+  IVectorOnchainService,
 } from "@connext/vector-types";
 import {
   createLinkedHash,
@@ -47,7 +47,7 @@ type VectorTestOverrides = {
   lockService: ILockService;
   storeService: IVectorStore;
   signer: IChannelSigner;
-  onchainService: ChainProviders;
+  onchainService: IVectorOnchainService;
   logger: Pino.BaseLogger;
 };
 
@@ -72,6 +72,7 @@ export const createVectorInstances = async (
 ): Promise<IVectorProtocol[]> => {
   const sharedMessaging = new MemoryMessagingService();
   const sharedLock = new MemoryLockService();
+  const sharedChain = new VectorOnchainService({[chainId]: new JsonRpcProvider(providerUrl)});
   return Promise.all(
     Array(numberOfEngines)
       .fill(0)
@@ -79,9 +80,11 @@ export const createVectorInstances = async (
         const instanceOverrides = overrides[idx] || {};
         const messagingService = shareServices ? sharedMessaging : new MemoryMessagingService();
         const lockService = shareServices ? sharedLock : new MemoryLockService();
+        const onchainService = shareServices ? sharedChain : new VectorOnchainService({[chainId]: new JsonRpcProvider(providerUrl)});
         return createVectorInstance({
           messagingService,
           lockService,
+          onchainService,
           ...instanceOverrides,
         });
       }),
@@ -94,7 +97,7 @@ export const createVectorInstance = async (overrides: Partial<VectorTestOverride
     lockService: new MemoryLockService(),
     storeService: new MemoryStoreService(),
     signer: getRandomChannelSigner(env.chainProviders[chainId]),
-    chainProviders: env.chainProviders,
+    onchainService: new VectorOnchainService({[chainId]: new JsonRpcProvider(providerUrl)}),
     logger: getTestLoggers("vector").log,
     ...overrides,
   };

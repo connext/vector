@@ -8,7 +8,7 @@ type StubType = {
   [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
 };
 
-export class MockOnchainTransactionService implements IVectorOnchainService {
+export class MockOnchainServce implements IVectorOnchainService {
   public readonly stubs: StubType;
 
   constructor(overrides: Partial<StubType> = {}) {
