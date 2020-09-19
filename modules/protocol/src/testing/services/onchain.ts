@@ -53,6 +53,5 @@ export class MockOnchainServce implements IVectorOnchainService {
     ret: StubType[typeof method],
   ): void {
     this.stubs[method] = Sinon.stub().resolves(ret);
-    // TODO: maybe we have to return a new instance?
   }
 }

@@ -50,12 +50,6 @@ describe(testName, () => {
     expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
   });
 
-  // TODO: is this important at the protocol integration layer if it has
-  // no conception of what this means?
-  // Arjun: yes -- we don't need to care about the details themselves, but we do need to test
-  //        that creating works in *both directions* to test that the states are being formed
-  //        correctly. Similarly, for concurrent creates, we want to make sure that each transfer
-  //        is totally isolated.
   it.skip("should work for Alice paying Bob", async () => {});
   it.skip("should work for Bob paying Alice", async () => {});
   it.skip("should work for many concurrent transfers with multiple parties", async () => {});

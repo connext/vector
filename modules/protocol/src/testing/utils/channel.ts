@@ -161,8 +161,6 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   expect(ret.isError).to.not.be.ok;
   const channel = ret.getValue()!;
 
-  // TODO: should we add stronger assertions here?
-
   // Verify stored channel
   const aliceChannel = await alice.getChannelState(channel.channelAddress);
   const bobChannel = await bob.getChannelState(channel.channelAddress);
@@ -346,8 +344,6 @@ export const resolveTransfer = async (
   const channel = ret.getValue();
   const stored = await redeemer.getTransferState(transfer.transferId);
   expect(stored!.transferResolver).to.deep.eq(params.transferResolver);
-
-  // TODO: stronger assertions here?
 
   expect(await redeemer.getChannelState(channelAddress)).to.be.deep.eq(channel);
   expect(await counterparty.getChannelState(channelAddress)).to.be.deep.eq(channel);

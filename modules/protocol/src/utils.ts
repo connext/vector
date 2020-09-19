@@ -111,7 +111,6 @@ export const create = async (
 ): Promise<boolean> => {
   const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
   const contract = new Contract(transfer.transferId, TransferDefinition.abi, signer);
-  // TODO: use pure-evm
   if (bytecode) {
     try {
       const data = contract.interface.encodeFunctionData("create", [encodedState]);

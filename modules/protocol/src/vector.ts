@@ -259,12 +259,6 @@ export class Vector implements IVectorProtocol {
       return Result.fail(error);
     }
 
-    // Make sure the amount declared has in fact been deposited
-    // onchain
-    // TODO: is there a good way to validate ^^? The total in channel +
-    // the amount locked + `amount` == `params.amount`? What if a user and
-    // a node deposited simultaneously, how is that handled onchain?
-
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"deposit"> = {
       channelAddress: params.channelAddress,

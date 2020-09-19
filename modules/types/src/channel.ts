@@ -67,7 +67,6 @@ export type UpdateParams<T extends UpdateType> = {
   details: UpdateParamsMap[T];
 };
 
-// TODO update this in contracts
 export type Balance = {
   amount: string[];
   to: Address[];

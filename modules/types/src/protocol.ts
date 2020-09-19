@@ -55,5 +55,3 @@ export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
 
 export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
 
-// TODO: fix these interfaces!
-export type IOnchainService = any;

@@ -463,7 +463,6 @@ describe("generateUpdate", () => {
     });
 
     // Get expected values
-    const emptyTree = new MerkleTree([], hashCoreTransferState);
     const { signatures: expectedSig, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
       channelAddress,
       nonce: state.nonce + 1,
