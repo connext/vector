@@ -1,13 +1,13 @@
-import { BigNumber, Contract, constants, ContractFactory, Wallet } from "ethers";
+import { BigNumber, Contract, constants, ContractFactory } from "ethers";
 import { VectorChannel, TestToken } from "@connext/vector-contracts";
 import { JsonRpcProvider, Balance, CoreChannelState, IChannelSigner } from "@connext/vector-types";
-import { createTestChannelState, getRandomChannelSigner, stringify } from "@connext/vector-utils";
+import { createTestChannelState, getRandomChannelSigner } from "@connext/vector-utils";
 import { expect } from "chai";
 
 import { reconcileDeposit } from "../utils";
 
 import { env } from "./utils";
-import { MockOnchainTransactionService } from "./services/onchain";
+import { MockOnchainServce } from "./services/onchain";
 
 describe("utils", () => {
   describe("reconcileDeposit", () => {
@@ -96,7 +96,7 @@ describe("utils", () => {
         state.latestDepositNonce,
         state.lockedBalance[0],
         assetId,
-        new MockOnchainTransactionService(),
+        new MockOnchainServce(),
       );
 
       await validateRet(ret.getValue(), assetId, amount, state.balances[0]);
@@ -114,7 +114,7 @@ describe("utils", () => {
         state.latestDepositNonce,
         state.lockedBalance[1],
         assetId,
-        new MockOnchainTransactionService(),
+        new MockOnchainServce(),
       );
 
       await validateRet(ret.getValue(), assetId, amount, state.balances[1]);
@@ -132,7 +132,7 @@ describe("utils", () => {
         state.latestDepositNonce,
         state.lockedBalance[0],
         assetId,
-        new MockOnchainTransactionService(),
+        new MockOnchainServce(),
       );
       await validateRet(ret.getValue(), assetId, amount, state.balances[0]);
     });
@@ -149,7 +149,7 @@ describe("utils", () => {
         state.latestDepositNonce,
         state.lockedBalance[1],
         assetId,
-        new MockOnchainTransactionService(),
+        new MockOnchainServce(),
       );
 
       await validateRet(ret.getValue(), assetId, amount, state.balances[1]);
@@ -168,7 +168,7 @@ describe("utils", () => {
         state.latestDepositNonce,
         state.lockedBalance[0],
         assetId,
-        new MockOnchainTransactionService(),
+        new MockOnchainServce(),
       );
 
       await validateRet(ret.getValue(), assetId, amount, state.balances[0]);
@@ -187,7 +187,7 @@ describe("utils", () => {
         state.latestDepositNonce,
         state.lockedBalance[1],
         assetId,
-        new MockOnchainTransactionService(),
+        new MockOnchainServce(),
       );
 
       await validateRet(ret.getValue(), assetId, amount, state.balances[1]);

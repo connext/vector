@@ -1,4 +1,3 @@
-import { ChannelFactory } from "@connext/vector-contracts";
 import {
   IVectorStore,
   UpdateParams,
@@ -19,7 +18,7 @@ import {
   VectorMessage,
   SetupParams,
   FullTransferState,
-  IVectorOnchainTransactionService,
+  IVectorOnchainService,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier, getCreate2MultisigAddress } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -47,7 +46,7 @@ export class Vector implements IVectorProtocol {
     private readonly lockService: ILockService,
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
-    private readonly onchainTxService: IVectorOnchainTransactionService,
+    private readonly onchainService: IVectorOnchainService,
     private readonly logger: pino.BaseLogger,
   ) {}
 
@@ -56,10 +55,10 @@ export class Vector implements IVectorProtocol {
     lockService: ILockService,
     storeService: IVectorStore,
     signer: IChannelSigner,
-    onchainTxService: IVectorOnchainTransactionService,
+    onchainService: IVectorOnchainService,
     logger: pino.BaseLogger,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer, onchainTxService, logger);
+    const node = new Vector(messagingService, lockService, storeService, signer, onchainService, logger);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
@@ -81,7 +80,14 @@ export class Vector implements IVectorProtocol {
     const state = await this.storeService.getChannelState(params.channelAddress);
 
     // Generate the update
-    const updateRes = await generateUpdate(params, state, this.storeService, this.signer, this.logger);
+    const updateRes = await generateUpdate(
+      params,
+      state,
+      this.storeService,
+      this.onchainService,
+      this.signer,
+      this.logger,
+    );
     if (updateRes.isError) {
       this.logger.error({ method: "lockedOperation", variable: "updateRes", error: updateRes.getError()?.message });
       return Result.fail(updateRes.getError()!);
@@ -235,7 +241,7 @@ export class Vector implements IVectorProtocol {
       params.networkContext.chainId,
       params.networkContext.channelFactoryAddress,
       params.networkContext.vectorChannelMastercopyAddress,
-      this.onchainTxService,
+      this.onchainService,
     );
     if (create2Res.isError) {
       return Result.fail(

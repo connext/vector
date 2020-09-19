@@ -1,3 +1,4 @@
+import { VectorOnchainService } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import {
   Address,
@@ -26,6 +27,7 @@ import {
   DepositInput,
   RpcRequestInput,
   EthAddressSchema,
+  JsonRpcProvider,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -59,12 +61,17 @@ export class VectorEngine {
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
   ): Promise<VectorEngine> {
+    const hydratedProviders = {};
+    Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
+      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl, chainId);
+    });
+    const chainService = new VectorOnchainService(hydratedProviders);
     const vector = await Vector.connect(
       messaging,
       lock,
       store as IVectorStore,
       signer,
-      chainProviders,
+      chainService,
       logger.child({ module: "VectorProtocol" }),
     );
     const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger);

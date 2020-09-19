@@ -13,8 +13,8 @@ import { Vector } from "../vector";
 import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 import { MemoryStoreService } from "./services/store";
-import { env, expect } from "./utils";
-import { MockOnchainTransactionService } from "./services/onchain";
+import { expect } from "./utils";
+import { MockOnchainServce } from "./services/onchain";
 
 describe("Vector.connect", () => {
   it("can be created", async () => {
@@ -24,7 +24,7 @@ describe("Vector.connect", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainTransactionService(),
+      new MockOnchainServce(),
       pino(),
     );
     expect(node).to.be.instanceOf(Vector);
@@ -49,7 +49,7 @@ describe("Vector.setup", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainTransactionService(),
+      new MockOnchainServce(),
       pino(),
     );
   });
@@ -167,7 +167,7 @@ describe("Vector.deposit", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainTransactionService(),
+      new MockOnchainServce(),
       pino(),
     );
   });
@@ -225,7 +225,7 @@ describe("Vector.create", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainTransactionService(),
+      new MockOnchainServce(),
       pino(),
     );
   });
@@ -338,7 +338,7 @@ describe("Vector.resolve", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainTransactionService(),
+      new MockOnchainServce(),
       pino(),
     );
   });

@@ -18,13 +18,13 @@ import {
   ChannelUpdateError,
   Result,
   FullTransferState,
+  IVectorOnchainService
 } from "@connext/vector-types";
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
 
 import { generateSignedChannelCommitment, reconcileDeposit, resolve } from "./utils";
 import { validateParams } from "./validate";
-import { MockOnchainTransactionService } from "./testing/services/onchain";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
@@ -136,6 +136,7 @@ export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   state: FullChannelState | undefined,
   storeService: IVectorStore,
+  onchainService: IVectorOnchainService,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
@@ -153,7 +154,7 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer);
+      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer, onchainService);
       break;
     }
     case UpdateType.create: {
@@ -236,6 +237,7 @@ async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
   signer: IChannelSigner,
+  onchainService: IVectorOnchainService,
 ): Promise<ChannelUpdate<"deposit">> {
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
@@ -264,7 +266,7 @@ async function generateDepositUpdate(
       state.latestDepositNonce,
       existingLockedBalance,
       assetId,
-      new MockOnchainTransactionService(),
+      onchainService,
     )
   ).getValue();
 

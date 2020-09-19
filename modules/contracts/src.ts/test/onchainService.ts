@@ -1,9 +1,9 @@
 import { MockProvider } from "ethereum-waffle";
 
-import { VectorOnchainTransactionService } from "../onchainService";
+import { VectorOnchainService } from "../onchainService";
 
-export const getOnchainTxService = async (provider: MockProvider): Promise<VectorOnchainTransactionService> => {
+export const getOnchainTxService = async (provider: MockProvider): Promise<VectorOnchainService> => {
   const network = await provider.getNetwork();
   const chainProviders = { [network.chainId]: provider };
-  return new VectorOnchainTransactionService(chainProviders);
+  return new VectorOnchainService(chainProviders);
 };

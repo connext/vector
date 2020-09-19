@@ -61,7 +61,7 @@ export interface IVectorTransactionService {
   ): Promise<Result<providers.TransactionResponse, OnchainTransactionError>>;
 }
 
-export interface IVectorOnchainTransactionService {
+export interface IVectorOnchainService {
   getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
   getLatestDepositByAssetId(
     channelAddress: string,
