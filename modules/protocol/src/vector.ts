@@ -142,6 +142,10 @@ export class Vector implements IVectorProtocol {
       });
     });
 
+    // TODO if the store doesn't have anything in it, restore from backup
+
+    // TODO for loop through store and isAlive all channels
+
     // TODO run setup updates if the channel is not already setup
 
     // TODO validate that the channel is not currently in dispute/checkpoint state
@@ -197,6 +201,13 @@ export class Vector implements IVectorProtocol {
   // calling `this.executeUpdate`. This includes all parameter validation,
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
+
+  public async isAlive(channelAddress: string) {
+    // TODO -- isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
+    //         it should return an error (and emit it!) if the ack is not received.
+
+    //         on the sync inbound side, we should properly ack this message and also emit an event when you hear it (on both sides)
+  }
 
   public async setup(params: SetupParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
     // Validate all parameters

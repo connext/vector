@@ -36,6 +36,7 @@ import {
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "./paramConverter";
+import { setupListeners } from "./listeners";
 
 const ajv = new Ajv();
 
@@ -67,27 +68,17 @@ export class VectorEngine {
       logger.child({ module: "VectorProtocol" }),
     );
     const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger);
-    await engine.setupListener();
+    await engine.setupListeners();
+
+    // It should clean up unresolved transfers -- note, is there a way to just queue up calls here and return? That way we're not blocking startup?
+
+    // It should check to see if a deposit happened and automatically call the deposit protocol
     logger.info("Vector Engine connected 🚀!");
     return engine;
   }
 
-  public async setupListener(): Promise<void> {
-    // unlock transfer if encrypted preimage exists
-    this.vector.on(
-      ProtocolEventName.CHANNEL_UPDATE_EVENT,
-      (data) => {
-        if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
-        }
-      },
-      (data) => data.updatedChannelState.latestUpdate?.details.meta.recipient === this.vector.publicIdentifier,
-    );
-
-    this.messaging.subscribe(`${this.vector.publicIdentifier}.*.check-in`, async () => {
-      // pull channel out of subject
-    });
-
-    // subscribe to isAlive
+  public async setupListeners(): Promise<void> {
+    // return setupListeners();
   }
 
   public async setup(params: SetupInput): Promise<Result<any, ChannelUpdateError | Error>> {
@@ -182,14 +173,6 @@ export class VectorEngine {
     // TODO convert this into linked transfer to recipient params in conditionalTransfer
     let updatedParams;
     return this.conditionalTransfer(updatedParams);
-  }
-
-  public async addToQueuedUpdates(params: any): Promise<Result<any>> {
-    return Result.ok(undefined);
-    // TODO what kinds of params do we want this to accept?
-    // First convert the update into correct type
-    // Then store in queued updates table
-    // return this.store.addToQueuedUpdates();
   }
 
   // JSON RPC interface -- this will accept:
