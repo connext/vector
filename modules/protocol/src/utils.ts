@@ -9,7 +9,7 @@ import {
   VectorChannelMessage,
   VectorErrorMessage,
   FullTransferState,
-  IVectorOnchainTransactionService,
+  IVectorOnchainService,
   Result,
 } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
@@ -162,7 +162,7 @@ export const reconcileDeposit = async (
   latestDepositNonce: number,
   lockedBalance: string,
   assetId: string,
-  onchainTxService: IVectorOnchainTransactionService,
+  onchainTxService: IVectorOnchainService,
 ): Promise<Result<{ balance: Balance; latestDepositNonce: number }, Error>> => {
   const balanceRes = await onchainTxService.getChannelOnchainBalance(channelAddress, chainId, assetId);
   if (balanceRes.isError) {

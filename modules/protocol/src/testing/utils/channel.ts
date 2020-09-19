@@ -47,7 +47,7 @@ type VectorTestOverrides = {
   lockService: ILockService;
   storeService: IVectorStore;
   signer: IChannelSigner;
-  chainProviders: ChainProviders;
+  onchainService: ChainProviders;
   logger: Pino.BaseLogger;
 };
 

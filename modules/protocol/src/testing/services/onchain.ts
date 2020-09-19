@@ -1,18 +1,18 @@
-import { VectorOnchainTransactionService } from "@connext/vector-contracts";
-import { IVectorOnchainTransactionService, Result } from "@connext/vector-types";
+import { VectorOnchainService } from "@connext/vector-contracts";
+import { IVectorOnchainService, Result } from "@connext/vector-types";
 import { mkHash } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Sinon from "sinon";
 
 type StubType = {
-  [K in keyof IVectorOnchainTransactionService]: IVectorOnchainTransactionService[K];
+  [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
 };
 
-export class MockOnchainTransactionService implements IVectorOnchainTransactionService {
+export class MockOnchainTransactionService implements IVectorOnchainService {
   public readonly stubs: StubType;
 
   constructor(overrides: Partial<StubType> = {}) {
-    this.stubs = Sinon.createStubInstance(VectorOnchainTransactionService, {
+    this.stubs = Sinon.createStubInstance(VectorOnchainService, {
       getChannelOnchainBalance: Result.ok<BigNumber>(BigNumber.from(10)) as any,
 
       getLatestDepositByAssetId: Result.ok<{ nonce: BigNumber; amount: BigNumber }>({
@@ -49,9 +49,10 @@ export class MockOnchainTransactionService implements IVectorOnchainTransactionS
 
   // Easy method to set stubs mid-test
   setStub(
-    method: keyof IVectorOnchainTransactionService,
+    method: keyof IVectorOnchainService,
     ret: StubType[typeof method],
   ): void {
     this.stubs[method] = Sinon.stub().resolves(ret);
+    // TODO: maybe we have to return a new instance?
   }
 }

@@ -2,7 +2,7 @@ import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
 import { Adjudicator, VectorChannel, ChannelFactory } from "../../artifacts";
-import { VectorOnchainTransactionService } from "../../onchainService";
+import { VectorOnchainService } from "../../onchainService";
 import { getOnchainTxService } from "../onchainService";
 import { expect, provider } from "../utils";
 
@@ -10,14 +10,14 @@ describe("ChannelFactory", () => {
   let deployer: Wallet;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
-  let onchainTxService: VectorOnchainTransactionService;
+  let onchainService: VectorOnchainService;
   let chainId: number;
 
   beforeEach(async () => {
     const network = await provider.getNetwork();
     chainId = network.chainId;
     deployer = provider.getWallets()[0];
-    onchainTxService = await getOnchainTxService(provider);
+    onchainService = await getOnchainTxService(provider);
 
     const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, deployer).deploy();
     await adjudicator.deployed();
@@ -54,7 +54,7 @@ describe("ChannelFactory", () => {
       chainId,
       channelFactory.address,
       channelMastercopy.address,
-      onchainTxService,
+      onchainService,
     );
     expect(channelAddress).to.be.a("string");
     expect(channelAddress).to.be.eq(computedAddr.getValue());
@@ -82,7 +82,7 @@ describe("ChannelFactory", () => {
       chainId,
       channelFactory.address,
       channelMastercopy.address,
-      onchainTxService,
+      onchainService,
     );
     expect(channelAddress).to.be.a("string");
     expect(channelAddress).to.be.eq(computedAddr.getValue());

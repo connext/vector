@@ -1,9 +1,9 @@
-import { ERC20Abi, IVectorOnchainTransactionService, Result } from "@connext/vector-types";
+import { ERC20Abi, IVectorOnchainService, Result } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers } from "ethers";
 
 import { VectorChannel, ChannelFactory } from "./artifacts";
 
-export class VectorOnchainTransactionService implements IVectorOnchainTransactionService {
+export class VectorOnchainService implements IVectorOnchainService {
   constructor(private readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider }) {}
 
   async getChannelOnchainBalance(
