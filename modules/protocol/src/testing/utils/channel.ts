@@ -220,6 +220,8 @@ export const depositInChannel = async (
   // NOTE: sometimes deposit fails, and it seems like its because it is
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
+  console.log("******* participants", channel?.participants);
+  console.log("******* pubIds", channel?.publicIdentifiers);
   console.log("******* isDepositA", isDepositA);
   if (isDepositA) {
     await depositAOnchain(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
