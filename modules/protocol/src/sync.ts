@@ -8,19 +8,15 @@ import {
   IChannelSigner,
   ChannelUpdateError,
   Result,
-  VectorMessage,
-  VectorChannelMessage,
-  VectorErrorMessage,
   ChannelCommitmentData,
   FullTransferState,
   TransferCommitmentData,
 } from "@connext/vector-types";
-import { delay, hashTransferState } from "@connext/vector-utils";
+import { hashTransferState } from "@connext/vector-utils";
 import { BigNumber, constants } from "ethers";
-import { Evt } from "evt";
 import pino from "pino";
 
-import { isChannelMessage, isChannelState, isErrorMessage, generateSignedChannelCommitment } from "./utils";
+import { generateSignedChannelCommitment } from "./utils";
 import { applyUpdate } from "./update";
 import { validateUpdate } from "./validate";
 
@@ -34,8 +30,6 @@ export async function outbound(
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
-  stateEvt: Evt<FullChannelState>,
-  errorEvt: Evt<ChannelUpdateError>,
   logger: pino.BaseLogger = pino(),
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   // NOTE: This is checked in `generateUpdate` as well, so this is unnecessary
@@ -44,77 +38,35 @@ export async function outbound(
     return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, update));
   }
 
-  // Create a helper function that will create a function that properly
-  // sets up the promise handlers. The only time this promise should
-  // reject instead of resolve is if *sending* the message failed. In
-  // that case, this should be safe to retry on failure
-  const generatePromise = (updateToSend: ChannelUpdate<any>, prevUpdate: ChannelUpdate<any> | undefined) =>
-    new Promise<Result<FullChannelState, ChannelUpdateError>>((resolve) => {
-      // If there is an error event corresponding to this channel and
-      // this nonce, reject the promise
-      errorEvt
-        .pipe((e: ChannelUpdateError) => {
-          return e.update?.channelAddress === updateToSend.channelAddress;
-        })
-        .attachOnce((e: ChannelUpdateError) => resolve(Result.fail(e)));
+  logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Sending protocol message");
+  const result = await messagingService.sendProtocolMessage(update, storedChannel?.latestUpdate);
 
-      // If there is a channel update event corresponding to
-      // this channel update, resolve the promise
-      stateEvt
-        .pipe((e: FullChannelState) => {
-          return e.channelAddress === updateToSend.channelAddress;
-        })
-        .attachOnce((state: FullChannelState) => resolve(Result.ok(state)));
-
-      messagingService
-        .send(updateToSend.toIdentifier, {
-          to: updateToSend.toIdentifier,
-          from: updateToSend.fromIdentifier,
-          data: { update: updateToSend, latestUpdate: prevUpdate },
-        })
-        .catch((e) =>
-          resolve(
-            Result.fail(
-              new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel, {
-                error: e.message,
-              }),
-            ),
-          ),
-        );
-    });
-
-  // Retry sending the message 5 times w/3s delay
-  const sendWithRetry = async (
-    updateToSend: ChannelUpdate<any>,
-    prevUpdate: ChannelUpdate<any> | undefined,
-  ): Promise<Result<FullChannelState<any>, ChannelUpdateError>> => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const _ of Array(5).fill(0)) {
-      const result = await generatePromise(updateToSend, prevUpdate);
-      if (!result.isError) {
-        logger.info({ method: "sendWithRetry", step: "Got result", result: result.getValue() });
-        return result;
-      }
-      const channelError = result.getError()!;
-      // The only errors we should retry here is if the message failed
-      // to send
-      if (channelError.message !== ChannelUpdateError.reasons.MessageFailed) {
-        return Result.fail(new ChannelUpdateError(channelError.message, channelError.update, channelError.state));
-      }
-      logger.error(`Failed to execute helper`, { error: result.getError()?.message, stack: result.getError()?.stack });
-      await delay(3_000);
-    }
-
-    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.MessageFailed, updateToSend, storedChannel));
-  };
-
-  const result = await sendWithRetry(update, storedChannel?.latestUpdate);
-  if (!result.isError && isChannelState(result.getValue())) {
-    // No error returned, successfully updated state
-    return Result.ok(result.getValue());
+  if (result.isError) {
+    logger.error({ method: "outbound", error: result.getError()! }, "Error receiving response!");
+    return Result.fail(result.getError()!);
   }
 
-  const channelError = result.getError()!;
+  logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Received protocol response");
+
+  const channelUpdate = result.getValue();
+  const validationRes = await validateAndSaveIncomingChannelUpdate(
+    channelUpdate.update,
+    channelUpdate.previousUpdate,
+    storeService,
+    signer,
+    logger,
+  );
+  if (!validationRes.isError) {
+    // No error returned, successfully updated state
+    return Result.ok(validationRes.getValue());
+  }
+
+  // eliminate error cases
+  const channelError = validationRes.getError()!;
+  logger.warn(
+    { method: "outbound", error: "channelError.message", to: update.toIdentifier, type: update.type },
+    "Error on received message",
+  );
 
   // The only error we should handle and retry is the case where we
   // are one state behind
@@ -169,80 +121,64 @@ export async function outbound(
     );
   }
 
-  // Retry the update
-  const syncedResult = await sendWithRetry({ ...update, nonce: update.nonce + 1 }, channelError.state.latestUpdate);
-  return syncedResult;
+  // Retry the update and save
+  const syncedResult = await messagingService.sendProtocolMessage(
+    { ...update, nonce: update.nonce + 1 },
+    channelError.state.latestUpdate,
+  );
+  const channelUpdate2 = syncedResult.getValue();
+  const validationRes2 = await validateAndSaveIncomingChannelUpdate(
+    channelUpdate2.update,
+    channelUpdate2.previousUpdate,
+    storeService,
+    signer,
+    logger,
+  );
+  return validationRes2;
 }
 
-// This function is responsible for handling any inbound vector messages.
-// This function is expected to handle errors and updates from a counterparty.
 export async function inbound(
-  message: VectorMessage,
+  update: ChannelUpdate<any>,
+  previousUpdate: ChannelUpdate<any>,
+  inbox: string,
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
-  stateEvt: Evt<FullChannelState>,
-  errorEvt: Evt<ChannelUpdateError>,
-  logger: pino.BaseLogger,
-): Promise<Result<FullChannelState | undefined, ChannelUpdateError>> {
-  // If the message is from us, ignore
-  if (message.from === signer.publicIdentifier) {
-    return Result.ok(undefined);
+  logger: pino.BaseLogger = pino(),
+): Promise<Result<FullChannelState, ChannelUpdateError>> {
+  const channelFromStore = await storeService.getChannelState(update.channelAddress);
+  if (!channelFromStore) {
+    return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
   }
-
-  // If it is a response, process the response
-  if (isChannelMessage(message)) {
-    logger.info({ method: "inbound", step: "Detected channel message" });
-    return processChannelMessage(
-      message as VectorChannelMessage,
-      storeService,
-      messagingService,
-      signer,
-      stateEvt,
-      errorEvt,
-      logger,
+  const inboundRes = await validateAndSaveIncomingChannelUpdate(update, previousUpdate, storeService, signer, logger);
+  if (inboundRes.isError) {
+    messagingService.respondWithProtocolError(
+      update.fromIdentifier,
+      update.toIdentifier,
+      inbox,
+      inboundRes.getError()!,
     );
-  } else if (isErrorMessage(message)) {
-    // It is an error message from a counterparty. An `outbound` promise
-    // may be waiting to resolve, so post to the errorEvt
-    logger.warn({ method: "inbound", step: "Detected error message" });
-    const errorMessage = message as VectorErrorMessage;
-    errorEvt.post(errorMessage.error);
-    return Result.fail(new ChannelUpdateError(errorMessage.error.message, errorMessage.error.update));
+    return inboundRes;
   }
+  const updatedChannelState = inboundRes.getValue();
 
-  logger.info({ method: "inbound", step: "Unrecognized message" });
-  // Otherwise, it is an unrecognized message format. do nothing
-  return Result.ok(undefined);
+  // send to counterparty
+  await messagingService.respondToProtocolMessage(
+    updatedChannelState.latestUpdate,
+    inbox,
+    channelFromStore.latestUpdate,
+  );
+  return inboundRes;
 }
 
 // This function is responsible for handling any inbound state requests.
-async function processChannelMessage(
-  message: VectorChannelMessage,
+export async function validateAndSaveIncomingChannelUpdate(
+  requestedUpdate: ChannelUpdate<any>,
+  counterpartyLatestUpdate: ChannelUpdate<any>,
   storeService: IVectorStore,
-  messagingService: IMessagingService,
   signer: IChannelSigner,
-  stateEvt: Evt<FullChannelState>,
-  errorEvt: Evt<ChannelUpdateError>,
   logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
-  const { from, data } = message;
-  const requestedUpdate = data.update as ChannelUpdate<any>;
-  const counterpartyLatestUpdate = data.latestUpdate as ChannelUpdate<any>;
-  // Create helper to handle errors
-  const handleError = async (error: ChannelUpdateError): Promise<ChannelUpdateError> => {
-    // If the update is single signed, the counterparty is waiting
-    // for a response.
-    if (requestedUpdate.signatures.length === 1) {
-      await messagingService.publish(from, { to: from, from: signer.publicIdentifier, error });
-    }
-    // Post to the evt
-    errorEvt.post(error);
-    // If the update is double signed, the counterparty is not
-    // waiting for a response and it is safe to error
-    return error;
-  };
-
   // Get our latest stored state + active transfers
   let storedState = await storeService.getChannelState(requestedUpdate.channelAddress);
   if (!storedState) {
@@ -251,10 +187,9 @@ async function processChannelMessage(
     // being created for the first time. If this is the case, create an
     // empty channel and continue through the function
     if (requestedUpdate.type !== UpdateType.setup) {
-      const error = await handleError(
+      return Result.fail(
         new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound, requestedUpdate, storedState),
       );
-      return Result.fail(error);
     }
     requestedUpdate.details as SetupUpdateDetails;
     // Create an empty channel state
@@ -323,23 +258,21 @@ async function processChannelMessage(
     // use the information from this error to sync, then retry your update
 
     // FIXME: We don't need to pass everything over the wire here, fix that
-    const error = await handleError(
+    return Result.fail(
       new ChannelUpdateError(ChannelUpdateError.reasons.StaleUpdateNonce, storedState.latestUpdate, storedState, {
         requestedUpdate,
       }),
     );
-    return Result.fail(error);
   }
 
   // If we are behind by more than 3, we cannot sync from their latest
   // update, and must use restore
   if (diff.gte(3)) {
-    const error = await handleError(
+    return Result.fail(
       new ChannelUpdateError(ChannelUpdateError.reasons.StaleChannelNonce, requestedUpdate, storedState, {
         counterpartyLatestUpdate,
       }),
     );
-    return Result.fail(error);
   }
 
   // If the update nonce is ahead of the store nonce by 2, we are
@@ -351,7 +284,7 @@ async function processChannelMessage(
     // Create the proper state to play the update on top of using the
     // latest update
     if (!counterpartyLatestUpdate) {
-      const error = await handleError(
+      return Result.fail(
         new ChannelUpdateError(
           ChannelUpdateError.reasons.StaleChannelNonceNoUpdate,
           counterpartyLatestUpdate,
@@ -359,18 +292,16 @@ async function processChannelMessage(
           { requestedUpdate },
         ),
       );
-      return Result.fail(error);
     }
     const mergeRes = await mergeUpdate(counterpartyLatestUpdate, storedState, storeService);
     if (mergeRes.isError) {
-      const error = await handleError(
+      return Result.fail(
         new ChannelUpdateError(ChannelUpdateError.reasons.ApplyUpdateFailed, counterpartyLatestUpdate, storedState, {
           requestedUpdate,
           error: mergeRes.getError()!.message,
           stack: mergeRes.getError()!.stack,
         }),
       );
-      return Result.fail(error);
     }
     previousState = mergeRes.getValue();
   }
@@ -379,57 +310,26 @@ async function processChannelMessage(
   // able to play it on top of the update
   const mergeRes = await mergeUpdate(requestedUpdate, previousState, storeService);
   if (mergeRes.isError) {
-    const error = await handleError(
+    return Result.fail(
       new ChannelUpdateError(ChannelUpdateError.reasons.ApplyUpdateFailed, requestedUpdate, previousState, {
         counterpartyLatestUpdate,
         error: mergeRes.getError()!.message,
       }),
     );
-    return Result.fail(error);
   }
   const response = mergeRes.getValue()!;
-
-  // If the update was single signed, the counterparty is proposing
-  // an update, so we should return an ack
-  if (requestedUpdate.signatures.filter((x) => !!x).length === 1) {
-    // Sign the update
-    let signed: ChannelCommitmentData;
-    try {
-      signed = await signAndSaveData(response, requestedUpdate, signer, storeService);
-    } catch (e) {
-      const error = await handleError(
-        new ChannelUpdateError(ChannelUpdateError.reasons.SaveChannelFailed, requestedUpdate, previousState, {
-          error: e.message,
-        }),
-      );
-      return Result.fail(error);
-    }
-
-    // Send the latest update to the node
-    await messagingService.publish(from, {
-      to: from,
-      from: signer.publicIdentifier,
-      data: {
-        update: { ...requestedUpdate, signatures: signed.signatures },
-        latestUpdate: response.latestUpdate,
-      },
-    });
-    return Result.ok(response);
-  }
 
   // Otherwise, we are receiving an ack, and we should save the
   // update to store and post to the EVT
   try {
     await signAndSaveData(response, requestedUpdate, signer, storeService);
   } catch (e) {
-    const error = await handleError(
+    return Result.fail(
       new ChannelUpdateError(ChannelUpdateError.reasons.SaveChannelFailed, requestedUpdate, previousState, {
         error: e.message,
       }),
     );
-    return Result.fail(error);
   }
-  stateEvt.post(response);
   return Result.ok(response);
 }
 

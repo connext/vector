@@ -15,7 +15,6 @@ import {
   IVectorProtocol,
   Result,
   ChannelUpdateError,
-  VectorMessage,
   SetupParams,
   FullTransferState,
   IVectorOnchainService,
@@ -98,8 +97,6 @@ export class Vector implements IVectorProtocol {
       this.storeService,
       this.messagingService,
       this.signer,
-      this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
-      this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
       this.logger,
     );
 
@@ -128,23 +125,41 @@ export class Vector implements IVectorProtocol {
   }
 
   private async setupServices(): Promise<Vector> {
-    this.messagingService.onReceive(this.publicIdentifier, async (msg: VectorMessage) => {
-      this.logger.info({ method: "onReceive", step: "Received inbound", msg });
+    // response to incoming message where we are not the leader
+    // steps:
+    //  - validate and save state
+    //  - send back message or error to specified inbox
+    //  - publish updated state event
+    this.messagingService.onReceiveProtocolMessage(this.publicIdentifier, async (msg, from, inbox) => {
+      this.logger.info({ method: "onReceiveProtocolMessage" }, "Received message");
+
+      if (msg.isError) {
+        this.logger.error(
+          { method: "inbound", error: msg.getError()?.message },
+          "Error received from counterparty's initial message, this shouldn't happen",
+        );
+        return;
+      }
+
+      const received = msg.getValue();
+
+      // validate and save
       const inboundRes = await sync.inbound(
-        msg,
+        received.update,
+        received.previousUpdate,
+        inbox,
         this.storeService,
         this.messagingService,
         this.signer,
-        this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
-        this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
         this.logger,
       );
       if (inboundRes.isError) {
-        this.logger.error({ method: "inbound", error: inboundRes.getError()?.message });
+        this.logger.error({ method: "inbound", error: inboundRes.getError()?.message }, "Error validating update");
+        return;
       }
-      const updatedChannelState = inboundRes.getValue();
+
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        updatedChannelState: updatedChannelState!,
+        updatedChannelState: inboundRes.getValue()!,
       });
     });
 
@@ -155,27 +170,13 @@ export class Vector implements IVectorProtocol {
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
     await Promise.all(
-      channels.map((channel) => {
-        return new Promise((resolve) => {
-          try {
-            sync
-              .outbound(
-                channel.latestUpdate,
-                channel,
-                this.storeService,
-                this.messagingService,
-                this.signer,
-                this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
-                this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
-                this.logger,
-              )
-              .then(resolve);
-          } catch (e) {
-            this.logger.error(`Failed to sync channel`, { channel: channel.channelAddress });
-            resolve(undefined);
-          }
-        });
-      }),
+      channels.map((channel) =>
+        sync
+          .outbound(channel.latestUpdate, channel, this.storeService, this.messagingService, this.signer, this.logger)
+          .catch((e) =>
+            this.logger.error({ channel: channel.channelAddress, error: e.message }, `Failed to sync channel`),
+          ),
+      ),
     );
     return this;
   }

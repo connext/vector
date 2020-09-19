@@ -28,7 +28,7 @@ import { Evt } from "evt";
 import { MerkleTree } from "merkletreejs";
 import pino from "pino";
 
-import { inbound, outbound } from "../sync";
+import { outbound } from "../sync";
 
 import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";

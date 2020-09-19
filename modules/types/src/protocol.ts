@@ -34,18 +34,19 @@ export interface IVectorProtocol {
     filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): Promise<ProtocolEventPayloadsMap[T]>;
 
-  getChannelState(channelAddress: string): Promise<FullChannelState | undefined>
-  getTransferState(transferId: string): Promise<FullTransferState | undefined>
+  getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
+  getTransferState(transferId: string): Promise<FullTransferState | undefined>;
 }
 
 type VectorChannelMessageData<T extends UpdateType = any> = {
-  update: ChannelUpdate<T>,
-  latestUpdate: ChannelUpdate<any> | undefined,
-}
+  update: ChannelUpdate<T>;
+  latestUpdate: ChannelUpdate<any> | undefined;
+};
 
 export type VectorChannelMessage<T extends UpdateType = any> = {
   to: string;
   from: string;
+  inbox: string;
   data: VectorChannelMessageData<T>;
 };
 
