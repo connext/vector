@@ -20,6 +20,7 @@ export interface IMessagingService {
     numRetries?: number,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>>;
   respondToProtocolMessage(
+    sentBy: string,
     channelUpdate: ChannelUpdate<any>,
     inbox: string,
     previousUpdate?: ChannelUpdate<any>,

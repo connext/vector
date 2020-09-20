@@ -56,36 +56,6 @@ describe("inbound", () => {
     messaging = new MemoryMessagingService();
   });
 
-  it("should return undefined if message is from us", async () => {
-    const message = createVectorChannelMessage({ from: signers[0].publicIdentifier });
-    const res = await inbound(
-      message.data.update,
-      message.data.latestUpdate!,
-      "test-inbox",
-      store,
-      messaging,
-      signers[0],
-      logger,
-    );
-    expect(res.isError).to.be.false;
-    expect(res.getValue()).to.be.undefined;
-  });
-
-  it("should return undefined if message is malformed", async () => {
-    const message = { should: "fail" } as any;
-    const res = await inbound(
-      message.data.update,
-      message.data.latestUpdate!,
-      "test-inbox",
-      store,
-      messaging,
-      signers[0],
-      logger,
-    );
-    expect(res.isError).to.be.false;
-    expect(res.getValue()).to.be.undefined;
-  });
-
   it("should work if there is no channel state stored and you are receiving a setup update", async () => {
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.setup, {
       nonce: 1,

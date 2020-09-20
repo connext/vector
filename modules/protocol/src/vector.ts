@@ -78,7 +78,7 @@ export class Vector implements IVectorProtocol {
   private async lockedOperation(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
     const state = await this.storeService.getChannelState(params.channelAddress);
 
-    // Generate the update
+    // Generate the signed update
     const updateRes = await generateUpdate(
       params,
       state,
@@ -92,8 +92,8 @@ export class Vector implements IVectorProtocol {
       return Result.fail(updateRes.getError()!);
     }
     const outboundRes = await sync.outbound(
-      updateRes.getValue(),
-      state,
+      updateRes.getValue().update,
+      updateRes.getValue().channelState,
       this.storeService,
       this.messagingService,
       this.signer,
@@ -131,6 +131,9 @@ export class Vector implements IVectorProtocol {
     //  - send back message or error to specified inbox
     //  - publish updated state event
     this.messagingService.onReceiveProtocolMessage(this.publicIdentifier, async (msg, from, inbox) => {
+      if (from === this.publicIdentifier) {
+        return;
+      }
       this.logger.info({ method: "onReceiveProtocolMessage" }, "Received message");
 
       if (msg.isError) {

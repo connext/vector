@@ -12,11 +12,13 @@ export class MemoryMessagingService implements IMessagingService {
       previousUpdate?: ChannelUpdate<any>;
       error?: ChannelUpdateError;
     };
+    sentBy: string;
   }> = Evt.create<{
     to: string;
     from: string;
     inbox?: string;
     data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: ChannelUpdateError };
+    sentBy: string;
   }>();
 
   async connect(): Promise<void> {
@@ -26,14 +28,17 @@ export class MemoryMessagingService implements IMessagingService {
   async sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
-    timeout?: number,
-    numRetries?: number,
+    timeout = 20_000,
+    numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>> {
     const inbox = getRandomBytes32();
     const responsePromise = this.evt
       .pipe(
-        ({ to, from, inbox }) =>
-          from === channelUpdate.fromIdentifier && to === channelUpdate.toIdentifier && inbox === inbox,
+        ({ to, from, inbox, sentBy }) =>
+          from === channelUpdate.fromIdentifier &&
+          to === channelUpdate.toIdentifier &&
+          inbox === inbox &&
+          sentBy === channelUpdate.toIdentifier,
       )
       .waitFor(timeout);
     this.evt.post({
@@ -41,6 +46,7 @@ export class MemoryMessagingService implements IMessagingService {
       from: channelUpdate.fromIdentifier,
       inbox,
       data: { update: channelUpdate, previousUpdate },
+      sentBy: channelUpdate.fromIdentifier,
     });
     const res = await responsePromise;
     if (res.data.error) {
@@ -50,6 +56,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async respondToProtocolMessage(
+    sentBy: string,
     channelUpdate: ChannelUpdate<any>,
     inbox: string,
     previousUpdate?: ChannelUpdate<any>,
@@ -59,6 +66,7 @@ export class MemoryMessagingService implements IMessagingService {
       from: channelUpdate.fromIdentifier,
       inbox,
       data: { update: channelUpdate, previousUpdate },
+      sentBy,
     });
   }
 
@@ -73,6 +81,7 @@ export class MemoryMessagingService implements IMessagingService {
       from: sender,
       inbox,
       data: { error },
+      sentBy: receiver,
     });
   }
 

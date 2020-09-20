@@ -71,7 +71,6 @@ export async function validateParams<T extends UpdateType = any>(
 export async function validateUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
-  storeService: IVectorStore,
   logger: pino.BaseLogger = pino(),
 ): Promise<Result<void, UpdateValidationError>> {
   // There is no need to validate items in the state since this will always

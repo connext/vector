@@ -18,7 +18,7 @@ import {
   ChannelUpdateError,
   Result,
   FullTransferState,
-  IVectorOnchainService
+  IVectorOnchainService,
 } from "@connext/vector-types";
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
@@ -32,7 +32,7 @@ import { validateParams } from "./validate";
 export async function applyUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
-  storeService: IVectorStore,
+  transfer?: FullTransferState,
   // Initial state of resolved transfer for calculating
   // updates to locked value needed from store
 ): Promise<Result<FullChannelState<T>, ChannelUpdateError>> {
@@ -92,8 +92,7 @@ export async function applyUpdate<T extends UpdateType>(
       });
     }
     case UpdateType.resolve: {
-      const { merkleRoot, transferId } = (update as ChannelUpdate<"resolve">).details;
-      const transfer = await storeService.getTransferState(transferId);
+      const { merkleRoot } = (update as ChannelUpdate<"resolve">).details;
       if (!transfer) {
         return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update, state));
       }
@@ -138,8 +137,8 @@ export async function generateUpdate<T extends UpdateType>(
   storeService: IVectorStore,
   onchainService: IVectorOnchainService,
   signer: IChannelSigner,
-  logger: pino.BaseLogger = pino(),
-): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
+  logger: pino.BaseLogger,
+): Promise<Result<{ update: ChannelUpdate<T>; channelState: FullChannelState<T> }, ChannelUpdateError>> {
   // Performs all update initiator-side validation
   const error = await validateParams(params, state, storeService, signer, logger);
   if (error) {
@@ -148,6 +147,7 @@ export async function generateUpdate<T extends UpdateType>(
 
   // Create the update from user parameters based on type
   let unsigned: ChannelUpdate<any>;
+  let transferState: FullTransferState | undefined;
   switch (params.type) {
     case UpdateType.setup: {
       unsigned = await generateSetupUpdate(params as UpdateParams<"setup">, signer);
@@ -164,7 +164,7 @@ export async function generateUpdate<T extends UpdateType>(
     }
     case UpdateType.resolve: {
       const transfers = await storeService.getActiveTransfers(params.channelAddress);
-      const transferState = await storeService.getTransferState((params as UpdateParams<"resolve">).details.transferId);
+      transferState = await storeService.getTransferState((params as UpdateParams<"resolve">).details.transferId);
       if (!transferState) {
         return Result.fail(
           new ChannelUpdateError(
@@ -185,7 +185,7 @@ export async function generateUpdate<T extends UpdateType>(
   }
 
   // Create a signed commitment for the new state
-  const result = await applyUpdate(unsigned, state!, storeService);
+  const result = await applyUpdate(unsigned, state!, transferState);
   if (result.isError) {
     return Result.fail(result.getError()!);
   }
@@ -193,8 +193,11 @@ export async function generateUpdate<T extends UpdateType>(
 
   // Return the validated update to send to counterparty
   return Result.ok({
-    ...unsigned,
-    signatures: commitment.signatures,
+    update: {
+      ...unsigned,
+      signatures: commitment.signatures,
+    },
+    channelState: result.getValue(),
   });
 }
 
