@@ -116,7 +116,7 @@ node_env="environment:
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
       VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
       VECTOR_PG_DATABASE: '$project'
-      VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
+      VECTOR_PG_PASSWORD: '$project'
       VECTOR_PG_PORT: '$pg_port'
       VECTOR_PG_USERNAME: '$project'
       VECTOR_PORT: '$node_port'

@@ -11,7 +11,7 @@ export class NatsMessagingService implements IMessagingService {
     private readonly log: BaseLogger,
     private readonly getBearerToken: () => Promise<string>,
   ) {}
-  onReceiveProtocolMessage(
+  async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
       result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>,
@@ -19,7 +19,15 @@ export class NatsMessagingService implements IMessagingService {
       inbox: string,
     ) => void,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    this.assertConnected();
+    this.connection?.subscribe(`${myPublicIdentifier}.>`, (msg, err) => {
+      console.log("msg: ", msg);
+      const from = msg.subject.split(".")[1];
+      if (err) {
+        callback(Result.fail(new ChannelUpdateError(err)), from, msg.reply);
+      }
+      callback(Result.ok({ update: msg.data.update, previousUpdate: msg.data.previousUpdate }), from, msg.reply);
+    });
   }
   sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
