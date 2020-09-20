@@ -94,7 +94,7 @@ export class MemoryMessagingService implements IMessagingService {
     ) => void,
   ): Promise<void> {
     this.evt
-      .pipe(({ to }) => to === myPublicIdentifier)
+      .pipe(({ to, sentBy }) => to === myPublicIdentifier && sentBy !== myPublicIdentifier)
       .attach(({ data, inbox, from }) => {
         callback(
           Result.ok({
