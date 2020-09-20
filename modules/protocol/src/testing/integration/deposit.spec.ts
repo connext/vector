@@ -7,7 +7,7 @@ import { depositInChannel, getSetupChannel } from "../utils/channel";
 const testName = "Deposit Integrations";
 const { log } = getTestLoggers(testName);
 
-describe.only(testName, () => {
+describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
   let preDepositChannel: FullChannelState;

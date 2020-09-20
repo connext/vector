@@ -305,7 +305,6 @@ export const createTransfer = async (
   const channel = ret.getValue();
   expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
 
-  console.log("channel.latestUpdate: ", channel.latestUpdate);
   const { transferId } = (channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details;
   const transfer = (await payee.getTransferState(transferId))!;
   expect(transfer).to.containSubset({

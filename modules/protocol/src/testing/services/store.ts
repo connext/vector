@@ -89,7 +89,6 @@ export class MemoryStoreService implements IVectorStore {
   }
 
   getTransferState(transferId: string): Promise<FullTransferState | undefined> {
-    console.log("transferId: ", transferId);
     return Promise.resolve(this.transfers.get(transferId));
   }
 

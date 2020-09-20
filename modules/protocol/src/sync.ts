@@ -51,6 +51,10 @@ export async function outbound(
   let transfer: FullTransferState | undefined;
   if (update.type === UpdateType.resolve) {
     transfer = await storeService.getTransferState((update.details as ResolveUpdateDetails).transferId);
+    if (!transfer) {
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound));
+    }
+    transfer.transferResolver = (update.details as ResolveUpdateDetails).transferResolver;
   }
 
   if (update.type === UpdateType.create) {
@@ -238,6 +242,10 @@ export async function inbound(
 
   if (update.type === UpdateType.resolve) {
     transfer = await storeService.getTransferState((update.details as ResolveUpdateDetails).transferId);
+    if (!transfer) {
+      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound));
+    }
+    transfer.transferResolver = (update.details as ResolveUpdateDetails).transferResolver;
   }
 
   // validate and merge

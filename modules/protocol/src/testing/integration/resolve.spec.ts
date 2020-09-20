@@ -6,7 +6,7 @@ import { createTransfer, getFundedChannel, resolveTransfer } from "../utils/chan
 
 const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName);
-describe(testName, () => {
+describe.only(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
   let channelAddress: string;
@@ -26,29 +26,16 @@ describe(testName, () => {
       alice: alice.publicIdentifier,
       bob: bob.publicIdentifier,
     });
-
-
   });
 
   it("should resolve an eth transfer from alice -> bob", async () => {
     // Set test constants
     const assetId = constants.AddressZero;
     const transferAmount = "7";
-  
-    const { transfer } = await createTransfer(
-      channelAddress,
-      alice,
-      bob,
-      assetId,
-      transferAmount,
-    );
 
-    await resolveTransfer(
-      channelAddress,
-      transfer,
-      alice,
-      bob,
-    );
+    const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
+
+    await resolveTransfer(channelAddress, transfer, alice, bob);
   });
 
   // We neeed this to test whether resolve still works if the funds in the transfer are burned
