@@ -61,7 +61,6 @@ server.addHook("onReady", async () => {
     },
   );
   await messaging.connect();
-  return; // TODO: rm this once the below command works w/out error
   vectorEngine = await VectorEngine.connect(
     messaging,
     new LockService(config.redisUrl),
@@ -113,6 +112,7 @@ server.post<{ Body: PostSetupRequestBody }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
     }
   },
 );

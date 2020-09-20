@@ -1,8 +1,4 @@
-import {
-  FullChannelState,
-  IChannelSigner,
-  IVectorProtocol,
-} from "@connext/vector-types";
+import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
 
 import { getTestLoggers } from "../utils";

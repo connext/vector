@@ -16,6 +16,8 @@ if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
 then export VECTOR_MNEMONIC="`cat $VECTOR_MNEMONIC_FILE`"
 fi
 
+export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+
 ########################################
 # Wait for dependencies to wake up
 
@@ -52,8 +54,11 @@ then
   ./node_modules/.bin/prisma studio --experimental &
   sleep 3 # give prisma a sec to start up & log it's endpoint
 
+  echo "Running database migrations"
+  ./node_modules/.bin/prisma migrate up --experimental &
+
   echo "Starting node in dev-mode"
-  exec ./node_modules/.bin/nodemon \
+  exec  ./node_modules/.bin/nodemon \
     --delay 1 \
     --exitcrash \
     --ignore *.test.ts \
