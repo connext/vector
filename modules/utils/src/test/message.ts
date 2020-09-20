@@ -1,5 +1,5 @@
 import {
-  ChannelUpdateError,
+  InboundChannelUpdateError,
   UpdateType,
   VectorChannelMessage,
   VectorErrorMessage,
@@ -48,7 +48,7 @@ export function createVectorErrorMessage(overrides: Partial<VectorErrorMessage> 
     to: mkPublicIdentifier("indraBBB"),
     from: mkPublicIdentifier("indraAAA"),
     inbox: "test_inbox",
-    error: new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, createTestChannelUpdate("setup")),
+    error: new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadUpdateType, createTestChannelUpdate("setup")),
     ...overrides,
   };
 }

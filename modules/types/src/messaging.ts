@@ -1,5 +1,5 @@
 import { ChannelUpdate } from "./channel";
-import { ChannelUpdateError, Result } from "./error";
+import { InboundChannelUpdateError, Result } from "./error";
 import { VectorMessage } from "./protocol";
 
 export interface IMessagingService {
@@ -8,7 +8,7 @@ export interface IMessagingService {
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>,
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
       from: string,
       inbox: string,
     ) => void,
@@ -18,14 +18,19 @@ export interface IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>>;
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>>;
   respondToProtocolMessage(
     sentBy: string,
     channelUpdate: ChannelUpdate<any>,
     inbox: string,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void>;
-  respondWithProtocolError(sender: string, receiver: string, inbox: string, error: ChannelUpdateError): Promise<void>;
+  respondWithProtocolError(
+    sender: string,
+    receiver: string,
+    inbox: string,
+    error: InboundChannelUpdateError,
+  ): Promise<void>;
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;
   unsubscribe(subject: string): Promise<void>;

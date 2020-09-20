@@ -4,10 +4,10 @@ import {
   FullChannelState,
   IVectorStore,
   Result,
-  UpdateValidationError,
-  ChannelUpdateError,
   IChannelSigner,
   UpdateParams,
+  OutboundChannelUpdateError,
+  InboundChannelUpdateError,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 import pino from "pino";
@@ -25,10 +25,10 @@ export async function validateParams<T extends UpdateType = any>(
   storeService: IVectorStore,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
-): Promise<ChannelUpdateError | undefined> {
+): Promise<OutboundChannelUpdateError | undefined> {
   // Only in the case of setup should the state be undefined
   if (!state && params.type !== UpdateType.setup) {
-    return new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound);
+    return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params, state);
   }
 
   switch (params.type) {
@@ -72,7 +72,7 @@ export async function validateUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
   logger: pino.BaseLogger = pino(),
-): Promise<Result<void, UpdateValidationError>> {
+): Promise<Result<void, InboundChannelUpdateError>> {
   // There is no need to validate items in the state since this will always
   // be a double signed state
 
@@ -81,27 +81,33 @@ export async function validateUpdate<T extends UpdateType = any>(
 
   // The channel address should not change from the state
   if (channelAddress !== state.channelAddress) {
-    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.DifferentChannelAddress, update, state));
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.DifferentChannelAddress, update, state),
+    );
   }
 
   // Channel address should be an address
   if (!isAddress(channelAddress)) {
-    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.InvalidChannelAddress, update, state));
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InvalidChannelAddress, update, state),
+    );
   }
 
   // The identifiers should be the same
   if (JSON.stringify([fromIdentifier, toIdentifier].sort()) !== JSON.stringify(state.publicIdentifiers.sort())) {
-    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.DifferentIdentifiers, update, state));
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.DifferentIdentifiers, update, state),
+    );
   }
 
   // The update nonce should be exactly one more than the state nonce
   if (nonce !== state.nonce + 1) {
-    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.StaleChannelNonce, update, state));
+    return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StaleChannel, update, state));
   }
 
   // Make sure the assetId is a valid address
   if (!isAddress(assetId)) {
-    return Result.fail(new UpdateValidationError(UpdateValidationError.reasons.InvalidAssetId, update, state));
+    return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InvalidAssetId, update, state));
   }
 
   // TODO: Validate any signatures that exist
@@ -136,7 +142,7 @@ function validateSetup(
   update: ChannelUpdate<"setup">,
   state: FullChannelState<"setup">,
   logger: pino.BaseLogger = pino(),
-): Result<undefined, UpdateValidationError> {
+): Result<undefined, InboundChannelUpdateError> {
   // Validate channel doesnt exist in storage
 
   // Validate it is the correct channel address
@@ -163,7 +169,7 @@ function validateDeposit(
   update: ChannelUpdate<"deposit">,
   state: FullChannelState<"deposit">,
   logger: pino.BaseLogger = pino(),
-): Result<undefined, UpdateValidationError> {
+): Result<undefined, InboundChannelUpdateError> {
   // Validate the latest deposit nonce from chain
 
   // TODO: Best way to reconcile on and offchain balances?
@@ -177,7 +183,7 @@ function validateCreate(
   update: ChannelUpdate<"create">,
   state: FullChannelState<"create">,
   logger: pino.BaseLogger = pino(),
-): Result<undefined, UpdateValidationError> {
+): Result<undefined, InboundChannelUpdateError> {
   // Validate transfer id
 
   // Validate transfer definition
@@ -202,7 +208,7 @@ function validateResolve(
   update: ChannelUpdate<"resolve">,
   state: FullChannelState<"resolve">,
   logger: pino.BaseLogger = pino(),
-): Result<undefined, UpdateValidationError> {
+): Result<undefined, InboundChannelUpdateError> {
   // Validate transfer id
 
   // Validate transfer definition

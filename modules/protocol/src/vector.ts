@@ -14,10 +14,10 @@ import {
   ProtocolEventPayloadsMap,
   IVectorProtocol,
   Result,
-  ChannelUpdateError,
   SetupParams,
   FullTransferState,
   IVectorOnchainService,
+  OutboundChannelUpdateError,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier, getCreate2MultisigAddress } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -26,7 +26,6 @@ import pino from "pino";
 
 import * as sync from "./sync";
 import { CreateParamsSchema, DepositParamsSchema, ResolveParamsSchema, SetupParamsSchema } from "./types";
-import { generateUpdate } from "./update";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -35,8 +34,6 @@ const ajv = new Ajv();
 export class Vector implements IVectorProtocol {
   private evts: EvtContainer = {
     [ProtocolEventName.CHANNEL_UPDATE_EVENT]: Evt.create<ChannelUpdateEvent>(),
-    [ProtocolEventName.PROTOCOL_ERROR_EVENT]: Evt.create<ChannelUpdateError>(),
-    [ProtocolEventName.PROTOCOL_MESSAGE_EVENT]: Evt.create<FullChannelState>(),
   };
 
   // make it private so the only way to create the class is to use `connect`
@@ -75,26 +72,14 @@ export class Vector implements IVectorProtocol {
   }
 
   // separate out this function so that we can atomically return and release the lock
-  private async lockedOperation(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
-    const state = await this.storeService.getChannelState(params.channelAddress);
-
-    // Generate the signed update
-    const updateRes = await generateUpdate(
+  private async lockedOperation(
+    params: UpdateParams<any>,
+  ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    // Send the update to counterparty
+    const outboundRes = await sync.outbound(
       params,
-      state,
       this.storeService,
       this.onchainService,
-      this.signer,
-      this.logger,
-    );
-    if (updateRes.isError) {
-      this.logger.error({ method: "lockedOperation", variable: "updateRes", error: updateRes.getError()?.message });
-      return Result.fail(updateRes.getError()!);
-    }
-    const outboundRes = await sync.outbound(
-      updateRes.getValue().update,
-      updateRes.getValue().channelState,
-      this.storeService,
       this.messagingService,
       this.signer,
       this.logger,
@@ -105,6 +90,7 @@ export class Vector implements IVectorProtocol {
       return outboundRes;
     }
 
+    // Post to channel update evt
     const updatedChannelState = outboundRes.getValue();
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
       updatedChannelState,
@@ -114,7 +100,9 @@ export class Vector implements IVectorProtocol {
   }
 
   // Primary protocol execution from the leader side
-  private async executeUpdate(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
+  private async executeUpdate(
+    params: UpdateParams<any>,
+  ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     this.logger.info({ method: "executeUpdate", step: "start", params });
 
     const key = await this.lockService.acquireLock(params.channelAddress);
@@ -175,7 +163,14 @@ export class Vector implements IVectorProtocol {
     await Promise.all(
       channels.map((channel) =>
         sync
-          .outbound(channel.latestUpdate, channel, this.storeService, this.messagingService, this.signer, this.logger)
+          .outbound(
+            channel.latestUpdate,
+            this.storeService,
+            this.onchainService,
+            this.messagingService,
+            this.signer,
+            this.logger,
+          )
           .catch((e) =>
             this.logger.error({ channel: channel.channelAddress, error: e.message }, `Failed to sync channel`),
           ),
@@ -184,11 +179,11 @@ export class Vector implements IVectorProtocol {
     return this;
   }
 
-  private validateParams(params: any, schema: any): undefined | ChannelUpdateError {
+  private validateParams(params: any, schema: any): undefined | OutboundChannelUpdateError {
     const validate = ajv.compile(schema);
     const valid = validate(params);
     if (!valid) {
-      return new ChannelUpdateError(ChannelUpdateError.reasons.InvalidParams, undefined, undefined, {
+      return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
         errors: validate.errors?.map((e) => e.message).join(),
       });
     }
@@ -208,7 +203,7 @@ export class Vector implements IVectorProtocol {
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
 
-  public async setup(params: SetupParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+  public async setup(params: SetupParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all parameters
     const error = this.validateParams(params, SetupParamsSchema);
     if (error) {
@@ -238,9 +233,14 @@ export class Vector implements IVectorProtocol {
     );
     if (create2Res.isError) {
       return Result.fail(
-        new ChannelUpdateError(ChannelUpdateError.reasons.Create2Failed, undefined, undefined, {
-          error: create2Res.getError()!.message,
-        }),
+        new OutboundChannelUpdateError(
+          OutboundChannelUpdateError.reasons.Create2Failed,
+          { details: params, channelAddress: "", type: UpdateType.setup },
+          undefined,
+          {
+            error: create2Res.getError()!.message,
+          },
+        ),
       );
     }
     const channelAddress = create2Res.getValue();
@@ -256,7 +256,7 @@ export class Vector implements IVectorProtocol {
   }
 
   // Adds a deposit that has *already occurred* onchain into the multisig
-  public async deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+  public async deposit(params: DepositParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all input
     const error = this.validateParams(params, DepositParamsSchema);
     if (error) {
@@ -279,7 +279,7 @@ export class Vector implements IVectorProtocol {
     return this.executeUpdate(updateParams);
   }
 
-  public async create(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+  public async create(params: CreateTransferParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all input
     const error = this.validateParams(params, CreateParamsSchema);
     if (error) {
@@ -296,7 +296,7 @@ export class Vector implements IVectorProtocol {
     return this.executeUpdate(updateParams);
   }
 
-  public async resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>> {
+  public async resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all input
     const error = this.validateParams(params, ResolveParamsSchema);
     if (error) {

@@ -8,16 +8,16 @@ import {
   SetupParams,
   UpdateType,
 } from "./channel";
-import { ChannelUpdateError, Result } from "./error";
+import { InboundChannelUpdateError, OutboundChannelUpdateError, Result } from "./error";
 import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";
 
 export interface IVectorProtocol {
   signerAddress: string;
   publicIdentifier: string;
-  setup(params: SetupParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  deposit(params: DepositParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  create(params: CreateTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
-  resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, ChannelUpdateError>>;
+  setup(params: SetupParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
+  deposit(params: DepositParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
+  create(params: CreateTransferParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
+  resolve(params: ResolveTransferParams): Promise<Result<FullChannelState, OutboundChannelUpdateError>>;
   on<T extends ProtocolEventName>(
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
@@ -51,10 +51,7 @@ export type VectorChannelMessage<T extends UpdateType = any> = {
 };
 
 export type VectorErrorMessage = Omit<VectorChannelMessage, "data"> & {
-  error: ChannelUpdateError;
+  error: InboundChannelUpdateError; // returned by the person receiving an update
 };
 
 export type VectorMessage = VectorChannelMessage | VectorErrorMessage;
-
-// TODO: fix these interfaces!
-export type IOnchainService = any;

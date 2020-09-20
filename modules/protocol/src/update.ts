@@ -15,10 +15,11 @@ import {
   IChannelSigner,
   CoreTransferState,
   IVectorStore,
-  ChannelUpdateError,
   Result,
   FullTransferState,
   IVectorOnchainService,
+  InboundChannelUpdateError,
+  OutboundChannelUpdateError,
 } from "@connext/vector-types";
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
@@ -28,14 +29,17 @@ import { validateParams } from "./validate";
 
 // Should return a state with the given update applied
 // It is assumed here that the update is validated before
-// being passed in
+// being passed in. This is called by both inbound and outbound
+// functions (i.e. both channel participants). While it returns an
+// InboundChannelError, this can be cast to an OutboundChannelError
+// at the appropriate level
 export async function applyUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   state: FullChannelState<T>,
   transfer?: FullTransferState,
   // Initial state of resolved transfer for calculating
   // updates to locked value needed from store
-): Promise<Result<FullChannelState<T>, ChannelUpdateError>> {
+): Promise<Result<FullChannelState<T>, InboundChannelUpdateError>> {
   switch (update.type) {
     case UpdateType.setup: {
       const { timeout, networkContext } = (update as ChannelUpdate<"setup">).details;
@@ -94,7 +98,9 @@ export async function applyUpdate<T extends UpdateType>(
     case UpdateType.resolve: {
       const { merkleRoot } = (update as ChannelUpdate<"resolve">).details;
       if (!transfer) {
-        return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update, state));
+        return Result.fail(
+          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.TransferNotFound, update, state),
+        );
       }
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       const lockedBalance = reconcilelockedBalance(
@@ -114,7 +120,7 @@ export async function applyUpdate<T extends UpdateType>(
       });
     }
     default: {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, update, state));
+      return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadUpdateType, update, state));
     }
   }
 }
@@ -133,12 +139,12 @@ export async function applyUpdate<T extends UpdateType>(
 // properly validated resultant state
 export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
-  state: FullChannelState | undefined,
+  state: FullChannelState | undefined, // passed in to avoid store call
   storeService: IVectorStore,
   onchainService: IVectorOnchainService,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
-): Promise<Result<{ update: ChannelUpdate<T>; channelState: FullChannelState<T> }, ChannelUpdateError>> {
+): Promise<Result<{ update: ChannelUpdate<T>; channelState: FullChannelState<T> }, OutboundChannelUpdateError>> {
   // Performs all update initiator-side validation
   const error = await validateParams(params, state, storeService, signer, logger);
   if (error) {
@@ -167,11 +173,7 @@ export async function generateUpdate<T extends UpdateType>(
       transferState = await storeService.getTransferState((params as UpdateParams<"resolve">).details.transferId);
       if (!transferState) {
         return Result.fail(
-          new ChannelUpdateError(
-            ChannelUpdateError.reasons.TransferNotFound,
-            { ...params, nonce: state!.nonce + 1 },
-            state,
-          ),
+          new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params, state),
         );
       }
       unsigned = await generateResolveUpdate(state!, params as UpdateParams<"resolve">, signer, transfers, logger);
@@ -179,7 +181,7 @@ export async function generateUpdate<T extends UpdateType>(
     }
     default: {
       return Result.fail(
-        new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, { ...params, nonce: state!.nonce + 1 }, state),
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.BadUpdateType, params, state),
       );
     }
   }
@@ -187,7 +189,9 @@ export async function generateUpdate<T extends UpdateType>(
   // Create a signed commitment for the new state
   const result = await applyUpdate(unsigned, state!, transferState);
   if (result.isError) {
-    return Result.fail(result.getError()!);
+    // Cast to an outbound error (see note in applyUpdate, safe to any cast)
+    const inboundError = result.getError()!;
+    return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, state));
   }
   const commitment = await generateSignedChannelCommitment(result.getValue(), signer, []);
 
