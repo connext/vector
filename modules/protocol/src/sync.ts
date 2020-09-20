@@ -107,7 +107,12 @@ export async function outbound(
   }
 
   // verify sigs on update
-  if (channelUpdateFromCounterparty.update.signatures.find((sig) => !sig)) {
+  const sigRes = await validateChannelUpdateSignatures(
+    updatedChannel,
+    channelUpdateFromCounterparty.update.signatures,
+    2,
+  );
+  if (sigRes) {
     const error = new OutboundChannelUpdateError(
       OutboundChannelUpdateError.reasons.BadSignatures,
       params,
