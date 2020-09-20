@@ -28,6 +28,7 @@ import {
   RpcRequestInput,
   EthAddressSchema,
   JsonRpcProvider,
+  RpcRequestInputSchema,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -205,7 +206,7 @@ export class VectorEngine {
   // - "vector_resolveTransfer"
   // TODO add rpc request type
   public async request(payload: RpcRequestInput): Promise<any> {
-    const validate = ajv.compile(DepositInputSchema);
+    const validate = ajv.compile(RpcRequestInputSchema);
     const valid = validate(payload);
     if (!valid) {
       // dont use result type since this could go over the wire

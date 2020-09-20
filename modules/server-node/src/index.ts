@@ -112,6 +112,7 @@ server.post<{ Body: PostSetupRequestBody }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
     }
   },
 );
