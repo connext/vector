@@ -33,7 +33,7 @@ describe(testName, () => {
     // Set test constants
     const assetId = constants.AddressZero;
     const transferAmount = "7";
-  
+
     const { channel, transfer } = await createTransfer(
       preCreateChannel.channelAddress,
       alice,

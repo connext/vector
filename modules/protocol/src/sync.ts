@@ -44,7 +44,7 @@ export async function outbound(
 
   logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Received protocol response");
 
-  const channelUpdate = result.getValue();
+  const channelUpdateFromCounterparty = result.getValue();
 
   // get transfer state if needed
   let transfer: FullTransferState | undefined;
@@ -53,7 +53,7 @@ export async function outbound(
   }
 
   // verify sigs on update
-  if (channelUpdate.update.signatures.find((sig) => !sig)) {
+  if (channelUpdateFromCounterparty.update.signatures.find((sig) => !sig)) {
     const error = new ChannelUpdateError(ChannelUpdateError.reasons.BadSignatures);
     logger.error({ method: "outbound", error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
@@ -61,22 +61,22 @@ export async function outbound(
 
   try {
     await storeService.saveChannelState(
-      { ...storedChannel, latestUpdate: channelUpdate.update },
+      { ...storedChannel, latestUpdate: channelUpdateFromCounterparty.update },
       {
         adjudicatorAddress: storedChannel.networkContext.adjudicatorAddress,
         state: storedChannel,
         chainId: storedChannel.networkContext.chainId,
-        signatures: channelUpdate.update.signatures,
+        signatures: channelUpdateFromCounterparty.update.signatures,
       },
       transfer,
     );
-    return Result.ok({ ...storedChannel, latestUpdate: channelUpdate.update });
+    return Result.ok({ ...storedChannel, latestUpdate: channelUpdateFromCounterparty.update });
   } catch (e) {
     return Result.fail(
       new ChannelUpdateError(
         ChannelUpdateError.reasons.SaveChannelFailed,
-        channelUpdate.update,
-        { ...storedChannel, latestUpdate: channelUpdate.update },
+        channelUpdateFromCounterparty.update,
+        { ...storedChannel, latestUpdate: channelUpdateFromCounterparty.update },
         {
           error: e.message,
         },

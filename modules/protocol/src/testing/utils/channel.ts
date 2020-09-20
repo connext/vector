@@ -169,10 +169,10 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   // Verify stored channel
   const aliceChannel = await alice.getChannelState(channel.channelAddress);
   const bobChannel = await bob.getChannelState(channel.channelAddress);
-  // expect(aliceChannel).to.deep.eq(channel);
-  // expect(bobChannel).to.deep.eq(channel);
-  // expect(channel.participants).to.be.deep.eq([alice.signerAddress, bob.signerAddress]);
-  // expect(channel.publicIdentifiers).to.be.deep.eq([alice.publicIdentifier, bob.publicIdentifier]);
+  expect(aliceChannel).to.deep.eq(channel);
+  expect(bobChannel).to.deep.eq(channel);
+  expect(channel.participants).to.be.deep.eq([alice.signerAddress, bob.signerAddress]);
+  expect(channel.publicIdentifiers).to.be.deep.eq([alice.publicIdentifier, bob.publicIdentifier]);
   return channel;
 };
 
