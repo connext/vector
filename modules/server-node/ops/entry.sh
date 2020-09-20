@@ -54,8 +54,11 @@ then
   ./node_modules/.bin/prisma studio --experimental &
   sleep 3 # give prisma a sec to start up & log it's endpoint
 
+  echo "Running database migrations"
+  ./node_modules/.bin/prisma migrate up --experimental &
+
   echo "Starting node in dev-mode"
-  exec ./node_modules/.bin/nodemon \
+  exec  ./node_modules/.bin/nodemon \
     --delay 1 \
     --exitcrash \
     --ignore *.test.ts \
