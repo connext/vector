@@ -1,4 +1,4 @@
-import { IMessagingService, MessagingConfig } from "@connext/vector-types";
+import { ChannelUpdate, ChannelUpdateError, IMessagingService, MessagingConfig, Result } from "@connext/vector-types";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 import { BaseLogger } from "pino";
 
@@ -11,6 +11,35 @@ export class NatsMessagingService implements IMessagingService {
     private readonly log: BaseLogger,
     private readonly getBearerToken: () => Promise<string>,
   ) {}
+  onReceiveProtocolMessage(
+    myPublicIdentifier: string,
+    callback: (
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  sendProtocolMessage(
+    channelUpdate: ChannelUpdate<any>,
+    previousUpdate?: ChannelUpdate<any>,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>> {
+    throw new Error("Method not implemented.");
+  }
+  respondToProtocolMessage(
+    sentBy: string,
+    channelUpdate: ChannelUpdate<any>,
+    inbox: string,
+    previousUpdate?: ChannelUpdate<any>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondWithProtocolError(sender: string, receiver: string, inbox: string, error: ChannelUpdateError): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
 
   private isConnected(): boolean {
     return !!this.connection?.isConnected();
