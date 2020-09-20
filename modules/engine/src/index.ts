@@ -62,7 +62,7 @@ export class VectorEngine {
   ): Promise<VectorEngine> {
     const hydratedProviders = {};
     Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
-      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl, chainId);
+      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl);
     });
     const chainService = new VectorOnchainService(hydratedProviders);
     const vector = await Vector.connect(
