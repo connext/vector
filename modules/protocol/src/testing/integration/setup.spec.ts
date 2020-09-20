@@ -6,7 +6,7 @@ import { createVectorInstances, setupChannel } from "../utils/channel";
 const testName = "Setup Integrations";
 const { log } = getTestLoggers(testName);
 
-describe.only(testName, () => {
+describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
 
