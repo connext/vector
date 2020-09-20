@@ -14,7 +14,7 @@ import {
 } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
 import { BigNumber, Signer, utils } from "ethers";
-import { hashChannelCommitment } from "@connext/vector-utils";
+import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -101,6 +101,39 @@ export async function generateSignedChannelCommitment(
     ...unsigned,
     signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
   };
+}
+
+// TODO: make a result type?
+export async function validateChannelUpdateSignatures(
+  state: FullChannelState,
+  updateSignatures: string[],
+  requiredSigs: 1 | 2 = 1,
+): Promise<string | undefined> {
+  const present = updateSignatures.filter((x) => !!x).length;
+  if (present < requiredSigs) {
+    return `Only ${present}/${requiredSigs} signatures present`;
+  }
+  // generate the commitment
+  const { publicIdentifiers, networkContext, ...core } = state;
+  const hash = hashChannelCommitment({
+    chainId: networkContext.chainId,
+    state: core,
+    adjudicatorAddress: networkContext.adjudicatorAddress,
+    signatures: [],
+  });
+  const valid = (await Promise.all(
+    updateSignatures.map(async (sigToVerify, idx) => {
+      if (!sigToVerify) {
+        return undefined;
+      }
+      const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
+      return recovered === state.participants[idx] ? sigToVerify : undefined;
+    }),
+  )).filter(x => !!x);
+  if (valid.length < requiredSigs) {
+    return `Only ${valid.length}/${requiredSigs} are valid signatures`;
+  }
+  return undefined;
 }
 
 export const create = async (
