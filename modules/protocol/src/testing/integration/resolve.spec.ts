@@ -6,7 +6,7 @@ import { createTransfer, getFundedChannel, resolveTransfer } from "../utils/chan
 
 const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName);
-describe.only(testName, () => {
+describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
   let channelAddress: string;
