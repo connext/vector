@@ -12,6 +12,7 @@ import {
   FullTransferState,
   TransferCommitmentData,
   ResolveUpdateDetails,
+  CreateUpdateDetails,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier, hashTransferState } from "@connext/vector-utils";
 import { constants } from "ethers";
@@ -27,7 +28,7 @@ import { validateUpdate } from "./validate";
 // has been persisted.
 export async function outbound(
   update: ChannelUpdate<any>,
-  storedChannel: FullChannelState<any>,
+  channelFromStore: FullChannelState<any>,
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
@@ -35,7 +36,7 @@ export async function outbound(
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Sending protocol message");
   // send and wait for response
-  const result = await messagingService.sendProtocolMessage(update, storedChannel?.latestUpdate);
+  const result = await messagingService.sendProtocolMessage(update, channelFromStore?.latestUpdate);
 
   if (result.isError) {
     logger.error({ method: "outbound", error: result.getError()! }, "Error receiving response, will not save state!");
@@ -52,6 +53,24 @@ export async function outbound(
     transfer = await storeService.getTransferState((update.details as ResolveUpdateDetails).transferId);
   }
 
+  if (update.type === UpdateType.create) {
+    const details = update.details as CreateUpdateDetails;
+    transfer = {
+      initialBalance: details.transferInitialState.balance,
+      assetId: update.assetId,
+      transferId: details.transferId,
+      channelAddress: update.channelAddress,
+      transferDefinition: details.transferDefinition,
+      transferEncodings: details.transferEncodings,
+      transferTimeout: details.transferTimeout,
+      initialStateHash: hashTransferState(details.transferInitialState, details.transferEncodings[0]),
+      transferState: details.transferInitialState,
+      adjudicatorAddress: channelFromStore.networkContext.adjudicatorAddress,
+      chainId: channelFromStore.networkContext.chainId,
+      meta: details.meta,
+    };
+  }
+
   // verify sigs on update
   if (channelUpdateFromCounterparty.update.signatures.find((sig) => !sig)) {
     const error = new ChannelUpdateError(ChannelUpdateError.reasons.BadSignatures);
@@ -61,22 +80,22 @@ export async function outbound(
 
   try {
     await storeService.saveChannelState(
-      { ...storedChannel, latestUpdate: channelUpdateFromCounterparty.update },
+      { ...channelFromStore, latestUpdate: channelUpdateFromCounterparty.update },
       {
-        adjudicatorAddress: storedChannel.networkContext.adjudicatorAddress,
-        state: storedChannel,
-        chainId: storedChannel.networkContext.chainId,
+        adjudicatorAddress: channelFromStore.networkContext.adjudicatorAddress,
+        state: channelFromStore,
+        chainId: channelFromStore.networkContext.chainId,
         signatures: channelUpdateFromCounterparty.update.signatures,
       },
       transfer,
     );
-    return Result.ok({ ...storedChannel, latestUpdate: channelUpdateFromCounterparty.update });
+    return Result.ok({ ...channelFromStore, latestUpdate: channelUpdateFromCounterparty.update });
   } catch (e) {
     return Result.fail(
       new ChannelUpdateError(
         ChannelUpdateError.reasons.SaveChannelFailed,
         channelUpdateFromCounterparty.update,
-        { ...storedChannel, latestUpdate: channelUpdateFromCounterparty.update },
+        { ...channelFromStore, latestUpdate: channelUpdateFromCounterparty.update },
         {
           error: e.message,
         },
@@ -199,6 +218,24 @@ export async function inbound(
   }
   // get transfer state if needed
   let transfer: FullTransferState | undefined;
+  if (update.type === UpdateType.create) {
+    const details = update.details as CreateUpdateDetails;
+    transfer = {
+      initialBalance: details.transferInitialState.balance,
+      assetId: update.assetId,
+      transferId: details.transferId,
+      channelAddress: update.channelAddress,
+      transferDefinition: details.transferDefinition,
+      transferEncodings: details.transferEncodings,
+      transferTimeout: details.transferTimeout,
+      initialStateHash: hashTransferState(details.transferInitialState, details.transferEncodings[0]),
+      transferState: details.transferInitialState,
+      adjudicatorAddress: channelFromStore.networkContext.adjudicatorAddress,
+      chainId: channelFromStore.networkContext.chainId,
+      meta: details.meta,
+    };
+  }
+
   if (update.type === UpdateType.resolve) {
     transfer = await storeService.getTransferState((update.details as ResolveUpdateDetails).transferId);
   }
@@ -224,7 +261,7 @@ export async function inbound(
   // sign update
   const signed = await signData(updatedChannelState, update, signer, transfer);
   // save channel
-  await storeService.saveChannelState(signed.channel, signed.commitment, signed.updatedTransfer);
+  await storeService.saveChannelState(signed.channel, signed.commitment, transfer);
 
   // send to counterparty
   await messagingService.respondToProtocolMessage(

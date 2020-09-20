@@ -138,7 +138,12 @@ export async function generateUpdate<T extends UpdateType>(
   onchainService: IVectorOnchainService,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
-): Promise<Result<{ update: ChannelUpdate<T>; channelState: FullChannelState<T> }, ChannelUpdateError>> {
+): Promise<
+  Result<
+    { update: ChannelUpdate<T>; channelState: FullChannelState<T>; transfer: FullTransferState | undefined },
+    ChannelUpdateError
+  >
+> {
   // Performs all update initiator-side validation
   const error = await validateParams(params, state, storeService, signer, logger);
   if (error) {
@@ -197,6 +202,7 @@ export async function generateUpdate<T extends UpdateType>(
       ...unsigned,
       signatures: commitment.signatures,
     },
+    transfer: transferState,
     channelState: result.getValue(),
   });
 }

@@ -6,7 +6,7 @@ import { createTransfer, getFundedChannel } from "../utils/channel";
 
 const testName = "Create Integrations";
 const { log } = getTestLoggers(testName);
-describe(testName, () => {
+describe.only(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
 

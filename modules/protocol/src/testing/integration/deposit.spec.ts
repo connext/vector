@@ -1,8 +1,4 @@
-import {
-  FullChannelState,
-  IChannelSigner,
-  IVectorProtocol,
-} from "@connext/vector-types";
+import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
 
 import { getTestLoggers } from "../utils";
@@ -11,7 +7,7 @@ import { depositInChannel, getSetupChannel } from "../utils/channel";
 const testName = "Deposit Integrations";
 const { log } = getTestLoggers(testName);
 
-describe(testName, () => {
+describe.only(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
   let preDepositChannel: FullChannelState;
