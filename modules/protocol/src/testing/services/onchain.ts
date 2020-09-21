@@ -20,7 +20,7 @@ export class MockOnchainServce implements IVectorOnchainService {
         amount: BigNumber.from(14),
       }) as any,
 
-      getChannelFactoryBytecode: Result.ok<string>(mkHash("0x51523ase")) as any,
+      getChannelManagerBytecode: Result.ok<string>(mkHash("0x51523ase")) as any,
 
       ...overrides,
     });
@@ -43,8 +43,8 @@ export class MockOnchainServce implements IVectorOnchainService {
     return this.stubs["getLatestDepositByAssetId"](channelAddress, chainId, assetId, latestDepositNonce);
   }
 
-  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>> {
-    return this.stubs["getChannelFactoryBytecode"](channelFactoryAddress, chainId);
+  getChannelManagerBytecode(channelManagerAddress: string, chainId: number): Promise<Result<string, Error>> {
+    return this.stubs["getChannelManagerBytecode"](channelManagerAddress, chainId);
   }
 
   // Easy method to set stubs mid-test

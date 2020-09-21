@@ -1,4 +1,4 @@
-import { ChannelFactory, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelManager, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import {
   Contract,
   FullChannelState,
@@ -124,13 +124,13 @@ export const deployChannelWithDepositA = async (
       : await new Contract(assetId, TestToken.abi, alice).balanceOf(channelAddress);
 
   // Deploy with deposit
-  const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, alice);
+  const manager = new Contract(env.chainAddresses[chainId].ChannelManager.address, ChannelManager.abi, alice);
   const created = new Promise<string>((res) => {
-    factory.once(factory.filters.ChannelCreation(), (data) => {
+    manager.once(manager.filters.ChannelCreation(), (data) => {
       res(data);
     });
   });
-  const tx = await factory.createChannelAndDepositA(alice.address, bobAddr, assetId, depositAmount, {
+  const tx = await manager.createChannelAndDepositA(alice.address, bobAddr, assetId, depositAmount, {
     value: depositAmount,
   });
   await tx.wait();
@@ -150,9 +150,8 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   const ret = await alice.setup({
     counterpartyIdentifier: bob.publicIdentifier,
     networkContext: {
-      adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
       chainId,
-      channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
+      channelManagerAddress: env.chainAddresses[chainId].ChannelManager.address,
       providerUrl,
       vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
     },

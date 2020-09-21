@@ -2,14 +2,20 @@ import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
 import { VectorChannel, ChannelManager } from "../../artifacts";
+import { VectorOnchainService } from "../../onchainService";
+import { getOnchainTxService } from "../onchainService";
 import { expect, provider } from "../utils";
 
 describe("ChannelManager", () => {
   let deployer: Wallet;
   let channelManager: Contract;
+  let channelMastercopy: Contract;
+  let onchainService: VectorOnchainService;
+  let chainId: number;
 
   beforeEach(async () => {
     deployer = (await provider.getWallets())[0];
+    chainId = (await provider.getNetwork()).chainId;
 
     channelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, deployer).deploy();
     await channelMastercopy.deployed();
@@ -18,6 +24,7 @@ describe("ChannelManager", () => {
       channelMastercopy.address,
     );
     await channelManager.deployed();
+    onchainService = await getOnchainTxService(provider);
   });
 
   it("should deploy", async () => {
@@ -38,7 +45,7 @@ describe("ChannelManager", () => {
       initiator.publicIdentifier,
       responder.publicIdentifier,
       chainId,
-      channelFactory.address,
+      channelManager.address,
       channelMastercopy.address,
       onchainService,
     );
@@ -51,12 +58,12 @@ describe("ChannelManager", () => {
     const initiator = new ChannelSigner(deployer.privateKey, provider);
     const responder = getRandomChannelSigner();
     const created = new Promise<string>((res) => {
-      channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
+      channelManager.once(channelManager.filters.ChannelCreation(), (data) => {
         res(data);
       });
     });
     const value = BigNumber.from("1000");
-    const tx = await channelFactory
+    const tx = await channelManager
       .connect(deployer)
       .createChannelAndDepositA(initiator.address, responder.address, constants.AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
@@ -66,7 +73,7 @@ describe("ChannelManager", () => {
       initiator.publicIdentifier,
       responder.publicIdentifier,
       chainId,
-      channelFactory.address,
+      channelManager.address,
       channelMastercopy.address,
       onchainService,
     );
