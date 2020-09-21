@@ -94,7 +94,7 @@ export async function validateUpdate<T extends UpdateType = any>(
   }
 
   // The identifiers should be the same
-  if (JSON.stringify([fromIdentifier, toIdentifier].sort()) !== JSON.stringify(state.publicIdentifiers.sort())) {
+  if (JSON.stringify([fromIdentifier, toIdentifier].sort()) !== JSON.stringify([...state.publicIdentifiers].sort())) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.DifferentIdentifiers, update, state),
     );

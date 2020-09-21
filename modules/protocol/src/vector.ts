@@ -134,6 +134,10 @@ export class Vector implements IVectorProtocol {
 
       const received = msg.getValue();
 
+      if (received.update.fromIdentifier === this.publicIdentifier) {
+        return;
+      }
+
       // validate and save
       const inboundRes = await sync.inbound(
         received.update,

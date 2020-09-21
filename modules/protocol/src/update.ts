@@ -419,22 +419,16 @@ async function generateResolveUpdate(
 // - defining update type
 // - channel addressing (participants, address, etc.)
 function generateBaseUpdate<T extends UpdateType>(
-  state: FullChannelState | undefined,
+  state: FullChannelState,
   params: UpdateParams<T>,
   signer: IChannelSigner,
 ): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
-  // Create the update with all the things that are constant
-  // between update types
-  const publicIdentifiers = state?.publicIdentifiers ?? [
-    signer.publicIdentifier,
-    (params as UpdateParams<"setup">).details.counterpartyIdentifier,
-  ];
   return {
-    nonce: (state?.nonce ?? 0) + 1,
-    channelAddress: state?.channelAddress ?? params.channelAddress,
+    nonce: state.nonce + 1,
+    channelAddress: state.channelAddress,
     type: params.type,
     fromIdentifier: signer.publicIdentifier,
-    toIdentifier: publicIdentifiers.find((id) => id !== signer.publicIdentifier)!,
+    toIdentifier: state.publicIdentifiers.find((id) => id !== signer.publicIdentifier)!,
   };
 }
 

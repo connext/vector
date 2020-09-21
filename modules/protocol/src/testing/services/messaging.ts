@@ -1,4 +1,10 @@
-import { ChannelUpdate, ChannelUpdateError, IMessagingService, Result, VectorMessage } from "@connext/vector-types";
+import {
+  ChannelUpdate,
+  IMessagingService,
+  InboundChannelUpdateError,
+  Result,
+  VectorMessage,
+} from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 
@@ -10,14 +16,14 @@ export class MemoryMessagingService implements IMessagingService {
     data: {
       update?: ChannelUpdate<any>;
       previousUpdate?: ChannelUpdate<any>;
-      error?: ChannelUpdateError;
+      error?: InboundChannelUpdateError;
     };
     sentBy: string;
   }> = Evt.create<{
     to: string;
     from: string;
     inbox?: string;
-    data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: ChannelUpdateError };
+    data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: InboundChannelUpdateError };
     sentBy: string;
   }>();
 
@@ -30,13 +36,13 @@ export class MemoryMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout = 20_000,
     numRetries = 0,
-  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>> {
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
     const inbox = getRandomBytes32();
     const responsePromise = this.evt
       .pipe(
         ({ to, from, inbox, sentBy }) =>
-          from === channelUpdate.fromIdentifier &&
-          to === channelUpdate.toIdentifier &&
+          from === channelUpdate.toIdentifier &&
+          to === channelUpdate.fromIdentifier &&
           inbox === inbox &&
           sentBy === channelUpdate.toIdentifier,
       )
@@ -62,8 +68,8 @@ export class MemoryMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
     this.evt.post({
-      to: channelUpdate.toIdentifier,
-      from: channelUpdate.fromIdentifier,
+      to: channelUpdate.fromIdentifier,
+      from: channelUpdate.toIdentifier,
       inbox,
       data: { update: channelUpdate, previousUpdate },
       sentBy,
@@ -71,30 +77,30 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async respondWithProtocolError(
-    sender: string,
-    receiver: string,
+    updateFromIdentifier: string,
+    updateToIdentifier: string,
     inbox: string,
-    error: ChannelUpdateError,
+    error: InboundChannelUpdateError,
   ): Promise<void> {
     this.evt.post({
-      to: receiver,
-      from: sender,
+      to: updateFromIdentifier,
+      from: updateToIdentifier,
       inbox,
       data: { error },
-      sentBy: receiver,
+      sentBy: updateToIdentifier,
     });
   }
 
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>,
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void> {
     this.evt
-      .pipe(({ to, sentBy }) => to === myPublicIdentifier && sentBy !== myPublicIdentifier)
+      .pipe(({ to }) => to === myPublicIdentifier)
       .attach(({ data, inbox, from }) => {
         callback(
           Result.ok({

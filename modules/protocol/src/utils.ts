@@ -89,18 +89,19 @@ export async function generateSignedChannelCommitment(
     // No need to sign, we have already signed
     return {
       ...unsigned,
-      signatures: filteredSigs,
+      signatures: updateSignatures,
     };
   }
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
   const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
-  const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
-  return {
+  const idx = newState.participants.findIndex((p) => p === signer.address);
+  const signed = {
     ...unsigned,
     signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
   };
+  return signed;
 }
 
 // TODO: make a result type?
@@ -121,15 +122,17 @@ export async function validateChannelUpdateSignatures(
     adjudicatorAddress: networkContext.adjudicatorAddress,
     signatures: [],
   });
-  const valid = (await Promise.all(
-    updateSignatures.map(async (sigToVerify, idx) => {
-      if (!sigToVerify) {
-        return undefined;
-      }
-      const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
-      return recovered === state.participants[idx] ? sigToVerify : undefined;
-    }),
-  )).filter(x => !!x);
+  const valid = (
+    await Promise.all(
+      updateSignatures.map(async (sigToVerify, idx) => {
+        if (!sigToVerify) {
+          return undefined;
+        }
+        const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
+        return recovered === state.participants[idx] ? sigToVerify : undefined;
+      }),
+    )
+  ).filter((x) => !!x);
   if (valid.length < requiredSigs) {
     return `Only ${valid.length}/${requiredSigs} are valid signatures`;
   }

@@ -25,7 +25,6 @@ import {
   getRandomBytes32,
   getRandomChannelSigner,
   hashTransferState,
-  stringify,
 } from "@connext/vector-utils";
 import { Wallet, utils, BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
@@ -164,8 +163,6 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   expect(ret.isError).to.not.be.ok;
   const channel = ret.getValue()!;
 
-  // TODO: should we add stronger assertions here?
-
   // Verify stored channel
   const aliceChannel = await alice.getChannelState(channel.channelAddress);
   const bobChannel = await bob.getChannelState(channel.channelAddress);
@@ -213,7 +210,7 @@ export const depositInChannel = async (
       assetId,
       channelAddress,
     });
-    expect(ret.isError).to.be.false;
+    expect(ret.getError()).to.be.undefined;
     return ret.getValue();
   }
 
@@ -225,7 +222,6 @@ export const depositInChannel = async (
   // NOTE: sometimes deposit fails, and it seems like its because it is
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
-  console.log("******* isDepositA", isDepositA);
   if (isDepositA) {
     await depositAOnchain(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
   } else {
@@ -243,7 +239,7 @@ export const depositInChannel = async (
     assetId,
     channelAddress,
   });
-  expect(ret.isError).to.be.false;
+  expect(ret.getError()).to.be.undefined;
 
   const postDeposit = ret.getValue()!;
   expect(postDeposit.latestDepositNonce).to.be.eq(
@@ -301,7 +297,7 @@ export const createTransfer = async (
   };
 
   const ret = await payor.create(params);
-  expect(ret.isError).to.be.false;
+  expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
   expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
 
@@ -345,12 +341,10 @@ export const resolveTransfer = async (
   };
 
   const ret = await redeemer.resolve(params);
-  expect(ret.isError).to.be.false;
+  expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
   const stored = await redeemer.getTransferState(transfer.transferId);
   expect(stored!.transferResolver).to.deep.eq(params.transferResolver);
-
-  // TODO: stronger assertions here?
 
   expect(await redeemer.getChannelState(channelAddress)).to.be.deep.eq(channel);
   expect(await counterparty.getChannelState(channelAddress)).to.be.deep.eq(channel);

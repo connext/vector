@@ -106,7 +106,9 @@ export async function outbound(
   if (update.type === UpdateType.resolve) {
     transfer = await storeService.getTransferState((update.details as ResolveUpdateDetails).transferId);
     if (!transfer) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound));
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params, storedChannel),
+      );
     }
     transfer.transferResolver = (update.details as ResolveUpdateDetails).transferResolver;
   }
@@ -140,6 +142,7 @@ export async function outbound(
       OutboundChannelUpdateError.reasons.BadSignatures,
       params,
       storedChannel,
+      { error: sigRes },
     );
     logger.error({ method: "outbound", error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
@@ -186,19 +189,21 @@ export async function inbound(
       return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ChannelNotFound, update));
     }
 
+    const publicIdentifiers =
+      update.signatures.filter((x) => !!x).length === 1
+        ? [update.fromIdentifier, update.toIdentifier]
+        : [update.toIdentifier, update.fromIdentifier];
+
     channelFromStore = {
       channelAddress: update.channelAddress,
-      participants: [
-        getSignerAddressFromPublicIdentifier(update.fromIdentifier),
-        getSignerAddressFromPublicIdentifier(update.toIdentifier),
-      ],
+      participants: publicIdentifiers.map(getSignerAddressFromPublicIdentifier),
       networkContext: (update.details as SetupUpdateDetails).networkContext,
       assetIds: [],
       balances: [],
       lockedBalance: [],
       merkleRoot: constants.HashZero,
       nonce: 0,
-      publicIdentifiers: [update.fromIdentifier, update.toIdentifier],
+      publicIdentifiers,
       timeout: (update.details as SetupUpdateDetails).timeout,
       latestUpdate: {} as any, // There is no latest update on setup
       latestDepositNonce: 0,
@@ -227,7 +232,9 @@ export async function inbound(
   if (update.type === UpdateType.resolve) {
     transfer = await storeService.getTransferState((update.details as ResolveUpdateDetails).transferId);
     if (!transfer) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound));
+      return Result.fail(
+        new InboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, update, channelFromStore),
+      );
     }
     transfer.transferResolver = (update.details as ResolveUpdateDetails).transferResolver;
   }
@@ -342,7 +349,7 @@ export async function validateIncomingChannelUpdate(
   // behind by one update. We can progress the state to the correct
   // state to be updated by applying the counterparty's supplied
   // latest action
-  let previousState = myState;
+  let previousState = { ...myState };
   if (diff === 2) {
     // Create the proper state to play the update on top of using the
     // latest update
@@ -472,7 +479,7 @@ const syncStateAndRecreateUpdate = async (
   if (sigRes) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.BadSignatures, attemptedParams, myChannel, {
-        error: applyRes.getError()!.message,
+        error: sigRes,
         counterpartyUpdate: counterpartyUpdate,
       }),
     );
