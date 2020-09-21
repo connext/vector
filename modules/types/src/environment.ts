@@ -14,7 +14,7 @@ export type ContractAddressesEnv = {
     };
     ChannelFactory: {
       address: "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10";
-      constructorArgs: [Array];
+      constructorArgs: [Array<any>];
       creationCodeHash: "0x2433c887ee1e5a7a998e84094b2dfa5c7745ff102aa5419d84130d9759563859";
       runtimeCodeHash: "0x1884c081baad04efb329dada96578ecc14b6c755c1cf5226f172b19cc7d7f41c";
       txHash: "0x60e663d7158d330bb35e464b72f92369cf8cbc9197dbdb31fbe469e297dd2194";
@@ -39,7 +39,7 @@ export type ContractAddressesEnv = {
     };
     TestToken: {
       address: "0x2C2B9C9a4a25e24B174f26114e8926a9f2128FE4";
-      constructorArgs: [Array];
+      constructorArgs: [Array<any>];
       creationCodeHash: "0xf8ef2ccf61cfd98fc9226b9267d4191f499134c1438e1cf29f4c74b7e73f62ef";
       runtimeCodeHash: "0x9f6523ded8e9b137e57d39379fe9572b6ef99f9e3378193663f5619ff7eab7e4";
       txHash: "0xfa2dc5ad3a5d6e3c95234257d3a4c1ad2b27b3c51a40be2d4a3f4068a9d9ddda";
