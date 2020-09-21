@@ -489,7 +489,7 @@ const signAndSaveData = async (
         transferDefinition,
         initialStateHash: hashTransferState(transferInitialState, transferEncodings[0]),
       },
-      channelManagerAddress: newState.networkContext.channelManagerAddress,
+      channelFactoryAddress: newState.networkContext.channelFactoryAddress,
       chainId: newState.networkContext.chainId,
       merkleProofData,
     };
@@ -498,7 +498,7 @@ const signAndSaveData = async (
       transferState: transferInitialState,
       meta,
       ...commitment.state,
-      channelManagerAddress: commitment.channelManagerAddress,
+      channelFactoryAddress: commitment.channelFactoryAddress,
       chainId: commitment.chainId,
     };
   }
@@ -514,7 +514,7 @@ const signAndSaveData = async (
       transferDefinition,
       transferTimeout,
       initialStateHash,
-      channelManagerAddress,
+      channelFactoryAddress,
       channelAddress,
       chainId,
       transferEncodings,
@@ -531,7 +531,7 @@ const signAndSaveData = async (
       transferDefinition,
       transferTimeout,
       initialStateHash,
-      channelManagerAddress,
+      channelFactoryAddress,
       chainId,
       transferEncodings,
       transferState,

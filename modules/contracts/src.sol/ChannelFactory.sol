@@ -2,7 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IChannelManager.sol";
+import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/IVectorChannel.sol";
@@ -12,7 +12,7 @@ import "./lib/SafeMath.sol";
 import "./Proxy.sol";
 
 /// @title Channel Manager - Allows us to create new channel proxy contract
-contract ChannelManager is IChannelManager {
+contract ChannelFactory is IChannelFactory {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
@@ -33,7 +33,7 @@ contract ChannelManager is IChannelManager {
         require(
             msg.sender == ccs.participants[0] ||
             msg.sender == ccs.participants[1],
-            "ChannelManager: msg.sender is not channel participant"
+            "ChannelFactory: msg.sender is not channel participant"
         );
         _;
     }
@@ -102,11 +102,11 @@ contract ChannelManager is IChannelManager {
         if (assetId != address(0)) {
             require(
                 IERC20(assetId).transferFrom(msg.sender, address(this), amount),
-                "ChannelManager: token transferFrom failed"
+                "ChannelFactory: token transferFrom failed"
             );
             require(
                 IERC20(assetId).approve(address(channel), amount),
-                "ChannelManager: token approve failed"
+                "ChannelFactory: token approve failed"
             );
         }
         channel.depositA{value: msg.value}(assetId, amount);
@@ -154,68 +154,6 @@ contract ChannelManager is IChannelManager {
         assembly {
             id := chainid()
         }
-    }
-
-    function verifySignatures(
-        address[2] memory participants,
-        CoreChannelState memory ccs,
-        bytes[2] memory signatures
-    )
-        internal
-        pure
-    {
-        verifySignature(participants[0], ccs, signatures[0]);
-        verifySignature(participants[1], ccs, signatures[1]);
-    }
-
-    function verifySignature(
-        address participant,
-        CoreChannelState memory ccs,
-        bytes memory signature
-    )
-        internal
-        pure
-    {
-        // TODO WIP, check this!!
-        bytes32 generatedHash = hashChannelState(ccs);
-        require(
-            participant == generatedHash.verifyChannelMessage(signature),
-            "invalid signature on core channel state"
-        );
-        return;
-    }
-
-    function verifyMerkleProof(
-        bytes32 leaf,
-        bytes32 root,
-        bytes32[] memory proof
-    )
-        internal
-        pure
-    {
-        require(
-            MerkleProof.verify(proof, root, leaf),
-            "ChannelManager: Merkle proof verification failed"
-        );
-    }
-
-    function inConsensusPhase(ChannelDispute storage dispute) internal view returns (bool) {
-        return block.number < dispute.consensusExpiry;
-    }
-
-    function inDefundPhase(ChannelDispute storage dispute) internal view returns (bool) {
-        return dispute.consensusExpiry <= block.number && block.number < dispute.defundExpiry;
-    }
-
-    function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
-        // TODO: WIP
-        bytes32 hashedState = sha256(abi.encode(ccs));
-        return hashedState.toChannelSignedMessage();
-    }
-
-    function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
-        // TODO: WIP
-        return sha256(abi.encode(cts));
     }
 
 }

@@ -9,7 +9,7 @@ import {
   ERC20Abi,
 } from "@connext/vector-types";
 import { constants, providers, utils, Wallet } from "ethers";
-import { ChannelManager, VectorChannel } from "@connext/vector-contracts";
+import { ChannelFactory, VectorChannel } from "@connext/vector-contracts";
 import { BaseLogger } from "pino";
 
 export type ChainSigners = {
@@ -84,11 +84,11 @@ export class VectorTransactionService implements IVectorTransactionService {
     if (multisigCode === `0x`) {
       this.logger.info({ channelAddress: channelState.channelAddress }, `Deploying multisig`);
       // deploy multisig
-      const channelManager = new utils.Interface(ChannelManager.abi);
-      const data = channelManager.encodeFunctionData("createChannel", [channelState.participants]);
+      const channelFactory = new utils.Interface(ChannelFactory.abi);
+      const data = channelFactory.encodeFunctionData("createChannel", [channelState.participants]);
       const txRes = await this.onchainTransactionService.sendTx(
         {
-          to: channelState.networkContext.channelManagerAddress,
+          to: channelState.networkContext.channelFactoryAddress,
           value: 0,
           data,
         },

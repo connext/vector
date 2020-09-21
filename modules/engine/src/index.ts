@@ -111,7 +111,7 @@ export class VectorEngine {
         linkedTransferDefinition: this.chainAddresses[params.chainId].linkedTransferDefinition,
         withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
         vectorChannelMastercopyAddress: this.chainAddresses[params.chainId].vectorChannelMastercopyAddress,
-        channelManagerAddress: this.chainAddresses[params.chainId].channelManagerAddress,
+        channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         chainId: params.chainId,
         providerUrl: this.chainProviders[params.chainId],
       },

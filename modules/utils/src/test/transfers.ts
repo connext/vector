@@ -60,7 +60,7 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
 //       break;
 //   }
 //   return {
-//     managerAddress: mkAddress("0xaaaddd"),
+//     factoryAddress: mkAddress("0xaaaddd"),
 //     chainId,
 //     transferEncodings,
 //     transferState,

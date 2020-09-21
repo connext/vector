@@ -71,5 +71,5 @@ export interface IVectorOnchainService {
     latestDepositNonce: number,
   ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, Error>>;
 
-  getChannelManagerBytecode(channelManagerAddress: string, chainId: number): Promise<Result<string, Error>>;
+  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
 }

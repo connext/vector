@@ -1,14 +1,14 @@
 import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
-import { VectorChannel, ChannelManager } from "../artifacts";
+import { VectorChannel, ChannelFactory } from "../artifacts";
 import { VectorOnchainService } from "../onchainService";
 
 import { expect, getOnchainTxService, provider } from "./utils";
 
-describe("ChannelManager", () => {
+describe("ChannelFactory", () => {
   let deployer: Wallet;
-  let channelManager: Contract;
+  let channelFactory: Contract;
   let channelMastercopy: Contract;
   let onchainService: VectorOnchainService;
   let chainId: number;
@@ -20,24 +20,24 @@ describe("ChannelManager", () => {
     channelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, deployer).deploy();
     await channelMastercopy.deployed();
 
-    channelManager = await new ContractFactory(ChannelManager.abi, ChannelManager.bytecode, deployer).deploy(
+    channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer).deploy(
       channelMastercopy.address,
     );
-    await channelManager.deployed();
+    await channelFactory.deployed();
     onchainService = await getOnchainTxService(provider);
   });
 
   it("should deploy", async () => {
-    expect(channelManager.address).to.be.a("string");
+    expect(channelFactory.address).to.be.a("string");
   });
 
   it("should create a channel", async () => {
     const initiator = getRandomChannelSigner();
     const responder = getRandomChannelSigner();
     const created = new Promise((res) => {
-      channelManager.once(channelManager.filters.ChannelCreation(), res);
+      channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
-    const tx = await channelManager.createChannel(initiator.address, responder.address);
+    const tx = await channelFactory.createChannel(initiator.address, responder.address);
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -45,7 +45,7 @@ describe("ChannelManager", () => {
       initiator.publicIdentifier,
       responder.publicIdentifier,
       chainId,
-      channelManager.address,
+      channelFactory.address,
       channelMastercopy.address,
       onchainService,
     );
@@ -58,12 +58,12 @@ describe("ChannelManager", () => {
     const initiator = new ChannelSigner(deployer.privateKey, provider);
     const responder = getRandomChannelSigner();
     const created = new Promise<string>((res) => {
-      channelManager.once(channelManager.filters.ChannelCreation(), (data) => {
+      channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
         res(data);
       });
     });
     const value = BigNumber.from("1000");
-    const tx = await channelManager
+    const tx = await channelFactory
       .connect(deployer)
       .createChannelAndDepositA(initiator.address, responder.address, constants.AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
@@ -73,7 +73,7 @@ describe("ChannelManager", () => {
       initiator.publicIdentifier,
       responder.publicIdentifier,
       chainId,
-      channelManager.address,
+      channelFactory.address,
       channelMastercopy.address,
       onchainService,
     );

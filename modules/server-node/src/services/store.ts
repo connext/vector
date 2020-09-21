@@ -53,7 +53,7 @@ const convertChannelEntityToFullChannelState = (
         details = {
           networkContext: {
             chainId: channelEntity.chainId,
-            channelManagerAddress: channelEntity.channelManagerAddress,
+            channelFactoryAddress: channelEntity.channelFactoryAddress,
             providerUrl: channelEntity.providerUrl,
             vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
           },
@@ -98,7 +98,7 @@ const convertChannelEntityToFullChannelState = (
     merkleRoot: channelEntity.merkleRoot,
     networkContext: {
       chainId: channelEntity.chainId,
-      channelManagerAddress: channelEntity.channelManagerAddress,
+      channelFactoryAddress: channelEntity.channelFactoryAddress,
       providerUrl: channelEntity.providerUrl,
       vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
     },
@@ -277,7 +277,7 @@ export class PrismaStore implements IVectorStore {
         assetIds,
         chainId: channelState.networkContext.chainId,
         channelAddress: channelState.channelAddress,
-        channelManagerAddress: channelState.networkContext.channelManagerAddress,
+        channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
         latestDepositNonce: channelState.latestDepositNonce,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
@@ -321,7 +321,7 @@ export class PrismaStore implements IVectorStore {
         latestDepositNonce: channelState.latestDepositNonce,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
-        channelManagerAddress: channelState.networkContext.channelManagerAddress,
+        channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
         latestUpdate: {
           connectOrCreate: {
             where: {
@@ -430,7 +430,7 @@ export class PrismaStore implements IVectorStore {
     }
 
     const fullTransfer: FullTransferState = {
-      channelManagerAddress: transfer.createUpdate.channel!.channelManagerAddress,
+      channelFactoryAddress: transfer.createUpdate.channel!.channelFactoryAddress,
       assetId: transfer.createUpdate.assetId,
       chainId: transfer.createUpdate.channel!.chainId,
       channelAddress: transfer.createUpdate.channelAddress!,

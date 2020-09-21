@@ -58,7 +58,7 @@ describe("Vector.setup", () => {
     const network = {
       chainId: 2,
       providerUrl: "http://eth.com",
-      channelManagerAddress: mkAddress("0xccc"),
+      channelFactoryAddress: mkAddress("0xccc"),
       vectorChannelMastercopyAddress: mkAddress("0xeee"),
     };
     const validParams = {
@@ -103,13 +103,13 @@ describe("Vector.setup", () => {
         error: "should be string",
       },
       {
-        name: "should fail if there is no channelManagerAddress",
-        params: { ...validParams, networkContext: { ...network, channelManagerAddress: undefined } },
-        error: "should have required property 'channelManagerAddress'",
+        name: "should fail if there is no channelFactoryAddress",
+        params: { ...validParams, networkContext: { ...network, channelFactoryAddress: undefined } },
+        error: "should have required property 'channelFactoryAddress'",
       },
       {
-        name: "should fail if there is an invalid channelManagerAddress",
-        params: { ...validParams, networkContext: { ...network, channelManagerAddress: "fail" } },
+        name: "should fail if there is an invalid channelFactoryAddress",
+        params: { ...validParams, networkContext: { ...network, channelFactoryAddress: "fail" } },
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {

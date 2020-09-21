@@ -6,7 +6,7 @@ import "./IVectorChannel.sol";
 import "./Types.sol";
 
 
-interface IChannelManager {
+interface IChannelFactory {
 
     event ChannelCreation(IVectorChannel channel);
 

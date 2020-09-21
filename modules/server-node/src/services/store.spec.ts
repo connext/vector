@@ -26,7 +26,7 @@ describe("store", () => {
   it("should save and retrieve all update types and keep updating the channel", async () => {
     const setupState = createTestChannelState("setup");
     await store.saveChannelState(setupState, {
-      channelManagerAddress: setupState.networkContext.channelManagerAddress,
+      channelFactoryAddress: setupState.networkContext.channelFactoryAddress,
       chainId: setupState.networkContext.chainId,
       signatures: setupState.latestUpdate.signatures,
       state: setupState,
@@ -41,7 +41,7 @@ describe("store", () => {
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
     });
     await store.saveChannelState(depositState, {
-      channelManagerAddress: depositState.networkContext.channelManagerAddress,
+      channelFactoryAddress: depositState.networkContext.channelFactoryAddress,
       chainId: depositState.networkContext.chainId,
       signatures: depositState.latestUpdate.signatures,
       state: depositState,
@@ -54,7 +54,7 @@ describe("store", () => {
       nonce: depositState.nonce + 1,
     });
     await store.saveChannelState(createState, {
-      channelManagerAddress: createState.networkContext.channelManagerAddress,
+      channelFactoryAddress: createState.networkContext.channelFactoryAddress,
       chainId: createState.networkContext.chainId,
       signatures: createState.latestUpdate.signatures,
       state: createState,
@@ -67,7 +67,7 @@ describe("store", () => {
       nonce: createState.nonce + 1,
     });
     await store.saveChannelState(resolveState, {
-      channelManagerAddress: resolveState.networkContext.channelManagerAddress,
+      channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,
       chainId: resolveState.networkContext.chainId,
       signatures: resolveState.latestUpdate.signatures,
       state: resolveState,
@@ -84,7 +84,7 @@ describe("store", () => {
     await store.saveChannelState(
       createState,
       {
-        channelManagerAddress: createState.networkContext.channelManagerAddress,
+        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
         chainId: createState.networkContext.chainId,
         signatures: createState.latestUpdate.signatures,
         state: createState,

@@ -1,4 +1,4 @@
-import { LinkedTransfer, ChannelManager } from "@connext/vector-contracts";
+import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
 import {
   IVectorStore,
   JsonRpcProvider,
@@ -245,7 +245,7 @@ describe("applyUpdate", () => {
       ...coreState,
       transferState: transferInitialState,
       chainId: state.networkContext.chainId,
-      channelManagerAddress: state.networkContext.channelManagerAddress,
+      channelFactoryAddress: state.networkContext.channelFactoryAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     });
@@ -284,17 +284,17 @@ describe("generateUpdate", () => {
 
     // Deploy multisig
     // TODO: in channel deployment?
-    const manager = new Contract(
-      global["networkContext"].channelManagerAddress,
-      ChannelManager.abi,
+    const factory = new Contract(
+      global["networkContext"].channelFactoryAddress,
+      ChannelFactory.abi,
       global["wallet"].connect(provider),
     );
     const created = new Promise((resolve) => {
-      manager.once(manager.filters.ChannelCreation(), (data) => {
+      factory.once(factory.filters.ChannelCreation(), (data) => {
         resolve(data);
       });
     });
-    const tx = await manager.createChannel(signers[0].address, signers[1].address);
+    const tx = await factory.createChannel(signers[0].address, signers[1].address);
     await tx.wait();
     channelAddress = (await created) as string;
   });
@@ -304,7 +304,7 @@ describe("generateUpdate", () => {
       details: {
         counterpartyIdentifier: signers[1].publicIdentifier,
         networkContext: {
-          channelManagerAddress: env.chainAddresses[chainId].ChannelManager.address,
+          channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
           vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
           linkedTransferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
           withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
@@ -460,7 +460,7 @@ describe("generateUpdate", () => {
       ...coreState,
       transferState: transferInitialState,
       chainId: state.networkContext.chainId,
-      channelManagerAddress: state.networkContext.channelManagerAddress,
+      channelFactoryAddress: state.networkContext.channelFactoryAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     });

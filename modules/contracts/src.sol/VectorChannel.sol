@@ -10,12 +10,12 @@ import "./lib/LibChannelCrypto.sol";
 /// @title Vector Channel
 /// @author Arjun Bhuptani <arjun@connext.network>
 /// @notice
-/// (a) A proxy to this contract is deployed per-channel using the ChannelManager.sol contract
-/// (b) Executes transactions dispute logic on a hardcoded channel manager
+/// (a) A proxy to this contract is deployed per-channel using the ChannelFactory.sol contract
+/// (b) Executes transactions dispute logic on a hardcoded channel factory
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
 contract VectorChannel is IVectorChannel {
-    // Note: this is the mastercopy of channel logic, this address is managed by the ChannelManager
+    // Note: this is the mastercopy of channel logic, this address is managed by the ChannelFactory
     // TODO: decide which variables should be public
 
     using LibChannelCrypto for bytes32;
@@ -28,13 +28,13 @@ contract VectorChannel is IVectorChannel {
 
     address[2] private _owners;
 
-    address public _manager;
+    address public _factory;
 
     // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
 
     modifier onlyManager {
-        require(msg.sender == _manager, "msg.sender is not the manager");
+        require(msg.sender == _factory, "msg.sender is not the factory");
         _;
     }
 
@@ -49,9 +49,9 @@ contract VectorChannel is IVectorChannel {
         public
         override
     {
-        require(_manager == address(0), "Contract has already been setup");
+        require(_factory == address(0), "Contract has already been setup");
         _owners = owners;
-        _manager = msg.sender;
+        _factory = msg.sender;
     }
 
     /// @notice A getter function for the owners of the multisig

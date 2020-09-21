@@ -1,4 +1,4 @@
-import { ChannelManager } from "@connext/vector-contracts";
+import { ChannelFactory } from "@connext/vector-contracts";
 import {
   IVectorStore,
   UpdateParams,
@@ -229,7 +229,7 @@ export class Vector implements IVectorProtocol {
       this.publicIdentifier,
       params.counterpartyIdentifier,
       params.networkContext.chainId,
-      params.networkContext.channelManagerAddress,
+      params.networkContext.channelFactoryAddress,
       params.networkContext.vectorChannelMastercopyAddress,
       this.onchainService,
     );

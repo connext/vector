@@ -1,5 +1,5 @@
 import {
-  ChannelManager,
+  ChannelFactory,
   LinkedTransfer,
   VectorChannel,
   Withdraw,

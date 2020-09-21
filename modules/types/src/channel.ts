@@ -109,7 +109,7 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
 export interface ChannelCommitmentData {
   state: CoreChannelState;
   signatures: string[];
-  channelManagerAddress: Address;
+  channelFactoryAddress: Address;
   chainId: number;
 }
 
@@ -124,7 +124,7 @@ export interface CoreTransferState {
 }
 
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
-  channelManagerAddress: string; // networkContext?
+  channelFactoryAddress: string; // networkContext?
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: TransferStateMap[T];
@@ -134,7 +134,7 @@ export type FullTransferState<T extends TransferName = any> = CoreTransferState 
 
 export interface TransferCommitmentData {
   state: CoreTransferState;
-  channelManagerAddress: Address;
+  channelFactoryAddress: Address;
   chainId: number;
   merkleProofData: string[];
 }
@@ -144,7 +144,7 @@ export type ChainAddresses = {
 };
 
 export type ContractAddresses = {
-  channelManagerAddress: Address;
+  channelFactoryAddress: Address;
   vectorChannelMastercopyAddress: Address;
   linkedTransferDefinition?: Address;
   withdrawDefinition?: Address;

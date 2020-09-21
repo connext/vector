@@ -2,7 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IChannelManager.sol";
+import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/IVectorChannel.sol";
@@ -11,8 +11,8 @@ import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 import "./Proxy.sol";
 
-/// @title Channel Manager - Allows us to create new channel proxy contract
-contract Adjudicator {
+/// @title Adjudicator - Dispute logic
+contract Adjudicator is IAdjudicator {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
@@ -49,17 +49,17 @@ contract Adjudicator {
         verifySignatures(ccs.participants, ccs, signatures);
         require(
             !inDefundPhase(dispute),
-            "ChannelManager forceChannelConsensus: Not allowed in defund phase"
+            "ChannelFactory forceChannelConsensus: Not allowed in defund phase"
         );
         // TODO: check not defunded???
         require(
             dispute.nonce <= ccs.nonce,
-            "ChannelManager forceChannelConsensus: New nonce smaller than stored one"
+            "ChannelFactory forceChannelConsensus: New nonce smaller than stored one"
         );
         if (dispute.nonce == ccs.nonce) {
             require(
                 !inConsensusPhase(dispute),
-                "ChannelManager forceChannelConsensus: Same nonce not allowed in consensus phase"
+                "ChannelFactory forceChannelConsensus: Same nonce not allowed in consensus phase"
             );
         } else { // dispute.nonce < ccs.nonce
             dispute.channelStateHash = hashChannelState(ccs);
@@ -107,16 +107,16 @@ contract Adjudicator {
         ChannelDispute storage dispute = channelDispute[channelAddress];
         require(
             inDefundPhase(dispute),
-            "ChannelManager defundChannel: Not in defund phase"
+            "ChannelFactory defundChannel: Not in defund phase"
         );
         require(
             !dispute.isDefunded,
-            "ChannelManager defundChannel: channel already defunded"
+            "ChannelFactory defundChannel: channel already defunded"
         );
         dispute.isDefunded = true;
         require(
             hashChannelState(ccs) == dispute.channelStateHash,
-            "ChannelManager defundChannel: Hash of core channel state does not match stored hash"
+            "ChannelFactory defundChannel: Hash of core channel state does not match stored hash"
         );
         // TODO SECURITY: Beware of reentrancy
         // TODO: keep this? offchain code has to ensure this
@@ -163,19 +163,19 @@ contract Adjudicator {
         ChannelDispute storage dispute = channelDispute[cts.channelAddress];
         require(
             inDefundPhase(dispute),
-            "ChannelManager forceTransferConsensus: Not in defund phase"
+            "ChannelFactory forceTransferConsensus: Not in defund phase"
         );
         bytes32 transferStateHash = hashTransferState(cts);
         verifyMerkleProof(transferStateHash, dispute.merkleRoot, merkleProofData);
         TransferDispute storage transferDispute = transferDisputes[cts.transferId];
         require(
             transferDispute.transferDisputeExpiry == 0,
-            "ChannelManager forceTransferConsensus: transfer already disputed"
+            "ChannelFactory forceTransferConsensus: transfer already disputed"
         );
         // necessary?
         require(
             !transferDispute.isDefunded,
-            "ChannelManager forceTransferConsensus: transfer already defunded"
+            "ChannelFactory forceTransferConsensus: transfer already defunded"
         );
         // TODO: offchain-ensure that there can't be an overflow
         transferDispute.transferStateHash = transferStateHash;
@@ -215,22 +215,22 @@ contract Adjudicator {
         TransferDispute memory transferDispute = transferDisputes[cts.transferId];
         require(
             hashTransferState(cts) == transferDispute.transferStateHash,
-            "ChannelManager defundTransfer: Hash of core transfer state does not match stored hash"
+            "ChannelFactory defundTransfer: Hash of core transfer state does not match stored hash"
         );
         // TODO: check / simplify
         require(
             transferDispute.transferDisputeExpiry != 0,
-            "ChannelManager defundTransfer: transfer not yet disputed"
+            "ChannelFactory defundTransfer: transfer not yet disputed"
         );
         require(
             !transferDispute.isDefunded,
-            "ChannelManager defundTransfer: transfer already defunded"
+            "ChannelFactory defundTransfer: transfer already defunded"
         );
         Balance memory finalBalance;
         if (block.number < transferDispute.transferDisputeExpiry) {
             require(
                 keccak256(encodedInitialTransferState) == cts.initialStateHash,
-                "ChannelManager defundTransfer: Hash of encoded initial transfer state does not match stored hash"
+                "ChannelFactory defundTransfer: Hash of encoded initial transfer state does not match stored hash"
             );
             ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
             finalBalance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
@@ -240,4 +240,108 @@ contract Adjudicator {
         IVectorChannel channel = IVectorChannel(cts.channelAddress);
         channel.managedTransfer(finalBalance, cts.assetId);
     }
+
+    /// @dev Allows us to create new channel contact using CREATE2
+    /// @dev This method is only meant as an utility to be called from other methods
+    /// @param initiator address of one of the two participants in the channel
+    /// @param responder address of the other channel participant
+    function deployChannelProxy(
+        address initiator,
+        address responder
+    )
+        internal
+        returns (IVectorChannel)
+    {
+        bytes32 salt = generateSalt(initiator, responder);
+        Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
+        return IVectorChannel(address(proxy));
+    }
+
+    function generateSalt(
+        address initiator,
+        address responder
+    )
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                initiator,
+                responder,
+                chainId(),
+                domainSalt
+            )
+        );
+    }
+
+    function chainId() internal pure returns (uint256 id) {
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            id := chainid()
+        }
+    }
+
+    function verifySignatures(
+        address[2] memory participants,
+        CoreChannelState memory ccs,
+        bytes[2] memory signatures
+    )
+        internal
+        pure
+    {
+        verifySignature(participants[0], ccs, signatures[0]);
+        verifySignature(participants[1], ccs, signatures[1]);
+    }
+
+    function verifySignature(
+        address participant,
+        CoreChannelState memory ccs,
+        bytes memory signature
+    )
+        internal
+        pure
+    {
+        // TODO WIP, check this!!
+        bytes32 generatedHash = hashChannelState(ccs);
+        require(
+            participant == generatedHash.verifyChannelMessage(signature),
+            "invalid signature on core channel state"
+        );
+        return;
+    }
+
+    function verifyMerkleProof(
+        bytes32 leaf,
+        bytes32 root,
+        bytes32[] memory proof
+    )
+        internal
+        pure
+    {
+        require(
+            MerkleProof.verify(proof, root, leaf),
+            "ChannelFactory: Merkle proof verification failed"
+        );
+    }
+
+    function inConsensusPhase(ChannelDispute storage dispute) internal view returns (bool) {
+        return block.number < dispute.consensusExpiry;
+    }
+
+    function inDefundPhase(ChannelDispute storage dispute) internal view returns (bool) {
+        return dispute.consensusExpiry <= block.number && block.number < dispute.defundExpiry;
+    }
+
+    function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
+        // TODO: WIP
+        bytes32 hashedState = sha256(abi.encode(ccs));
+        return hashedState.toChannelSignedMessage();
+    }
+
+    function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
+        // TODO: WIP
+        return sha256(abi.encode(cts));
+    }
+
 }

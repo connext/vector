@@ -1,4 +1,4 @@
-import { ChannelManager, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelFactory, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import {
   Contract,
   FullChannelState,
@@ -124,13 +124,13 @@ export const deployChannelWithDepositA = async (
       : await new Contract(assetId, TestToken.abi, alice).balanceOf(channelAddress);
 
   // Deploy with deposit
-  const manager = new Contract(env.chainAddresses[chainId].ChannelManager.address, ChannelManager.abi, alice);
+  const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, alice);
   const created = new Promise<string>((res) => {
-    manager.once(manager.filters.ChannelCreation(), (data) => {
+    factory.once(factory.filters.ChannelCreation(), (data) => {
       res(data);
     });
   });
-  const tx = await manager.createChannelAndDepositA(alice.address, bobAddr, assetId, depositAmount, {
+  const tx = await factory.createChannelAndDepositA(alice.address, bobAddr, assetId, depositAmount, {
     value: depositAmount,
   });
   await tx.wait();
@@ -151,7 +151,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
     counterpartyIdentifier: bob.publicIdentifier,
     networkContext: {
       chainId,
-      channelManagerAddress: env.chainAddresses[chainId].ChannelManager.address,
+      channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
       providerUrl,
       vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
     },
@@ -310,7 +310,7 @@ export const createTransfer = async (
     transferId,
     initialStateHash: hashTransferState(transferInitialState, params.encodings[0]),
     transferDefinition: params.transferDefinition,
-    channelManagerAddress: channel.networkContext.channelManagerAddress,
+    channelFactoryAddress: channel.networkContext.channelFactoryAddress,
     chainId,
     transferEncodings: params.encodings,
     transferState: params.transferInitialState,
