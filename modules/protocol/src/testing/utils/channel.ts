@@ -18,6 +18,9 @@ import {
   ResolveTransferParams,
   TransferResolver,
   IVectorOnchainService,
+  TransferName,
+  Balance,
+  CoreTransferState,
 } from "@connext/vector-types";
 import {
   createLinkedHash,
@@ -25,9 +28,11 @@ import {
   getRandomBytes32,
   getRandomChannelSigner,
   hashTransferState,
+  mkAddress,
 } from "@connext/vector-utils";
 import { Wallet, utils, BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
+import { keccak256, solidityPack } from "ethers/lib/utils";
 
 import { Vector } from "../../vector";
 import { MemoryLockService } from "../services/lock";
@@ -263,6 +268,53 @@ export const depositInChannel = async (
   expect(onchainTotal).to.be.eq(channelTotal);
   return postDeposit;
 };
+
+type TestLinkedTransferOptions = {
+  balance: Balance;
+  assetId: string;
+  preImage: string;
+} & CoreTransferState;
+export function createTestFullLinkedTransferState(
+  overrides: Partial<TestLinkedTransferOptions>,
+): FullTransferState<typeof TransferName.LinkedTransfer> {
+  // get overrides/defaults values
+  const { balance, assetId, preImage, ...core } = overrides;
+
+  const transferEncodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
+  const transferResolver = { preImage: preImage ?? getRandomBytes32() };
+  const transferState = createTestLinkedTransferState({
+    linkedHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
+    assetId: assetId ?? mkAddress(),
+    balance: balance ?? { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["4", "0"] },
+  });
+
+  // get transfer value
+  const transferValue = transferState.balance.amount.map((prev, curr) => {
+    return BigNumber.from(prev).add(curr);
+  }, BigNumber.from(0));
+
+  // get default values
+  const defaults = {
+    initialBalance: { ...transferState.balance, amount: [transferValue.toString(), "0"] },
+    assetId: assetId ?? mkAddress(),
+    channelAddress: mkAddress("0xccc"),
+    transferId: getRandomBytes32(),
+    transferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
+    transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    initialStateHash: hashTransferState(transferState, transferEncodings[0]),
+    adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
+    chainId,
+    transferEncodings,
+    transferState,
+    transferResolver,
+    meta: { super: "cool stuff" },
+  };
+
+  return {
+    ...defaults,
+    ...core,
+  };
+}
 
 // Will create a linked transfer in the channel, and return the full
 // transfer state (including the necessary resolver)

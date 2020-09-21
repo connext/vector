@@ -1,266 +1,402 @@
-// import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
-// import {
-//   IVectorStore,
-//   JsonRpcProvider,
-//   UpdateType,
-//   LinkedTransferStateEncoding,
-//   LinkedTransferResolverEncoding,
-// } from "@connext/vector-types";
-// import {
-//   getRandomChannelSigner,
-//   createTestChannelState,
-//   createTestChannelUpdate,
-//   mkAddress,
-//   mkHash,
-//   createTestChannelStateWithSigners,
-//   createTestChannelUpdateWithSigners,
-//   createTestLinkedTransferState,
-//   createCoreTransferState,
-//   hashCoreTransferState,
-//   createLinkedHash,
-//   encodeLinkedTransferResolver,
-//   encodeLinkedTransferState,
-//   createTestUpdateParams,
-//   ChannelSigner,
-//   hashTransferState,
-//   stringify,
-// } from "@connext/vector-utils";
-// import { expect } from "chai";
-// import { BigNumber, constants, Contract, utils } from "ethers";
-// import { MerkleTree } from "merkletreejs";
+import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
+import {
+  IVectorStore,
+  JsonRpcProvider,
+  UpdateType,
+  LinkedTransferStateEncoding,
+  LinkedTransferResolverEncoding,
+  OutboundChannelUpdateError,
+  InboundChannelUpdateError,
+  FullChannelState,
+  FullTransferState,
+  Balance,
+  TransferName,
+  Values,
+  DEFAULT_TRANSFER_TIMEOUT,
+  NetworkContext,
+} from "@connext/vector-types";
+import {
+  getRandomChannelSigner,
+  createTestChannelState,
+  createTestChannelUpdate,
+  mkAddress,
+  mkHash,
+  createTestChannelStateWithSigners,
+  createTestChannelUpdateWithSigners,
+  createTestLinkedTransferState,
+  createCoreTransferState,
+  hashCoreTransferState,
+  createLinkedHash,
+  encodeLinkedTransferResolver,
+  encodeLinkedTransferState,
+  createTestUpdateParams,
+  ChannelSigner,
+  hashTransferState,
+  stringify,
+  PartialFullChannelState,
+  PartialChannelUpdate,
+} from "@connext/vector-utils";
+import { expect } from "chai";
+import { BigNumber, BigNumberish, constants, Contract, utils } from "ethers";
+import { MerkleTree } from "merkletreejs";
+import Sinon from "sinon";
 
-// import { applyUpdate, generateUpdate } from "../update";
+import { applyUpdate, generateUpdate } from "../update";
 
-// import { MockOnchainService } from "./services/onchain";
-// import { MemoryStoreService } from "./services/store";
-// import { env } from "./utils";
+import { MockOnchainService } from "./services/onchain";
+import { MemoryStoreService } from "./services/store";
+import { env } from "./utils";
+import { createTestFullLinkedTransferState } from "./utils/channel";
 
-// const { hexlify, randomBytes } = utils;
+const { hexlify, randomBytes } = utils;
 
-// // Should test that the application of an update results in the correct
-// // final state. While this function *will* fail if validation fails,
-// // the validation function is tested elsewhere
-// describe.skip("applyUpdate", () => {
-//   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-//   const providerUrl = env.chainProviders[chainId];
-//   const provider = new JsonRpcProvider(providerUrl);
-//   const signers = Array(2)
-//     .fill(0)
-//     .map(() => getRandomChannelSigner(providerUrl));
+type ApplyUpdateTestParams = {
+  name: string;
+  updateType: UpdateType;
+  stateOverrides?: PartialFullChannelState<any>;
+  updateOverrides?: PartialChannelUpdate<any>;
+  // transferAmount?: BigNumberish;
+  transferOverrides?: Partial<FullTransferState<typeof TransferName.LinkedTransfer>>;
+  expected?: Partial<FullChannelState<any>>;
+  error?: Values<typeof InboundChannelUpdateError.reasons>;
+};
 
-//   let store: IVectorStore;
-//   let linkedTransferDefinition: string;
+describe("applyUpdate", () => {
+  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+  const providerUrl = env.chainProviders[chainId];
+  const signers = Array(2)
+    .fill(0)
+    .map(() => getRandomChannelSigner(providerUrl));
 
-//   beforeEach(() => {
-//     store = new MemoryStoreService();
-//     linkedTransferDefinition = env.chainAddresses[chainId].LinkedTransfer.address;
-//   });
+  // Generate test constants
+  const participants = signers.map((s) => s.address);
+  const publicIdentifiers = signers.map((s) => s.publicIdentifier);
+  const channelAddress = mkAddress("0xccc");
+  const networkContext: NetworkContext = {
+    chainId,
+    providerUrl,
+    adjudicatorAddress: mkAddress("0xaaabbbcccc"),
+    channelFactoryAddress: mkAddress("0xddddeeeffff"),
+    vectorChannelMastercopyAddress: mkAddress("0xbeef"),
+  };
+  const merkleProofData = [mkHash("0xproof")];
+  const merkleRoot = mkHash("0xroot");
 
-//   it("should fail for an unrecognized update type", async () => {
-//     const update = createTestChannelUpdate(UpdateType.setup, {
-//       type: "fail" as any,
-//       nonce: 1,
-//     });
-//     const state = createTestChannelState(UpdateType.setup, { nonce: 0 });
+  afterEach(() => {
+    Sinon.restore();
+  });
 
-//     const ret = await applyUpdate(update, state, store);
-//     expect(ret.isError).to.be.true;
-//     expect(ret.getError()?.message).to.be.eq(ChannelUpdateError.reasons.BadUpdateType);
-//   });
+  const tests: ApplyUpdateTestParams[] = [
+    {
+      name: "should work for setup",
+      updateType: UpdateType.setup,
+      stateOverrides: {
+        nonce: 0,
+      },
+      updateOverrides: {
+        details: { counterpartyIdentifier: publicIdentifiers[1], networkContext, timeout: "8267345" },
+        nonce: 1,
+      },
+      expected: {
+        timeout: "8267345",
+        latestDepositNonce: 0,
+        balances: [],
+        lockedBalance: [],
+        assetIds: [],
+        merkleRoot: mkHash(),
+      },
+    },
+    {
+      name: "should work for deposit (adding new assetId)",
+      updateType: UpdateType.deposit,
+      stateOverrides: {
+        nonce: 1,
+        balances: [],
+        assetIds: [],
+        lockedBalance: [],
+        latestDepositNonce: 0,
+      },
+      updateOverrides: {
+        details: { latestDepositNonce: 0 },
+        nonce: 2,
+        balance: { to: participants, amount: ["0", "17"] },
+        assetId: mkAddress("0xaddee"),
+      },
+      expected: {
+        latestDepositNonce: 0,
+        balances: [{ to: participants, amount: ["0", "17"] }],
+        lockedBalance: [],
+        assetIds: [mkAddress("0xaddee")],
+      },
+    },
+    {
+      name: "should work for deposit (existing assetId)",
+      updateType: UpdateType.deposit,
+      stateOverrides: {
+        nonce: 5,
+        balances: [{ to: participants, amount: ["0", "17"] }],
+        assetIds: [mkAddress()],
+        lockedBalance: [],
+        latestDepositNonce: 0,
+      },
+      updateOverrides: {
+        details: { latestDepositNonce: 3 },
+        nonce: 6,
+        balance: { to: participants, amount: ["6", "17"] },
+        assetId: mkAddress("0xaddee"),
+      },
+      expected: {
+        latestDepositNonce: 3,
+        balances: [
+          { to: participants, amount: ["0", "17"] },
+          { to: participants, amount: ["6", "17"] },
+        ],
+        lockedBalance: [],
+        assetIds: [mkAddress(), mkAddress("0xaddee")],
+      },
+    },
+    {
+      name: "should work for create (bob creates)",
+      updateType: UpdateType.create,
+      stateOverrides: {
+        nonce: 5,
+        balances: [{ to: participants, amount: ["43", "22"] }],
+        assetIds: [mkAddress()],
+        lockedBalance: [],
+        merkleRoot: mkHash(),
+      },
+      updateOverrides: {
+        balance: { to: participants, amount: ["43", "8"] },
+        fromIdentifier: publicIdentifiers[1],
+        toIdentifier: publicIdentifiers[0],
+        assetId: mkAddress(),
+      },
+      transferOverrides: {
+        initialBalance: { to: participants, amount: ["0", "14"] },
+        assetId: mkAddress(),
+      },
+      expected: {
+        balances: [{ to: participants, amount: ["43", "8"] }],
+        lockedBalance: ["14"],
+        assetIds: [mkAddress()],
+        merkleRoot,
+      },
+    },
+    {
+      name: "should work for create (alice creates)",
+      updateType: UpdateType.create,
+      stateOverrides: {
+        nonce: 5,
+        balances: [{ to: participants, amount: ["43", "22"] }],
+        assetIds: [mkAddress()],
+        lockedBalance: [],
+        merkleRoot: mkHash(),
+      },
+      updateOverrides: {
+        balance: { to: participants, amount: ["29", "22"] },
+        fromIdentifier: publicIdentifiers[0],
+        toIdentifier: publicIdentifiers[1],
+        assetId: mkAddress(),
+      },
+      transferOverrides: {
+        initialBalance: { to: participants, amount: ["14", "0"] },
+        assetId: mkAddress(),
+      },
+      expected: {
+        balances: [{ to: participants, amount: ["29", "22"] }],
+        lockedBalance: ["14"],
+        assetIds: [mkAddress()],
+        merkleRoot,
+      },
+    },
+    {
+      name: "should work for create when transfer does not include state participants",
+      updateType: UpdateType.create,
+      stateOverrides: {
+        nonce: 5,
+        balances: [{ to: participants, amount: ["43", "22"] }],
+        assetIds: [mkAddress()],
+        lockedBalance: [],
+        merkleRoot: mkHash(),
+      },
+      updateOverrides: {
+        balance: { to: participants, amount: ["29", "22"] },
+        assetId: mkAddress(),
+      },
+      transferOverrides: {
+        initialBalance: { to: [mkAddress("0xffff"), participants[1]], amount: ["14", "0"] },
+        assetId: mkAddress(),
+      },
+      expected: {
+        balances: [{ to: participants, amount: ["29", "22"] }],
+        lockedBalance: ["14"],
+        assetIds: [mkAddress()],
+        merkleRoot,
+      },
+    },
+    {
+      name: "should work for resolve (bob resolves)",
+      updateType: UpdateType.resolve,
+      stateOverrides: {
+        nonce: 5,
+        balances: [{ to: participants, amount: ["3", "4"] }],
+        assetIds: [mkAddress()],
+        lockedBalance: ["8"],
+        merkleRoot,
+      },
+      updateOverrides: {
+        balance: { to: participants, amount: ["3", "12"] },
+        fromIdentifier: publicIdentifiers[1],
+        toIdentifier: publicIdentifiers[0],
+        assetId: mkAddress(),
+      },
+      transferOverrides: {
+        initialBalance: { to: participants, amount: ["0", "8"] },
+        assetId: mkAddress(),
+      },
+      expected: {
+        balances: [{ to: participants, amount: ["3", "12"] }],
+        lockedBalance: [],
+        assetIds: [mkAddress()],
+        merkleRoot: mkHash(),
+      },
+    },
+    {
+      name: "should work for resolve (alice resolves)",
+      updateType: UpdateType.resolve,
+      stateOverrides: {
+        nonce: 5,
+        balances: [{ to: participants, amount: ["13", "2"] }],
+        assetIds: [mkAddress()],
+        lockedBalance: ["9"],
+        merkleRoot,
+      },
+      updateOverrides: {
+        balance: { to: participants, amount: ["22", "2"] },
+        fromIdentifier: publicIdentifiers[0],
+        toIdentifier: publicIdentifiers[1],
+        assetId: mkAddress(),
+      },
+      transferOverrides: {
+        initialBalance: { to: participants, amount: ["9", "0"] },
+        assetId: mkAddress(),
+      },
+      expected: {
+        balances: [{ to: participants, amount: ["22", "2"] }],
+        lockedBalance: [],
+        assetIds: [mkAddress()],
+        merkleRoot: mkHash(),
+      },
+    },
+    {
+      name: "should work for resolve when transfer does not include state participants",
+      updateType: UpdateType.resolve,
+      stateOverrides: {
+        nonce: 5,
+        balances: [{ to: participants, amount: ["7", "22"] }],
+        assetIds: [mkAddress()],
+        lockedBalance: ["14"],
+        merkleRoot,
+      },
+      updateOverrides: {
+        balance: { to: participants, amount: ["7", "22"] },
+        assetId: mkAddress(),
+      },
+      transferOverrides: {
+        initialBalance: { to: [mkAddress("0xffff"), participants[1]], amount: ["14", "0"] },
+        assetId: mkAddress(),
+      },
+      expected: {
+        balances: [{ to: participants, amount: ["7", "22"] }],
+        lockedBalance: [],
+        assetIds: [mkAddress()],
+        merkleRoot: mkHash(),
+      },
+    },
+    {
+      name: "should fail for an unrecognized update type",
+      updateType: ("fail" as unknown) as UpdateType,
+      error: InboundChannelUpdateError.reasons.BadUpdateType,
+    },
+  ];
 
-//   it("should work for setup", async () => {
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 0 });
-//     const update = createTestChannelUpdateWithSigners(signers, UpdateType.setup, { nonce: 1 });
+  for (const test of tests) {
+    const { name, updateType, stateOverrides, updateOverrides, transferOverrides, error, expected } = test;
 
-//     const newState = (await applyUpdate(update, state, store)).getValue();
-//     expect(newState).to.containSubset({
-//       ...state,
-//       publicIdentifiers: state.publicIdentifiers,
-//       nonce: 1,
-//       latestDepositNonce: 0,
-//       channelAddress: update.channelAddress,
-//       timeout: update.details.timeout,
-//       participants: signers.map((s) => s.address),
-//       balances: [],
-//       lockedBalance: [],
-//       assetIds: [],
-//       merkleRoot: mkHash(),
-//       latestUpdate: update,
-//       networkContext: update.details.networkContext,
-//     });
-//   });
+    it(name, async () => {
+      // Generate the previous state
+      const previousState = createTestChannelStateWithSigners(
+        signers,
+        stateOverrides?.latestUpdate?.type ?? UpdateType.setup,
+        { channelAddress, networkContext, ...stateOverrides },
+      );
 
-//   it.skip("should work for deposit (adding a new assetId)", async () => {
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
-//       nonce: 1,
-//       balances: [],
-//       assetIds: [],
-//       latestDepositNonce: 0,
-//     });
-//     const assetId = mkAddress();
-//     const balance = {
-//       to: signers.map((s) => s.address),
-//       amount: ["1", "0"],
-//     };
-//     const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-//       nonce: 2,
-//       balance,
-//       assetId,
-//       details: { latestDepositNonce: 1 },
-//     });
+      // Generate the transfer (if needed)
+      let transfer: FullTransferState | undefined = undefined;
+      if (updateType === UpdateType.resolve || updateType === UpdateType.create) {
+        // Create the full transfer state
+        transfer = {
+          ...createTestFullLinkedTransferState({
+            balance: transferOverrides?.initialBalance,
+            assetId: transferOverrides?.assetId ?? mkAddress(),
+          }),
+          ...transferOverrides,
+        };
+      }
 
-//     const newState = (await applyUpdate(update, state, store)).getValue();
-//     expect(newState).to.containSubset({
-//       ...state,
-//       nonce: update.nonce,
-//       latestDepositNonce: update.details.latestDepositNonce,
-//       balances: [balance],
-//       assetIds: [assetId],
-//       latestUpdate: update,
-//     });
-//   });
+      // Generate the update using sensible defaults from transfers
+      const overrides: any = { channelAddress, nonce: previousState.nonce + 1 };
+      if (updateType === UpdateType.create && transfer) {
+        // mock out merkle tree
+        Sinon.createStubInstance(MerkleTree, {
+          getHexProof: merkleProofData,
+          getHexRoot: merkleRoot,
+        } as any);
+        const { transferResolver, transferState, ...createDetails } = transfer;
+        overrides.details = {
+          ...createDetails,
+          transferInitialState: transferState,
+          merkleProofData,
+          merkleRoot,
+        };
+      } else if (updateType === UpdateType.resolve && transfer) {
+        Sinon.createStubInstance(MerkleTree, {
+          getHexRoot: mkHash(),
+        } as any);
+        const { transferTimeout, transferState, ...resolveDetails } = transfer;
+        overrides.details = {
+          ...resolveDetails,
+          merkleRoot: mkHash(),
+        };
+      }
+      const update = createTestChannelUpdateWithSigners(signers, updateType, {
+        ...overrides,
+        ...updateOverrides,
+      });
 
-//   it.skip("should work for deposit (existing assetId)", async () => {
-//     const initialBalanceAmt = ["1", "0"];
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-//       nonce: 3,
-//       balances: [{ to: signers.map((s) => s.address), amount: initialBalanceAmt }],
-//       assetIds: [mkAddress()],
-//       latestDepositNonce: 1,
-//     });
+      // Call `applyUpdate`
+      const result = await applyUpdate(update, previousState, transfer);
 
-//     const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-//       nonce: 4,
-//       balance: { amount: ["1", "1"], to: signers.map((s) => s.address) },
-//       assetId: mkAddress(),
-//       fromIdentifier: signers[1].publicIdentifier,
-//       toIdentifier: signers[0].publicIdentifier,
-//       details: { latestDepositNonce: 1 },
-//     });
-
-//     const newState = (await applyUpdate(update, state, store)).getValue();
-//     expect(newState).to.containSubset({
-//       ...state,
-//       nonce: update.nonce,
-//       latestDepositNonce: update.details.latestDepositNonce,
-//       balances: [update.balance],
-//       latestUpdate: update,
-//     });
-//   });
-
-//   it("should work for create", async () => {
-//     const transferInitialState = createTestLinkedTransferState({
-//       balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
-//     });
-//     const assetId = constants.AddressZero;
-
-//     // Create the channel state
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-//       nonce: 3,
-//       lockedBalance: [],
-//       balances: [transferInitialState.balance],
-//       assetIds: [assetId],
-//       latestDepositNonce: 1,
-//     });
-
-//     // Create the transfer update
-//     const coreState = createCoreTransferState({
-//       initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
-//     });
-//     const hash = Buffer.from(hashCoreTransferState(coreState));
-//     const tree = new MerkleTree([hash], hashCoreTransferState);
-//     const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
-//       nonce: state.nonce + 1,
-//       assetId,
-//       balance: transferInitialState.balance,
-//       details: {
-//         ...coreState,
-//         transferInitialState,
-//         merkleRoot: tree.getHexRoot(),
-//         merkleProofData: tree.getHexProof(hash),
-//       },
-//     });
-
-//     const newState = (await applyUpdate(update, state, store)).getValue();
-//     expect(newState).to.containSubset({
-//       ...state,
-//       balances: [{ ...transferInitialState.balance, amount: ["0", "0"] }],
-//       lockedBalance: ["1"],
-//       nonce: update.nonce,
-//       merkleRoot: update.details.merkleRoot,
-//       latestUpdate: update,
-//     });
-//   });
-
-//   it("should work for resolve", async () => {
-//     const preImage = hexlify(randomBytes(32));
-//     const linkedHash = createLinkedHash(preImage);
-//     const transferInitialState = createTestLinkedTransferState({
-//       balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
-//       linkedHash,
-//     });
-//     const assetId = constants.AddressZero;
-
-//     const encodedState = encodeLinkedTransferState(transferInitialState);
-//     const encodedResolver = encodeLinkedTransferResolver({ preImage });
-//     const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
-//       encodedState,
-//       encodedResolver,
-//     );
-//     const balance = {
-//       to: ret.to,
-//       amount: ret.amount.map((a: BigNumber) => a.toString()),
-//     };
-
-//     // Create the channel state
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-//       nonce: 3,
-//       lockedBalance: ["1"],
-//       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
-//       assetIds: [assetId],
-//       latestDepositNonce: 1,
-//     });
-
-//     // Create the transfer update
-//     const coreState = createCoreTransferState({
-//       initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
-//     });
-//     const emptyTree = new MerkleTree([], hashCoreTransferState);
-//     const update = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
-//       nonce: state.nonce + 1,
-//       assetId,
-//       balance,
-//       details: {
-//         transferId: coreState.transferId,
-//         transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-//         transferDefinition: coreState.transferDefinition,
-//         transferResolver: { preImage },
-//         merkleRoot: emptyTree.getHexRoot(),
-//       },
-//     });
-
-//     // Load the store
-//     await store.saveChannelState(state, {} as any, {
-//       ...coreState,
-//       transferState: transferInitialState,
-//       chainId: state.networkContext.chainId,
-//       adjudicatorAddress: state.networkContext.adjudicatorAddress,
-//       transferId: coreState.transferId,
-//       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-//     });
-
-//     const updateRet = await applyUpdate(update, state, store);
-//     expect(updateRet.isError).to.be.false;
-//     expect(updateRet.getValue()).to.containSubset({
-//       ...state,
-//       balances: [{ ...transferInitialState.balance, amount: ["1", "0"] }],
-//       lockedBalance: ["0"],
-//       nonce: update.nonce,
-//       merkleRoot: emptyTree.getHexRoot(),
-//       latestUpdate: update,
-//     });
-//   });
-// });
+      // Verify result
+      if (error) {
+        expect(result.getError()?.message).to.be.eq(error);
+      } else if (expected) {
+        expect(result.getError()).to.be.undefined;
+        expect(result.getValue()).to.containSubset({
+          channelAddress,
+          publicIdentifiers,
+          participants,
+          latestUpdate: update,
+          nonce: previousState.nonce + 1,
+          networkContext,
+          ...expected,
+        });
+      } else {
+        expect(false).to.be.eq("Neither error or expected result provided in test");
+      }
+    });
+  }
+});
 
 // describe.skip("generateUpdate", () => {
 //   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
@@ -331,18 +467,18 @@
 //     });
 //     const assetId = constants.AddressZero;
 //     await store.saveChannelState(state, {} as any);
-    // const params = createTestUpdateParams(UpdateType.deposit, {
-    //   channelAddress,
-    //   details: { channelAddress, assetId },
-    // });
+//     const params = createTestUpdateParams(UpdateType.deposit, {
+//       channelAddress,
+//       details: { channelAddress, assetId },
+//     });
 //     console.log(`params: ${stringify(params)}`);
 //     const update = (await generateUpdate(params, state, store, chainService, signers[0])).getValue();
 //     console.log(`update: ${stringify(update)}`);
-    // const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-    //   channelAddress,
-    //   details: { latestDepositNonce: 0 },
-    //   nonce: state.nonce + 1,
-    // });
+//     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+//       channelAddress,
+//       details: { latestDepositNonce: 0 },
+//       nonce: state.nonce + 1,
+//     });
 //     console.log(`generatedUpdate: ${stringify(expected)}`);
 //     expect(update).to.containSubset(expected);
 //     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
