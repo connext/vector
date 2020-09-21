@@ -8,8 +8,8 @@ import {
   keyify,
 } from "@connext/vector-utils";
 
-import { LinkedTransfer } from "../../../artifacts";
-import { expect, provider } from "../../utils";
+import { LinkedTransfer } from "../../artifacts";
+import { expect, provider } from "../utils";
 
 const { HashZero, Zero } = constants;
 

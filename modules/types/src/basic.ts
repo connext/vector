@@ -14,8 +14,7 @@ export type BigNumberish = ethers.BigNumberish;
 export type Network = providers.Network;
 export type Transaction = providers.TransactionRequest;
 
-// special strings
-// these function more as documentation for devs than checked types
+// strings aliases: these function more as documentation for devs than checked types
 export type ABIEncoding = string; // eg "tuple(address to, uint256 amount)"
 export type Address = string; // aka HexString of length 42
 export type AssetId = string; // aka Address of ERC20 token contract or AddressZero for ETH

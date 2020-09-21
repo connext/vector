@@ -146,7 +146,7 @@ function validateSetup(
   // participants are correctly derived
 
   // Validate network context has correct addresses
-  // TODO: validate adjudicator onchain
+  // TODO: validate factory onchain
 
   // Validate timeout is reasonable
 

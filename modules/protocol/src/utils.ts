@@ -82,7 +82,7 @@ export async function generateSignedChannelCommitment(
   const unsigned = {
     chainId: networkContext.chainId,
     state: core,
-    adjudicatorAddress: networkContext.adjudicatorAddress,
+    channelFactoryAddress: networkContext.channelFactoryAddress,
   };
   const filteredSigs = updateSignatures.filter((x) => !!x);
   if (filteredSigs.length === 2) {

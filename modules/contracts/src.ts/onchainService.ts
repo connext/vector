@@ -1,7 +1,7 @@
 import { ERC20Abi, IVectorOnchainService, Result } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers } from "ethers";
 
-import { VectorChannel, ChannelFactory } from "./artifacts";
+import { ChannelMastercopy, ChannelFactory } from "./artifacts";
 
 export class VectorOnchainService implements IVectorOnchainService {
   constructor(private readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider }) {}
@@ -15,7 +15,7 @@ export class VectorOnchainService implements IVectorOnchainService {
     if (!provider) {
       return Result.fail(new Error(`No provider exists for ${chainId}`));
     }
-    const channelContract = new Contract(channelAddress, VectorChannel.abi, provider);
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let onchainBalance: BigNumber;
     try {
       onchainBalance = await channelContract.getBalance(assetId);
@@ -45,7 +45,7 @@ export class VectorOnchainService implements IVectorOnchainService {
       return Result.fail(new Error(`No provider exists for ${chainId}`));
     }
 
-    const channelContract = new Contract(channelAddress, VectorChannel.abi, provider);
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let latestDepositA: { nonce: BigNumber; amount: BigNumber };
     try {
       latestDepositA = await channelContract.latestDepositByAssetId(assetId);
@@ -67,9 +67,9 @@ export class VectorOnchainService implements IVectorOnchainService {
       return Result.fail(new Error(`No provider exists for ${chainId}`));
     }
 
-    const proxyFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+    const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const proxyBytecode = await proxyFactory.proxyCreationCode();
+      const proxyBytecode = await factory.proxyCreationCode();
       return Result.ok(proxyBytecode);
     } catch (e) {
       return Result.fail(e);

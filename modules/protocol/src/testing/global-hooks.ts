@@ -1,4 +1,11 @@
-import { Wallet, providers, utils } from "ethers";
+import {
+  ChannelFactory,
+  LinkedTransfer,
+  ChannelMastercopy,
+  Withdraw,
+} from "@connext/vector-contracts";
+import { Wallet, providers, utils, ContractFactory } from "ethers";
+import { ContractAddresses, NetworkContext } from "@connext/vector-types";
 
 const { parseEther } = utils;
 

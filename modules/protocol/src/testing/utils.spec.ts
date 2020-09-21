@@ -1,5 +1,5 @@
 import { BigNumber, Contract, constants, ContractFactory } from "ethers";
-import { VectorChannel, TestToken } from "@connext/vector-contracts";
+import { ChannelMastercopy, TestToken } from "@connext/vector-contracts";
 import { JsonRpcProvider, Balance, CoreChannelState, IChannelSigner } from "@connext/vector-types";
 import { createTestChannelState, getRandomChannelSigner } from "@connext/vector-utils";
 import { expect } from "chai";
@@ -63,7 +63,7 @@ describe("utils", () => {
 
     beforeEach(async () => {
       // TODO replace this with a mock
-      channelContract = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, wallet).deploy();
+      channelContract = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, wallet).deploy();
       await channelContract.deployed();
       token = new Contract(env.chainAddresses[chainId].TestToken.address, TestToken.abi, wallet);
       state = createTestChannelState("setup", {

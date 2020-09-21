@@ -245,7 +245,7 @@ describe("applyUpdate", () => {
       ...coreState,
       transferState: transferInitialState,
       chainId: state.networkContext.chainId,
-      adjudicatorAddress: state.networkContext.adjudicatorAddress,
+      channelFactoryAddress: state.networkContext.channelFactoryAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     });
@@ -284,7 +284,11 @@ describe("generateUpdate", () => {
 
     // Deploy multisig
     // TODO: in channel deployment?
-    const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, wallet);
+    const factory = new Contract(
+      global["networkContext"].channelFactoryAddress,
+      ChannelFactory.abi,
+      global["wallet"].connect(provider),
+    );
     const created = new Promise((resolve) => {
       factory.once(factory.filters.ChannelCreation(), (data) => {
         resolve(data);
@@ -301,8 +305,7 @@ describe("generateUpdate", () => {
         counterpartyIdentifier: signers[1].publicIdentifier,
         networkContext: {
           channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-          vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
-          adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
+          channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
           linkedTransferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
           withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
           chainId,
@@ -457,7 +460,7 @@ describe("generateUpdate", () => {
       ...coreState,
       transferState: transferInitialState,
       chainId: state.networkContext.chainId,
-      adjudicatorAddress: state.networkContext.adjudicatorAddress,
+      channelFactoryAddress: state.networkContext.channelFactoryAddress,
       transferId: coreState.transferId,
       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     });

@@ -1,3 +1,4 @@
+import { ChannelFactory } from "@connext/vector-contracts";
 import {
   IVectorStore,
   UpdateParams,
@@ -229,7 +230,7 @@ export class Vector implements IVectorProtocol {
       params.counterpartyIdentifier,
       params.networkContext.chainId,
       params.networkContext.channelFactoryAddress,
-      params.networkContext.vectorChannelMastercopyAddress,
+      params.networkContext.channelMastercopyAddress,
       this.onchainService,
     );
     if (create2Res.isError) {
