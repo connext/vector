@@ -35,7 +35,7 @@ export function createTestUpdateParams<T extends UpdateType>(
   overrides: PartialUpdateParams<T>,
 ): UpdateParams<T> {
   const base = {
-    channelAddress: mkAddress("0xccc"),
+    channelAddress: overrides.channelAddress ?? mkAddress("0xccc"),
     type,
   };
 
@@ -46,6 +46,8 @@ export function createTestUpdateParams<T extends UpdateType>(
         counterpartyIdentifier: mkPublicIdentifier("0xbbb"),
         timeout: "1200",
         networkContext: {
+          chainId: 2,
+          providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xcha"),
           vectorChannelMastercopyAddress: mkAddress("0xcccaaa"),
           adjudicatorAddress: mkAddress("0xaaaddd"),
@@ -86,6 +88,7 @@ export function createTestUpdateParams<T extends UpdateType>(
     ...base,
     details: {
       ...details,
+      channelAddress: base.channelAddress,
       ...(detailOverrides ?? {}),
     },
     ...defaultOverrides,
