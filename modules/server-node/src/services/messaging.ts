@@ -1,6 +1,5 @@
 import {
   ChannelUpdate,
-  OutboundChannelUpdateError,
   InboundChannelUpdateError,
   IMessagingService,
   MessagingConfig,
@@ -18,48 +17,6 @@ export class NatsMessagingService implements IMessagingService {
     private readonly log: BaseLogger,
     private readonly getBearerToken: () => Promise<string>,
   ) {}
-  sendProtocolMessage(
-    channelUpdate: ChannelUpdate<any>,
-    previousUpdate?: ChannelUpdate<any>,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
-    throw new Error("Method not implemented.");
-  }
-  respondToProtocolMessage(
-    sentBy: string,
-    channelUpdate: ChannelUpdate<any>,
-    inbox: string,
-    previousUpdate?: ChannelUpdate<any>,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  respondWithProtocolError(
-    sender: string,
-    receiver: string,
-    inbox: string,
-    error: InboundChannelUpdateError,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  async onReceiveProtocolMessage(
-    myPublicIdentifier: string,
-    callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
-      from: string,
-      inbox: string,
-    ) => void,
-  ): Promise<void> {
-    this.assertConnected();
-    this.connection?.subscribe(`${myPublicIdentifier}.>`, (msg, err) => {
-      console.log("msg: ", msg);
-      const from = msg.subject.split(".")[1];
-      if (err) {
-        callback(Result.fail(new InboundChannelUpdateError(err, msg.data.update)), from, msg.reply);
-      }
-      callback(Result.ok({ update: msg.data.update, previousUpdate: msg.data.previousUpdate }), from, msg.reply);
-    });
-  }
 
   private isConnected(): boolean {
     return !!this.connection?.isConnected();
@@ -98,6 +55,98 @@ export class NatsMessagingService implements IMessagingService {
         await this.connect();
       });
     }
+  }
+
+  async sendProtocolMessage(
+    channelUpdate: ChannelUpdate<any>,
+    previousUpdate?: ChannelUpdate<any>,
+    timeout = 30_000,
+    numRetries = 0,
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
+    this.assertConnected();
+    try {
+      const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
+      console.log("subject: ", subject);
+      const msg = await this.connection?.request(
+        subject,
+        timeout,
+        JSON.stringify({
+          update: channelUpdate,
+          previousUpdate,
+        }),
+      );
+      console.log("response: ", msg);
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      parsedMsg.data = parsedData;
+      // TODO: validate message structure
+      return Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.update });
+    } catch (e) {
+      console.log("e: ", e);
+      return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.MessageFailed, {} as any));
+    }
+  }
+
+  async onReceiveProtocolMessage(
+    myPublicIdentifier: string,
+    callback: (
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    const subscriptionSubject = `${myPublicIdentifier}.>`;
+    console.log("subscriptionSubject: ", subscriptionSubject);
+    this.connection?.subscribe(subscriptionSubject, (msg, err) => {
+      console.log("msg: ", msg);
+      const from = msg.subject.split(".")[1];
+      if (err) {
+        callback(Result.fail(new InboundChannelUpdateError(err, msg.data.update)), from, msg.reply);
+      }
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      // TODO: validate msg structure
+      parsedMsg.data = parsedData;
+      callback(
+        Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.previousUpdate }),
+        from,
+        parsedMsg.reply,
+      );
+    });
+  }
+
+  async respondToProtocolMessage(
+    sentBy: string,
+    channelUpdate: ChannelUpdate<any>,
+    inbox: string,
+    previousUpdate?: ChannelUpdate<any>,
+  ): Promise<void> {
+    this.assertConnected();
+    await this.connection?.publish(
+      `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`,
+      JSON.stringify({
+        update: channelUpdate,
+        previousUpdate,
+      }),
+      inbox,
+    );
+  }
+
+  async respondWithProtocolError(
+    sender: string,
+    receiver: string,
+    inbox: string,
+    error: InboundChannelUpdateError,
+  ): Promise<void> {
+    this.assertConnected();
+    await this.connection?.publish(
+      `${sender}.${receiver}.protocol`,
+      JSON.stringify({
+        error,
+      }),
+      inbox,
+    );
   }
 
   public async onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
