@@ -74,7 +74,7 @@ export class MessagingAuthService {
       // },
     };
 
-    const jwt = this.vend(userIdentifier, nonceTTL, permissions);
+    const jwt = await this.vend(userIdentifier, nonceTTL, permissions);
     return jwt;
   }
 
