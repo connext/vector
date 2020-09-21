@@ -61,9 +61,11 @@ server.addHook("onReady", async () => {
     },
   );
   await messaging.connect();
+
+  const lock = await LockService.connect(config.redisUrl);
   vectorEngine = await VectorEngine.connect(
     messaging,
-    new LockService(config.redisUrl),
+    lock,
     store,
     signer,
     config.chainProviders,

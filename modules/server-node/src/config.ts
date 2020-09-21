@@ -46,7 +46,6 @@ try {
 } catch (e) {
   throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
 }
-console.log("contractAddresses: ", contractAddresses);
 
 if (!chainProviders) {
   throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
