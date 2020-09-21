@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IVectorChannel.sol";
-import "./lib/IERC20.sol";
+import "./interfaces/IERC20.sol";
 import "./Proxy.sol";
 
 

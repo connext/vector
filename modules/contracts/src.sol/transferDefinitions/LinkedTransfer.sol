@@ -3,7 +3,6 @@ pragma solidity ^0.7.1;
 pragma experimental "ABIEncoderV2";
 
 import "../interfaces/ITransferDefinition.sol";
-import "../lib/Types.sol";
 
 
 /// @title Linked Transfer

@@ -2,14 +2,15 @@
 
 pragma solidity ^0.7.1;
 
-import "./SafeMath.sol";
+import "./interfaces/IERC20.sol";
+import "./lib/SafeMath.sol";
 
 
 /* This token is only useful for testing
  * Anybody can mint as many tokens as they like
  * Anybody can burn anyone else's tokens
  */
-contract TestToken {
+contract TestToken is IERC20 {
     using SafeMath for uint256;
 
     mapping (address => uint256) private _balances;
@@ -19,9 +20,6 @@ contract TestToken {
     string private _name;
     string private _symbol;
     uint8 private _decimals;
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     constructor (string memory name, string memory symbol) {
         _name = name;
@@ -41,43 +39,43 @@ contract TestToken {
         return _decimals;
     }
 
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() public override view returns (uint256) {
         return _totalSupply;
     }
 
-    function balanceOf(address account) public view returns (uint256) {
+    function balanceOf(address account) public override view returns (uint256) {
         return _balances[account];
     }
 
-    function mint(address account, uint256 amount) public virtual returns (bool) {
+    function mint(address account, uint256 amount) public override virtual returns (bool) {
         _totalSupply = _totalSupply.add(amount);
         _balances[account] = _balances[account].add(amount);
         emit Transfer(address(0), account, amount);
         return true;
     }
 
-    function burn(address account, uint256 amount) public virtual returns (bool) {
+    function burn(address account, uint256 amount) public override virtual returns (bool) {
         _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
         _totalSupply = _totalSupply.sub(amount);
         emit Transfer(account, address(0), amount);
         return true;
     }
 
-    function transfer(address recipient, uint256 amount) public virtual returns (bool) {
+    function transfer(address recipient, uint256 amount) public override virtual returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
 
-    function allowance(address owner, address spender) public view virtual returns (uint256) {
+    function allowance(address owner, address spender) public override view virtual returns (uint256) {
         return _allowances[owner][spender];
     }
 
-    function approve(address spender, uint256 amount) public virtual returns (bool) {
+    function approve(address spender, uint256 amount) public override virtual returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public override virtual returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;

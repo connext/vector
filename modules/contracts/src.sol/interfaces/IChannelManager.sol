@@ -3,7 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./IVectorChannel.sol";
-import "../lib/Types.sol";
+import "./Types.sol";
 
 
 interface IChannelManager {

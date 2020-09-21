@@ -4,7 +4,6 @@ pragma experimental "ABIEncoderV2";
 
 import "../interfaces/ITransferDefinition.sol";
 import "../lib/LibChannelCrypto.sol";
-import "../lib/Types.sol";
 
 
 /// @title Withdraw
