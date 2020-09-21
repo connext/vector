@@ -35,6 +35,7 @@ import {
   stringify,
   PartialFullChannelState,
   PartialChannelUpdate,
+  createTestFullLinkedTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { BigNumber, BigNumberish, constants, Contract, utils } from "ethers";
@@ -46,7 +47,7 @@ import { applyUpdate, generateUpdate } from "../update";
 import { MockOnchainService } from "./services/onchain";
 import { MemoryStoreService } from "./services/store";
 import { env } from "./utils";
-import { createTestFullLinkedTransferState } from "./utils/channel";
+// import { createTestFullLinkedTransferState } from "./utils/channel";
 
 const { hexlify, randomBytes } = utils;
 
@@ -61,7 +62,7 @@ type ApplyUpdateTestParams = {
   error?: Values<typeof InboundChannelUpdateError.reasons>;
 };
 
-describe("applyUpdate", () => {
+describe.only("applyUpdate", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
   const signers = Array(2)
@@ -369,6 +370,7 @@ describe("applyUpdate", () => {
           merkleRoot: mkHash(),
         };
       }
+      // Make sure update has correct transfer details
       const update = createTestChannelUpdateWithSigners(signers, updateType, {
         ...overrides,
         ...updateOverrides,
