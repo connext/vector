@@ -1,15 +1,11 @@
-import { Address, Network } from "./basic";
+import { Address } from "./basic";
 import { BalanceEncoding } from "./contracts";
 import {
-  LinkedTransferResolver,
-  LinkedTransferState,
   TransferName,
   TransferResolver,
   TransferResolverMap,
   TransferState,
   TransferStateMap,
-  WithdrawResolver,
-  WithdrawState,
 } from "./transferDefinitions";
 import { tidy } from "./utils";
 
@@ -71,7 +67,6 @@ export type UpdateParams<T extends UpdateType> = {
   details: UpdateParamsMap[T];
 };
 
-// TODO update this in contracts
 export type Balance = {
   amount: string[];
   to: Address[];

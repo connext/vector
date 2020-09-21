@@ -9,10 +9,12 @@ import {
   VectorChannelMessage,
   VectorErrorMessage,
   FullTransferState,
+  IVectorOnchainService,
+  Result,
 } from "@connext/vector-types";
 import { TransferDefinition } from "@connext/vector-contracts";
-import { Signer, utils } from "ethers";
-import { hashChannelCommitment, stringify } from "@connext/vector-utils";
+import { BigNumber, Signer, utils } from "ethers";
+import { hashChannelCommitment } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -93,9 +95,7 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
-  console.log(stringify({ ...unsigned, signatures: [] }))
   const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
-  console.log("4.10.2")
   const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
   return {
     ...unsigned,
@@ -111,7 +111,6 @@ export const create = async (
 ): Promise<boolean> => {
   const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
   const contract = new Contract(transfer.transferId, TransferDefinition.abi, signer);
-  // TODO: use pure-evm
   if (bytecode) {
     try {
       const data = contract.interface.encodeFunctionData("create", [encodedState]);
@@ -153,4 +152,45 @@ export const resolve = async (
     to: ret.to,
     amount: ret.amount.map((a) => a.toString()),
   };
+};
+
+export const reconcileDeposit = async (
+  channelAddress: string,
+  chainId: number,
+  initialBalance: Balance,
+  latestDepositNonce: number,
+  lockedBalance: string,
+  assetId: string,
+  onchainService: IVectorOnchainService,
+): Promise<Result<{ balance: Balance; latestDepositNonce: number }, Error>> => {
+  const balanceRes = await onchainService.getChannelOnchainBalance(channelAddress, chainId, assetId);
+  if (balanceRes.isError) {
+    return Result.fail(balanceRes.getError()!);
+  }
+  const onchainBalance = balanceRes.getValue();
+
+  const latestDepositARes = await onchainService.getLatestDepositByAssetId(
+    channelAddress,
+    chainId,
+    assetId,
+    latestDepositNonce,
+  );
+  if (latestDepositARes.isError) {
+    return Result.fail(latestDepositARes.getError()!);
+  }
+  const latestDepositA = latestDepositARes.getValue();
+
+  const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
+    ? latestDepositA.amount.add(initialBalance.amount[0])
+    : BigNumber.from(initialBalance.amount[0]);
+
+  const balance = {
+    ...initialBalance,
+    amount: [balanceA.toString(), BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
+  };
+
+  return Result.ok({
+    balance,
+    latestDepositNonce: latestDepositA.nonce.toNumber(),
+  });
 };

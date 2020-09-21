@@ -54,7 +54,6 @@ export function createTestUpdateParams<T extends UpdateType>(
     case UpdateType.deposit:
       details = {
         channelAddress: base.channelAddress,
-        amount: "10",
         assetId: mkAddress(),
       };
       break;
@@ -198,7 +197,6 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     lockedBalance: ["1", "2"],
     channelAddress,
     latestDepositNonce: 1,
-    // TODO: wtf typescript? why do i have to any cast this
     latestUpdate: createTestChannelUpdate(type, {
       channelAddress,
       fromIdentifier: publicIdentifiers[0],

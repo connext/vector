@@ -48,7 +48,14 @@ export class MemoryStoreService implements IVectorStore {
     commitment: ChannelCommitmentData,
     transfer?: FullTransferState,
   ): Promise<void> {
-    this.channelStates.set(channelState.channelAddress, { state: channelState, commitment });
+    const existing = this.channelStates.get(channelState.channelAddress)?.state ?? channelState;
+    this.channelStates.set(channelState.channelAddress, { state: {
+      ...channelState,
+      channelAddress: existing.channelAddress,
+      publicIdentifiers: existing.publicIdentifiers,
+      participants: existing.participants,
+      networkContext: existing.networkContext,
+    }, commitment });
     if (!transfer) {
       return Promise.resolve();
     }

@@ -26,6 +26,7 @@ import { constants } from "ethers";
 import { expect } from "chai";
 import { Evt } from "evt";
 import { MerkleTree } from "merkletreejs";
+import pino from "pino";
 
 import { inbound, outbound } from "../sync";
 
@@ -39,6 +40,9 @@ describe("inbound", () => {
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
   const stateEvt = new Evt<FullChannelState>();
   const errorEvt = new Evt<ChannelUpdateError>();
+  const logger = pino().child({
+    testName: "inbound",
+  });
 
   let signers: ChannelSigner[];
   let store: IVectorStore;
@@ -54,14 +58,14 @@ describe("inbound", () => {
 
   it("should return undefined if message is from us", async () => {
     const message = createVectorChannelMessage({ from: signers[0].publicIdentifier });
-    const res = await inbound(message, store, messaging, signers[0], chainProviders, stateEvt, errorEvt);
+    const res = await inbound(message, store, messaging, signers[0], stateEvt, errorEvt, logger);
     expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.undefined;
   });
 
   it("should return undefined if message is malformed", async () => {
     const message = { should: "fail" } as any;
-    const res = await inbound(message, store, messaging, signers[0], chainProviders, stateEvt, errorEvt);
+    const res = await inbound(message, store, messaging, signers[0], stateEvt, errorEvt, logger);
     expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.undefined;
   });
@@ -70,7 +74,7 @@ describe("inbound", () => {
     const message = createVectorErrorMessage();
     const [event, res] = await Promise.all([
       errorEvt.waitFor((e) => e.message === message.error.message, 5_000),
-      inbound(message, store, messaging, signers[0], chainProviders, stateEvt, errorEvt),
+      inbound(message, store, messaging, signers[0], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.true;
     expect(event).to.be.instanceOf(ChannelUpdateError);
@@ -96,7 +100,7 @@ describe("inbound", () => {
         messaging.subscribe(signers[0].publicIdentifier, res);
         delay(5_000).then(rej);
       }),
-      inbound(message, store, messaging, signers[1], chainProviders, stateEvt, errorEvt),
+      inbound(message, store, messaging, signers[1], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.false;
 
@@ -128,7 +132,7 @@ describe("inbound", () => {
     // Call `inbound`
     const [event, res] = await Promise.all([
       errorEvt.waitFor(5_000),
-      inbound(message, store, messaging, signers[1], chainProviders, stateEvt, errorEvt),
+      inbound(message, store, messaging, signers[1], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.true;
 
@@ -182,7 +186,7 @@ describe("inbound", () => {
     // Call `inbound`
     const [event, res] = await Promise.all([
       stateEvt.waitFor((e) => e.nonce === update.nonce),
-      inbound(message, store, messaging, signers[1], chainProviders, stateEvt, errorEvt),
+      inbound(message, store, messaging, signers[1], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.false;
 
@@ -218,7 +222,7 @@ describe("inbound", () => {
     // Call `inbound`
     const [event, res] = await Promise.all([
       stateEvt.waitFor((e) => e.nonce === update.nonce),
-      inbound(message, store, messaging, signers[1], chainProviders, stateEvt, errorEvt),
+      inbound(message, store, messaging, signers[1], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.false;
 
@@ -262,9 +266,7 @@ describe("outbound", () => {
     const error = new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update);
 
     const res = (await new Promise((resolve, reject) => {
-      outbound(update, channel, store, messaging, signers[0], chainProviders, stateEvt, errorEvt)
-        .then(resolve)
-        .catch(reject);
+      outbound(update, channel, store, messaging, signers[0], stateEvt, errorEvt).then(resolve).catch(reject);
 
       // First post error. use timeout to allow listeners to register
       setTimeout(() => {
@@ -288,7 +290,7 @@ describe("outbound", () => {
 
     // Send `outbound` call with deposit update and post to the error evt
     const res = (await new Promise((resolve, reject) => {
-      outbound(depositUpdate, staleChannel, store, messaging, signers[0], chainProviders, stateEvt, errorEvt)
+      outbound(depositUpdate, staleChannel, store, messaging, signers[0], stateEvt, errorEvt)
         .then(resolve)
         .catch(reject);
 
@@ -320,9 +322,7 @@ describe("outbound", () => {
 
     // Send `outbound` call with deposit update and post to the error evt
     const res = (await new Promise((resolve, reject) => {
-      outbound(update, channel, store, messaging, signers[0], chainProviders, stateEvt, errorEvt)
-        .then(resolve)
-        .catch(reject);
+      outbound(update, channel, store, messaging, signers[0], stateEvt, errorEvt).then(resolve).catch(reject);
 
       // Then, post state evt with proper state for updating
       setTimeout(() => stateEvt.post({ ...channel, latestUpdate: update, nonce: 3 }), 5000);

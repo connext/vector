@@ -1,4 +1,4 @@
-import { BigNumberish, providers } from "ethers";
+import { BigNumber, BigNumberish, providers } from "ethers";
 
 import { Address, HexString } from "./basic";
 import { FullChannelState } from "./channel";
@@ -59,4 +59,15 @@ export interface IVectorTransactionService {
     channelState: FullChannelState,
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, OnchainTransactionError>>;
+}
+
+export interface IVectorOnchainService {
+  getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+  getLatestDepositByAssetId(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+    latestDepositNonce: number,
+  ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, Error>>;
+  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
 }

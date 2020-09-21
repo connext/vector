@@ -3,6 +3,8 @@ import {
   LinkedTransferState,
   TransferState,
   CoreTransferState,
+  FullTransferState,
+  TransferName,
 } from "@connext/vector-types";
 
 import { mkAddress, mkHash, mkBytes32 } from "./util";
@@ -35,8 +37,7 @@ export const createTestLinkedTransferStates = (
     });
 };
 
-export function createCoreTransferState(overrides: Partial<CoreTransferState> = {}): CoreTransferState {
-  // TODO: make dependent on transfer def/name
+export const createCoreTransferState = (overrides: Partial<CoreTransferState> = {}): CoreTransferState => {
   return {
     initialBalance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
     assetId: mkAddress(),
@@ -47,4 +48,24 @@ export function createCoreTransferState(overrides: Partial<CoreTransferState> = 
     transferTimeout: "1",
     ...overrides,
   };
-}
+};
+
+// export const createFullTransferState = <T extends TransferName = any>(type: TransferName): FullTransferState<T> => {
+//   let transferState;
+//   switch (type) {
+//     case "LinkedTransfer":
+//       transferState = createTestLinkedTransferState();
+//       break;
+//     case "Withdraw":
+//       break;
+//   }
+//   return {
+//     adjudicatorAddress: mkAddress("0xaaaddd"),
+//     chainId,
+//     transferEncodings,
+//     transferState,
+//     transferResolver,
+//     meta,
+//     ...createCoreTransferState(),
+//   };
+// };

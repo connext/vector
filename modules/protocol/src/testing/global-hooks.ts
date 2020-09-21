@@ -31,14 +31,7 @@ async function globalSetup(): Promise<void> {
   await fundAddress(addresses[1], ethProvider);
   await fundAddress(addresses[2], ethProvider);
   await fundAddress(fundedAccount.address, ethProvider);
-  const contractAddresses = await deployArtifactsToChain(fundedAccount);
-  const context: NetworkContext = {
-    ...contractAddresses,
-    providerUrl,
-    chainId: parseInt(chainIdString),
-  };
   global["wallet"] = fundedAccount;
-  global["networkContext"] = { ...context };
 }
 
 export const mochaHooks = {
@@ -46,25 +39,4 @@ export const mochaHooks = {
   async beforeAll() {
     await globalSetup();
   },
-};
-
-const deployArtifactsToChain = async (wallet: Wallet): Promise<ContractAddresses> => {
-  // Deploy core contracts
-  const vectorChannelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, wallet).deploy();
-
-  const channelManager = await new ContractFactory(ChannelManager.abi, ChannelManager.bytecode, wallet).deploy(
-    vectorChannelMastercopy.address,
-  );
-
-  // Deploy app contracts
-  const linkedTransfer = await new ContractFactory(LinkedTransfer.abi, LinkedTransfer.bytecode, wallet).deploy();
-
-  const withdraw = await new ContractFactory(Withdraw.abi, Withdraw.bytecode, wallet).deploy();
-
-  return {
-    channelManagerAddress: channelManager.address,
-    vectorChannelMastercopyAddress: vectorChannelMastercopy.address,
-    linkedTransferDefinition: linkedTransfer.address,
-    withdrawDefinition: withdraw.address,
-  };
 };

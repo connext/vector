@@ -8,7 +8,6 @@ import {
   ResolveTransferParams,
   ILockService,
   IMessagingService,
-  ChainProviders,
   IChannelSigner,
   FullChannelState,
   ChannelUpdateEvent,
@@ -19,14 +18,14 @@ import {
   ChannelUpdateError,
   VectorMessage,
   SetupParams,
+  FullTransferState,
+  IVectorOnchainService,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier, getCreate2MultisigAddress } from "@connext/vector-utils";
 import Ajv from "ajv";
-import { providers } from "ethers";
 import { Evt } from "evt";
 import pino from "pino";
 
-import { getCreate2MultisigAddress } from "./create2";
 import * as sync from "./sync";
 import { CreateParamsSchema, DepositParamsSchema, ResolveParamsSchema, SetupParamsSchema } from "./types";
 import { generateUpdate } from "./update";
@@ -42,31 +41,25 @@ export class Vector implements IVectorProtocol {
     [ProtocolEventName.PROTOCOL_MESSAGE_EVENT]: Evt.create<FullChannelState>(),
   };
 
-  private chainProviders: Map<number, providers.JsonRpcProvider> = new Map<number, providers.JsonRpcProvider>();
-
   // make it private so the only way to create the class is to use `connect`
   private constructor(
     private readonly messagingService: IMessagingService,
     private readonly lockService: ILockService,
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
-    private readonly chainProviderUrls: ChainProviders,
+    private readonly onchainService: IVectorOnchainService,
     private readonly logger: pino.BaseLogger,
-  ) {
-    Object.entries(chainProviderUrls).forEach(([chainId, providerUrl]) => {
-      this.chainProviders.set(parseInt(chainId), new providers.JsonRpcProvider(providerUrl));
-    });
-  }
+  ) {}
 
   static async connect(
     messagingService: IMessagingService,
     lockService: ILockService,
     storeService: IVectorStore,
     signer: IChannelSigner,
-    chainProviders: ChainProviders,
+    onchainService: IVectorOnchainService,
     logger: pino.BaseLogger,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer, chainProviders, logger);
+    const node = new Vector(messagingService, lockService, storeService, signer, onchainService, logger);
 
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
@@ -86,7 +79,16 @@ export class Vector implements IVectorProtocol {
   // separate out this function so that we can atomically return and release the lock
   private async lockedOperation(params: UpdateParams<any>): Promise<Result<FullChannelState, ChannelUpdateError>> {
     const state = await this.storeService.getChannelState(params.channelAddress);
-    const updateRes = await generateUpdate(params, state, this.storeService, this.signer, this.logger);
+
+    // Generate the update
+    const updateRes = await generateUpdate(
+      params,
+      state,
+      this.storeService,
+      this.onchainService,
+      this.signer,
+      this.logger,
+    );
     if (updateRes.isError) {
       this.logger.error({ method: "lockedOperation", variable: "updateRes", error: updateRes.getError()?.message });
       return Result.fail(updateRes.getError()!);
@@ -97,7 +99,6 @@ export class Vector implements IVectorProtocol {
       this.storeService,
       this.messagingService,
       this.signer,
-      this.chainProviderUrls,
       this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
       this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
       this.logger,
@@ -135,7 +136,6 @@ export class Vector implements IVectorProtocol {
         this.storeService,
         this.messagingService,
         this.signer,
-        this.chainProviderUrls,
         this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
         this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
         this.logger,
@@ -166,7 +166,6 @@ export class Vector implements IVectorProtocol {
                 this.storeService,
                 this.messagingService,
                 this.signer,
-                this.chainProviderUrls,
                 this.evts[ProtocolEventName.PROTOCOL_MESSAGE_EVENT],
                 this.evts[ProtocolEventName.PROTOCOL_ERROR_EVENT],
                 this.logger,
@@ -214,17 +213,6 @@ export class Vector implements IVectorProtocol {
       return Result.fail(error);
     }
 
-    // Should have chainprovider for this channel
-    if (!this.chainProviders.has(params.networkContext.chainId)) {
-      const error = `No chain provider for chainId ${params.networkContext.chainId}`;
-      this.logger.error({ method: "setup", params, error });
-      return Result.fail(
-        new ChannelUpdateError(ChannelUpdateError.reasons.InvalidParams, undefined, undefined, {
-          error,
-        }),
-      );
-    }
-
     // TODO: move to within lock!
     const existing = await this.storeService.getChannelStateByParticipants(
       this.signerAddress,
@@ -251,10 +239,11 @@ export class Vector implements IVectorProtocol {
       this.logger.error({ method: "setup", step: "getCreate2MultisigAddress", error: e.message, stack: e.stack });
       return Result.fail(
         new ChannelUpdateError(ChannelUpdateError.reasons.Create2Failed, undefined, undefined, {
-          error: e.message,
+          error: create2Res.getError()!.message,
         }),
       );
     }
+    const channelAddress = create2Res.getValue();
 
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"setup"> = {
@@ -273,12 +262,6 @@ export class Vector implements IVectorProtocol {
     if (error) {
       return Result.fail(error);
     }
-
-    // Make sure the amount declared has in fact been deposited
-    // onchain
-    // TODO: is there a good way to validate ^^? The total in channel +
-    // the amount locked + `amount` == `params.amount`? What if a user and
-    // a node deposited simultaneously, how is that handled onchain?
 
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"deposit"> = {
@@ -324,8 +307,14 @@ export class Vector implements IVectorProtocol {
     return this.executeUpdate(updateParams);
   }
 
+  ///////////////////////////////////
+  // STORE METHODS
   public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     return this.storeService.getChannelState(channelAddress);
+  }
+
+  public async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
+    return this.storeService.getTransferState(transferId);
   }
 
   ///////////////////////////////////

@@ -170,7 +170,7 @@ contract Adjudicator is IAdjudicator {
 
             transfer.amount[0] = balance.amount[0];
 
-            if (latestDeposit.nonce < ccs.latestDepositNonce) {
+            if (latestDeposit.nonce > ccs.latestDepositNonce) {
                 transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
             }
 

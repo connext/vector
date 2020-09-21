@@ -1,11 +1,11 @@
-import { LinkedTransfer, VectorChannel } from "@connext/vector-contracts";
+import { LinkedTransfer } from "@connext/vector-contracts";
 import {
   getSignerAddressFromPublicIdentifier,
   hashCoreTransferState,
   hashTransferState,
   getTransferId,
 } from "@connext/vector-utils";
-import { Contract, BigNumber, constants } from "ethers";
+import { BigNumber, constants, utils } from "ethers";
 import {
   UpdateType,
   ChannelUpdate,
@@ -18,11 +18,12 @@ import {
   ChannelUpdateError,
   Result,
   FullTransferState,
+  IVectorOnchainService
 } from "@connext/vector-types";
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
 
-import { generateSignedChannelCommitment, resolve } from "./utils";
+import { generateSignedChannelCommitment, reconcileDeposit, resolve } from "./utils";
 import { validateParams } from "./validate";
 
 // Should return a state with the given update applied
@@ -135,6 +136,7 @@ export async function generateUpdate<T extends UpdateType>(
   params: UpdateParams<T>,
   state: FullChannelState | undefined,
   storeService: IVectorStore,
+  onchainService: IVectorOnchainService,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<Result<ChannelUpdate<T>, ChannelUpdateError>> {
@@ -152,7 +154,7 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer);
+      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer, onchainService);
       break;
     }
     case UpdateType.create: {
@@ -235,6 +237,7 @@ async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
   signer: IChannelSigner,
+  onchainService: IVectorOnchainService,
 ): Promise<ChannelUpdate<"deposit">> {
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
@@ -244,36 +247,33 @@ async function generateDepositUpdate(
   // - latestDepositNonce
   // while the remaining fields are consistent
 
-  const { channelAddress } = state;
-
   // Initiating a deposit update should happen *after* money is
   // sent to the multisig. This means that the `latestDepositByAssetId`
   // will include the latest nonce needed
 
-  // TODO: PROPERLY CALCULATE DEPOSIT AMOUNT FROM CHAIN!!!
-
-  // Determine the latest deposit nonce from chain using
-  // the provided assetId from the params
-  const multisig = new Contract(channelAddress, VectorChannel.abi, signer.provider);
-  let deposit: { amount: string; nonce: string } | undefined;
-  try {
-    deposit = await multisig.latestDepositByAssetId(params.details.assetId);
-  } catch (e) {}
-  const latestDepositNonce = parseInt(deposit?.nonce.toString() ?? "0");
-
-  const depositBalance = {
-    to: state.participants,
-    amount:
-      signer.address === state.participants[0]
-        ? [deposit?.amount.toString() ?? "0", "0"]
-        : ["0", deposit?.amount.toString() ?? "0"],
-  };
-  const balance = getUpdatedChannelBalance(UpdateType.deposit, params.details.assetId, depositBalance, state);
+  // Determine the locked value and existing balance using the
+  // assetIdx
+  const { assetId } = params.details;
+  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  const existingLockedBalance = assetIdx === -1 ? "0" : state.lockedBalance[assetIdx] ?? "0";
+  const existingChannelBalance =
+    assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.balances[assetIdx];
+  const { balance, latestDepositNonce } = (
+    await reconcileDeposit(
+      state.channelAddress,
+      state.networkContext.chainId,
+      existingChannelBalance,
+      state.latestDepositNonce,
+      existingLockedBalance,
+      assetId,
+      onchainService,
+    )
+  ).getValue();
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
     balance,
-    assetId: params.details.assetId,
+    assetId,
     details: { latestDepositNonce },
     signatures: [],
   };
@@ -288,7 +288,7 @@ async function generateCreateUpdate(
   transfers: CoreTransferState[],
 ): Promise<ChannelUpdate<"create">> {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -314,14 +314,14 @@ async function generateCreateUpdate(
     chainId: state.networkContext.chainId,
   };
   const transferHash = hashCoreTransferState(transferState);
-  const hashes: Buffer[] = [...transfers, transferState].map((state) => {
-    const hash = hashCoreTransferState(state);
-    return Buffer.from(hash);
+  const hashes = [...transfers, transferState].map((state) => {
+    return hashCoreTransferState(state);
   });
-  const merkle = new MerkleTree(hashes, hashCoreTransferState);
+  const merkle = new MerkleTree(hashes, utils.keccak256);
 
   // Create the update from the user provided params
   const balance = getUpdatedChannelBalance(UpdateType.create, assetId, transferInitialState.balance, state);
+  const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
@@ -333,7 +333,8 @@ async function generateCreateUpdate(
       transferInitialState,
       transferEncodings: encodings,
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
-      merkleRoot: merkle.getHexRoot(),
+      merkleRoot: root === "0x" ? constants.HashZero : root,
+      meta,
     },
     signatures: [],
   };
@@ -360,11 +361,10 @@ async function generateResolveUpdate(
   if (!transferState) {
     throw new Error(`Could not find transfer for id ${params.details.transferId}`);
   }
-  const hashes: Buffer[] = transfers
+  const hashes = transfers
     .filter((x) => x.transferId !== params.details.transferId)
     .map((state) => {
-      const hash = hashCoreTransferState(state);
-      return Buffer.from(hash);
+      return hashCoreTransferState(state);
     });
   const merkle = new MerkleTree(hashes, hashCoreTransferState);
 
@@ -380,6 +380,7 @@ async function generateResolveUpdate(
   const balance = getUpdatedChannelBalance(UpdateType.resolve, transferState.assetId, transferBalance, state);
 
   // Generate the unsigned update from the params
+  const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
@@ -389,16 +390,13 @@ async function generateResolveUpdate(
       transferDefinition: transferState.transferDefinition,
       transferResolver: params.details.transferResolver,
       transferEncodings: transferState.transferEncodings,
-      merkleRoot: merkle.getHexRoot(),
+      merkleRoot: root === "0x" ? constants.HashZero : root,
     },
     signatures: [],
   };
 
   return unsigned;
 }
-
-// TODO: signature assertion helpers for commitment data
-// and for updates
 
 // Holds the logic that is the same between all update types:
 // - increasing channel nonce
@@ -425,14 +423,14 @@ function generateBaseUpdate<T extends UpdateType>(
 }
 
 function getUpdatedChannelBalance(
-  type: typeof UpdateType.create | typeof UpdateType.resolve | typeof UpdateType.deposit,
+  type: typeof UpdateType.create | typeof UpdateType.resolve,
   assetId: string,
   balanceToReconcile: Balance,
   state: FullChannelState,
 ): Balance {
   // Get the existing balances to update
   const assetIdx = state.assetIds.findIndex((a) => a === assetId);
-  if (assetIdx === -1 && type !== UpdateType.deposit) {
+  if (assetIdx === -1) {
     throw new Error(`Asset id not found in channel ${assetId}`);
   }
   const existing = state.balances[assetIdx] || { to: state.participants, amount: ["0", "0"] };

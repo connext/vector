@@ -1,5 +1,5 @@
 import { Balance } from "@connext/vector-types";
-import { createTestChannelState } from "@connext/vector-utils";
+import { createCoreTransferState, createTestChannelState } from "@connext/vector-utils";
 
 import { expect } from "../test/utils/assert";
 import { config } from "../config";
@@ -23,7 +23,6 @@ describe("store", () => {
     await store.disconnect();
   });
 
-  // TODO: unskip once it works
   it("should save and retrieve all update types and keep updating the channel", async () => {
     const setupState = createTestChannelState("setup");
     await store.saveChannelState(setupState, {
@@ -76,5 +75,21 @@ describe("store", () => {
 
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(resolveState);
+  });
+
+  it("should create and resolve a transfer and pull transfer by ID", async () => {
+    const createState = createTestChannelState("create");
+    const transfer = createCoreTransferState({ channelAddress: createState.channelAddress });
+
+    await store.saveChannelState(
+      createState,
+      {
+        adjudicatorAddress: createState.networkContext.adjudicatorAddress,
+        chainId: createState.networkContext.chainId,
+        signatures: createState.latestUpdate.signatures,
+        state: createState,
+      },
+      transfer,
+    );
   });
 });

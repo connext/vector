@@ -3,7 +3,6 @@ import {
   IVectorStore,
   UpdateType,
   IMessagingService,
-  ChainProviders,
   SetupUpdateDetails,
   FullChannelState,
   IChannelSigner,
@@ -35,7 +34,6 @@ export async function outbound(
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
-  chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
   logger: pino.BaseLogger = pino(),
@@ -145,12 +143,7 @@ export async function outbound(
   }
 
   // Apply the update, and retry the update
-  const mergeRes = await mergeUpdate(
-    channelError.state.latestUpdate,
-    storedChannel!,
-    storeService,
-    chainProviders[storedChannel!.networkContext.chainId],
-  );
+  const mergeRes = await mergeUpdate(channelError.state.latestUpdate, storedChannel!, storeService);
   if (mergeRes.isError) {
     return Result.fail(
       new ChannelUpdateError(
@@ -188,10 +181,9 @@ export async function inbound(
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
-  chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-  logger: pino.BaseLogger = pino(),
+  logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState | undefined, ChannelUpdateError>> {
   // If the message is from us, ignore
   if (message.from === signer.publicIdentifier) {
@@ -206,7 +198,6 @@ export async function inbound(
       storeService,
       messagingService,
       signer,
-      chainProviders,
       stateEvt,
       errorEvt,
       logger,
@@ -231,10 +222,9 @@ async function processChannelMessage(
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
-  chainProviders: ChainProviders,
   stateEvt: Evt<FullChannelState>,
   errorEvt: Evt<ChannelUpdateError>,
-  logger: pino.BaseLogger = pino(),
+  logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState, ChannelUpdateError>> {
   const { from, data } = message;
   const requestedUpdate = data.update as ChannelUpdate<any>;
@@ -283,8 +273,6 @@ async function processChannelMessage(
       latestDepositNonce: 0,
     };
   }
-
-  const providerUrl = chainProviders[storedState.networkContext.chainId];
 
   // Assume that our stored state has nonce `k`, and the update
   // has nonce `n`, and `k` is the latest double signed state for you. The
@@ -373,7 +361,7 @@ async function processChannelMessage(
       );
       return Result.fail(error);
     }
-    const mergeRes = await mergeUpdate(counterpartyLatestUpdate, storedState, storeService, providerUrl);
+    const mergeRes = await mergeUpdate(counterpartyLatestUpdate, storedState, storeService);
     if (mergeRes.isError) {
       const error = await handleError(
         new ChannelUpdateError(ChannelUpdateError.reasons.ApplyUpdateFailed, counterpartyLatestUpdate, storedState, {
@@ -389,7 +377,7 @@ async function processChannelMessage(
 
   // We now have the latest state for the update, and should be
   // able to play it on top of the update
-  const mergeRes = await mergeUpdate(requestedUpdate, previousState, storeService, providerUrl);
+  const mergeRes = await mergeUpdate(requestedUpdate, previousState, storeService);
   if (mergeRes.isError) {
     const error = await handleError(
       new ChannelUpdateError(ChannelUpdateError.reasons.ApplyUpdateFailed, requestedUpdate, previousState, {
@@ -449,9 +437,8 @@ const mergeUpdate = async (
   update: ChannelUpdate<any>,
   state: FullChannelState,
   storeService: IVectorStore,
-  providerUrl: string,
 ): Promise<Result<FullChannelState, ChannelUpdateError>> => {
-  await validateUpdate(update, state, storeService, providerUrl);
+  await validateUpdate(update, state, storeService);
   const result = await applyUpdate(update, state, storeService);
   return result;
 };
