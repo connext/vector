@@ -142,7 +142,7 @@ contract ChannelManager is IChannelManager {
         //      channelDispute(state.channelAddress) = dispute;
         // }
 
-        address channelAddress = getChannelAddress(ccs);
+        address channelAddress = getChannelAddress(ccs.participants[0], ccs.participants[1]);
         ChannelDispute storage dispute = channelDispute[channelAddress];
 
         verifySignatures(ccs.participants, ccs, signatures);
@@ -213,7 +213,7 @@ contract ChannelManager is IChannelManager {
         //      channel.transfer([aBalance, bBalance], assetIds[i]);
         //  }
 
-        address channelAddress = getChannelAddress(ccs);
+        address channelAddress = getChannelAddress(ccs.participants[0], ccs.participants[1]);
         ChannelDispute storage dispute = channelDispute[channelAddress];
 
         require(
