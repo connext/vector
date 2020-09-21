@@ -2,10 +2,10 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./shared/LibCommitment.sol";
-import "./shared/LibChannelCrypto.sol";
 import "./interfaces/IVectorChannel.sol";
-import "./shared/IERC20.sol";
+import "./lib/IERC20.sol";
+import "./lib/LibChannelCrypto.sol";
+import "./lib/LibCommitment.sol";
 
 
 /// @title Vector Channel

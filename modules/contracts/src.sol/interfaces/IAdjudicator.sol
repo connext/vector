@@ -2,7 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./Types.sol";
+import "../lib/Types.sol";
 
 
 interface IAdjudicator {

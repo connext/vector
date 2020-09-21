@@ -5,9 +5,9 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./interfaces/ITransferDefinition.sol";
-import "./shared/LibChannelCrypto.sol";
-import "./shared/MerkleProof.sol";
-import "./shared/SafeMath.sol";
+import "./lib/LibChannelCrypto.sol";
+import "./lib/MerkleProof.sol";
+import "./lib/SafeMath.sol";
 
 contract Adjudicator is IAdjudicator {
 
@@ -376,7 +376,7 @@ contract Adjudicator is IAdjudicator {
 
     function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
         // TODO
-        return 0;
+        return sha256(abi.encode(cts));
     }
 
 }

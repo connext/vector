@@ -4,8 +4,8 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IVectorChannel.sol";
+import "./lib/IERC20.sol";
 import "./Proxy.sol";
-import "./shared/IERC20.sol";
 
 
 /// @title Channel Factory - Allows us to create new channel proxy contract

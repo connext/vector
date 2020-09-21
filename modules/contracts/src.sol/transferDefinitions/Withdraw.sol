@@ -2,15 +2,16 @@
 pragma solidity ^0.7.1;
 pragma experimental "ABIEncoderV2";
 
-import "../interfaces/TransferDefinition.sol";
-import "../interfaces/Types.sol";
-import "../shared/LibChannelCrypto.sol";
+import "../interfaces/ITransferDefinition.sol";
+import "../lib/LibChannelCrypto.sol";
+import "../lib/Types.sol";
+
 
 /// @title Withdraw
 /// @notice This contract burns the initiator's funds if a mutually signed
 ///         withdraw commitment can be generated
 
-contract Withdraw is TransferDefinition {
+contract Withdraw is ITransferDefinition {
     using LibChannelCrypto for bytes32;
 
     struct TransferState {
@@ -27,9 +28,9 @@ contract Withdraw is TransferDefinition {
     }
 
     function create(bytes calldata encodedState)
-        override
         external
-        view
+        override
+        pure
         returns (bool)
     {
         TransferState memory state = abi.decode(encodedState, (TransferState));
@@ -45,9 +46,9 @@ contract Withdraw is TransferDefinition {
     }
 
     function resolve(bytes calldata encodedState, bytes calldata encodedResolver)
-        override
         external
-        view
+        override
+        pure
         returns (Balance memory)
     {
         TransferState memory state = abi.decode(encodedState, (TransferState));
@@ -56,7 +57,7 @@ contract Withdraw is TransferDefinition {
         require(state.signers[0] == state.data.verifyChannelMessage(state.initiatorSignature), "invalid withdrawer signature");
 
         // Allow for a withdrawal to be canceled if an incorrect signature is passed in
-        if(state.signers[1] == state.data.verifyChannelMessage(resolver.responderSignature)) {
+        if (state.signers[1] == state.data.verifyChannelMessage(resolver.responderSignature)) {
 
             // Reduce withdraw amount by optional fee -- note that it's up to the offchain validators to ensure
             // That the withdraw commitment takes this fee into account

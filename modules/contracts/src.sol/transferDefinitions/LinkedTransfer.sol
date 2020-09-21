@@ -2,14 +2,15 @@
 pragma solidity ^0.7.1;
 pragma experimental "ABIEncoderV2";
 
-import "../interfaces/TransferDefinition.sol";
-import "../interfaces/Types.sol";
+import "../interfaces/ITransferDefinition.sol";
+import "../lib/Types.sol";
+
 
 /// @title Linked Transfer
 /// @notice This contract allows users to claim a payment locked in
 ///         the application if they provide the correct preImage
 
-contract LinkedTransfer is TransferDefinition {
+contract LinkedTransfer is ITransferDefinition {
 
     struct TransferState {
         Balance balance;
@@ -21,9 +22,9 @@ contract LinkedTransfer is TransferDefinition {
     }
 
     function create(bytes calldata encodedState)
-        override
         external
-        view
+        override
+        pure
         returns (bool)
     {
         TransferState memory state = abi.decode(encodedState, (TransferState));
@@ -34,9 +35,9 @@ contract LinkedTransfer is TransferDefinition {
     }
 
     function resolve(bytes calldata encodedState, bytes calldata encodedResolver)
-        override
         external
-        view
+        override
+        pure
         returns (Balance memory)
     {
         TransferState memory state = abi.decode(encodedState, (TransferState));
@@ -47,8 +48,8 @@ contract LinkedTransfer is TransferDefinition {
             // Check hash for normal payment unlock
             bytes32 generatedHash = sha256(abi.encode(resolver.preImage));
             require(
-            state.linkedHash == generatedHash,
-            "Hash generated from preimage does not match hash in state"
+                state.linkedHash == generatedHash,
+                "Hash generated from preimage does not match hash in state"
             );
 
             // Update state
