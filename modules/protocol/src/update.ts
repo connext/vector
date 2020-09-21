@@ -79,7 +79,7 @@ export async function applyUpdate<T extends UpdateType>(
       const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedBalance = reconcilelockedBalance(
+      const lockedBalance = reconcileLockedBalance(
         UpdateType.create,
         transferInitialState.balance,
         update.assetId,
@@ -103,7 +103,7 @@ export async function applyUpdate<T extends UpdateType>(
         );
       }
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedBalance = reconcilelockedBalance(
+      const lockedBalance = reconcileLockedBalance(
         UpdateType.resolve,
         transfer.initialBalance,
         update.assetId,
@@ -511,7 +511,7 @@ function reconcileBalanceWithExisting(
 // that the value locked during transfer creation is not added
 // back into the channel, but still needs to be removed from
 // the locked value (i.e. withdrawal)
-function reconcilelockedBalance(
+function reconcileLockedBalance(
   type: typeof UpdateType.create | typeof UpdateType.resolve,
   transferBalanceToReconcile: Balance, // From transferState.balance
   assetToReconcile: string,
