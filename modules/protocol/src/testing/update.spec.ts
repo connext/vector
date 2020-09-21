@@ -306,7 +306,6 @@ describe("generateUpdate", () => {
         networkContext: {
           channelManagerAddress: env.chainAddresses[chainId].ChannelManager.address,
           vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
-          adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
           linkedTransferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
           withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
           chainId,

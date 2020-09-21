@@ -430,7 +430,7 @@ export class PrismaStore implements IVectorStore {
     }
 
     const fullTransfer: FullTransferState = {
-      adjudicatorAddress: transfer.createUpdate.channel!.adjudicatorAddress,
+      channelManagerAddress: transfer.createUpdate.channel!.channelManagerAddress,
       assetId: transfer.createUpdate.assetId,
       chainId: transfer.createUpdate.channel!.chainId,
       channelAddress: transfer.createUpdate.channelAddress!,

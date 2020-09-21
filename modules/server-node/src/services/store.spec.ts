@@ -84,7 +84,7 @@ describe("store", () => {
     await store.saveChannelState(
       createState,
       {
-        adjudicatorAddress: createState.networkContext.adjudicatorAddress,
+        channelManagerAddress: createState.networkContext.channelManagerAddress,
         chainId: createState.networkContext.chainId,
         signatures: createState.latestUpdate.signatures,
         state: createState,

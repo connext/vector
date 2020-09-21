@@ -225,18 +225,15 @@ export class Vector implements IVectorProtocol {
       return Result.ok(existing);
     }
 
-    let channelAddress: string;
-    try {
-      channelAddress = await getCreate2MultisigAddress(
-        this.publicIdentifier,
-        params.counterpartyIdentifier,
-        params.networkContext.channelManagerAddress,
-        ChannelManager.abi,
-        params.networkContext.vectorChannelMastercopyAddress,
-        this.chainProviders.get(params.networkContext.chainId)!,
-      );
-    } catch (e) {
-      this.logger.error({ method: "setup", step: "getCreate2MultisigAddress", error: e.message, stack: e.stack });
+    const create2Res = await getCreate2MultisigAddress(
+      this.publicIdentifier,
+      params.counterpartyIdentifier,
+      params.networkContext.chainId,
+      params.networkContext.channelManagerAddress,
+      params.networkContext.vectorChannelMastercopyAddress,
+      this.onchainService,
+    );
+    if (create2Res.isError) {
       return Result.fail(
         new ChannelUpdateError(ChannelUpdateError.reasons.Create2Failed, undefined, undefined, {
           error: create2Res.getError()!.message,

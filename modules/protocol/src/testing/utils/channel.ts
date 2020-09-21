@@ -310,7 +310,7 @@ export const createTransfer = async (
     transferId,
     initialStateHash: hashTransferState(transferInitialState, params.encodings[0]),
     transferDefinition: params.transferDefinition,
-    adjudicatorAddress: channel.networkContext.adjudicatorAddress,
+    channelManagerAddress: channel.networkContext.channelManagerAddress,
     chainId,
     transferEncodings: params.encodings,
     transferState: params.transferInitialState,
