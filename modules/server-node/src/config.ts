@@ -1,3 +1,5 @@
+import { ChainAddresses } from "@connext/vector-types";
+
 const mnemonic = process.env.VECTOR_MNEMONIC;
 if (!mnemonic) {
   throw new Error("VECTOR_MNEMONIC is a required config item");
@@ -28,23 +30,29 @@ if (!authUrl) {
   throw new Error("VECTOR_AUTH_URL is a required config item");
 }
 
-let contractAddresses;
+let contractAddressesEnv;
+const contractAddresses: ChainAddresses = {};
 try {
-  contractAddresses = JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES!);
+  contractAddressesEnv = JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES!);
+  Object.entries(contractAddressesEnv).forEach(([chainId, contractDetails]: [string, any]) => {
+    contractAddresses[parseInt(chainId)] = {
+      adjudicatorAddress: contractDetails.Adjudicator.address,
+      channelFactoryAddress: contractDetails.ChannelFactory.address,
+      vectorChannelMastercopyAddress: contractDetails.VectorChannel.address,
+      linkedTransferDefinition: contractDetails.LinkedTransfer.address,
+      withdrawDefinition: contractDetails.Withdraw.address,
+    };
+  });
 } catch (e) {
   throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
 }
+console.log("contractAddresses: ", contractAddresses);
+
 if (!chainProviders) {
   throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
 }
 
-const dbDb = process.env.VECTOR_PG_DATABASE;
-const dbHost = process.env.VECTOR_PG_HOST;
-const dbPort = process.env.VECTOR_PG_PORT;
-const dbUser = process.env.VECTOR_PG_USERNAME;
-const dbPassword = process.env.VECTOR_PG_PASSWORD;
-
-const dbUrl = process.env.VECTOR_DATABASE_URL || `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbDb}`;
+const dbUrl = process.env.VECTOR_DATABASE_URL;
 if (!dbUrl) {
   throw new Error("VECTOR_DATABASE_URL is a required config item");
 }

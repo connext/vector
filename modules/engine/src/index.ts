@@ -4,7 +4,6 @@ import {
   Address,
   ChainAddresses,
   ChainProviders,
-  ChannelUpdateError,
   ConditionalTransferParams,
   ConditionalTransferResponse,
   ConditionalTransferType,
@@ -29,6 +28,7 @@ import {
   EthAddressSchema,
   JsonRpcProvider,
   RpcRequestInputSchema,
+  OutboundChannelUpdateError,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -98,7 +98,8 @@ export class VectorEngine {
     // subscribe to isAlive
   }
 
-  public async setup(params: SetupInput): Promise<Result<any, ChannelUpdateError | Error>> {
+  public async setup(params: SetupInput): Promise<Result<any, OutboundChannelUpdateError | Error>> {
+    this.logger.info({ params, method: "setup" }, "Method called");
     const validate = ajv.compile(SetupInputSchema);
     const valid = validate(params);
     if (!valid) {
@@ -120,7 +121,7 @@ export class VectorEngine {
     });
   }
 
-  public async deposit(params: DepositInput): Promise<Result<FullChannelState, ChannelUpdateError | Error>> {
+  public async deposit(params: DepositInput): Promise<Result<FullChannelState, OutboundChannelUpdateError | Error>> {
     const validate = ajv.compile(DepositInputSchema);
     const valid = validate(params);
     if (!valid) {
@@ -132,12 +133,14 @@ export class VectorEngine {
 
   public async conditionalTransfer<T extends ConditionalTransferType = any>(
     params: ConditionalTransferParams<T>,
-  ): Promise<Result<ConditionalTransferResponse, InvalidTransferType | ChannelUpdateError>> {
+  ): Promise<Result<ConditionalTransferResponse, InvalidTransferType | OutboundChannelUpdateError>> {
     // TODO types
     // TODO input validation
     const channel = await this.store.getChannelState(params.channelAddress);
     if (!channel) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
@@ -154,7 +157,9 @@ export class VectorEngine {
     return Result.ok({ routingId: params.routingId });
   }
 
-  public async getChannelState(channelAddress: Address): Promise<Result<FullChannelState, Error | ChannelUpdateError>> {
+  public async getChannelState(
+    channelAddress: Address,
+  ): Promise<Result<FullChannelState, Error | OutboundChannelUpdateError>> {
     const validate = ajv.compile(EthAddressSchema);
     const valid = validate(channelAddress);
     if (!valid) {
@@ -162,7 +167,9 @@ export class VectorEngine {
     }
     const channel = await this.store.getChannelState(channelAddress);
     if (!channel) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, channelAddress as any),
+      );
     }
     return Result.ok(channel);
   }
@@ -206,6 +213,7 @@ export class VectorEngine {
   // - "vector_resolveTransfer"
   // TODO add rpc request type
   public async request(payload: RpcRequestInput): Promise<any> {
+    this.logger.info({ payload, method: "request" }, "Method called");
     const validate = ajv.compile(RpcRequestInputSchema);
     const valid = validate(payload);
     if (!valid) {

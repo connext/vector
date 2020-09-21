@@ -1,4 +1,11 @@
-import { ChannelUpdate, ChannelUpdateError, IMessagingService, MessagingConfig, Result } from "@connext/vector-types";
+import {
+  ChannelUpdate,
+  OutboundChannelUpdateError,
+  InboundChannelUpdateError,
+  IMessagingService,
+  MessagingConfig,
+  Result,
+} from "@connext/vector-types";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 import { BaseLogger } from "pino";
 
@@ -11,30 +18,12 @@ export class NatsMessagingService implements IMessagingService {
     private readonly log: BaseLogger,
     private readonly getBearerToken: () => Promise<string>,
   ) {}
-  async onReceiveProtocolMessage(
-    myPublicIdentifier: string,
-    callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>,
-      from: string,
-      inbox: string,
-    ) => void,
-  ): Promise<void> {
-    this.assertConnected();
-    this.connection?.subscribe(`${myPublicIdentifier}.>`, (msg, err) => {
-      console.log("msg: ", msg);
-      const from = msg.subject.split(".")[1];
-      if (err) {
-        callback(Result.fail(new ChannelUpdateError(err)), from, msg.reply);
-      }
-      callback(Result.ok({ update: msg.data.update, previousUpdate: msg.data.previousUpdate }), from, msg.reply);
-    });
-  }
   sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ChannelUpdateError>> {
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
     throw new Error("Method not implemented.");
   }
   respondToProtocolMessage(
@@ -45,8 +34,31 @@ export class NatsMessagingService implements IMessagingService {
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  respondWithProtocolError(sender: string, receiver: string, inbox: string, error: ChannelUpdateError): Promise<void> {
+  respondWithProtocolError(
+    sender: string,
+    receiver: string,
+    inbox: string,
+    error: InboundChannelUpdateError,
+  ): Promise<void> {
     throw new Error("Method not implemented.");
+  }
+  async onReceiveProtocolMessage(
+    myPublicIdentifier: string,
+    callback: (
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    this.connection?.subscribe(`${myPublicIdentifier}.>`, (msg, err) => {
+      console.log("msg: ", msg);
+      const from = msg.subject.split(".")[1];
+      if (err) {
+        callback(Result.fail(new InboundChannelUpdateError(err, msg.data.update)), from, msg.reply);
+      }
+      callback(Result.ok({ update: msg.data.update, previousUpdate: msg.data.previousUpdate }), from, msg.reply);
+    });
   }
 
   private isConnected(): boolean {
