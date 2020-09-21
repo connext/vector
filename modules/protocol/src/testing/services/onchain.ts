@@ -4,14 +4,14 @@ import { mkHash } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Sinon from "sinon";
 
-type StubType = {
+export type MockOnchainStubType = {
   [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
 };
 
-export class MockOnchainServce implements IVectorOnchainService {
-  public readonly stubs: StubType;
+export class MockOnchainService implements IVectorOnchainService {
+  public readonly stubs: MockOnchainStubType;
 
-  constructor(overrides: Partial<StubType> = {}) {
+  constructor(overrides: Partial<MockOnchainStubType> = {}) {
     this.stubs = Sinon.createStubInstance(VectorOnchainService, {
       getChannelOnchainBalance: Result.ok<BigNumber>(BigNumber.from(10)) as any,
 
@@ -50,7 +50,7 @@ export class MockOnchainServce implements IVectorOnchainService {
   // Easy method to set stubs mid-test
   setStub(
     method: keyof IVectorOnchainService,
-    ret: StubType[typeof method],
+    ret: MockOnchainStubType[typeof method],
   ): void {
     this.stubs[method] = Sinon.stub().resolves(ret);
     // TODO: maybe we have to return a new instance?
