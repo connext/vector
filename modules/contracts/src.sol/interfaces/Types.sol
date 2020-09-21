@@ -3,6 +3,16 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 
+struct Balance {
+    uint256[2] amount;
+    address payable[2] to;
+}
+
+struct LatestDeposit {
+    uint256 amount;
+    uint256 nonce;
+}
+
 struct CoreChannelState {
     Balance[] balances; // TODO index by assetId? // initiator, responder
     uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
@@ -25,12 +35,18 @@ struct CoreTransferState {
     bytes32 initialStateHash;
 }
 
-struct LatestDeposit {
-    uint256 amount;
+
+struct ChannelDispute {
+    bytes32 channelStateHash;
     uint256 nonce;
+    bytes32 merkleRoot;
+    uint256 consensusExpiry;
+    uint256 defundExpiry;
+    bool isDefunded;
 }
 
-struct Balance {
-    uint256[2] amount;
-    address payable[2] to;
+struct TransferDispute {
+    uint256 transferDisputeExpiry;
+    bytes32 transferStateHash;
+    bool isDefunded;
 }

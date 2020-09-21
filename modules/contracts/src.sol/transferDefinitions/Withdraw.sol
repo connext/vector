@@ -37,7 +37,10 @@ contract Withdraw is ITransferDefinition {
         require(state.balance.amount[1] == 0, "Cannot create withdraw with nonzero recipient balance");
         // TODO
         // require(state.initiatorSignature != bytes(0), "Cannot create withdraw with no initiator signature");
-        require(state.signers[0] != address(0) && state.signers[1] != address(0), "Cannot create withdraw with empty signers");
+        require(
+            state.signers[0] != address(0) && state.signers[1] != address(0),
+            "Cannot create withdraw with empty signers"
+        );
         require(state.data != bytes32(0), "Cannot create withdraw with empty commitment data");
         require(state.nonce != bytes32(0), "Cannot create withdraw with empty nonce");
         require(state.fee <= state.balance.amount[0], "Cannot create withdraw with fee greater than amount in balance");
@@ -53,7 +56,10 @@ contract Withdraw is ITransferDefinition {
         TransferState memory state = abi.decode(encodedState, (TransferState));
         TransferResolver memory resolver = abi.decode(encodedResolver, (TransferResolver));
 
-        require(state.signers[0] == state.data.verifyChannelMessage(state.initiatorSignature), "invalid withdrawer signature");
+        require(
+            state.signers[0] == state.data.verifyChannelMessage(state.initiatorSignature),
+            "invalid withdrawer signature"
+        );
 
         // Allow for a withdrawal to be canceled if an incorrect signature is passed in
         if (state.signers[1] == state.data.verifyChannelMessage(resolver.responderSignature)) {

@@ -11,19 +11,22 @@ interface IVectorChannel {
         address[2] memory owners
     ) external;
 
+    function getOwners(
+    ) external view returns (address[2] memory);
+
     function getBalance(
         address assetId
     ) external view returns (uint256);
-
-    function latestDepositByAssetId(
-        address assetId
-    ) external view returns (LatestDeposit memory);
 
     function depositA(
         address assetId,
         uint256 amount
         // bytes memory signature
     ) external payable;
+
+    function latestDepositByAssetId(
+        address assetId
+    ) external view returns (LatestDeposit memory);
 
     function managedTransfer(
         Balance memory balances,
@@ -37,8 +40,5 @@ interface IVectorChannel {
         uint256 nonce,
         bytes[] memory signatures
     ) external;
-
-    function getOwners(
-    ) external view returns (address[2] memory);
 
 }

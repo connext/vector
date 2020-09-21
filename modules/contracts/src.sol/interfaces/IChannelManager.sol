@@ -29,6 +29,7 @@ interface IChannelManager {
         uint256 amount
     ) external payable returns (IVectorChannel);
 
+
     function forceChannelConsensus(
         CoreChannelState memory ccs,
         bytes[2] memory signatures

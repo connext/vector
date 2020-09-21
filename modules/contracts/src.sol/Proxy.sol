@@ -7,7 +7,8 @@ pragma solidity ^0.7.1;
 /// @author Richard Meissner - <richard@gnosis.io>
 contract Proxy {
 
-    // masterCopy always needs to be first declared variable, to ensure that it is at the same location in the contracts to which calls are delegated.
+    // masterCopy always needs to be first declared variable
+    // This ensures that it is at the same location in the contracts to which calls are delegated.
     // To reduce deployment costs this variable is internal and needs to be retrieved via `getStorageAt`
     address internal masterCopy;
 
