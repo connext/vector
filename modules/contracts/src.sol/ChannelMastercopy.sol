@@ -33,7 +33,7 @@ contract ChannelMastercopy is IVectorChannel {
     // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
 
-    modifier onlyManager {
+    modifier onlyFactory {
         require(msg.sender == _factory, "msg.sender is not the factory");
         _;
     }
@@ -111,7 +111,7 @@ contract ChannelMastercopy is IVectorChannel {
     )
         public
         override
-        onlyManager
+        onlyFactory
     {
         // TODO: This is quick-and-dirty to allow for basic testing.
         // We should add dealing with non-standard-conforming tokens,

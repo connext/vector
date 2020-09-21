@@ -34,7 +34,7 @@ model Channel {
   latestDepositNonce             Int
   merkleRoot                     String
   balances                       Balance[]
-  channelManagerAddress          String
+  channelFactoryAddress          String
   channelMastercopyAddress String
   chainId                        Int
   providerUrl                    String

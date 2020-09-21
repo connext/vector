@@ -11,7 +11,7 @@ import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 import "./Proxy.sol";
 
-/// @title Channel Manager - Allows us to create new channel proxy contract
+/// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
