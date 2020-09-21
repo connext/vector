@@ -51,7 +51,5 @@ interface IChannelManager {
         bytes memory encodedTransferResolver
     ) external;
 
-    // function setTransferResolution() external;
-
 }
 

@@ -11,7 +11,7 @@ import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 import "./Proxy.sol";
 
-/// @title Channel Factory - Allows us to create new channel proxy contract
+/// @title Channel Manager - Allows us to create new channel proxy contract
 contract ChannelManager is IChannelManager {
 
     using LibChannelCrypto for bytes32;
@@ -87,11 +87,11 @@ contract ChannelManager is IChannelManager {
         if (assetId != address(0)) {
             require(
                 IERC20(assetId).transferFrom(msg.sender, address(this), amount),
-                "ChannelFactory: token transferFrom failed"
+                "ChannelManager: token transferFrom failed"
             );
             require(
                 IERC20(assetId).approve(address(channel), amount),
-                "ChannelFactory: token approve failed"
+                "ChannelManager: token approve failed"
             );
 
         }
@@ -196,20 +196,20 @@ contract ChannelManager is IChannelManager {
 
         require(
             !inDefundPhase(dispute),
-            "Adjudicator forceChannelConsensus: Not allowed in defund phase"
+            "ChannelManager forceChannelConsensus: Not allowed in defund phase"
         );
 
         // TODO: check not defunded???
 
         require(
             dispute.nonce <= ccs.nonce,
-            "Adjudicator forceChannelConsensus: New nonce smaller than stored one"
+            "ChannelManager forceChannelConsensus: New nonce smaller than stored one"
         );
 
         if (dispute.nonce == ccs.nonce) {
             require(
                 !inConsensusPhase(dispute),
-                "Adjudicator forceChannelConsensus: Same nonce not allowed in consensus phase"
+                "ChannelManager forceChannelConsensus: Same nonce not allowed in consensus phase"
             );
 
         } else { // dispute.nonce < ccs.nonce
@@ -255,7 +255,7 @@ contract ChannelManager is IChannelManager {
         //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
         //      }
         //
-        //      channel.adjudicatorTransfer([aBalance, bBalance], assetIds[i]);
+        //      channel.transfer([aBalance, bBalance], assetIds[i]);
         //  }
 
         address channelAddress = getChannelAddress(ccs);
@@ -263,18 +263,18 @@ contract ChannelManager is IChannelManager {
 
         require(
             inDefundPhase(dispute),
-            "Adjudicator defundChannel: Not in defund phase"
+            "ChannelManager defundChannel: Not in defund phase"
         );
 
         require(
             !dispute.isDefunded,
-            "Adjudicator defundChannel: channel already defunded"
+            "ChannelManager defundChannel: channel already defunded"
         );
         dispute.isDefunded = true;
 
         require(
             hashChannelState(ccs) == dispute.channelStateHash,
-            "Adjudicator defundChannel: Hash of core channel state does not match stored hash"
+            "ChannelManager defundChannel: Hash of core channel state does not match stored hash"
         );
 
         // TODO SECURITY: Beware of reentrancy
@@ -334,7 +334,7 @@ contract ChannelManager is IChannelManager {
 
         require(
             inDefundPhase(dispute),
-            "Adjudicator forceTransferConsensus: Not in defund phase"
+            "ChannelManager forceTransferConsensus: Not in defund phase"
         );
 
         bytes32 transferStateHash = hashTransferState(cts);
@@ -345,13 +345,13 @@ contract ChannelManager is IChannelManager {
 
         require(
             transferDispute.transferDisputeExpiry == 0,
-            "Adjudicator forceTransferConsensus: transfer already disputed"
+            "ChannelManager forceTransferConsensus: transfer already disputed"
         );
 
         // necessary?
         require(
             !transferDispute.isDefunded,
-            "Adjudicator forceTransferConsensus: transfer already defunded"
+            "ChannelManager forceTransferConsensus: transfer already defunded"
         );
 
         transferDispute.transferStateHash = transferStateHash;
@@ -390,24 +390,24 @@ contract ChannelManager is IChannelManager {
         // transferDisputes(state.transferId) = transferDispute
 
         // VectorChannel channel = VectorChannel(state.channelAddress)
-        // channel.adjudicatorTransfer(finalBalances, state.assetId)
+        // channel.transfer(finalBalances, state.assetId)
 
         TransferDispute memory transferDispute = transferDisputes[cts.transferId];
 
         require(
             hashTransferState(cts) == transferDispute.transferStateHash,
-            "Adjudicator defundTransfer: Hash of core transfer state does not match stored hash"
+            "ChannelManager defundTransfer: Hash of core transfer state does not match stored hash"
         );
 
         // TODO: check / simplify
         require(
             transferDispute.transferDisputeExpiry != 0,
-            "Adjudicator defundTransfer: transfer not yet disputed"
+            "ChannelManager defundTransfer: transfer not yet disputed"
         );
 
         require(
             !transferDispute.isDefunded,
-            "Adjudicator defundTransfer: transfer already defunded"
+            "ChannelManager defundTransfer: transfer already defunded"
         );
 
         Balance memory finalBalance;
@@ -415,7 +415,7 @@ contract ChannelManager is IChannelManager {
         if (block.number < transferDispute.transferDisputeExpiry) {
             require(
                 keccak256(encodedInitialTransferState) == cts.initialStateHash,
-                "Adjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
+                "ChannelManager defundTransfer: Hash of encoded initial transfer state does not match stored hash"
             );
 
             ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
@@ -436,7 +436,7 @@ contract ChannelManager is IChannelManager {
         require(
             msg.sender == ccs.participants[0] ||
             msg.sender == ccs.participants[1],
-            "Adjudicator: msg.sender is not channel participant"
+            "ChannelManager: msg.sender is not channel participant"
         );
         _;
     }
@@ -483,7 +483,7 @@ contract ChannelManager is IChannelManager {
     {
         require(
             MerkleProof.verify(proof, root, leaf),
-            "Adjudicator: Merkle proof verification failed"
+            "ChannelManager: Merkle proof verification failed"
         );
     }
 

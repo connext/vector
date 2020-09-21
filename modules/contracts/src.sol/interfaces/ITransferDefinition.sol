@@ -14,9 +14,8 @@ interface ITransferDefinition {
         view
         returns (bool);
 
-    // Performs a state transition to resolve a transfer
-    // and returns final balances. Called by validator.ts
-    // during `resolve` updates.
+    // Performs a state transition to resolve a transfer and returns final balances.
+    // Called by validator.ts during `resolve` updates.
     function resolve(bytes calldata, bytes calldata)
         external
         view

@@ -10,12 +10,12 @@ import "./lib/LibChannelCrypto.sol";
 /// @title Vector Channel
 /// @author Arjun Bhuptani <arjun@connext.network>
 /// @notice
-/// (a) A proxy to this contract is deployed per-channel using the ChannelFactory.sol contract
+/// (a) A proxy to this contract is deployed per-channel using the ChannelManager.sol contract
 /// (b) Executes transactions dispute logic on a hardcoded channel manager
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
 contract VectorChannel is IVectorChannel {
-    // Note: this is the mastercopy of channel logic, this address is managed by the ProxyFactory
+    // Note: this is the mastercopy of channel logic, this address is managed by the ChannelManager
     // TODO: decide which variables should be public
 
     using LibChannelCrypto for bytes32;
@@ -123,6 +123,7 @@ contract VectorChannel is IVectorChannel {
     /// @param to The destination address of the message call
     /// @param value The amount of ETH being forwarded in the message call
     /// @param data Any calldata being sent along with the message call
+    /// @param nonce ???
     /// @param signatures A sorted bytes string of concatenated signatures of each owner
     function execTransaction(
         address to,
