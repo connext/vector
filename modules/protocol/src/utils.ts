@@ -12,7 +12,7 @@ import {
   IVectorOnchainService,
   Result,
 } from "@connext/vector-types";
-import { TransferDefinition } from "@connext/vector-contracts";
+import { ITransferDefinition } from "@connext/vector-contracts";
 import { BigNumber, Signer, utils } from "ethers";
 import { hashChannelCommitment } from "@connext/vector-utils";
 import { Evt } from "evt";
@@ -110,7 +110,7 @@ export const create = async (
   logger: pino.BaseLogger = pino(),
 ): Promise<boolean> => {
   const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
-  const contract = new Contract(transfer.transferId, TransferDefinition.abi, signer);
+  const contract = new Contract(transfer.transferId, ITransferDefinition.abi, signer);
   if (bytecode) {
     try {
       const data = contract.interface.encodeFunctionData("create", [encodedState]);
@@ -131,7 +131,7 @@ export const resolve = async (
 ): Promise<Balance> => {
   const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
   const encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);
-  const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, signer);
+  const contract = new Contract(transfer.transferDefinition, ITransferDefinition.abi, signer);
   if (bytecode) {
     try {
       const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);

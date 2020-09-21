@@ -5,7 +5,7 @@ import * as ChannelManager from "../artifacts/ChannelManager.json";
 import * as ERC20 from "../artifacts/IERC20.json";
 import * as LinkedTransfer from "../artifacts/LinkedTransfer.json";
 import * as TestToken from "../artifacts/TestToken.json";
-import * as TransferDefinition from "../artifacts/TransferDefinition.json";
+import * as TransferDefinition from "../artifacts/ITransferDefinition.json";
 import * as VectorChannel from "../artifacts/VectorChannel.json";
 import * as Withdraw from "../artifacts/Withdraw.json";
 

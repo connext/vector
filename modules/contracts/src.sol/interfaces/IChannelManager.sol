@@ -8,6 +8,8 @@ import "./Types.sol";
 
 interface IChannelManager {
 
+    event ChannelCreation(IVectorChannel channel);
+
     function proxyCreationCode() external pure returns (bytes memory);
 
     function getChannelAddress(
