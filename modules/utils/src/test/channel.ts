@@ -22,7 +22,7 @@ export type PartialChannelUpdate<T extends UpdateType> = Partial<
   Omit<ChannelUpdate<T>, "details"> & { details: Partial<ChannelUpdateDetailsMap[T]> }
 >;
 
-type PartialFullChannelState<T extends UpdateType> = Partial<
+export type PartialFullChannelState<T extends UpdateType> = Partial<
   Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
 >;
 

@@ -3,8 +3,6 @@ import {
   LinkedTransferState,
   TransferState,
   CoreTransferState,
-  FullTransferState,
-  TransferName,
 } from "@connext/vector-types";
 
 import { mkAddress, mkHash, mkBytes32 } from "./util";
@@ -50,22 +48,3 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
   };
 };
 
-// export const createFullTransferState = <T extends TransferName = any>(type: TransferName): FullTransferState<T> => {
-//   let transferState;
-//   switch (type) {
-//     case "LinkedTransfer":
-//       transferState = createTestLinkedTransferState();
-//       break;
-//     case "Withdraw":
-//       break;
-//   }
-//   return {
-//     adjudicatorAddress: mkAddress("0xaaaddd"),
-//     chainId,
-//     transferEncodings,
-//     transferState,
-//     transferResolver,
-//     meta,
-//     ...createCoreTransferState(),
-//   };
-// };

@@ -48,10 +48,7 @@ export class MockOnchainService implements IVectorOnchainService {
   }
 
   // Easy method to set stubs mid-test
-  setStub(
-    method: keyof IVectorOnchainService,
-    ret: MockOnchainStubType[typeof method],
-  ): void {
+  setStub(method: keyof IVectorOnchainService, ret: any): void {
     this.stubs[method] = Sinon.stub().resolves(ret);
     // TODO: maybe we have to return a new instance?
   }

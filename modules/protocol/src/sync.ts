@@ -273,7 +273,7 @@ export async function inbound(
 }
 
 // This function is responsible for handling any inbound state requests.
-export async function validateIncomingChannelUpdate(
+async function validateIncomingChannelUpdate(
   requestedUpdate: ChannelUpdate<any>,
   counterpartyLatestUpdate: ChannelUpdate<any>,
   myState: FullChannelState,
