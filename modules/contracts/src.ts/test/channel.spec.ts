@@ -1,7 +1,7 @@
 import { Contract, ContractFactory, Wallet } from "ethers";
 
-import { VectorChannel } from "../../artifacts";
-import { expect, provider } from "../utils";
+import { VectorChannel } from "../artifacts";
+import { expect, provider } from "./utils";
 
 describe("VectorChannel", () => {
   let deployer: Wallet;

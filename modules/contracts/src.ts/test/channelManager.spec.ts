@@ -1,10 +1,10 @@
 import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
-import { VectorChannel, ChannelManager } from "../../artifacts";
-import { VectorOnchainService } from "../../onchainService";
-import { getOnchainTxService } from "../onchainService";
-import { expect, provider } from "../utils";
+import { VectorChannel, ChannelManager } from "../artifacts";
+import { VectorOnchainService } from "../onchainService";
+
+import { expect, getOnchainTxService, provider } from "./utils";
 
 describe("ChannelManager", () => {
   let deployer: Wallet;
