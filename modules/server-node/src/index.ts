@@ -4,7 +4,7 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { ChannelRpcMethods } from "@connext/vector-types";
 
 import { NatsMessagingService } from "./services/messaging";
@@ -56,8 +56,14 @@ server.addHook("onReady", async () => {
     },
     logger.child({ module: "NatsMessagingService" }),
     async () => {
-      const r = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
-      return r.data;
+      const nonceResponse = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
+      const nonce = nonceResponse.data;
+      const sig = await signer.signMessage(nonce);
+      const verifyResponse: AxiosResponse<string> = await axios.post(`${config.authUrl}/auth`, {
+        sig,
+        userIdentifier: signer.publicIdentifier,
+      });
+      return verifyResponse.data;
     },
   );
   await messaging.connect();
