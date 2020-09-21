@@ -59,7 +59,7 @@ describe("Vector.setup", () => {
       chainId: 2,
       providerUrl: "http://eth.com",
       channelFactoryAddress: mkAddress("0xccc"),
-      vectorChannelMastercopyAddress: mkAddress("0xeee"),
+      channelMastercopyAddress: mkAddress("0xeee"),
     };
     const validParams = {
       counterpartyIdentifier: mkPublicIdentifier(),
@@ -113,13 +113,13 @@ describe("Vector.setup", () => {
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {
-        name: "should fail if there is no vectorChannelMastercopyAddress",
-        params: { ...validParams, networkContext: { ...network, vectorChannelMastercopyAddress: undefined } },
-        error: "should have required property 'vectorChannelMastercopyAddress'",
+        name: "should fail if there is no channelMastercopyAddress",
+        params: { ...validParams, networkContext: { ...network, channelMastercopyAddress: undefined } },
+        error: "should have required property 'channelMastercopyAddress'",
       },
       {
-        name: "should fail if there is an invalid vectorChannelMastercopyAddress",
-        params: { ...validParams, networkContext: { ...network, vectorChannelMastercopyAddress: "fail" } },
+        name: "should fail if there is an invalid channelMastercopyAddress",
+        params: { ...validParams, networkContext: { ...network, channelMastercopyAddress: "fail" } },
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {

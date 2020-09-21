@@ -55,7 +55,7 @@ export const migrate = async (
     }
   };
 
-  const mastercopy = await deployHelper("VectorChannel", []);
+  const mastercopy = await deployHelper("ChannelMastercopy", []);
   await deployHelper("ChannelFactory", [
     { name: "mastercopy", value: mastercopy.address },
   ]);

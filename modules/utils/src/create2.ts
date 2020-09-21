@@ -8,7 +8,7 @@ export const getCreate2MultisigAddress = async (
   responderIdentifier: PublicIdentifier,
   chainId: number,
   channelFactoryAddress: string,
-  vectorChannelMastercopyAddress: string,
+  channelMastercopyAddress: string,
   onchainTxService: IVectorOnchainService,
 ): Promise<Result<string, Error>> => {
   const proxyRes = await onchainTxService.getChannelFactoryBytecode(channelFactoryAddress, chainId);
@@ -38,7 +38,7 @@ export const getCreate2MultisigAddress = async (
               ),
               utils.solidityKeccak256(
                 ["bytes", "uint256"],
-                [`0x${proxyBytecode.replace(/^0x/, "")}`, vectorChannelMastercopyAddress],
+                [`0x${proxyBytecode.replace(/^0x/, "")}`, channelMastercopyAddress],
               ),
             ],
           )

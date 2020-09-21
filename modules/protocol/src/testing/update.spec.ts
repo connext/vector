@@ -305,7 +305,7 @@ describe("generateUpdate", () => {
         counterpartyIdentifier: signers[1].publicIdentifier,
         networkContext: {
           channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-          vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
+          channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
           linkedTransferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
           withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
           chainId,

@@ -22,20 +22,8 @@ contract ChannelFactory is IChannelFactory {
 
     bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
-    mapping(address => ChannelDispute) channelDispute;
-    mapping(bytes32 => TransferDispute) transferDisputes;
-
     constructor(IVectorChannel _masterCopy) {
         masterCopy = _masterCopy;
-    }
-
-    modifier onlyParticipant(CoreChannelState memory ccs) {
-        require(
-            msg.sender == ccs.participants[0] ||
-            msg.sender == ccs.participants[1],
-            "ChannelFactory: msg.sender is not channel participant"
-        );
-        _;
     }
 
     ////////////////////////////////////////

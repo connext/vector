@@ -6,7 +6,7 @@ import * as ERC20 from "../artifacts/IERC20.json";
 import * as LinkedTransfer from "../artifacts/LinkedTransfer.json";
 import * as TestToken from "../artifacts/TestToken.json";
 import * as TransferDefinition from "../artifacts/ITransferDefinition.json";
-import * as VectorChannel from "../artifacts/VectorChannel.json";
+import * as ChannelMastercopy from "../artifacts/ChannelMastercopy.json";
 import * as Withdraw from "../artifacts/Withdraw.json";
 
 type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
@@ -26,7 +26,7 @@ export const artifacts: Artifacts = {
   LinkedTransfer,
   TestToken,
   TransferDefinition,
-  VectorChannel,
+  ChannelMastercopy,
   Withdraw,
 } as any;
 
@@ -36,6 +36,6 @@ export {
   LinkedTransfer,
   TestToken,
   TransferDefinition,
-  VectorChannel,
+  ChannelMastercopy,
   Withdraw,
 };

@@ -3,9 +3,10 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./Types.sol";
+import "./IAdjudicator.sol";
 
 
-interface IVectorChannel {
+interface IVectorChannel { // is IAdjudicator? {
 
     function setup(
         address[2] memory owners
@@ -39,28 +40,6 @@ interface IVectorChannel {
         bytes memory data,
         uint256 nonce,
         bytes[] memory signatures
-    ) external;
-
-    function forceChannelConsensus(
-        CoreChannelState memory ccs,
-        bytes[2] memory signatures
-    ) external;
-
-
-    function defundChannel(
-        CoreChannelState memory ccs
-    ) external;
-
-
-    function forceTransferConsensus(
-        CoreTransferState memory cts,
-        bytes32[] memory merkeProofData
-    ) external;
-
-    function defundTransfer(
-        CoreTransferState memory cts,
-        bytes memory encodedInitialTransferState,
-        bytes memory encodedTransferResolver
     ) external;
 
 }

@@ -1,7 +1,7 @@
 import {
   ChannelFactory,
   LinkedTransfer,
-  VectorChannel,
+  ChannelMastercopy,
   Withdraw,
 } from "@connext/vector-contracts";
 import { Wallet, providers, utils, ContractFactory } from "ethers";

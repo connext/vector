@@ -55,7 +55,7 @@ const convertChannelEntityToFullChannelState = (
             chainId: channelEntity.chainId,
             channelFactoryAddress: channelEntity.channelFactoryAddress,
             providerUrl: channelEntity.providerUrl,
-            vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
+            channelMastercopyAddress: channelEntity.channelMastercopyAddress,
           },
           timeout: channelEntity.timeout,
         } as SetupUpdateDetails;
@@ -100,7 +100,7 @@ const convertChannelEntityToFullChannelState = (
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       providerUrl: channelEntity.providerUrl,
-      vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
+      channelMastercopyAddress: channelEntity.channelMastercopyAddress,
     },
     nonce: channelEntity.nonce,
     participants: [channelEntity.participantA, channelEntity.participantB],
@@ -287,7 +287,7 @@ export class PrismaStore implements IVectorStore {
         publicIdentifierA: channelState.publicIdentifiers[0],
         publicIdentifierB: channelState.publicIdentifiers[1],
         timeout: channelState.timeout,
-        vectorChannelMastercopyAddress: channelState.networkContext.vectorChannelMastercopyAddress,
+        channelMastercopyAddress: channelState.networkContext.channelMastercopyAddress,
         balances: {
           create: channelState.assetIds.reduce(
             (create: BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {

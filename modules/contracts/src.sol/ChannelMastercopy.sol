@@ -14,7 +14,7 @@ import "./lib/LibChannelCrypto.sol";
 /// (b) Executes transactions dispute logic on a hardcoded channel factory
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
-contract VectorChannel is IVectorChannel {
+contract ChannelMastercopy is IVectorChannel {
     // Note: this is the mastercopy of channel logic, this address is managed by the ChannelFactory
     // TODO: decide which variables should be public
 

@@ -2,7 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IChannelFactory.sol";
+import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/IVectorChannel.sol";
@@ -15,6 +15,18 @@ import "./Proxy.sol";
 contract Adjudicator is IAdjudicator {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
+
+    mapping(address => ChannelDispute) channelDispute;
+    mapping(bytes32 => TransferDispute) transferDisputes;
+
+    modifier onlyParticipant(CoreChannelState memory ccs) {
+        require(
+            msg.sender == ccs.participants[0] ||
+            msg.sender == ccs.participants[1],
+            "ChannelFactory: msg.sender is not channel participant"
+        );
+        _;
+    }
 
     function forceChannelConsensus(
         CoreChannelState memory ccs,
@@ -44,7 +56,8 @@ contract Adjudicator is IAdjudicator {
         //      };
         //      channelDispute(state.channelAddress) = dispute;
         // }
-        address channelAddress = getChannelAddress(ccs.participants[0], ccs.participants[1]);
+        // TODO: what are the implications of this?
+        address channelAddress = msg.sender; // getChannelAddress(ccs.participants[0], ccs.participants[1]);
         ChannelDispute storage dispute = channelDispute[channelAddress];
         verifySignatures(ccs.participants, ccs, signatures);
         require(
@@ -86,7 +99,7 @@ contract Adjudicator is IAdjudicator {
         // for(int i = 0, i < assetIds.length(), i++) {
         //      require(!dispute.assetDefunded[assetIds[i]])
         //      dispute.assetDefunded[assetIds[i]] = true
-        //      VectorChannel channel = VectorChannel(state.channelAddress)
+        //      ChannelMastercopy channel = ChannelMastercopy(state.channelAddress)
         //      LatestDeposit latestDeposit = channel.latestDepositA(assetIds[i])
         //
         //      Balance memory aBalance, bBalance; //Bad syntax here, I know
@@ -103,7 +116,8 @@ contract Adjudicator is IAdjudicator {
         //
         //      channel.transfer([aBalance, bBalance], assetIds[i]);
         //  }
-        address channelAddress = getChannelAddress(ccs.participants[0], ccs.participants[1]);
+        // TODO: what are the implications of this?
+        address channelAddress = msg.sender; // getChannelAddress(ccs.participants[0], ccs.participants[1]);
         ChannelDispute storage dispute = channelDispute[channelAddress];
         require(
             inDefundPhase(dispute),
@@ -210,7 +224,7 @@ contract Adjudicator is IAdjudicator {
         //
         // transferDispute.isDefunded = true;
         // transferDisputes(state.transferId) = transferDispute
-        // VectorChannel channel = VectorChannel(state.channelAddress)
+        // ChannelMastercopy channel = ChannelMastercopy(state.channelAddress)
         // channel.transfer(finalBalances, state.assetId)
         TransferDispute memory transferDispute = transferDisputes[cts.transferId];
         require(
@@ -239,47 +253,6 @@ contract Adjudicator is IAdjudicator {
         }
         IVectorChannel channel = IVectorChannel(cts.channelAddress);
         channel.managedTransfer(finalBalance, cts.assetId);
-    }
-
-    /// @dev Allows us to create new channel contact using CREATE2
-    /// @dev This method is only meant as an utility to be called from other methods
-    /// @param initiator address of one of the two participants in the channel
-    /// @param responder address of the other channel participant
-    function deployChannelProxy(
-        address initiator,
-        address responder
-    )
-        internal
-        returns (IVectorChannel)
-    {
-        bytes32 salt = generateSalt(initiator, responder);
-        Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
-        return IVectorChannel(address(proxy));
-    }
-
-    function generateSalt(
-        address initiator,
-        address responder
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                initiator,
-                responder,
-                chainId(),
-                domainSalt
-            )
-        );
-    }
-
-    function chainId() internal pure returns (uint256 id) {
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            id := chainid()
-        }
     }
 
     function verifySignatures(

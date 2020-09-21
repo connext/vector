@@ -35,7 +35,7 @@ model Channel {
   merkleRoot                     String
   balances                       Balance[]
   channelManagerAddress          String
-  vectorChannelMastercopyAddress String
+  channelMastercopyAddress String
   chainId                        Int
   providerUrl                    String
   latestUpdate                   Update

@@ -1,7 +1,7 @@
 import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
-import { VectorChannel, ChannelFactory } from "../artifacts";
+import { ChannelMastercopy, ChannelFactory } from "../artifacts";
 import { VectorOnchainService } from "../onchainService";
 
 import { expect, getOnchainTxService, provider } from "./utils";
@@ -17,7 +17,7 @@ describe("ChannelFactory", () => {
     deployer = (await provider.getWallets())[0];
     chainId = (await provider.getNetwork()).chainId;
 
-    channelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, deployer).deploy();
+    channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, deployer).deploy();
     await channelMastercopy.deployed();
 
     channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer).deploy(
@@ -83,7 +83,7 @@ describe("ChannelFactory", () => {
     const balance = await provider.getBalance(channelAddress as string);
     expect(balance).to.be.eq(value);
 
-    const latestDeposit = await new Contract(channelAddress, VectorChannel.abi, deployer).latestDepositByAssetId(
+    const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).latestDepositByAssetId(
       constants.AddressZero,
     );
     expect(latestDeposit.nonce).to.be.eq(1);

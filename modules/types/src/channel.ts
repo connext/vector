@@ -145,7 +145,7 @@ export type ChainAddresses = {
 
 export type ContractAddresses = {
   channelFactoryAddress: Address;
-  vectorChannelMastercopyAddress: Address;
+  channelMastercopyAddress: Address;
   linkedTransferDefinition?: Address;
   withdrawDefinition?: Address;
 };
