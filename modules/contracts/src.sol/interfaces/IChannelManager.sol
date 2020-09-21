@@ -30,27 +30,5 @@ interface IChannelManager {
     ) external payable returns (IVectorChannel);
 
 
-    function forceChannelConsensus(
-        CoreChannelState memory ccs,
-        bytes[2] memory signatures
-    ) external;
-
-
-    function defundChannel(
-        CoreChannelState memory ccs
-    ) external;
-
-
-    function forceTransferConsensus(
-        CoreTransferState memory cts,
-        bytes32[] memory merkeProofData
-    ) external;
-
-    function defundTransfer(
-        CoreTransferState memory cts,
-        bytes memory encodedInitialTransferState,
-        bytes memory encodedTransferResolver
-    ) external;
-
 }
 
