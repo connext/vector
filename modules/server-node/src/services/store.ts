@@ -27,7 +27,7 @@ const convertChannelEntityToFullChannelState = (
   },
 ): FullChannelState => {
   // use the inputted assetIds to preserve order
-  const assetIds = channelEntity!.assetIds.split(",");
+  const assetIds = channelEntity!.assetIds ? channelEntity!.assetIds?.split(",") : [];
 
   // get balances and locked value for each assetId
   const lockedBalance: string[] = [];
@@ -218,15 +218,15 @@ export class PrismaStore implements IVectorStore {
         // deposit
         latestDepositNonce: channelState.latestUpdate?.details.latestDepositNonce,
         // create transfer
-        transferInitialState: JSON.stringify(
-          (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState,
-        ),
+        transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
+          ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
+          : undefined,
         merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
-        merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData.join(),
+        merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
         transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
-        transferEncodings: JSON.stringify(
-          (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings,
-        ),
+        transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
+          ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings)
+          : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
         meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
@@ -234,7 +234,9 @@ export class PrismaStore implements IVectorStore {
           : undefined,
 
         // resolve transfer
-        transferResolver: JSON.stringify(channelState.latestUpdate!.details.transferResolver),
+        transferResolver: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver
+          ? JSON.stringify((channelState.latestUpdate!.details as ResolveUpdateDetails).transferResolver)
+          : undefined,
 
         // if create, add createdTransfer
         createdTransfer:

@@ -88,7 +88,7 @@ export class VectorEngine {
         if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
         }
       },
-      (data) => data.updatedChannelState.latestUpdate?.details.meta.recipient === this.vector.publicIdentifier,
+      (data) => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
     );
 
     this.messaging.subscribe(`${this.vector.publicIdentifier}.*.check-in`, async () => {

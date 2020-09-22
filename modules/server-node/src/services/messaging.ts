@@ -4,9 +4,24 @@ import {
   IMessagingService,
   MessagingConfig,
   Result,
+  IChannelSigner,
 } from "@connext/vector-types";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 import { BaseLogger } from "pino";
+import axios, { AxiosResponse } from "axios";
+
+import { config } from "../config";
+
+export const getBearerTokenFunction = (signer: IChannelSigner) => async (): Promise<string> => {
+  const nonceResponse = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
+  const nonce = nonceResponse.data;
+  const sig = await signer.signMessage(nonce);
+  const verifyResponse: AxiosResponse<string> = await axios.post(`${config.authUrl}/auth`, {
+    sig,
+    userIdentifier: signer.publicIdentifier,
+  });
+  return verifyResponse.data;
+};
 
 export class NatsMessagingService implements IMessagingService {
   private connection: INatsService | undefined;
@@ -16,6 +31,7 @@ export class NatsMessagingService implements IMessagingService {
     private readonly config: MessagingConfig,
     private readonly log: BaseLogger,
     private readonly getBearerToken: () => Promise<string>,
+    private readonly publicIdentifier: string,
   ) {}
 
   private isConnected(): boolean {
@@ -57,6 +73,10 @@ export class NatsMessagingService implements IMessagingService {
     }
   }
 
+  async disconnect(): Promise<void> {
+    this.connection?.disconnect();
+  }
+
   async sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
@@ -66,16 +86,17 @@ export class NatsMessagingService implements IMessagingService {
     this.assertConnected();
     try {
       const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
-      console.log("subject: ", subject);
+      console.log("sendProtocolMessage to subject: ", subject);
       const msg = await this.connection?.request(
         subject,
         timeout,
         JSON.stringify({
           update: channelUpdate,
           previousUpdate,
+          from: this.publicIdentifier,
         }),
       );
-      console.log("response: ", msg);
+      console.log("sendProtocolMessage response: ", msg);
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       parsedMsg.data = parsedData;
@@ -97,9 +118,8 @@ export class NatsMessagingService implements IMessagingService {
   ): Promise<void> {
     this.assertConnected();
     const subscriptionSubject = `${myPublicIdentifier}.>`;
-    console.log("subscriptionSubject: ", subscriptionSubject);
-    this.connection?.subscribe(subscriptionSubject, (msg, err) => {
-      console.log("msg: ", msg);
+    await this.connection?.subscribe(subscriptionSubject, (msg, err) => {
+      console.log("onReceiveProtocolMessage msg: ", msg);
       const from = msg.subject.split(".")[1];
       if (err) {
         callback(Result.fail(new InboundChannelUpdateError(err, msg.data.update)), from, msg.reply);
@@ -107,7 +127,13 @@ export class NatsMessagingService implements IMessagingService {
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       // TODO: validate msg structure
+      if (!parsedMsg.reply) {
+        console.log(`MSG did not contain reply, ignoring`);
+      }
       parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        callback(Result.fail(parsedMsg.data.error), from, parsedMsg.reply);
+      }
       callback(
         Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.previousUpdate }),
         from,
@@ -123,8 +149,10 @@ export class NatsMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
     this.assertConnected();
+    const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
+    console.log("respondToProtocolMessage to subject: ", subject);
     await this.connection?.publish(
-      `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`,
+      subject,
       JSON.stringify({
         update: channelUpdate,
         previousUpdate,
@@ -134,14 +162,16 @@ export class NatsMessagingService implements IMessagingService {
   }
 
   async respondWithProtocolError(
-    sender: string,
-    receiver: string,
+    updateFromIdentifier: string,
+    updateToIdentifier: string,
     inbox: string,
     error: InboundChannelUpdateError,
   ): Promise<void> {
     this.assertConnected();
+    const subject = `${updateFromIdentifier}.${updateToIdentifier}.protocol`;
+    console.log("respondToProtocolMessage to subject: ", subject);
     await this.connection?.publish(
-      `${sender}.${receiver}.protocol`,
+      subject,
       JSON.stringify({
         error,
       }),

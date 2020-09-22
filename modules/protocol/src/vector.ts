@@ -118,7 +118,7 @@ export class Vector implements IVectorProtocol {
     //  - validate and save state
     //  - send back message or error to specified inbox
     //  - publish updated state event
-    this.messagingService.onReceiveProtocolMessage(this.publicIdentifier, async (msg, from, inbox) => {
+    await this.messagingService.onReceiveProtocolMessage(this.publicIdentifier, async (msg, from, inbox) => {
       if (from === this.publicIdentifier) {
         return;
       }

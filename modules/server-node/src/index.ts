@@ -4,10 +4,9 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
-import axios, { AxiosResponse } from "axios";
 import { ChannelRpcMethods } from "@connext/vector-types";
 
-import { NatsMessagingService } from "./services/messaging";
+import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -55,16 +54,8 @@ server.addHook("onReady", async () => {
       messagingUrl: config.natsUrl,
     },
     logger.child({ module: "NatsMessagingService" }),
-    async () => {
-      const nonceResponse = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
-      const nonce = nonceResponse.data;
-      const sig = await signer.signMessage(nonce);
-      const verifyResponse: AxiosResponse<string> = await axios.post(`${config.authUrl}/auth`, {
-        sig,
-        userIdentifier: signer.publicIdentifier,
-      });
-      return verifyResponse.data;
-    },
+    getBearerTokenFunction(signer),
+    signer.publicIdentifier,
   );
   await messaging.connect();
 

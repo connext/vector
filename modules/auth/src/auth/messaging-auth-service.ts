@@ -61,10 +61,9 @@ export class MessagingAuthService {
       throw new Error(`Verification failed... nonce expired for address: ${userIdentifier}`);
     }
 
-    // Try to get latest published OR move everything under address route.
     const permissions = {
       publish: {
-        allow: [`${userIdentifier}.>`],
+        allow: [`*.${userIdentifier}.>`, `${userIdentifier}.>`], // publish as to.from.subject, respond to to.from
       },
       subscribe: {
         allow: [`>`],
