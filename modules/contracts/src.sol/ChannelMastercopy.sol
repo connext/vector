@@ -2,9 +2,11 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IVectorChannel.sol";
+import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IERC20.sol";
+import "./interfaces/IVectorChannel.sol";
 import "./lib/LibChannelCrypto.sol";
+import "./lib/SafeMath.sol";
 
 
 /// @title Vector Channel
@@ -19,6 +21,10 @@ contract ChannelMastercopy is IVectorChannel {
     // TODO: decide which variables should be public
 
     using LibChannelCrypto for bytes32;
+    using SafeMath for uint256;
+
+    ChannelDispute channelDispute;
+    TransferDispute transferDisputes;
 
     address public masterCopy;
 
@@ -28,30 +34,40 @@ contract ChannelMastercopy is IVectorChannel {
 
     address[2] private _owners;
 
-    address public _factory;
+    IAdjudicator public _adjudicator;
 
     // TODO: receive must emit event, in order to track eth deposits
     receive() external payable {}
 
     modifier onlyFactory {
-        require(msg.sender == _factory, "msg.sender is not the factory");
+        require(msg.sender == address(_adjudicator), "msg.sender is not the factory");
         _;
     }
 
     ////////////////////////////////////////
     // Public Methods
 
-    /// @notice Contract constructor
-    /// @param owners An array of unique addresses representing the participants of the channel
+    /// @notice Contract constructor for Mastercopy
+    /// @notice The mastercopy is only a source of code & should never be used for real channels
+    /// @notice To prevent anyone from using the mastercopy directly, initialize it w unusable data
+    constructor() {
+        _owners = [address(0),address(0)];
+        _adjudicator = IAdjudicator(address(1));
+    }
+
+    /// @notice Contract constructor for Proxied copies
+    /// @param owners: An array of unique addresses representing the participants of the channel
+    /// @param adjudicator: Address to call for adjudication logic
     function setup(
-        address[2] memory owners
+        address[2] memory owners,
+        address adjudicator
     )
         public
         override
     {
-        require(_factory == address(0), "Contract has already been setup");
+        require(address(_adjudicator) == address(0), "Contract has already been setup");
         _owners = owners;
-        _factory = msg.sender;
+        _adjudicator = IAdjudicator(adjudicator);
     }
 
     /// @notice A getter function for the owners of the multisig

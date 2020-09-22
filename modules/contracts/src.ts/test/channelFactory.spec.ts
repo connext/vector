@@ -1,13 +1,14 @@
 import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
-import { ChannelMastercopy, ChannelFactory } from "../artifacts";
+import { Adjudicator, ChannelMastercopy, ChannelFactory } from "../artifacts";
 import { VectorOnchainService } from "../onchainService";
 
 import { expect, getOnchainTxService, provider } from "./utils";
 
 describe("ChannelFactory", () => {
   let deployer: Wallet;
+  let adjudicator: Contract;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
   let onchainService: VectorOnchainService;
@@ -17,11 +18,15 @@ describe("ChannelFactory", () => {
     deployer = (await provider.getWallets())[0];
     chainId = (await provider.getNetwork()).chainId;
 
+    adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, deployer).deploy();
+    await adjudicator.deployed();
+
     channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, deployer).deploy();
     await channelMastercopy.deployed();
 
     channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer).deploy(
       channelMastercopy.address,
+      adjudicator.address,
     );
     await channelFactory.deployed();
     onchainService = await getOnchainTxService(provider);
