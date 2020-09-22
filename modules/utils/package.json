@@ -17,6 +17,7 @@
     "@connext/vector-types": "0.0.1",
     "axios": "0.20.0",
     "bs58check": "2.1.2",
+    "caip": "0.9.2",
     "eccrypto-js": "4.5.4",
     "evt": "1.8.10",
     "pino-pretty": "4.2.1"
