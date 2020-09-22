@@ -73,7 +73,7 @@ describe("inbound", () => {
   it("should post to evt if receives an error message", async () => {
     const message = createVectorErrorMessage();
     const [event, res] = await Promise.all([
-      errorEvt.waitFor((e) => e.message === message.error.message, 5_000),
+      errorEvt.waitFor(e => e.message === message.error.message, 5_000),
       inbound(message, store, messaging, signers[0], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.true;
@@ -84,7 +84,7 @@ describe("inbound", () => {
   it("should work if there is no channel state stored and you are receiving a setup update", async () => {
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.setup, {
       nonce: 1,
-      signatures: [mkBytes32("0xsig1")],
+      signatures: [mkBytes32("abc1")],
     });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { signatures, ...unsigned } = update;
@@ -106,7 +106,7 @@ describe("inbound", () => {
 
     // Verify sent message
     expect(messageSent).to.be.ok;
-    expect(messageSent.data.update.signatures.filter((x) => !!x).length).to.be.eq(2);
+    expect(messageSent.data.update.signatures.filter(x => !!x).length).to.be.eq(2);
     expect(messageSent).to.containSubset({
       to: signers[0].publicIdentifier,
       from: signers[1].publicIdentifier,
@@ -156,7 +156,7 @@ describe("inbound", () => {
 
     // Create the update to propose (a create)
     const transferInitialState = createTestLinkedTransferState({
-      balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
+      balance: { to: signers.map(s => s.address), amount: ["1", "0"] },
     });
     const assetId = constants.AddressZero;
     const coreState = createCoreTransferState({
@@ -185,7 +185,7 @@ describe("inbound", () => {
 
     // Call `inbound`
     const [event, res] = await Promise.all([
-      stateEvt.waitFor((e) => e.nonce === update.nonce),
+      stateEvt.waitFor(e => e.nonce === update.nonce),
       inbound(message, store, messaging, signers[1], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.false;
@@ -199,7 +199,7 @@ describe("inbound", () => {
     expect(storedState).to.containSubset(event);
     expect(storedState?.nonce).to.be.eq(update.nonce);
     expect(storedCommitment).to.be.ok;
-    expect(storedCommitment!.signatures.filter((x) => !!x).length).to.be.eq(2);
+    expect(storedCommitment!.signatures.filter(x => !!x).length).to.be.eq(2);
   });
 
   it("should update if stored state is in sync", async () => {
@@ -221,7 +221,7 @@ describe("inbound", () => {
 
     // Call `inbound`
     const [event, res] = await Promise.all([
-      stateEvt.waitFor((e) => e.nonce === update.nonce),
+      stateEvt.waitFor(e => e.nonce === update.nonce),
       inbound(message, store, messaging, signers[1], stateEvt, errorEvt, logger),
     ]);
     expect(res.isError).to.be.false;
@@ -235,7 +235,7 @@ describe("inbound", () => {
     expect(storedState).to.containSubset(event);
     expect(storedState?.nonce).to.be.eq(update.nonce);
     expect(storedCommitment).to.be.ok;
-    expect(storedCommitment!.signatures.filter((x) => !!x).length).to.be.eq(2);
+    expect(storedCommitment!.signatures.filter(x => !!x).length).to.be.eq(2);
   });
 });
 
@@ -266,7 +266,9 @@ describe("outbound", () => {
     const error = new ChannelUpdateError(ChannelUpdateError.reasons.TransferNotFound, update);
 
     const res = (await new Promise((resolve, reject) => {
-      outbound(update, channel, store, messaging, signers[0], stateEvt, errorEvt).then(resolve).catch(reject);
+      outbound(update, channel, store, messaging, signers[0], stateEvt, errorEvt)
+        .then(resolve)
+        .catch(reject);
 
       // First post error. use timeout to allow listeners to register
       setTimeout(() => {
@@ -312,7 +314,7 @@ describe("outbound", () => {
 
     const finalChannel = res.getValue();
     expect(finalChannel.nonce).to.be.eq(3);
-    expect(finalChannel.latestUpdate.signatures.filter((x) => !!x).length).to.be.eq(2);
+    expect(finalChannel.latestUpdate.signatures.filter(x => !!x).length).to.be.eq(2);
   });
 
   it("should successfully initiate update if channels are in sync (or initiator is ahead)", async () => {
@@ -322,7 +324,9 @@ describe("outbound", () => {
 
     // Send `outbound` call with deposit update and post to the error evt
     const res = (await new Promise((resolve, reject) => {
-      outbound(update, channel, store, messaging, signers[0], stateEvt, errorEvt).then(resolve).catch(reject);
+      outbound(update, channel, store, messaging, signers[0], stateEvt, errorEvt)
+        .then(resolve)
+        .catch(reject);
 
       // Then, post state evt with proper state for updating
       setTimeout(() => stateEvt.post({ ...channel, latestUpdate: update, nonce: 3 }), 5000);
@@ -331,6 +335,6 @@ describe("outbound", () => {
 
     const finalChannel = res.getValue();
     expect(finalChannel.nonce).to.be.eq(3);
-    expect(finalChannel.latestUpdate.signatures.filter((x) => !!x).length).to.be.eq(2);
+    expect(finalChannel.latestUpdate.signatures.filter(x => !!x).length).to.be.eq(2);
   });
 });

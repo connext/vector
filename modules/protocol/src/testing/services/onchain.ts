@@ -20,7 +20,7 @@ export class MockOnchainServce implements IVectorOnchainService {
         amount: BigNumber.from(14),
       }) as any,
 
-      getChannelFactoryBytecode: Result.ok<string>(mkHash("0x51523ase")) as any,
+      getChannelFactoryBytecode: Result.ok<string>(mkHash("51523ace")) as any,
 
       ...overrides,
     });
@@ -48,10 +48,7 @@ export class MockOnchainServce implements IVectorOnchainService {
   }
 
   // Easy method to set stubs mid-test
-  setStub(
-    method: keyof IVectorOnchainService,
-    ret: StubType[typeof method],
-  ): void {
+  setStub(method: keyof IVectorOnchainService, ret: StubType[typeof method]): void {
     this.stubs[method] = Sinon.stub().resolves(ret);
   }
 }

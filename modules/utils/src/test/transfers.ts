@@ -17,11 +17,11 @@ export const createTestLinkedTransferState = (
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {
-      to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
+      to: [mkAddress("aaa"), mkAddress("bbb")],
       amount: ["1", "0"],
       ...(balanceOverrides ?? {}),
     },
-    linkedHash: mkHash("0xeee"),
+    linkedHash: mkHash("eee"),
     ...defaultOverrides,
   };
 };
@@ -39,12 +39,12 @@ export const createTestLinkedTransferStates = (
 
 export const createCoreTransferState = (overrides: Partial<CoreTransferState> = {}): CoreTransferState => {
   return {
-    initialBalance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
+    initialBalance: { to: [mkAddress("aa"), mkAddress("bbb")], amount: ["1", "0"] },
     assetId: mkAddress(),
-    channelAddress: mkAddress("0xccc"),
-    transferId: mkBytes32("0xeeefff"),
-    transferDefinition: mkAddress("0xdef"),
-    initialStateHash: mkBytes32("0xabcdef"),
+    channelAddress: mkAddress("ccc"),
+    transferId: mkBytes32("eeefff"),
+    transferDefinition: mkAddress("def"),
+    initialStateHash: mkBytes32("abcdef"),
     transferTimeout: "1",
     ...overrides,
   };
@@ -60,7 +60,7 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
 //       break;
 //   }
 //   return {
-//     factoryAddress: mkAddress("0xaaaddd"),
+//     factoryAddress: mkAddress("aaaddd"),
 //     chainId,
 //     transferEncodings,
 //     transferState,

@@ -58,8 +58,8 @@ describe("Vector.setup", () => {
     const network = {
       chainId: 2,
       providerUrl: "http://eth.com",
-      channelFactoryAddress: mkAddress("0xccc"),
-      channelMastercopyAddress: mkAddress("0xeee"),
+      channelFactoryAddress: mkAddress("ccc"),
+      channelMastercopyAddress: mkAddress("eee"),
     };
     const validParams = {
       counterpartyIdentifier: mkPublicIdentifier(),
@@ -163,9 +163,9 @@ describe("Vector.deposit", () => {
 
   describe("should validate parameters", () => {
     const validParams = {
-      channelAddress: mkAddress("0xccc"),
+      channelAddress: mkAddress("ccc"),
       amount: "12039",
-      assetId: mkAddress("0xaaa"),
+      assetId: mkAddress("aaa"),
     };
 
     const tests: ParamValidationTest[] = [
@@ -221,10 +221,10 @@ describe("Vector.create", () => {
 
   describe("should validate parameters", () => {
     const validParams = {
-      channelAddress: mkAddress("0xccc"),
+      channelAddress: mkAddress("ccc"),
       amount: "123214",
-      assetId: mkAddress("0xaaa"),
-      transferDefinition: mkAddress("0xdef"),
+      assetId: mkAddress("aaa"),
+      transferDefinition: mkAddress("def"),
       transferInitialState: createTestLinkedTransferState(),
       timeout: "133215",
       encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
@@ -334,10 +334,10 @@ describe("Vector.resolve", () => {
 
   describe("should validate parameters", () => {
     const validParams = {
-      channelAddress: mkAddress("0xccc"),
-      transferId: mkBytes32("0xaaabbb"),
+      channelAddress: mkAddress("ccc"),
+      transferId: mkBytes32("aaabbb"),
       transferResolver: {
-        preImage: mkBytes32("0xeeeeffff"),
+        preImage: mkBytes32("eeeeffff"),
       },
     };
 

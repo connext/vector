@@ -1,4 +1,10 @@
-import { ChannelUpdateError, UpdateType, VectorChannelMessage, VectorErrorMessage, VectorMessage } from "@connext/vector-types";
+import {
+  ChannelUpdateError,
+  UpdateType,
+  VectorChannelMessage,
+  VectorErrorMessage,
+  VectorMessage,
+} from "@connext/vector-types";
 
 import { createTestChannelUpdate, PartialChannelUpdate } from "./channel";
 import { mkPublicIdentifier } from "./util";
@@ -14,10 +20,7 @@ type PartialVectorChannelMessage<T extends UpdateType = any> = Partial<
 
 export function createVectorChannelMessage(overrides: PartialVectorChannelMessage = {}): VectorChannelMessage {
   // Generate the proper data fields given the overrides
-  const {
-    data,
-    ...defaults
-  } = overrides;
+  const { data, ...defaults } = overrides;
   const update = {
     ...createTestChannelUpdate(data?.update?.type ?? UpdateType.setup, data?.update),
   };
@@ -25,8 +28,8 @@ export function createVectorChannelMessage(overrides: PartialVectorChannelMessag
     ...createTestChannelUpdate(data?.latestUpdate?.type ?? UpdateType.setup, data?.latestUpdate),
   };
   return {
-    to: mkPublicIdentifier("indraBBB"),
-    from: mkPublicIdentifier("indraAAA"),
+    to: mkPublicIdentifier("BBB"),
+    from: mkPublicIdentifier("AAA"),
     data: {
       update: {
         ...update,
@@ -41,14 +44,17 @@ export function createVectorChannelMessage(overrides: PartialVectorChannelMessag
 
 export function createVectorErrorMessage(overrides: Partial<VectorErrorMessage> = {}): VectorErrorMessage {
   return {
-    to: mkPublicIdentifier("indraBBB"),
-    from: mkPublicIdentifier("indraAAA"),
+    to: mkPublicIdentifier("BBB"),
+    from: mkPublicIdentifier("AAA"),
     error: new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, createTestChannelUpdate("setup")),
     ...overrides,
   };
 }
 
-export function createVectorMessage(type: "channel" | "error" = "channel", overrides: PartialVectorChannelMessage | Partial<VectorErrorMessage>): VectorMessage {
+export function createVectorMessage(
+  type: "channel" | "error" = "channel",
+  overrides: PartialVectorChannelMessage | Partial<VectorErrorMessage>,
+): VectorMessage {
   if (type === "channel") {
     return createVectorChannelMessage(overrides);
   }
