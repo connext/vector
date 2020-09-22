@@ -52,6 +52,12 @@ export const cliOpts = {
     type: "boolean",
     deafult: false,
   },
+  silent: {
+    alias: "silent",
+    description: "Don't log anything to console",
+    type: "boolean",
+    deafult: false,
+  },
   tokenAddress: {
     alias: "token-address",
     description: "The address of the token",

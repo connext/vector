@@ -59,9 +59,8 @@ describe("applyUpdate", () => {
   const networkContext: NetworkContext = {
     chainId,
     providerUrl,
-    adjudicatorAddress: mkAddress("0xaaabbbcccc"),
-    channelFactoryAddress: mkAddress("0xddddeeeffff"),
-    vectorChannelMastercopyAddress: mkAddress("0xbeef"),
+    channelFactoryAddress: mkAddress("0xaaabbbcccc"),
+    channelMastercopyAddress: mkAddress("0xbeef"),
   };
   const merkleProofData = [mkHash("0xproof")];
   const merkleRoot = mkHash("0xroot");
@@ -413,9 +412,8 @@ describe.only("generateUpdate", () => {
   const networkContext: NetworkContext = {
     chainId,
     providerUrl,
-    adjudicatorAddress: mkAddress("0xaaabbbcccc"),
-    channelFactoryAddress: mkAddress("0xddddeeeffff"),
-    vectorChannelMastercopyAddress: mkAddress("0xbeef"),
+    channelFactoryAddress: mkAddress("0xaaabbbcccc"),
+    channelMastercopyAddress: mkAddress("0xbeef"),
   };
   // const merkleProofData = [mkHash("0xproof")];
   // const merkleRoot = mkHash("0xroot");
@@ -735,7 +733,7 @@ describe.only("generateUpdate", () => {
   //     ...coreState,
   //     transferState: transferInitialState,
   //     chainId: state.networkContext.chainId,
-  //     adjudicatorAddress: state.networkContext.adjudicatorAddress,
+  //     channelFactoryAddress: state.networkContext.channelFactoryAddress,
   //     transferId: coreState.transferId,
   //     transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
   //   });

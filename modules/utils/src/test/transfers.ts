@@ -86,19 +86,19 @@ export function createTestFullLinkedTransferState(
 
   // get default values
   const defaults = {
-    initialBalance: { ...transferState.balance, amount: [transferValue.toString(), "0"] },
     assetId: assetId ?? mkAddress(),
-    channelAddress: mkAddress("0xccc"),
-    transferId: getRandomBytes32(),
-    transferDefinition: mkAddress("0xdef"),
-    transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-    initialStateHash: hashTransferState(transferState, transferEncodings[0]),
-    adjudicatorAddress: mkAddress("0xaaaaddddffff"),
     chainId: 2,
-    transferEncodings,
-    transferState,
-    transferResolver,
+    channelAddress: mkAddress("0xccc"),
+    channelFactoryAddress: mkAddress("0xaaaaddddffff"),
+    initialBalance: { ...transferState.balance, amount: [transferValue.toString(), "0"] },
+    initialStateHash: hashTransferState(transferState, transferEncodings[0]),
     meta: { super: "cool stuff" },
+    transferDefinition: mkAddress("0xdef"),
+    transferEncodings,
+    transferId: getRandomBytes32(),
+    transferResolver,
+    transferState,
+    transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
   };
 
   return {

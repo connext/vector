@@ -3,35 +3,30 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IAdjudicator.sol";
-import "./interfaces/IVectorChannel.sol";
+import "./interfaces/IERC20.sol";
 import "./interfaces/ITransferDefinition.sol";
-import "./shared/LibChannelCrypto.sol";
-import "./shared/MerkleProof.sol";
-import "./shared/SafeMath.sol";
+import "./interfaces/IVectorChannel.sol";
+import "./lib/LibChannelCrypto.sol";
+import "./lib/MerkleProof.sol";
+import "./lib/SafeMath.sol";
+import "./Proxy.sol";
 
+/// @title Adjudicator - Dispute logic
 contract Adjudicator is IAdjudicator {
-
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
-    struct Dispute { // Maybe this should be ChannelDispute?
-        bytes32 channelStateHash;
-        uint256 nonce;
-        bytes32 merkleRoot;
-        uint256 consensusExpiry;
-        uint256 defundExpiry;
-        // iterable_mapping(address => bool) assetDefunded; // Disabled because we now withdraw all assets
-        bool isDefunded;
-    }
-
-    struct TransferDispute {
-        uint256 transferDisputeExpiry;
-        bytes32 transferStateHash;
-        bool isDefunded;
-    }
-
-    mapping(address => Dispute) channelDispute;
+    mapping(address => ChannelDispute) channelDispute;
     mapping(bytes32 => TransferDispute) transferDisputes;
+
+    modifier onlyParticipant(CoreChannelState memory ccs) {
+        require(
+            msg.sender == ccs.participants[0] ||
+            msg.sender == ccs.participants[1],
+            "ChannelFactory: msg.sender is not channel participant"
+        );
+        _;
+    }
 
     function forceChannelConsensus(
         CoreChannelState memory ccs,
@@ -42,7 +37,7 @@ contract Adjudicator is IAdjudicator {
         onlyParticipant(ccs)
     {
         // PSEUDOCODE: Please don't delete yet!
-        // Dispute memory lastDispute = channelDispute(state.channelAddress)
+        // ChannelDispute memory lastDispute = channelDisputes(state.channelAddress)
         // validateSignatures(signatures, participants, state);
         // require(!inDefundPhase(lastDispute))
         // require(state.nonce >= lastDispute.nonce)
@@ -51,7 +46,7 @@ contract Adjudicator is IAdjudicator {
         //     channelDispute(state.channelAddress).consensusExpiry = block.number.add(state.timeout)
         //     channelDispute(state.channelAddress).defundExpiry    = block.number.add(state.timeout.mul(2))
         // } else { -- state.nonce > lastDispute.nonce
-        //     Dispute dispute = {
+        //     ChannelDispute dispute = {
         //         channelStateHash: hash(state),
         //         nonce: state.nonce,
         //         merkleRoot: state.merkleRoot,
@@ -61,40 +56,33 @@ contract Adjudicator is IAdjudicator {
         //      };
         //      channelDispute(state.channelAddress) = dispute;
         // }
-
-        address channelAddress = getChannelAddress(ccs);
-        Dispute storage dispute = channelDispute[channelAddress];
-
+        // TODO: what are the implications of this?
+        address channelAddress = msg.sender; // getChannelAddress(ccs.participants[0], ccs.participants[1]);
+        ChannelDispute storage dispute = channelDispute[channelAddress];
         verifySignatures(ccs.participants, ccs, signatures);
-
         require(
             !inDefundPhase(dispute),
-            "Adjudicator forceChannelConsensus: Not allowed in defund phase"
+            "ChannelFactory forceChannelConsensus: Not allowed in defund phase"
         );
-
         // TODO: check not defunded???
-
         require(
             dispute.nonce <= ccs.nonce,
-            "Adjudicator forceChannelConsensus: New nonce smaller than stored one"
+            "ChannelFactory forceChannelConsensus: New nonce smaller than stored one"
         );
-
         if (dispute.nonce == ccs.nonce) {
             require(
                 !inConsensusPhase(dispute),
-                "Adjudicator forceChannelConsensus: Same nonce not allowed in consensus phase"
+                "ChannelFactory forceChannelConsensus: Same nonce not allowed in consensus phase"
             );
-
         } else { // dispute.nonce < ccs.nonce
             dispute.channelStateHash = hashChannelState(ccs);
             dispute.nonce = ccs.nonce;
             dispute.merkleRoot = ccs.merkleRoot;
             // TODO: reset mapping
         }
-
-        dispute.consensusExpiry = block.number.add(ccs.timeout); // TODO: offchain-ensure that there can't be an overflow
-        dispute.defundExpiry = block.number.add(ccs.timeout.mul(2)); // TODO: offchain-ensure that there can't be an overflow
-
+        // TODO: offchain-ensure that there can't be an overflow
+        dispute.consensusExpiry = block.number.add(ccs.timeout);
+        dispute.defundExpiry = block.number.add(ccs.timeout.mul(2));
     }
 
     function defundChannel(
@@ -105,78 +93,63 @@ contract Adjudicator is IAdjudicator {
         onlyParticipant(ccs)
     {
         // PSEUDOCODE: Please don't delete yet!
-        // Dispute memory dispute = channelDispute(state.channelAddress)
+        // ChannelDispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(hash(state) == dispute.channelStateHash)
-
         // for(int i = 0, i < assetIds.length(), i++) {
         //      require(!dispute.assetDefunded[assetIds[i]])
         //      dispute.assetDefunded[assetIds[i]] = true
-
-        //      VectorChannel channel = VectorChannel(state.channelAddress)
+        //      ChannelMastercopy channel = ChannelMastercopy(state.channelAddress)
         //      LatestDeposit latestDeposit = channel.latestDepositA(assetIds[i])
         //
         //      Balance memory aBalance, bBalance; //Bad syntax here, I know
         //      aBalance.to = state.balA.to
         //      bBalance.to = state.balB.to
-
         //      if(latestDeposit.nonce < state.latestDepositNonce) {
         //          aBalance.amount = state.balA.add(latestDeposit.amount)
-        //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i]))) //TODO can we assume that assetIds[i] == lockedBalance[i]? probably not
+        //          // TODO can we assume that assetIds[i] == lockedBalance[i]? probably not
+        //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
         //      } else if (latestDeposit.nonce == state.latestDepositNonce) {
         //          aBalance.amount = state.balA;
         //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
         //      }
         //
-        //      channel.adjudicatorTransfer([aBalance, bBalance], assetIds[i]);
+        //      channel.transfer([aBalance, bBalance], assetIds[i]);
         //  }
-
-        address channelAddress = getChannelAddress(ccs);
-        Dispute storage dispute = channelDispute[channelAddress];
-
+        // TODO: what are the implications of this?
+        address channelAddress = msg.sender; // getChannelAddress(ccs.participants[0], ccs.participants[1]);
+        ChannelDispute storage dispute = channelDispute[channelAddress];
         require(
             inDefundPhase(dispute),
-            "Adjudicator defundChannel: Not in defund phase"
+            "ChannelFactory defundChannel: Not in defund phase"
         );
-
         require(
             !dispute.isDefunded,
-            "Adjudicator defundChannel: channel already defunded"
+            "ChannelFactory defundChannel: channel already defunded"
         );
         dispute.isDefunded = true;
-
         require(
             hashChannelState(ccs) == dispute.channelStateHash,
-            "Adjudicator defundChannel: Hash of core channel state does not match stored hash"
+            "ChannelFactory defundChannel: Hash of core channel state does not match stored hash"
         );
-
         // TODO SECURITY: Beware of reentrancy
-
         // TODO: keep this? offchain code has to ensure this
         assert(ccs.balances.length == ccs.lockedBalance.length && ccs.balances.length == ccs.assetIds.length);
-
         for (uint256 i = 0; i < ccs.balances.length; i++) {
             Balance memory balance = ccs.balances[i];
             uint256 lockedBalance = ccs.lockedBalance[i];
             address assetId = ccs.assetIds[i];
-
             IVectorChannel channel = IVectorChannel(channelAddress);
             LatestDeposit memory latestDeposit = channel.latestDepositByAssetId(assetId);
-
             Balance memory transfer;
-
             transfer.to[0] = balance.to[0];
             transfer.to[1] = balance.to[1];
-
             transfer.amount[0] = balance.amount[0];
-
             if (latestDeposit.nonce > ccs.latestDepositNonce) {
                 transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
             }
-
             transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
-
-            channel.adjudicatorTransfer(transfer, assetId);
+            channel.managedTransfer(transfer, assetId);
         }
     }
 
@@ -189,46 +162,38 @@ contract Adjudicator is IAdjudicator {
         // TODO: Who should be able to call this?
     {
         // PSEUDOCODE: Please don't delete yet!
-        // Dispute memory dispute = channelDispute(state.channelAddress)
+        // ChannelDispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(doMerkleProof(hash(state), dispute.merkleRoot, state.merkleProofData))
         // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
         // require(!inTransferDispute(transferDispute) && !afterTransferDispute(transferDispute))
         // require(!transferDispute.isDefunded)
-
         // TransferDispute transferDispute = {
         //      transferDisputeExpiry: block.number.add(state.timeout)
         //      transferStateHash: hash(state)
         //      isDefunded: false
         // }
         //  transferDisputes(state.transferId) = transferDispute
-
-        Dispute storage dispute = channelDispute[cts.channelAddress];
-
+        ChannelDispute storage dispute = channelDispute[cts.channelAddress];
         require(
             inDefundPhase(dispute),
-            "Adjudicator forceTransferConsensus: Not in defund phase"
+            "ChannelFactory forceTransferConsensus: Not in defund phase"
         );
-
         bytes32 transferStateHash = hashTransferState(cts);
-
         verifyMerkleProof(transferStateHash, dispute.merkleRoot, merkleProofData);
-
         TransferDispute storage transferDispute = transferDisputes[cts.transferId];
-
         require(
             transferDispute.transferDisputeExpiry == 0,
-            "Adjudicator forceTransferConsensus: transfer already disputed"
+            "ChannelFactory forceTransferConsensus: transfer already disputed"
         );
-
         // necessary?
         require(
             !transferDispute.isDefunded,
-            "Adjudicator forceTransferConsensus: transfer already defunded"
+            "ChannelFactory forceTransferConsensus: transfer already defunded"
         );
-
+        // TODO: offchain-ensure that there can't be an overflow
         transferDispute.transferStateHash = transferStateHash;
-        transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout); // TODO: offchain-ensure that there can't be an overflow
+        transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout);
     }
 
     function defundTransfer(
@@ -244,9 +209,7 @@ contract Adjudicator is IAdjudicator {
         // TransferDispute Memory transferDispute = transferDisputes(state.transferId)
         // require(hash(state) == transferDispute.transferStateHash)
         // require(inTransferDispute(transferDispute) || afterTransferDispute(transferDispute))
-
         // uint256[] finalBalances;
-
         // if(afterTransferDispute(transferDispute)) { -- empty it with created state
         //      finalBalances = state.balances
         // } else // inTransferDispute(transferDispute) {
@@ -255,69 +218,41 @@ contract Adjudicator is IAdjudicator {
         //      require(hash(initialTransferState) == state.initialStateHash)
         //      TransferInterface transferInterface = TransferInterface(state.transferDefinition)
         //
-        //      encodedResolvedBalances = transferInterface.resolve(encodedInitialTransferState, encodedTransferResolver)
+        //      encodedResolvedBalances = transferInterface.resolve(encodedInitialTransferState,encodedTransferResolver)
         //      finalBalances = abi.decode(encodedResolvedBalances, Balances)
         // }
         //
         // transferDispute.isDefunded = true;
         // transferDisputes(state.transferId) = transferDispute
-
-        // VectorChannel channel = VectorChannel(state.channelAddress)
-        // channel.adjudicatorTransfer(finalBalances, state.assetId)
-
+        // ChannelMastercopy channel = ChannelMastercopy(state.channelAddress)
+        // channel.transfer(finalBalances, state.assetId)
         TransferDispute memory transferDispute = transferDisputes[cts.transferId];
-
         require(
             hashTransferState(cts) == transferDispute.transferStateHash,
-            "Adjudicator defundTransfer: Hash of core transfer state does not match stored hash"
+            "ChannelFactory defundTransfer: Hash of core transfer state does not match stored hash"
         );
-
         // TODO: check / simplify
         require(
             transferDispute.transferDisputeExpiry != 0,
-            "Adjudicator defundTransfer: transfer not yet disputed"
+            "ChannelFactory defundTransfer: transfer not yet disputed"
         );
-
         require(
             !transferDispute.isDefunded,
-            "Adjudicator defundTransfer: transfer already defunded"
+            "ChannelFactory defundTransfer: transfer already defunded"
         );
-
         Balance memory finalBalance;
-
         if (block.number < transferDispute.transferDisputeExpiry) {
             require(
                 keccak256(encodedInitialTransferState) == cts.initialStateHash,
-                "Adjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
+                "ChannelFactory defundTransfer: Hash of encoded initial transfer state does not match stored hash"
             );
-
             ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
             finalBalance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
-
         } else {
             finalBalance = cts.initialBalance;
         }
-
         IVectorChannel channel = IVectorChannel(cts.channelAddress);
-        channel.adjudicatorTransfer(finalBalance, cts.assetId);
-    }
-
-
-    /* INTERNAL AND HELPER FUNCTIONS */
-
-    modifier onlyParticipant(CoreChannelState memory ccs) {
-        require(
-            msg.sender == ccs.participants[0] ||
-            msg.sender == ccs.participants[1],
-            "Adjudicator: msg.sender is not channel participant"
-        );
-        _;
-    }
-
-    function getChannelAddress(CoreChannelState memory ccs) internal pure returns (address) {
-        // TODO: FIX! SECURITY!
-        // Must be derived from participants, chainId, channel nonce, etc.
-        return ccs.channelAddress;
+        channel.managedTransfer(finalBalance, cts.assetId);
     }
 
     function verifySignatures(
@@ -342,7 +277,10 @@ contract Adjudicator is IAdjudicator {
     {
         // TODO WIP, check this!!
         bytes32 generatedHash = hashChannelState(ccs);
-        require(participant == generatedHash.verifyChannelMessage(signature), "invalid signature on core channel state");
+        require(
+            participant == generatedHash.verifyChannelMessage(signature),
+            "invalid signature on core channel state"
+        );
         return;
     }
 
@@ -356,27 +294,27 @@ contract Adjudicator is IAdjudicator {
     {
         require(
             MerkleProof.verify(proof, root, leaf),
-            "Adjudicator: Merkle proof verification failed"
+            "ChannelFactory: Merkle proof verification failed"
         );
     }
 
-    function inConsensusPhase(Dispute storage dispute) internal view returns (bool) {
+    function inConsensusPhase(ChannelDispute storage dispute) internal view returns (bool) {
         return block.number < dispute.consensusExpiry;
     }
 
-    function inDefundPhase(Dispute storage dispute) internal view returns (bool) {
+    function inDefundPhase(ChannelDispute storage dispute) internal view returns (bool) {
         return dispute.consensusExpiry <= block.number && block.number < dispute.defundExpiry;
     }
 
     function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
-        // TODO WIP, check this!!
+        // TODO: WIP
         bytes32 hashedState = sha256(abi.encode(ccs));
         return hashedState.toChannelSignedMessage();
     }
 
     function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
-        // TODO
-        return 0;
+        // TODO: WIP
+        return sha256(abi.encode(cts));
     }
 
 }

@@ -3,25 +3,31 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelFactory.sol";
+import "./interfaces/IERC20.sol";
+import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/IVectorChannel.sol";
-import "./interfaces/IAdjudicator.sol";
+import "./lib/LibChannelCrypto.sol";
+import "./lib/MerkleProof.sol";
+import "./lib/SafeMath.sol";
 import "./Proxy.sol";
-import "./shared/IERC20.sol";
-
 
 /// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
+    using LibChannelCrypto for bytes32;
+    using SafeMath for uint256;
 
     IVectorChannel public immutable masterCopy;
-    IAdjudicator public immutable adjudicator;
 
     bytes32 private constant domainSalt = keccak256("vector");
+
     bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
-    constructor(IVectorChannel _masterCopy, IAdjudicator _adjudicator) {
+    constructor(IVectorChannel _masterCopy) {
         masterCopy = _masterCopy;
-        adjudicator = _adjudicator;
     }
+
+    ////////////////////////////////////////
+    // Public Methods
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
     /// @param initiator address of one of the two participants in the channel
@@ -37,10 +43,12 @@ contract ChannelFactory is IChannelFactory {
     {
         bytes32 salt = generateSalt(initiator, responder);
         bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, masterCopy));
-
         return address(uint256(
             keccak256(abi.encodePacked(
-                byte(0xff), address(this), salt, initCodeHash
+                byte(0xff),
+                address(this),
+                salt,
+                initCodeHash
             ))
         ));
     }
@@ -57,7 +65,7 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel channel)
     {
         channel = deployChannelProxy(initiator, responder);
-        channel.setup([initiator, responder], adjudicator);
+        channel.setup([initiator, responder]);
         emit ChannelCreation(channel);
     }
 
@@ -77,10 +85,8 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel channel)
     {
         channel = createChannel(initiator, responder);
-
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
-
         if (assetId != address(0)) {
             require(
                 IERC20(assetId).transferFrom(msg.sender, address(this), amount),
@@ -90,11 +96,12 @@ contract ChannelFactory is IChannelFactory {
                 IERC20(assetId).approve(address(channel), amount),
                 "ChannelFactory: token approve failed"
             );
-
         }
-
         channel.depositA{value: msg.value}(assetId, amount);
     }
+
+    ////////////////////////////////////////
+    // Internal Methods
 
     /// @dev Allows us to create new channel contact using CREATE2
     /// @dev This method is only meant as an utility to be called from other methods

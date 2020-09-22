@@ -1,10 +1,10 @@
 import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from "@connext/vector-utils";
 import { Contract, ContractFactory, Wallet, constants, BigNumber } from "ethers";
 
-import { Adjudicator, VectorChannel, ChannelFactory } from "../../artifacts";
-import { VectorOnchainService } from "../../onchainService";
-import { getOnchainTxService } from "../onchainService";
-import { expect, provider } from "../utils";
+import { ChannelMastercopy, ChannelFactory } from "../artifacts";
+import { VectorOnchainService } from "../onchainService";
+
+import { expect, getOnchainTxService, provider } from "./utils";
 
 describe("ChannelFactory", () => {
   let deployer: Wallet;
@@ -14,22 +14,17 @@ describe("ChannelFactory", () => {
   let chainId: number;
 
   beforeEach(async () => {
-    const network = await provider.getNetwork();
-    chainId = network.chainId;
-    deployer = provider.getWallets()[0];
-    onchainService = await getOnchainTxService(provider);
+    deployer = (await provider.getWallets())[0];
+    chainId = (await provider.getNetwork()).chainId;
 
-    const adjudicator = await new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, deployer).deploy();
-    await adjudicator.deployed();
-
-    channelMastercopy = await new ContractFactory(VectorChannel.abi, VectorChannel.bytecode, deployer).deploy();
+    channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, deployer).deploy();
     await channelMastercopy.deployed();
 
     channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer).deploy(
       channelMastercopy.address,
-      adjudicator.address,
     );
     await channelFactory.deployed();
+    onchainService = await getOnchainTxService(provider);
   });
 
   it("should deploy", async () => {
@@ -40,9 +35,7 @@ describe("ChannelFactory", () => {
     const initiator = getRandomChannelSigner();
     const responder = getRandomChannelSigner();
     const created = new Promise((res) => {
-      channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
-        res(data);
-      });
+      channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
     const tx = await channelFactory.createChannel(initiator.address, responder.address);
     expect(tx.hash).to.be.a("string");
@@ -90,7 +83,7 @@ describe("ChannelFactory", () => {
     const balance = await provider.getBalance(channelAddress as string);
     expect(balance).to.be.eq(value);
 
-    const latestDeposit = await new Contract(channelAddress, VectorChannel.abi, deployer).latestDepositByAssetId(
+    const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).latestDepositByAssetId(
       constants.AddressZero,
     );
     expect(latestDeposit.nonce).to.be.eq(1);

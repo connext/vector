@@ -21,7 +21,6 @@ export interface TransferNameToStateMap {
 
 export type TransferStateEncodings = typeof LinkedTransferStateEncoding | typeof WithdrawStateEncoding;
 
-// TODO: is this correct?
 export const CoreTransferStateEncoding = tidy(`tuple(
   ${BalanceEncoding} initialBalance,
   address assetId,

@@ -14,8 +14,8 @@ import {
   keyify,
 } from "@connext/vector-utils";
 
-import { Withdraw } from "../../../artifacts";
-import { expect, provider } from "../../utils";
+import { Withdraw } from "../../artifacts";
+import { expect, provider } from "../utils";
 
 const { Zero } = constants;
 
