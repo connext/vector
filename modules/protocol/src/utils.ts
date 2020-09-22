@@ -62,12 +62,12 @@ export async function generateSignedChannelCommitment(
   signer: IChannelSigner,
   updateSignatures: string[],
 ): Promise<ChannelCommitmentData> {
-  const { publicIdentifiers, networkContext, ...core } = newState;
+  const { networkContext, ...core } = newState;
 
   const unsigned = {
     chainId: networkContext.chainId,
     state: core,
-    adjudicatorAddress: networkContext.adjudicatorAddress,
+    channelFactoryAddress: networkContext.channelFactoryAddress,
   };
   const filteredSigs = updateSignatures.filter((x) => !!x);
   if (filteredSigs.length === 2) {
@@ -100,11 +100,11 @@ export async function validateChannelUpdateSignatures(
     return `Only ${present}/${requiredSigs} signatures present`;
   }
   // generate the commitment
-  const { publicIdentifiers, networkContext, ...core } = state;
+  const { networkContext, ...core } = state;
   const hash = hashChannelCommitment({
     chainId: networkContext.chainId,
     state: core,
-    adjudicatorAddress: networkContext.adjudicatorAddress,
+    channelFactoryAddress: networkContext.channelFactoryAddress,
     signatures: [],
   });
   const valid = (

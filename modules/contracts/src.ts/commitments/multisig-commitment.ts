@@ -2,11 +2,11 @@ import { CommitmentTarget, EthereumCommitment, MinimalTransaction, MultisigTrans
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { utils } from "ethers";
 
-import { VectorChannel } from "../artifacts";
+import { ChannelMastercopy } from "../artifacts";
 
 const { Interface, keccak256, solidityKeccak256, solidityPack } = utils;
 
-// A commitment to make VectorChannel perform a message call
+// A commitment to make ChannelMastercopy perform a message call
 export abstract class MultisigCommitment implements EthereumCommitment {
   constructor(
     readonly multisigAddress: string,
@@ -45,7 +45,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     await this.assertSignatures();
     const multisigInput = this.getTransactionDetails();
 
-    const txData = new Interface(VectorChannel.abi).encodeFunctionData("execTransaction", [
+    const txData = new Interface(ChannelMastercopy.abi).encodeFunctionData("execTransaction", [
       multisigInput.to,
       multisigInput.value,
       multisigInput.data,

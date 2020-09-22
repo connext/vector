@@ -130,7 +130,7 @@ export async function outbound(
       transferTimeout: details.transferTimeout,
       initialStateHash: hashTransferState(details.transferInitialState, details.transferEncodings[0]),
       transferState: details.transferInitialState,
-      adjudicatorAddress: updatedChannel.networkContext.adjudicatorAddress,
+      channelFactoryAddress: updatedChannel.networkContext.channelFactoryAddress,
       chainId: updatedChannel.networkContext.chainId,
       meta: details.meta,
     };
@@ -157,7 +157,7 @@ export async function outbound(
     await storeService.saveChannelState(
       { ...updatedChannel, latestUpdate: channelUpdateFromCounterparty.update },
       {
-        adjudicatorAddress: updatedChannel.networkContext.adjudicatorAddress,
+        channelFactoryAddress: updatedChannel.networkContext.channelFactoryAddress,
         state: updatedChannel,
         chainId: updatedChannel.networkContext.chainId,
         signatures: channelUpdateFromCounterparty.update.signatures,
@@ -228,7 +228,7 @@ export async function inbound(
       transferTimeout: details.transferTimeout,
       initialStateHash: hashTransferState(details.transferInitialState, details.transferEncodings[0]),
       transferState: details.transferInitialState,
-      adjudicatorAddress: channelFromStore.networkContext.adjudicatorAddress,
+      channelFactoryAddress: channelFromStore.networkContext.channelFactoryAddress,
       chainId: channelFromStore.networkContext.chainId,
       meta: details.meta,
     };
@@ -584,7 +584,7 @@ const signData = async (
         transferDefinition,
         initialStateHash: hashTransferState(transferInitialState, transferEncodings[0]),
       },
-      adjudicatorAddress: newState.networkContext.adjudicatorAddress,
+      channelFactoryAddress: newState.networkContext.channelFactoryAddress,
       chainId: newState.networkContext.chainId,
       merkleProofData,
     };
@@ -593,7 +593,7 @@ const signData = async (
       transferState: transferInitialState,
       meta,
       ...commitment.state,
-      adjudicatorAddress: commitment.adjudicatorAddress,
+      channelFactoryAddress: commitment.channelFactoryAddress,
       chainId: commitment.chainId,
     };
   }
@@ -608,7 +608,7 @@ const signData = async (
       transferDefinition,
       transferTimeout,
       initialStateHash,
-      adjudicatorAddress,
+      channelFactoryAddress,
       channelAddress,
       chainId,
       transferEncodings,
@@ -625,7 +625,7 @@ const signData = async (
       transferDefinition,
       transferTimeout,
       initialStateHash,
-      adjudicatorAddress,
+      channelFactoryAddress,
       chainId,
       transferEncodings,
       transferState,

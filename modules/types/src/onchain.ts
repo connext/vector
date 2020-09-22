@@ -63,12 +63,14 @@ export interface IVectorTransactionService {
 
 export interface IVectorOnchainService {
   getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+
   getLatestDepositByAssetId(
     channelAddress: string,
     chainId: number,
     assetId: string,
     latestDepositNonce: number,
   ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, Error>>;
+
   getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
   create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>
   resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>

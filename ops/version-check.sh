@@ -23,7 +23,7 @@ echo "===== Package: $project/package.json"
 npm outdated -D | tail -n +2 | awk '$3 != $4' | awk "$format" | sed "$filter_cmd"
 echo
 
-for package in `find modules ops -type f -name "package.json" -not -path "*/node_modules/*"`
+for package in `find modules ops -type f -name "package.json" -not -path "*/node_modules/*" -not -path "*/dist/*"`
 do
   cd `dirname $package`
   echo "===== Package: $project/`dirname $package`/package.json"

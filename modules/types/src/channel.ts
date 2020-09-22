@@ -67,7 +67,6 @@ export type UpdateParams<T extends UpdateType> = {
   details: UpdateParamsMap[T];
 };
 
-// TODO update this in contracts
 export type Balance = {
   amount: string[];
   to: Address[];
@@ -110,7 +109,7 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
 export interface ChannelCommitmentData {
   state: CoreChannelState;
   signatures: string[];
-  adjudicatorAddress: Address;
+  channelFactoryAddress: Address;
   chainId: number;
 }
 
@@ -125,7 +124,7 @@ export interface CoreTransferState {
 }
 
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
-  adjudicatorAddress: string; // networkContext?
+  channelFactoryAddress: string; // networkContext?
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: TransferStateMap[T];
@@ -135,7 +134,7 @@ export type FullTransferState<T extends TransferName = any> = CoreTransferState 
 
 export interface TransferCommitmentData {
   state: CoreTransferState;
-  adjudicatorAddress: Address;
+  channelFactoryAddress: Address;
   chainId: number;
   merkleProofData: string[];
 }
@@ -146,8 +145,7 @@ export type ChainAddresses = {
 
 export type ContractAddresses = {
   channelFactoryAddress: Address;
-  vectorChannelMastercopyAddress: Address;
-  adjudicatorAddress: Address;
+  channelMastercopyAddress: Address;
   linkedTransferDefinition?: Address;
   withdrawDefinition?: Address;
 };

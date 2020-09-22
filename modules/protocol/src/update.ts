@@ -323,7 +323,7 @@ async function generateCreateUpdate(
     transferTimeout: timeout,
     initialStateHash: hashTransferState(transferInitialState, encodings[0]),
     transferState: transferInitialState,
-    adjudicatorAddress: state.networkContext.adjudicatorAddress,
+    channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
   };
   const transferHash = hashCoreTransferState(transferState);
@@ -416,9 +416,6 @@ async function generateResolveUpdate(
 
   return unsigned;
 }
-
-// TODO: signature assertion helpers for commitment data
-// and for updates
 
 // Holds the logic that is the same between all update types:
 // - increasing channel nonce

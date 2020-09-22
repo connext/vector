@@ -40,13 +40,12 @@ export const hashCoreChannelState = (state: CoreChannelState): string => {
   return keccak256(solidityPack(["bytes"], [encodeCoreChannelState(state)]));
 };
 
-// TODO: is this the right hashing? Should we encode the state *then* hash?
 export const hashChannelCommitment = (commitment: ChannelCommitmentData): string => {
   const channelStateHash = hashCoreChannelState(commitment.state);
   return keccak256(
     solidityPack(
       ["bytes32", "bytes[]", "address", "uint256"],
-      [channelStateHash, commitment.signatures, commitment.adjudicatorAddress, commitment.chainId.toString()],
+      [channelStateHash, commitment.signatures, commitment.channelFactoryAddress, commitment.chainId.toString()],
     ),
   );
 };

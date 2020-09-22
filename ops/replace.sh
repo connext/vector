@@ -28,6 +28,7 @@ then
     modules/*/src \
     modules/*/src.sol \
     modules/*/src.ts \
+    modules/server-node/schema.prisma \
     ops \
     -type f -not -name "*.swp" -exec sed -i "s|$old|$new|g" {} \;
 
