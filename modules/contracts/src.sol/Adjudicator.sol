@@ -58,7 +58,7 @@ contract Adjudicator is IAdjudicator {
         verifySignatures(ccs.participants, ccs, signatures);
         require(
             !inDefundPhase(),
-            "disputeChannel: Not allowed in defund phase"
+            "Adjudicator disputeChannel: Not allowed in defund phase"
         );
         // TODO: check not defunded???
         require(
@@ -264,7 +264,7 @@ contract Adjudicator is IAdjudicator {
         bytes32 generatedHash = hashChannelState(ccs);
         require(
             participant == generatedHash.verifyChannelMessage(signature),
-            "invalid signature on core channel state"
+            "Adjudicator: invalid signature on core channel state"
         );
         return;
     }
