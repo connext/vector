@@ -169,13 +169,28 @@ export class VectorEngine {
     return Result.ok(channel);
   }
 
-  private async resolveCondition(params: ResolveConditionParams): Promise<Result<any>> {
+  private async resolveCondition(params: ResolveConditionParams<any>): Promise<Result<any>> {
     // TODO types
     // TODO input validation
+    const channel = await this.store.getChannelState(params.channelAddress);
+    if (!channel) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
 
-    // First, get translated `resolve` params using the passed in resolve condition ones
-    const resolveParams: ResolveTransferParams = await convertResolveConditionParams(params);
-    return this.vector.resolve(resolveParams);
+    // First, get translated `create` params using the passed in conditional transfer ones
+    const resolveResult = convertResolveConditionParams(params, channel!);
+    if (resolveResult.isError) {
+      return Result.fail(resolveResult.getError()!);
+    }
+    const resolveParams = resolveResult.getValue();
+    const protocolRes = await this.vector.resolve(resolveParams);
+    if (protocolRes.isError) {
+      return Result.fail(protocolRes.getError()!);
+    }
+    const res = protocolRes.getValue();
+    return Result.ok({ routingId: params.routingId });
   }
 
   private async withdraw(params: WithdrawParams): Promise<Result<any>> {

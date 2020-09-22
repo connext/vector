@@ -1,5 +1,5 @@
-import { ChainAddresses, ConditionalTransferParams, ConditionalTransferType, ContractAddresses, CreateTransferParams, DEFAULT_TRANSFER_TIMEOUT, FullChannelState, LinkedTransferParams, LinkedTransferResolverEncoding, LinkedTransferStateEncoding, ResolveConditionParams } from "@connext/vector-types";
-import { convertConditionalTransferParams } from "../paramConverter";
+import { ChainAddresses, ConditionalTransferParams, ConditionalTransferType, ContractAddresses, CreateTransferParams, DEFAULT_TRANSFER_TIMEOUT, FullChannelState, LinkedTransferParams, LinkedTransferResolver, LinkedTransferResolverEncoding, LinkedTransferStateEncoding, ResolveConditionParams } from "@connext/vector-types";
+import { convertConditionalTransferParams, convertResolveConditionParams } from "../paramConverter";
 import { env } from "./env";
 
 import { createTestChannelState, getRandomBytes32, mkAddress, mkHash, stringify } from "@connext/vector-utils";
@@ -7,7 +7,7 @@ import { expect } from "chai";
 import { utils } from "ethers";
 import { InvalidTransferType } from "../errors";
 
-describe.only("ParamConverter", () => {
+describe("ParamConverter", () => {
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const providerUrl = env.chainProviders[chainId];
     const chainAddresses = env.chainAddresses[chainId]
@@ -89,9 +89,34 @@ describe.only("ParamConverter", () => {
         })
     })
 
-    describe("convertResolveConditionParams", () => {
-        const generateParams = (): ResolveConditionParams => {
-
+    describe.only("convertResolveConditionParams", () => {
+        const generateParams = (): ResolveConditionParams<"LinkedTransfer"> => {
+            return {
+                channelAddress: mkAddress("0xa"),
+                conditionType: ConditionalTransferType.LinkedTransfer,
+                routingId: mkHash("0xtest"),
+                details: {
+                    preImage: getRandomBytes32()
+                } as LinkedTransferResolver,
+                meta: {
+                    message: "test"
+                }
+            }
         }
+
+        it("should work", async () => {
+            const params = generateParams()
+            const channelState: FullChannelState = createTestChannelState("create", {
+                channelAddress: params.channelAddress,
+                networkContext: {
+                    ...contractAddresses[chainId],
+                    chainId,
+                    providerUrl
+                }
+            });
+            const ret: CreateTransferParams = (convertConditionalTransferParams(params, channelState)).getValue()
+            convertResolveConditionParams(params, channelState);
+            console.log("Hello")
+        })
     })
 })
