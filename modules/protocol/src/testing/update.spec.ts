@@ -34,8 +34,6 @@ import Sinon from "sinon";
 
 import * as vectorUpdate from "../update";
 
-// import { applyUpdate, generateUpdate } from "../update";
-
 import { MemoryStoreService } from "./services/store";
 import { env } from "./utils";
 
@@ -120,26 +118,32 @@ describe("applyUpdate", () => {
       name: "should work for deposit (existing assetId)",
       updateType: UpdateType.deposit,
       stateOverrides: {
-        nonce: 5,
-        balances: [{ to: participants, amount: ["0", "17"] }],
-        assetIds: [mkAddress()],
-        lockedBalance: [],
-        latestDepositNonce: 0,
-      },
-      updateOverrides: {
-        details: { latestDepositNonce: 3 },
-        nonce: 6,
-        balance: { to: participants, amount: ["6", "17"] },
-        assetId: mkAddress("0xaddee"),
-      },
-      expected: {
-        latestDepositNonce: 3,
+        nonce: 15,
         balances: [
           { to: participants, amount: ["0", "17"] },
-          { to: participants, amount: ["6", "17"] },
+          { to: participants, amount: ["10", "1"] },
+          { to: participants, amount: ["4", "7"] },
         ],
-        lockedBalance: [],
-        assetIds: [mkAddress(), mkAddress("0xaddee")],
+        assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
+        lockedBalance: ["", "", "7"],
+        latestDepositNonce: 7,
+      },
+      updateOverrides: {
+        details: { latestDepositNonce: 8 },
+        nonce: 16,
+        balance: { to: participants, amount: ["16", "17"] },
+        assetId: mkAddress("0xfed"),
+      },
+      expected: {
+        nonce: 16,
+        latestDepositNonce: 8,
+        balances: [
+          { to: participants, amount: ["0", "17"] },
+          { to: participants, amount: ["16", "17"] },
+          { to: participants, amount: ["4", "7"] },
+        ],
+        lockedBalance: ["", "", "7"],
+        assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
       },
     },
     {
@@ -147,25 +151,31 @@ describe("applyUpdate", () => {
       updateType: UpdateType.create,
       stateOverrides: {
         nonce: 5,
-        balances: [{ to: participants, amount: ["43", "22"] }],
-        assetIds: [mkAddress()],
-        lockedBalance: [],
-        merkleRoot: mkHash(),
+        balances: [
+          { to: participants, amount: ["43", "22"] },
+          { to: participants, amount: ["13", "6"] },
+          { to: participants, amount: ["4", "2"] },
+        ],
+        assetIds: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
+        lockedBalance: ["", "5", "7"],
+        merkleRoot: mkHash("0xafeb"),
       },
       updateOverrides: {
-        balance: { to: participants, amount: ["43", "8"] },
+        nonce: 6,
+        balance: { to: participants, amount: ["13", "2"] },
         fromIdentifier: publicIdentifiers[1],
         toIdentifier: publicIdentifiers[0],
-        assetId: mkAddress(),
+        assetId: mkAddress("0xdeffff"),
       },
       transferOverrides: {
-        initialBalance: { to: participants, amount: ["0", "14"] },
-        assetId: mkAddress(),
+        initialBalance: { to: [participants[1], participants[0]], amount: ["4", "0"] },
+        assetId: mkAddress("0xdeffff"),
       },
       expected: {
-        balances: [{ to: participants, amount: ["43", "8"] }],
-        lockedBalance: ["14"],
-        assetIds: [mkAddress()],
+        nonce: 6,
+        balances: [{ to: participants, amount: ["13", "2"] }],
+        lockedBalance: ["", "9", "7"],
+        assetIds: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
         merkleRoot,
       },
     },
@@ -305,6 +315,11 @@ describe("applyUpdate", () => {
       updateType: ("fail" as unknown) as UpdateType,
       error: InboundChannelUpdateError.reasons.BadUpdateType,
     },
+    {
+      name: "should fail for `resolve` if there is no transfer",
+      updateType: UpdateType.resolve,
+      error: InboundChannelUpdateError.reasons.TransferNotFound,
+    },
   ];
 
   for (const test of tests) {
@@ -322,7 +337,7 @@ describe("applyUpdate", () => {
       let transfer: FullTransferState | undefined = undefined;
       if (updateType === UpdateType.resolve || updateType === UpdateType.create) {
         // Create the full transfer state
-        transfer = {
+        transfer = transferOverrides && {
           ...createTestFullLinkedTransferState({
             balance: transferOverrides?.initialBalance,
             assetId: transferOverrides?.assetId ?? mkAddress(),
@@ -420,7 +435,7 @@ describe("generateUpdate", () => {
     channelMastercopyAddress: mkAddress("0xbeef"),
   };
 
-  // // Get transfer constants
+  // Get transfer constants
   const emptyLinkedTransfer = createTestFullLinkedTransferState({
     channelAddress,
     balance: { to: participants, amount: ["0", "0"] },
