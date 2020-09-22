@@ -1,6 +1,5 @@
 import {
   ChannelSigner,
-  createTestCoreChannelState,
   encodeCoreChannelState,
   hashChannelMessage,
   hashCoreChannelState,
@@ -62,26 +61,55 @@ describe("Channel", () => {
     expect(participants[1]).to.equal(counterparty.address);
   });
 
-  it.skip("should successfully start a dispute", async () => {
-    const channelState = createTestCoreChannelState({
+  it("should successfully start a dispute", async () => {
+    const channelState = {
+      assetIds: [
+        "0x0000000000000000000000000000000000000000",
+      ],
+      balances: [
+        {
+          amount: [
+            "0",
+            "1",
+          ],
+          to: [initiator.address, counterparty.address],
+        },
+      ],
+      channelAddress: channel.address,
+      latestDepositNonce: 1,
+      lockedBalance: [
+        "1",
+        "2",
+      ],
+      merkleRoot: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      nonce: 1,
       participants: [initiator.address, counterparty.address],
-    });
+      timeout: "1",
+    };
     console.log(`Core channel state: ${JSON.stringify(channelState, null, 2)}`);
+
     const encodedState = encodeCoreChannelState(channelState);
+    const onchainEncodedState = await channel.encodeState(channelState);
+    expect(encodedState).to.equal(onchainEncodedState);
+    console.log(`encodedState looks good: ${encodedState}`);
+
     const hashedState = hashCoreChannelState(channelState);
+    const onchainHashedState = await channel.hashState(channelState);
+    expect(hashedState).to.equal(onchainHashedState);
+    console.log(`hashedState looks good: ${hashedState}`);
+
     const hashedChannelMsg = hashChannelMessage(hashedState);
-    console.log(`encodedState: ${encodedState}`);
-    console.log(`hashedState: ${hashedState}`);
-    console.log(`hashedChannelMsg: ${hashedChannelMsg}`);
+    const onchainHashedChannelMsg = await channel.hashChannelMsg(channelState);
+    expect(hashedChannelMsg).to.equal(onchainHashedChannelMsg);
+    console.log(`hashedChannelMsg looks good: ${hashedChannelMsg}`);
+
     const signatures: string[] = [
       await initiator.signMessage(hashedState),
       await counterparty.signMessage(hashedState),
     ];
-    const onchainHash = await channel.hashState(channelState);
-    console.log(`onchainHash: ${onchainHash}`);
-    expect(onchainHash).to.equal(hashedChannelMsg);
-    const res = await channel.disputeChannel(channelState, signatures);
-    console.log(`Dispute res: ${JSON.stringify(res, null, 2)}`);
+    // TODO: fix bugs in below
+    // const res = await channel.disputeChannel(channelState, signatures);
+    // console.log(`Dispute res: ${JSON.stringify(res, null, 2)}`);
   });
 
 });

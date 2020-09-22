@@ -54,7 +54,16 @@ contract ChannelMastercopy is IVectorChannel, Adjudicator {
     ////////////////////////////////////////
     // Public Methods
 
+    // The following three methods are only to debug signatures & can be deleted eventually
+    function encodeState(CoreChannelState memory ccs) public pure returns (bytes memory) {
+      return abi.encode(ccs);
+    }
+
     function hashState(CoreChannelState memory ccs) public pure returns (bytes32) {
+      return keccak256(abi.encode(ccs));
+    }
+
+    function hashChannelMsg(CoreChannelState memory ccs) public pure returns (bytes32) {
       return hashChannelState(ccs);
     }
 

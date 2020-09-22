@@ -77,7 +77,7 @@ export const CoreChannelStateEncoding = tidy(`tuple(
   uint256[] lockedBalance,
   address[] assetIds,
   address channelAddress,
-  address[] participants,
+  address[2] participants,
   uint256 timeout,
   uint256 nonce,
   uint256 latestDepositNonce,
