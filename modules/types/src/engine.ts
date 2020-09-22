@@ -20,6 +20,7 @@ export type ConditionalTransferParams<T extends ConditionalTransferType> = {
   amount: string;
   assetId: Address;
   recipient?: PublicIdentifier;
+  timeout?: string;
   conditionType: T;
   routingId: Bytes32; // This is needed for hopped transfers, but it might get confusing against transferId
   details: TransferParamsMap[T];

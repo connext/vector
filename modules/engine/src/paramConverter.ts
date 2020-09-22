@@ -20,18 +20,16 @@ import { InvalidTransferType } from "./errors";
 
 export function convertConditionalTransferParams<T extends ConditionalTransferType>(
   params: ConditionalTransferParams<T>,
-  chainAddresses: ChainAddresses,
   channel: FullChannelState,
 ): Result<CreateTransferParams, InvalidTransferType> {
-  const { channelAddress, amount, assetId, recipient, routingId, details } = params;
-  const chainId = channel.networkContext.chainId;
+  const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
   const participants = channel.participants;
   let transferDefinition: string | undefined;
   let transferInitialState: LinkedTransferState;
   let encodings: string[];
 
   if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
-    transferDefinition = chainAddresses[chainId].linkedTransferDefinition;
+    transferDefinition = channel.networkContext.linkedTransferDefinition;
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
@@ -56,7 +54,7 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
     assetId,
     transferDefinition: transferDefinition!,
     transferInitialState,
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings,
     meta,
   });
@@ -71,7 +69,6 @@ export async function convertWithdrawParams(
   chainAddresses: ChainAddresses,
 ): Promise<CreateTransferParams> {
   throw new Error("implement convertWithdrawParams");
-  // const transferDefinition = ""; // TODO get from chainAddresses and channel state
 
   // // TODO create withdraw commitment (need to add util for this)
 

@@ -139,7 +139,7 @@ export class VectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = convertConditionalTransferParams(params, this.chainAddresses, channel!);
+    const createResult = convertConditionalTransferParams(params, channel!);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -192,14 +192,6 @@ export class VectorEngine {
     // TODO convert this into linked transfer to recipient params in conditionalTransfer
     let updatedParams;
     return this.conditionalTransfer(updatedParams);
-  }
-
-  private async addToQueuedUpdates(params: any): Promise<Result<any>> {
-    return Result.ok(undefined);
-    // TODO what kinds of params do we want this to accept?
-    // First convert the update into correct type
-    // Then store in queued updates table
-    // return this.store.addToQueuedUpdates();
   }
 
   // JSON RPC interface -- this will accept:
