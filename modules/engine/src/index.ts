@@ -24,6 +24,7 @@ import {
   EngineParams,
   OutboundChannelUpdateError,
   TAddress,
+  FullTransferState
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -172,15 +173,22 @@ export class VectorEngine {
   private async resolveCondition(params: ResolveConditionParams<any>): Promise<Result<any>> {
     // TODO types
     // TODO input validation
-    const channel = await this.store.getChannelState(params.channelAddress);
-    if (!channel) {
+    const transfers = await this.store.getActiveTransfers(params.channelAddress);
+    let transfer: FullTransferState;
+    transfers.forEach((instance) => {
+      if(instance.meta.routingId === params.routingId) {
+        transfer = instance;
+      }
+    })
+    if (!transfer!) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
       );
     }
+    // TODO validate that transfer hasn't already been resolved?
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const resolveResult = convertResolveConditionParams(params, channel!);
+    const resolveResult = convertResolveConditionParams(params, transfer!);
     if (resolveResult.isError) {
       return Result.fail(resolveResult.getError()!);
     }
@@ -196,9 +204,25 @@ export class VectorEngine {
   private async withdraw(params: WithdrawParams): Promise<Result<any>> {
     // TODO types
     // TODO input validation
+    const channel = await this.store.getChannelState(params.channelAddress);
+    if (!channel) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
 
-    const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses);
-    return this.vector.create(withdrawParams);
+    // First, get translated `create` params from withdraw
+    const createResult = convertWithdrawParams(params, channel!);
+    if (createResult.isError) {
+      return Result.fail(createResult.getError()!);
+    }
+    const createParams = createResult.getValue();
+    const protocolRes = await this.vector.create(createParams);
+    if (protocolRes.isError) {
+      return Result.fail(protocolRes.getError()!);
+    }
+    const res = protocolRes.getValue();
+    return Result.ok({}); // TODO what do we return here?
   }
 
   private async transfer(params: TransferParams): Promise<Result<any>> {

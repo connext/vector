@@ -47,7 +47,13 @@ export type ResolveConditionParams<T extends ConditionalTransferType> = {
   meta?: any;
 };
 
-export type WithdrawParams = any;
+export type WithdrawParams = {
+  channelAddress: Address,
+  amount: string,
+  assetId: Address,
+  recipient: Address,
+  fee?: string
+};
 export type TransferParams = any;
 
 // These are from the node, may not be the right place

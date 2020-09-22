@@ -1,13 +1,13 @@
-import { ChainAddresses, ConditionalTransferParams, ConditionalTransferType, ContractAddresses, CreateTransferParams, DEFAULT_TRANSFER_TIMEOUT, FullChannelState, LinkedTransferParams, LinkedTransferResolver, LinkedTransferResolverEncoding, LinkedTransferStateEncoding, ResolveConditionParams } from "@connext/vector-types";
+import { ChainAddresses, ConditionalTransferParams, ConditionalTransferType, ContractAddresses, CreateTransferParams, DEFAULT_TRANSFER_TIMEOUT, FullChannelState, FullTransferState, LinkedTransferParams, LinkedTransferResolver, LinkedTransferResolverEncoding, LinkedTransferStateEncoding, ResolveConditionParams, ResolveTransferParams } from "@connext/vector-types";
 import { convertConditionalTransferParams, convertResolveConditionParams } from "../paramConverter";
 import { env } from "./env";
 
-import { createTestChannelState, getRandomBytes32, mkAddress, mkHash, stringify } from "@connext/vector-utils";
+import { createTestChannelState, createTestFullLinkedTransferState, getRandomBytes32, mkAddress, mkHash, stringify } from "@connext/vector-utils";
 import { expect } from "chai";
 import { utils } from "ethers";
 import { InvalidTransferType } from "../errors";
 
-describe("ParamConverter", () => {
+describe.only("ParamConverter", () => {
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const providerUrl = env.chainProviders[chainId];
     const chainAddresses = env.chainAddresses[chainId]
@@ -89,7 +89,7 @@ describe("ParamConverter", () => {
         })
     })
 
-    describe.only("convertResolveConditionParams", () => {
+    describe("convertResolveConditionParams", () => {
         const generateParams = (): ResolveConditionParams<"LinkedTransfer"> => {
             return {
                 channelAddress: mkAddress("0xa"),
@@ -106,17 +106,50 @@ describe("ParamConverter", () => {
 
         it("should work", async () => {
             const params = generateParams()
-            const channelState: FullChannelState = createTestChannelState("create", {
+            const transferState: FullTransferState = createTestFullLinkedTransferState({
                 channelAddress: params.channelAddress,
-                networkContext: {
-                    ...contractAddresses[chainId],
-                    chainId,
-                    providerUrl
-                }
             });
-            const ret: CreateTransferParams = (convertConditionalTransferParams(params, channelState)).getValue()
-            convertResolveConditionParams(params, channelState);
-            console.log("Hello")
+            const ret: ResolveTransferParams = (convertResolveConditionParams(params, transferState)).getValue();
+            expect(ret).to.deep.eq({
+                channelAddress: params.channelAddress,
+                transferId: transferState.transferId,
+                transferResolver: {
+                    preImage: params.details.preImage
+                },
+                meta: {
+                    routingId: params.routingId,
+                    meta: params.meta
+                }
+            })
+        })
+
+        it("should fail if invalid type", async () => {
+            let params = generateParams()
+            // Set incorrect type
+            //@ts-ignore
+            params.conditionType = "FailingTest";
+            const transferState: FullTransferState = createTestFullLinkedTransferState({
+                channelAddress: params.channelAddress,
+            });
+            const ret = convertResolveConditionParams(params, transferState)
+            expect(ret.isError).to.be.true;
+            expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType))
+        })
+    })
+
+    describe("convertWithdrawParams", () => {
+        const generateParams = () => {
+            return {
+                channelAddress: mkAddress("0xa"),
+                amount: "8",
+                assetId: mkAddress("0x0"),
+                recipient: mkAddress("0xb"),
+            }
+        }
+
+        it("should work", () => {
+            const params = generateParams();
+            
         })
     })
 })

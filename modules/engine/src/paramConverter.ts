@@ -13,8 +13,10 @@ import {
   LinkedTransferState,
   Result,
   DEFAULT_TRANSFER_TIMEOUT,
+  FullTransferState, 
+  LinkedTransferResolver, WithdrawState, WithdrawStateEncoding, WithdrawResolverEncoding
 } from "@connext/vector-types";
-import { utils } from "ethers";
+import { BigNumber, utils } from "ethers";
 
 import { InvalidTransferType } from "./errors";
 
@@ -23,7 +25,10 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
   channel: FullChannelState,
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
+
+  // TODO IMPORTANT!!! -- This needs to be ordered correctly based on who is calling the transfer!!
   const participants = channel.participants;
+
   let transferDefinition: string | undefined;
   let transferInitialState: LinkedTransferState;
   let encodings: string[];
@@ -62,31 +67,69 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
 
 export function convertResolveConditionParams<T extends ConditionalTransferType>(
   params: ResolveConditionParams<T>,
-  channel: FullChannelState,
+  transfer: FullTransferState
 ): Result<ResolveTransferParams, InvalidTransferType> {
-  throw new Error("implement convertResolveConditionParams");
+  const { channelAddress, routingId, details } = params;
+  let transferResolver: LinkedTransferResolver;
+
+  if (params.conditionType == ConditionalTransferType.LinkedTransfer) {
+    transferResolver = {
+      preImage: details.preImage
+    }
+  } else {
+    return Result.fail(new InvalidTransferType(params.conditionType));
+  }
+
+  const meta = {
+    routingId,
+    meta: params.meta
+  }
+
+  return Result.ok({
+    channelAddress,
+    transferId: transfer.transferId,
+    transferResolver,
+    meta,
+  });
 }
 
-export async function convertWithdrawParams(
+export function convertWithdrawParams(
   params: WithdrawParams,
-  chainAddresses: ChainAddresses,
-): Promise<CreateTransferParams> {
-  throw new Error("implement convertWithdrawParams");
+  channel: FullChannelState,
+): Result<CreateTransferParams, InvalidTransferType> {
+  const { channelAddress, assetId, recipient, fee } = params;
+  let amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
-  // // TODO create withdraw commitment (need to add util for this)
+  // TODO create withdraw commitment (need to add util for this)
 
-  // // TODO hash the withdraw commitment
+  // TODO hash the withdraw commitment
+  let data: string = ""// TODO
 
-  // // TODO sign the withdraw commitment
-  // const transferInitialState = {}; // TODO setup initial state with the above params
+  // TODO sign the withdraw commitment
 
-  // return {
-  //   channelAddress: params.channelAddress,
-  //   amount: params.amount,
-  //   assetId: params.assetId,
-  //   transferDefinition,
-  //   transferInitialState,
-  //   timeout: DEFAULT_TRANSFER_TIMEOUT,
-  //   encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
-  // };
+  let initiatorSignature: string = ""; // TODO!
+
+  const transferInitialState: WithdrawState = {
+    balance: {
+      amount: [amount, "0"],
+      // TODO we need to figure out if to[1] is participant[0] or participant[1]!!!
+      to: [recipient, channel.participants[1]]
+    },
+    initiatorSignature,
+    // TODO ordering!!
+    signers: channel.participants,
+    data,
+    nonce: "1", // TODO -- how do we do this?
+    fee: fee ? fee : "0"
+  }
+
+  return Result.ok({
+    channelAddress,
+    amount,
+    assetId,
+    transferDefinition: channel.networkContext.withdrawDefinition!,
+    transferInitialState,
+    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+  });
 }
