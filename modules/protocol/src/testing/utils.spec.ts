@@ -27,9 +27,9 @@ type ReconcileDepositTest = {
 
 describe("utils", () => {
   describe("reconcileDeposit", () => {
-    const channelAddress = mkAddress("0xccc");
+    const channelAddress = mkAddress("ccc");
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-    const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];
+    const to = [mkAddress("aaa"), mkAddress("bbb")];
 
     const getOnchainService = (testParams: Partial<ReconcileDepositTest>) => {
       const { initialBalance, latestDepositNonce, stubs, aliceDeposit, bobDeposit } = testParams;
@@ -79,7 +79,7 @@ describe("utils", () => {
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         latestDepositNonce: 0,
-        assetId: mkAddress("0xdddd"),
+        assetId: mkAddress("dddd"),
         expected: { amount: ["18", "9"], latestDepositNonce: 1 },
       },
       {
@@ -92,7 +92,7 @@ describe("utils", () => {
         name: "should work for Bob Token deposit when onchain deposit was successful",
         bobDeposit: 7,
         initialBalance: { amount: ["3", "9"] },
-        assetId: mkAddress("0xdddd"),
+        assetId: mkAddress("dddd"),
         expected: { amount: ["3", "16"], latestDepositNonce: 1 },
       },
       {
@@ -109,7 +109,7 @@ describe("utils", () => {
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         latestDepositNonce: 0,
-        assetId: mkAddress("0xdddd"),
+        assetId: mkAddress("dddd"),
         expected: { amount: ["18", "16"], latestDepositNonce: 1 },
       },
     ];

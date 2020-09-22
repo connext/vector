@@ -59,15 +59,15 @@ describe("applyUpdate", () => {
   // Generate test constants
   const participants = signers.map(s => s.address);
   const publicIdentifiers = signers.map(s => s.publicIdentifier);
-  const channelAddress = mkAddress("0xccc");
+  const channelAddress = mkAddress("ccc");
   const networkContext: NetworkContext = {
     chainId,
     providerUrl,
-    channelFactoryAddress: mkAddress("0xaaabbbcccc"),
-    channelMastercopyAddress: mkAddress("0xbeef"),
+    channelFactoryAddress: mkAddress("aaabbbcccc"),
+    channelMastercopyAddress: mkAddress("beef"),
   };
-  const merkleProofData = [mkHash("0x1235asdf")];
-  const merkleRoot = mkHash("0xaaaeeecccbbbb123");
+  const merkleProofData = [mkHash("1235asdf")];
+  const merkleRoot = mkHash("aaaeeecccbbbb123");
 
   afterEach(() => {
     Sinon.restore();
@@ -107,13 +107,13 @@ describe("applyUpdate", () => {
         details: { latestDepositNonce: 0 },
         nonce: 2,
         balance: { to: participants, amount: ["0", "17"] },
-        assetId: mkAddress("0xaddee"),
+        assetId: mkAddress("addee"),
       },
       expected: {
         latestDepositNonce: 0,
         balances: [{ to: participants, amount: ["0", "17"] }],
         lockedBalance: [],
-        assetIds: [mkAddress("0xaddee")],
+        assetIds: [mkAddress("addee")],
       },
     },
     {
@@ -130,7 +130,7 @@ describe("applyUpdate", () => {
         details: { latestDepositNonce: 3 },
         nonce: 6,
         balance: { to: participants, amount: ["6", "17"] },
-        assetId: mkAddress("0xaddee"),
+        assetId: mkAddress("addee"),
       },
       expected: {
         latestDepositNonce: 3,
@@ -139,7 +139,7 @@ describe("applyUpdate", () => {
           { to: participants, amount: ["6", "17"] },
         ],
         lockedBalance: [],
-        assetIds: [mkAddress(), mkAddress("0xaddee")],
+        assetIds: [mkAddress(), mkAddress("addee")],
       },
     },
     {
@@ -211,7 +211,7 @@ describe("applyUpdate", () => {
         assetId: mkAddress(),
       },
       transferOverrides: {
-        initialBalance: { to: [mkAddress("0xffff"), participants[1]], amount: ["14", "0"] },
+        initialBalance: { to: [mkAddress("ffff"), participants[1]], amount: ["14", "0"] },
         assetId: mkAddress(),
       },
       expected: {
@@ -290,7 +290,7 @@ describe("applyUpdate", () => {
         assetId: mkAddress(),
       },
       transferOverrides: {
-        initialBalance: { to: [mkAddress("0xffff"), participants[1]], amount: ["14", "0"] },
+        initialBalance: { to: [mkAddress("ffff"), participants[1]], amount: ["14", "0"] },
         assetId: mkAddress(),
       },
       expected: {
@@ -412,12 +412,12 @@ describe("generateUpdate", () => {
     .map(() => getRandomChannelSigner(providerUrl));
   const participants = signers.map(s => s.address);
   const publicIdentifiers = signers.map(s => s.publicIdentifier);
-  const channelAddress = mkAddress("0xccc");
+  const channelAddress = mkAddress("ccc");
   const networkContext: NetworkContext = {
     chainId,
     providerUrl,
-    channelFactoryAddress: mkAddress("0xaaabbbcccc"),
-    channelMastercopyAddress: mkAddress("0xbeef"),
+    channelFactoryAddress: mkAddress("aaabbbcccc"),
+    channelMastercopyAddress: mkAddress("beef"),
   };
 
   // // Get transfer constants
@@ -426,8 +426,8 @@ describe("generateUpdate", () => {
     balance: { to: participants, amount: ["0", "0"] },
     transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
   });
-  const merkleProofData = [mkHash("0x1235asdf")];
-  const merkleRoot = mkHash("0xaaaeeecccbbbb123");
+  const merkleProofData = [mkHash("1235asdf")];
+  const merkleRoot = mkHash("aaaeeecccbbbb123");
 
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;

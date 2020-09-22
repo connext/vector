@@ -27,11 +27,11 @@ export const createTestLinkedTransferState = (
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {
-      to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
+      to: [mkAddress("aaa"), mkAddress("bbb")],
       amount: ["1", "0"],
       ...(balanceOverrides ?? {}),
     },
-    linkedHash: mkHash("0xeee"),
+    linkedHash: mkHash("eee"),
     ...defaultOverrides,
   };
 };
@@ -49,12 +49,12 @@ export const createTestLinkedTransferStates = (
 
 export const createCoreTransferState = (overrides: Partial<CoreTransferState> = {}): CoreTransferState => {
   return {
-    initialBalance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
+    initialBalance: { to: [mkAddress("aa"), mkAddress("bbb")], amount: ["1", "0"] },
     assetId: mkAddress(),
-    channelAddress: mkAddress("0xccc"),
-    transferId: mkBytes32("0xeeefff"),
-    transferDefinition: mkAddress("0xdef"),
-    initialStateHash: mkBytes32("0xabcdef"),
+    channelAddress: mkAddress("ccc"),
+    transferId: mkBytes32("eeefff"),
+    transferDefinition: mkAddress("def"),
+    initialStateHash: mkBytes32("abcdef"),
     transferTimeout: "1",
     ...overrides,
   };
@@ -76,7 +76,7 @@ export function createTestFullLinkedTransferState(
   const transferState = createTestLinkedTransferState({
     linkedHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
     assetId: assetId ?? mkAddress(),
-    balance: balance ?? { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["4", "0"] },
+    balance: balance ?? { to: [mkAddress("aaa"), mkAddress("bbb")], amount: ["4", "0"] },
   });
 
   // get transfer value
@@ -88,12 +88,12 @@ export function createTestFullLinkedTransferState(
   const defaults = {
     assetId: assetId ?? mkAddress(),
     chainId: 2,
-    channelAddress: mkAddress("0xccc"),
-    channelFactoryAddress: mkAddress("0xaaaaddddffff"),
+    channelAddress: mkAddress("ccc"),
+    channelFactoryAddress: mkAddress("aaaaddddffff"),
     initialBalance: { ...transferState.balance, amount: [transferValue.toString(), "0"] },
     initialStateHash: hashTransferState(transferState, transferEncodings[0]),
     meta: { super: "cool stuff" },
-    transferDefinition: mkAddress("0xdef"),
+    transferDefinition: mkAddress("def"),
     transferEncodings,
     transferId: getRandomBytes32(),
     transferResolver,

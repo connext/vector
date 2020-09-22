@@ -28,8 +28,8 @@ export function createVectorChannelMessage(overrides: PartialVectorChannelMessag
     ...createTestChannelUpdate(data?.latestUpdate?.type ?? UpdateType.setup, data?.latestUpdate),
   };
   return {
-    to: mkPublicIdentifier("indraBBB"),
-    from: mkPublicIdentifier("indraAAA"),
+    to: mkPublicIdentifier("BBB"),
+    from: mkPublicIdentifier("AAA"),
     inbox: "test_inbox",
     data: {
       update: {
@@ -45,10 +45,13 @@ export function createVectorChannelMessage(overrides: PartialVectorChannelMessag
 
 export function createVectorErrorMessage(overrides: Partial<VectorErrorMessage> = {}): VectorErrorMessage {
   return {
-    to: mkPublicIdentifier("indraBBB"),
-    from: mkPublicIdentifier("indraAAA"),
+    to: mkPublicIdentifier("BBB"),
+    from: mkPublicIdentifier("AAA"),
     inbox: "test_inbox",
-    error: new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadUpdateType, createTestChannelUpdate("setup")),
+    error: new InboundChannelUpdateError(
+      InboundChannelUpdateError.reasons.BadUpdateType,
+      createTestChannelUpdate("setup"),
+    ),
     ...overrides,
   };
 }
