@@ -293,13 +293,13 @@ contract Adjudicator is IAdjudicator {
 
     function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
         // TODO: WIP
-        bytes32 hashedState = sha256(abi.encode(ccs));
+        bytes32 hashedState = keccak256(abi.encode(ccs));
         return hashedState.toChannelSignedMessage();
     }
 
     function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
         // TODO: WIP
-        return sha256(abi.encode(cts));
+        return keccak256(abi.encode(cts));
     }
 
 }
