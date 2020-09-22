@@ -19,7 +19,7 @@ describe(testName, () => {
     });
   });
 
-  it("should setup a channel between Alice and Bob", async () => {
+  it.only("should setup a channel between Alice and Bob", async () => {
     await setupChannel(alice, bob);
   });
 });
