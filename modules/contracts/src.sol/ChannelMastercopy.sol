@@ -54,6 +54,10 @@ contract ChannelMastercopy is IVectorChannel, Adjudicator {
     ////////////////////////////////////////
     // Public Methods
 
+    function hashState(CoreChannelState memory ccs) public pure returns (bytes32) {
+      return hashChannelState(ccs);
+    }
+
     receive() external payable onlyByProxy {
         // TODO: emit Deposit event to track eth deposits
     }
