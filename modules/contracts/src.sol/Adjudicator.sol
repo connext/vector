@@ -60,7 +60,6 @@ contract Adjudicator is IAdjudicator {
             !inDefundPhase(),
             "Adjudicator disputeChannel: Not allowed in defund phase"
         );
-        // TODO: check not defunded???
         require(
             channelDispute.nonce <= ccs.nonce,
             "Adjudicator disputeChannel: New nonce smaller than stored one"
@@ -74,7 +73,6 @@ contract Adjudicator is IAdjudicator {
             channelDispute.channelStateHash = hashChannelState(ccs);
             channelDispute.nonce = ccs.nonce;
             channelDispute.merkleRoot = ccs.merkleRoot;
-            // TODO: reset mapping
         }
         // TODO: offchain-ensure that there can't be an overflow
         channelDispute.consensusExpiry = block.number.add(ccs.timeout);
