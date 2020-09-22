@@ -11,7 +11,7 @@ module.exports = {
 
   externals: {
     "pg-native": "commonjs2 pg-native",
-    "sqlite3": "commonjs2 sqlite3",
+    sqlite3: "commonjs2 sqlite3",
   },
 
   node: {
@@ -66,6 +66,10 @@ module.exports = {
         {
           from: path.join(__dirname, "../../../node_modules/@connext/pure-evm-wasm/pure-evm_bg.wasm"),
           to: path.join(__dirname, "../dist/pure-evm_bg.wasm"),
+        },
+        {
+          from: path.join(__dirname, "../schema.prisma"),
+          to: path.join(__dirname, "../dist/schema.prisma"),
         },
       ],
     }),

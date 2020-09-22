@@ -1,5 +1,5 @@
 import {
-  ChannelUpdateError,
+  InboundChannelUpdateError,
   UpdateType,
   VectorChannelMessage,
   VectorErrorMessage,
@@ -30,6 +30,7 @@ export function createVectorChannelMessage(overrides: PartialVectorChannelMessag
   return {
     to: mkPublicIdentifier("BBB"),
     from: mkPublicIdentifier("AAA"),
+    inbox: "test_inbox",
     data: {
       update: {
         ...update,
@@ -46,7 +47,11 @@ export function createVectorErrorMessage(overrides: Partial<VectorErrorMessage> 
   return {
     to: mkPublicIdentifier("BBB"),
     from: mkPublicIdentifier("AAA"),
-    error: new ChannelUpdateError(ChannelUpdateError.reasons.BadUpdateType, createTestChannelUpdate("setup")),
+    inbox: "test_inbox",
+    error: new InboundChannelUpdateError(
+      InboundChannelUpdateError.reasons.BadUpdateType,
+      createTestChannelUpdate("setup"),
+    ),
     ...overrides,
   };
 }

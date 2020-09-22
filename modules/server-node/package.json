@@ -7,7 +7,7 @@
     "build": "prisma generate && rm -rf dist && tsc -p tsconfig.json",
     "start": "prisma migrate up --experimental && node dist/index.js",
     "test": "prisma generate && prisma migrate up --experimental && ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
-    "migration:generate": "prisma migrate save --experimental"
+    "migration:generate": "VECTOR_DATABASE_URL=file:dev.db prisma migrate save --experimental"
   },
   "author": "",
   "license": "ISC",

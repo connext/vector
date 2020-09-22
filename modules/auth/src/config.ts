@@ -1,10 +1,10 @@
-const publicKey = process.env.VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY;
+const publicKey = process.env.VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY?.replace(/\\n/g, "\n");
 if (!publicKey) {
   throw new Error(`VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY is required`);
 }
 
-const privateKey = process.env.VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY;
-if (!publicKey) {
+const privateKey = process.env.VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY?.replace(/\\n/g, "\n");
+if (!privateKey) {
   throw new Error(`VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY is required`);
 }
 

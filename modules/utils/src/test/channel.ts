@@ -22,11 +22,11 @@ export type PartialChannelUpdate<T extends UpdateType> = Partial<
   Omit<ChannelUpdate<T>, "details"> & { details: Partial<ChannelUpdateDetailsMap[T]> }
 >;
 
-type PartialFullChannelState<T extends UpdateType> = Partial<
+export type PartialFullChannelState<T extends UpdateType> = Partial<
   Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
 >;
 
-type PartialUpdateParams<T extends UpdateType> = Partial<
+export type PartialUpdateParams<T extends UpdateType> = Partial<
   Omit<UpdateParams<T>, "details"> & { details?: Partial<UpdateParamsMap[T]> }
 >;
 
@@ -35,7 +35,7 @@ export function createTestUpdateParams<T extends UpdateType>(
   overrides: PartialUpdateParams<T>,
 ): UpdateParams<T> {
   const base = {
-    channelAddress: mkAddress("ccc"),
+    channelAddress: overrides.channelAddress ?? mkAddress("ccc"),
     type,
   };
 
@@ -46,7 +46,9 @@ export function createTestUpdateParams<T extends UpdateType>(
         counterpartyIdentifier: mkPublicIdentifier("0xbbb"),
         timeout: "1200",
         networkContext: {
-          channelFactoryAddress: mkAddress("cfa"),
+          chainId: 2,
+          providerUrl: "http://eth.com",
+          channelFactoryAddress: mkAddress("ccccddddaaaaaffff"),
           channelMastercopyAddress: mkAddress("cccaaa"),
         },
       };
@@ -59,7 +61,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.create:
       details = {
-        channelAddress: mkAddress("ccc"),
+        channelAddress: base.channelAddress,
         amount: "15",
         assetId: mkAddress("0"),
         transferDefinition: mkAddress("def"),
@@ -71,7 +73,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.resolve:
       details = {
-        channelAddress: mkAddress("ccc"),
+        channelAddress: base.channelAddress,
         transferId: mkBytes32("abcdef"),
         transferResolver: { preImage: mkBytes32("cdef") },
         meta: { test: "meta" },
@@ -85,6 +87,7 @@ export function createTestUpdateParams<T extends UpdateType>(
     ...base,
     details: {
       ...details,
+      channelAddress: base.channelAddress,
       ...(detailOverrides ?? {}),
     },
     ...defaultOverrides,
@@ -105,7 +108,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
     channelAddress: mkAddress("ccc"),
     fromIdentifier: mkPublicIdentifier("A"),
     nonce: 1,
-    signatures: [mkBytes32("abc1"), mkBytes32("abc2")],
+    signatures: [mkBytes32("abcd1"), mkBytes32("abcd2")],
     toIdentifier: mkPublicIdentifier("B"),
     type,
   };
@@ -120,9 +123,9 @@ export function createTestChannelUpdate<T extends UpdateType>(
       details = {
         networkContext: {
           chainId: 1337,
-          channelFactoryAddress: mkAddress("cfa"),
+          channelFactoryAddress: mkAddress("ccccddddaaaaaffff"),
           providerUrl: "http://localhost:8545",
-          channelMastercopyAddress: mkAddress("afa"),
+          channelMastercopyAddress: mkAddress("mast"),
         },
         timeout: "1",
       } as SetupUpdateDetails;
@@ -135,27 +138,27 @@ export function createTestChannelUpdate<T extends UpdateType>(
     case UpdateType.create:
       details = {
         merkleProofData: [mkBytes32("beef")],
-        merkleRoot: mkBytes32("root"),
+        merkleRoot: mkBytes32("feeb"),
         transferDefinition: mkAddress("def"),
         transferEncodings: ["create", "resolve"],
-        transferId: mkBytes32("id"),
+        transferId: mkBytes32("eee"),
         transferInitialState: {
           balance: {
             amount: ["10", "0"],
             to: [mkAddress("aaa"), mkAddress("bbb")],
           },
-          linkedHash: mkBytes32("12345baaf"),
+          linkedHash: mkBytes32("fabfab"),
         } as LinkedTransferState,
         transferTimeout: "0",
       } as CreateUpdateDetails;
       break;
     case UpdateType.resolve:
       details = {
-        merkleRoot: mkBytes32("root1"),
+        merkleRoot: mkBytes32("feeb"),
         transferDefinition: mkAddress("def"),
         transferEncodings: ["create", "resolve"],
-        transferId: mkBytes32("id"),
-        transferResolver: { preImage: mkBytes32("eefff") },
+        transferId: mkBytes32("eee"),
+        transferResolver: { preImage: mkBytes32("eeefff") },
       } as ResolveUpdateDetails;
       break;
   }
@@ -208,9 +211,9 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     merkleRoot: mkHash(),
     networkContext: {
       chainId: 1337,
-      channelFactoryAddress: mkAddress("cfa"),
+      channelFactoryAddress: mkAddress("ccccddddaaaaaffff"),
       providerUrl: "http://localhost:8545",
-      channelMastercopyAddress: mkAddress("afa"),
+      channelMastercopyAddress: mkAddress("mast"),
     },
     nonce,
     participants,
