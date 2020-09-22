@@ -115,7 +115,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 
 #### Adjudicator
 - [ ] Add constructor and pass in `ChannelFactory` address
-- [ ] Change timeouts in `forceChannelConsensus` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
+- [X] Change timeouts in `forceChannelConsensus` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
 - [ ] Only allow recipient of a transfer to use `transferResolver` to `resolve` a transfer onchain in `defundTransfer`. Either party should be able to defund it with the existing state, however.
 - [ ] Don't need `onlyParticipants` anymore if we're allowing anybody to dispute.
 - [ ] `getChannelAddress` needs to be implemented using participants, chainId (from onchain data), hardcoded vector domain separator, and hardcoded `ChannelFactory` address.

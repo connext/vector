@@ -64,19 +64,25 @@ contract Adjudicator is IAdjudicator {
             channelDispute.nonce <= ccs.nonce,
             "Adjudicator disputeChannel: New nonce smaller than stored one"
         );
-        if (channelDispute.nonce == ccs.nonce) {
+        if (inConsensusPhase()) {
             require(
-                !inConsensusPhase(),
+                channelDispute.nonce < ccs.nonce,
                 "Adjudicator disputeChannel: Same nonce not allowed in consensus phase"
             );
-        } else { // channelDispute.nonce < ccs.nonce
             channelDispute.channelStateHash = hashChannelState(ccs);
             channelDispute.nonce = ccs.nonce;
             channelDispute.merkleRoot = ccs.merkleRoot;
+        } else { // during regular operation
+            // For equality, skip updates without effect and only set new expiries
+            if (channelDispute.nonce < ccs.nonce) {
+                channelDispute.channelStateHash = hashChannelState(ccs);
+                channelDispute.nonce = ccs.nonce;
+                channelDispute.merkleRoot = ccs.merkleRoot;
+            }
+            // TODO: offchain-ensure that there can't be an overflow
+            channelDispute.consensusExpiry = block.number.add(ccs.timeout);
+            channelDispute.defundExpiry = block.number.add(ccs.timeout.mul(2));
         }
-        // TODO: offchain-ensure that there can't be an overflow
-        channelDispute.consensusExpiry = block.number.add(ccs.timeout);
-        channelDispute.defundExpiry = block.number.add(ccs.timeout.mul(2));
     }
 
     // PSEUDOCODE: Please don't delete yet!
