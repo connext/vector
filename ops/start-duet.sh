@@ -96,6 +96,7 @@ VECTOR_MNEMONIC_FILE="/run/secrets/${project}_mnemonic_dev"
 
 node_port="8000"
 prisma_studio_port="5555"
+nats_port="4222"
 
 alice_port="8001"
 alice_prisma_port="5555"

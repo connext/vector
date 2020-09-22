@@ -31,7 +31,6 @@ export class NatsMessagingService implements IMessagingService {
     private readonly config: MessagingConfig,
     private readonly log: BaseLogger,
     private readonly getBearerToken: () => Promise<string>,
-    private readonly publicIdentifier: string,
   ) {}
 
   private isConnected(): boolean {
@@ -86,25 +85,22 @@ export class NatsMessagingService implements IMessagingService {
     this.assertConnected();
     try {
       const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
-      console.log("sendProtocolMessage to subject: ", subject);
-      const msg = await this.connection?.request(
-        subject,
-        timeout,
-        JSON.stringify({
-          update: channelUpdate,
-          previousUpdate,
-          from: this.publicIdentifier,
-        }),
-      );
-      console.log("sendProtocolMessage response: ", msg);
+      const msgBody = JSON.stringify({
+        update: channelUpdate,
+        previousUpdate,
+      });
+      this.log.debug({ method: "sendProtocolMessage", msgBody }, "Sending message");
+      const msg = await this.connection!.request(subject, timeout, msgBody);
+      this.log.debug({ method: "sendProtocolMessage", msgBody, msg }, "Received response");
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       parsedMsg.data = parsedData;
       // TODO: validate message structure
       return Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.update });
     } catch (e) {
-      console.log("e: ", e);
-      return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.MessageFailed, {} as any));
+      return Result.fail(
+        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.MessageFailed, channelUpdate, undefined, e),
+      );
     }
   }
 
@@ -118,8 +114,8 @@ export class NatsMessagingService implements IMessagingService {
   ): Promise<void> {
     this.assertConnected();
     const subscriptionSubject = `${myPublicIdentifier}.>`;
-    await this.connection?.subscribe(subscriptionSubject, (msg, err) => {
-      console.log("onReceiveProtocolMessage msg: ", msg);
+    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method: "onReceiveProtocolMessage", msg }, "Received message");
       const from = msg.subject.split(".")[1];
       if (err) {
         callback(Result.fail(new InboundChannelUpdateError(err, msg.data.update)), from, msg.reply);
@@ -128,11 +124,12 @@ export class NatsMessagingService implements IMessagingService {
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       // TODO: validate msg structure
       if (!parsedMsg.reply) {
-        console.log(`MSG did not contain reply, ignoring`);
+        return;
       }
       parsedMsg.data = parsedData;
       if (parsedMsg.data.error) {
         callback(Result.fail(parsedMsg.data.error), from, parsedMsg.reply);
+        return;
       }
       callback(
         Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.previousUpdate }),
@@ -140,62 +137,39 @@ export class NatsMessagingService implements IMessagingService {
         parsedMsg.reply,
       );
     });
+    this.log.debug({ method: "onReceiveProtocolMessage", subject: subscriptionSubject }, `Subscription created`);
   }
 
   async respondToProtocolMessage(
-    sentBy: string,
-    channelUpdate: ChannelUpdate<any>,
     inbox: string,
+    channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
     this.assertConnected();
-    const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
-    console.log("respondToProtocolMessage to subject: ", subject);
-    await this.connection?.publish(
+    const subject = inbox;
+    this.log.debug(
+      { method: "respondToProtocolMessage", subject, channelUpdate, previousUpdate },
+      `Sending protocol response`,
+    );
+    await this.connection!.publish(
       subject,
       JSON.stringify({
         update: channelUpdate,
         previousUpdate,
       }),
-      inbox,
     );
   }
 
-  async respondWithProtocolError(
-    updateFromIdentifier: string,
-    updateToIdentifier: string,
-    inbox: string,
-    error: InboundChannelUpdateError,
-  ): Promise<void> {
+  async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
     this.assertConnected();
-    const subject = `${updateFromIdentifier}.${updateToIdentifier}.protocol`;
-    console.log("respondToProtocolMessage to subject: ", subject);
-    await this.connection?.publish(
+    const subject = inbox;
+    this.log.debug({ method: "respondWithProtocolError", subject, error }, `Sending protocol error response`);
+    await this.connection!.publish(
       subject,
       JSON.stringify({
         error,
       }),
-      inbox,
     );
-  }
-
-  public async onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
-    this.assertConnected();
-    await this.connection!.subscribe(`${subject}.>`, (msg: any, err?: any): void => {
-      if (err || !msg || !msg.data) {
-        this.log.error(`Encountered an error while handling callback for message ${msg}: ${err}`);
-      } else {
-        const data = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
-        this.log.debug(`Received message for ${subject}: ${JSON.stringify(data)}`);
-        callback(data);
-      }
-    });
-  }
-
-  public async send(to: string, msg: any): Promise<void> {
-    this.assertConnected();
-    this.log.debug(`Sending message to ${to}: ${JSON.stringify(msg)}`);
-    return this.connection!.publish(`${to}.${msg.from}`, JSON.stringify(msg));
   }
 
   // Generic methods

@@ -1,6 +1,7 @@
 import { Type, Static, TStringLiteral } from "@sinclair/typebox";
 
 import { Address, Bytes32, PublicIdentifier } from "./basic";
+import { TAddress, TPublicIdentifier } from "./schemas";
 import { ChannelRpcMethods } from "./vectorProvider";
 
 export const ConditionalTransferType = {
@@ -38,19 +39,17 @@ export type TransferParams = any;
 // These are from the node, may not be the right place
 export type CreateTransferInput = any;
 
-export const EthAddressSchema = Type.Pattern(/0x[a-fA-F0-9]{40}/);
-
 export const SetupInputSchema = Type.Object({
-  counterpartyIdentifier: Type.String(), // TODO: pattern
+  counterpartyIdentifier: TPublicIdentifier,
   chainId: Type.Number({ minimum: 1 }),
   timeout: Type.String(),
 });
 export type SetupInput = Static<typeof SetupInputSchema>;
 
 export const DepositInputSchema = Type.Object({
-  channelAddress: EthAddressSchema,
+  channelAddress: TAddress,
   amount: Type.String(),
-  assetId: EthAddressSchema,
+  assetId: TAddress,
 });
 export type DepositInput = Static<typeof DepositInputSchema>;
 

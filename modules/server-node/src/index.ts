@@ -55,7 +55,6 @@ server.addHook("onReady", async () => {
     },
     logger.child({ module: "NatsMessagingService" }),
     getBearerTokenFunction(signer),
-    signer.publicIdentifier,
   );
   await messaging.connect();
 

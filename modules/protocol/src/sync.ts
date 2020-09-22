@@ -252,12 +252,7 @@ export async function inbound(
       { method: "inbound", channel: update.channelAddress, error: inboundRes.getError()?.message },
       "Error validating incoming channel update",
     );
-    messagingService.respondWithProtocolError(
-      update.fromIdentifier,
-      update.toIdentifier,
-      inbox,
-      inboundRes.getError()!,
-    );
+    messagingService.respondWithProtocolError(inbox, inboundRes.getError()!);
     return inboundRes;
   }
   const updatedChannelState = inboundRes.getValue();
@@ -268,12 +263,7 @@ export async function inbound(
   await storeService.saveChannelState(signed.channel, signed.commitment, transfer);
 
   // send to counterparty
-  await messagingService.respondToProtocolMessage(
-    signer.publicIdentifier,
-    signed.channel.latestUpdate,
-    inbox,
-    channelFromStore.latestUpdate,
-  );
+  await messagingService.respondToProtocolMessage(inbox, signed.channel.latestUpdate, channelFromStore.latestUpdate);
   return inboundRes;
 }
 

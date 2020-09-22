@@ -1,9 +1,9 @@
-import { EthAddressSchema } from "@connext/vector-types";
+import { TAddress } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 
 // GET CHANNEL STATE
 export const getChannelStateParamsSchema = Type.Object({
-  channelAddress: EthAddressSchema,
+  channelAddress: TAddress,
 });
 export type GetChannelStateParams = Static<typeof getChannelStateParamsSchema>;
 
@@ -18,7 +18,7 @@ export const getConfigResponseSchema = {
     publicIdentifier: Type.String({
       example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
     }),
-    signerAddress: EthAddressSchema,
+    signerAddress: TAddress,
   }),
 };
 export type GetConfigResponseBody = Static<typeof getConfigResponseSchema["200"]>;
@@ -50,31 +50,31 @@ export type PostSetupResponseBody = Static<typeof postSetupResponseSchema["200"]
 
 // POST DEPOSIT
 export const postDepositBodySchema = Type.Object({
-  channelAddress: EthAddressSchema,
+  channelAddress: TAddress,
   amount: Type.String({
     example: "100000",
     description: "Amount in real units",
   }),
-  assetId: EthAddressSchema,
+  assetId: TAddress,
 });
 
 export type PostDepositRequestBody = Static<typeof postDepositBodySchema>;
 
 export const postDepositResponseSchema = {
   200: Type.Object({
-    channelAddress: EthAddressSchema,
+    channelAddress: TAddress,
   }),
 };
 export type PostDepositResponseBody = Static<typeof postDepositResponseSchema["200"]>;
 
 // POST LINKED TRANSFER
 export const postLinkedTransferBodySchema = Type.Object({
-  channelAddress: EthAddressSchema,
+  channelAddress: TAddress,
   amount: Type.String({
     example: "100000",
     description: "Amount in real units",
   }),
-  assetId: EthAddressSchema,
+  assetId: TAddress,
   preImage: Type.String({
     example: "0x",
     description: "Bytes32 secret used to lock transfer",
@@ -95,7 +95,7 @@ export const postLinkedTransferBodySchema = Type.Object({
       description: "Recipient chain ID, if on another chain",
     }),
   ),
-  recipientAssetId: Type.Optional(EthAddressSchema),
+  recipientAssetId: Type.Optional(TAddress),
   meta: Type.Optional(Type.Any()),
 });
 
@@ -103,7 +103,7 @@ export type PostLinkedTransferRequestBody = Static<typeof postLinkedTransferBody
 
 export const postLinkedTransferResponseSchema = {
   200: Type.Object({
-    channelAddress: EthAddressSchema,
+    channelAddress: TAddress,
   }),
 };
 export type PostLinkedTransferResponseBody = Static<typeof postLinkedTransferResponseSchema["200"]>;

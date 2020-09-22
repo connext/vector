@@ -43,7 +43,8 @@ try {
     };
   });
 } catch (e) {
-  throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
+  console.log(e);
+  throw new Error(`VECTOR_CONTRACT_ADDRESSES is a required config item: ${e.message}`);
 }
 
 if (!chainProviders) {

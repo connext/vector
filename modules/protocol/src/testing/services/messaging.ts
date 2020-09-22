@@ -1,31 +1,29 @@
-import {
-  ChannelUpdate,
-  IMessagingService,
-  InboundChannelUpdateError,
-  Result,
-  VectorMessage,
-} from "@connext/vector-types";
+import { ChannelUpdate, IMessagingService, InboundChannelUpdateError, Result } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 
 export class MemoryMessagingService implements IMessagingService {
   private readonly evt: Evt<{
-    to: string;
+    to?: string;
     from: string;
     inbox?: string;
+    replyTo?: string;
     data: {
       update?: ChannelUpdate<any>;
       previousUpdate?: ChannelUpdate<any>;
       error?: InboundChannelUpdateError;
     };
-    sentBy: string;
   }> = Evt.create<{
-    to: string;
+    to?: string;
     from: string;
     inbox?: string;
     data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: InboundChannelUpdateError };
-    sentBy: string;
+    replyTo?: string;
   }>();
+
+  flush(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
 
   async connect(): Promise<void> {
     return;
@@ -38,21 +36,12 @@ export class MemoryMessagingService implements IMessagingService {
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
     const inbox = getRandomBytes32();
-    const responsePromise = this.evt
-      .pipe(
-        ({ to, from, inbox, sentBy }) =>
-          from === channelUpdate.toIdentifier &&
-          to === channelUpdate.fromIdentifier &&
-          inbox === inbox &&
-          sentBy === channelUpdate.toIdentifier,
-      )
-      .waitFor(timeout);
+    const responsePromise = this.evt.pipe(({ inbox }) => inbox === inbox).waitFor(timeout);
     this.evt.post({
       to: channelUpdate.toIdentifier,
       from: channelUpdate.fromIdentifier,
-      inbox,
+      replyTo: inbox,
       data: { update: channelUpdate, previousUpdate },
-      sentBy: channelUpdate.fromIdentifier,
     });
     const res = await responsePromise;
     if (res.data.error) {
@@ -62,32 +51,22 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   async respondToProtocolMessage(
-    sentBy: string,
-    channelUpdate: ChannelUpdate<any>,
     inbox: string,
+    channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void> {
     this.evt.post({
-      to: channelUpdate.fromIdentifier,
-      from: channelUpdate.toIdentifier,
       inbox,
       data: { update: channelUpdate, previousUpdate },
-      sentBy,
+      from: channelUpdate.toIdentifier,
     });
   }
 
-  async respondWithProtocolError(
-    updateFromIdentifier: string,
-    updateToIdentifier: string,
-    inbox: string,
-    error: InboundChannelUpdateError,
-  ): Promise<void> {
+  async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
     this.evt.post({
-      to: updateFromIdentifier,
-      from: updateToIdentifier,
       inbox,
       data: { error },
-      sentBy: updateToIdentifier,
+      from: error.update.toIdentifier,
     });
   }
 
@@ -101,20 +80,16 @@ export class MemoryMessagingService implements IMessagingService {
   ): Promise<void> {
     this.evt
       .pipe(({ to }) => to === myPublicIdentifier)
-      .attach(({ data, inbox, from }) => {
+      .attach(({ data, replyTo, from }) => {
         callback(
           Result.ok({
             previousUpdate: data.previousUpdate!,
             update: data.update!,
           }),
           from,
-          inbox!,
+          replyTo!,
         );
       });
-  }
-
-  send(to: string, msg: VectorMessage): Promise<void> {
-    throw new Error("Method not implemented.");
   }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {

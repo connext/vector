@@ -63,7 +63,7 @@ export class MessagingAuthService {
 
     const permissions = {
       publish: {
-        allow: [`*.${userIdentifier}.>`, `${userIdentifier}.>`], // publish as to.from.subject, respond to to.from
+        allow: [`*.${userIdentifier}.>`, `_INBOX.>`], // publish as to.from.subject, respond to INBOX
       },
       subscribe: {
         allow: [`>`],

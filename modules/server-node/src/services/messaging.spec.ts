@@ -1,10 +1,5 @@
-import { Balance, IChannelSigner, IMessagingService } from "@connext/vector-types";
-import {
-  createCoreTransferState,
-  createTestChannelState,
-  createTestChannelUpdate,
-  getRandomChannelSigner,
-} from "@connext/vector-utils";
+import { IChannelSigner } from "@connext/vector-types";
+import { createTestChannelUpdate, delay, getRandomChannelSigner } from "@connext/vector-utils";
 import pino from "pino";
 
 import { expect } from "../test/utils/assert";
@@ -21,7 +16,9 @@ describe("messaging", () => {
 
   beforeEach(async () => {
     signerA = getRandomChannelSigner();
+    console.log("signerA: ", signerA.publicIdentifier);
     signerB = getRandomChannelSigner();
+    console.log("signerB: ", signerB.publicIdentifier);
     console.log("config.natsUrl: ", config.natsUrl);
     messagingA = new NatsMessagingService(
       {
@@ -29,7 +26,6 @@ describe("messaging", () => {
       },
       logger.child({ module: "MessagingA", pubId: signerA.publicIdentifier }),
       getBearerTokenFunction(signerA),
-      signerA.publicIdentifier,
     );
 
     messagingB = new NatsMessagingService(
@@ -38,7 +34,6 @@ describe("messaging", () => {
       },
       logger.child({ module: "MessagingB", pubId: signerB.publicIdentifier }),
       getBearerTokenFunction(signerB),
-      signerB.publicIdentifier,
     );
 
     await messagingA.connect();
@@ -51,19 +46,22 @@ describe("messaging", () => {
   });
 
   it.only("should send a protocol message from A to B", async () => {
-    return new Promise(async (resolve) => {
-      const update = createTestChannelUpdate("setup", {
-        toIdentifier: signerB.publicIdentifier,
-        fromIdentifier: signerA.publicIdentifier,
-      });
-
-      await messagingB.onReceiveProtocolMessage(signerB.publicIdentifier, (result) => {
-        expect(result.isError).to.not.be.ok;
-        expect(result.getValue()).to.deep.eq(update);
-        resolve();
-      });
-
-      await messagingA.sendProtocolMessage(update);
+    const update = createTestChannelUpdate("setup", {
+      toIdentifier: signerB.publicIdentifier,
+      fromIdentifier: signerA.publicIdentifier,
     });
+
+    await messagingB.onReceiveProtocolMessage(signerB.publicIdentifier, async (result, from, inbox) => {
+      expect(result.isError).to.not.be.ok;
+      expect(result.getValue().update).to.deep.eq(update);
+      expect(inbox).to.be.a("string");
+      await messagingB.respondToProtocolMessage(inbox, result.getValue().update);
+    });
+
+    await delay(1_000);
+
+    const res = await messagingA.sendProtocolMessage(update);
+    expect(res.isError).to.not.be.ok;
+    expect(res.getValue().update).to.deep.eq(update);
   });
 });

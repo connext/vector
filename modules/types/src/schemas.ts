@@ -1,21 +1,18 @@
+import { Static, Type } from "@sinclair/typebox";
+
 import {
   LinkedTransferResolverEncoding,
   LinkedTransferStateEncoding,
-  Result,
   WithdrawResolverEncoding,
   WithdrawStateEncoding,
-} from "@connext/vector-types";
-import { Static, Type } from "@sinclair/typebox";
-import { BigNumber } from "ethers";
+} from "./transferDefinitions";
 
-////////////////////////////////////////
-// Helper schemas
 // String pattern types
-const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
-const TIntegerString = Type.Pattern(/^([0-9])*$/);
-const TPublicIdentifier = Type.Pattern(/^indra([a-zA-Z0-9]{50})$/);
-const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
-const TSignature = Type.Pattern(/^0x([a-fA-F0-9]{130})$/);
+export const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
+export const TIntegerString = Type.Pattern(/^([0-9])*$/);
+export const TPublicIdentifier = Type.Pattern(/^indra([a-zA-Z0-9]{50})$/);
+export const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
+export const TSignature = Type.Pattern(/^0x([a-fA-F0-9]{130})$/);
 
 // Object pattern types
 const TBalance = Type.Object({
@@ -57,13 +54,8 @@ export const TransferResolverSchema = Type.Union([LinkedTransferResolverSchema, 
 export const TransferEncodingSchema = Type.Union([LinkedTransferEncodingSchema, WithdrawTransferEncodingSchema]);
 
 ////////////////////////////////////////
-// Messaging schemas
-
-// TODO: Define vector message schema
-
-////////////////////////////////////////
-// API Parameter schemas
-export const SetupParamsSchema = Type.Object({
+// Protocol API Parameter schemas
+const SetupParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   timeout: TIntegerString,
   networkContext: Type.Object({
@@ -76,14 +68,12 @@ export const SetupParamsSchema = Type.Object({
   }),
 });
 
-export type SetupParams = Static<typeof SetupParamsSchema>;
-
-export const DepositParamsSchema = Type.Object({
+const DepositParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
 });
 
-export const CreateParamsSchema = Type.Object({
+const CreateParamsSchema = Type.Object({
   channelAddress: TAddress,
   amount: TIntegerString,
   assetId: TAddress,
@@ -94,9 +84,21 @@ export const CreateParamsSchema = Type.Object({
   meta: Type.Optional(Type.Any()),
 });
 
-export const ResolveParamsSchema = Type.Object({
+const ResolveParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
   transferResolver: TransferResolverSchema,
   meta: Type.Optional(Type.Any()),
 });
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace ProtocolParams {
+  export const SetupSchema = SetupParamsSchema;
+  export type Setup = Static<typeof SetupParamsSchema>;
+  export const DepositSchema = DepositParamsSchema;
+  export type Deposit = Static<typeof DepositParamsSchema>;
+  export const CreateSchema = CreateParamsSchema;
+  export type Create = Static<typeof CreateParamsSchema>;
+  export const ResolveSchema = ResolveParamsSchema;
+  export type Resolve = Static<typeof ResolveParamsSchema>;
+}

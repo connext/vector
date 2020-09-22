@@ -25,10 +25,10 @@ import {
   DepositInputSchema,
   DepositInput,
   RpcRequestInput,
-  EthAddressSchema,
   JsonRpcProvider,
   RpcRequestInputSchema,
   OutboundChannelUpdateError,
+  TAddress,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -159,7 +159,7 @@ export class VectorEngine {
   public async getChannelState(
     channelAddress: Address,
   ): Promise<Result<FullChannelState, Error | OutboundChannelUpdateError>> {
-    const validate = ajv.compile(EthAddressSchema);
+    const validate = ajv.compile(TAddress);
     const valid = validate(channelAddress);
     if (!valid) {
       return Result.fail(new Error(validate.errors?.join()));
