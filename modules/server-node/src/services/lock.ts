@@ -5,9 +5,16 @@ import { MemoLock } from "./memo-lock";
 
 export class LockService implements ILockService {
   private memoLock: MemoLock;
-  constructor(redisUrl: string) {
+
+  private constructor(redisUrl: string) {
     const redis = new Redis(redisUrl);
     this.memoLock = new MemoLock(redis);
+  }
+
+  static async connect(redisUrl: string): Promise<LockService> {
+    const lock = new LockService(redisUrl);
+    await lock.memoLock.setupSubs();
+    return lock;
   }
 
   acquireLock(lockName: string): Promise<string> {

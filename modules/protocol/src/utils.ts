@@ -1,6 +1,4 @@
-import * as evm from "@connext/pure-evm-wasm";
 import {
-  Contract,
   Balance,
   ChannelCommitmentData,
   FullChannelState,
@@ -8,17 +6,12 @@ import {
   CoreChannelState,
   VectorChannelMessage,
   VectorErrorMessage,
-  FullTransferState,
   IVectorOnchainService,
   Result,
 } from "@connext/vector-types";
-import { TransferDefinition } from "@connext/vector-contracts";
-import { BigNumber, Signer, utils } from "ethers";
-import { hashChannelCommitment } from "@connext/vector-utils";
+import { BigNumber } from "ethers";
+import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { Evt } from "evt";
-import pino from "pino";
-
-const { defaultAbiCoder } = utils;
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function isChannelMessage(msg: any): msg is VectorChannelMessage {
@@ -62,14 +55,6 @@ export function addEvtHandler<T = any>(
   return evt.attach(...attachArgs);
 }
 
-// We might need to convert this file to JS...
-// https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
-export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
-  evm.exec(
-    Uint8Array.from(Buffer.from(bytecode.replace(/^0x/, ""), "hex")),
-    Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
-  );
-
 // This function signs the state after the update is applied,
 // not for the update that exists
 export async function generateSignedChannelCommitment(
@@ -77,7 +62,7 @@ export async function generateSignedChannelCommitment(
   signer: IChannelSigner,
   updateSignatures: string[],
 ): Promise<ChannelCommitmentData> {
-  const { publicIdentifiers, networkContext, ...core } = newState;
+  const { networkContext, ...core } = newState;
 
   const unsigned = {
     chainId: networkContext.chainId,
@@ -89,70 +74,55 @@ export async function generateSignedChannelCommitment(
     // No need to sign, we have already signed
     return {
       ...unsigned,
-      signatures: filteredSigs,
+      signatures: updateSignatures,
     };
   }
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
   const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
-  const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
-  return {
+  const idx = newState.participants.findIndex((p) => p === signer.address);
+  const signed = {
     ...unsigned,
     signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
   };
+  return signed;
 }
 
-export const create = async (
-  transfer: FullTransferState,
-  signer: Signer,
-  bytecode?: string,
-  logger: pino.BaseLogger = pino(),
-): Promise<boolean> => {
-  const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
-  const contract = new Contract(transfer.transferId, TransferDefinition.abi, signer);
-  if (bytecode) {
-    try {
-      const data = contract.interface.encodeFunctionData("create", [encodedState]);
-      const output = await execEvmBytecode(bytecode, data);
-      return contract.interface.decodeFunctionResult("create", output)[0];
-    } catch (e) {
-      logger.debug(`Failed to create with pure-evm`, { error: e.message });
-    }
+// TODO: make a result type?
+export async function validateChannelUpdateSignatures(
+  state: FullChannelState,
+  updateSignatures: string[],
+  requiredSigs: 1 | 2 = 1,
+): Promise<string | undefined> {
+  const present = updateSignatures.filter((x) => !!x).length;
+  if (present < requiredSigs) {
+    return `Only ${present}/${requiredSigs} signatures present`;
   }
-  return contract.create(encodedState);
-};
-
-export const resolve = async (
-  transfer: FullTransferState,
-  signer: Signer,
-  bytecode?: string,
-  logger: pino.BaseLogger = pino(),
-): Promise<Balance> => {
-  const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
-  const encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);
-  const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, signer);
-  if (bytecode) {
-    try {
-      const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);
-      const output = await execEvmBytecode(bytecode, data);
-      const ret = contract.interface.decodeFunctionResult("resolve", output)[0];
-      return {
-        to: ret.to,
-        amount: ret.amount,
-      };
-    } catch (e) {
-      logger.debug(`Failed to create with pure-evm`, { error: e.message });
-    }
+  // generate the commitment
+  const { networkContext, ...core } = state;
+  const hash = hashChannelCommitment({
+    chainId: networkContext.chainId,
+    state: core,
+    channelFactoryAddress: networkContext.channelFactoryAddress,
+    signatures: [],
+  });
+  const valid = (
+    await Promise.all(
+      updateSignatures.map(async (sigToVerify, idx) => {
+        if (!sigToVerify) {
+          return undefined;
+        }
+        const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
+        return recovered === state.participants[idx] ? sigToVerify : undefined;
+      }),
+    )
+  ).filter((x) => !!x);
+  if (valid.length < requiredSigs) {
+    return `Only ${valid.length}/${requiredSigs} are valid signatures`;
   }
-  const ret = await contract.resolve(encodedState, encodedResolver);
-  // NOTE: contract values are returned as an array type, so transform the
-  // returned value to the proper object
-  return {
-    to: ret.to,
-    amount: ret.amount.map((a) => a.toString()),
-  };
-};
+  return undefined;
+}
 
 export const reconcileDeposit = async (
   channelAddress: string,

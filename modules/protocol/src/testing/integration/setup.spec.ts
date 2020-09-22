@@ -3,7 +3,6 @@ import { IVectorProtocol } from "@connext/vector-types";
 import { getTestLoggers } from "../utils";
 import { createVectorInstances, setupChannel } from "../utils/channel";
 
-
 const testName = "Setup Integrations";
 const { log } = getTestLoggers(testName);
 

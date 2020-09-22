@@ -4,19 +4,16 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
-import axios from "axios";
-import { ChannelRpcMethods } from "@connext/vector-types";
-
-import { NatsMessagingService } from "./services/messaging";
-import { LockService } from "./services/lock";
-import { PrismaStore } from "./services/store";
-import { config } from "./config";
 import {
+  ChannelRpcMethods,
   GetChannelStateParams,
   getChannelStateParamsSchema,
   getChannelStateResponseSchema,
   GetConfigResponseBody,
   getConfigResponseSchema,
+  postAdminBodySchema,
+  PostAdminRequestBody,
+  postAdminResponseSchema,
   postDepositBodySchema,
   PostDepositRequestBody,
   postDepositResponseSchema,
@@ -26,7 +23,12 @@ import {
   postSetupBodySchema,
   PostSetupRequestBody,
   postSetupResponseSchema,
-} from "./schema";
+} from "@connext/vector-types";
+
+import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
+import { LockService } from "./services/lock";
+import { PrismaStore } from "./services/store";
+import { config } from "./config";
 import { MultichainTransactionService, VectorTransactionService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
 
@@ -55,16 +57,14 @@ server.addHook("onReady", async () => {
       messagingUrl: config.natsUrl,
     },
     logger.child({ module: "NatsMessagingService" }),
-    async () => {
-      const r = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
-      return r.data;
-    },
+    getBearerTokenFunction(signer),
   );
   await messaging.connect();
-  return; // TODO: rm this once the below command works w/out error
+
+  const lock = await LockService.connect(config.redisUrl);
   vectorEngine = await VectorEngine.connect(
     messaging,
-    new LockService(config.redisUrl),
+    lock,
     store,
     signer,
     config.chainProviders,
@@ -113,6 +113,7 @@ server.post<{ Body: PostSetupRequestBody }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
     }
   },
 );
@@ -167,6 +168,22 @@ server.post<{ Body: PostLinkedTransferRequestBody }>(
       return reply.status(400).send({ message: res.getError()?.message ?? "" });
     }
     return reply.status(200).send(res.getValue());
+  },
+);
+
+server.post<{ Body: PostAdminRequestBody }>(
+  "/clear-store",
+  { schema: { body: postAdminBodySchema, response: postAdminResponseSchema } },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply.status(401).send({ message: "Unauthorized" });
+    }
+    try {
+      await store.clear();
+      return reply.status(200).send({ message: "success" });
+    } catch (e) {
+      return reply.status(500).send({ message: e.message });
+    }
   },
 );
 

@@ -1,17 +1,17 @@
 import { VectorOnchainService } from "@connext/vector-contracts";
-import { IVectorOnchainService, Result } from "@connext/vector-types";
-import { mkHash } from "@connext/vector-utils";
+import { Balance, FullTransferState, IVectorOnchainService, Result } from "@connext/vector-types";
+import { mkAddress, mkHash } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Sinon from "sinon";
 
-type StubType = {
+export type MockOnchainStubType = {
   [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
 };
 
-export class MockOnchainServce implements IVectorOnchainService {
-  public readonly stubs: StubType;
+export class MockOnchainService implements IVectorOnchainService {
+  public readonly stubs: MockOnchainStubType;
 
-  constructor(overrides: Partial<StubType> = {}) {
+  constructor(overrides: Partial<MockOnchainStubType> = {}) {
     this.stubs = Sinon.createStubInstance(VectorOnchainService, {
       getChannelOnchainBalance: Result.ok<BigNumber>(BigNumber.from(10)) as any,
 
@@ -22,8 +22,18 @@ export class MockOnchainServce implements IVectorOnchainService {
 
       getChannelFactoryBytecode: Result.ok<string>(mkHash("0x51523ase")) as any,
 
+      create: Result.ok<boolean>(true) as any,
+
+      resolve: Result.ok<Balance>({ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["1", "1"] }) as any,
+
       ...overrides,
     });
+  }
+  create(transfer: FullTransferState<any>, chainId: number, bytecode?: string): Promise<Result<boolean, Error>> {
+    throw new Error("Method not implemented.");
+  }
+  resolve(transfer: FullTransferState<any>, chainId: number, bytecode?: string): Promise<Result<Balance, Error>> {
+    throw new Error("Method not implemented.");
   }
 
   getChannelOnchainBalance(
@@ -48,10 +58,7 @@ export class MockOnchainServce implements IVectorOnchainService {
   }
 
   // Easy method to set stubs mid-test
-  setStub(
-    method: keyof IVectorOnchainService,
-    ret: StubType[typeof method],
-  ): void {
+  setStub(method: keyof IVectorOnchainService, ret: any): void {
     this.stubs[method] = Sinon.stub().resolves(ret);
   }
 }

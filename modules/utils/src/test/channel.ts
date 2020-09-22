@@ -22,11 +22,11 @@ export type PartialChannelUpdate<T extends UpdateType> = Partial<
   Omit<ChannelUpdate<T>, "details"> & { details: Partial<ChannelUpdateDetailsMap[T]> }
 >;
 
-type PartialFullChannelState<T extends UpdateType> = Partial<
+export type PartialFullChannelState<T extends UpdateType> = Partial<
   Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
 >;
 
-type PartialUpdateParams<T extends UpdateType> = Partial<
+export type PartialUpdateParams<T extends UpdateType> = Partial<
   Omit<UpdateParams<T>, "details"> & { details?: Partial<UpdateParamsMap[T]> }
 >;
 
@@ -35,7 +35,7 @@ export function createTestUpdateParams<T extends UpdateType>(
   overrides: PartialUpdateParams<T>,
 ): UpdateParams<T> {
   const base = {
-    channelAddress: mkAddress("0xccc"),
+    channelAddress: overrides.channelAddress ?? mkAddress("0xccc"),
     type,
   };
 
@@ -46,7 +46,9 @@ export function createTestUpdateParams<T extends UpdateType>(
         counterpartyIdentifier: mkPublicIdentifier("0xbbb"),
         timeout: "1200",
         networkContext: {
-          channelFactoryAddress: mkAddress("0xcha"),
+          chainId: 2,
+          providerUrl: "http://eth.com",
+          channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           channelMastercopyAddress: mkAddress("0xcccaaa"),
         },
       };
@@ -59,7 +61,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.create:
       details = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress: base.channelAddress,
         amount: "15",
         assetId: mkAddress("0x0"),
         transferDefinition: mkAddress("0xdef"),
@@ -71,7 +73,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.resolve:
       details = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress: base.channelAddress,
         transferId: mkBytes32("0xabcdef"),
         transferResolver: { preImage: mkBytes32("0xcdef") },
         meta: { test: "meta" },
@@ -85,6 +87,7 @@ export function createTestUpdateParams<T extends UpdateType>(
     ...base,
     details: {
       ...details,
+      channelAddress: base.channelAddress,
       ...(detailOverrides ?? {}),
     },
     ...defaultOverrides,
@@ -120,7 +123,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
       details = {
         networkContext: {
           chainId: 1337,
-          channelFactoryAddress: mkAddress("0xcha"),
+          channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           providerUrl: "http://localhost:8545",
           channelMastercopyAddress: mkAddress("0xmast"),
         },
@@ -208,7 +211,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     merkleRoot: mkHash(),
     networkContext: {
       chainId: 1337,
-      channelFactoryAddress: mkAddress("0xcha"),
+      channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
       providerUrl: "http://localhost:8545",
       channelMastercopyAddress: mkAddress("0xmast"),
     },

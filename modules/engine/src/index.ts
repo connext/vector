@@ -4,7 +4,6 @@ import {
   Address,
   ChainAddresses,
   ChainProviders,
-  ChannelUpdateError,
   ConditionalTransferParams,
   ConditionalTransferResponse,
   ConditionalTransferType,
@@ -26,8 +25,10 @@ import {
   DepositInputSchema,
   DepositInput,
   RpcRequestInput,
-  EthAddressSchema,
   JsonRpcProvider,
+  RpcRequestInputSchema,
+  OutboundChannelUpdateError,
+  TAddress,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -62,7 +63,7 @@ export class VectorEngine {
   ): Promise<VectorEngine> {
     const hydratedProviders = {};
     Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
-      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl, chainId);
+      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl);
     });
     const chainService = new VectorOnchainService(hydratedProviders);
     const vector = await Vector.connect(
@@ -87,7 +88,7 @@ export class VectorEngine {
         if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
         }
       },
-      (data) => data.updatedChannelState.latestUpdate?.details.meta.recipient === this.vector.publicIdentifier,
+      (data) => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
     );
 
     this.messaging.subscribe(`${this.vector.publicIdentifier}.*.check-in`, async () => {
@@ -97,7 +98,8 @@ export class VectorEngine {
     // subscribe to isAlive
   }
 
-  public async setup(params: SetupInput): Promise<Result<any, ChannelUpdateError | Error>> {
+  public async setup(params: SetupInput): Promise<Result<any, OutboundChannelUpdateError | Error>> {
+    this.logger.info({ params, method: "setup" }, "Method called");
     const validate = ajv.compile(SetupInputSchema);
     const valid = validate(params);
     if (!valid) {
@@ -118,7 +120,7 @@ export class VectorEngine {
     });
   }
 
-  public async deposit(params: DepositInput): Promise<Result<FullChannelState, ChannelUpdateError | Error>> {
+  public async deposit(params: DepositInput): Promise<Result<FullChannelState, OutboundChannelUpdateError | Error>> {
     const validate = ajv.compile(DepositInputSchema);
     const valid = validate(params);
     if (!valid) {
@@ -130,12 +132,14 @@ export class VectorEngine {
 
   public async conditionalTransfer<T extends ConditionalTransferType = any>(
     params: ConditionalTransferParams<T>,
-  ): Promise<Result<ConditionalTransferResponse, InvalidTransferType | ChannelUpdateError>> {
+  ): Promise<Result<ConditionalTransferResponse, InvalidTransferType | OutboundChannelUpdateError>> {
     // TODO types
     // TODO input validation
     const channel = await this.store.getChannelState(params.channelAddress);
     if (!channel) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
@@ -152,15 +156,19 @@ export class VectorEngine {
     return Result.ok({ routingId: params.routingId });
   }
 
-  public async getChannelState(channelAddress: Address): Promise<Result<FullChannelState, Error | ChannelUpdateError>> {
-    const validate = ajv.compile(EthAddressSchema);
+  public async getChannelState(
+    channelAddress: Address,
+  ): Promise<Result<FullChannelState, Error | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(TAddress);
     const valid = validate(channelAddress);
     if (!valid) {
       return Result.fail(new Error(validate.errors?.join()));
     }
     const channel = await this.store.getChannelState(channelAddress);
     if (!channel) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, channelAddress as any),
+      );
     }
     return Result.ok(channel);
   }
@@ -204,7 +212,8 @@ export class VectorEngine {
   // - "vector_resolveTransfer"
   // TODO add rpc request type
   public async request(payload: RpcRequestInput): Promise<any> {
-    const validate = ajv.compile(DepositInputSchema);
+    this.logger.info({ payload, method: "request" }, "Method called");
+    const validate = ajv.compile(RpcRequestInputSchema);
     const valid = validate(payload);
     if (!valid) {
       // dont use result type since this could go over the wire

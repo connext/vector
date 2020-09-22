@@ -12,6 +12,7 @@ export * from "./network";
 export * from "./onchain";
 export * from "./protocol";
 export * from "./rpc";
+export * from "./schemas";
 export * from "./store";
 export * from "./transferDefinitions";
 export * from "./vectorProvider";

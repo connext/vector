@@ -1,0 +1,896 @@
+{
+  "version": "0.3.14-fixed",
+  "steps": [
+    {
+      "tag": "CreateSource",
+      "source": "db"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Source",
+        "source": "db"
+      },
+      "argument": "provider",
+      "value": "[\"postgresql\", \"sqlite\"]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Source",
+        "source": "db"
+      },
+      "argument": "url",
+      "value": "\"***\""
+    },
+    {
+      "tag": "CreateModel",
+      "model": "Balance"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Balance",
+      "field": "participant",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Balance",
+      "field": "assetId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Balance",
+      "field": "to",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Balance",
+      "field": "amount",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Balance",
+      "field": "lockedBalance",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Balance",
+      "field": "Channel",
+      "type": "Channel",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Balance",
+          "field": "Channel"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Balance",
+          "field": "Channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Balance",
+          "field": "Channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Balance",
+      "field": "channelAddress",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Balance"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Balance"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"balance\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Balance"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Balance"
+        },
+        "directive": "id"
+      },
+      "argument": "",
+      "value": "[participant, channelAddress, assetId]"
+    },
+    {
+      "tag": "CreateModel",
+      "model": "Channel"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "channelAddress",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Channel",
+          "field": "channelAddress"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "publicIdentifierA",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "publicIdentifierB",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "participantA",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "participantB",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "assetIds",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "timeout",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "nonce",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "latestDepositNonce",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "merkleRoot",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "balances",
+      "type": "Balance",
+      "arity": "List"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "channelFactoryAddress",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "channelMastercopyAddress",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "chainId",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "providerUrl",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "latestUpdate",
+      "type": "Update",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Channel"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Channel"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"channel\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Channel",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[publicIdentifierA, publicIdentifierB, chainId]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Channel",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[participantA, participantB, chainId]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "CreateModel",
+      "model": "Update"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "channelAddress",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "channel",
+      "type": "Channel",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "channel"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "channelAddressId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "fromIdentifier",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "toIdentifier",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "type",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "nonce",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "amountA",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "amountB",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "toA",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "toB",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "assetId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "signatureA",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "signatureB",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferId",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferDefinition",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferTimeout",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferInitialState",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferEncodings",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "merkleProofData",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "meta",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferResolver",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "merkleRoot",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "latestDepositNonce",
+      "type": "Int",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "createdTransfer",
+      "type": "Transfer",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "createdTransfer"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "createdTransfer"
+        },
+        "directive": "relation"
+      },
+      "argument": "",
+      "value": "\"CreatedTransfer\""
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "resolvedTransfer",
+      "type": "Transfer",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "resolvedTransfer"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Update",
+          "field": "resolvedTransfer"
+        },
+        "directive": "relation"
+      },
+      "argument": "",
+      "value": "\"ResolvedTransfer\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Update"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Update"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"update\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Update"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Update"
+        },
+        "directive": "id"
+      },
+      "argument": "",
+      "value": "[channelAddressId, nonce]"
+    },
+    {
+      "tag": "CreateModel",
+      "model": "Transfer"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "routingId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "routingId"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "createUpdate",
+      "type": "Update",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "name",
+      "value": "\"CreatedTransfer\""
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[createUpdateChannelAddressId, createUpdateNonce]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "createUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddressId, nonce]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "resolveUpdate",
+      "type": "Update",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "name",
+      "value": "\"ResolvedTransfer\""
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[resolveUpdateChannelAddressId, resolveUpdateNonce]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "resolveUpdate"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddressId, nonce]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "initialAmountA",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "initialAmountB",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "initialToA",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "initialToB",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "initialStateHash",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "createUpdateChannelAddressId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "createUpdateNonce",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "resolveUpdateChannelAddressId",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "resolveUpdateNonce",
+      "type": "Int",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Transfer"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Transfer"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"transfer\""
+    }
+  ]
+}

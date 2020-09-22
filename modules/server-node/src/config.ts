@@ -1,3 +1,5 @@
+import { ChainAddresses } from "@connext/vector-types";
+
 const mnemonic = process.env.VECTOR_MNEMONIC;
 if (!mnemonic) {
   throw new Error("VECTOR_MNEMONIC is a required config item");
@@ -28,23 +30,33 @@ if (!authUrl) {
   throw new Error("VECTOR_AUTH_URL is a required config item");
 }
 
-let contractAddresses;
-try {
-  contractAddresses = JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES!);
-} catch (e) {
-  throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
+const adminToken = process.env.VECTOR_ADMIN_TOKEN;
+if (!adminToken) {
+  throw new Error("VECTOR_ADMIN_TOKEN is a required config item");
 }
+
+let contractAddressesEnv;
+const contractAddresses: ChainAddresses = {};
+try {
+  contractAddressesEnv = JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES!);
+  Object.entries(contractAddressesEnv).forEach(([chainId, contractDetails]: [string, any]) => {
+    contractAddresses[parseInt(chainId)] = {
+      channelFactoryAddress: contractDetails.ChannelFactory.address,
+      channelMastercopyAddress: contractDetails.ChannelMastercopy.address,
+      linkedTransferDefinition: contractDetails.LinkedTransfer.address,
+      withdrawDefinition: contractDetails.Withdraw.address,
+    };
+  });
+} catch (e) {
+  console.log(e);
+  throw new Error(`VECTOR_CONTRACT_ADDRESSES is a required config item: ${e.message}`);
+}
+
 if (!chainProviders) {
   throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
 }
 
-const dbDb = process.env.VECTOR_PG_DATABASE;
-const dbHost = process.env.VECTOR_PG_HOST;
-const dbPort = process.env.VECTOR_PG_PORT;
-const dbUser = process.env.VECTOR_PG_USERNAME;
-const dbPassword = process.env.VECTOR_PG_PASSWORD;
-
-const dbUrl = process.env.VECTOR_DATABASE_URL || `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbDb}`;
+const dbUrl = process.env.VECTOR_DATABASE_URL;
 if (!dbUrl) {
   throw new Error("VECTOR_DATABASE_URL is a required config item");
 }
@@ -58,4 +70,5 @@ export const config = {
   port: parseInt(process.env.VECTOR_PORT ?? "5040"),
   redisUrl,
   dbUrl,
+  adminToken,
 };

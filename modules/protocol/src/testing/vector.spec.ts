@@ -6,7 +6,11 @@ import {
   createTestLinkedTransferState,
 } from "@connext/vector-utils";
 import pino from "pino";
-import { ChannelUpdateError, LinkedTransferResolverEncoding, LinkedTransferStateEncoding } from "@connext/vector-types";
+import {
+  LinkedTransferResolverEncoding,
+  LinkedTransferStateEncoding,
+  OutboundChannelUpdateError,
+} from "@connext/vector-types";
 
 import { Vector } from "../vector";
 
@@ -14,7 +18,7 @@ import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 import { MemoryStoreService } from "./services/store";
 import { expect } from "./utils";
-import { MockOnchainServce } from "./services/onchain";
+import { MockOnchainService } from "./services/onchain";
 
 describe("Vector.connect", () => {
   it("can be created", async () => {
@@ -24,7 +28,7 @@ describe("Vector.connect", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainServce(),
+      new MockOnchainService(),
       pino(),
     );
     expect(node).to.be.instanceOf(Vector);
@@ -49,7 +53,7 @@ describe("Vector.setup", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainServce(),
+      new MockOnchainService(),
       pino(),
     );
   });
@@ -138,7 +142,7 @@ describe("Vector.setup", () => {
         const ret = await vector.setup(t.params);
         expect(ret.isError).to.be.true;
         const error = ret.getError();
-        expect(error?.message).to.be.eq(ChannelUpdateError.reasons.InvalidParams);
+        expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
         expect(error?.context?.errors).to.include(t.error);
       });
     }
@@ -156,7 +160,7 @@ describe("Vector.deposit", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainServce(),
+      new MockOnchainService(),
       pino(),
     );
   });
@@ -196,7 +200,7 @@ describe("Vector.deposit", () => {
         const ret = await vector.deposit(params);
         expect(ret.isError).to.be.true;
         const err = ret.getError();
-        expect(err?.message).to.be.eq(ChannelUpdateError.reasons.InvalidParams);
+        expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
         expect(err?.context?.errors).to.include(error);
       });
     }
@@ -214,7 +218,7 @@ describe("Vector.create", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainServce(),
+      new MockOnchainService(),
       pino(),
     );
   });
@@ -309,7 +313,7 @@ describe("Vector.create", () => {
         const ret = await vector.create(params);
         expect(ret.isError).to.be.true;
         const err = ret.getError();
-        expect(err?.message).to.be.eq(ChannelUpdateError.reasons.InvalidParams);
+        expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
         expect(err?.context?.errors).to.include(error);
       });
     }
@@ -327,7 +331,7 @@ describe("Vector.resolve", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainServce(),
+      new MockOnchainService(),
       pino(),
     );
   });
@@ -380,7 +384,7 @@ describe("Vector.resolve", () => {
         const ret = await vector.resolve(params);
         expect(ret.isError).to.be.true;
         const err = ret.getError();
-        expect(err?.message).to.be.eq(ChannelUpdateError.reasons.InvalidParams);
+        expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
         expect(err?.context?.errors).to.include(error);
       });
     }

@@ -61,10 +61,9 @@ export class MessagingAuthService {
       throw new Error(`Verification failed... nonce expired for address: ${userIdentifier}`);
     }
 
-    // Try to get latest published OR move everything under address route.
     const permissions = {
       publish: {
-        allow: [`${userIdentifier}.>`],
+        allow: [`*.${userIdentifier}.>`, `_INBOX.>`], // publish as to.from.subject, respond to INBOX
       },
       subscribe: {
         allow: [`>`],
@@ -74,7 +73,7 @@ export class MessagingAuthService {
       // },
     };
 
-    const jwt = this.vend(userIdentifier, nonceTTL, permissions);
+    const jwt = await this.vend(userIdentifier, nonceTTL, permissions);
     return jwt;
   }
 

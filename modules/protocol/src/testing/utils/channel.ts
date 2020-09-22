@@ -72,7 +72,7 @@ export const createVectorInstances = async (
 ): Promise<IVectorProtocol[]> => {
   const sharedMessaging = new MemoryMessagingService();
   const sharedLock = new MemoryLockService();
-  const sharedChain = new VectorOnchainService({[chainId]: new JsonRpcProvider(providerUrl)});
+  const sharedChain = new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) });
   return Promise.all(
     Array(numberOfEngines)
       .fill(0)
@@ -80,7 +80,9 @@ export const createVectorInstances = async (
         const instanceOverrides = overrides[idx] || {};
         const messagingService = shareServices ? sharedMessaging : new MemoryMessagingService();
         const lockService = shareServices ? sharedLock : new MemoryLockService();
-        const onchainService = shareServices ? sharedChain : new VectorOnchainService({[chainId]: new JsonRpcProvider(providerUrl)});
+        const onchainService = shareServices
+          ? sharedChain
+          : new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) });
         return createVectorInstance({
           messagingService,
           lockService,
@@ -97,7 +99,7 @@ export const createVectorInstance = async (overrides: Partial<VectorTestOverride
     lockService: new MemoryLockService(),
     storeService: new MemoryStoreService(),
     signer: getRandomChannelSigner(env.chainProviders[chainId]),
-    onchainService: new VectorOnchainService({[chainId]: new JsonRpcProvider(providerUrl)}),
+    onchainService: new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) }),
     logger: getTestLoggers("vector").log,
     ...overrides,
   };
@@ -138,7 +140,9 @@ export const deployChannelWithDepositA = async (
   expect(deployedAddr).to.be.eq(channelAddress);
 
   // Verify onchain values updated
-  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).latestDepositByAssetId(assetId);
+  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).latestDepositByAssetId(
+    assetId,
+  );
   expect(latestDeposit.nonce).to.be.eq(1);
   expect(latestDeposit.amount).to.be.eq(depositAmount);
 
@@ -157,7 +161,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
     },
     timeout: "3600",
   });
-  expect(ret.isError).to.not.be.ok;
+  expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;
 
   // Verify stored channel
@@ -207,7 +211,7 @@ export const depositInChannel = async (
       assetId,
       channelAddress,
     });
-    expect(ret.isError).to.be.false;
+    expect(ret.getError()).to.be.undefined;
     return ret.getValue();
   }
 
@@ -219,9 +223,6 @@ export const depositInChannel = async (
   // NOTE: sometimes deposit fails, and it seems like its because it is
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
-  console.log("******* participants", channel?.participants);
-  console.log("******* pubIds", channel?.publicIdentifiers);
-  console.log("******* isDepositA", isDepositA);
   if (isDepositA) {
     await depositAOnchain(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
   } else {
@@ -239,7 +240,7 @@ export const depositInChannel = async (
     assetId,
     channelAddress,
   });
-  expect(ret.isError).to.be.false;
+  expect(ret.getError()).to.be.undefined;
 
   const postDeposit = ret.getValue()!;
   expect(postDeposit.latestDepositNonce).to.be.eq(
@@ -297,7 +298,7 @@ export const createTransfer = async (
   };
 
   const ret = await payor.create(params);
-  expect(ret.isError).to.be.false;
+  expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
   expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
 
@@ -341,7 +342,7 @@ export const resolveTransfer = async (
   };
 
   const ret = await redeemer.resolve(params);
-  expect(ret.isError).to.be.false;
+  expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
   const stored = await redeemer.getTransferState(transfer.transferId);
   expect(stored!.transferResolver).to.deep.eq(params.transferResolver);
@@ -365,9 +366,10 @@ export const getSetupChannel = async (
   bobSigner: IChannelSigner;
 }> => {
   // First, get the signers and fund the accounts
-  const [aliceSigner, bobSigner] = Array(2)
-    .fill(0)
-    .map((_) => getRandomChannelSigner(env.chainProviders[chainId]));
+  const [aliceSigner, bobSigner] = [
+    getRandomChannelSigner(env.chainProviders[chainId]),
+    getRandomChannelSigner(env.chainProviders[chainId]),
+  ];
 
   // Fund the signer addresses with the sugar daddy account
   const wallet = env.sugarDaddy.connect(new JsonRpcProvider(env.chainProviders[chainId]));
