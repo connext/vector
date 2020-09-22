@@ -101,7 +101,7 @@ server.post<{ Body: ServerNodeParams.Setup }>(
 
 server.post<{ Body: ServerNodeParams.SendDepositTx }>(
   "/send-deposit-tx",
-  { schema: { body: ServerNodeParams.DepositSchema, response: ServerNodeResponses.DepositSchema } },
+  { schema: { body: ServerNodeParams.SendDepositTxSchema, response: ServerNodeResponses.SendDepositTxSchema } },
   async (request, reply) => {
     const channelState = await store.getChannelState(request.body.channelAddress);
     if (!channelState) {
@@ -116,18 +116,7 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
     if (depositRes.isError) {
       return reply.status(400).send({ message: depositRes.getError()!.message ?? "" });
     }
-    await depositRes.getValue().wait();
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_deposit, {
-      assetId: request.body.assetId,
-      channelAddress: request.body.channelAddress,
-    });
-    try {
-      const res = await vectorEngine.request(rpc);
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
-    }
+    return reply.status(200).send({ txHash: depositRes.getValue().hash });
   },
 );
 
