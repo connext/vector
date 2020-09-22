@@ -159,7 +159,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
     },
     timeout: "3600",
   });
-  expect(ret.isError).to.not.be.ok;
+  expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;
 
   // Verify stored channel

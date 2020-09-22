@@ -36,7 +36,9 @@ export class MemoryMessagingService implements IMessagingService {
     numRetries = 0,
   ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
     const inbox = getRandomBytes32();
-    const responsePromise = this.evt.pipe(({ inbox }) => inbox === inbox).waitFor(timeout);
+    const responsePromise = this.evt
+      .pipe((e) => e.inbox === inbox)
+      .waitFor(timeout);
     this.evt.post({
       to: channelUpdate.toIdentifier,
       from: channelUpdate.fromIdentifier,

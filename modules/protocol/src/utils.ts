@@ -9,7 +9,7 @@ import {
   IVectorOnchainService,
   Result,
 } from "@connext/vector-types";
-import { BigNumber} from "ethers";
+import { BigNumber } from "ethers";
 import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { Evt } from "evt";
 
