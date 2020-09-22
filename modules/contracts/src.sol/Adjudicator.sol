@@ -19,15 +19,6 @@ contract Adjudicator is IAdjudicator {
     ChannelDispute channelDispute;
     TransferDispute transferDispute;
 
-    modifier onlyParticipant(CoreChannelState memory ccs) {
-        require(
-            msg.sender == ccs.participants[0] ||
-            msg.sender == ccs.participants[1],
-            "Adjudicator: msg.sender is not channel participant"
-        );
-        _;
-    }
-
     // PSEUDOCODE: Please don't delete yet!
     // ChannelDispute memory lastDispute = channelDisputes(channelAddress)
     // validateSignatures(signatures, participants, state);
@@ -53,7 +44,6 @@ contract Adjudicator is IAdjudicator {
     )
         public
         override
-        onlyParticipant(ccs)
     {
         verifySignatures(ccs.participants, ccs, signatures);
         require(
@@ -73,6 +63,8 @@ contract Adjudicator is IAdjudicator {
             channelDispute.nonce = ccs.nonce;
             channelDispute.merkleRoot = ccs.merkleRoot;
         } else { // during regular operation
+            // Only participants may start a dispute
+            verifySenderIsParticipant(ccs);
             // For equality, skip updates without effect and only set new expiries
             if (channelDispute.nonce < ccs.nonce) {
                 channelDispute.channelStateHash = hashChannelState(ccs);
@@ -113,8 +105,8 @@ contract Adjudicator is IAdjudicator {
     )
         public
         override
-        onlyParticipant(ccs)
     {
+        verifySenderIsParticipant(ccs);
         require(
             inDefundPhase(),
             "Adjudicator defundChannel: Not in defund phase"
@@ -242,6 +234,14 @@ contract Adjudicator is IAdjudicator {
         }
         IVectorChannel channel = IVectorChannel(cts.channelAddress);
         channel.managedTransfer(finalBalance, cts.assetId);
+    }
+
+    function verifySenderIsParticipant(CoreChannelState memory ccs) internal view {
+        require(
+            msg.sender == ccs.participants[0] ||
+            msg.sender == ccs.participants[1],
+            "Adjudicator: msg.sender is not channel participant"
+        );
     }
 
     function verifySignatures(
