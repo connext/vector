@@ -11,15 +11,24 @@ interface TransferParamsMap {
   [ConditionalTransferType.LinkedTransfer]: LinkedTransferParams;
 }
 
+interface ResolverParamsMap {
+  [ConditionalTransferType.LinkedTransfer]: ResolveLinkedTransferParams
+}
+
 export type LinkedTransferParams = {
   preImage: string;
 };
+
+export type ResolveLinkedTransferParams = {
+  preImage: string;
+}
 
 export type ConditionalTransferParams<T extends ConditionalTransferType> = {
   channelAddress: Address;
   amount: string;
   assetId: Address;
   recipient?: PublicIdentifier;
+  timeout?: string;
   conditionType: T;
   routingId: Bytes32; // This is needed for hopped transfers, but it might get confusing against transferId
   details: TransferParamsMap[T];
@@ -30,8 +39,21 @@ export type ConditionalTransferResponse = {
   routingId: Bytes32;
 };
 
-export type ResolveConditionParams = any;
-export type WithdrawParams = any;
+export type ResolveConditionParams<T extends ConditionalTransferType> = {
+  channelAddress: Address;
+  conditionType: T;
+  routingId: Bytes32; // This is needed for hopped transfers, but it might get confusing against transferId
+  details: ResolverParamsMap[T];
+  meta?: any;
+};
+
+export type WithdrawParams = {
+  channelAddress: Address,
+  amount: string,
+  assetId: Address,
+  recipient: Address,
+  fee?: string
+};
 export type TransferParams = any;
 
 // These are from the node, may not be the right place

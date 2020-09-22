@@ -24,6 +24,7 @@ import {
   EngineParams,
   OutboundChannelUpdateError,
   TAddress,
+  FullTransferState
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -139,7 +140,7 @@ export class VectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = convertConditionalTransferParams(params, this.chainAddresses, channel!);
+    const createResult = convertConditionalTransferParams(params, channel!);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -169,21 +170,59 @@ export class VectorEngine {
     return Result.ok(channel);
   }
 
-  private async resolveCondition(params: ResolveConditionParams): Promise<Result<any>> {
+  private async resolveCondition(params: ResolveConditionParams<any>): Promise<Result<any>> {
     // TODO types
     // TODO input validation
+    const transfers = await this.store.getActiveTransfers(params.channelAddress);
+    let transfer: FullTransferState;
+    transfers.forEach((instance) => {
+      if(instance.meta.routingId === params.routingId) {
+        transfer = instance;
+      }
+    })
+    if (!transfer!) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+      );
+    }
+    // TODO validate that transfer hasn't already been resolved?
 
-    // First, get translated `resolve` params using the passed in resolve condition ones
-    const resolveParams: ResolveTransferParams = await convertResolveConditionParams(params);
-    return this.vector.resolve(resolveParams);
+    // First, get translated `create` params using the passed in conditional transfer ones
+    const resolveResult = convertResolveConditionParams(params, transfer!);
+    if (resolveResult.isError) {
+      return Result.fail(resolveResult.getError()!);
+    }
+    const resolveParams = resolveResult.getValue();
+    const protocolRes = await this.vector.resolve(resolveParams);
+    if (protocolRes.isError) {
+      return Result.fail(protocolRes.getError()!);
+    }
+    const res = protocolRes.getValue();
+    return Result.ok({ routingId: params.routingId });
   }
 
   private async withdraw(params: WithdrawParams): Promise<Result<any>> {
     // TODO types
     // TODO input validation
+    const channel = await this.store.getChannelState(params.channelAddress);
+    if (!channel) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
 
-    const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses);
-    return this.vector.create(withdrawParams);
+    // First, get translated `create` params from withdraw
+    const createResult = convertWithdrawParams(params, channel!);
+    if (createResult.isError) {
+      return Result.fail(createResult.getError()!);
+    }
+    const createParams = createResult.getValue();
+    const protocolRes = await this.vector.create(createParams);
+    if (protocolRes.isError) {
+      return Result.fail(protocolRes.getError()!);
+    }
+    const res = protocolRes.getValue();
+    return Result.ok({}); // TODO what do we return here?
   }
 
   private async transfer(params: TransferParams): Promise<Result<any>> {
@@ -192,14 +231,6 @@ export class VectorEngine {
     // TODO convert this into linked transfer to recipient params in conditionalTransfer
     let updatedParams;
     return this.conditionalTransfer(updatedParams);
-  }
-
-  private async addToQueuedUpdates(params: any): Promise<Result<any>> {
-    return Result.ok(undefined);
-    // TODO what kinds of params do we want this to accept?
-    // First convert the update into correct type
-    // Then store in queued updates table
-    // return this.store.addToQueuedUpdates();
   }
 
   // JSON RPC interface -- this will accept:
