@@ -7,8 +7,6 @@ import "./Types.sol";
 
 interface IAdjudicator {
 
-    // TODO: add disputes to args
-
     function disputeChannel(
         CoreChannelState memory ccs,
         bytes[2] memory signatures

@@ -6,7 +6,7 @@ import "./Types.sol";
 import "./IAdjudicator.sol";
 
 
-interface IVectorChannel { // is IAdjudicator {
+interface IVectorChannel is IAdjudicator {
 
     function setup(
         address[2] memory participants,

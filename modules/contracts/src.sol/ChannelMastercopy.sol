@@ -2,6 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./Adjudicator.sol";
 import "./interfaces/IAdjudicator.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVectorChannel.sol";
@@ -16,7 +17,7 @@ import "./lib/SafeMath.sol";
 /// (b) Executes transactions dispute logic on a hardcoded channel factory
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
-contract ChannelMastercopy is IVectorChannel {
+contract ChannelMastercopy is IVectorChannel, Adjudicator {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
@@ -28,9 +29,6 @@ contract ChannelMastercopy is IVectorChannel {
     IAdjudicator private _adjudicator;
 
     address[2] private _participants;
-
-    ChannelDispute channelDispute;
-    TransferDispute transferDisputes;
 
     mapping(bytes32 => bool) isExecuted;
 
