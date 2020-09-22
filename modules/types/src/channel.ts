@@ -88,15 +88,15 @@ export const CoreChannelStateEncoding = tidy(`tuple(
 // participants array ordering (but value in `to` field may
 // not always be the participants addresses)
 export interface CoreChannelState {
+  assetIds: Address[];
+  balances: Balance[]; // Indexed by assetId
   channelAddress: Address;
+  latestDepositNonce: number;
+  lockedBalance: string[]; // Indexed by assetId -- should always be changed in lockstep with transfers
+  merkleRoot: string;
+  nonce: number;
   participants: Address[]; // Signer keys
   timeout: string;
-  balances: Balance[]; // Indexed by assetId
-  lockedBalance: string[]; // Indexed by assetId -- should always be changed in lockstep with transfers
-  assetIds: Address[];
-  nonce: number;
-  latestDepositNonce: number;
-  merkleRoot: string;
 }
 
 // Includes any additional info that doesn't need to be sent to chain

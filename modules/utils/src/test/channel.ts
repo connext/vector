@@ -1,15 +1,16 @@
 import {
-  UpdateType,
   ChannelUpdate,
   ChannelUpdateDetailsMap,
-  FullChannelState,
-  UpdateParams,
-  UpdateParamsMap,
+  CoreChannelState,
   CreateUpdateDetails,
   DepositUpdateDetails,
+  FullChannelState,
+  LinkedTransferState,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  LinkedTransferState,
+  UpdateParams,
+  UpdateParamsMap,
+  UpdateType,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -169,13 +170,11 @@ export function createTestChannelUpdate<T extends UpdateType>(
   } as ChannelUpdate<T>;
 }
 
-export function createTestChannelState<T extends UpdateType = typeof UpdateType.setup>(
-  type: T,
-  overrides: PartialFullChannelState<T> = {},
-): FullChannelState<T> {
+export function createTestCoreChannelState(
+  overrides: Partial<CoreChannelState> = {},
+): CoreChannelState {
   // Get some default values that should be consistent between
   // the channel state and the channel update
-  const publicIdentifiers = overrides.publicIdentifiers ?? [mkPublicIdentifier("indraA"), mkPublicIdentifier("indraB")];
   const participants = overrides.participants ?? [mkAddress("0xaaa"), mkAddress("0xbbb")];
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
@@ -194,9 +193,29 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
         to: [...participants],
       },
     ],
-    lockedBalance: ["1", "2"],
     channelAddress,
     latestDepositNonce: 1,
+    lockedBalance: ["1", "2"],
+    merkleRoot: mkHash(),
+    nonce,
+    participants,
+    timeout: "1",
+    ...overrides,
+  };
+}
+
+export function createTestChannelState<T extends UpdateType = typeof UpdateType.setup>(
+  type: T,
+  overrides: PartialFullChannelState<T> = {},
+): FullChannelState<T> {
+  const channelAddress = overrides.channelAddress || mkAddress("0xccc");
+  const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
+  const nonce = overrides.nonce ?? 1;
+  const coreChannelState = createTestCoreChannelState({ ...overrides });
+  // Get some default values that should be consistent between
+  // the channel state and the channel update
+  const publicIdentifiers = overrides.publicIdentifiers ?? [mkPublicIdentifier("indraA"), mkPublicIdentifier("indraB")];
+  return {
     latestUpdate: createTestChannelUpdate(type, {
       channelAddress,
       fromIdentifier: publicIdentifiers[0],
@@ -205,17 +224,14 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       nonce,
       ...(overrides.latestUpdate ?? {}),
     }) as any,
-    merkleRoot: mkHash(),
     networkContext: {
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xcha"),
       providerUrl: "http://localhost:8545",
       channelMastercopyAddress: mkAddress("0xmast"),
     },
-    nonce,
-    participants,
     publicIdentifiers,
-    timeout: "1",
+    ...coreChannelState,
     ...overrides,
   };
 }
