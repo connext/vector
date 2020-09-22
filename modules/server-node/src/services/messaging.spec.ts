@@ -45,7 +45,7 @@ describe("messaging", () => {
     await messagingB.disconnect();
   });
 
-  it.only("should send a protocol message from A to B", async () => {
+  it("should send a protocol message from A to B", async () => {
     const update = createTestChannelUpdate("setup", {
       toIdentifier: signerB.publicIdentifier,
       fromIdentifier: signerA.publicIdentifier,

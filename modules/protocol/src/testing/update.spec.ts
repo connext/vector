@@ -398,7 +398,7 @@ type GenerateUpdateTestParams = {
   depositA?: { nonce: BigNumber; amount: BigNumber };
 };
 
-describe.only("generateUpdate", () => {
+describe("generateUpdate", () => {
   // Get channel constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
