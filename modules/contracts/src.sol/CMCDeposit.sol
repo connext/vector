@@ -19,7 +19,7 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
 
     mapping(address => LatestDeposit) internal _latestDeposit;
 
-    receive() external payable onlyByProxy {
+    receive() external payable onlyOnProxy {
         // TODO: emit Deposit event to track eth deposits
     }
 
@@ -34,7 +34,7 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         public
         override
         view
-        onlyByProxy
+        onlyOnProxy
         returns (LatestDeposit memory)
     {
         return _latestDeposit[assetId];
@@ -47,7 +47,7 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         public
         payable
         override
-        onlyByProxy
+        onlyOnProxy
     {
         // WIP version just for basic testing
         if (assetId == address(0)) {

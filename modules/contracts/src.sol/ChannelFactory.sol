@@ -2,7 +2,6 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITransferDefinition.sol";
@@ -17,16 +16,14 @@ contract ChannelFactory is IChannelFactory {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
-    ICMCAdjudicator public immutable adjudicator;
     IVectorChannel public immutable masterCopy;
 
     bytes32 private constant domainSalt = keccak256("vector");
 
     bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
-    constructor(IVectorChannel _masterCopy, ICMCAdjudicator _adjudicator) {
+    constructor(IVectorChannel _masterCopy) {
         masterCopy = _masterCopy;
-        adjudicator = _adjudicator;
     }
 
     ////////////////////////////////////////
@@ -67,7 +64,7 @@ contract ChannelFactory is IChannelFactory {
     {
         address initiator = msg.sender;
         channel = deployChannelProxy(initiator, counterparty);
-        channel.setup([initiator, counterparty], address(adjudicator));
+        channel.setup([initiator, counterparty]);
         emit ChannelCreation(channel);
     }
 

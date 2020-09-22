@@ -29,7 +29,7 @@ contract CMCExecutor is CMCCore, ICMCExecutor {
     )
         public
         override
-        onlyByProxy
+        onlyOnProxy
     {
         bytes32 transactionHash = keccak256(
             abi.encodePacked(
@@ -45,9 +45,9 @@ contract CMCExecutor is CMCCore, ICMCExecutor {
             "Transacation has already been executed"
         );
         isExecuted[transactionHash] = true;
-        for (uint256 i = 0; i < _participants.length; i++) {
+        for (uint256 i = 0; i < participants.length; i++) {
             require(
-                _participants[i] == transactionHash.verifyChannelMessage(signatures[i]),
+                participants[i] == transactionHash.verifyChannelMessage(signatures[i]),
                 "Invalid signature"
             );
         }

@@ -8,20 +8,10 @@ import "./Types.sol";
 interface ICMCCore {
 
     function setup(
-        address[2] memory participants,
-        address adjudicator
+        address[2] memory _participants
     ) external;
-
-    function getBalance(
-        address assetId
-    ) external view returns (uint256);
 
     function getParticipants(
     ) external view returns (address[2] memory);
-
-    function managedTransfer(
-        Balance memory balances,
-        address assetId
-    ) external;
 
 }

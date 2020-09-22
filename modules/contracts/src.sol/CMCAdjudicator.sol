@@ -4,15 +4,16 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
-import "./interfaces/IVectorChannel.sol";
+import "./interfaces/IERC20.sol";
 import "./CMCCore.sol";
+import "./CMCDeposit.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 
 
 /// @title Adjudicator - Dispute logic for ONE channel
-contract CMCAdjudicator is CMCCore, ICMCAdjudicator {
+contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
@@ -127,9 +128,7 @@ contract CMCAdjudicator is CMCCore, ICMCAdjudicator {
             Balance memory balance = ccs.balances[i];
             uint256 lockedBalance = ccs.lockedBalance[i];
             address assetId = ccs.assetIds[i];
-            // TODO: something better
-            IVectorChannel channel = IVectorChannel(address(this));
-            LatestDeposit memory latestDeposit = channel.getLatestDeposit(assetId);
+            LatestDeposit memory latestDeposit = getLatestDeposit(assetId);
             Balance memory transfer;
             transfer.to[0] = balance.to[0];
             transfer.to[1] = balance.to[1];
@@ -137,8 +136,8 @@ contract CMCAdjudicator is CMCCore, ICMCAdjudicator {
             if (latestDeposit.nonce > ccs.latestDepositNonce) {
                 transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
             }
-            transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
-            channel.managedTransfer(transfer, assetId);
+            transfer.amount[1] = getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
+            transferAsset(transfer, assetId);
         }
     }
 
@@ -232,8 +231,7 @@ contract CMCAdjudicator is CMCCore, ICMCAdjudicator {
         } else {
             finalBalance = cts.initialBalance;
         }
-        IVectorChannel channel = IVectorChannel(cts.channelAddress);
-        channel.managedTransfer(finalBalance, cts.assetId);
+        transferAsset(finalBalance, cts.assetId);
     }
 
     function verifySenderIsParticipant(CoreChannelState memory ccs) internal view {
@@ -317,6 +315,38 @@ contract CMCAdjudicator is CMCCore, ICMCAdjudicator {
 
     function hashChannelMsg(CoreChannelState memory ccs) public pure returns (bytes32) {
       return hashChannelState(ccs);
+    }
+
+    // TODO: Asset library
+
+    function getBalance(
+        address assetId
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        return assetId == address(0) ?
+            address(this).balance :
+            IERC20(assetId).balanceOf(address(this));
+    }
+
+    function transferAsset(
+        Balance memory balances,
+        address assetId
+    )
+        internal
+    {
+        // TODO: This is quick-and-dirty to allow for basic testing.
+        // We should add dealing with non-standard-conforming tokens,
+        // unexpected reverts, avoid reentrancy, etc.
+        if (assetId == address(0)) {
+            balances.to[0].transfer(balances.amount[0]);
+            balances.to[1].transfer(balances.amount[1]);
+        } else {
+            require(IERC20(assetId).transfer(balances.to[0], balances.amount[0]), "oh no");
+            require(IERC20(assetId).transfer(balances.to[1], balances.amount[1]), "oh no");
+        }
     }
 
 }
