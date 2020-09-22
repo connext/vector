@@ -4,18 +4,16 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
-import { ChannelRpcMethods } from "@connext/vector-types";
-
-import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
-import { LockService } from "./services/lock";
-import { PrismaStore } from "./services/store";
-import { config } from "./config";
 import {
+  ChannelRpcMethods,
   GetChannelStateParams,
   getChannelStateParamsSchema,
   getChannelStateResponseSchema,
   GetConfigResponseBody,
   getConfigResponseSchema,
+  postAdminBodySchema,
+  PostAdminRequestBody,
+  postAdminResponseSchema,
   postDepositBodySchema,
   PostDepositRequestBody,
   postDepositResponseSchema,
@@ -25,7 +23,12 @@ import {
   postSetupBodySchema,
   PostSetupRequestBody,
   postSetupResponseSchema,
-} from "./schema";
+} from "@connext/vector-types";
+
+import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
+import { LockService } from "./services/lock";
+import { PrismaStore } from "./services/store";
+import { config } from "./config";
 import { MultichainTransactionService, VectorTransactionService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
 
@@ -165,6 +168,22 @@ server.post<{ Body: PostLinkedTransferRequestBody }>(
       return reply.status(400).send({ message: res.getError()?.message ?? "" });
     }
     return reply.status(200).send(res.getValue());
+  },
+);
+
+server.post<{ Body: PostAdminRequestBody }>(
+  "/clear-store",
+  { schema: { body: postAdminBodySchema, response: postAdminResponseSchema } },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply.status(401).send({ message: "Unauthorized" });
+    }
+    try {
+      await store.clear();
+      return reply.status(200).send({ message: "success" });
+    } catch (e) {
+      return reply.status(500).send({ message: e.message });
+    }
   },
 );
 

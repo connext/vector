@@ -453,4 +453,11 @@ export class PrismaStore implements IVectorStore {
     };
     return fullTransfer;
   }
+
+  async clear(): Promise<void> {
+    await this.prisma.channel.deleteMany({});
+    await this.prisma.balance.deleteMany({});
+    await this.prisma.update.deleteMany({});
+    await this.prisma.transfer.deleteMany({});
+  }
 }

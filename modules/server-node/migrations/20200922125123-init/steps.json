@@ -263,14 +263,7 @@
     {
       "tag": "CreateField",
       "model": "Channel",
-      "field": "vectorChannelMastercopyAddress",
-      "type": "String",
-      "arity": "Required"
-    },
-    {
-      "tag": "CreateField",
-      "model": "Channel",
-      "field": "adjudicatorAddress",
+      "field": "channelMastercopyAddress",
       "type": "String",
       "arity": "Required"
     },

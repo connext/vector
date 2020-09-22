@@ -1,5 +1,5 @@
 import { Balance } from "@connext/vector-types";
-import { createCoreTransferState, createTestChannelState } from "@connext/vector-utils";
+import { createTestFullLinkedTransferState, createTestChannelState } from "@connext/vector-utils";
 
 import { expect } from "../test/utils/assert";
 import { config } from "../config";
@@ -79,7 +79,7 @@ describe("store", () => {
 
   it("should create and resolve a transfer and pull transfer by ID", async () => {
     const createState = createTestChannelState("create");
-    const transfer = createCoreTransferState({ channelAddress: createState.channelAddress });
+    const transfer = createTestFullLinkedTransferState({ channelAddress: createState.channelAddress });
 
     await store.saveChannelState(
       createState,

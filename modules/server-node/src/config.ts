@@ -30,6 +30,11 @@ if (!authUrl) {
   throw new Error("VECTOR_AUTH_URL is a required config item");
 }
 
+const adminToken = process.env.VECTOR_ADMIN_TOKEN;
+if (!adminToken) {
+  throw new Error("VECTOR_ADMIN_TOKEN is a required config item");
+}
+
 let contractAddressesEnv;
 const contractAddresses: ChainAddresses = {};
 try {
@@ -65,4 +70,5 @@ export const config = {
   port: parseInt(process.env.VECTOR_PORT ?? "5040"),
   redisUrl,
   dbUrl,
+  adminToken,
 };

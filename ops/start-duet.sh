@@ -108,6 +108,8 @@ bob_database="database_b"
 
 public_url="http://localhost:$alice_port"
 
+VECTOR_ADMIN_TOKEN="${VECTOR_ADMIN_TOKEN:-cxt1234}";
+
 node_env="environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_AUTH_URL: '$auth_url'
