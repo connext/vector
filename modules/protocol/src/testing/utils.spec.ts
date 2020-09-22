@@ -1,13 +1,17 @@
 import { BigNumber, constants, BigNumberish } from "ethers";
-import { Balance, Result } from "@connext/vector-types";
+import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
 import { mkAddress } from "@connext/vector-utils";
 import { expect } from "chai";
 import Sinon from "sinon";
+import { VectorOnchainService } from "@connext/vector-contracts";
 
 import { reconcileDeposit } from "../utils";
 
 import { env } from "./utils";
-import { MockOnchainService, MockOnchainStubType } from "./services/onchain";
+
+type MockOnchainStubType = {
+  [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
+};
 
 type ReconcileDepositTest = {
   initialBalance: Omit<Balance, "to">;
@@ -34,8 +38,10 @@ describe("utils", () => {
         BigNumber.from(0),
       );
 
-      // Create the stubs
-      const defaults = {
+      // Creat the mock with defaults
+      const onchain = Sinon.createStubInstance(VectorOnchainService);
+      // set return values
+      const mockedValues = {
         // Default the value onchain + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
 
@@ -47,11 +53,8 @@ describe("utils", () => {
 
         ...stubs,
       };
-
-      // Create the onchain service
-      const onchain = new MockOnchainService();
-      Object.entries(defaults).forEach(([key, value]) => {
-        onchain.setStub(key as any, value as any);
+      Object.entries(mockedValues).forEach(([method, stub]) => {
+        onchain[method].resolves(stub);
       });
 
       // Return the onchain service

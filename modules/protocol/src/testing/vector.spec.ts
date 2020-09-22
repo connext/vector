@@ -1,3 +1,4 @@
+import { VectorOnchainService } from "@connext/vector-contracts";
 import {
   getRandomChannelSigner,
   mkAddress,
@@ -10,7 +11,9 @@ import {
   LinkedTransferResolverEncoding,
   LinkedTransferStateEncoding,
   OutboundChannelUpdateError,
+  IVectorOnchainService,
 } from "@connext/vector-types";
+import Sinon from "sinon";
 
 import { Vector } from "../vector";
 
@@ -18,7 +21,15 @@ import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 import { MemoryStoreService } from "./services/store";
 import { expect } from "./utils";
-import { MockOnchainService } from "./services/onchain";
+
+let chainService: IVectorOnchainService;
+beforeEach(async () => {
+  chainService = Sinon.createStubInstance(VectorOnchainService);
+});
+
+afterEach(() => {
+  Sinon.restore();
+});
 
 describe("Vector.connect", () => {
   it("can be created", async () => {
@@ -28,7 +39,7 @@ describe("Vector.connect", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainService(),
+      chainService,
       pino(),
     );
     expect(node).to.be.instanceOf(Vector);
@@ -53,7 +64,7 @@ describe("Vector.setup", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainService(),
+      chainService,
       pino(),
     );
   });
@@ -160,7 +171,7 @@ describe("Vector.deposit", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainService(),
+      chainService,
       pino(),
     );
   });
@@ -218,7 +229,7 @@ describe("Vector.create", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainService(),
+      chainService,
       pino(),
     );
   });
@@ -331,7 +342,7 @@ describe("Vector.resolve", () => {
       new MemoryLockService(),
       new MemoryStoreService(),
       signer,
-      new MockOnchainService(),
+      chainService,
       pino(),
     );
   });
