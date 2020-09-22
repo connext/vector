@@ -17,68 +17,82 @@ import "./lib/SafeMath.sol";
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
 contract ChannelMastercopy is IVectorChannel {
-    // Note: this is the mastercopy of channel logic, this address is managed by the ChannelFactory
-    // TODO: decide which variables should be public
-
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
+    // masterCopy always needs to be first declared variable
+    // This ensures that it is at the same location in the contracts to which calls are delegated.
+    // To reduce deployment costs this variable is internal and needs to be retrieved via `getStorageAt`
+    address internal masterCopy;
+
+    IAdjudicator private _adjudicator;
+
+    address[2] private _participants;
+
     ChannelDispute channelDispute;
     TransferDispute transferDisputes;
-
-    address public masterCopy;
 
     mapping(bytes32 => bool) isExecuted;
 
     mapping(address => LatestDeposit) internal _latestDepositByAssetId;
 
-    address[2] private _owners;
+    // Prevents us from calling methods directly from the mastercopy contract
+    modifier onlyByProxy {
+        require(address(_adjudicator) != address(1), "This contract is the mastercopy");
+        require(address(_adjudicator) != address(0), "Channel has not been setup");
+        _;
+    }
 
-    IAdjudicator public _adjudicator;
+    modifier onlyAdjudicator {
+        require(msg.sender == address(_adjudicator), "Message sender is not the Adjudicator");
+        _;
+    }
 
-    // TODO: receive must emit event, in order to track eth deposits
-    receive() external payable {}
-
-    modifier onlyFactory {
-        require(msg.sender == address(_adjudicator), "msg.sender is not the factory");
+    modifier onlyParticipants {
+        require(msg.sender == address(_adjudicator), "Message sender is not a participant");
         _;
     }
 
     ////////////////////////////////////////
     // Public Methods
 
+    receive() external payable onlyByProxy {
+        // TODO: emit Deposit event to track eth deposits
+    }
+
     /// @notice Contract constructor for Mastercopy
     /// @notice The mastercopy is only a source of code & should never be used for real channels
     /// @notice To prevent anyone from using the mastercopy directly, initialize it w unusable data
     constructor() {
-        _owners = [address(0),address(0)];
+        _participants = [address(0),address(0)];
         _adjudicator = IAdjudicator(address(1));
     }
 
     /// @notice Contract constructor for Proxied copies
-    /// @param owners: An array of unique addresses representing the participants of the channel
+    /// @param participants: A pair of addresses representing the participants of the channel
     /// @param adjudicator: Address to call for adjudication logic
     function setup(
-        address[2] memory owners,
+        address[2] memory participants,
         address adjudicator
     )
         public
         override
     {
-        require(address(_adjudicator) == address(0), "Contract has already been setup");
-        _owners = owners;
+        require(address(_adjudicator) == address(0), "Channel has already been setup");
+        _participants = participants;
         _adjudicator = IAdjudicator(adjudicator);
     }
 
-    /// @notice A getter function for the owners of the multisig
-    /// @return An array of addresses representing the owners
-    function getOwners()
+    /// @notice A getter function for the participants of the multisig
+    /// @return An array of addresses representing the participants
+    function getParticipants()
         public
         override
         view
+        onlyByProxy
         returns (address[2] memory)
     {
-        return _owners;
+        return _participants;
     }
 
     function getBalance(
@@ -87,6 +101,7 @@ contract ChannelMastercopy is IVectorChannel {
         public
         override
         view
+        onlyByProxy
         returns (uint256)
     {
         return assetId == address(0) ?
@@ -101,6 +116,7 @@ contract ChannelMastercopy is IVectorChannel {
         public
         payable
         override
+        onlyByProxy
     {
         // WIP version just for basic testing
         if (assetId == address(0)) {
@@ -117,7 +133,15 @@ contract ChannelMastercopy is IVectorChannel {
     // auto-generated getter of an overriding state variable
     // if said variable is a mapping with a struct as value type.
     // In other words, I had to write the getter myself...
-    function latestDepositByAssetId(address assetId) public override view returns (LatestDeposit memory) {
+    function latestDepositByAssetId(
+        address assetId
+    )
+        public
+        override
+        view
+        onlyByProxy
+        returns (LatestDeposit memory)
+    {
         return _latestDepositByAssetId[assetId];
     }
 
@@ -127,7 +151,8 @@ contract ChannelMastercopy is IVectorChannel {
     )
         public
         override
-        onlyFactory
+        onlyByProxy
+        onlyAdjudicator
     {
         // TODO: This is quick-and-dirty to allow for basic testing.
         // We should add dealing with non-standard-conforming tokens,
@@ -157,6 +182,7 @@ contract ChannelMastercopy is IVectorChannel {
     )
         public
         override
+        onlyByProxy
     {
         bytes32 transactionHash = keccak256(
             abi.encodePacked(
@@ -172,9 +198,9 @@ contract ChannelMastercopy is IVectorChannel {
             "Transacation has already been executed"
         );
         isExecuted[transactionHash] = true;
-        for (uint256 i = 0; i < _owners.length; i++) {
+        for (uint256 i = 0; i < _participants.length; i++) {
             require(
-                _owners[i] == transactionHash.verifyChannelMessage(signatures[i]),
+                _participants[i] == transactionHash.verifyChannelMessage(signatures[i]),
                 "Invalid signature"
             );
         }

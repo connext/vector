@@ -9,11 +9,11 @@ import "./IAdjudicator.sol";
 interface IVectorChannel { // is IAdjudicator {
 
     function setup(
-        address[2] memory owners,
+        address[2] memory participants,
         address adjudicator
     ) external;
 
-    function getOwners(
+    function getParticipants(
     ) external view returns (address[2] memory);
 
     function getBalance(

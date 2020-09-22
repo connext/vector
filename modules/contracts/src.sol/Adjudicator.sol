@@ -56,6 +56,7 @@ contract Adjudicator is IAdjudicator {
         //      };
         //      channelDispute(state.channelAddress) = dispute;
         // }
+
         // TODO: what are the implications of this?
         address channelAddress = msg.sender; // getChannelAddress(ccs.participants[0], ccs.participants[1]);
         ChannelDispute storage dispute = channelDispute[channelAddress];
