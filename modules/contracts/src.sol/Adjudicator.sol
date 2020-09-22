@@ -57,7 +57,7 @@ contract Adjudicator is IAdjudicator {
     {
         verifySignatures(ccs.participants, ccs, signatures);
         require(
-            !inDefundPhase(channelDispute),
+            !inDefundPhase(),
             "disputeChannel: Not allowed in defund phase"
         );
         // TODO: check not defunded???
@@ -67,7 +67,7 @@ contract Adjudicator is IAdjudicator {
         );
         if (channelDispute.nonce == ccs.nonce) {
             require(
-                !inConsensusPhase(channelDispute),
+                !inConsensusPhase(),
                 "Adjudicator disputeChannel: Same nonce not allowed in consensus phase"
             );
         } else { // channelDispute.nonce < ccs.nonce
@@ -112,7 +112,7 @@ contract Adjudicator is IAdjudicator {
         onlyParticipant(ccs)
     {
         require(
-            inDefundPhase(channelDispute),
+            inDefundPhase(),
             "Adjudicator defundChannel: Not in defund phase"
         );
         require(
@@ -165,7 +165,7 @@ contract Adjudicator is IAdjudicator {
         // TODO: Who should be able to call this?
     {
         require(
-            inDefundPhase(channelDispute),
+            inDefundPhase(),
             "Adjudicator disputeTransfer: Not in defund phase"
         );
         bytes32 transferStateHash = hashTransferState(cts);
@@ -283,12 +283,12 @@ contract Adjudicator is IAdjudicator {
         );
     }
 
-    function inConsensusPhase(ChannelDispute storage dispute) internal view returns (bool) {
-        return block.number < dispute.consensusExpiry;
+    function inConsensusPhase() internal view returns (bool) {
+        return block.number < channelDispute.consensusExpiry;
     }
 
-    function inDefundPhase(ChannelDispute storage dispute) internal view returns (bool) {
-        return dispute.consensusExpiry <= block.number && block.number < dispute.defundExpiry;
+    function inDefundPhase() internal view returns (bool) {
+        return channelDispute.consensusExpiry <= block.number && block.number < channelDispute.defundExpiry;
     }
 
     function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
