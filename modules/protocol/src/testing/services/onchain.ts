@@ -1,6 +1,6 @@
 import { VectorOnchainService } from "@connext/vector-contracts";
-import { IVectorOnchainService, Result } from "@connext/vector-types";
-import { mkHash } from "@connext/vector-utils";
+import { Balance, FullTransferState, IVectorOnchainService, Result } from "@connext/vector-types";
+import { mkAddress, mkHash } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Sinon from "sinon";
 
@@ -22,8 +22,18 @@ export class MockOnchainService implements IVectorOnchainService {
 
       getChannelFactoryBytecode: Result.ok<string>(mkHash("0x51523ase")) as any,
 
+      create: Result.ok<boolean>(true) as any,
+
+      resolve: Result.ok<Balance>({ to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["1", "1"] }) as any,
+
       ...overrides,
     });
+  }
+  create(transfer: FullTransferState<any>, chainId: number, bytecode?: string): Promise<Result<boolean, Error>> {
+    throw new Error("Method not implemented.");
+  }
+  resolve(transfer: FullTransferState<any>, chainId: number, bytecode?: string): Promise<Result<Balance, Error>> {
+    throw new Error("Method not implemented.");
   }
 
   getChannelOnchainBalance(
@@ -50,6 +60,5 @@ export class MockOnchainService implements IVectorOnchainService {
   // Easy method to set stubs mid-test
   setStub(method: keyof IVectorOnchainService, ret: any): void {
     this.stubs[method] = Sinon.stub().resolves(ret);
-    // TODO: maybe we have to return a new instance?
   }
 }

@@ -52,11 +52,10 @@ const convertChannelEntityToFullChannelState = (
       case "setup":
         details = {
           networkContext: {
-            adjudicatorAddress: channelEntity.adjudicatorAddress,
             chainId: channelEntity.chainId,
             channelFactoryAddress: channelEntity.channelFactoryAddress,
             providerUrl: channelEntity.providerUrl,
-            vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
+            channelMastercopyAddress: channelEntity.channelMastercopyAddress,
           },
           timeout: channelEntity.timeout,
         } as SetupUpdateDetails;
@@ -98,11 +97,10 @@ const convertChannelEntityToFullChannelState = (
     lockedBalance,
     merkleRoot: channelEntity.merkleRoot,
     networkContext: {
-      adjudicatorAddress: channelEntity.adjudicatorAddress,
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       providerUrl: channelEntity.providerUrl,
-      vectorChannelMastercopyAddress: channelEntity.vectorChannelMastercopyAddress,
+      channelMastercopyAddress: channelEntity.channelMastercopyAddress,
     },
     nonce: channelEntity.nonce,
     participants: [channelEntity.participantA, channelEntity.participantB],
@@ -291,8 +289,7 @@ export class PrismaStore implements IVectorStore {
         publicIdentifierA: channelState.publicIdentifiers[0],
         publicIdentifierB: channelState.publicIdentifiers[1],
         timeout: channelState.timeout,
-        vectorChannelMastercopyAddress: channelState.networkContext.vectorChannelMastercopyAddress,
-        adjudicatorAddress: channelState.networkContext.adjudicatorAddress,
+        channelMastercopyAddress: channelState.networkContext.channelMastercopyAddress,
         balances: {
           create: channelState.assetIds.reduce(
             (create: BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
@@ -326,7 +323,7 @@ export class PrismaStore implements IVectorStore {
         latestDepositNonce: channelState.latestDepositNonce,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
-        adjudicatorAddress: channelState.networkContext.adjudicatorAddress,
+        channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
         latestUpdate: {
           connectOrCreate: {
             where: {
@@ -435,7 +432,7 @@ export class PrismaStore implements IVectorStore {
     }
 
     const fullTransfer: FullTransferState = {
-      adjudicatorAddress: transfer.createUpdate.channel!.adjudicatorAddress,
+      channelFactoryAddress: transfer.createUpdate.channel!.channelFactoryAddress,
       assetId: transfer.createUpdate.assetId,
       chainId: transfer.createUpdate.channel!.chainId,
       channelAddress: transfer.createUpdate.channelAddress!,

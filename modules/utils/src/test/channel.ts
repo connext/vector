@@ -26,7 +26,7 @@ export type PartialFullChannelState<T extends UpdateType> = Partial<
   Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
 >;
 
-type PartialUpdateParams<T extends UpdateType> = Partial<
+export type PartialUpdateParams<T extends UpdateType> = Partial<
   Omit<UpdateParams<T>, "details"> & { details?: Partial<UpdateParamsMap[T]> }
 >;
 
@@ -49,8 +49,7 @@ export function createTestUpdateParams<T extends UpdateType>(
           chainId: 2,
           providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xcha"),
-          vectorChannelMastercopyAddress: mkAddress("0xcccaaa"),
-          adjudicatorAddress: mkAddress("0xaaaddd"),
+          channelMastercopyAddress: mkAddress("0xcccaaa"),
         },
       };
       break;
@@ -62,7 +61,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.create:
       details = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress: base.channelAddress,
         amount: "15",
         assetId: mkAddress("0x0"),
         transferDefinition: mkAddress("0xdef"),
@@ -74,7 +73,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.resolve:
       details = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress: base.channelAddress,
         transferId: mkBytes32("0xabcdef"),
         transferResolver: { preImage: mkBytes32("0xcdef") },
         meta: { test: "meta" },
@@ -123,11 +122,10 @@ export function createTestChannelUpdate<T extends UpdateType>(
     case UpdateType.setup:
       details = {
         networkContext: {
-          adjudicatorAddress: mkAddress("0xaaaddd"),
           chainId: 1337,
           channelFactoryAddress: mkAddress("0xcha"),
           providerUrl: "http://localhost:8545",
-          vectorChannelMastercopyAddress: mkAddress("0xmast"),
+          channelMastercopyAddress: mkAddress("0xmast"),
         },
         timeout: "1",
       } as SetupUpdateDetails;
@@ -202,7 +200,6 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     lockedBalance: ["1", "2"],
     channelAddress,
     latestDepositNonce: 1,
-    // TODO: wtf typescript? why do i have to any cast this
     latestUpdate: createTestChannelUpdate(type, {
       channelAddress,
       fromIdentifier: publicIdentifiers[0],
@@ -213,11 +210,10 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     }) as any,
     merkleRoot: mkHash(),
     networkContext: {
-      adjudicatorAddress: mkAddress("0xaaaddd"),
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xcha"),
       providerUrl: "http://localhost:8545",
-      vectorChannelMastercopyAddress: mkAddress("0xmast"),
+      channelMastercopyAddress: mkAddress("0xmast"),
     },
     nonce,
     participants,

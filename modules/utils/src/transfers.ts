@@ -49,7 +49,6 @@ export function hashTransferState(state: TransferState, encoding: string): strin
   return keccak256(solidityPack(["bytes"], [defaultAbiCoder.encode([encoding], [state])]));
 }
 
-// TODO: how to include the merkle proof in the hash?
 export const hashCoreTransferState = (state: CoreTransferState): string => {
   return keccak256(solidityPack(["bytes"], [encodeCoreTransferState(state)]));
 };

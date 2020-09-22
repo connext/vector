@@ -1,10 +1,24 @@
-import { ERC20Abi, IVectorOnchainService, Result } from "@connext/vector-types";
+import * as evm from "@connext/pure-evm-wasm";
+import { Balance, ERC20Abi, FullTransferState, IVectorOnchainService, Result } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers } from "ethers";
+import { defaultAbiCoder } from "ethers/lib/utils";
+import Pino from "pino";
 
-import { VectorChannel, ChannelFactory } from "./artifacts";
+import { ChannelFactory, ChannelMastercopy, TransferDefinition } from "./artifacts";
+
+// We might need to convert this file to JS...
+// https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
+export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
+  evm.exec(
+    Uint8Array.from(Buffer.from(bytecode.replace(/^0x/, ""), "hex")),
+    Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
+  );
 
 export class VectorOnchainService implements IVectorOnchainService {
-  constructor(private readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider }) {}
+  constructor(
+    private readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
+    private readonly log: Pino.BaseLogger = Pino(),
+  ) {}
 
   async getChannelOnchainBalance(
     channelAddress: string,
@@ -15,7 +29,7 @@ export class VectorOnchainService implements IVectorOnchainService {
     if (!provider) {
       return Result.fail(new Error(`No provider exists for ${chainId}`));
     }
-    const channelContract = new Contract(channelAddress, VectorChannel.abi, provider);
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let onchainBalance: BigNumber;
     try {
       onchainBalance = await channelContract.getBalance(assetId);
@@ -45,7 +59,7 @@ export class VectorOnchainService implements IVectorOnchainService {
       return Result.fail(new Error(`No provider exists for ${chainId}`));
     }
 
-    const channelContract = new Contract(channelAddress, VectorChannel.abi, provider);
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let latestDepositA: { nonce: BigNumber; amount: BigNumber };
     try {
       latestDepositA = await channelContract.latestDepositByAssetId(assetId);
@@ -67,10 +81,77 @@ export class VectorOnchainService implements IVectorOnchainService {
       return Result.fail(new Error(`No provider exists for ${chainId}`));
     }
 
-    const proxyFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+    const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const proxyBytecode = await proxyFactory.proxyCreationCode();
+      const proxyBytecode = await factory.proxyCreationCode();
       return Result.ok(proxyBytecode);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new Error(`No provider exists for ${chainId}`));
+    }
+    const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
+    const contract = new Contract(transfer.transferId, TransferDefinition.abi, provider);
+    if (bytecode) {
+      try {
+        const data = contract.interface.encodeFunctionData("create", [encodedState]);
+        const output = await execEvmBytecode(bytecode, data);
+        return Result.ok(contract.interface.decodeFunctionResult("create", output)[0]);
+      } catch (e) {
+        this.log.debug({ error: e.message }, `Failed to create with pure-evm`);
+      }
+    }
+    try {
+      const valid = await contract.create(encodedState);
+      return Result.ok(valid);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>> {
+    // Get provider
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new Error(`No provider exists for ${chainId}`));
+    }
+
+    // Try to encode
+    let encodedState: string;
+    let encodedResolver: string;
+    try {
+      encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
+      encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);
+    } catch (e) {
+      return Result.fail(e);
+    }
+
+    // Use pure-evm if possible
+    const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
+    if (bytecode) {
+      try {
+        const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);
+        const output = await execEvmBytecode(bytecode, data);
+        const ret = contract.interface.decodeFunctionResult("resolve", output)[0];
+        return Result.ok({
+          to: ret.to,
+          amount: ret.amount,
+        });
+      } catch (e) {
+        this.log.debug({ error: e.message }, `Failed to resolve with pure-evm`);
+      }
+    }
+    try {
+      const ret = await contract.resolve(encodedState, encodedResolver);
+      return Result.ok({
+        to: ret.to,
+        amount: ret.amount.map((a: BigNumber) => a.toString()),
+      });
     } catch (e) {
       return Result.fail(e);
     }

@@ -1,7 +1,7 @@
 import { BigNumber, BigNumberish, providers } from "ethers";
 
 import { Address, HexString } from "./basic";
-import { FullChannelState } from "./channel";
+import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { Result, Values, VectorError } from "./error";
 
 export const ERC20Abi = [
@@ -63,11 +63,15 @@ export interface IVectorTransactionService {
 
 export interface IVectorOnchainService {
   getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+
   getLatestDepositByAssetId(
     channelAddress: string,
     chainId: number,
     assetId: string,
     latestDepositNonce: number,
   ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, Error>>;
+
   getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>
+  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>
 }

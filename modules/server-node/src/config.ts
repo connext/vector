@@ -36,9 +36,8 @@ try {
   contractAddressesEnv = JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES!);
   Object.entries(contractAddressesEnv).forEach(([chainId, contractDetails]: [string, any]) => {
     contractAddresses[parseInt(chainId)] = {
-      adjudicatorAddress: contractDetails.Adjudicator.address,
       channelFactoryAddress: contractDetails.ChannelFactory.address,
-      vectorChannelMastercopyAddress: contractDetails.VectorChannel.address,
+      channelMastercopyAddress: contractDetails.ChannelMastercopy.address,
       linkedTransferDefinition: contractDetails.LinkedTransfer.address,
       withdrawDefinition: contractDetails.Withdraw.address,
     };

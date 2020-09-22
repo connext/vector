@@ -24,7 +24,7 @@ import {
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
 
-import { generateSignedChannelCommitment, reconcileDeposit, resolve } from "./utils";
+import { generateSignedChannelCommitment, reconcileDeposit } from "./utils";
 import { validateParams } from "./validate";
 
 // Should return a state with the given update applied
@@ -79,7 +79,7 @@ export async function applyUpdate<T extends UpdateType>(
       const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedBalance = reconcilelockedBalance(
+      const lockedBalance = reconcileLockedBalance(
         UpdateType.create,
         transferInitialState.balance,
         update.assetId,
@@ -103,7 +103,7 @@ export async function applyUpdate<T extends UpdateType>(
         );
       }
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
-      const lockedBalance = reconcilelockedBalance(
+      const lockedBalance = reconcileLockedBalance(
         UpdateType.resolve,
         transfer.initialBalance,
         update.assetId,
@@ -143,7 +143,7 @@ export async function generateUpdate<T extends UpdateType>(
   storeService: IVectorStore,
   onchainService: IVectorOnchainService,
   signer: IChannelSigner,
-  logger: pino.BaseLogger,
+  logger: pino.BaseLogger = pino(),
 ): Promise<
   Result<
     { update: ChannelUpdate<T>; channelState: FullChannelState<T>; transfer: FullTransferState | undefined },
@@ -181,7 +181,7 @@ export async function generateUpdate<T extends UpdateType>(
           new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params, state),
         );
       }
-      unsigned = await generateResolveUpdate(state!, params as UpdateParams<"resolve">, signer, transfers, logger);
+      unsigned = await generateResolveUpdate(state!, params as UpdateParams<"resolve">, signer, transfers, onchainService, logger);
       break;
     }
     default: {
@@ -323,7 +323,7 @@ async function generateCreateUpdate(
     transferTimeout: timeout,
     initialStateHash: hashTransferState(transferInitialState, encodings[0]),
     transferState: transferInitialState,
-    adjudicatorAddress: state.networkContext.adjudicatorAddress,
+    channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
   };
   const transferHash = hashCoreTransferState(transferState);
@@ -360,6 +360,7 @@ async function generateResolveUpdate(
   params: UpdateParams<"resolve">,
   signer: IChannelSigner,
   transfers: FullTransferState[],
+  chainService: IVectorOnchainService,
   logger: pino.BaseLogger,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
@@ -382,12 +383,17 @@ async function generateResolveUpdate(
   const merkle = new MerkleTree(hashes, hashCoreTransferState);
 
   // Get the final transfer balance from contract
-  const transferBalance = await resolve(
+  const transferBalanceResult = await chainService.resolve(
     { ...transferState, transferResolver: params.details.transferResolver },
-    signer,
+    state.networkContext.chainId,
     LinkedTransfer.bytecode,
-    logger,
   );
+  // TODO: Change generate functions to return Result types
+  if (transferBalanceResult.isError) {
+    throw transferBalanceResult.getError()!;
+  }
+  const transferBalance = transferBalanceResult.getValue()!;
+
 
   // Convert transfer balance to channel update balance
   const balance = getUpdatedChannelBalance(UpdateType.resolve, transferState.assetId, transferBalance, state);
@@ -410,9 +416,6 @@ async function generateResolveUpdate(
 
   return unsigned;
 }
-
-// TODO: signature assertion helpers for commitment data
-// and for updates
 
 // Holds the logic that is the same between all update types:
 // - increasing channel nonce
@@ -511,7 +514,7 @@ function reconcileBalanceWithExisting(
 // that the value locked during transfer creation is not added
 // back into the channel, but still needs to be removed from
 // the locked value (i.e. withdrawal)
-function reconcilelockedBalance(
+function reconcileLockedBalance(
   type: typeof UpdateType.create | typeof UpdateType.resolve,
   transferBalanceToReconcile: Balance, // From transferState.balance
   assetToReconcile: string,

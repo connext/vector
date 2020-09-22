@@ -1,11 +1,23 @@
+import { BigNumber } from "@connext/types";
 import {
   Balance,
   LinkedTransferState,
   TransferState,
   CoreTransferState,
+  DEFAULT_TRANSFER_TIMEOUT,
+  FullTransferState,
+  LinkedTransferResolverEncoding,
+  LinkedTransferStateEncoding,
+  TransferName,
 } from "@connext/vector-types";
+import { utils } from "ethers";
+
+import { getRandomBytes32 } from "../hexStrings";
+import { hashTransferState } from "../transfers";
 
 import { mkAddress, mkHash, mkBytes32 } from "./util";
+
+const { keccak256, solidityPack } = utils;
 
 type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
 
@@ -48,3 +60,49 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
   };
 };
 
+type TestLinkedTransferOptions = {
+  balance: Balance;
+  assetId: string;
+  preImage: string;
+} & CoreTransferState;
+export function createTestFullLinkedTransferState(
+  overrides: Partial<TestLinkedTransferOptions>,
+): FullTransferState<typeof TransferName.LinkedTransfer> {
+  // get overrides/defaults values
+  const { balance, assetId, preImage, ...core } = overrides;
+
+  const transferEncodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
+  const transferResolver = { preImage: preImage ?? getRandomBytes32() };
+  const transferState = createTestLinkedTransferState({
+    linkedHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
+    assetId: assetId ?? mkAddress(),
+    balance: balance ?? { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["4", "0"] },
+  });
+
+  // get transfer value
+  const transferValue = transferState.balance.amount.map((prev, curr) => {
+    return BigNumber.from(prev).add(curr);
+  }, BigNumber.from(0));
+
+  // get default values
+  const defaults = {
+    assetId: assetId ?? mkAddress(),
+    chainId: 2,
+    channelAddress: mkAddress("0xccc"),
+    channelFactoryAddress: mkAddress("0xaaaaddddffff"),
+    initialBalance: { ...transferState.balance, amount: [transferValue.toString(), "0"] },
+    initialStateHash: hashTransferState(transferState, transferEncodings[0]),
+    meta: { super: "cool stuff" },
+    transferDefinition: mkAddress("0xdef"),
+    transferEncodings,
+    transferId: getRandomBytes32(),
+    transferResolver,
+    transferState,
+    transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+  };
+
+  return {
+    ...defaults,
+    ...core,
+  };
+}
