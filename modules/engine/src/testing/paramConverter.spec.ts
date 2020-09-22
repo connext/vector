@@ -1,4 +1,4 @@
-import { ChainAddresses, ConditionalTransferParams, ConditionalTransferType, ContractAddresses, CreateTransferParams, DEFAULT_TRANSFER_TIMEOUT, FullChannelState, LinkedTransferParams, LinkedTransferResolverEncoding, LinkedTransferStateEncoding } from "@connext/vector-types";
+import { ChainAddresses, ConditionalTransferParams, ConditionalTransferType, ContractAddresses, CreateTransferParams, DEFAULT_TRANSFER_TIMEOUT, FullChannelState, LinkedTransferParams, LinkedTransferResolverEncoding, LinkedTransferStateEncoding, ResolveConditionParams } from "@connext/vector-types";
 import { convertConditionalTransferParams } from "../paramConverter";
 import { env } from "./env";
 
@@ -87,5 +87,11 @@ describe.only("ParamConverter", () => {
             expect(ret.isError).to.be.true;
             expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType))
         })
+    })
+
+    describe("convertResolveConditionParams", () => {
+        const generateParams = (): ResolveConditionParams => {
+
+        }
     })
 })

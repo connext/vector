@@ -60,7 +60,10 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
   });
 }
 
-export async function convertResolveConditionParams(params: ResolveConditionParams): Promise<ResolveTransferParams> {
+export function convertResolveConditionParams<T extends ConditionalTransferType>(
+  params: ResolveConditionParams<T>,
+  channel: FullChannelState,
+): Result<ResolveTransferParams, InvalidTransferType> {
   throw new Error("implement convertResolveConditionParams");
 }
 
