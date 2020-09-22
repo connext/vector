@@ -24,7 +24,7 @@ import {
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
 
-import { generateSignedChannelCommitment, reconcileDeposit, resolve } from "./utils";
+import { generateSignedChannelCommitment, reconcileDeposit } from "./utils";
 import { validateParams } from "./validate";
 
 // Should return a state with the given update applied
@@ -143,7 +143,7 @@ export async function generateUpdate<T extends UpdateType>(
   storeService: IVectorStore,
   onchainService: IVectorOnchainService,
   signer: IChannelSigner,
-  logger: pino.BaseLogger,
+  logger: pino.BaseLogger = pino(),
 ): Promise<
   Result<
     { update: ChannelUpdate<T>; channelState: FullChannelState<T>; transfer: FullTransferState | undefined },
@@ -181,7 +181,7 @@ export async function generateUpdate<T extends UpdateType>(
           new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params, state),
         );
       }
-      unsigned = await generateResolveUpdate(state!, params as UpdateParams<"resolve">, signer, transfers, logger);
+      unsigned = await generateResolveUpdate(state!, params as UpdateParams<"resolve">, signer, transfers, onchainService, logger);
       break;
     }
     default: {
@@ -360,6 +360,7 @@ async function generateResolveUpdate(
   params: UpdateParams<"resolve">,
   signer: IChannelSigner,
   transfers: FullTransferState[],
+  chainService: IVectorOnchainService,
   logger: pino.BaseLogger,
 ): Promise<ChannelUpdate<"resolve">> {
   // A transfer resolution update can effect the following
@@ -382,12 +383,17 @@ async function generateResolveUpdate(
   const merkle = new MerkleTree(hashes, hashCoreTransferState);
 
   // Get the final transfer balance from contract
-  const transferBalance = await resolve(
+  const transferBalanceResult = await chainService.resolve(
     { ...transferState, transferResolver: params.details.transferResolver },
-    signer,
+    state.networkContext.chainId,
     LinkedTransfer.bytecode,
-    logger,
   );
+  // TODO: Change generate functions to return Result types
+  if (transferBalanceResult.isError) {
+    throw transferBalanceResult.getError()!;
+  }
+  const transferBalance = transferBalanceResult.getValue()!;
+
 
   // Convert transfer balance to channel update balance
   const balance = getUpdatedChannelBalance(UpdateType.resolve, transferState.assetId, transferBalance, state);
