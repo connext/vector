@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./Types.sol";
 
 
-interface IAdjudicator {
+interface ICMCAdjudicator {
 
     function disputeChannel(
         CoreChannelState memory ccs,

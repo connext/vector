@@ -2,17 +2,17 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IAdjudicator.sol";
-import "./interfaces/IERC20.sol";
+import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/IVectorChannel.sol";
+import "./CMCCore.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
-import "./Proxy.sol";
+
 
 /// @title Adjudicator - Dispute logic for ONE channel
-contract Adjudicator is IAdjudicator {
+contract CMCAdjudicator is CMCCore, ICMCAdjudicator {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
@@ -304,6 +304,19 @@ contract Adjudicator is IAdjudicator {
     function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
         // TODO: WIP
         return keccak256(abi.encode(cts));
+    }
+
+    // The following three methods are only to debug signatures & can be deleted eventually
+    function encodeState(CoreChannelState memory ccs) public pure returns (bytes memory) {
+      return abi.encode(ccs);
+    }
+
+    function hashState(CoreChannelState memory ccs) public pure returns (bytes32) {
+      return keccak256(abi.encode(ccs));
+    }
+
+    function hashChannelMsg(CoreChannelState memory ccs) public pure returns (bytes32) {
+      return hashChannelState(ccs);
     }
 
 }
