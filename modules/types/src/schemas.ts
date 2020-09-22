@@ -1,4 +1,4 @@
-import { Static, Type } from "@sinclair/typebox";
+import { Static, TStringLiteral, Type } from "@sinclair/typebox";
 
 import {
   LinkedTransferResolverEncoding,
@@ -6,6 +6,7 @@ import {
   WithdrawResolverEncoding,
   WithdrawStateEncoding,
 } from "./transferDefinitions";
+import { ChannelRpcMethods } from "./vectorProvider";
 
 // String pattern types
 export const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
@@ -55,7 +56,7 @@ export const TransferEncodingSchema = Type.Union([LinkedTransferEncodingSchema, 
 
 ////////////////////////////////////////
 // Protocol API Parameter schemas
-const SetupParamsSchema = Type.Object({
+const SetupProtocolParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   timeout: TIntegerString,
   networkContext: Type.Object({
@@ -68,12 +69,12 @@ const SetupParamsSchema = Type.Object({
   }),
 });
 
-const DepositParamsSchema = Type.Object({
+const DepositProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
 });
 
-const CreateParamsSchema = Type.Object({
+const CreateProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
   amount: TIntegerString,
   assetId: TAddress,
@@ -84,7 +85,7 @@ const CreateParamsSchema = Type.Object({
   meta: Type.Optional(Type.Any()),
 });
 
-const ResolveParamsSchema = Type.Object({
+const ResolveProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
   transferResolver: TransferResolverSchema,
@@ -93,31 +94,62 @@ const ResolveParamsSchema = Type.Object({
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ProtocolParams {
-  export const SetupSchema = SetupParamsSchema;
-  export type Setup = Static<typeof SetupParamsSchema>;
-  export const DepositSchema = DepositParamsSchema;
-  export type Deposit = Static<typeof DepositParamsSchema>;
-  export const CreateSchema = CreateParamsSchema;
-  export type Create = Static<typeof CreateParamsSchema>;
-  export const ResolveSchema = ResolveParamsSchema;
-  export type Resolve = Static<typeof ResolveParamsSchema>;
+  export const SetupSchema = SetupProtocolParamsSchema;
+  export type Setup = Static<typeof SetupProtocolParamsSchema>;
+  export const DepositSchema = DepositProtocolParamsSchema;
+  export type Deposit = Static<typeof DepositProtocolParamsSchema>;
+  export const CreateSchema = CreateProtocolParamsSchema;
+  export type Create = Static<typeof CreateProtocolParamsSchema>;
+  export const ResolveSchema = ResolveProtocolParamsSchema;
+  export type Resolve = Static<typeof ResolveProtocolParamsSchema>;
+}
+
+////////////////////////////////////////
+// Engine API Parameter schemas
+
+export const SetupEngineParamsSchema = Type.Object({
+  counterpartyIdentifier: TPublicIdentifier,
+  chainId: Type.Number({ minimum: 1 }),
+  timeout: Type.String(),
+});
+
+export const DepositEngineParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  assetId: TAddress,
+});
+
+export const RpcRequestEngineParamsSchema = Type.Object({
+  id: Type.Number({ minimum: 1 }),
+  jsonrpc: Type.Literal("2.0"),
+  method: Type.Union(
+    Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<string>],
+  ),
+  params: Type.Any(),
+});
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace EngineParams {
+  export const RpcRequestSchema = RpcRequestEngineParamsSchema;
+  export type RpcRequest = Static<typeof RpcRequestEngineParamsSchema>;
+  export const SetupSchema = SetupEngineParamsSchema;
+  export type Setup = Static<typeof SetupEngineParamsSchema>;
+  export const DepositSchema = DepositEngineParamsSchema;
+  export type Deposit = Static<typeof DepositEngineParamsSchema>;
 }
 
 ////////////////////////////////////////
 // Server Node API Parameter schemas
 // GET CHANNEL STATE
-export const getChannelStateParamsSchema = Type.Object({
+const getChannelStateParamsSchema = Type.Object({
   channelAddress: TAddress,
 });
-export type GetChannelStateParams = Static<typeof getChannelStateParamsSchema>;
 
-export const getChannelStateResponseSchema = {
+const getChannelStateResponseSchema = {
   200: Type.Any(),
 };
-export type GetChannelStateResponseBody = Static<typeof getChannelStateResponseSchema["200"]>;
 
 // GET CONFIG
-export const getConfigResponseSchema = {
+const getConfigResponseSchema = {
   200: Type.Object({
     publicIdentifier: Type.String({
       example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
@@ -125,10 +157,9 @@ export const getConfigResponseSchema = {
     signerAddress: TAddress,
   }),
 };
-export type GetConfigResponseBody = Static<typeof getConfigResponseSchema["200"]>;
 
 // POST SETUP
-export const postSetupBodySchema = Type.Object({
+const postSetupBodySchema = Type.Object({
   counterpartyIdentifier: Type.String({
     example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
     description: "Public identifier for counterparty",
@@ -143,36 +174,39 @@ export const postSetupBodySchema = Type.Object({
   }),
 });
 
-export type PostSetupRequestBody = Static<typeof postSetupBodySchema>;
-
-export const postSetupResponseSchema = {
+const postSetupResponseSchema = {
   200: Type.Object({
     channelAddress: Type.String({ example: "0x", description: "Channel address" }),
   }),
 };
-export type PostSetupResponseBody = Static<typeof postSetupResponseSchema["200"]>;
 
 // POST DEPOSIT
-export const postDepositBodySchema = Type.Object({
+const postDepositBodySchema = Type.Object({
   channelAddress: TAddress,
-  amount: Type.String({
-    example: "100000",
-    description: "Amount in real units",
-  }),
   assetId: TAddress,
 });
 
-export type PostDepositRequestBody = Static<typeof postDepositBodySchema>;
-
-export const postDepositResponseSchema = {
+const postDepositResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
   }),
 };
-export type PostDepositResponseBody = Static<typeof postDepositResponseSchema["200"]>;
+
+// POST SEND DEPOSIT TX
+const postSendDepositTxBodySchema = Type.Object({
+  channelAddress: TAddress,
+  amount: TIntegerString,
+  assetId: TAddress,
+});
+
+const postSendDepositTxResponseSchema = {
+  200: Type.Object({
+    txHash: TBytes32,
+  }),
+};
 
 // POST LINKED TRANSFER
-export const postLinkedTransferBodySchema = Type.Object({
+const postLinkedTransferBodySchema = Type.Object({
   channelAddress: TAddress,
   amount: Type.String({
     example: "100000",
@@ -203,27 +237,67 @@ export const postLinkedTransferBodySchema = Type.Object({
   meta: Type.Optional(Type.Any()),
 });
 
-export type PostLinkedTransferRequestBody = Static<typeof postLinkedTransferBodySchema>;
-
-export const postLinkedTransferResponseSchema = {
+const postLinkedTransferResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
   }),
 };
-export type PostLinkedTransferResponseBody = Static<typeof postLinkedTransferResponseSchema["200"]>;
 
 // ADMIN
-export const postAdminBodySchema = Type.Object({
+const postAdminBodySchema = Type.Object({
   adminToken: Type.String({
     example: "cxt1234",
     description: "Admin token",
   }),
 });
-export type PostAdminRequestBody = Static<typeof postAdminBodySchema>;
 
-export const postAdminResponseSchema = {
+const postAdminResponseSchema = {
   200: Type.Object({
     message: Type.String(),
   }),
 };
-export type PostAdminResponseBody = Static<typeof postAdminResponseSchema["200"]>;
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace ServerNodeParams {
+  export const GetChannelStateSchema = getChannelStateParamsSchema;
+  export type GetChannelState = Static<typeof GetChannelStateSchema>;
+
+  export const SetupSchema = postSetupBodySchema;
+  export type Setup = Static<typeof SetupSchema>;
+
+  export const DepositSchema = postDepositBodySchema;
+  export type Deposit = Static<typeof DepositSchema>;
+
+  export const SendDepositTxSchema = postSendDepositTxBodySchema;
+  export type SendDepositTx = Static<typeof SendDepositTxSchema>;
+
+  export const LinkedTransferSchema = postLinkedTransferBodySchema;
+  export type LinkedTransfer = Static<typeof LinkedTransferSchema>;
+
+  export const AdminSchema = postAdminBodySchema;
+  export type Admin = Static<typeof AdminSchema>;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace ServerNodeResponses {
+  export const GetChannelStateSchema = getChannelStateResponseSchema;
+  export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;
+
+  export const GetConfigSchema = getChannelStateResponseSchema;
+  export type GetConfig = Static<typeof GetConfigSchema["200"]>;
+
+  export const SetupSchema = postSetupResponseSchema;
+  export type Setup = Static<typeof SetupSchema["200"]>;
+
+  export const DepositSchema = postDepositResponseSchema;
+  export type Deposit = Static<typeof DepositSchema["200"]>;
+
+  export const SendDepositTxSchema = postSendDepositTxResponseSchema;
+  export type SendDepositTx = Static<typeof SendDepositTxSchema>;
+
+  export const LinkedTransferSchema = postLinkedTransferResponseSchema;
+  export type LinkedTransfer = Static<typeof LinkedTransferSchema["200"]>;
+
+  export const AdminSchema = postAdminResponseSchema;
+  export type Admin = Static<typeof AdminSchema["200"]>;
+}

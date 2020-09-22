@@ -1,9 +1,9 @@
-import { ChannelRpcMethods, ChannelRpcMethodsPayloadMap, RpcRequestInput } from "@connext/vector-types";
+import { ChannelRpcMethods, ChannelRpcMethodsPayloadMap, EngineParams } from "@connext/vector-types";
 
 export const constructRpcRequest = <T extends ChannelRpcMethods>(
   method: T,
   params: ChannelRpcMethodsPayloadMap[T],
-): RpcRequestInput => {
+): EngineParams.RpcRequest => {
   return {
     id: Date.now(),
     jsonrpc: "2.0",
