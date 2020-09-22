@@ -2,6 +2,10 @@ import { AccountID, ChainID, ChainIDParams } from "caip";
 
 const EIP155_NAMESPACE = "eip155";
 
+export const formatChainId = (chainId: number): ChainIDParams => {
+  return { namespace: EIP155_NAMESPACE, reference: `${chainId}` };
+};
+
 export const parseChainId = (chainId: string | ChainIDParams): number => {
   if (typeof chainId === "string") {
     chainId = ChainID.parse(chainId);
@@ -13,7 +17,7 @@ export const parseChainId = (chainId: string | ChainIDParams): number => {
 };
 
 export const formatAssetId = (assetAddress: string, chainId: number): string => {
-  return AccountID.format({ address: assetAddress, chainId: { namespace: EIP155_NAMESPACE, reference: `${chainId}` } });
+  return AccountID.format({ address: assetAddress, chainId: formatChainId(chainId) });
 };
 
 export const parseAssetId = (assetId: string): { assetAddress: string; chainId: number } => {
