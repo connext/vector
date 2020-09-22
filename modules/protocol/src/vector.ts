@@ -160,8 +160,6 @@ export class Vector implements IVectorProtocol {
       });
     });
 
-    // TODO run setup updates if the channel is not already setup
-
     // TODO validate that the channel is not currently in dispute/checkpoint state
 
     // sync latest state before starting
