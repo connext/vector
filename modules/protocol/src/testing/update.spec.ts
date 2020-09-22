@@ -9,6 +9,9 @@ import {
   NetworkContext,
   Result,
   ChannelUpdate,
+  DEFAULT_TRANSFER_TIMEOUT,
+  LinkedTransferStateEncoding,
+  Balance,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -22,6 +25,7 @@ import {
   PartialChannelUpdate,
   createTestFullLinkedTransferState,
   ChannelSigner,
+  hashTransferState,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
@@ -53,8 +57,8 @@ describe("applyUpdate", () => {
     .map(() => getRandomChannelSigner(providerUrl));
 
   // Generate test constants
-  const participants = signers.map((s) => s.address);
-  const publicIdentifiers = signers.map((s) => s.publicIdentifier);
+  const participants = signers.map(s => s.address);
+  const publicIdentifiers = signers.map(s => s.publicIdentifier);
   const channelAddress = mkAddress("0xccc");
   const networkContext: NetworkContext = {
     chainId,
@@ -62,8 +66,8 @@ describe("applyUpdate", () => {
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     channelMastercopyAddress: mkAddress("0xbeef"),
   };
-  const merkleProofData = [mkHash("0xproof")];
-  const merkleRoot = mkHash("0xroot");
+  const merkleProofData = [mkHash("0x1235asdf")];
+  const merkleRoot = mkHash("0xaaaeeecccbbbb123");
 
   afterEach(() => {
     Sinon.restore();
@@ -396,6 +400,7 @@ type GenerateUpdateTestParams = {
   storedChannel?: PartialFullChannelState<any>;
   onchainBalance?: BigNumber;
   depositA?: { nonce: BigNumber; amount: BigNumber };
+  resolveBalance?: Balance;
 };
 
 describe("generateUpdate", () => {
@@ -405,8 +410,8 @@ describe("generateUpdate", () => {
   const signers = Array(2)
     .fill(0)
     .map(() => getRandomChannelSigner(providerUrl));
-  const participants = signers.map((s) => s.address);
-  const publicIdentifiers = signers.map((s) => s.publicIdentifier);
+  const participants = signers.map(s => s.address);
+  const publicIdentifiers = signers.map(s => s.publicIdentifier);
   const channelAddress = mkAddress("0xccc");
   const networkContext: NetworkContext = {
     chainId,
@@ -416,33 +421,17 @@ describe("generateUpdate", () => {
   };
 
   // // Get transfer constants
-  // const preImage = getRandomBytes32();
-  // const transferDefinition = env.chainAddresses[chainId].LinkedTransfer.address;
-  // const transferEncodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
-  // const linkedHash = createLinkedHash(preImage);
-  // const transferMeta = { super: "cool" };
-  // const transferInitialBalance = { to: participants, amount: ["3", "0"] };
-  // const initialState = createTestLinkedTransferState({
-  //   linkedHash,
-  //   balance: transferInitialBalance,
-  // });
-  // const initialFullTransfer = createTestFullLinkedTransferState({
-  //   channelAddress,
-  //   preImage,
-  //   balance: transferInitialBalance,
-  //   initialBalance: transferInitialBalance,
-  //   initialStateHash: hashTransferState(initialState, transferEncodings[0]),
-  // });
-  // const merkleProofData = [mkHash("0xproof")];
-  // const merkleRoot = mkHash("0xroot");
+  const emptyLinkedTransfer = createTestFullLinkedTransferState({
+    channelAddress,
+    balance: { to: participants, amount: ["0", "0"] },
+    transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+  });
+  const merkleProofData = [mkHash("0x1235asdf")];
+  const merkleRoot = mkHash("0xaaaeeecccbbbb123");
 
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
   let chainService: Sinon.SinonStubbedInstance<VectorOnchainService>;
-
-  afterEach(() => {
-    Sinon.restore();
-  });
 
   beforeEach(async () => {
     store = Sinon.createStubInstance(MemoryStoreService);
@@ -451,6 +440,16 @@ describe("generateUpdate", () => {
     // Mock `applyUpdate` (tested above) so it always returns
     // an empty object
     Sinon.stub(vectorUpdate, "applyUpdate").resolves(Result.ok({} as any));
+    // Mock merkle tree
+    // FIXME: y no work here :(
+    // const merkleStub = Sinon.createStubInstance(MerkleTree);
+    // merkleStub.getHexProof.returns(merkleProofData);
+    // merkleStub.getHexRoot.returns(merkleRoot);
+  });
+
+  afterEach(() => {
+    Sinon.restore();
+    Sinon.reset();
   });
 
   const tests: GenerateUpdateTestParams[] = [
@@ -535,22 +534,88 @@ describe("generateUpdate", () => {
       onchainBalance: BigNumber.from(10),
       depositA: { nonce: BigNumber.from(1), amount: BigNumber.from(10) },
     },
-    // {
-    //   name: "should work for create",
-    //   updateType: UpdateType.resolve,
-    //   paramOverrides: {},
-    //   stateOverrides: {},
-    //   expectedUpdate: {},
-    //   expectedTransfer: {},
-    // },
-    // {
-    //   name: "should work for resolve",
-    //   updateType: UpdateType.resolve,
-    //   paramOverrides: {},
-    //   stateOverrides: {},
-    //   expectedUpdate: {},
-    //   expectedTransfer: {},
-    // },
+    {
+      name: "should work for create (alice creates)",
+      updateType: UpdateType.create,
+      paramOverrides: {
+        details: {
+          amount: "7",
+          transferInitialState: {
+            ...emptyLinkedTransfer.transferState,
+            balance: { to: participants, amount: ["7", "0"] },
+          },
+          encodings: emptyLinkedTransfer.transferEncodings,
+          timeout: emptyLinkedTransfer.transferTimeout,
+          meta: emptyLinkedTransfer.meta,
+        },
+      },
+      stateOverrides: {
+        assetIds: [mkAddress()],
+        lockedBalance: [],
+        balances: [{ to: participants, amount: ["14", "8"] }],
+        nonce: 3,
+      },
+      expectedUpdate: {
+        nonce: 4,
+        balance: { to: participants, amount: ["7", "8"] },
+        assetId: mkAddress(),
+        details: {
+          transferInitialState: {
+            ...emptyLinkedTransfer.transferState,
+            balance: { to: participants, amount: ["7", "0"] },
+          },
+          transferEncodings: emptyLinkedTransfer.transferEncodings,
+          transferTimeout: emptyLinkedTransfer.transferTimeout,
+          merkleProofData,
+          merkleRoot,
+          meta: emptyLinkedTransfer.meta,
+        },
+      },
+    },
+    {
+      name: "should work for resolve (bob resolves)",
+      updateType: UpdateType.resolve,
+      paramOverrides: {
+        details: {
+          transferId: emptyLinkedTransfer.transferId,
+          transferResolver: emptyLinkedTransfer.transferResolver,
+        },
+      },
+      stateOverrides: {
+        assetIds: [mkAddress()],
+        lockedBalance: ["7"],
+        balances: [{ to: participants, amount: ["7", "8"] }],
+        nonce: 3,
+      },
+      expectedUpdate: {
+        nonce: 4,
+        balance: { to: participants, amount: ["7", "15"] },
+        assetId: mkAddress(),
+        details: {
+          transferId: emptyLinkedTransfer.transferId,
+          transferResolver: emptyLinkedTransfer.transferResolver,
+          transferEncodings: emptyLinkedTransfer.transferEncodings,
+          merkleRoot: mkHash(),
+        },
+      },
+      expectedTransfer: {
+        ...emptyLinkedTransfer,
+        initialBalance: { to: participants, amount: ["7", "0"] },
+        transferState: {
+          ...emptyLinkedTransfer.transferState,
+          balance: { to: participants, amount: ["7", "0"] },
+        },
+        initialStateHash: hashTransferState(
+          {
+            ...emptyLinkedTransfer.transferState,
+            balance: { to: participants, amount: ["7", "0"] },
+          },
+          LinkedTransferStateEncoding,
+        ),
+        transferResolver: undefined,
+      },
+      resolveBalance: { to: participants, amount: ["0", "7"] },
+    },
   ];
 
   for (const test of tests) {
@@ -565,11 +630,19 @@ describe("generateUpdate", () => {
       storedChannel,
       onchainBalance,
       depositA,
+      resolveBalance,
       from,
     } = test;
 
     it(name, async () => {
-      // TODO: handle transfers first!
+      // // Generate the expected transfer
+      // const expectedTransfer = createTestFullLinkedTransferState(expectedTransfer)
+
+      // Generate the transfer from the params IFF the update type is resolve
+      let transfer: FullTransferState | undefined = undefined;
+      if (updateType === UpdateType.resolve) {
+        transfer = createTestFullLinkedTransferState(expectedTransfer);
+      }
 
       // Generate the params
       const params = createTestUpdateParams(updateType, { channelAddress, ...paramOverrides });
@@ -594,13 +667,16 @@ describe("generateUpdate", () => {
           })
         : state;
       store.getChannelState.resolves(inStore);
-      // store.getTransferState.resolves(transfer);
-      // store.getActiveTransfers.resolves([transfer?.transferState].filter((x) => !!x) as any);
+      store.getTransferState.resolves(transfer);
+      store.getActiveTransfers.resolves([transfer].filter(x => !!x) as any);
+
       // Chain service mocks are only used by deposit/resolve
       chainService.getLatestDepositByAssetId.resolves(
         Result.ok(depositA ?? { nonce: BigNumber.from(0), amount: BigNumber.from(0) }),
       );
       chainService.getChannelOnchainBalance.resolves(Result.ok(onchainBalance ?? BigNumber.from(0)));
+
+      chainService.resolve.resolves(Result.ok(resolveBalance ?? { to: participants, amount: ["0", "0"] }));
 
       // Execute function call
       const result = await vectorUpdate.generateUpdate(params, state, store, chainService, from ?? signers[0]);
@@ -623,11 +699,18 @@ describe("generateUpdate", () => {
               : publicIdentifiers[1],
           ...expectedUpdate,
         });
+
         // Dont compare signatures
-        const { signatures, ...unsigned } = expected;
-        // Dont compare transferIds or merkleRoot
+        const { signatures, details, ...unsigned } = expected;
+
+        // Dont compare transferIds or merkle data
+        const { transferId, merkleProofData, merkleRoot, ...sanitizedDetails } = details;
+
         expect(update).to.containSubset({
           ...unsigned,
+          details: {
+            ...sanitizedDetails,
+          },
         });
 
         // Verify transfer

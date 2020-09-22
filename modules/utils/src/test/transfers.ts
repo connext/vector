@@ -66,7 +66,7 @@ type TestLinkedTransferOptions = {
   preImage: string;
 } & CoreTransferState;
 export function createTestFullLinkedTransferState(
-  overrides: Partial<TestLinkedTransferOptions>,
+  overrides: Partial<TestLinkedTransferOptions> = {},
 ): FullTransferState<typeof TransferName.LinkedTransfer> {
   // get overrides/defaults values
   const { balance, assetId, preImage, ...core } = overrides;
