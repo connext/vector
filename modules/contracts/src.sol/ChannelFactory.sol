@@ -34,17 +34,17 @@ contract ChannelFactory is IChannelFactory {
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
     /// @param initiator address of one of the two participants in the channel
-    /// @param responder address of the other channel participant
+    /// @param counterparty address of the other channel participant
     function getChannelAddress(
         address initiator,
-        address responder
+        address counterparty
     )
         public
         override
         view
         returns (address)
     {
-        bytes32 salt = generateSalt(initiator, responder);
+        bytes32 salt = generateSalt(initiator, counterparty);
         bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, masterCopy));
         return address(uint256(
             keccak256(abi.encodePacked(
@@ -57,28 +57,25 @@ contract ChannelFactory is IChannelFactory {
     }
 
     /// @dev Allows us to create new channel contract and get it all set up in one transaction
-    /// @param initiator address of one of the two participants in the channel
-    /// @param responder address of the other channel participant
+    /// @param counterparty address of the other channel participant
     function createChannel(
-        address initiator,
-        address responder
+        address counterparty
     )
         public
         override
         returns (IVectorChannel channel)
     {
-        channel = deployChannelProxy(initiator, responder);
-        channel.setup([initiator, responder], address(adjudicator));
+        address initiator = msg.sender;
+        channel = deployChannelProxy(initiator, counterparty);
+        channel.setup([initiator, counterparty], address(adjudicator));
         emit ChannelCreation(channel);
     }
 
     /// @dev Allows us to create new channel contract, get it set up, and fund it
     /// with a call to `depositA` in one transaction
-    /// @param initiator address of one of the two participants in the channel
-    /// @param responder address of the other channel participant
+    /// @param counterparty address of the other channel participant
     function createChannelAndDepositA(
-        address initiator,
-        address responder,
+        address counterparty,
         address assetId,
         uint256 amount
     )
@@ -87,7 +84,7 @@ contract ChannelFactory is IChannelFactory {
         override
         returns (IVectorChannel channel)
     {
-        channel = createChannel(initiator, responder);
+        channel = createChannel(counterparty);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
         if (assetId != address(0)) {
@@ -109,22 +106,22 @@ contract ChannelFactory is IChannelFactory {
     /// @dev Allows us to create new channel contact using CREATE2
     /// @dev This method is only meant as an utility to be called from other methods
     /// @param initiator address of one of the two participants in the channel
-    /// @param responder address of the other channel participant
+    /// @param counterparty address of the other channel participant
     function deployChannelProxy(
         address initiator,
-        address responder
+        address counterparty
     )
         internal
         returns (IVectorChannel)
     {
-        bytes32 salt = generateSalt(initiator, responder);
+        bytes32 salt = generateSalt(initiator, counterparty);
         Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
         return IVectorChannel(address(proxy));
     }
 
     function generateSalt(
         address initiator,
-        address responder
+        address counterparty
     )
         internal
         pure
@@ -133,7 +130,7 @@ contract ChannelFactory is IChannelFactory {
         return keccak256(
             abi.encodePacked(
                 initiator,
-                responder,
+                counterparty,
                 chainId(),
                 domainSalt
             )

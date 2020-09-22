@@ -14,17 +14,15 @@ interface IChannelFactory {
 
     function getChannelAddress(
         address initiator,
-        address responder
+        address counterparty
     ) external view returns (address);
 
     function createChannel(
-        address initiator,
-        address responder
+        address counterparty
     ) external returns (IVectorChannel);
 
     function createChannelAndDepositA(
-        address initiator,
-        address responder,
+        address counterparty,
         address assetId,
         uint256 amount
     ) external payable returns (IVectorChannel);

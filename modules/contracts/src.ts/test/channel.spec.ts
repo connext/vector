@@ -7,12 +7,12 @@ import { expect, provider } from "./utils";
 
 describe("Channel", () => {
   const deployer = provider.getWallets()[0];
+  const initiator = new ChannelSigner(deployer.privateKey);
+  const counterparty = getRandomChannelSigner();
   let adjudicator: Contract;
+  let channel: Contract;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
-  let channel: Contract;
-  let initiator: ChannelSigner;
-  let responder: ChannelSigner;
 
   beforeEach(async () => {
     adjudicator = await (
@@ -32,12 +32,10 @@ describe("Channel", () => {
     await channelFactory.deployed();
 
     // Create a new channel to run tests against
-    initiator = getRandomChannelSigner();
-    responder = getRandomChannelSigner();
     const created = new Promise((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
-    const tx = await channelFactory.createChannel(initiator.address, responder.address);
+    const tx = await channelFactory.createChannel(counterparty.address);
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created as string;
@@ -52,7 +50,7 @@ describe("Channel", () => {
   it("should return correct participants from getParticipants()", async () => {
     const participants = await channel.getParticipants();
     expect(participants[0]).to.equal(initiator.address);
-    expect(participants[1]).to.equal(responder.address);
+    expect(participants[1]).to.equal(counterparty.address);
   });
 
 });
