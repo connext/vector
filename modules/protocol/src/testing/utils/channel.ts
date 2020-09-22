@@ -138,7 +138,7 @@ export const deployChannelWithDepositA = async (
   expect(deployedAddr).to.be.eq(channelAddress);
 
   // Verify onchain values updated
-  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).latestDepositByAssetId(assetId);
+  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).getLatestDeposit(assetId);
   expect(latestDeposit.nonce).to.be.eq(1);
   expect(latestDeposit.amount).to.be.eq(depositAmount);
 

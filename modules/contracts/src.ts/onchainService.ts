@@ -48,7 +48,7 @@ export class VectorOnchainService implements IVectorOnchainService {
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let latestDepositA: { nonce: BigNumber; amount: BigNumber };
     try {
-      latestDepositA = await channelContract.latestDepositByAssetId(assetId);
+      latestDepositA = await channelContract.getLatestDeposit(assetId);
     } catch (e) {
       if (latestDepositNonce !== 0) {
         return Result.fail(e);

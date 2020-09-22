@@ -34,7 +34,7 @@ contract ChannelMastercopy is IVectorChannel {
 
     mapping(bytes32 => bool) isExecuted;
 
-    mapping(address => LatestDeposit) internal _latestDepositByAssetId;
+    mapping(address => LatestDeposit) internal _latestDeposit;
 
     // Prevents us from calling methods directly from the mastercopy contract
     modifier onlyByProxy {
@@ -124,8 +124,8 @@ contract ChannelMastercopy is IVectorChannel {
         } else {
             require(IERC20(assetId).transferFrom(msg.sender, address(this), amount), "oh no");
         }
-        _latestDepositByAssetId[assetId].amount = amount;
-        _latestDepositByAssetId[assetId].nonce++;
+        _latestDeposit[assetId].amount = amount;
+        _latestDeposit[assetId].nonce++;
     }
 
     // Workaround, because I was not able to convince the compiler
@@ -133,7 +133,7 @@ contract ChannelMastercopy is IVectorChannel {
     // auto-generated getter of an overriding state variable
     // if said variable is a mapping with a struct as value type.
     // In other words, I had to write the getter myself...
-    function latestDepositByAssetId(
+    function getLatestDeposit(
         address assetId
     )
         public
@@ -142,7 +142,7 @@ contract ChannelMastercopy is IVectorChannel {
         onlyByProxy
         returns (LatestDeposit memory)
     {
-        return _latestDepositByAssetId[assetId];
+        return _latestDeposit[assetId];
     }
 
     function managedTransfer(

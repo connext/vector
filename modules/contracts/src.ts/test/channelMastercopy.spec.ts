@@ -34,7 +34,7 @@ describe("ChannelMastercopy", () => {
       { name: "execTransaction", args: [AddressZero, Zero, HashZero, Zero, [HashZero]] },
       { name: "getBalance", args: [AddressZero] },
       { name: "getParticipants", args: [] },
-      { name: "latestDepositByAssetId", args: [AddressZero] },
+      { name: "getLatestDeposit", args: [AddressZero] },
       { name: "managedTransfer", args: [[[Zero, Zero], [AddressZero, AddressZero]], AddressZero] },
     ]) {
       await expect(

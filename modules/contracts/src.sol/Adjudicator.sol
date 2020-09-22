@@ -141,7 +141,7 @@ contract Adjudicator is IAdjudicator {
             uint256 lockedBalance = ccs.lockedBalance[i];
             address assetId = ccs.assetIds[i];
             IVectorChannel channel = IVectorChannel(channelAddress);
-            LatestDeposit memory latestDeposit = channel.latestDepositByAssetId(assetId);
+            LatestDeposit memory latestDeposit = channel.getLatestDeposit(assetId);
             Balance memory transfer;
             transfer.to[0] = balance.to[0];
             transfer.to[1] = balance.to[1];

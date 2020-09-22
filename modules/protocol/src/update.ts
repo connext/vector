@@ -248,7 +248,7 @@ async function generateDepositUpdate(
   // while the remaining fields are consistent
 
   // Initiating a deposit update should happen *after* money is
-  // sent to the multisig. This means that the `latestDepositByAssetId`
+  // sent to the multisig. This means that the `latestDeposit`
   // will include the latest nonce needed
 
   // Determine the locked value and existing balance using the

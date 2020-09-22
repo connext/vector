@@ -45,7 +45,7 @@ describe("utils", () => {
     ): Promise<void> {
       let onchainDepositA: { nonce: BigNumber; amount: BigNumber };
       try {
-        onchainDepositA = await channelContract.latestDepositByAssetId(assetId);
+        onchainDepositA = await channelContract.getLatestDeposit(assetId);
       } catch (e) {
         // Channel contract was not deployed, use 0 value
         onchainDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) };

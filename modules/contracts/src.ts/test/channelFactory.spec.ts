@@ -88,7 +88,7 @@ describe("ChannelFactory", () => {
     const balance = await provider.getBalance(channelAddress as string);
     expect(balance).to.be.eq(value);
 
-    const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).latestDepositByAssetId(
+    const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).getLatestDeposit(
       constants.AddressZero,
     );
     expect(latestDeposit.nonce).to.be.eq(1);
