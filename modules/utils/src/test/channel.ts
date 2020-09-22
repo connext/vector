@@ -62,7 +62,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.create:
       details = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress: base.channelAddress,
         amount: "15",
         assetId: mkAddress("0x0"),
         transferDefinition: mkAddress("0xdef"),
@@ -74,7 +74,7 @@ export function createTestUpdateParams<T extends UpdateType>(
       break;
     case UpdateType.resolve:
       details = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress: base.channelAddress,
         transferId: mkBytes32("0xabcdef"),
         transferResolver: { preImage: mkBytes32("0xcdef") },
         meta: { test: "meta" },
