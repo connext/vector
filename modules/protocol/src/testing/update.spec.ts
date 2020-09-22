@@ -1,68 +1,51 @@
-import { LinkedTransfer, ChannelFactory } from "@connext/vector-contracts";
+import { VectorOnchainService } from "@connext/vector-contracts";
 import {
-  IVectorStore,
-  JsonRpcProvider,
   UpdateType,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
-  OutboundChannelUpdateError,
   InboundChannelUpdateError,
   FullChannelState,
   FullTransferState,
-  Balance,
   TransferName,
   Values,
-  DEFAULT_TRANSFER_TIMEOUT,
   NetworkContext,
+  Result,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
-  createTestChannelState,
-  createTestChannelUpdate,
   mkAddress,
   mkHash,
   createTestChannelStateWithSigners,
   createTestChannelUpdateWithSigners,
-  createTestLinkedTransferState,
-  createCoreTransferState,
-  hashCoreTransferState,
-  createLinkedHash,
-  encodeLinkedTransferResolver,
-  encodeLinkedTransferState,
   createTestUpdateParams,
-  ChannelSigner,
-  hashTransferState,
-  stringify,
+  PartialUpdateParams,
   PartialFullChannelState,
   PartialChannelUpdate,
   createTestFullLinkedTransferState,
+  ChannelSigner,
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import { BigNumber, BigNumberish, constants, Contract, utils } from "ethers";
+import { BigNumber } from "ethers";
 import { MerkleTree } from "merkletreejs";
 import Sinon from "sinon";
 
-import { applyUpdate, generateUpdate } from "../update";
+import * as vectorUpdate from "../update";
 
-import { MockOnchainService } from "./services/onchain";
+// import { applyUpdate, generateUpdate } from "../update";
+
 import { MemoryStoreService } from "./services/store";
 import { env } from "./utils";
-// import { createTestFullLinkedTransferState } from "./utils/channel";
-
-const { hexlify, randomBytes } = utils;
 
 type ApplyUpdateTestParams = {
   name: string;
   updateType: UpdateType;
   stateOverrides?: PartialFullChannelState<any>;
   updateOverrides?: PartialChannelUpdate<any>;
-  // transferAmount?: BigNumberish;
   transferOverrides?: Partial<FullTransferState<typeof TransferName.LinkedTransfer>>;
   expected?: Partial<FullChannelState<any>>;
   error?: Values<typeof InboundChannelUpdateError.reasons>;
 };
 
-describe.only("applyUpdate", () => {
+describe("applyUpdate", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
   const signers = Array(2)
@@ -377,7 +360,7 @@ describe.only("applyUpdate", () => {
       });
 
       // Call `applyUpdate`
-      const result = await applyUpdate(update, previousState, transfer);
+      const result = await vectorUpdate.applyUpdate(update, previousState, transfer);
 
       // Verify result
       if (error) {
@@ -400,227 +383,385 @@ describe.only("applyUpdate", () => {
   }
 });
 
-// describe.skip("generateUpdate", () => {
-//   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-//   const providerUrl = env.chainProviders[chainId];
-//   const provider = new JsonRpcProvider(providerUrl);
-//   const wallet = env.sugarDaddy.connect(provider);
-//   const chainService = new MockOnchainService();
+type GenerateUpdateTestParams = {
+  name: string;
+  updateType: UpdateType;
+  stateOverrides?: PartialFullChannelState<any>;
+  paramOverrides?: PartialUpdateParams<any>;
+  // transferOverrides?: Partial<FullTransferState<typeof TransferName.LinkedTransfer>>;
+  expectedUpdate?: Partial<ChannelUpdate<any>>;
+  expectedTransfer?: Partial<FullTransferState<typeof TransferName.LinkedTransfer>>;
+  error?: Values<typeof InboundChannelUpdateError.reasons>;
+  from?: ChannelSigner;
 
-//   let signers: ChannelSigner[];
-//   let store: IVectorStore;
-//   let linkedTransferDefinition: string;
-//   let channelAddress: string;
+  // Mock values
+  storedChannel?: PartialFullChannelState<any>;
+  onchainBalance?: BigNumber;
+  depositA?: { nonce: BigNumber; amount: BigNumber };
+};
 
-//   beforeEach(async () => {
-//     signers = Array(2)
-//       .fill(0)
-//       .map(() => getRandomChannelSigner(providerUrl));
-//     store = new MemoryStoreService();
-//     linkedTransferDefinition = env.chainAddresses[chainId].LinkedTransfer.address;
+describe.only("generateUpdate", () => {
+  // Get test constants
+  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+  const providerUrl = env.chainProviders[chainId];
+  const signers = Array(2)
+    .fill(0)
+    .map(() => getRandomChannelSigner(providerUrl));
+  const participants = signers.map((s) => s.address);
+  const publicIdentifiers = signers.map((s) => s.publicIdentifier);
+  const channelAddress = mkAddress("0xccc");
+  const networkContext: NetworkContext = {
+    chainId,
+    providerUrl,
+    adjudicatorAddress: mkAddress("0xaaabbbcccc"),
+    channelFactoryAddress: mkAddress("0xddddeeeffff"),
+    vectorChannelMastercopyAddress: mkAddress("0xbeef"),
+  };
+  // const merkleProofData = [mkHash("0xproof")];
+  // const merkleRoot = mkHash("0xroot");
 
-//     // Deploy multisig
-//     // TODO: in channel deployment?
-//     const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, wallet);
-//     const created = new Promise((resolve) => {
-//       factory.once(factory.filters.ChannelCreation(), (data) => {
-//         resolve(data);
-//       });
-//     });
-//     const tx = await factory.createChannel(signers[0].address, signers[1].address);
-//     await tx.wait();
-//     channelAddress = (await created) as string;
-//   });
+  // Declare mocks
+  let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
+  let chainService: Sinon.SinonStubbedInstance<VectorOnchainService>;
 
-//   it("should work for setup", async () => {
-//     const params = createTestUpdateParams(UpdateType.setup, {
-//       details: {
-//         counterpartyIdentifier: signers[1].publicIdentifier,
-//         networkContext: {
-//           channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-//           vectorChannelMastercopyAddress: env.chainAddresses[chainId].VectorChannel.address,
-//           adjudicatorAddress: env.chainAddresses[chainId].Adjudicator.address,
-//           linkedTransferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
-//           withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
-//           chainId,
-//           providerUrl,
-//         },
-//       },
-//     });
-//     const update = (await generateUpdate(params, undefined, store, chainService, signers[0])).getValue();
-//     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-//     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.setup, {
-//       balance: { to: signers.map((a) => a.address), amount: ["0", "0"] },
-//       details: { networkContext: { ...params.details.networkContext }, timeout: params.details.timeout },
-//     });
-//     expect(update).to.containSubset(expected);
-//     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
-//   });
+  afterEach(() => {
+    Sinon.restore();
+  });
 
-//   // TODO it should first send an onchain tx -- otherwise this doesn't test anything
-//   it.skip("should work for deposit", async () => {
-//     // First, deploy a multisig
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
-//       nonce: 1,
-//       balances: [],
-//       assetIds: [],
-//       latestDepositNonce: 0,
-//       channelAddress,
-//     });
-//     const assetId = constants.AddressZero;
-//     await store.saveChannelState(state, {} as any);
-//     const params = createTestUpdateParams(UpdateType.deposit, {
-//       channelAddress,
-//       details: { channelAddress, assetId },
-//     });
-//     console.log(`params: ${stringify(params)}`);
-//     const update = (await generateUpdate(params, state, store, chainService, signers[0])).getValue();
-//     console.log(`update: ${stringify(update)}`);
-//     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-//       channelAddress,
-//       details: { latestDepositNonce: 0 },
-//       nonce: state.nonce + 1,
-//     });
-//     console.log(`generatedUpdate: ${stringify(expected)}`);
-//     expect(update).to.containSubset(expected);
-//     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
-//   });
+  beforeEach(async () => {
+    store = Sinon.createStubInstance(MemoryStoreService);
+    chainService = Sinon.createStubInstance(VectorOnchainService);
 
-//   it("should work for create", async () => {
-//     const transferInitialState = createTestLinkedTransferState({
-//       balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
-//     });
-//     const assetId = constants.AddressZero;
+    // Mock `applyUpdate` (tested above) so it always returns
+    // an empty object
+    Sinon.stub(vectorUpdate, "applyUpdate").resolves(Result.ok({} as any));
+  });
 
-//     // Create the channel state
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-//       channelAddress,
-//       nonce: 3,
-//       lockedBalance: [],
-//       balances: [transferInitialState.balance],
-//       assetIds: [assetId],
-//       latestDepositNonce: 1,
-//     });
-//     await store.saveChannelState(state, {} as any);
+  const tests: GenerateUpdateTestParams[] = [
+    {
+      name: "should work for setup",
+      updateType: UpdateType.setup,
+      paramOverrides: {
+        details: {
+          counterpartyIdentifier: publicIdentifiers[1],
+          timeout: "1023497",
+          networkContext,
+        },
+      },
+      stateOverrides: {
+        assetIds: [],
+        balances: [],
+        lockedBalance: [],
+        merkleRoot: mkHash(),
+        nonce: 0,
+        timeout: "0",
+        latestUpdate: {} as any, // There is no latest update on setup
+        latestDepositNonce: 0,
+      },
+      expectedUpdate: {
+        nonce: 1,
+        // should have the to field filled out
+        balance: { to: participants, amount: ["0", "0"] },
+        details: {
+          networkContext,
+          timeout: "1023497",
+        },
+        assetId: mkAddress(),
+      },
+    },
+    {
+      name: "should work for bob deposit",
+      updateType: UpdateType.deposit,
+      paramOverrides: {
+        details: {
+          assetId: mkAddress(),
+        },
+      },
+      stateOverrides: {
+        assetIds: [],
+        balances: [],
+        lockedBalance: [],
+        merkleRoot: mkHash(),
+        nonce: 1,
+        latestDepositNonce: 0,
+      },
+      expectedUpdate: {
+        nonce: 2,
+        assetId: mkAddress(),
+        balance: { to: participants, amount: ["0", "10"] },
+        details: { latestDepositNonce: 0 },
+      },
+      onchainBalance: BigNumber.from(10),
+      from: signers[1],
+    },
+    {
+      name: "should work for alice deposit",
+      updateType: UpdateType.deposit,
+      paramOverrides: {
+        details: {
+          assetId: mkAddress(),
+        },
+      },
+      stateOverrides: {
+        assetIds: [],
+        balances: [],
+        lockedBalance: [],
+        merkleRoot: mkHash(),
+        nonce: 1,
+        latestDepositNonce: 0,
+      },
+      expectedUpdate: {
+        nonce: 2,
+        assetId: mkAddress(),
+        balance: { to: participants, amount: ["10", "0"] },
+        details: { latestDepositNonce: 1 },
+      },
+      onchainBalance: BigNumber.from(10),
+      depositA: { nonce: BigNumber.from(1), amount: BigNumber.from(10) },
+    },
+    // {
+    //   name: "should work for create",
+    //   updateType: UpdateType.create,
+    //   paramOverrides: {},
+    //   stateOverrides: {},
+    //   expectedUpdate: {},
+    //   expectedTransfer: {},
+    // },
+    // {
+    //   name: "should work for resolve",
+    //   updateType: UpdateType.resolve,
+    //   paramOverrides: {},
+    //   stateOverrides: {},
+    //   expectedUpdate: {},
+    //   expectedTransfer: {},
+    // },
+  ];
 
-//     // Create the params
-//     const params = createTestUpdateParams(UpdateType.create, {
-//       channelAddress,
-//       details: {
-//         amount: "1",
-//         transferDefinition: linkedTransferDefinition,
-//         transferInitialState,
-//         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-//       },
-//     });
+  for (const test of tests) {
+    const {
+      name,
+      updateType,
+      stateOverrides,
+      paramOverrides,
+      expectedUpdate,
+      error,
+      expectedTransfer,
+      storedChannel,
+      onchainBalance,
+      depositA,
+      from,
+    } = test;
 
-//     // Test update
-//     const update = (await generateUpdate(params, state, store, chainService, signers[0])).getValue();
+    it(name, async () => {
+      // TODO: handle transfers first!
+      // Generate the params
+      const params = createTestUpdateParams(updateType, { channelAddress, ...paramOverrides });
 
-//     // Get expected value
-//     const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
-//       channelAddress,
-//       nonce: state.nonce + 1,
-//       assetId,
-//       balance: { to: signers.map((s) => s.address), amount: ["0", "0"] },
-//       details: {
-//         transferDefinition: linkedTransferDefinition,
-//         transferEncodings: params.details.encodings,
-//         transferInitialState,
-//         transferTimeout: "1",
-//       },
-//     });
-//     // DONT compare merkle values (don't know transfer id)
-//     expect(update).to.containSubset({
-//       ...expected,
-//       details: {
-//         ...expected.details,
-//         transferId: (update.details as any).transferId,
-//         merkleRoot: (update.details as any).merkleRoot,
-//         merkleProofData: (update.details as any).merkleProofData,
-//       },
-//     });
-//     expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
-//   });
+      // Generate the state
+      const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
+        channelAddress,
+        participants,
+        networkContext,
+        publicIdentifiers,
+        ...stateOverrides,
+      });
 
-//   it("should work for resolve", async () => {
-//     const preImage = hexlify(randomBytes(32));
-//     const linkedHash = createLinkedHash(preImage);
-//     const transferInitialState = createTestLinkedTransferState({
-//       balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
-//       linkedHash,
-//     });
-//     const assetId = constants.AddressZero;
+      // Set the mocks
+      const inStore = !!storedChannel
+        ? createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            channelAddress,
+            participants,
+            networkContext,
+            publicIdentifiers,
+            ...storedChannel,
+          })
+        : state;
+      store.getChannelState.resolves(inStore);
+      // Chain service mocks are only used by deposit/resolve
+      chainService.getLatestDepositByAssetId.resolves(
+        Result.ok(depositA ?? { nonce: BigNumber.from(0), amount: BigNumber.from(0) }),
+      );
+      chainService.getChannelOnchainBalance.resolves(Result.ok(onchainBalance ?? BigNumber.from(0)));
 
-//     const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
-//       encodeLinkedTransferState(transferInitialState),
-//       encodeLinkedTransferResolver({ preImage }),
-//     );
-//     const balance = {
-//       to: ret.to,
-//       amount: ret.amount.map((a) => a.toString()),
-//     };
+      // Execute function call
+      const result = await vectorUpdate.generateUpdate(params, state, store, chainService, from ?? signers[0]);
 
-//     // Create the channel state
-//     const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-//       channelAddress,
-//       nonce: 3,
-//       lockedBalance: ["1"],
-//       balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
-//       assetIds: [assetId],
-//       latestDepositNonce: 1,
-//     });
+      // Verify result
+      if (error) {
+        expect(result.getError()?.message).to.be.eq(error);
+      } else if (expectedUpdate) {
+        expect(result.getError()).to.be.undefined;
+        const { update, transfer } = result.getValue()!;
 
-//     // Create the transfer core
-//     const coreState = createCoreTransferState({
-//       initialBalance: transferInitialState.balance,
-//       initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
-//       channelAddress,
-//       transferDefinition: linkedTransferDefinition,
-//     });
+        // Verify expected update
+        const expected = createTestChannelUpdateWithSigners(signers, updateType, {
+          channelAddress,
+          type: updateType,
+          fromIdentifier: from?.publicIdentifier ?? publicIdentifiers[0],
+          toIdentifier:
+            from?.publicIdentifier && from?.publicIdentifier === publicIdentifiers[1]
+              ? publicIdentifiers[0]
+              : publicIdentifiers[1],
+          ...expectedUpdate,
+        });
+        const { signatures, ...unsigned } = expected;
+        expect(update).to.containSubset(unsigned);
 
-//     // Create the resolve params
-//     const params = createTestUpdateParams(UpdateType.resolve, {
-//       channelAddress,
-//       details: {
-//         channelAddress,
-//         transferId: coreState.transferId,
-//         transferResolver: { preImage },
-//       },
-//     });
+        // Verify transfer
+        expect(transfer).to.containSubset(expectedTransfer);
 
-//     // Load the store
-//     await store.saveChannelState(state, {} as any, {
-//       ...coreState,
-//       transferState: transferInitialState,
-//       chainId: state.networkContext.chainId,
-//       adjudicatorAddress: state.networkContext.adjudicatorAddress,
-//       transferId: coreState.transferId,
-//       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-//     });
+        // Verify update initiator added sigs
+        expect(
+          from?.publicIdentifier && from?.publicIdentifier == publicIdentifiers[1]
+            ? update.signatures[1]
+            : update.signatures[0],
+        ).to.be.ok;
+        expect(
+          from?.publicIdentifier && from?.publicIdentifier == publicIdentifiers[1]
+            ? update.signatures[0]
+            : update.signatures[1],
+        ).to.not.be.ok;
+      } else {
+        expect(false).to.be.eq("Neither error or expected result provided in test");
+      }
+    });
+  }
 
-//     // Get expected values
-//     const emptyTree = new MerkleTree([], hashCoreTransferState);
-//     const { signatures: expectedSig, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
-//       channelAddress,
-//       nonce: state.nonce + 1,
-//       assetId,
-//       balance,
-//       details: {
-//         transferId: coreState.transferId,
-//         transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-//         transferDefinition: coreState.transferDefinition,
-//         transferResolver: { preImage },
-//         merkleRoot: constants.HashZero,
-//       },
-//     });
+  // it("should work for create", async () => {
+  //   const transferInitialState = createTestLinkedTransferState({
+  //     balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
+  //   });
+  //   const assetId = constants.AddressZero;
 
-//     // Generate the update
-//     const updateRet = await generateUpdate(params, state, store, chainService, signers[0]);
-//     expect(updateRet.isError).to.be.false;
-//     const { signatures: returnedSig, ...returnedUnsigned } = updateRet.getValue();
+  //   // Create the channel state
+  //   const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+  //     channelAddress,
+  //     nonce: 3,
+  //     lockedBalance: [],
+  //     balances: [transferInitialState.balance],
+  //     assetIds: [assetId],
+  //     latestDepositNonce: 1,
+  //   });
+  //   await store.saveChannelState(state, {} as any);
 
-//     // TODO check signatures!!
-//     expect(returnedUnsigned).to.containSubset(expected);
-//   });
-// });
+  //   // Create the params
+  //   const params = createTestUpdateParams(UpdateType.create, {
+  //     channelAddress,
+  //     details: {
+  //       amount: "1",
+  //       transferDefinition: linkedTransferDefinition,
+  //       transferInitialState,
+  //       encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+  //     },
+  //   });
+
+  //   // Test update
+  //   const update = (await generateUpdate(params, state, store, chainService, signers[0])).getValue();
+
+  //   // Get expected value
+  //   const { signatures, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
+  //     channelAddress,
+  //     nonce: state.nonce + 1,
+  //     assetId,
+  //     balance: { to: signers.map((s) => s.address), amount: ["0", "0"] },
+  //     details: {
+  //       transferDefinition: linkedTransferDefinition,
+  //       transferEncodings: params.details.encodings,
+  //       transferInitialState,
+  //       transferTimeout: "1",
+  //     },
+  //   });
+  //   // DONT compare merkle values (don't know transfer id)
+  //   expect(update).to.containSubset({
+  //     ...expected,
+  //     details: {
+  //       ...expected.details,
+  //       transferId: (update.details as any).transferId,
+  //       merkleRoot: (update.details as any).merkleRoot,
+  //       merkleProofData: (update.details as any).merkleProofData,
+  //     },
+  //   });
+  //   expect(update.signatures.filter((x) => !!x).length).to.be.eq(1);
+  // });
+
+  // it("should work for resolve", async () => {
+  //   const preImage = hexlify(randomBytes(32));
+  //   const linkedHash = createLinkedHash(preImage);
+  //   const transferInitialState = createTestLinkedTransferState({
+  //     balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
+  //     linkedHash,
+  //   });
+  //   const assetId = constants.AddressZero;
+
+  //   const ret = await new Contract(linkedTransferDefinition, LinkedTransfer.abi, provider).resolve(
+  //     encodeLinkedTransferState(transferInitialState),
+  //     encodeLinkedTransferResolver({ preImage }),
+  //   );
+  //   const balance = {
+  //     to: ret.to,
+  //     amount: ret.amount.map((a) => a.toString()),
+  //   };
+
+  //   // Create the channel state
+  //   const state = createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+  //     channelAddress,
+  //     nonce: 3,
+  //     lockedBalance: ["1"],
+  //     balances: [{ to: signers.map((s) => s.address), amount: ["0", "0"] }],
+  //     assetIds: [assetId],
+  //     latestDepositNonce: 1,
+  //   });
+
+  //   // Create the transfer core
+  //   const coreState = createCoreTransferState({
+  //     initialBalance: transferInitialState.balance,
+  //     initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
+  //     channelAddress,
+  //     transferDefinition: linkedTransferDefinition,
+  //   });
+
+  //   // Create the resolve params
+  //   const params = createTestUpdateParams(UpdateType.resolve, {
+  //     channelAddress,
+  //     details: {
+  //       channelAddress,
+  //       transferId: coreState.transferId,
+  //       transferResolver: { preImage },
+  //     },
+  //   });
+
+  //   // Load the store
+  //   await store.saveChannelState(state, {} as any, {
+  //     ...coreState,
+  //     transferState: transferInitialState,
+  //     chainId: state.networkContext.chainId,
+  //     adjudicatorAddress: state.networkContext.adjudicatorAddress,
+  //     transferId: coreState.transferId,
+  //     transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+  //   });
+
+  //   // Get expected values
+  //   const emptyTree = new MerkleTree([], hashCoreTransferState);
+  //   const { signatures: expectedSig, ...expected } = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
+  //     channelAddress,
+  //     nonce: state.nonce + 1,
+  //     assetId,
+  //     balance,
+  //     details: {
+  //       transferId: coreState.transferId,
+  //       transferEncodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+  //       transferDefinition: coreState.transferDefinition,
+  //       transferResolver: { preImage },
+  //       merkleRoot: constants.HashZero,
+  //     },
+  //   });
+
+  //   // Generate the update
+  //   const updateRet = await generateUpdate(params, state, store, chainService, signers[0]);
+  //   expect(updateRet.isError).to.be.false;
+  //   const { signatures: returnedSig, ...returnedUnsigned } = updateRet.getValue();
+
+  //   // TODO check signatures!!
+  //   expect(returnedUnsigned).to.containSubset(expected);
+  // });
+});

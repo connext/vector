@@ -26,7 +26,7 @@ export type PartialFullChannelState<T extends UpdateType> = Partial<
   Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
 >;
 
-type PartialUpdateParams<T extends UpdateType> = Partial<
+export type PartialUpdateParams<T extends UpdateType> = Partial<
   Omit<UpdateParams<T>, "details"> & { details?: Partial<UpdateParamsMap[T]> }
 >;
 
