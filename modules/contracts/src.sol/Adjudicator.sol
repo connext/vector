@@ -28,7 +28,7 @@ contract Adjudicator is IAdjudicator {
         _;
     }
 
-    function forceChannelConsensus(
+    function disputeChannel(
         CoreChannelState memory ccs,
         bytes[2] memory signatures
     )
@@ -63,17 +63,17 @@ contract Adjudicator is IAdjudicator {
         verifySignatures(ccs.participants, ccs, signatures);
         require(
             !inDefundPhase(dispute),
-            "ChannelFactory forceChannelConsensus: Not allowed in defund phase"
+            "ChannelFactory disputeChannel: Not allowed in defund phase"
         );
         // TODO: check not defunded???
         require(
             dispute.nonce <= ccs.nonce,
-            "ChannelFactory forceChannelConsensus: New nonce smaller than stored one"
+            "ChannelFactory disputeChannel: New nonce smaller than stored one"
         );
         if (dispute.nonce == ccs.nonce) {
             require(
                 !inConsensusPhase(dispute),
-                "ChannelFactory forceChannelConsensus: Same nonce not allowed in consensus phase"
+                "ChannelFactory disputeChannel: Same nonce not allowed in consensus phase"
             );
         } else { // dispute.nonce < ccs.nonce
             dispute.channelStateHash = hashChannelState(ccs);
@@ -154,7 +154,7 @@ contract Adjudicator is IAdjudicator {
         }
     }
 
-    function forceTransferConsensus(
+    function disputeTransfer(
         CoreTransferState memory cts,
         bytes32[] memory merkleProofData
     )
@@ -178,19 +178,19 @@ contract Adjudicator is IAdjudicator {
         ChannelDispute storage dispute = channelDispute[cts.channelAddress];
         require(
             inDefundPhase(dispute),
-            "ChannelFactory forceTransferConsensus: Not in defund phase"
+            "ChannelFactory disputeTransfer: Not in defund phase"
         );
         bytes32 transferStateHash = hashTransferState(cts);
         verifyMerkleProof(transferStateHash, dispute.merkleRoot, merkleProofData);
         TransferDispute storage transferDispute = transferDisputes[cts.transferId];
         require(
             transferDispute.transferDisputeExpiry == 0,
-            "ChannelFactory forceTransferConsensus: transfer already disputed"
+            "ChannelFactory disputeTransfer: transfer already disputed"
         );
         // necessary?
         require(
             !transferDispute.isDefunded,
-            "ChannelFactory forceTransferConsensus: transfer already defunded"
+            "ChannelFactory disputeTransfer: transfer already defunded"
         );
         // TODO: offchain-ensure that there can't be an overflow
         transferDispute.transferStateHash = transferStateHash;

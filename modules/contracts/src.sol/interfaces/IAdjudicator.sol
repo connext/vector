@@ -9,10 +9,11 @@ interface IAdjudicator {
 
     // TODO: add disputes to args
 
-    function forceChannelConsensus(
+    function disputeChannel(
+        ChannelDispute memory oldChannelDispute,
         CoreChannelState memory ccs,
         bytes[2] memory signatures
-    ) external;
+    ) external returns(ChannelDispute newChannelDispute);
 
 
     function defundChannel(
@@ -20,7 +21,7 @@ interface IAdjudicator {
     ) external;
 
 
-    function forceTransferConsensus(
+    function disputeTransfer(
         CoreTransferState memory cts,
         bytes32[] memory merkeProofData
     ) external;
