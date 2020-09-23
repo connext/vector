@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 unit=$1
 cmd="${2:-test}"
@@ -20,6 +19,7 @@ fi
 
 if [[ "${cmd##*-}" == "test" ]]
 then
+  set -euo pipefail
   echo "Starting $unit tester"
   if [[ -n "`which pino-pretty`" ]]
   then exec npm run test -- $opts | pino-pretty --colorize
