@@ -1,15 +1,18 @@
-import { getCreate2MultisigAddress, getRandomChannelSigner, ChannelSigner } from "@connext/vector-utils";
+import {
+  getCreate2MultisigAddress,
+  getPublicIdentifierFromPublicKey,
+} from "@connext/vector-utils";
 import { Contract, ContractFactory, constants, BigNumber } from "ethers";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
 import { VectorOnchainService } from "../onchainService";
 
-import { expect, getOnchainTxService, provider } from "./utils";
+import { initiator, counterparty, provider } from "./constants";
+import { expect, getOnchainTxService } from "./utils";
 
 describe("ChannelFactory", () => {
-  const deployer = provider.getWallets()[0];
-  const initiator = new ChannelSigner(deployer.privateKey, provider);
-  const counterparty = getRandomChannelSigner(provider);
+  const initiatorPubId = getPublicIdentifierFromPublicKey(initiator.publicKey);
+  const counterpartyPubId = getPublicIdentifierFromPublicKey(counterparty.publicKey);
   let channelFactory: Contract;
   let channelMastercopy: Contract;
   let onchainService: VectorOnchainService;
@@ -18,10 +21,10 @@ describe("ChannelFactory", () => {
   beforeEach(async () => {
     chainId = (await provider.getNetwork()).chainId;
 
-    channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, deployer).deploy();
+    channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, initiator).deploy();
     await channelMastercopy.deployed();
 
-    channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer).deploy(
+    channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, initiator).deploy(
       channelMastercopy.address,
     );
     await channelFactory.deployed();
@@ -41,8 +44,8 @@ describe("ChannelFactory", () => {
     await tx.wait();
     const channelAddress = await created;
     const computedAddr = await getCreate2MultisigAddress(
-      initiator.publicIdentifier,
-      counterparty.publicIdentifier,
+      initiatorPubId,
+      counterpartyPubId,
       chainId,
       channelFactory.address,
       channelMastercopy.address,
@@ -61,14 +64,14 @@ describe("ChannelFactory", () => {
     });
     const value = BigNumber.from("1000");
     const tx = await channelFactory
-      .connect(deployer)
+      .connect(initiator)
       .createChannelAndDepositA(counterparty.address, constants.AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
     const computedAddr = await getCreate2MultisigAddress(
-      initiator.publicIdentifier,
-      counterparty.publicIdentifier,
+      initiatorPubId,
+      counterpartyPubId,
       chainId,
       channelFactory.address,
       channelMastercopy.address,
@@ -80,7 +83,7 @@ describe("ChannelFactory", () => {
     const balance = await provider.getBalance(channelAddress as string);
     expect(balance).to.be.eq(value);
 
-    const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).getLatestDeposit(
+    const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, initiator).getLatestDeposit(
       constants.AddressZero,
     );
     expect(latestDeposit.nonce).to.be.eq(1);

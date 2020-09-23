@@ -4,7 +4,8 @@ import { fund } from "../commands/fund";
 import { migrate } from "../commands/migrate";
 import { newToken } from "../commands/new-token";
 
-import { expect, provider } from "./utils";
+import { provider } from "./constants";
+import { expect } from "./utils";
 
 const addressBookPath = "/tmp/address-book.json";
 

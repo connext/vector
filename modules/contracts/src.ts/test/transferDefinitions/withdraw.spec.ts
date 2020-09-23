@@ -15,7 +15,8 @@ import {
 } from "@connext/vector-utils";
 
 import { Withdraw } from "../../artifacts";
-import { expect, provider } from "../utils";
+import { provider } from "../constants";
+import { expect } from "../utils";
 
 const { Zero } = constants;
 

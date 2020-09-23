@@ -17,8 +17,26 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     using LibChannelCrypto for bytes32;
     using SafeMath for uint256;
 
-    ChannelDispute channelDispute;
-    TransferDispute transferDispute;
+    ChannelDispute private channelDispute;
+    TransferDispute private transferDispute;
+
+    function getLatestChannelDispute()
+        public
+        view
+        override
+        returns (ChannelDispute memory)
+    {
+        return channelDispute;
+    }
+
+    function getLatestTransferDispute()
+        public
+        view
+        override
+        returns (TransferDispute memory)
+    {
+        return transferDispute;
+    }
 
     // PSEUDOCODE: Please don't delete yet!
     // ChannelDispute memory lastDispute = channelDisputes(channelAddress)
@@ -299,18 +317,6 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
 
     function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
         return keccak256(abi.encode(cts));
-    }
-
-    // The following three methods are only to debug signatures & can be deleted eventually
-    function encodeState(CoreChannelState memory ccs) public pure returns (bytes memory) {
-      return abi.encode(ccs);
-    }
-    function hashState(CoreChannelState memory ccs) public pure returns (bytes32) {
-      return keccak256(abi.encode(ccs));
-    }
-    function hashChannelMsg(CoreChannelState memory ccs) public pure returns (bytes32) {
-      bytes32 hashedState = hashChannelState(ccs);
-      return hashedState.toChannelSignedMessage();
     }
 
     // TODO: Asset library

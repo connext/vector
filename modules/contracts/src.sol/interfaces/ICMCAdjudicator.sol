@@ -7,6 +7,12 @@ import "./Types.sol";
 
 interface ICMCAdjudicator {
 
+    function getLatestChannelDispute(
+    ) external returns (ChannelDispute memory);
+
+    function getLatestTransferDispute(
+    ) external returns (TransferDispute memory);
+
     function disputeChannel(
         CoreChannelState memory ccs,
         bytes[2] memory signatures
