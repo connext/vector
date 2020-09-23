@@ -76,9 +76,23 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
         return reply.status(404).send({ message: "Channel not found", channelAddress: request.params.channelAddress });
       }
       return reply.status(200).send(res);
-    } catch (e) {}
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
   },
 );
+
+server.get("/channel/", { schema: { response: ServerNodeResponses.GetChannelStateSchema } }, async (request, reply) => {
+  const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+  try {
+    const res = await vectorEngine.request(params);
+    return reply.status(200).send(res);
+  } catch (e) {
+    logger.error({ message: e.message, stack: e.stack });
+    return reply.status(500).send({ message: e.message });
+  }
+});
 
 server.post<{ Body: ServerNodeParams.Setup }>(
   "/setup",
