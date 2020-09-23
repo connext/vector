@@ -2,7 +2,7 @@ import { ChainAddresses, ConditionalTransferParams, ConditionalTransferType, Con
 import { convertConditionalTransferParams, convertResolveConditionParams } from "../paramConverter";
 import { env } from "./env";
 
-import { createTestChannelState, createTestFullLinkedTransferState, getRandomBytes32, mkAddress, mkHash, stringify } from "@connext/vector-utils";
+import { createTestChannelState, createTestChannelStateWithSigners, createTestFullLinkedTransferState, getRandomBytes32, getRandomChannelSigner, mkAddress, mkHash, stringify } from "@connext/vector-utils";
 import { expect } from "chai";
 import { InvalidTransferType } from "../errors";
 
@@ -10,6 +10,8 @@ describe.only("ParamConverter", () => {
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const providerUrl = env.chainProviders[chainId];
     const chainAddresses = env.chainAddresses[chainId]
+    const signerA = getRandomChannelSigner(providerUrl);
+    const signerB = getRandomChannelSigner(providerUrl)
     const contractAddresses: ChainAddresses = {
         [chainId]: {
             channelFactoryAddress: chainAddresses.ChannelFactory.address,
@@ -25,6 +27,8 @@ describe.only("ParamConverter", () => {
                 amount: "8",
                 assetId: mkAddress("0x0"),
                 recipient: mkAddress("0xb"),
+                recipientChainId: "1",
+                recipientAssetId: mkAddress("0x1"),
                 conditionType: ConditionalTransferType.LinkedTransfer,
                 routingId: mkHash("0xtest"),
                 details: {
@@ -36,9 +40,9 @@ describe.only("ParamConverter", () => {
             }
         }
 
-        it("should work", async () => {
+        it("should work for A", async () => {
             const params = generateParams()
-            const channelState: FullChannelState = createTestChannelState("setup", {
+            const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
                 channelAddress: params.channelAddress,
                 networkContext: {
                     ...contractAddresses[chainId],
@@ -46,7 +50,7 @@ describe.only("ParamConverter", () => {
                     providerUrl
                 }
             });
-            const ret: CreateTransferParams = (convertConditionalTransferParams(params, channelState)).getValue()
+            const ret: CreateTransferParams = (convertConditionalTransferParams(params, signerA, channelState)).getValue()
             expect(ret).to.deep.eq({
                 channelAddress: channelState.channelAddress,
                 amount: params.amount,
@@ -55,7 +59,7 @@ describe.only("ParamConverter", () => {
                 transferInitialState: {
                     balance: {
                         amount: [params.amount, "0"],
-                        to: channelState.participants
+                        to: [signerA.address, signerB.address]
                     },
                     linkedHash: params.details.linkedHash
                 },
@@ -63,6 +67,43 @@ describe.only("ParamConverter", () => {
                 encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
                 meta: {
                     routingId: params.routingId,
+                    recipientAssetId: params.recipientAssetId,
+                    recipientChainId: params.recipientChainId,
+                    recipient: params.recipient,
+                    meta: params.meta
+                }
+            })
+        })
+
+        it("should work for B", async () => {
+            const params = generateParams()
+            const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+                channelAddress: params.channelAddress,
+                networkContext: {
+                    ...contractAddresses[chainId],
+                    chainId,
+                    providerUrl
+                }
+            });
+            const ret: CreateTransferParams = (convertConditionalTransferParams(params, signerB, channelState)).getValue()
+            expect(ret).to.deep.eq({
+                channelAddress: channelState.channelAddress,
+                amount: params.amount,
+                assetId: params.assetId,
+                transferDefinition: channelState.networkContext.linkedTransferDefinition,
+                transferInitialState: {
+                    balance: {
+                        amount: [params.amount, "0"],
+                        to: [signerB.address, signerA.address]
+                    },
+                    linkedHash: params.details.linkedHash
+                },
+                timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+                encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+                meta: {
+                    routingId: params.routingId,
+                    recipientAssetId: params.recipientAssetId,
+                    recipientChainId: params.recipientChainId,
                     recipient: params.recipient,
                     meta: params.meta
                 }
@@ -82,7 +123,7 @@ describe.only("ParamConverter", () => {
                     providerUrl
                 }
             });
-            const ret = convertConditionalTransferParams(params, channelState)
+            const ret = convertConditionalTransferParams(params, signerA, channelState)
             expect(ret.isError).to.be.true;
             expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType))
         })

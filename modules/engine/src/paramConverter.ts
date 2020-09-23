@@ -14,6 +14,7 @@ import {
   WithdrawStateEncoding,
   WithdrawResolverEncoding,
   EngineParams,
+  IChannelSigner,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
@@ -21,12 +22,14 @@ import { InvalidTransferType } from "./errors";
 
 export function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
+  signer: IChannelSigner,
   channel: FullChannelState,
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
 
-  // TODO IMPORTANT!!! -- This needs to be ordered correctly based on who is calling the transfer!!
-  const participants = channel.participants;
+  const participants = channel.participants[0] == signer.address ? channel.participants : [channel.participants[1], channel.participants[0]];
+  const recipientChainId = params.recipientChainId ? params.recipientChainId : channel.networkContext.chainId;
+  const recipientAssetId = params.recipientAssetId ? params.recipientAssetId : params.assetId;
 
   let transferDefinition: string | undefined;
   let transferInitialState: LinkedTransferState;
@@ -48,6 +51,8 @@ export function convertConditionalTransferParams(
 
   const meta = {
     recipient,
+    recipientChainId,
+    recipientAssetId,
     routingId,
     meta: params.meta,
   };
@@ -81,6 +86,7 @@ export function convertResolveConditionParams(
 
   const meta = {
     routingId,
+    meta: params.meta
   };
 
   return Result.ok({
@@ -93,6 +99,7 @@ export function convertResolveConditionParams(
 
 export function convertWithdrawParams(
   params: EngineParams.Withdraw,
+  signer: IChannelSigner,
   channel: FullChannelState,
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, assetId, recipient, fee } = params;
@@ -106,6 +113,8 @@ export function convertWithdrawParams(
   // TODO sign the withdraw commitment
 
   const initiatorSignature = ""; // TODO!
+
+  const counterpartySigner = channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
 
   const transferInitialState: WithdrawState = {
     balance: {
