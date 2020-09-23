@@ -294,13 +294,10 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     }
 
     function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
-        // TODO: WIP
-        bytes32 hashedState = keccak256(abi.encode(ccs));
-        return hashedState.toChannelSignedMessage();
+        return keccak256(abi.encode(ccs));
     }
 
     function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
-        // TODO: WIP
         return keccak256(abi.encode(cts));
     }
 
@@ -308,13 +305,12 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     function encodeState(CoreChannelState memory ccs) public pure returns (bytes memory) {
       return abi.encode(ccs);
     }
-
     function hashState(CoreChannelState memory ccs) public pure returns (bytes32) {
       return keccak256(abi.encode(ccs));
     }
-
     function hashChannelMsg(CoreChannelState memory ccs) public pure returns (bytes32) {
-      return hashChannelState(ccs);
+      bytes32 hashedState = hashChannelState(ccs);
+      return hashedState.toChannelSignedMessage();
     }
 
     // TODO: Asset library

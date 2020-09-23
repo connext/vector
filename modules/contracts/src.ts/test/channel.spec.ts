@@ -6,7 +6,7 @@ import {
 } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
-import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
+import { ChannelMastercopy, ChannelFactory } from "../artifacts";
 
 import { expect, provider } from "./utils";
 
@@ -101,8 +101,8 @@ describe("Channel", () => {
       await counterparty.signMessage(hashedState),
     ];
     // TODO: fix bugs in below
-    // const res = await channel.disputeChannel(channelState, signatures);
-    // console.log(`Dispute res: ${JSON.stringify(res, null, 2)}`);
+    const res = await channel.disputeChannel(channelState, signatures);
+    console.log(`Dispute res: ${JSON.stringify(res, null, 2)}`);
   });
 
 });
