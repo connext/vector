@@ -103,7 +103,7 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     //      require(!channelDispute.assetDefunded[assetIds[i]])
     //      channelDispute.assetDefunded[assetIds[i]] = true
     //      ChannelMastercopy channel = ChannelMastercopy(channelAddress)
-    //      LatestDeposit latestDeposit = channel.latestDepositA(assetIds[i])
+    //      LatestDeposit latestDeposit = channel.latestInitiatorDeposit(assetIds[i])
     //
     //      Balance memory aBalance, bBalance; //Bad syntax here, I know
     //      aBalance.to = state.balA.to

@@ -103,7 +103,7 @@ export class VectorTransactionService implements IVectorTransactionService {
     }
 
     if (sender === channelState.participants[0]) {
-      return this.sendDepositATx(channelState, amount, assetId);
+      return this.sendInitiatorDepositTx(channelState, amount, assetId);
     } else {
       return this.sendDepositBTx(channelState, amount, assetId);
     }
@@ -116,13 +116,13 @@ export class VectorTransactionService implements IVectorTransactionService {
     throw new Error("Method not implemented.");
   }
 
-  private async sendDepositATx(
+  private async sendInitiatorDepositTx(
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
   ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     const vectorChannel = new utils.Interface(ChannelMastercopy.abi);
-    const data = vectorChannel.encodeFunctionData("depositA", [amount, assetId]);
+    const data = vectorChannel.encodeFunctionData("initiatorDeposit", [amount, assetId]);
     if (assetId === constants.AddressZero) {
       return this.onchainTransactionService.sendTx(
         {

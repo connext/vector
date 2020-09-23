@@ -65,7 +65,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(initiator)
-      .createChannelAndDepositA(counterparty.address, constants.AddressZero, value, { value });
+      .createChannelAndDeposit(counterparty.address, constants.AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;

@@ -16,7 +16,7 @@ interface ICMCDeposit {
         address assetId
     ) external view returns (LatestDeposit memory);
 
-    function depositA(
+    function initiatorDeposit(
         address assetId,
         uint256 amount
         // bytes memory signature

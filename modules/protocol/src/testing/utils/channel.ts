@@ -111,7 +111,7 @@ export const createVectorInstance = async (overrides: Partial<VectorTestOverride
   return vector;
 };
 
-export const deployChannelWithDepositA = async (
+export const deployChannelWithInitiatorDeposit = async (
   channelAddress: string,
   depositAmount: BigNumber,
   assetId: string,
@@ -132,7 +132,7 @@ export const deployChannelWithDepositA = async (
       res(data);
     });
   });
-  const tx = await factory.createChannelAndDepositA(alice.address, bobAddr, assetId, depositAmount, {
+  const tx = await factory.createChannelAndDeposit(alice.address, bobAddr, assetId, depositAmount, {
     value: depositAmount,
   });
   await tx.wait();
@@ -172,7 +172,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   return channel;
 };
 
-export const depositAOnchain = async (
+export const sendInitiatorDeposit = async (
   channelAddress: string,
   latestDepositNonce: number,
   depositorSigner: IChannelSigner,
@@ -184,10 +184,10 @@ export const depositAOnchain = async (
   if (latestDepositNonce === 0) {
     // First node deposit, must deploy channel
     // Deploy multisig with deposit
-    await deployChannelWithDepositA(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
+    await deployChannelWithInitiatorDeposit(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
   } else {
     // Call deposit on the multisig
-    const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).depositA(assetId, value, {
+    const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).initiatorDeposit(assetId, value, {
       value,
     });
     await tx.wait();
@@ -217,12 +217,12 @@ export const depositInChannel = async (
 
   // Deploy multsig if needed
   const channel = await depositor.getChannelState(channelAddress);
-  const isDepositA = channel!.publicIdentifiers[0] === depositor.publicIdentifier;
+  const isInitiatorDeposit = channel!.publicIdentifiers[0] === depositor.publicIdentifier;
   // NOTE: sometimes deposit fails, and it seems like its because it is
-  // not detecting depositA properly, only happens sometimes so leave
+  // not detecting initiatorDeposit properly, only happens sometimes so leave
   // this log for now!
-  if (isDepositA) {
-    await depositAOnchain(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
+  if (isInitiatorDeposit) {
+    await sendInitiatorDeposit(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
   } else {
     // Deposit onchain
     const tx =
@@ -242,7 +242,7 @@ export const depositInChannel = async (
 
   const postDeposit = ret.getValue()!;
   expect(postDeposit.latestDepositNonce).to.be.eq(
-    isDepositA ? channel!.latestDepositNonce + 1 : channel!.latestDepositNonce,
+    isInitiatorDeposit ? channel!.latestDepositNonce + 1 : channel!.latestDepositNonce,
   );
   expect(postDeposit.assetIds).to.be.deep.eq([...new Set(channel!.assetIds.concat(assetId))]);
 

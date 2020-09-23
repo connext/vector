@@ -108,19 +108,19 @@ export const reconcileDeposit = async (
   }
   const onchainBalance = balanceRes.getValue();
 
-  const latestDepositARes = await onchainService.getLatestDepositByAssetId(
+  const latestInitiatorDepositRes = await onchainService.getLatestDepositByAssetId(
     channelAddress,
     chainId,
     assetId,
     latestDepositNonce,
   );
-  if (latestDepositARes.isError) {
-    return Result.fail(latestDepositARes.getError()!);
+  if (latestInitiatorDepositRes.isError) {
+    return Result.fail(latestInitiatorDepositRes.getError()!);
   }
-  const latestDepositA = latestDepositARes.getValue();
+  const latestInitiatorDeposit = latestInitiatorDepositRes.getValue();
 
-  const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
-    ? latestDepositA.amount.add(initialBalance.amount[0])
+  const balanceA = latestInitiatorDeposit.nonce.gt(latestDepositNonce)
+    ? latestInitiatorDeposit.amount.add(initialBalance.amount[0])
     : BigNumber.from(initialBalance.amount[0]);
 
   const balance = {
@@ -135,6 +135,6 @@ export const reconcileDeposit = async (
 
   return Result.ok({
     balance,
-    latestDepositNonce: latestDepositA.nonce.toNumber(),
+    latestDepositNonce: latestInitiatorDeposit.nonce.toNumber(),
   });
 };

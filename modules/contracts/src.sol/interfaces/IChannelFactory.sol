@@ -21,7 +21,7 @@ interface IChannelFactory {
         address counterparty
     ) external returns (IVectorChannel);
 
-    function createChannelAndDepositA(
+    function createChannelAndDeposit(
         address counterparty,
         address assetId,
         uint256 amount

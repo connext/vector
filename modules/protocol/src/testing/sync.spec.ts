@@ -363,8 +363,8 @@ describe("outbound", () => {
       const assetId = constants.AddressZero;
       const userBBalance = BigNumber.from(9);
       const missedUpdateNonce = 2;
-      const depositAAmt = BigNumber.from(14);
-      const depositANonce = BigNumber.from(1);
+      const depositAmt = BigNumber.from(14);
+      const depositNonce = BigNumber.from(1);
       const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
         channelAddress,
         details: { assetId },
@@ -372,9 +372,9 @@ describe("outbound", () => {
 
       beforeEach(() => {
         // Set the chain service mock
-        chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: depositANonce, amount: depositAAmt }));
+        chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: depositNonce, amount: depositAmt }));
 
-        chainService.getChannelOnchainBalance.resolves(Result.ok(userBBalance.add(depositAAmt)));
+        chainService.getChannelOnchainBalance.resolves(Result.ok(userBBalance.add(depositAmt)));
       });
 
       afterEach(() => {
@@ -390,18 +390,18 @@ describe("outbound", () => {
           nonce: missedUpdateNonce,
           balance: { to: signers.map(s => s.address), amount: ["0", userBBalance.toString()] },
           assetId,
-          details: { latestDepositNonce: depositANonce.sub(1).toNumber() },
+          details: { latestDepositNonce: depositNonce.sub(1).toNumber() },
           signatures: [mkSig("0xaaaaccccc"), mkSig("0xbbbbddddd")],
         });
 
         // Create the expected final double signed update state
         const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
           channelAddress,
-          details: { latestDepositNonce: depositANonce.toNumber() },
+          details: { latestDepositNonce: depositNonce.toNumber() },
           signatures: [mkSig("0xaaabbb"), mkSig("0xcccddd")],
           nonce: missedUpdateNonce + 1,
           assetId,
-          balance: { to: signers.map(s => s.address), amount: [depositAAmt.toString(), userBBalance.toString()] },
+          balance: { to: signers.map(s => s.address), amount: [depositAmt.toString(), userBBalance.toString()] },
         });
 
         // Set messaging mocks:
