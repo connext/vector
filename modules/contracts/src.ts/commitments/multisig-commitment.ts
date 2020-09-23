@@ -2,7 +2,7 @@ import { EthereumCommitment } from "@connext/types";
 
 import { MinimalTransaction } from "@connext/vector-types"
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { utils } from "ethers";
+import { BigNumber, utils } from "ethers";
 
 import { ChannelMastercopy } from "../artifacts";
 
@@ -52,7 +52,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
       multisigInput.to,
       multisigInput.value,
       multisigInput.data,
-      this.nonce,
+      BigNumber.from(this.nonce),
       this.signatures,
     ]);
 
@@ -62,8 +62,8 @@ export abstract class MultisigCommitment implements EthereumCommitment {
   public encode(): string {
     const { to, value, data } = this.getTransactionDetails();
     return solidityPack(
-      ["uint8", "address", "address", "uint256", "bytes32", "uint256"],
-      [this.multisigAddress, to, value, solidityKeccak256(["bytes"], [data]), this.nonce],
+      ["address", "address", "uint256", "bytes32", "uint256"],
+      [this.multisigAddress, to, value, solidityKeccak256(["bytes"], [data]), BigNumber.from(this.nonce)],
     );
   }
 
