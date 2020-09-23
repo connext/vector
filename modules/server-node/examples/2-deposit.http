@@ -1,0 +1,17 @@
+@aliceUrl = http://localhost:8001
+@aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+
+# 0.1 ETH
+@ethAmount = 100000000000000000
+
+##############
+### Send Deposit Tx
+# Alice deposit ETH
+POST {{aliceUrl}}/send-deposit-tx
+Content-Type: application/json
+
+{
+  "channelAddress": "{{aliceBobChannel}}",
+  "amount": "{{ethAmount}}",
+  "assetId": "0x0000000000000000000000000000000000000000"
+}

@@ -24,9 +24,10 @@ export const ERC20Abi = [
 
 export class OnchainError extends VectorError {
   readonly type = VectorError.errors.OnchainError;
-  static readonly reasons: { [key: string]: string } = {
+  static readonly reasons = {
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
+    NotEnoughFunds: "Not enough funds in wallet",
   };
 
   constructor(public readonly message: Values<typeof OnchainError.reasons>) {
@@ -41,10 +42,7 @@ export type MinimalTransaction = {
 };
 
 export interface IMultichainTransactionService {
-  sendTx(
-    minTx: MinimalTransaction,
-    chainId: number,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
+  sendTx(minTx: MinimalTransaction, chainId: number): Promise<Result<providers.TransactionResponse, OnchainError>>;
   getCode(address: Address, chainId: number): Promise<Result<string, OnchainError>>;
 }
 
@@ -72,6 +70,6 @@ export interface IVectorOnchainService {
   ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, Error>>;
 
   getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
-  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>
-  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>
+  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
+  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
 }

@@ -4,7 +4,7 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
-import { ChannelRpcMethods, ServerNodeParams, ServerNodeResponses } from "@connext/vector-types";
+import { ChannelRpcMethods, OnchainError, ServerNodeParams, ServerNodeResponses } from "@connext/vector-types";
 
 import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
@@ -29,7 +29,11 @@ let vectorEngine: VectorEngine;
 const pk = Wallet.fromMnemonic(config.mnemonic!).privateKey;
 const signer = new ChannelSigner(pk);
 
-const multichainTx = new MultichainTransactionService(config.chainProviders, pk);
+const multichainTx = new MultichainTransactionService(
+  config.chainProviders,
+  pk,
+  logger.child({ module: "MultichainTransactionService" }),
+);
 const vectorTx = new VectorTransactionService(multichainTx, logger.child({ module: "VectorTransactionService" }));
 const store = new PrismaStore();
 server.addHook("onReady", async () => {
@@ -73,7 +77,7 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   async (request, reply) => {
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params.channelAddress);
     try {
-      const res = await vectorEngine.request(params);
+      const res = await vectorEngine.request<"chan_getChannelState">(params);
       if (!res) {
         return reply.status(404).send({ message: "Channel not found", channelAddress: request.params.channelAddress });
       }
@@ -106,7 +110,7 @@ server.post<{ Body: ServerNodeParams.Setup }>(
       timeout: request.body.timeout,
     });
     try {
-      const res = await vectorEngine.request(rpc);
+      const res = await vectorEngine.request<"chan_setup">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
@@ -130,7 +134,11 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
       request.body.assetId,
     );
     if (depositRes.isError) {
-      return reply.status(400).send({ message: depositRes.getError()!.message ?? "" });
+      if (depositRes.getError()!.message === OnchainError.reasons.NotEnoughFunds) {
+        return reply.status(400).send({ message: depositRes.getError()!.message });
+      }
+      console.log("depositRes.getError(): ", depositRes.getError()?.message);
+      return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });
   },
@@ -145,7 +153,7 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
       channelAddress: request.body.channelAddress,
     });
     try {
-      const res = await vectorEngine.request(rpc);
+      const res = await vectorEngine.request<"chan_deposit">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
@@ -171,7 +179,7 @@ server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
       },
     } as any);
     try {
-      const res = await vectorEngine.request(rpc);
+      const res = await vectorEngine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
