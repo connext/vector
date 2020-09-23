@@ -178,7 +178,7 @@ const RpcRequestEngineParamsSchema = Type.Object({
   method: Type.Union(
     Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<string>],
   ),
-  params: Type.Any(),
+  params: Type.Optional(Type.Any()),
 });
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -214,6 +214,10 @@ const getChannelStateParamsSchema = Type.Object({
 
 const getChannelStateResponseSchema = {
   200: Type.Any(),
+};
+
+const getChannelStatesResponseSchema = {
+  200: Type.Array(TAddress),
 };
 
 // GET CONFIG
@@ -322,6 +326,9 @@ export namespace ServerNodeParams {
 export namespace ServerNodeResponses {
   export const GetChannelStateSchema = getChannelStateResponseSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;
+
+  export const GetChannelStatesSchema = getChannelStatesResponseSchema;
+  export type GetChannelStates = Static<typeof GetChannelStatesSchema["200"]>;
 
   export const GetConfigSchema = getConfigResponseSchema;
   export type GetConfig = Static<typeof GetConfigSchema["200"]>;

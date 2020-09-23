@@ -4,7 +4,6 @@ import {
   Address,
   ChainAddresses,
   ChainProviders,
-  ConditionalTransferResponse,
   FullChannelState,
   IChannelSigner,
   ILockService,
@@ -18,6 +17,8 @@ import {
   OutboundChannelUpdateError,
   TAddress,
   FullTransferState,
+  ChannelRpcMethods,
+  ChannelRpcMethodsResponsesMap,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -98,19 +99,14 @@ export class VectorEngine {
     return Result.ok(channel);
   }
 
-  private async getChannelStates(
-    channelAddress: Address,
-  ): Promise<Result<FullChannelState[], Error | OutboundChannelUpdateError>> {
-    const validate = ajv.compile(TAddress);
-    const valid = validate(channelAddress);
-    if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
-    }
+  private async getChannelStates(): Promise<Result<FullChannelState[], Error | OutboundChannelUpdateError>> {
     const channel = await this.vector.getChannelStates();
     return Result.ok(channel);
   }
 
-  private async setup(params: EngineParams.Setup): Promise<Result<any, OutboundChannelUpdateError | Error>> {
+  private async setup(
+    params: EngineParams.Setup,
+  ): Promise<Result<FullChannelState, OutboundChannelUpdateError | Error>> {
     this.logger.info({ params, method: "setup" }, "Method called");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
@@ -146,7 +142,7 @@ export class VectorEngine {
 
   private async conditionalTransfer(
     params: EngineParams.ConditionalTransfer,
-  ): Promise<Result<ConditionalTransferResponse, InvalidTransferType | OutboundChannelUpdateError>> {
+  ): Promise<Result<FullChannelState, InvalidTransferType | OutboundChannelUpdateError>> {
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -171,10 +167,10 @@ export class VectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    return Result.ok({ routingId: params.routingId });
+    return Result.ok(res);
   }
 
-  private async resolveCondition(params: EngineParams.ResolveTransfer): Promise<Result<any>> {
+  private async resolveCondition(params: EngineParams.ResolveTransfer): Promise<Result<FullChannelState, Error>> {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -201,10 +197,10 @@ export class VectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    return Result.ok({ routingId: params.routingId });
+    return Result.ok(res);
   }
 
-  private async withdraw(params: EngineParams.Withdraw): Promise<Result<any>> {
+  private async withdraw(params: EngineParams.Withdraw): Promise<Result<FullChannelState, Error>> {
     const validate = ajv.compile(EngineParams.WithdrawSchema);
     const valid = validate(params);
     if (!valid) {
@@ -229,14 +225,16 @@ export class VectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    return Result.ok({}); // TODO what do we return here?
+    return Result.ok(res); // TODO what do we return here?
   }
 
   // JSON RPC interface -- this will accept:
   // - "vector_deposit"
   // - "vector_createTransfer"
   // - "vector_resolveTransfer"
-  public async request(payload: EngineParams.RpcRequest): Promise<any> {
+  public async request<T extends ChannelRpcMethods>(
+    payload: EngineParams.RpcRequest,
+  ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     this.logger.info({ payload, method: "request" }, "Method called");
     const validate = ajv.compile(EngineParams.RpcRequestSchema);
     const valid = validate(payload);

@@ -67,7 +67,9 @@ server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema 
 
 server.get<{ Params: ServerNodeParams.GetChannelState }>(
   "/channel/:channelAddress",
-  { schema: { params: ServerNodeParams.GetChannelStateSchema, response: ServerNodeResponses.GetChannelStateSchema } },
+  // TODO: add response schema, if you set it as `Any` it doesn't work properly
+  //  might want to add the full channel state as a schema
+  { schema: { params: ServerNodeParams.GetChannelStateSchema } },
   async (request, reply) => {
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params.channelAddress);
     try {
@@ -83,11 +85,11 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   },
 );
 
-server.get("/channel/", { schema: { response: ServerNodeResponses.GetChannelStateSchema } }, async (request, reply) => {
+server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelStatesSchema } }, async (request, reply) => {
   const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
   try {
-    const res = await vectorEngine.request(params);
-    return reply.status(200).send(res);
+    const res = await vectorEngine.request<"chan_getChannelStates">(params);
+    return reply.status(200).send(res.map((chan) => chan.channelAddress));
   } catch (e) {
     logger.error({ message: e.message, stack: e.stack });
     return reply.status(500).send({ message: e.message });

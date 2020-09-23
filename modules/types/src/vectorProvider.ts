@@ -1,3 +1,4 @@
+import { FullChannelState } from "./channel";
 import { EngineParams } from "./schemas";
 
 export const ChannelRpcMethods = {
@@ -19,4 +20,14 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_createTransfer]: EngineParams.ConditionalTransfer;
   [ChannelRpcMethods.chan_resolveTransfer]: EngineParams.ResolveTransfer;
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
+};
+
+export type ChannelRpcMethodsResponsesMap = {
+  [ChannelRpcMethods.chan_getChannelState]: FullChannelState | undefined;
+  [ChannelRpcMethods.chan_getChannelStates]: FullChannelState[];
+  [ChannelRpcMethods.chan_setup]: FullChannelState;
+  [ChannelRpcMethods.chan_deposit]: FullChannelState;
+  [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
+  [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
+  [ChannelRpcMethods.chan_withdraw]: FullChannelState;
 };
