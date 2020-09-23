@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 unit=$1
 cmd="${2:-test}"

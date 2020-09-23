@@ -17,7 +17,7 @@ export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =
 export class VectorOnchainService implements IVectorOnchainService {
   constructor(
     private readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
-    private readonly log: Pino.BaseLogger,
+    private readonly log: Pino.BaseLogger = Pino(),
   ) {}
 
   async getChannelOnchainBalance(
