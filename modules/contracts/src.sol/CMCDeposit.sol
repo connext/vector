@@ -47,11 +47,17 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         override
         onlyOnProxy
     {
-        // WIP version just for basic testing
+        require(msg.sender == participants[0], "Only the initiator can call initiatorDeposit");
         if (assetId == address(0)) {
-            require(msg.value == amount, "oh no");
+            require(
+                msg.value == amount,
+                "msg.value does not match the provided amount"
+            );
         } else {
-            require(IERC20(assetId).transferFrom(msg.sender, address(this), amount), "oh no");
+            require(
+                IERC20(assetId).transferFrom(msg.sender, address(this), amount),
+                "ERC20: transferFrom failed"
+            );
         }
         _latestDeposit[assetId].amount = amount;
         _latestDeposit[assetId].nonce++;
