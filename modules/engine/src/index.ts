@@ -55,7 +55,7 @@ export class VectorEngine {
     Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
       hydratedProviders[chainId] = new JsonRpcProvider(providerUrl);
     });
-    const chainService = new VectorOnchainService(hydratedProviders);
+    const chainService = new VectorOnchainService(hydratedProviders, logger.child({ module: "VectorOnchainService" }));
     const vector = await Vector.connect(
       messaging,
       lock,

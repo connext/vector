@@ -1,6 +1,13 @@
 import * as evm from "@connext/pure-evm-wasm";
-import { Balance, ERC20Abi, FullTransferState, IVectorOnchainService, Result } from "@connext/vector-types";
-import { BigNumber, constants, Contract, providers } from "ethers";
+import {
+  Balance,
+  ERC20Abi,
+  FullTransferState,
+  IVectorOnchainService,
+  Result,
+  OnchainError,
+} from "@connext/vector-types";
+import { BigNumber, constants, Contract, providers, utils } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import Pino from "pino";
 
@@ -24,10 +31,10 @@ export class VectorOnchainService implements IVectorOnchainService {
     channelAddress: string,
     chainId: number,
     assetId: string,
-  ): Promise<Result<BigNumber, Error>> {
+  ): Promise<Result<BigNumber, OnchainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new Error(`No provider exists for ${chainId}`));
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let onchainBalance: BigNumber;
@@ -53,10 +60,10 @@ export class VectorOnchainService implements IVectorOnchainService {
     chainId: number,
     assetId: string,
     latestDepositNonce: number,
-  ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, Error>> {
+  ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, OnchainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new Error(`No provider exists for ${chainId}`));
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
 
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
@@ -75,10 +82,13 @@ export class VectorOnchainService implements IVectorOnchainService {
     return Result.ok(latestDepositA);
   }
 
-  async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>> {
+  async getChannelFactoryBytecode(
+    channelFactoryAddress: string,
+    chainId: number,
+  ): Promise<Result<string, OnchainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new Error(`No provider exists for ${chainId}`));
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
 
     const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
@@ -90,10 +100,14 @@ export class VectorOnchainService implements IVectorOnchainService {
     }
   }
 
-  async create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>> {
+  async create(
+    transfer: FullTransferState,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<boolean, OnchainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new Error(`No provider exists for ${chainId}`));
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
     const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
     const contract = new Contract(transfer.transferId, TransferDefinition.abi, provider);
@@ -114,11 +128,15 @@ export class VectorOnchainService implements IVectorOnchainService {
     }
   }
 
-  async resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>> {
+  async resolve(
+    transfer: FullTransferState,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<Balance, OnchainError>> {
     // Get provider
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new Error(`No provider exists for ${chainId}`));
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
 
     // Try to encode
@@ -152,6 +170,46 @@ export class VectorOnchainService implements IVectorOnchainService {
         to: ret.to,
         amount: ret.amount.map((a: BigNumber) => a.toString()),
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getChannelAddress(
+    initiator: string,
+    responder: string,
+    channelFactoryAddress: string,
+    chainId: number,
+  ): Promise<Result<string, OnchainError>> {
+    // Get provider
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+    }
+
+    const vectorChannel = new utils.Interface(ChannelFactory.abi);
+    const data = vectorChannel.encodeFunctionData("getChannelAddress", [initiator, responder]);
+    try {
+      const derivedAddress = await provider.call({
+        data,
+        to: channelFactoryAddress,
+        value: 0,
+      });
+      return Result.ok(derivedAddress);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getCode(address: string, chainId: number): Promise<Result<string, OnchainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+    }
+
+    try {
+      const code = await provider.getCode(address);
+      return Result.ok(code);
     } catch (e) {
       return Result.fail(e);
     }

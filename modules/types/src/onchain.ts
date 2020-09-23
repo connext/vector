@@ -25,6 +25,7 @@ export const ERC20Abi = [
 export class OnchainError extends VectorError {
   readonly type = VectorError.errors.OnchainError;
   static readonly reasons = {
+    ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
@@ -41,24 +42,6 @@ export type MinimalTransaction = {
   data: HexString;
 };
 
-export interface IMultichainTransactionService {
-  sendTx(minTx: MinimalTransaction, chainId: number): Promise<Result<providers.TransactionResponse, OnchainError>>;
-  getCode(address: Address, chainId: number): Promise<Result<string, OnchainError>>;
-}
-
-export interface IVectorTransactionService {
-  sendDepositTx(
-    channelState: FullChannelState,
-    sender: string,
-    amount: string,
-    assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
-  sendWithdrawTx(
-    channelState: FullChannelState,
-    minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
-}
-
 export interface IVectorOnchainService {
   getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
 
@@ -72,4 +55,18 @@ export interface IVectorOnchainService {
   getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
   create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
   resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
+  getCode(address: Address, chainId: number): Promise<Result<string, OnchainError>>;
+}
+
+export interface IVectorTransactionService extends IVectorOnchainService {
+  sendDepositTx(
+    channelState: FullChannelState,
+    sender: string,
+    amount: string,
+    assetId: string,
+  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
+  sendWithdrawTx(
+    channelState: FullChannelState,
+    minTx: MinimalTransaction,
+  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
 }

@@ -14,7 +14,7 @@ describe("ChannelFactory", () => {
   let chainId: number;
 
   beforeEach(async () => {
-    deployer = (await provider.getWallets())[0];
+    deployer = provider.getWallets()[0];
     chainId = (await provider.getNetwork()).chainId;
 
     channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, deployer).deploy();
@@ -34,7 +34,7 @@ describe("ChannelFactory", () => {
   it("should create a channel", async () => {
     const initiator = getRandomChannelSigner();
     const responder = getRandomChannelSigner();
-    const created = new Promise((res) => {
+    const created = new Promise(res => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
     const tx = await channelFactory.createChannel(initiator.address, responder.address);
@@ -57,8 +57,8 @@ describe("ChannelFactory", () => {
     // Use funded account for initiator
     const initiator = new ChannelSigner(deployer.privateKey, provider);
     const responder = getRandomChannelSigner();
-    const created = new Promise<string>((res) => {
-      channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
+    const created = new Promise<string>(res => {
+      channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
         res(data);
       });
     });
@@ -82,6 +82,9 @@ describe("ChannelFactory", () => {
 
     const balance = await provider.getBalance(channelAddress as string);
     expect(balance).to.be.eq(value);
+
+    const code = await provider.getCode(channelAddress);
+    expect(code).to.not.be.eq("0x");
 
     const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).latestDepositByAssetId(
       constants.AddressZero,
