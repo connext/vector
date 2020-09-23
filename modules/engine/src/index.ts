@@ -86,6 +86,30 @@ export class VectorEngine {
     });
   }
 
+  private async getChannelState(
+    channelAddress: Address,
+  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(TAddress);
+    const valid = validate(channelAddress);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
+    const channel = await this.vector.getChannelState(channelAddress);
+    return Result.ok(channel);
+  }
+
+  private async getChannelStates(
+    channelAddress: Address,
+  ): Promise<Result<FullChannelState[], Error | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(TAddress);
+    const valid = validate(channelAddress);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
+    const channel = await this.vector.getChannelStates();
+    return Result.ok(channel);
+  }
+
   private async setup(params: EngineParams.Setup): Promise<Result<any, OutboundChannelUpdateError | Error>> {
     this.logger.info({ params, method: "setup" }, "Method called");
     const validate = ajv.compile(EngineParams.SetupSchema);
@@ -150,33 +174,12 @@ export class VectorEngine {
     return Result.ok({ routingId: params.routingId });
   }
 
-  private async getChannelState(
-    channelAddress: Address,
-  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
-    const validate = ajv.compile(TAddress);
-    const valid = validate(channelAddress);
-    if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
-    }
-    const channel = await this.vector.getChannelState(channelAddress);
-    return Result.ok(channel);
-  }
-
-  private async getChannelStates(
-    channelAddress: Address,
-  ): Promise<Result<FullChannelState[], Error | OutboundChannelUpdateError>> {
-    const validate = ajv.compile(TAddress);
-    const valid = validate(channelAddress);
-    if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
-    }
-    const channel = await this.vector.getChannelStates();
-    return Result.ok(channel);
-  }
-
   private async resolveCondition(params: EngineParams.ResolveTransfer): Promise<Result<any>> {
-    // TODO types
-    // TODO input validation
+    const validate = ajv.compile(EngineParams.ResolveTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
     const transfers = await this.store.getActiveTransfers(params.channelAddress);
     let transfer: FullTransferState | undefined;
     transfers.find((instance) => instance.meta.routingId === params.routingId);
@@ -202,8 +205,12 @@ export class VectorEngine {
   }
 
   private async withdraw(params: EngineParams.Withdraw): Promise<Result<any>> {
-    // TODO types
-    // TODO input validation
+    const validate = ajv.compile(EngineParams.WithdrawSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
+
     const channel = await this.store.getChannelState(params.channelAddress);
     if (!channel) {
       return Result.fail(
