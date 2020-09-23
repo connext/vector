@@ -161,7 +161,7 @@ export async function generateUpdate<T extends UpdateType>(
   let transferState: FullTransferState | undefined;
   switch (params.type) {
     case UpdateType.setup: {
-      unsigned = await generateSetupUpdate(params as UpdateParams<"setup">, signer);
+      unsigned = generateSetupUpdate(params as UpdateParams<"setup">, signer);
       break;
     }
     case UpdateType.deposit: {
@@ -170,7 +170,7 @@ export async function generateUpdate<T extends UpdateType>(
     }
     case UpdateType.create: {
       const transfers = await storeService.getActiveTransfers(params.channelAddress);
-      unsigned = await generateCreateUpdate(state!, params as UpdateParams<"create">, signer, transfers);
+      unsigned = generateCreateUpdate(state!, params as UpdateParams<"create">, signer, transfers);
       break;
     }
     case UpdateType.resolve: {
@@ -211,10 +211,10 @@ export async function generateUpdate<T extends UpdateType>(
   });
 }
 
-async function generateSetupUpdate(
+function generateSetupUpdate(
   params: UpdateParams<"setup">, // already validated
   signer: IChannelSigner,
-): Promise<ChannelUpdate<"setup">> {
+): ChannelUpdate<"setup"> {
   // During channel creation, you have no channel state, so create
   // the base values
   const publicIdentifiers = [signer.publicIdentifier, params.details.counterpartyIdentifier];
@@ -294,12 +294,12 @@ async function generateDepositUpdate(
 }
 
 // Generates the transfer creation update based on user input
-async function generateCreateUpdate(
+function generateCreateUpdate(
   state: FullChannelState,
   params: UpdateParams<"create">,
   signer: IChannelSigner,
   transfers: CoreTransferState[],
-): Promise<ChannelUpdate<"create">> {
+): ChannelUpdate<"create"> {
   const {
     details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
   } = params;
@@ -388,7 +388,7 @@ async function generateResolveUpdate(
     state.networkContext.chainId,
     LinkedTransfer.bytecode,
   );
-  // TODO: Change generate functions to return Result types
+
   if (transferBalanceResult.isError) {
     throw transferBalanceResult.getError()!;
   }

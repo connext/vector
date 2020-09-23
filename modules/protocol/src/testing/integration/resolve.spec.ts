@@ -40,4 +40,14 @@ describe(testName, () => {
 
   // We neeed this to test whether resolve still works if the funds in the transfer are burned
   it.skip("should work for withdraw", async () => {});
+  it.skip("should work for alice resolving an eth transfer", async () => {});
+  it.skip("should work for alice resolving an eth transfer out of channel", async () => {});
+  it.skip("should work for alice resolving a token transfer", async () => {});
+  it.skip("should work for alice resolving a token transfer out of channel", async () => {});
+  it.skip("should work for bob resolving an eth transfer", async () => {});
+  it.skip("should work for bob resolving an eth transfer out of channel", async () => {});
+  it.skip("should work for bob resolving a token transfer", async () => {});
+  it.skip("should work for bob resolving a token transfer out of channel", async () => {});
+  it.skip("should work concurrently", async () => {});
+  it.skip("should work if channel is out of sync", async () => {});
 });

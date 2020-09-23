@@ -419,6 +419,14 @@ type GenerateUpdateTestParams = {
 };
 
 describe("generateUpdate", () => {
+
+  // FIXME: THESE ARE BLOCKING TESTS!
+  it.skip("should fail if it fails parameter validation", () => {});
+  it.skip("should fail if it is unable to reconcile the deposit", () => {});
+  it.skip("should fail if trying to resolve an inactive transfer", () => {});
+  it.skip("should fail if fails to call resolve using chain service", () => {});it.skip("should work if creating a transfer to someone outside of channel", () => {});
+  it.skip("should work if resolving a transfer to someone outside of channel", () => {});
+
   // Get channel constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];

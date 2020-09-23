@@ -22,4 +22,6 @@ describe(testName, () => {
   it("should setup a channel between Alice and Bob", async () => {
     await setupChannel(alice, bob);
   });
+
+  it.skip("should work concurrently", async () => {});
 });

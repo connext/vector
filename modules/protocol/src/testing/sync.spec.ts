@@ -40,7 +40,40 @@ import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";
 import { env } from "./utils";
 
+// TODO: Sync todos:
+// - signData should use a Result type
+
 describe("inbound", () => {
+  // FIXME: These are blocking tests!
+  it.skip("should fail if there is no channel in store and it is not a setup update", async () => {});
+  it.skip("should fail if there is no transfer in the store and it is a resolve update", async () => {});
+  it.skip("should fail if you are 3+ states behind the update", async () => {});
+  it.skip("should fail if validating the update fails", async () => {});
+  it.skip("should fail if applying the update fails", async () => {});
+  it.skip("should fail if signing the data fails", async () => {});
+  it.skip("should fail if saving the data fails", async () => {});
+  it.skip("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {});
+  describe.skip("should sync channel and retry update IFF state nonce is behind by 2 updates", async () => {
+    describe.skip("initiator trying deposit", () => {
+      it("missed setup, should work", async () => {});
+      it("missed deposit, should work", async () => {});
+      it("missed create, should work", async () => {});
+      it("missed resolve, should work", async () => {});
+    });
+
+    describe.skip("initiator trying create", () => {
+      it("missed deposit, should work", async () => {});
+      it("missed create, should work", async () => {});
+      it("missed resolve, should work", async () => {});
+    });
+
+    describe.skip("initiator trying resolve", () => {
+      it("missed deposit, should work", async () => {});
+      it("missed create, should work", async () => {});
+      it("missed resolve, should work", async () => {});
+    });
+  });
+
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
@@ -77,14 +110,14 @@ describe("inbound", () => {
     // Verify result
     const emptyChannel = {
       channelAddress: update.channelAddress,
-      participants: signers.map((s) => s.address),
+      participants: signers.map(s => s.address),
       networkContext: update.details.networkContext,
       assetIds: [],
       balances: [],
       lockedBalance: [],
       merkleRoot: constants.HashZero,
       nonce: 0,
-      publicIdentifiers: signers.map((s) => s.publicIdentifier),
+      publicIdentifiers: signers.map(s => s.publicIdentifier),
       timeout: update.details.timeout,
       latestUpdate: {} as any, // There is no latest update on setup
       latestDepositNonce: 0,
@@ -122,7 +155,7 @@ describe("inbound", () => {
 
     // Create the update to propose (a create)
     const transferInitialState = createTestLinkedTransferState({
-      balance: { to: signers.map((s) => s.address), amount: ["1", "0"] },
+      balance: { to: signers.map(s => s.address), amount: ["1", "0"] },
     });
     const assetId = constants.AddressZero;
     const coreState = createCoreTransferState({
@@ -154,7 +187,7 @@ describe("inbound", () => {
     expect(storedState?.latestUpdate).to.containSubset(update);
     expect(storedState?.nonce).to.be.eq(update.nonce);
     expect(storedCommitment).to.be.ok;
-    expect(storedCommitment!.signatures.filter((x) => !!x).length).to.be.eq(2);
+    expect(storedCommitment!.signatures.filter(x => !!x).length).to.be.eq(2);
   });
 
   it("should update if stored state is in sync", async () => {
@@ -179,11 +212,19 @@ describe("inbound", () => {
     // Verify stored data
     expect(storedState?.nonce).to.be.eq(update.nonce);
     expect(storedCommitment).to.be.ok;
-    expect(storedCommitment!.signatures.filter((x) => !!x).length).to.be.eq(2);
+    expect(storedCommitment!.signatures.filter(x => !!x).length).to.be.eq(2);
   });
 });
 
 describe("outbound", () => {
+  // FIXME: These are blocking tests!
+  it.skip("should fail if resolving a transfer and none exists in store", async () => {});
+  it.skip("should fail if signatures are invalid", async () => {});
+  it.skip("should fail if update is single signed", async () => {});
+  it.skip("should fail if the channel is not saved to store", async () => {});
+  it.skip("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {});
+  // .. see other skipped tests at bottom ..
+
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const providerUrl = Object.values(chainProviders)[0] as string;
@@ -285,7 +326,7 @@ describe("outbound", () => {
       nonce: 2,
       signatures: ["", doubleSigned[1]],
       assetId: params.details.assetId,
-      balance: { to: signers.map((s) => s.address), amount: ["0", depositBAmt.toString()] },
+      balance: { to: signers.map(s => s.address), amount: ["0", depositBAmt.toString()] },
     });
 
     // Set the messaging mocks to return the proper update from the counterparty
@@ -347,7 +388,7 @@ describe("outbound", () => {
         const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
           channelAddress,
           nonce: missedUpdateNonce,
-          balance: { to: signers.map((s) => s.address), amount: ["0", userBBalance.toString()] },
+          balance: { to: signers.map(s => s.address), amount: ["0", userBBalance.toString()] },
           assetId,
           details: { latestDepositNonce: depositANonce.sub(1).toNumber() },
           signatures: [mkSig("0xaaaaccccc"), mkSig("0xbbbbddddd")],
@@ -360,7 +401,7 @@ describe("outbound", () => {
           signatures: [mkSig("0xaaabbb"), mkSig("0xcccddd")],
           nonce: missedUpdateNonce + 1,
           assetId,
-          balance: { to: signers.map((s) => s.address), amount: [depositAAmt.toString(), userBBalance.toString()] },
+          balance: { to: signers.map(s => s.address), amount: [depositAAmt.toString(), userBBalance.toString()] },
         });
 
         // Set messaging mocks:

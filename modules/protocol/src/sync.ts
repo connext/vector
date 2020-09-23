@@ -195,7 +195,7 @@ export async function inbound(
     }
 
     const publicIdentifiers =
-      update.signatures.filter((x) => !!x).length === 1
+      update.signatures.filter(x => !!x).length === 1
         ? [update.fromIdentifier, update.toIdentifier]
         : [update.toIdentifier, update.fromIdentifier];
 
@@ -245,7 +245,6 @@ export async function inbound(
   }
 
   // validate and merge
-  // TODO: is this the correct inbound validation?
   const inboundRes = await validateIncomingChannelUpdate(update, previousUpdate, channelFromStore, transfer);
   if (inboundRes.isError) {
     logger.error(
@@ -260,7 +259,19 @@ export async function inbound(
   // sign update
   const signed = await signData(updatedChannelState, update, signer, transfer);
   // save channel
-  await storeService.saveChannelState(signed.channel, signed.commitment, transfer);
+  try {
+    await storeService.saveChannelState(signed.channel, signed.commitment, transfer);
+  } catch (e) {
+    logger.error({ method: "inbound", channel: update.channelAddress, error: e.message }, "Error saving channel state");
+    const error = new InboundChannelUpdateError(
+      InboundChannelUpdateError.reasons.SaveChannelFailed,
+      update,
+      signed.channel,
+      { error: e.message },
+    );
+    messagingService.respondWithProtocolError(inbox, error);
+    return Result.fail(error);
+  }
 
   // send to counterparty
   await messagingService.respondToProtocolMessage(inbox, signed.channel.latestUpdate, channelFromStore.latestUpdate);
@@ -311,8 +322,6 @@ async function validateIncomingChannelUpdate(
   //   );
   //   return Result.fail(error)
   // }
-  // TODO: should also make sure that there are *2* signatures
-  // await counterpartyLatestUpdate.commitment.assertSignatures();
 
   // Get the difference between the stored and received nonces
   const diff = requestedUpdate.nonce - myState.nonce;
@@ -421,21 +430,23 @@ const syncStateAndRecreateUpdate = async (
   // parameters.
 
   const counterpartyUpdate = receivedError.update;
-  // In the case where the channel is undefined, the only possible
-  // update you can sync is a `setup` update
-  if (!myChannel && counterpartyUpdate.type === UpdateType.setup) {
-    // TODO: how to handle setup sync issues? In this case, it is highly
-    // likely you would not be able to safely "retry" whatever update
-    // you had originally proposed, but here is the place where the
-    // edge case could be handled
-    throw new Error("Figure out how to handle setup sync updates");
+  // You would not be able to setup a channel with a counter-
+  // party twice, and this should be handled on validation. A sync
+  // here is likely indicative of a store issue, do not sync
+  if (counterpartyUpdate.type === UpdateType.setup) {
+    return Result.fail(
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, myChannel, {
+        error: "Cannot sync setup update",
+        counterpartyError: receivedError.message,
+      }),
+    );
   }
 
   // Otherwise, if the channel is not defined you cannot sync the update
   if (!myChannel) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, attemptedParams, myChannel, {
-        error: receivedError.message,
+        counterpartyError: receivedError.message,
         counterpartyUpdate: counterpartyUpdate.nonce,
       }),
     );
@@ -446,7 +457,7 @@ const syncStateAndRecreateUpdate = async (
   if (counterpartyUpdate.nonce !== myChannel.nonce + 1) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.RestoreNeeded, attemptedParams, myChannel, {
-        error: receivedError.message,
+        counterpartyError: receivedError.message,
         counterpartyUpdate: counterpartyUpdate.nonce,
       }),
     );
@@ -469,6 +480,7 @@ const syncStateAndRecreateUpdate = async (
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, myChannel, {
         error: applyRes.getError()!.message,
         counterpartyUpdate: counterpartyUpdate,
+        counterpartyError: receivedError.message,
       }),
     );
   }
@@ -480,6 +492,7 @@ const syncStateAndRecreateUpdate = async (
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.BadSignatures, attemptedParams, myChannel, {
         error: sigRes,
         counterpartyUpdate: counterpartyUpdate,
+        counterpartyError: receivedError.message,
       }),
     );
   }
@@ -488,7 +501,7 @@ const syncStateAndRecreateUpdate = async (
   await storeService.saveChannelState(
     syncedChannel,
     await generateSignedChannelCommitment(syncedChannel, signer, counterpartyUpdate.signatures),
-    undefined, // TODO: SAVE TRANSFER!!!!
+    transfer,
   );
 
   // Update successfully validated and applied to channel, now
