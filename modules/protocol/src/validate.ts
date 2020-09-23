@@ -77,7 +77,7 @@ export async function validateUpdate<T extends UpdateType = any>(
   // be a double signed state
 
   // First, validate all the common fields within the channel update
-  const { channelAddress, fromIdentifier, toIdentifier, nonce, assetId } = update;
+  const { channelAddress, fromIdentifier, toIdentifier, nonce, assetAddress } = update;
 
   // The channel address should not change from the state
   if (channelAddress !== state.channelAddress) {
@@ -105,9 +105,11 @@ export async function validateUpdate<T extends UpdateType = any>(
     return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StaleChannel, update, state));
   }
 
-  // Make sure the assetId is a valid address
-  if (!isAddress(assetId)) {
-    return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InvalidAssetId, update, state));
+  // Make sure the assetAddress is a valid address
+  if (!isAddress(assetAddress)) {
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InvalidAssetAddress, update, state),
+    );
   }
 
   // TODO: Validate any signatures that exist
@@ -160,7 +162,7 @@ function validateSetup(
   // Validate initial nonce + latestDepositNonce
   // TODO: is initial nonce 0 or 1?
 
-  // Validate merkle root is empty hash, assetIds are empty
+  // Validate merkle root is empty hash, assetAddresss are empty
   logger.error("validateSetup not implemented", { update, state });
   return Result.ok(undefined);
 }

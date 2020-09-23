@@ -86,9 +86,11 @@ describe("ChannelFactory", () => {
     const code = await provider.getCode(channelAddress);
     expect(code).to.not.be.eq("0x");
 
-    const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).latestDepositByAssetId(
-      constants.AddressZero,
-    );
+    const latestDeposit = await new Contract(
+      channelAddress,
+      ChannelMastercopy.abi,
+      deployer,
+    ).latestDepositByAssetAddress(constants.AddressZero);
     expect(latestDeposit.nonce).to.be.eq(1);
     expect(latestDeposit.amount).to.be.eq(value);
   });

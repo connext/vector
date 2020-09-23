@@ -112,7 +112,7 @@ describe("inbound", () => {
       channelAddress: update.channelAddress,
       participants: signers.map(s => s.address),
       networkContext: update.details.networkContext,
-      assetIds: [],
+      assetAddresss: [],
       balances: [],
       lockedBalance: [],
       merkleRoot: constants.HashZero,
@@ -157,7 +157,7 @@ describe("inbound", () => {
     const transferInitialState = createTestLinkedTransferState({
       balance: { to: signers.map(s => s.address), amount: ["1", "0"] },
     });
-    const assetId = constants.AddressZero;
+    const assetAddress = constants.AddressZero;
     const coreState = createCoreTransferState({
       initialStateHash: hashTransferState(transferInitialState, LinkedTransferStateEncoding),
     });
@@ -165,7 +165,7 @@ describe("inbound", () => {
     const tree = new MerkleTree([hash], hashCoreTransferState);
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
       nonce: 3,
-      assetId,
+      assetAddress,
       balance: transferInitialState.balance,
       details: {
         ...coreState,
@@ -293,11 +293,11 @@ describe("outbound", () => {
 
   it("should successfully initiate an update if channels are in sync, or initiator is ahead by 1 (update nonce > state.nonce)", async () => {
     // Create the update (a user deposit on a setup channel)
-    const assetId = constants.AddressZero;
+    const assetAddress = constants.AddressZero;
     const depositBAmt = BigNumber.from(16);
     const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { assetId },
+      details: { assetAddress },
     });
 
     // Create the channel and store mocks for the user
@@ -306,7 +306,7 @@ describe("outbound", () => {
       nonce: 1,
       balances: [],
       lockedBalance: [],
-      assetIds: [],
+      assetAddresss: [],
       latestDepositNonce: 0,
       latestUpdate: { type: UpdateType.setup },
     });
@@ -314,7 +314,9 @@ describe("outbound", () => {
 
     // Set the onchain service mocks
     chainService.getChannelOnchainBalance.resolves(Result.ok(depositBAmt));
-    chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: BigNumber.from(0), amount: BigNumber.from(0) }));
+    chainService.getLatestDepositByAssetAddress.resolves(
+      Result.ok({ nonce: BigNumber.from(0), amount: BigNumber.from(0) }),
+    );
 
     // Generate the update from the params
     const doubleSigned = [mkSig("0xaaaaccccc"), mkSig("0xbbbbddddd")];
@@ -325,7 +327,7 @@ describe("outbound", () => {
       },
       nonce: 2,
       signatures: ["", doubleSigned[1]],
-      assetId: params.details.assetId,
+      assetAddress: params.details.assetAddress,
       balance: { to: signers.map(s => s.address), amount: ["0", depositBAmt.toString()] },
     });
 
@@ -360,19 +362,19 @@ describe("outbound", () => {
     describe("initiator trying deposit", () => {
       // Assume the initiator is Alice, and she is always trying to reconcile
       // a deposit. Generate test constants
-      const assetId = constants.AddressZero;
+      const assetAddress = constants.AddressZero;
       const userBBalance = BigNumber.from(9);
       const missedUpdateNonce = 2;
       const depositAAmt = BigNumber.from(14);
       const depositANonce = BigNumber.from(1);
       const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
         channelAddress,
-        details: { assetId },
+        details: { assetAddress },
       });
 
       beforeEach(() => {
         // Set the chain service mock
-        chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: depositANonce, amount: depositAAmt }));
+        chainService.getLatestDepositByAssetAddress.resolves(Result.ok({ nonce: depositANonce, amount: depositAAmt }));
 
         chainService.getChannelOnchainBalance.resolves(Result.ok(userBBalance.add(depositAAmt)));
       });
@@ -389,7 +391,7 @@ describe("outbound", () => {
           channelAddress,
           nonce: missedUpdateNonce,
           balance: { to: signers.map(s => s.address), amount: ["0", userBBalance.toString()] },
-          assetId,
+          assetAddress,
           details: { latestDepositNonce: depositANonce.sub(1).toNumber() },
           signatures: [mkSig("0xaaaaccccc"), mkSig("0xbbbbddddd")],
         });
@@ -400,7 +402,7 @@ describe("outbound", () => {
           details: { latestDepositNonce: depositANonce.toNumber() },
           signatures: [mkSig("0xaaabbb"), mkSig("0xcccddd")],
           nonce: missedUpdateNonce + 1,
-          assetId,
+          assetAddress,
           balance: { to: signers.map(s => s.address), amount: [depositAAmt.toString(), userBBalance.toString()] },
         });
 
@@ -424,7 +426,7 @@ describe("outbound", () => {
           latestUpdate: {},
           balances: [],
           lockedBalance: [],
-          assetIds: [],
+          assetAddresss: [],
         });
         store.getChannelState.resolves(staleChannel);
 

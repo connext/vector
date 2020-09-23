@@ -76,7 +76,7 @@ contract ChannelFactory is IChannelFactory {
     function createChannelAndDepositA(
         address initiator,
         address responder,
-        address assetId,
+        address assetAddress,
         uint256 amount
     )
         public
@@ -87,17 +87,17 @@ contract ChannelFactory is IChannelFactory {
         channel = createChannel(initiator, responder);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
-        if (assetId != address(0)) {
+        if (assetAddress != address(0)) {
             require(
-                IERC20(assetId).transferFrom(msg.sender, address(this), amount),
+                IERC20(assetAddress).transferFrom(msg.sender, address(this), amount),
                 "ChannelFactory: token transferFrom failed"
             );
             require(
-                IERC20(assetId).approve(address(channel), amount),
+                IERC20(assetAddress).approve(address(channel), amount),
                 "ChannelFactory: token approve failed"
             );
         }
-        channel.depositA{value: msg.value}(assetId, amount);
+        channel.depositA{value: msg.value}(assetAddress, amount);
     }
 
     ////////////////////////////////////////

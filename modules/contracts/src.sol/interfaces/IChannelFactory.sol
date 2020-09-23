@@ -25,7 +25,7 @@ interface IChannelFactory {
     function createChannelAndDepositA(
         address initiator,
         address responder,
-        address assetId,
+        address assetAddress,
         uint256 amount
     ) external payable returns (IVectorChannel);
 

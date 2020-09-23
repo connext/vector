@@ -43,12 +43,16 @@ export type MinimalTransaction = {
 };
 
 export interface IVectorOnchainService {
-  getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
-
-  getLatestDepositByAssetId(
+  getChannelOnchainBalance(
     channelAddress: string,
     chainId: number,
-    assetId: string,
+    assetAddress: string,
+  ): Promise<Result<BigNumber, Error>>;
+
+  getLatestDepositByAssetAddress(
+    channelAddress: string,
+    chainId: number,
+    assetAddress: string,
     latestDepositNonce: number,
   ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, Error>>;
 
@@ -63,7 +67,7 @@ export interface IVectorTransactionService extends IVectorOnchainService {
     channelState: FullChannelState,
     sender: string,
     amount: string,
-    assetId: string,
+    assetAddress: string,
   ): Promise<Result<providers.TransactionResponse, OnchainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,

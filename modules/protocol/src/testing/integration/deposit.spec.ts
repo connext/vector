@@ -31,16 +31,16 @@ describe(testName, () => {
 
   it("should deposit eth for Alice (depositA)", async () => {
     const depositAmount = BigNumber.from("1000");
-    const assetId = constants.AddressZero;
+    const assetAddress = constants.AddressZero;
 
-    await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+    await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetAddress, depositAmount);
   });
 
   it("should deposit eth for Bob (multisig deposit)", async () => {
     const depositAmount = BigNumber.from("1000");
-    const assetId = constants.AddressZero;
+    const assetAddress = constants.AddressZero;
 
-    await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
+    await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetAddress, depositAmount);
   });
 
   it.skip("should deposit tokens for alice", async () => {});
@@ -48,6 +48,6 @@ describe(testName, () => {
   it.skip("should work after multiple deposits", async () => {});
   it.skip("should work if there have been no deposits onchain", async () => {});
   it.skip("should work if the channel is out of sync", async () => {});
-  it.skip("should work concurrently", async () => {})
+  it.skip("should work concurrently", async () => {});
   it.skip("should work if channel is out of sync", async () => {});
 });

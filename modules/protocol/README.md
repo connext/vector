@@ -60,7 +60,7 @@ A deposit update should occur after deposits have been send to chain (either by 
 
 The deposit update is used to confirm an already-mined deposit tx into the channel `balance`. To do this safely, the following must occur:
 
-1. The update initiator's balance must be incremented by the deposit amount (calculating new balances for each party using onchain data as described in the [Funding a Channel](https://github.com/connext/vector/blob/master/modules/contracts/README.md#funding-a-channel) writeup). Note that this is per-assetId, so a new assetId may need to be added to the `assetId` array.
+1. The update initiator's balance must be incremented by the deposit amount (calculating new balances for each party using onchain data as described in the [Funding a Channel](https://github.com/connext/vector/blob/master/modules/contracts/README.md#funding-a-channel) writeup). Note that this is per-assetAddress, so a new assetAddress may need to be added to the `assetAddress` array.
 2. The channel nonce must be updated by 1.
 3. The `latestDepositNonce` in state must be set to whatever is onchain for Alice.
 4. A new `ChannelCommitment` must be generated using the above and signed by both parties.
@@ -72,8 +72,8 @@ A create update should occur when both parties want to create a new conditional 
 
 The create update must do the following:
 
-1. Decrement the channel state `balance` on one (or both) sides by the amount that will be locked in the transfer (indexed by assetId).
-2. Increase the `lockedBalance` in the channel state by the total locked maount of value (indexed by assetId).
+1. Decrement the channel state `balance` on one (or both) sides by the amount that will be locked in the transfer (indexed by assetAddress).
+2. Increase the `lockedBalance` in the channel state by the total locked maount of value (indexed by assetAddress).
 3. Update the channel nonce by 1.
 4. Create a new `TransferState` with a status of CREATED, passing in the correct params.
 5. Hash the `TransferState` and add it to the merkle root in the new channel state.

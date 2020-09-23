@@ -87,17 +87,17 @@ describe("applyUpdate", () => {
         latestDepositNonce: 0,
         balances: [],
         lockedBalance: [],
-        assetIds: [],
+        assetAddresss: [],
         merkleRoot: mkHash(),
       },
     },
     {
-      name: "should work for deposit (adding new assetId)",
+      name: "should work for deposit (adding new assetAddress)",
       updateType: UpdateType.deposit,
       stateOverrides: {
         nonce: 1,
         balances: [],
-        assetIds: [],
+        assetAddresss: [],
         lockedBalance: [],
         latestDepositNonce: 0,
       },
@@ -105,17 +105,17 @@ describe("applyUpdate", () => {
         details: { latestDepositNonce: 0 },
         nonce: 2,
         balance: { to: participants, amount: ["0", "17"] },
-        assetId: mkAddress("0xaddee"),
+        assetAddress: mkAddress("0xaddee"),
       },
       expected: {
         latestDepositNonce: 0,
         balances: [{ to: participants, amount: ["0", "17"] }],
         lockedBalance: [],
-        assetIds: [mkAddress("0xaddee")],
+        assetAddresss: [mkAddress("0xaddee")],
       },
     },
     {
-      name: "should work for deposit (existing assetId)",
+      name: "should work for deposit (existing assetAddress)",
       updateType: UpdateType.deposit,
       stateOverrides: {
         nonce: 15,
@@ -124,7 +124,7 @@ describe("applyUpdate", () => {
           { to: participants, amount: ["10", "1"] },
           { to: participants, amount: ["4", "7"] },
         ],
-        assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
+        assetAddresss: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
         lockedBalance: ["", "", "7"],
         latestDepositNonce: 7,
       },
@@ -132,7 +132,7 @@ describe("applyUpdate", () => {
         details: { latestDepositNonce: 8 },
         nonce: 16,
         balance: { to: participants, amount: ["16", "17"] },
-        assetId: mkAddress("0xfed"),
+        assetAddress: mkAddress("0xfed"),
       },
       expected: {
         nonce: 16,
@@ -143,7 +143,7 @@ describe("applyUpdate", () => {
           { to: participants, amount: ["4", "7"] },
         ],
         lockedBalance: ["", "", "7"],
-        assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
+        assetAddresss: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
       },
     },
     {
@@ -156,7 +156,7 @@ describe("applyUpdate", () => {
           { to: participants, amount: ["13", "6"] },
           { to: participants, amount: ["4", "2"] },
         ],
-        assetIds: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
+        assetAddresss: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
         lockedBalance: ["", "5", "7"],
         merkleRoot: mkHash("0xafeb"),
       },
@@ -165,17 +165,17 @@ describe("applyUpdate", () => {
         balance: { to: participants, amount: ["13", "2"] },
         fromIdentifier: publicIdentifiers[1],
         toIdentifier: publicIdentifiers[0],
-        assetId: mkAddress("0xdeffff"),
+        assetAddress: mkAddress("0xdeffff"),
       },
       transferOverrides: {
         initialBalance: { to: [participants[1], participants[0]], amount: ["4", "0"] },
-        assetId: mkAddress("0xdeffff"),
+        assetAddress: mkAddress("0xdeffff"),
       },
       expected: {
         nonce: 6,
         balances: [{ to: participants, amount: ["13", "2"] }],
         lockedBalance: ["", "9", "7"],
-        assetIds: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
+        assetAddresss: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
         merkleRoot,
       },
     },
@@ -185,7 +185,7 @@ describe("applyUpdate", () => {
       stateOverrides: {
         nonce: 5,
         balances: [{ to: participants, amount: ["43", "22"] }],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         lockedBalance: [],
         merkleRoot: mkHash(),
       },
@@ -193,16 +193,16 @@ describe("applyUpdate", () => {
         balance: { to: participants, amount: ["29", "22"] },
         fromIdentifier: publicIdentifiers[0],
         toIdentifier: publicIdentifiers[1],
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       transferOverrides: {
         initialBalance: { to: participants, amount: ["14", "0"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       expected: {
         balances: [{ to: participants, amount: ["29", "22"] }],
         lockedBalance: ["14"],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         merkleRoot,
       },
     },
@@ -212,22 +212,22 @@ describe("applyUpdate", () => {
       stateOverrides: {
         nonce: 5,
         balances: [{ to: participants, amount: ["43", "22"] }],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         lockedBalance: [],
         merkleRoot: mkHash(),
       },
       updateOverrides: {
         balance: { to: participants, amount: ["29", "22"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       transferOverrides: {
         initialBalance: { to: [mkAddress("0xffff"), participants[1]], amount: ["14", "0"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       expected: {
         balances: [{ to: participants, amount: ["29", "22"] }],
         lockedBalance: ["14"],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         merkleRoot,
       },
     },
@@ -237,7 +237,7 @@ describe("applyUpdate", () => {
       stateOverrides: {
         nonce: 5,
         balances: [{ to: participants, amount: ["3", "4"] }],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         lockedBalance: ["8"],
         merkleRoot,
       },
@@ -245,16 +245,16 @@ describe("applyUpdate", () => {
         balance: { to: participants, amount: ["3", "12"] },
         fromIdentifier: publicIdentifiers[1],
         toIdentifier: publicIdentifiers[0],
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       transferOverrides: {
         initialBalance: { to: participants, amount: ["0", "8"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       expected: {
         balances: [{ to: participants, amount: ["3", "12"] }],
         lockedBalance: [],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         merkleRoot: mkHash(),
       },
     },
@@ -264,7 +264,7 @@ describe("applyUpdate", () => {
       stateOverrides: {
         nonce: 5,
         balances: [{ to: participants, amount: ["13", "2"] }],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         lockedBalance: ["9"],
         merkleRoot,
       },
@@ -272,16 +272,16 @@ describe("applyUpdate", () => {
         balance: { to: participants, amount: ["22", "2"] },
         fromIdentifier: publicIdentifiers[0],
         toIdentifier: publicIdentifiers[1],
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       transferOverrides: {
         initialBalance: { to: participants, amount: ["9", "0"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       expected: {
         balances: [{ to: participants, amount: ["22", "2"] }],
         lockedBalance: [],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         merkleRoot: mkHash(),
       },
     },
@@ -291,22 +291,22 @@ describe("applyUpdate", () => {
       stateOverrides: {
         nonce: 5,
         balances: [{ to: participants, amount: ["7", "22"] }],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         lockedBalance: ["14"],
         merkleRoot,
       },
       updateOverrides: {
         balance: { to: participants, amount: ["7", "22"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       transferOverrides: {
         initialBalance: { to: [mkAddress("0xffff"), participants[1]], amount: ["14", "0"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
       expected: {
         balances: [{ to: participants, amount: ["7", "22"] }],
         lockedBalance: [],
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         merkleRoot: mkHash(),
       },
     },
@@ -340,7 +340,7 @@ describe("applyUpdate", () => {
         transfer = transferOverrides && {
           ...createTestFullLinkedTransferState({
             balance: transferOverrides?.initialBalance,
-            assetId: transferOverrides?.assetId ?? mkAddress(),
+            assetAddress: transferOverrides?.assetAddress ?? mkAddress(),
           }),
           ...transferOverrides,
         };
@@ -419,12 +419,12 @@ type GenerateUpdateTestParams = {
 };
 
 describe("generateUpdate", () => {
-
   // FIXME: THESE ARE BLOCKING TESTS!
   it.skip("should fail if it fails parameter validation", () => {});
   it.skip("should fail if it is unable to reconcile the deposit", () => {});
   it.skip("should fail if trying to resolve an inactive transfer", () => {});
-  it.skip("should fail if fails to call resolve using chain service", () => {});it.skip("should work if creating a transfer to someone outside of channel", () => {});
+  it.skip("should fail if fails to call resolve using chain service", () => {});
+  it.skip("should work if creating a transfer to someone outside of channel", () => {});
   it.skip("should work if resolving a transfer to someone outside of channel", () => {});
 
   // Get channel constants
@@ -487,7 +487,7 @@ describe("generateUpdate", () => {
         },
       },
       stateOverrides: {
-        assetIds: [],
+        assetAddresss: [],
         balances: [],
         lockedBalance: [],
         merkleRoot: mkHash(),
@@ -504,7 +504,7 @@ describe("generateUpdate", () => {
           networkContext,
           timeout: "1023497",
         },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
       },
     },
     {
@@ -512,11 +512,11 @@ describe("generateUpdate", () => {
       updateType: UpdateType.deposit,
       paramOverrides: {
         details: {
-          assetId: mkAddress(),
+          assetAddress: mkAddress(),
         },
       },
       stateOverrides: {
-        assetIds: [],
+        assetAddresss: [],
         balances: [],
         lockedBalance: [],
         merkleRoot: mkHash(),
@@ -525,7 +525,7 @@ describe("generateUpdate", () => {
       },
       expectedUpdate: {
         nonce: 2,
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
         balance: { to: participants, amount: ["0", "10"] },
         details: { latestDepositNonce: 0 },
       },
@@ -537,11 +537,11 @@ describe("generateUpdate", () => {
       updateType: UpdateType.deposit,
       paramOverrides: {
         details: {
-          assetId: mkAddress(),
+          assetAddress: mkAddress(),
         },
       },
       stateOverrides: {
-        assetIds: [],
+        assetAddresss: [],
         balances: [],
         lockedBalance: [],
         merkleRoot: mkHash(),
@@ -550,7 +550,7 @@ describe("generateUpdate", () => {
       },
       expectedUpdate: {
         nonce: 2,
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
         balance: { to: participants, amount: ["10", "0"] },
         details: { latestDepositNonce: 1 },
       },
@@ -573,7 +573,7 @@ describe("generateUpdate", () => {
         },
       },
       stateOverrides: {
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         lockedBalance: [],
         balances: [{ to: participants, amount: ["14", "8"] }],
         nonce: 3,
@@ -581,7 +581,7 @@ describe("generateUpdate", () => {
       expectedUpdate: {
         nonce: 4,
         balance: { to: participants, amount: ["7", "8"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
         details: {
           transferInitialState: {
             ...emptyLinkedTransfer.transferState,
@@ -605,7 +605,7 @@ describe("generateUpdate", () => {
         },
       },
       stateOverrides: {
-        assetIds: [mkAddress()],
+        assetAddresss: [mkAddress()],
         lockedBalance: ["7"],
         balances: [{ to: participants, amount: ["7", "8"] }],
         nonce: 3,
@@ -613,7 +613,7 @@ describe("generateUpdate", () => {
       expectedUpdate: {
         nonce: 4,
         balance: { to: participants, amount: ["7", "15"] },
-        assetId: mkAddress(),
+        assetAddress: mkAddress(),
         details: {
           transferId: emptyLinkedTransfer.transferId,
           transferResolver: emptyLinkedTransfer.transferResolver,
@@ -694,7 +694,7 @@ describe("generateUpdate", () => {
       store.getActiveTransfers.resolves([transfer].filter(x => !!x) as any);
 
       // Chain service mocks are only used by deposit/resolve
-      chainService.getLatestDepositByAssetId.resolves(
+      chainService.getLatestDepositByAssetAddress.resolves(
         Result.ok(depositA ?? { nonce: BigNumber.from(0), amount: BigNumber.from(0) }),
       );
       chainService.getChannelOnchainBalance.resolves(Result.ok(onchainBalance ?? BigNumber.from(0)));

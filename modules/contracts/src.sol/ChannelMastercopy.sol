@@ -24,7 +24,7 @@ contract ChannelMastercopy is IVectorChannel {
 
     mapping(bytes32 => bool) isExecuted;
 
-    mapping(address => LatestDeposit) internal _latestDepositByAssetId;
+    mapping(address => LatestDeposit) internal _latestDepositByAssetAddress;
 
     address[2] private _owners;
 
@@ -66,20 +66,20 @@ contract ChannelMastercopy is IVectorChannel {
     }
 
     function getBalance(
-        address assetId
+        address assetAddress
     )
         public
         override
         view
         returns (uint256)
     {
-        return assetId == address(0) ?
+        return assetAddress == address(0) ?
             address(this).balance :
-            IERC20(assetId).balanceOf(address(this));
+            IERC20(assetAddress).balanceOf(address(this));
     }
 
     function depositA(
-        address assetId,
+        address assetAddress,
         uint256 amount
     )
         public
@@ -87,13 +87,13 @@ contract ChannelMastercopy is IVectorChannel {
         override
     {
         // WIP version just for basic testing
-        if (assetId == address(0)) {
+        if (assetAddress == address(0)) {
             require(msg.value == amount, "oh no");
         } else {
-            require(IERC20(assetId).transferFrom(msg.sender, address(this), amount), "oh no");
+            require(IERC20(assetAddress).transferFrom(msg.sender, address(this), amount), "oh no");
         }
-        _latestDepositByAssetId[assetId].amount = amount;
-        _latestDepositByAssetId[assetId].nonce++;
+        _latestDepositByAssetAddress[assetAddress].amount = amount;
+        _latestDepositByAssetAddress[assetAddress].nonce++;
     }
 
     // Workaround, because I was not able to convince the compiler
@@ -101,13 +101,13 @@ contract ChannelMastercopy is IVectorChannel {
     // auto-generated getter of an overriding state variable
     // if said variable is a mapping with a struct as value type.
     // In other words, I had to write the getter myself...
-    function latestDepositByAssetId(address assetId) public override view returns (LatestDeposit memory) {
-        return _latestDepositByAssetId[assetId];
+    function latestDepositByAssetAddress(address assetAddress) public override view returns (LatestDeposit memory) {
+        return _latestDepositByAssetAddress[assetAddress];
     }
 
     function managedTransfer(
         Balance memory balances,
-        address assetId
+        address assetAddress
     )
         public
         override
@@ -116,12 +116,12 @@ contract ChannelMastercopy is IVectorChannel {
         // TODO: This is quick-and-dirty to allow for basic testing.
         // We should add dealing with non-standard-conforming tokens,
         // unexpected reverts, avoid reentrancy, etc.
-        if (assetId == address(0)) {
+        if (assetAddress == address(0)) {
             balances.to[0].transfer(balances.amount[0]);
             balances.to[1].transfer(balances.amount[1]);
         } else {
-            require(IERC20(assetId).transfer(balances.to[0], balances.amount[0]), "oh no");
-            require(IERC20(assetId).transfer(balances.to[1], balances.amount[1]), "oh no");
+            require(IERC20(assetAddress).transfer(balances.to[0], balances.amount[0]), "oh no");
+            require(IERC20(assetAddress).transfer(balances.to[1], balances.amount[1]), "oh no");
         }
     }
 

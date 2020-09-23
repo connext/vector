@@ -75,7 +75,7 @@ type ParamValidationTest = {
 
 describe("Vector.setup", () => {
   let vector: Vector;
-  const counterpartyIdentifier = "indra6LkSoBv6QD5BKZ5vZQnVsd8cq6Tyb2oi93s62sTvW6xUUQg8PC"
+  const counterpartyIdentifier = "indra6LkSoBv6QD5BKZ5vZQnVsd8cq6Tyb2oi93s62sTvW6xUUQg8PC";
 
   beforeEach(async () => {
     const signer = getRandomChannelSigner();
@@ -215,7 +215,7 @@ describe("Vector.deposit", () => {
     const validParams = {
       channelAddress: mkAddress("0xccc"),
       amount: "12039",
-      assetId: mkAddress("0xaaa"),
+      assetAddress: mkAddress("0xaaa"),
     };
 
     const tests: ParamValidationTest[] = [
@@ -230,13 +230,13 @@ describe("Vector.deposit", () => {
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {
-        name: "should fail if assetId is undefined",
-        params: { ...validParams, assetId: undefined },
-        error: "should have required property 'assetId'",
+        name: "should fail if assetAddress is undefined",
+        params: { ...validParams, assetAddress: undefined },
+        error: "should have required property 'assetAddress'",
       },
       {
-        name: "should fail if assetId is invalid",
-        params: { ...validParams, assetId: "fail" },
+        name: "should fail if assetAddress is invalid",
+        params: { ...validParams, assetAddress: "fail" },
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
     ];
@@ -275,7 +275,7 @@ describe("Vector.create", () => {
     const validParams = {
       channelAddress: mkAddress("0xccc"),
       amount: "123214",
-      assetId: mkAddress("0xaaa"),
+      assetAddress: mkAddress("0xaaa"),
       transferDefinition: mkAddress("0xdef"),
       transferInitialState: createTestLinkedTransferState(),
       timeout: "133215",
@@ -304,13 +304,13 @@ describe("Vector.create", () => {
         error: 'should match pattern "^([0-9])*$"',
       },
       {
-        name: "should fail if assetId is undefined",
-        params: { ...validParams, assetId: undefined },
-        error: "should have required property 'assetId'",
+        name: "should fail if assetAddress is undefined",
+        params: { ...validParams, assetAddress: undefined },
+        error: "should have required property 'assetAddress'",
       },
       {
-        name: "should fail if assetId is invalid",
-        params: { ...validParams, assetId: "fail" },
+        name: "should fail if assetAddress is invalid",
+        params: { ...validParams, assetAddress: "fail" },
         error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
       },
       {

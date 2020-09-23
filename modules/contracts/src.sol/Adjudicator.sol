@@ -96,25 +96,25 @@ contract Adjudicator is IAdjudicator {
         // ChannelDispute memory dispute = channelDispute(state.channelAddress)
         // require(inDefundPhase(dispute))
         // require(hash(state) == dispute.channelStateHash)
-        // for(int i = 0, i < assetIds.length(), i++) {
-        //      require(!dispute.assetDefunded[assetIds[i]])
-        //      dispute.assetDefunded[assetIds[i]] = true
+        // for(int i = 0, i < assetAddresss.length(), i++) {
+        //      require(!dispute.assetDefunded[assetAddresss[i]])
+        //      dispute.assetDefunded[assetAddresss[i]] = true
         //      ChannelMastercopy channel = ChannelMastercopy(state.channelAddress)
-        //      LatestDeposit latestDeposit = channel.latestDepositA(assetIds[i])
+        //      LatestDeposit latestDeposit = channel.latestDepositA(assetAddresss[i])
         //
         //      Balance memory aBalance, bBalance; //Bad syntax here, I know
         //      aBalance.to = state.balA.to
         //      bBalance.to = state.balB.to
         //      if(latestDeposit.nonce < state.latestDepositNonce) {
         //          aBalance.amount = state.balA.add(latestDeposit.amount)
-        //          // TODO can we assume that assetIds[i] == lockedBalance[i]? probably not
-        //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
+        //          // TODO can we assume that assetAddresss[i] == lockedBalance[i]? probably not
+        //          bBalance.amount = channel.getBalance(assetAddresss[i]).sub((aBalance.add(state.lockedBalance[i])))
         //      } else if (latestDeposit.nonce == state.latestDepositNonce) {
         //          aBalance.amount = state.balA;
-        //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
+        //          bBalance.amount = channel.getBalance(assetAddresss[i]).sub((aBalance.add(state.lockedBalance[i])))
         //      }
         //
-        //      channel.transfer([aBalance, bBalance], assetIds[i]);
+        //      channel.transfer([aBalance, bBalance], assetAddresss[i]);
         //  }
         // TODO: what are the implications of this?
         address channelAddress = msg.sender; // getChannelAddress(ccs.participants[0], ccs.participants[1]);
@@ -134,13 +134,13 @@ contract Adjudicator is IAdjudicator {
         );
         // TODO SECURITY: Beware of reentrancy
         // TODO: keep this? offchain code has to ensure this
-        assert(ccs.balances.length == ccs.lockedBalance.length && ccs.balances.length == ccs.assetIds.length);
+        assert(ccs.balances.length == ccs.lockedBalance.length && ccs.balances.length == ccs.assetAddresss.length);
         for (uint256 i = 0; i < ccs.balances.length; i++) {
             Balance memory balance = ccs.balances[i];
             uint256 lockedBalance = ccs.lockedBalance[i];
-            address assetId = ccs.assetIds[i];
+            address assetAddress = ccs.assetAddresss[i];
             IVectorChannel channel = IVectorChannel(channelAddress);
-            LatestDeposit memory latestDeposit = channel.latestDepositByAssetId(assetId);
+            LatestDeposit memory latestDeposit = channel.latestDepositByAssetAddress(assetAddress);
             Balance memory transfer;
             transfer.to[0] = balance.to[0];
             transfer.to[1] = balance.to[1];
@@ -148,8 +148,8 @@ contract Adjudicator is IAdjudicator {
             if (latestDeposit.nonce > ccs.latestDepositNonce) {
                 transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
             }
-            transfer.amount[1] = channel.getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
-            channel.managedTransfer(transfer, assetId);
+            transfer.amount[1] = channel.getBalance(assetAddress).sub(transfer.amount[0].add(lockedBalance));
+            channel.managedTransfer(transfer, assetAddress);
         }
     }
 
@@ -225,7 +225,7 @@ contract Adjudicator is IAdjudicator {
         // transferDispute.isDefunded = true;
         // transferDisputes(state.transferId) = transferDispute
         // ChannelMastercopy channel = ChannelMastercopy(state.channelAddress)
-        // channel.transfer(finalBalances, state.assetId)
+        // channel.transfer(finalBalances, state.assetAddress)
         TransferDispute memory transferDispute = transferDisputes[cts.transferId];
         require(
             hashTransferState(cts) == transferDispute.transferStateHash,
@@ -252,7 +252,7 @@ contract Adjudicator is IAdjudicator {
             finalBalance = cts.initialBalance;
         }
         IVectorChannel channel = IVectorChannel(cts.channelAddress);
-        channel.managedTransfer(finalBalance, cts.assetId);
+        channel.managedTransfer(finalBalance, cts.assetAddress);
     }
 
     function verifySignatures(

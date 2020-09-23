@@ -16,22 +16,22 @@ interface IVectorChannel { // is IAdjudicator? {
     ) external view returns (address[2] memory);
 
     function getBalance(
-        address assetId
+        address assetAddress
     ) external view returns (uint256);
 
     function depositA(
-        address assetId,
+        address assetAddress,
         uint256 amount
         // bytes memory signature
     ) external payable;
 
-    function latestDepositByAssetId(
-        address assetId
+    function latestDepositByAssetAddress(
+        address assetAddress
     ) external view returns (LatestDeposit memory);
 
     function managedTransfer(
         Balance memory balances,
-        address assetId
+        address assetAddress
     ) external;
 
     function execTransaction(

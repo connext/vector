@@ -14,7 +14,7 @@ describe(testName, () => {
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
       {
-        assetId: constants.AddressZero,
+        assetAddress: constants.AddressZero,
         amount: ["14", 0],
       },
     ]);
@@ -30,10 +30,10 @@ describe(testName, () => {
 
   it("should resolve an eth transfer from alice -> bob", async () => {
     // Set test constants
-    const assetId = constants.AddressZero;
+    const assetAddress = constants.AddressZero;
     const transferAmount = "7";
 
-    const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
+    const { transfer } = await createTransfer(channelAddress, alice, bob, assetAddress, transferAmount);
 
     await resolveTransfer(channelAddress, transfer, alice, bob);
   });

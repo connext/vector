@@ -121,25 +121,25 @@ export const createVectorInstance = async (overrides: Partial<VectorTestOverride
 export const deployChannelWithDepositA = async (
   channelAddress: string,
   depositAmount: BigNumber,
-  assetId: string,
+  assetAddress: string,
   alice: IChannelSigner,
   bobAddr: string,
 ): Promise<string> => {
   await alice.connectProvider(env.chainProviders[chainId]);
   // Get the previous balance before deploying
   const prev =
-    assetId === constants.AddressZero
+    assetAddress === constants.AddressZero
       ? await alice.provider!.getBalance(channelAddress)
-      : await new Contract(assetId, TestToken.abi, alice).balanceOf(channelAddress);
+      : await new Contract(assetAddress, TestToken.abi, alice).balanceOf(channelAddress);
 
   // Deploy with deposit
   const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, alice);
-  const created = new Promise<string>((res) => {
-    factory.once(factory.filters.ChannelCreation(), (data) => {
+  const created = new Promise<string>(res => {
+    factory.once(factory.filters.ChannelCreation(), data => {
       res(data);
     });
   });
-  const tx = await factory.createChannelAndDepositA(alice.address, bobAddr, assetId, depositAmount, {
+  const tx = await factory.createChannelAndDepositA(alice.address, bobAddr, assetAddress, depositAmount, {
     value: depositAmount,
   });
   await tx.wait();
@@ -147,8 +147,8 @@ export const deployChannelWithDepositA = async (
   expect(deployedAddr).to.be.eq(channelAddress);
 
   // Verify onchain values updated
-  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).latestDepositByAssetId(
-    assetId,
+  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).latestDepositByAssetAddress(
+    assetAddress,
   );
   expect(latestDeposit.nonce).to.be.eq(1);
   expect(latestDeposit.amount).to.be.eq(depositAmount);
@@ -186,19 +186,23 @@ export const depositAOnchain = async (
   latestDepositNonce: number,
   depositorSigner: IChannelSigner,
   counterparty: IVectorProtocol,
-  assetId: string = constants.AddressZero,
+  assetAddress: string = constants.AddressZero,
   amount: BigNumberish = 15,
 ): Promise<void> => {
   const value = BigNumber.from(amount);
   if (latestDepositNonce === 0) {
     // First node deposit, must deploy channel
     // Deploy multisig with deposit
-    await deployChannelWithDepositA(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
+    await deployChannelWithDepositA(channelAddress, value, assetAddress, depositorSigner, counterparty.signerAddress);
   } else {
     // Call deposit on the multisig
-    const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).depositA(assetId, value, {
+    const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).depositA(
+      assetAddress,
       value,
-    });
+      {
+        value,
+      },
+    );
     await tx.wait();
   }
 };
@@ -208,14 +212,14 @@ export const depositInChannel = async (
   depositor: IVectorProtocol,
   depositorSigner: IChannelSigner,
   counterparty: IVectorProtocol,
-  assetId: string = constants.AddressZero,
+  assetAddress: string = constants.AddressZero,
   amount?: BigNumberish,
 ): Promise<FullChannelState<any>> => {
   // If amount is not supplied, simply reconcile
   // deposits immediately
   if (!amount) {
     const ret = await depositor.deposit({
-      assetId,
+      assetAddress,
       channelAddress,
     });
     expect(ret.getError()).to.be.undefined;
@@ -231,20 +235,27 @@ export const depositInChannel = async (
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
   if (isDepositA) {
-    await depositAOnchain(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
+    await depositAOnchain(
+      channelAddress,
+      channel!.latestDepositNonce,
+      depositorSigner,
+      counterparty,
+      assetAddress,
+      amount,
+    );
   } else {
     // Deposit onchain
     const tx =
-      assetId === constants.AddressZero
+      assetAddress === constants.AddressZero
         ? await depositorSigner.sendTransaction({ value, to: channelAddress })
-        : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
+        : await new Contract(assetAddress, TestToken.abi, depositorSigner).transfer(channelAddress, value);
 
     await tx.wait();
   }
 
   // Reconcile with channel
   const ret = await depositor.deposit({
-    assetId,
+    assetAddress,
     channelAddress,
   });
   expect(ret.getError()).to.be.undefined;
@@ -253,20 +264,22 @@ export const depositInChannel = async (
   expect(postDeposit.latestDepositNonce).to.be.eq(
     isDepositA ? channel!.latestDepositNonce + 1 : channel!.latestDepositNonce,
   );
-  expect(postDeposit.assetIds).to.be.deep.eq([...new Set(channel!.assetIds.concat(assetId))]);
+  expect(postDeposit.assetAddresss).to.be.deep.eq([...new Set(channel!.assetAddresss.concat(assetAddress))]);
 
-  const assetIdx = postDeposit!.assetIds.findIndex((a) => a === assetId);
-  const postDepositBal = postDeposit.balances[assetIdx];
-  const postDepositLocked = postDeposit.lockedBalance[assetIdx] || "0";
+  const assetAddressx = postDeposit!.assetAddresss.findIndex(a => a === assetAddress);
+  const postDepositBal = postDeposit.balances[assetAddressx];
+  const postDepositLocked = postDeposit.lockedBalance[assetAddressx] || "0";
 
   // Make sure the onchain balance of the channel is equal to the
   // sum of the locked balance + channel balance
-  const channelTotal = BigNumber.from(postDepositLocked).add(postDepositBal.amount[0]).add(postDepositBal.amount[1]);
+  const channelTotal = BigNumber.from(postDepositLocked)
+    .add(postDepositBal.amount[0])
+    .add(postDepositBal.amount[1]);
 
   const onchainTotal =
-    assetId === constants.AddressZero
+    assetAddress === constants.AddressZero
       ? await depositorSigner.provider!.getBalance(channelAddress)
-      : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
+      : await new Contract(assetAddress, TestToken.abi, depositorSigner).balanceOf(channelAddress);
 
   expect(onchainTotal).to.be.eq(channelTotal);
   return postDeposit;
@@ -280,7 +293,7 @@ export const createTransfer = async (
   channelAddress: string,
   payor: IVectorProtocol,
   payee: IVectorProtocol,
-  assetId: string = constants.AddressZero,
+  assetAddress: string = constants.AddressZero,
   amount: BigNumberish = 10,
 ): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
   // Create the transfer information
@@ -291,7 +304,7 @@ export const createTransfer = async (
     to: [payor.signerAddress, payee.signerAddress],
     amount: [amount.toString(), "0"],
   };
-  const transferInitialState = createTestLinkedTransferState({ linkedHash, assetId, balance });
+  const transferInitialState = createTestLinkedTransferState({ linkedHash, assetAddress, balance });
 
   const params: CreateTransferParams = {
     channelAddress,
@@ -301,7 +314,7 @@ export const createTransfer = async (
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     meta: { test: "field" },
-    assetId,
+    assetAddress,
   };
 
   const ret = await payor.create(params);
@@ -313,7 +326,7 @@ export const createTransfer = async (
   const transfer = (await payee.getTransferState(transferId))!;
   expect(transfer).to.containSubset({
     initialBalance: balance,
-    assetId,
+    assetAddress,
     channelAddress,
     transferId,
     initialStateHash: hashTransferState(transferInitialState, params.encodings[0]),
@@ -407,8 +420,8 @@ export const getSetupChannel = async (
 // is funded) it will not deploy the multisig
 export const getFundedChannel = async (
   testName = "deposit",
-  balances: { assetId: string; amount: [BigNumberish, BigNumberish] }[] = [
-    { assetId: constants.AddressZero, amount: [100, 0] },
+  balances: { assetAddress: string; amount: [BigNumberish, BigNumberish] }[] = [
+    { assetAddress: constants.AddressZero, amount: [100, 0] },
   ],
 ): Promise<{
   channel: FullChannelState;
@@ -418,17 +431,17 @@ export const getFundedChannel = async (
   const { alice, bob, channel: setupChannel, aliceSigner, bobSigner } = await getSetupChannel(testName);
   // Fund the channel for all balances
   for (const requestedDeposit of balances) {
-    const { assetId, amount } = requestedDeposit;
+    const { assetAddress, amount } = requestedDeposit;
     const [depositAlice, depositBob] = amount;
 
     // Perform the alice deposit
     if (constants.Zero.lt(depositAlice)) {
-      await depositInChannel(setupChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAlice);
+      await depositInChannel(setupChannel.channelAddress, alice, aliceSigner, bob, assetAddress, depositAlice);
     }
 
     // Perform the bob deposit
     if (constants.Zero.lt(depositBob)) {
-      await depositInChannel(setupChannel.channelAddress, bob, bobSigner, alice, assetId, depositBob);
+      await depositInChannel(setupChannel.channelAddress, bob, bobSigner, alice, assetAddress, depositBob);
     }
   }
 

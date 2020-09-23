@@ -99,19 +99,19 @@ export const reconcileDeposit = async (
   initialBalance: Balance,
   latestDepositNonce: number,
   lockedBalance: string,
-  assetId: string,
+  assetAddress: string,
   onchainService: IVectorOnchainService,
 ): Promise<Result<{ balance: Balance; latestDepositNonce: number }, Error>> => {
-  const balanceRes = await onchainService.getChannelOnchainBalance(channelAddress, chainId, assetId);
+  const balanceRes = await onchainService.getChannelOnchainBalance(channelAddress, chainId, assetAddress);
   if (balanceRes.isError) {
     return Result.fail(balanceRes.getError()!);
   }
   const onchainBalance = balanceRes.getValue();
 
-  const latestDepositARes = await onchainService.getLatestDepositByAssetId(
+  const latestDepositARes = await onchainService.getLatestDepositByAssetAddress(
     channelAddress,
     chainId,
-    assetId,
+    assetAddress,
     latestDepositNonce,
   );
   if (latestDepositARes.isError) {

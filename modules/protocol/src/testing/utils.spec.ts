@@ -17,7 +17,7 @@ type ReconcileDepositTest = {
   initialBalance: Omit<Balance, "to">;
   latestDepositNonce: number;
   lockedBalance: string;
-  assetId: string;
+  assetAddress: string;
   aliceDeposit: BigNumberish; // depositA deposit
   bobDeposit: BigNumberish; // user deposit
   stubs: Partial<MockOnchainStubType>;
@@ -81,7 +81,7 @@ describe("utils", () => {
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
 
         // Default is nonce 1, deposit 0
-        getLatestDepositByAssetId: Result.ok<{ nonce: BigNumber; amount: BigNumber }>({
+        getLatestDepositByAssetAddress: Result.ok<{ nonce: BigNumber; amount: BigNumber }>({
           nonce: BigNumber.from((latestDepositNonce ?? 0) + 1),
           amount: BigNumber.from(aliceDeposit ?? 0),
         }),
@@ -114,7 +114,7 @@ describe("utils", () => {
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         latestDepositNonce: 0,
-        assetId: mkAddress("0xdddd"),
+        assetAddress: mkAddress("0xdddd"),
         expected: { amount: ["18", "9"], latestDepositNonce: 1 },
       },
       {
@@ -127,7 +127,7 @@ describe("utils", () => {
         name: "should work for Bob Token deposit when onchain deposit was successful",
         bobDeposit: 7,
         initialBalance: { amount: ["3", "9"] },
-        assetId: mkAddress("0xdddd"),
+        assetAddress: mkAddress("0xdddd"),
         expected: { amount: ["3", "16"], latestDepositNonce: 1 },
       },
       {
@@ -144,13 +144,13 @@ describe("utils", () => {
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         latestDepositNonce: 0,
-        assetId: mkAddress("0xdddd"),
+        assetAddress: mkAddress("0xdddd"),
         expected: { amount: ["18", "16"], latestDepositNonce: 1 },
       },
     ];
 
     for (const test of tests) {
-      const { name, initialBalance, latestDepositNonce, lockedBalance, assetId, error, expected } = test;
+      const { name, initialBalance, latestDepositNonce, lockedBalance, assetAddress, error, expected } = test;
       it(name, async () => {
         // Create the onchain service
         const chainService = getOnchainService(test);
@@ -162,7 +162,7 @@ describe("utils", () => {
           { ...(initialBalance ?? { amount: ["0", "0"] }), to },
           latestDepositNonce ?? 0,
           lockedBalance ?? "0",
-          assetId ?? constants.AddressZero,
+          assetAddress ?? constants.AddressZero,
           chainService,
         );
 

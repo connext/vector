@@ -122,7 +122,7 @@ export async function outbound(
     const details = update.details as CreateUpdateDetails;
     transfer = {
       initialBalance: details.transferInitialState.balance,
-      assetId: update.assetId,
+      assetAddress: update.assetAddress,
       transferId: details.transferId,
       channelAddress: update.channelAddress,
       transferDefinition: details.transferDefinition,
@@ -203,7 +203,7 @@ export async function inbound(
       channelAddress: update.channelAddress,
       participants: publicIdentifiers.map(getSignerAddressFromPublicIdentifier),
       networkContext: (update.details as SetupUpdateDetails).networkContext,
-      assetIds: [],
+      assetAddresss: [],
       balances: [],
       lockedBalance: [],
       merkleRoot: constants.HashZero,
@@ -220,7 +220,7 @@ export async function inbound(
     const details = update.details as CreateUpdateDetails;
     transfer = {
       initialBalance: details.transferInitialState.balance,
-      assetId: update.assetId,
+      assetAddress: update.assetAddress,
       transferId: details.transferId,
       channelAddress: update.channelAddress,
       transferDefinition: details.transferDefinition,
@@ -580,7 +580,7 @@ const signData = async (
     const commitment: TransferCommitmentData = {
       state: {
         initialBalance: transferInitialState.balance,
-        assetId: update.assetId,
+        assetAddress: update.assetAddress,
         channelAddress: update.channelAddress,
         transferId,
         transferTimeout,
@@ -607,7 +607,7 @@ const signData = async (
     }
     const {
       initialBalance,
-      assetId,
+      assetAddress,
       transferDefinition,
       transferTimeout,
       initialStateHash,
@@ -623,7 +623,7 @@ const signData = async (
       meta,
       initialBalance,
       transferId,
-      assetId,
+      assetAddress,
       channelAddress,
       transferDefinition,
       transferTimeout,

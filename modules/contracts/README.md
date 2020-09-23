@@ -1,8 +1,9 @@
 # Vector Contracts
 
-The contracts module contains the core solidity files that back Vector's security onchain. **IMPORTANT: Do not edit these contracts unless you know exactly what you're doing**, even small changes to commitment interfaces or parameters can render the *entire* system undisputable.
+The contracts module contains the core solidity files that back Vector's security onchain. **IMPORTANT: Do not edit these contracts unless you know exactly what you're doing**, even small changes to commitment interfaces or parameters can render the _entire_ system undisputable.
 
 Contents:
+
 - [Developing and Running Tests](https://github.com/connext/vector/tree/master/modules/contracts#developing)
 - [Simplifying Assumptions](https://github.com/connext/vector/tree/master/modules/contracts#simplifying-assumptions)
 - [Dispute Flow](https://github.com/connext/vector/tree/master/modules/contracts#dispute-flow)
@@ -13,6 +14,7 @@ Contents:
 ## Developing and Running Tests
 
 In `~/vector` (root), run:
+
 - `make` to build the contracts
 - `make test-contracts` to run the tests
 - `make watch-contracts` to test in watch-mode
@@ -40,8 +42,8 @@ The dispute flow works as follows:
 1. A party calls `forceChannelConsensus()` passing in their latest state. This begins the `consensus` phase of the dispute game. The counterparty has the ability to respond with a higher-nonced state within the phase. Note that for now we just wait out the entire phase, but it would be possible to implement a shortcut where if both parties submit updates then the phase can be skipped.
    - Also note that once a dispute has been initiated, the channel should be considered halted. **Neither party should make or accept offchain updates during this time.**
 2. After the consensus phase is complete, the latest state of the channel is available onchain. Then, the `defund` phase of the dispute game begins.
-3. During the `defund` phase, either party may call `defundChannel()` with an array of `assetId`s to remove those assets from the channel (for both parties).
-4. It is also possible for either party to dispute transfers directly during this phase. The process for this looks somewhat similar to disputing channels. First, parties call `forceTransferConsensus()` which starts a timeout window within which the transfer state must be finalized. `forceTransferConsensus()` checks that the hash of the passed in transfer state is a part of the merkle root checkpointed onchain during the channel `consensus` phase. 
+3. During the `defund` phase, either party may call `defundChannel()` with an array of `assetAddress`s to remove those assets from the channel (for both parties).
+4. It is also possible for either party to dispute transfers directly during this phase. The process for this looks somewhat similar to disputing channels. First, parties call `forceTransferConsensus()` which starts a timeout window within which the transfer state must be finalized. `forceTransferConsensus()` checks that the hash of the passed in transfer state is a part of the merkle root checkpointed onchain during the channel `consensus` phase.
    - Note that the merkle root is updated to include transfer state during the `create` channel op (where balances are locked into the transfer), and then is updated again to remove the transfer state during the `resolve` channel op (where balances are reintroduced to the core channel state). This means that a disputed transfer can only ever be in it's initial state, which keeps things really simple.
 5. Once a transfer is in dispute, anyone can resolve it manually onchain using `emptyTransfer` anytime before the transfer dispute window expires. This will call the `TransferDefinition` to get an updated set of balances, and then send those balances to both parties onchain. If no transfer resolver is available, the dispute window will expire and then `emptyTransfer` can be called (once again by anyone) to pay out the initial balances of the transfer via `adjudicatorTransfer` on the `VectorChannel` contract.
 
@@ -51,7 +53,7 @@ In Vector, channel funding is asymmetric.
 
 The initiator of a channel (as determined by `participants[]`), _must_ deposit using the `depositA` function in the `Multisig.sol` contract. The responder of a channel can deposit simply by sending funds to the multisig address.
 
-Calling `depositA` registers Alice's deposit `amount`, `assetId`, `depositNonce` as the latest deposit onchain. This means that Alice's flow for depositing funds is:
+Calling `depositA` registers Alice's deposit `amount`, `assetAddress`, `depositNonce` as the latest deposit onchain. This means that Alice's flow for depositing funds is:
 
 1. Call `depositA` with funds (if this is the first deposit, Alice can do this while also deploying the proxy)
 2. Attempt to reconcile the latest deposit in Alice's balance offchain with Bob (i.e. add `deposit.amount` to `balanceA`)
@@ -73,19 +75,20 @@ The above flows have a few consequences:
 
 - Bob can send funds to the multisig at any time with any frequency and eventually reconcile them with his balances
 - Alice does not need to do preparatory work before sending her deposit to chain. The onchain part of her deposit is entirely decoupled from offchain reconciliation.
-- We need to pass in an `assetId[]` array into `defundChannel()` in order for it to work. The benefit here is that you dont actually need to dispute the entire balance in a single tx, which means that we shouldn't ever get into a case where the channel state is too large to dispute (even if there are 1000s of tokens).
-- Alice's cannot deposit many times concurrently (we can potentially modify the `latestDepositByAssetId` to track historic balances and aggregate them to allow this, however)
+- We need to pass in an `assetAddress[]` array into `defundChannel()` in order for it to work. The benefit here is that you dont actually need to dispute the entire balance in a single tx, which means that we shouldn't ever get into a case where the channel state is too large to dispute (even if there are 1000s of tokens).
+- Alice's cannot deposit many times concurrently (we can potentially modify the `latestDepositByAssetAddress` to track historic balances and aggregate them to allow this, however)
 
 ## Commitments
+
 One of the biggest headaches in CF is that we use multiple different types of commitments for channel disputes vs app disputes. This creates an attack vector where, in a single roundtrip, one party can choose to sign some of the commitments but not others (this is why we have `propose` and `install` as two separate protocols in CF).
 
 In vector, we have only one type of commitment for disputing - the `ChannelCommitment`, which is a signature on the `CoreChannelState`:
 
 ```
 struct CoreChannelState {
-   Balance[][] balances; // TODO index by assetId? // initiator, responder
-   uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
-   address[] assetIds;
+   Balance[][] balances; // TODO index by assetAddress? // initiator, responder
+   uint256[] lockedBalance; // Indexed by assetAddress -- should always be changed in lockstep with transfers
+   address[] assetAddresss;
    bytes32 channelAddress;
    address[] participants; // Signer keys -- does NOT have to be the same as balances.to[]
    uint256 timeout;
@@ -100,7 +103,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 ```
    struct CoreTransferState {
       Balance balance;
-      address assetId;
+      address assetAddress;
       address channelAddress;
       bytes32 transferId;
       address transferDefinition;
@@ -114,6 +117,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 ## Contract TODOs
 
 #### Adjudicator
+
 - [ ] Add constructor and pass in `ChannelFactory` address
 - [ ] Change timeouts in `forceChannelConsensus` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
 - [ ] Only allow recipient of a transfer to use `transferResolver` to `resolve` a transfer onchain in `defundTransfer`. Either party should be able to defund it with the existing state, however.
@@ -123,22 +127,26 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 - [ ] Events
 
 #### VectorChannel
+
 - [ ] Add events/event listening for deposits
 - [ ] Circumvent sig verificatin in `depositA` if being called by `owners[0]` (we still need possible sig to handle the case where it is called by the `ChannelFactory`)
-- [X] Write the `adjudicatorTransfer` fn
+- [x] Write the `adjudicatorTransfer` fn
 - [ ] Update `getTransactionHash` to use nonce-based replay protection
-- [X] Clean up + add missing functions to interface
-- [X] Remove update functionality for adjudicator
+- [x] Clean up + add missing functions to interface
+- [x] Remove update functionality for adjudicator
 
 #### ChannelFactory
+
 - [ ] Combine this into the `Adjudicator` to avoid cyclic dependency issue
 - [ ] `createChannelAndDepositA` is very ugly + we need two onchain txs no matter what because of approve/transferFrom
 
 #### Other
+
 - [ ] Do we want to downgrade to 0.6? Possibly not -- TODO/open an issue
 - [ ] Change encoding of `Balance` offchain to be fixed size arrays
 - [ ] Remove transfer encodings from CoreTransferState offchain
 
 #### Later
+
 - [ ] Solidify asset handling: deal with non-standard-conforming tokens, reverts, reentrancy, etc.
 - [ ] Allow to selectively defund assets (?)

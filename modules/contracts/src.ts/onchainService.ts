@@ -30,7 +30,7 @@ export class VectorOnchainService implements IVectorOnchainService {
   async getChannelOnchainBalance(
     channelAddress: string,
     chainId: number,
-    assetId: string,
+    assetAddress: string,
   ): Promise<Result<BigNumber, OnchainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -39,15 +39,15 @@ export class VectorOnchainService implements IVectorOnchainService {
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let onchainBalance: BigNumber;
     try {
-      onchainBalance = await channelContract.getBalance(assetId);
+      onchainBalance = await channelContract.getBalance(assetAddress);
     } catch (e) {
       // Likely means channel contract was not deployed
       // TODO: check for reason?
       try {
         onchainBalance =
-          assetId === constants.AddressZero
+          assetAddress === constants.AddressZero
             ? await provider!.getBalance(channelAddress)
-            : await new Contract(assetId, ERC20Abi, provider).balanceOf(channelAddress);
+            : await new Contract(assetAddress, ERC20Abi, provider).balanceOf(channelAddress);
       } catch (e) {
         return Result.fail(e);
       }
@@ -55,10 +55,10 @@ export class VectorOnchainService implements IVectorOnchainService {
     return Result.ok(onchainBalance);
   }
 
-  async getLatestDepositByAssetId(
+  async getLatestDepositByAssetAddress(
     channelAddress: string,
     chainId: number,
-    assetId: string,
+    assetAddress: string,
     latestDepositNonce: number,
   ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, OnchainError>> {
     const provider = this.chainProviders[chainId];
@@ -69,7 +69,7 @@ export class VectorOnchainService implements IVectorOnchainService {
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let latestDepositA: { nonce: BigNumber; amount: BigNumber };
     try {
-      latestDepositA = await channelContract.latestDepositByAssetId(assetId);
+      latestDepositA = await channelContract.latestDepositByAssetAddress(assetAddress);
     } catch (e) {
       if (latestDepositNonce !== 0) {
         return Result.fail(e);
