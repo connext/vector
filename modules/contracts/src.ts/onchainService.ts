@@ -100,7 +100,7 @@ export class VectorOnchainService implements IVectorOnchainService {
     if (bytecode) {
       try {
         const data = contract.interface.encodeFunctionData("create", [encodedState]);
-        const output = await execEvmBytecode(bytecode, data);
+        const output = execEvmBytecode(bytecode, data);
         return Result.ok(contract.interface.decodeFunctionResult("create", output)[0]);
       } catch (e) {
         this.log.debug({ error: e.message }, `Failed to create with pure-evm`);
@@ -136,7 +136,7 @@ export class VectorOnchainService implements IVectorOnchainService {
     if (bytecode) {
       try {
         const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);
-        const output = await execEvmBytecode(bytecode, data);
+        const output = execEvmBytecode(bytecode, data);
         const ret = contract.interface.decodeFunctionResult("resolve", output)[0];
         return Result.ok({
           to: ret.to,

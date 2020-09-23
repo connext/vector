@@ -1,15 +1,10 @@
 import {
   CreateTransferParams,
   ConditionalTransferType,
-  ConditionalTransferParams,
   ResolveTransferParams,
-  ChainAddresses,
   FullChannelState,
-  ResolveConditionParams,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
-  WithdrawParams,
-  LinkedTransferParams,
   LinkedTransferState,
   Result,
   DEFAULT_TRANSFER_TIMEOUT,
@@ -18,16 +13,14 @@ import {
   WithdrawState,
   WithdrawStateEncoding,
   WithdrawResolverEncoding,
-  TransferParams,
+  EngineParams,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
-
-import { BigNumber, utils } from "ethers";
+import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
 
-export function convertConditionalTransferParams<T extends ConditionalTransferType>(
-  params: ConditionalTransferParams<T>,
+export function convertConditionalTransferParams(
+  params: EngineParams.ConditionalTransfer,
   channel: FullChannelState,
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
@@ -71,8 +64,8 @@ export function convertConditionalTransferParams<T extends ConditionalTransferTy
   });
 }
 
-export function convertResolveConditionParams<T extends ConditionalTransferType>(
-  params: ResolveConditionParams<T>,
+export function convertResolveConditionParams(
+  params: EngineParams.ResolveTransfer,
   transfer: FullTransferState,
 ): Result<ResolveTransferParams, InvalidTransferType> {
   const { channelAddress, routingId, details } = params;
@@ -88,7 +81,6 @@ export function convertResolveConditionParams<T extends ConditionalTransferType>
 
   const meta = {
     routingId,
-    meta: params.meta,
   };
 
   return Result.ok({
@@ -100,20 +92,20 @@ export function convertResolveConditionParams<T extends ConditionalTransferType>
 }
 
 export function convertWithdrawParams(
-  params: WithdrawParams,
+  params: EngineParams.Withdraw,
   channel: FullChannelState,
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, assetId, recipient, fee } = params;
-  let amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
+  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
   // TODO create withdraw commitment (need to add util for this)
 
   // TODO hash the withdraw commitment
-  let data: string = ""; // TODO
+  const data = ""; // TODO
 
   // TODO sign the withdraw commitment
 
-  let initiatorSignature: string = ""; // TODO!
+  const initiatorSignature = ""; // TODO!
 
   const transferInitialState: WithdrawState = {
     balance: {
@@ -138,33 +130,4 @@ export function convertWithdrawParams(
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
   });
-}
-
-export function convertTransferParams(
-  params: TransferParams,
-  channel: FullChannelState,
-): Result<CreateTransferParams, InvalidTransferType> {
-  const { channelAddress, amount, assetId, recipient } = params;
-
-  const preImage = getRandomBytes32();
-  const encryptedPreImage = ""; // TODO
-
-  return convertConditionalTransferParams(
-    {
-      channelAddress,
-      amount,
-      assetId,
-      // TODO: what happens if recipient is undefined? How do we want to handle redeemable transfers?
-      recipient,
-      conditionType: ConditionalTransferType.LinkedTransfer,
-      routingId: getRandomBytes32(),
-      details: {
-        linkedHash: utils.soliditySha256(["bytes32"], [preImage]),
-      },
-      meta: {
-        encryptedPreImage,
-      },
-    } as ConditionalTransferParams<"LinkedTransfer">,
-    channel,
-  );
 }

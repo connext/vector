@@ -1,5 +1,6 @@
 @aliceUrl = http://localhost:8001
 @bobUrl = http://localhost:8002
+@channelAddress = 0xc27e351f43a8cCad42B609343a0A43905336c97b
 @adminToken = cxt1234
 
 ##############
@@ -9,6 +10,22 @@ GET {{aliceUrl}}/config
 
 ### Bob
 GET {{bobUrl}}/config
+
+##############
+### GET CHANNELS
+### Alice
+GET {{aliceUrl}}/channel
+
+### Bob
+GET {{bobUrl}}/channel
+
+##############
+### GET CHANNEL
+### Alice
+GET {{aliceUrl}}/channel/{{channelAddress}}
+
+### Bob
+GET {{bobUrl}}/channel/{{channelAddress}}
 
 ##############
 ### CLEAR STORE
