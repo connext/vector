@@ -4,7 +4,6 @@ import { env } from "./env";
 
 import { createTestChannelState, createTestFullLinkedTransferState, getRandomBytes32, mkAddress, mkHash, stringify } from "@connext/vector-utils";
 import { expect } from "chai";
-import { utils } from "ethers";
 import { InvalidTransferType } from "../errors";
 
 describe.only("ParamConverter", () => {
@@ -29,7 +28,7 @@ describe.only("ParamConverter", () => {
                 conditionType: ConditionalTransferType.LinkedTransfer,
                 routingId: mkHash("0xtest"),
                 details: {
-                    preImage: getRandomBytes32()
+                    linkedHash: getRandomBytes32()
                 } as LinkedTransferParams,
                 meta: {
                     message: "test"
@@ -58,7 +57,7 @@ describe.only("ParamConverter", () => {
                         amount: [params.amount, "0"],
                         to: channelState.participants
                     },
-                    linkedHash: utils.soliditySha256(["bytes32"], [params.details.preImage])
+                    linkedHash: params.details.linkedHash
                 },
                 timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
                 encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
@@ -147,9 +146,9 @@ describe.only("ParamConverter", () => {
             }
         }
 
-        it("should work", () => {
+        it.skip("should work", () => {
             const params = generateParams();
-            
+
         })
     })
 })

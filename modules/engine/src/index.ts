@@ -227,6 +227,7 @@ export class VectorEngine {
 
   private async transfer(params: TransferParams): Promise<Result<any>> {
     // TODO input validation
+    
 
     // TODO convert this into linked transfer to recipient params in conditionalTransfer
     let updatedParams;

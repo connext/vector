@@ -16,7 +16,7 @@ interface ResolverParamsMap {
 }
 
 export type LinkedTransferParams = {
-  preImage: string;
+  linkedHash: string;
 };
 
 export type ResolveLinkedTransferParams = {
