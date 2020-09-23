@@ -1,6 +1,6 @@
 import { Contract, ContractFactory } from "ethers";
 
-import { ChannelMastercopy, ChannelFactory } from "../../artifacts";
+import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../../artifacts";
 import { initiator, counterparty, provider } from "../constants";
 import { expect } from "../utils";
 
@@ -23,7 +23,7 @@ export const createChannel = async (): Promise<Contract> => {
     await tx.wait();
     const channelAddress = await doneBeingCreated;
     expect(channelAddress).to.be.a("string");
-    return new Contract(channelAddress, ChannelMastercopy.abi, initiator);
+    return new Contract(channelAddress, VectorChannel.abi, initiator);
 };
 
 describe("Channel Creation", () => {

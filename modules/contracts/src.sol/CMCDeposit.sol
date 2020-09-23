@@ -20,14 +20,12 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
     mapping(address => LatestDeposit) internal _latestDeposit;
 
     receive() external payable onlyOnProxy {
-        // TODO: emit Deposit event to track eth deposits
+        require(msg.sender == participants[1], "Only the counterparty can direct deposit");
+        _latestDeposit[address(0)].amount = msg.value;
+        _latestDeposit[address(0)].nonce++;
+        emit Deposit(address(0), msg.value);
     }
 
-    // Workaround, because I was not able to convince the compiler
-    // to let me override the getter in the interface with the
-    // auto-generated getter of an overriding state variable
-    // if said variable is a mapping with a struct as value type.
-    // In other words, I had to write the getter myself...
     function getLatestDeposit(
         address assetId
     )
@@ -57,6 +55,7 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         }
         _latestDeposit[assetId].amount = amount;
         _latestDeposit[assetId].nonce++;
+        emit Deposit(assetId, amount);
     }
 
 }
