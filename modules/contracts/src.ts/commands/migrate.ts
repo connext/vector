@@ -56,10 +56,8 @@ export const migrate = async (
   };
 
   const mastercopy = await deployHelper("ChannelMastercopy", []);
-  const adjudicator = await deployHelper("Adjudicator", []);
   await deployHelper("ChannelFactory", [
     { name: "mastercopy", value: mastercopy.address },
-    { name: "adjudicator", value: adjudicator.address },
   ]);
 
   // Transfers

@@ -6,7 +6,7 @@ import {
 } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
-import { Adjudicator, ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
+import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
 
 import { expect, provider } from "./utils";
 
@@ -15,17 +15,11 @@ describe("Channel", () => {
   const deployer = wallets[0];
   const initiator = new ChannelSigner(deployer.privateKey);
   const counterparty = new ChannelSigner(wallets[1].privateKey);
-  let adjudicator: Contract;
   let channel: Contract;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
 
   beforeEach(async () => {
-    adjudicator = await (
-      new ContractFactory(Adjudicator.abi, Adjudicator.bytecode, deployer)
-    ).deploy();
-    await adjudicator.deployed();
-
     channelMastercopy = await (
       new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, deployer)
     ).deploy();
@@ -35,7 +29,6 @@ describe("Channel", () => {
       new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, deployer)
     ).deploy(
       channelMastercopy.address,
-      adjudicator.address,
     );
     await channelFactory.deployed();
 

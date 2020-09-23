@@ -22,20 +22,17 @@ describe("ChannelMastercopy", () => {
     expect(mastercopy.address).to.be.a("string");
   });
 
-  it("setup() should revert bc it's already setup", async () => {
+  it("setup() should revert bc it's the mastercopy", async () => {
     await expect(
-      mastercopy.setup([getRandomAddress(), getRandomAddress()], getRandomAddress()),
-    ).to.be.revertedWith("Channel has already been setup");
+      mastercopy.setup([getRandomAddress(), getRandomAddress()]),
+    ).to.be.revertedWith("This contract is the mastercopy");
   });
 
   it("all public methods should revert bc it's the mastercopy", async () => {
     for (const method of [
-      { name: "depositA", args: [AddressZero, Zero] },
-      { name: "execTransaction", args: [AddressZero, Zero, HashZero, Zero, [HashZero]] },
-      { name: "getBalance", args: [AddressZero] },
       { name: "getParticipants", args: [] },
-      { name: "getLatestDeposit", args: [AddressZero] },
-      { name: "managedTransfer", args: [[[Zero, Zero], [AddressZero, AddressZero]], AddressZero] },
+      { name: "execTransaction", args: [AddressZero, Zero, HashZero, Zero, [HashZero]] },
+      { name: "depositA", args: [AddressZero, Zero] },
     ]) {
       await expect(
         mastercopy[method.name](...method.args),

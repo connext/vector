@@ -1,7 +1,6 @@
 import { HexString } from "@connext/types";
 import { utils } from "ethers";
 
-import * as Adjudicator from "../artifacts/Adjudicator.json";
 import * as ChannelFactory from "../artifacts/ChannelFactory.json";
 import * as ChannelMastercopy from "../artifacts/ChannelMastercopy.json";
 import * as ERC20 from "../artifacts/IERC20.json";
@@ -23,7 +22,6 @@ type Artifact = {
 type Artifacts = { [contractName: string]: Artifact };
 
 export const artifacts: Artifacts = {
-  Adjudicator,
   ChannelFactory,
   ChannelMastercopy,
   ERC20,
@@ -35,7 +33,6 @@ export const artifacts: Artifacts = {
 } as any;
 
 export {
-  Adjudicator,
   ChannelFactory,
   ChannelMastercopy,
   ERC20,
