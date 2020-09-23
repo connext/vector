@@ -10,6 +10,8 @@ import {
   ResolveUpdateDetails,
   SetupUpdateDetails,
   LinkedTransferState,
+  LinkedTransferStateEncoding,
+  LinkedTransferResolverEncoding,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -32,7 +34,7 @@ export type PartialUpdateParams<T extends UpdateType> = Partial<
 
 export function createTestUpdateParams<T extends UpdateType>(
   type: T,
-  overrides: PartialUpdateParams<T>,
+  overrides: PartialUpdateParams<T> = {},
 ): UpdateParams<T> {
   const base = {
     channelAddress: overrides.channelAddress ?? mkAddress("0xccc"),
@@ -43,7 +45,7 @@ export function createTestUpdateParams<T extends UpdateType>(
   switch (type) {
     case UpdateType.setup:
       details = {
-        counterpartyIdentifier: mkPublicIdentifier("0xbbb"),
+        counterpartyIdentifier: mkPublicIdentifier("indraBdea4"),
         timeout: "1200",
         networkContext: {
           chainId: 2,
@@ -67,7 +69,7 @@ export function createTestUpdateParams<T extends UpdateType>(
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestLinkedTransferState(),
         timeout: "1",
-        encodings: ["state", "resolver"],
+        encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: { test: "meta" },
       };
       break;
@@ -228,8 +230,8 @@ export function createTestChannelStateWithSigners<T extends UpdateType = typeof 
   type: T,
   overrides: PartialFullChannelState<T> = {},
 ): FullChannelState<T> {
-  const publicIdentifiers = signers.map((s) => s.publicIdentifier);
-  const participants = signers.map((s) => s.address);
+  const publicIdentifiers = signers.map(s => s.publicIdentifier);
+  const participants = signers.map(s => s.address);
   const signerOverrides = {
     publicIdentifiers,
     participants,
@@ -250,7 +252,7 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
   if (type === UpdateType.create) {
     details.transferInitialState = createTestLinkedTransferState({
       balance: {
-        to: signers.map((s) => s.address),
+        to: signers.map(s => s.address),
       },
       ...(((overrides as unknown) as ChannelUpdate<"create">).details.transferInitialState ?? {}),
     });
@@ -258,7 +260,7 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
 
   const signerOverrides = {
     balance: {
-      to: signers.map((s) => s.address),
+      to: signers.map(s => s.address),
       amount: ["1", "0"],
     },
     fromIdentifier: signers[0].publicIdentifier,

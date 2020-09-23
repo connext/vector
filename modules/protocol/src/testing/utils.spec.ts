@@ -26,7 +26,42 @@ type ReconcileDepositTest = {
 };
 
 describe("utils", () => {
+  describe.skip("addEvtHandler", () => {
+    it("should attach with callback", async () => {});
+    it("should attach with callback + filter", async () => {});
+    it("should attach with callback + timeout", async () => {});
+    it("should attach with callback + filter + timeout", async () => {});
+  });
+
+  // FIXME: THESE ARE BLOCKING TESTS!
+  describe.skip("generateSignedChannelCommitment", () => {
+    it("should not sign anything if there are two signatures", () => {});
+    it("should work for participants[0] if there is not a counterparty signature included", () => {});
+    it("should work for participants[1] if there is not a counterparty signature included", () => {});
+    it("should work for participants[0] if there is a counterparty signature included", () => {});
+    it("should work for participants[1] if there is a counterparty signature included", () => {});
+  });
+
+  // FIXME: THESE ARE BLOCKING TESTS!
+  describe.skip("validateChannelUpdateSignatures", () => {
+    it("should work for a valid single signed update", () => {});
+    it("should work for a valid double signed update", () => {});
+    it("should fail if there are not at the number of required sigs included", () => {});
+    it("should fail if number of valid sigs !== number of required sigs", () => {});
+    it("should fail if any of the signatures are invalid", () => {});
+    it("should fail if the signatures are not sorted correctly", () => {});
+  });
+
   describe("reconcileDeposit", () => {
+    // FIXME: THESE ARE BLOCKING TESTS!
+    // TODO: do we have to test eth v. tokens? seems more relevant in the
+    // chain service than in the reconcileDeposit
+    it.skip("should fail if it cannot get the onchain balance", () => {});
+    it.skip("should fail if it cannot get the latest deposit a", () => {});
+    it.skip("should work if the offchain latest nonce is less than the onchain latest nonce", () => {});
+    it.skip("should work if the offchain latest nonce is greater than the onchain latest nonce", () => {});
+    it.skip("should work if the offchain latest nonce is equal to the onchain latest nonce", () => {});
+
     const channelAddress = mkAddress("0xccc");
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];
@@ -68,7 +103,7 @@ describe("utils", () => {
 
     const tests: (Partial<ReconcileDepositTest> & { name: string })[] = [
       {
-        name: "should work for Alice Eth deposit when onchain deposit was succuessful",
+        name: "should work for Alice Eth deposit when onchain deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         latestDepositNonce: 0,

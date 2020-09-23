@@ -35,6 +35,7 @@ export interface IVectorProtocol {
   ): Promise<ProtocolEventPayloadsMap[T]>;
 
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
+  getChannelStates(): Promise<FullChannelState[]>;
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
 }
 

@@ -15,8 +15,11 @@ export const TPublicIdentifier = Type.Pattern(/^indra([a-zA-Z0-9]{50})$/);
 export const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
 export const TSignature = Type.Pattern(/^0x([a-fA-F0-9]{130})$/);
 
+// Convenience types
+export const TChainId = Type.Number({ minimum: 1 });
+
 // Object pattern types
-const TBalance = Type.Object({
+export const TBalance = Type.Object({
   to: Type.Array(TAddress),
   amount: Type.Array(TIntegerString),
 });
@@ -64,7 +67,7 @@ const SetupProtocolParamsSchema = Type.Object({
     channelMastercopyAddress: TAddress,
     linkedTransferDefinition: Type.Optional(TAddress),
     withdrawDefinition: Type.Optional(TAddress),
-    chainId: Type.Number({ minimum: 1 }),
+    chainId: TChainId,
     providerUrl: Type.String({ format: "uri" }),
   }),
 });
@@ -107,34 +110,99 @@ export namespace ProtocolParams {
 ////////////////////////////////////////
 // Engine API Parameter schemas
 
-export const SetupEngineParamsSchema = Type.Object({
+const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
-  chainId: Type.Number({ minimum: 1 }),
-  timeout: Type.String(),
+  chainId: TChainId,
+  timeout: TIntegerString,
 });
 
-export const DepositEngineParamsSchema = Type.Object({
+const DepositEngineParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
 });
 
-export const RpcRequestEngineParamsSchema = Type.Object({
+const SharedConditionalTransferParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  amount: TIntegerString,
+  assetId: TAddress,
+  recipient: Type.Optional(TPublicIdentifier),
+  recipientChainId: Type.Optional(TChainId),
+  recipientAssetId: Type.Optional(TAddress),
+  timeout: Type.Optional(TIntegerString),
+  routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
+  meta: Type.Any(),
+});
+
+const LinkedTransferParamsSchema = Type.Intersect([
+  SharedConditionalTransferParamsSchema,
+  Type.Object({
+    conditionType: Type.Literal("LinkedTransfer"),
+    details: Type.Object({
+      linkedHash: TBytes32,
+    }),
+  }),
+]);
+
+// TODO: resolves to any, revisit when we have more conditional transfers
+const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema]);
+
+const SharedResolveTransferParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
+});
+
+const ResolveLinkedTransferParamsSchema = Type.Intersect([
+  SharedResolveTransferParamsSchema,
+  Type.Object({
+    conditionType: Type.Literal("LinkedTransfer"),
+    details: Type.Object({
+      preImage: TBytes32,
+    }),
+  }),
+]);
+
+// TODO: resolves to any, revisit when we have more conditional transfers
+const ResolveTransferParamsSchema = Type.Union([ResolveLinkedTransferParamsSchema]);
+
+const WithdrawParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  amount: TIntegerString,
+  assetId: TAddress,
+  recipient: TAddress,
+  fee: Type.Optional(TIntegerString),
+});
+
+const RpcRequestEngineParamsSchema = Type.Object({
   id: Type.Number({ minimum: 1 }),
   jsonrpc: Type.Literal("2.0"),
   method: Type.Union(
     Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<string>],
   ),
-  params: Type.Any(),
+  params: Type.Optional(Type.Any()),
 });
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace EngineParams {
   export const RpcRequestSchema = RpcRequestEngineParamsSchema;
   export type RpcRequest = Static<typeof RpcRequestEngineParamsSchema>;
+
+  export const GetChannelStateSchema = TAddress;
+  export type GetChannelState = Static<typeof GetChannelStateSchema>;
+
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
+
   export const DepositSchema = DepositEngineParamsSchema;
   export type Deposit = Static<typeof DepositEngineParamsSchema>;
+
+  export const ConditionalTransferSchema = LinkedTransferParamsSchema;
+  export type ConditionalTransfer = Static<typeof ConditionalTransferSchema>;
+
+  export const ResolveTransferSchema = ResolveLinkedTransferParamsSchema;
+  export type ResolveTransfer = Static<typeof ResolveTransferSchema>;
+
+  export const WithdrawSchema = WithdrawParamsSchema;
+  export type Withdraw = Static<typeof WithdrawSchema>;
 }
 
 ////////////////////////////////////////
@@ -146,6 +214,10 @@ const getChannelStateParamsSchema = Type.Object({
 
 const getChannelStateResponseSchema = {
   200: Type.Any(),
+};
+
+const getChannelStatesResponseSchema = {
+  200: Type.Array(TAddress),
 };
 
 // GET CONFIG
@@ -160,23 +232,14 @@ const getConfigResponseSchema = {
 
 // POST SETUP
 const postSetupBodySchema = Type.Object({
-  counterpartyIdentifier: Type.String({
-    example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
-    description: "Public identifier for counterparty",
-  }),
-  chainId: Type.Number({
-    example: 1,
-    description: "Chain ID",
-  }),
-  timeout: Type.String({
-    example: "3600",
-    description: "Dispute timeout",
-  }),
+  counterpartyIdentifier: TPublicIdentifier,
+  chainId: TChainId,
+  timeout: TIntegerString,
 });
 
 const postSetupResponseSchema = {
   200: Type.Object({
-    channelAddress: Type.String({ example: "0x", description: "Channel address" }),
+    channelAddress: TAddress,
   }),
 };
 
@@ -208,31 +271,12 @@ const postSendDepositTxResponseSchema = {
 // POST LINKED TRANSFER
 const postLinkedTransferBodySchema = Type.Object({
   channelAddress: TAddress,
-  amount: Type.String({
-    example: "100000",
-    description: "Amount in real units",
-  }),
+  amount: TIntegerString,
   assetId: TAddress,
-  preImage: Type.String({
-    example: "0x",
-    description: "Bytes32 secret used to lock transfer",
-  }),
-  routingId: Type.String({
-    example: "0x",
-    description: "Bytes32 identifier used to route transfers properly",
-  }),
-  recipient: Type.Optional(
-    Type.String({
-      example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
-      description: "Recipient's public identifier",
-    }),
-  ),
-  recipientChainId: Type.Optional(
-    Type.Number({
-      example: 1,
-      description: "Recipient chain ID, if on another chain",
-    }),
-  ),
+  preImage: TBytes32,
+  routingId: TBytes32,
+  recipient: Type.Optional(TPublicIdentifier),
+  recipientChainId: Type.Optional(TChainId),
   recipientAssetId: Type.Optional(TAddress),
   meta: Type.Optional(Type.Any()),
 });
@@ -283,7 +327,10 @@ export namespace ServerNodeResponses {
   export const GetChannelStateSchema = getChannelStateResponseSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;
 
-  export const GetConfigSchema = getChannelStateResponseSchema;
+  export const GetChannelStatesSchema = getChannelStatesResponseSchema;
+  export type GetChannelStates = Static<typeof GetChannelStatesSchema["200"]>;
+
+  export const GetConfigSchema = getConfigResponseSchema;
   export type GetConfig = Static<typeof GetConfigSchema["200"]>;
 
   export const SetupSchema = postSetupResponseSchema;

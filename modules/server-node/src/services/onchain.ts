@@ -18,7 +18,11 @@ export type ChainSigners = {
 
 export class MultichainTransactionService implements IMultichainTransactionService {
   private signers: Map<number, Wallet> = new Map();
-  constructor(private readonly chainProviderUrls: ChainProviders, private readonly privateKey: string) {
+  constructor(
+    private readonly chainProviderUrls: ChainProviders,
+    private readonly privateKey: string,
+    private readonly logger: BaseLogger,
+  ) {
     Object.entries(chainProviderUrls).forEach(([chainId, url]: [string, string]) => {
       this.signers.set(parseInt(chainId), new Wallet(privateKey, new providers.JsonRpcProvider(url)));
     });
@@ -34,7 +38,7 @@ export class MultichainTransactionService implements IMultichainTransactionServi
       const code = await signer.provider.getCode(address);
       return Result.ok(code);
     } catch (e) {
-      return Result.fail(e.message);
+      return Result.fail(e);
     }
   }
 
@@ -51,7 +55,11 @@ export class MultichainTransactionService implements IMultichainTransactionServi
       const tx = await signer.sendTransaction(minTx);
       return Result.ok(tx);
     } catch (e) {
-      return Result.fail(e.message);
+      let error = e;
+      if (e.message.includes("sender doesn't have enough funds")) {
+        error = new OnchainError(OnchainError.reasons.NotEnoughFunds);
+      }
+      return Result.fail(error);
     }
   }
 }
@@ -61,6 +69,7 @@ export class VectorTransactionService implements IVectorTransactionService {
     private readonly onchainTransactionService: IMultichainTransactionService,
     private readonly logger: BaseLogger,
   ) {}
+
   async sendDepositTx(
     channelState: FullChannelState<any>,
     sender: string,
@@ -82,10 +91,13 @@ export class VectorTransactionService implements IVectorTransactionService {
 
     const multisigCode = multisigRes.getValue();
     if (multisigCode === `0x`) {
-      this.logger.info({ channelAddress: channelState.channelAddress }, `Deploying multisig`);
+      this.logger.info({ method: "sendDepositTx", channelAddress: channelState.channelAddress }, `Deploying multisig`);
       // deploy multisig
       const channelFactory = new utils.Interface(ChannelFactory.abi);
-      const data = channelFactory.encodeFunctionData("createChannel", [channelState.participants]);
+      const data = channelFactory.encodeFunctionData("createChannel", [
+        channelState.participants[0],
+        channelState.participants[1],
+      ]);
       const txRes = await this.onchainTransactionService.sendTx(
         {
           to: channelState.networkContext.channelFactoryAddress,
@@ -95,11 +107,20 @@ export class VectorTransactionService implements IVectorTransactionService {
         channelState.networkContext.chainId,
       );
       if (txRes.isError) {
+        this.logger.error(
+          {
+            method: "sendDepositTx",
+            channelAddress: channelState.channelAddress,
+            error: txRes.getError()?.message,
+          },
+          "Error deploying multisig",
+        );
         return Result.fail(txRes.getError()!);
       }
       const tx = txRes.getValue();
-      this.logger.info({ txHash: tx.hash }, "Deployed multisig, waiting for confirmation");
+      this.logger.info({ method: "sendDepositTx", txHash: tx.hash }, "Deployed multisig, waiting for confirmation");
       await tx.wait();
+      this.logger.info({ method: "sendDepositTx", txHash: tx.hash }, "Multisig deposit confirmed");
     }
 
     if (sender === channelState.participants[0]) {

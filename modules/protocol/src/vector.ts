@@ -16,7 +16,7 @@ import {
   OutboundChannelUpdateError,
   ProtocolParams,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier, getCreate2MultisigAddress } from "@connext/vector-utils";
+import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { Evt } from "evt";
 import pino from "pino";
@@ -50,11 +50,17 @@ export class Vector implements IVectorProtocol {
     onchainService: IVectorOnchainService,
     logger: pino.BaseLogger,
   ): Promise<Vector> {
-    const node = new Vector(messagingService, lockService, storeService, signer, onchainService, logger);
-
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
-    await node.setupServices();
+    const node = await new Vector(
+      messagingService,
+      lockService,
+      storeService,
+      signer,
+      onchainService,
+      logger,
+    ).setupServices();
+
     logger.info("Vector Protocol connected 🚀!");
     return node;
   }
@@ -67,7 +73,8 @@ export class Vector implements IVectorProtocol {
     return this.signer.publicIdentifier;
   }
 
-  // separate out this function so that we can atomically return and release the lock
+  // separate out this function so that we can atomically
+  // return and release the lock
   private async lockedOperation(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
@@ -100,9 +107,8 @@ export class Vector implements IVectorProtocol {
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     this.logger.info({ method: "executeUpdate", step: "start", params });
-
     const key = await this.lockService.acquireLock(params.channelAddress);
-    const outboundRes = this.lockedOperation(params);
+    const outboundRes = await this.lockedOperation(params);
     await this.lockService.releaseLock(params.channelAddress, key);
 
     return outboundRes;
@@ -153,8 +159,6 @@ export class Vector implements IVectorProtocol {
         updatedChannelState: inboundRes.getValue()!,
       });
     });
-
-    // TODO run setup updates if the channel is not already setup
 
     // TODO validate that the channel is not currently in dispute/checkpoint state
 
@@ -209,18 +213,6 @@ export class Vector implements IVectorProtocol {
     if (error) {
       this.logger.error({ method: "setup", params, error });
       return Result.fail(error);
-    }
-
-    // TODO: move to within lock!
-    const existing = await this.storeService.getChannelStateByParticipants(
-      this.signerAddress,
-      getSignerAddressFromPublicIdentifier(params.counterpartyIdentifier),
-      params.networkContext.chainId,
-    );
-    if (existing) {
-      // TODO: should this return an error here, or simply the already setup
-      // channel?
-      return Result.ok(existing);
     }
 
     const create2Res = await getCreate2MultisigAddress(
@@ -315,6 +307,10 @@ export class Vector implements IVectorProtocol {
 
   public async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
     return this.storeService.getTransferState(transferId);
+  }
+
+  public async getChannelStates(): Promise<FullChannelState[]> {
+    return this.storeService.getChannelStates();
   }
 
   ///////////////////////////////////

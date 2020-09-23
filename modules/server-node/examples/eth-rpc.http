@@ -1,0 +1,31 @@
+@ethNode = http://localhost:8545
+@sugarDaddy = 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
+@alice = 0x119a11d0D1686C7330cA0650E26Fd6889Fbeb832
+@amount = 0x16345785d8a0000
+
+### SEND ETH
+POST {{ethNode}}
+Content-Type: application/json
+
+{
+  "jsonrpc":"2.0",
+  "method":"eth_sendTransaction",
+  "params":[{
+    "from": "{{sugarDaddy}}",
+    "to": "{{alice}}",
+    "value": "{{amount}}",
+    "data": "0x0"
+  }],
+  "id":1
+}
+
+### GET BALANCE
+POST {{ethNode}}
+Content-Type: application/json
+
+{
+  "jsonrpc":"2.0",
+  "method":"eth_getBalance",
+  "params":["{{alice}}",  "latest"],
+  "id":1
+}

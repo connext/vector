@@ -1,4 +1,4 @@
-import { GetConfigResponseBody, PostSetupRequestBody, PostSetupResponseBody } from "@connext/vector-types";
+import { ServerNodeParams, ServerNodeResponses } from "@connext/vector-types";
 
 import { env } from "./env";
 import { getServerNode, postServerNode } from "./http";
@@ -9,10 +9,13 @@ export const clearStore = async (nodeUrl: string): Promise<void> => {
   });
 };
 
-export const getConfig = async (nodeUrl: string): Promise<GetConfigResponseBody> => {
-  return getServerNode<GetConfigResponseBody>(nodeUrl, "config");
+export const getConfig = async (nodeUrl: string): Promise<ServerNodeResponses.GetConfig> => {
+  return getServerNode<ServerNodeResponses.GetConfig>(nodeUrl, "config");
 };
 
-export const setupChannel = async (nodeUrl: string, params: PostSetupRequestBody): Promise<PostSetupResponseBody> => {
-  return postServerNode<PostSetupRequestBody, PostSetupResponseBody>(nodeUrl, "setup", params);
+export const setupChannel = async (
+  nodeUrl: string,
+  params: ServerNodeParams.Setup,
+): Promise<ServerNodeResponses.Setup> => {
+  return postServerNode<ServerNodeParams.Setup, ServerNodeResponses.Setup>(nodeUrl, "setup", params);
 };

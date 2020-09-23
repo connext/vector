@@ -50,7 +50,10 @@ describe(testName, () => {
     expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
   });
 
-  it.skip("should work for Alice paying Bob", async () => {});
-  it.skip("should work for Bob paying Alice", async () => {});
+  it.skip("should work for alice creating transfer to bob", async () => {});
+  it.skip("should work for alice creating transfer out of channel", async () => {});
+  it.skip("should work for bob creating transfer to alice", async () => {});
+  it.skip("should work for bob creating transfer out of channel", async () => {});
   it.skip("should work for many concurrent transfers with multiple parties", async () => {});
+  it.skip("should work if channel is out of sync", async () => {});
 });
