@@ -18,7 +18,10 @@ export const createChannel = async (): Promise<Contract> => {
     const doneBeingCreated: Promise<string> = new Promise((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
-    const tx = await channelFactory.createChannel(counterparty.address);
+    const tx = await channelFactory.createChannel(
+      initiator.address,
+      counterparty.address,
+    );
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await doneBeingCreated;

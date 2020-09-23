@@ -2,12 +2,12 @@ import {
   getCreate2MultisigAddress,
   getPublicIdentifierFromPublicKey,
 } from "@connext/vector-utils";
-import { Contract, ContractFactory, constants, BigNumber } from "ethers";
+import { Contract, ContractFactory, BigNumber } from "ethers";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
 import { VectorOnchainService } from "../onchainService";
 
-import { initiator, counterparty, provider } from "./constants";
+import { addressZero, initiator, counterparty, provider } from "./constants";
 import { expect, getOnchainTxService } from "./utils";
 
 describe("ChannelFactory", () => {
@@ -39,7 +39,7 @@ describe("ChannelFactory", () => {
     const created = new Promise((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
-    const tx = await channelFactory.createChannel(counterparty.address);
+    const tx = await channelFactory.createChannel(initiator.address, counterparty.address);
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -65,7 +65,13 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(initiator)
-      .createChannelAndDeposit(counterparty.address, constants.AddressZero, value, { value });
+      .createChannelAndDeposit(
+        initiator.address,
+        counterparty.address,
+        addressZero,
+        value,
+        { value },
+      );
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -84,7 +90,7 @@ describe("ChannelFactory", () => {
     expect(balance).to.be.eq(value);
 
     const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, initiator).getLatestDeposit(
-      constants.AddressZero,
+      addressZero,
     );
     expect(latestDeposit.nonce).to.be.eq(1);
     expect(latestDeposit.amount).to.be.eq(value);

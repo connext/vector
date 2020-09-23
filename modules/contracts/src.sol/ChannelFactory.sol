@@ -54,24 +54,25 @@ contract ChannelFactory is IChannelFactory {
     }
 
     /// @dev Allows us to create new channel contract and get it all set up in one transaction
+    /// @param initiator address of one of the channel participants
     /// @param counterparty address of the other channel participant
     function createChannel(
+        address initiator,
         address counterparty
     )
         public
         override
         returns (IVectorChannel channel)
     {
-        address initiator = msg.sender;
         channel = deployChannelProxy(initiator, counterparty);
         channel.setup([initiator, counterparty]);
         emit ChannelCreation(channel);
     }
 
-    /// @dev Allows us to create new channel contract, get it set up, and fund it
-    /// with a call to `initiatorDeposit` in one transaction
+    /// @dev Allows us to create a new channel contract and fund it in one transaction
     /// @param counterparty address of the other channel participant
     function createChannelAndDeposit(
+        address initiator,
         address counterparty,
         address assetId,
         uint256 amount
@@ -81,7 +82,7 @@ contract ChannelFactory is IChannelFactory {
         override
         returns (IVectorChannel channel)
     {
-        channel = createChannel(counterparty);
+        channel = createChannel(initiator, counterparty);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
         if (assetId != address(0)) {

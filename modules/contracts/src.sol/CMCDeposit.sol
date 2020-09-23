@@ -47,7 +47,8 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         override
         onlyOnProxy
     {
-        require(msg.sender == participants[0], "Only the initiator can call initiatorDeposit");
+        // TODO: do we want to protect this method from being called by randos?
+        // require(msg.sender == participants[0], "Only the initiator can call initiatorDeposit");
         if (assetId == address(0)) {
             require(
                 msg.value == amount,

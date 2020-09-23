@@ -18,10 +18,12 @@ interface IChannelFactory {
     ) external view returns (address);
 
     function createChannel(
+        address initiator,
         address counterparty
     ) external returns (IVectorChannel);
 
     function createChannelAndDeposit(
+        address initiator,
         address counterparty,
         address assetId,
         uint256 amount
