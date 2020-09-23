@@ -8,10 +8,10 @@ import "./Types.sol";
 interface ICMCAdjudicator {
 
     function getLatestChannelDispute(
-    ) external returns (ChannelDispute memory);
+    ) external view returns (ChannelDispute memory);
 
     function getLatestTransferDispute(
-    ) external returns (TransferDispute memory);
+    ) external view returns (TransferDispute memory);
 
     function disputeChannel(
         CoreChannelState memory ccs,
