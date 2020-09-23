@@ -4,7 +4,7 @@ import {
   IMultichainTransactionService,
   IVectorTransactionService,
   MinimalTransaction,
-  OnchainTransactionError,
+  OnchainError,
   Result,
   ERC20Abi,
 } from "@connext/vector-types";
@@ -24,10 +24,10 @@ export class MultichainTransactionService implements IMultichainTransactionServi
     });
   }
 
-  async getCode(address: string, chainId: number): Promise<Result<string, OnchainTransactionError>> {
+  async getCode(address: string, chainId: number): Promise<Result<string, OnchainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainTransactionError(OnchainTransactionError.reasons.SignerNotFound));
+      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
     }
 
     try {
@@ -41,10 +41,10 @@ export class MultichainTransactionService implements IMultichainTransactionServi
   async sendTx(
     minTx: MinimalTransaction,
     chainId: number,
-  ): Promise<Result<providers.TransactionResponse, OnchainTransactionError>> {
+  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainTransactionError(OnchainTransactionError.reasons.SignerNotFound));
+      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
     }
 
     try {
@@ -66,9 +66,9 @@ export class VectorTransactionService implements IVectorTransactionService {
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainTransactionError>> {
+  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     if (!channelState.participants.includes(sender)) {
-      return Result.fail(new OnchainTransactionError(OnchainTransactionError.reasons.SenderNotInChannel));
+      return Result.fail(new OnchainError(OnchainError.reasons.SenderNotInChannel));
     }
     // first check if multisig is needed to deploy
     const multisigRes = await this.onchainTransactionService.getCode(
@@ -112,7 +112,7 @@ export class VectorTransactionService implements IVectorTransactionService {
   sendWithdrawTx(
     channelState: FullChannelState<any>,
     minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, OnchainTransactionError>> {
+  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     throw new Error("Method not implemented.");
   }
 
@@ -120,7 +120,7 @@ export class VectorTransactionService implements IVectorTransactionService {
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainTransactionError>> {
+  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     const vectorChannel = new utils.Interface(ChannelMastercopy.abi);
     const data = vectorChannel.encodeFunctionData("depositA", [amount, assetId]);
     if (assetId === constants.AddressZero) {
@@ -166,7 +166,7 @@ export class VectorTransactionService implements IVectorTransactionService {
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainTransactionError>> {
+  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     if (assetId === constants.AddressZero) {
       return this.onchainTransactionService.sendTx(
         {

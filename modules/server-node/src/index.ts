@@ -4,29 +4,12 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { Wallet } from "ethers";
-import axios from "axios";
-import { ChannelRpcMethods } from "@connext/vector-types";
+import { ChannelRpcMethods, ServerNodeParams, ServerNodeResponses } from "@connext/vector-types";
 
-import { NatsMessagingService } from "./services/messaging";
+import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import {
-  GetChannelStateParams,
-  getChannelStateParamsSchema,
-  getChannelStateResponseSchema,
-  GetConfigResponseBody,
-  getConfigResponseSchema,
-  postDepositBodySchema,
-  PostDepositRequestBody,
-  postDepositResponseSchema,
-  postLinkedTransferBodySchema,
-  PostLinkedTransferRequestBody,
-  postLinkedTransferResponseSchema,
-  postSetupBodySchema,
-  PostSetupRequestBody,
-  postSetupResponseSchema,
-} from "./schema";
 import { MultichainTransactionService, VectorTransactionService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
 
@@ -55,16 +38,14 @@ server.addHook("onReady", async () => {
       messagingUrl: config.natsUrl,
     },
     logger.child({ module: "NatsMessagingService" }),
-    async () => {
-      const r = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
-      return r.data;
-    },
+    getBearerTokenFunction(signer),
   );
   await messaging.connect();
-  return; // TODO: rm this once the below command works w/out error
+
+  const lock = await LockService.connect(config.redisUrl);
   vectorEngine = await VectorEngine.connect(
     messaging,
-    new LockService(config.redisUrl),
+    lock,
     store,
     signer,
     config.chainProviders,
@@ -77,16 +58,16 @@ server.get("/ping", async () => {
   return "pong\n";
 });
 
-server.get("/config", { schema: { response: getConfigResponseSchema } }, async (request, reply) => {
+server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema } }, async (request, reply) => {
   return reply.status(200).send({
     publicIdentifier: signer.publicIdentifier,
     signerAddress: signer.address,
-  } as GetConfigResponseBody);
+  } as ServerNodeResponses.GetConfig);
 });
 
-server.get<{ Params: GetChannelStateParams }>(
+server.get<{ Params: ServerNodeParams.GetChannelState }>(
   "/channel/:channelAddress",
-  { schema: { params: getChannelStateParamsSchema, response: getChannelStateResponseSchema } },
+  { schema: { params: ServerNodeParams.GetChannelStateSchema, response: ServerNodeResponses.GetChannelStateSchema } },
   async (request, reply) => {
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params.channelAddress);
     try {
@@ -99,9 +80,9 @@ server.get<{ Params: GetChannelStateParams }>(
   },
 );
 
-server.post<{ Body: PostSetupRequestBody }>(
+server.post<{ Body: ServerNodeParams.Setup }>(
   "/setup",
-  { schema: { body: postSetupBodySchema, response: postSetupResponseSchema } },
+  { schema: { body: ServerNodeParams.SetupSchema, response: ServerNodeResponses.SetupSchema } },
   async (request, reply) => {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_setup, {
       chainId: request.body.chainId,
@@ -113,13 +94,14 @@ server.post<{ Body: PostSetupRequestBody }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
     }
   },
 );
 
-server.post<{ Body: PostDepositRequestBody }>(
-  "/deposit",
-  { schema: { body: postDepositBodySchema, response: postDepositResponseSchema } },
+server.post<{ Body: ServerNodeParams.SendDepositTx }>(
+  "/send-deposit-tx",
+  { schema: { body: ServerNodeParams.SendDepositTxSchema, response: ServerNodeResponses.SendDepositTxSchema } },
   async (request, reply) => {
     const channelState = await store.getChannelState(request.body.channelAddress);
     if (!channelState) {
@@ -134,24 +116,33 @@ server.post<{ Body: PostDepositRequestBody }>(
     if (depositRes.isError) {
       return reply.status(400).send({ message: depositRes.getError()!.message ?? "" });
     }
-    await depositRes.getValue().wait();
-    const res = await vectorEngine.deposit({
-      amount: request.body.amount,
-      assetId: request.body.assetId,
-      channelAddress: request.body.channelAddress,
-    });
-    if (res.isError) {
-      return reply.status(400).send({ message: res.getError()!.message ?? "" });
-    }
-    return reply.status(200).send(res.getValue());
+    return reply.status(200).send({ txHash: depositRes.getValue().hash });
   },
 );
 
-server.post<{ Body: PostLinkedTransferRequestBody }>(
-  "/linked-transfer",
-  { schema: { body: postLinkedTransferBodySchema, response: postLinkedTransferResponseSchema } },
+server.post<{ Body: ServerNodeParams.Deposit }>(
+  "/deposit",
+  { schema: { body: ServerNodeParams.DepositSchema, response: ServerNodeResponses.DepositSchema } },
   async (request, reply) => {
-    const res = await vectorEngine.conditionalTransfer({
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_deposit, {
+      assetId: request.body.assetId,
+      channelAddress: request.body.channelAddress,
+    });
+    try {
+      const res = await vectorEngine.request(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
+  "/linked-transfer",
+  { schema: { body: ServerNodeParams.LinkedTransferSchema, response: ServerNodeResponses.LinkedTransferSchema } },
+  async (request, reply) => {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, {
       amount: request.body.amount,
       assetId: request.body.assetId,
       channelAddress: request.body.channelAddress,
@@ -162,11 +153,30 @@ server.post<{ Body: PostLinkedTransferRequestBody }>(
       details: {
         preImage: request.body.preImage,
       },
-    });
-    if (res.isError) {
-      return reply.status(400).send({ message: res.getError()?.message ?? "" });
+    } as any);
+    try {
+      const res = await vectorEngine.request(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
     }
-    return reply.status(200).send(res.getValue());
+  },
+);
+
+server.post<{ Body: ServerNodeParams.Admin }>(
+  "/clear-store",
+  { schema: { body: ServerNodeParams.AdminSchema, response: ServerNodeResponses.AdminSchema } },
+  async (request, reply) => {
+    if (request.body.adminToken !== config.adminToken) {
+      return reply.status(401).send({ message: "Unauthorized" });
+    }
+    try {
+      await store.clear();
+      return reply.status(200).send({ message: "success" });
+    } catch (e) {
+      return reply.status(500).send({ message: e.message });
+    }
   },
 );
 
