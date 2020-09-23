@@ -7,11 +7,6 @@ import "./Types.sol";
 
 interface ICMCDeposit {
 
-    event Deposit(
-      address assetId,
-      uint256 amount
-    );
-
     function getLatestDeposit(
         address assetId
     ) external view returns (LatestDeposit memory);

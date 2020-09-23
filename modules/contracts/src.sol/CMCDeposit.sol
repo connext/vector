@@ -19,12 +19,7 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
 
     mapping(address => LatestDeposit) internal _latestDeposit;
 
-    receive() external payable onlyOnProxy {
-        require(msg.sender == participants[1], "Only the counterparty can direct deposit");
-        _latestDeposit[address(0)].amount = msg.value;
-        _latestDeposit[address(0)].nonce++;
-        emit Deposit(address(0), msg.value);
-    }
+    receive() external payable onlyOnProxy {}
 
     function getLatestDeposit(
         address assetId
@@ -47,8 +42,6 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         override
         onlyOnProxy
     {
-        // TODO: do we want to protect this method from being called by randos?
-        // require(msg.sender == participants[0], "Only the initiator can call initiatorDeposit");
         if (assetId == address(0)) {
             require(
                 msg.value == amount,
@@ -62,7 +55,6 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         }
         _latestDeposit[assetId].amount = amount;
         _latestDeposit[assetId].nonce++;
-        emit Deposit(assetId, amount);
     }
 
 }

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { Contract } from "ethers";
 
-import { addressZero, initiator, counterparty, rando, one } from "../constants";
+import { addressZero, initiator, counterparty, one } from "../constants";
 import { expect } from "../utils";
 
 import { createChannel } from "./creation.spec";
@@ -15,41 +15,21 @@ describe("Channel Deposits", () => {
     channel = await createChannel();
   });
 
-  it("should only accept a direct eth deposit from the counterparty", async () => {
+  it("should accept a direct eth deposit without recording anything", async () => {
     const assetId = addressZero;
     const directDeposit = { to: channel.address, value };
-    await expect(initiator.sendTransaction(directDeposit)).to.be.reverted;
-    await expect(rando.sendTransaction(directDeposit)).to.be.reverted;
-    const nonceBefore = (await channel.getLatestDeposit(assetId)).nonce;
-    const depositEmitted: Promise<any> = new Promise(res => {
-      channel.once(channel.filters.Deposit(), (assetId, amount) => res({ assetId, amount }));
-    });
+    const latestDepositBefore = await channel.getLatestDeposit(assetId);
     await expect(counterparty.sendTransaction(directDeposit)).to.be.fulfilled;
-    expect(depositEmitted).to.be.fulfilled;
-    const depositEvent = await depositEmitted;
-    expect(depositEvent.assetId).to.equal(assetId);
-    expect(depositEvent.amount).to.equal(value);
-    const latestDeposit = await channel.getLatestDeposit(assetId);
-    expect(latestDeposit.amount).to.equal(value);
-    expect(latestDeposit.nonce).to.equal(nonceBefore.add(value));
+    const latestDepositAfter = await channel.getLatestDeposit(assetId);
+    expect(latestDepositBefore.nonce).to.equal(latestDepositAfter.nonce);
+    expect(latestDepositBefore.amount).to.equal(latestDepositAfter.amount);
   });
 
-  it("should only accept an eth deposit via contract method from the initiator", async () => {
+  it("should update latestDeposit if accepting an eth deposit via contract method", async () => {
     const assetId = addressZero;
     const depositTx = await channel.populateTransaction.initiatorDeposit(assetId, value, { value });
-    // TODO: do we want to protect this method from being called by randos?
-    // If so, we need some way to also allow the factory to call this during create & deposit
-    // await expect(counterparty.sendTransaction(depositTx)).to.be.reverted;
-    // await expect(rando.sendTransaction(depositTx)).to.be.reverted;
     const nonceBefore = (await channel.getLatestDeposit(assetId)).nonce;
-    const depositEmitted: Promise<any> = new Promise(res => {
-      channel.once(channel.filters.Deposit(), (assetId, amount) => res({ assetId, amount }));
-    });
     await expect(initiator.sendTransaction(depositTx)).to.be.fulfilled;
-    expect(depositEmitted).to.be.fulfilled;
-    const depositEvent = await depositEmitted;
-    expect(depositEvent.assetId).to.equal(assetId);
-    expect(depositEvent.amount).to.equal(value);
     const latestDeposit = await channel.getLatestDeposit(assetId);
     expect(latestDeposit.amount).to.equal(value);
     expect(latestDeposit.nonce).to.equal(nonceBefore.add(value));
