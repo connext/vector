@@ -1,6 +1,5 @@
 import { EthereumCommitment } from "@connext/types";
-
-import { MinimalTransaction } from "@connext/vector-types"
+import { MinimalTransaction } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { BigNumber, utils } from "ethers";
 
@@ -56,7 +55,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
       this.signatures,
     ]);
 
-    return { to: this.multisigAddress, value: 0, data: txData, };
+    return { to: this.multisigAddress, value: 0, data: txData };
   }
 
   public encode(): string {
