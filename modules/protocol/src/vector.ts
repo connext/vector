@@ -225,8 +225,8 @@ export class Vector implements IVectorProtocol {
       this.publicIdentifier,
       params.counterpartyIdentifier,
       params.networkContext.chainId,
-      params.networkContext.channelFactoryAddress.toLowerCase(),
-      params.networkContext.channelMastercopyAddress.toLowerCase(),
+      params.networkContext.channelFactoryAddress,
+      params.networkContext.channelMastercopyAddress,
       this.onchainService,
     );
     if (create2Res.isError) {

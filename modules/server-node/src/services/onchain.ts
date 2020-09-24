@@ -6,7 +6,7 @@ import {
   Result,
   ERC20Abi,
 } from "@connext/vector-types";
-import { constants, Contract, providers, Wallet } from "ethers";
+import { BigNumber, constants, Contract, providers, Wallet } from "ethers";
 import { ChannelFactory, ChannelMastercopy, VectorOnchainService } from "@connext/vector-contracts";
 import { BaseLogger } from "pino";
 
@@ -64,47 +64,81 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     }
 
     const multisigCode = multisigRes.getValue();
-    if (multisigCode === `0x`) {
-      this.logger.info({ method: "sendDepositTx", channelAddress: channelState.channelAddress }, `Deploying multisig`);
+    // alice needs to deploy the multisig
+    if (multisigCode === `0x` && sender === channelState.participants[0]) {
+      this.logger.info(
+        { method: "sendDepositTx", channelAddress: channelState.channelAddress, assetId, amount },
+        `Deploying channel with deposit`,
+      );
       // deploy multisig
       const channelFactory = new Contract(
         channelState.networkContext.channelFactoryAddress,
         ChannelFactory.abi,
         signer,
       );
-      const created = new Promise(res => {
-        channelFactory.once(channelFactory.filters.ChannelCreation(), res);
+
+      channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
+        console.log(`Channel created: ${JSON.stringify(data)}`);
       });
-      const txRes = await this.sendTxAndParseResponse(
-        channelFactory.createChannel(channelState.participants[0], channelState.participants[1]),
+
+      if (assetId !== constants.AddressZero) {
+        // approve tokens
+        const approveRes = await this.approveTokens(
+          channelState.networkContext.channelFactoryAddress,
+          sender,
+          amount,
+          assetId,
+          channelState.networkContext.chainId,
+        );
+        if (approveRes.isError) {
+          return Result.fail(approveRes.getError()!);
+        }
+        if (approveRes.getValue()) {
+          const receipt = await approveRes.getValue()!.wait();
+          this.logger.info(
+            { txHash: receipt.transactionHash, method: "sendDepositATx", assetId },
+            "Token approval confirmed",
+          );
+        }
+      }
+
+      const tx = await this.sendTxAndParseResponse(
+        channelFactory.createChannel(
+          channelState.participants[0],
+          channelState.participants[1],
+          channelState.networkContext.chainId,
+        ),
       );
-      if (txRes.isError) {
+
+      // TODO: fix this
+      // const tx = await this.sendTxAndParseResponse(
+      //   channelFactory.createChannelAndDepositA(
+      //     channelState.participants[0],
+      //     channelState.participants[1],
+      //     channelState.networkContext.chainId,
+      //     assetId,
+      //     amount,
+      //   ),
+      // );
+      if (tx.isError) {
         this.logger.error(
           {
             method: "sendDepositTx",
-            channelAddress: channelState.channelAddress,
-            error: txRes.getError()?.message,
+            error: tx.getError()?.message,
           },
-          "Error deploying multisig",
+          "Error creating channel",
         );
-        return Result.fail(txRes.getError()!);
       }
-      const tx = txRes.getValue();
-      this.logger.info({ method: "sendDepositTx", txHash: tx.hash }, "Deployed multisig, waiting for confirmation");
-      const txReceipt = await tx.wait();
-      const channelAddress = (await created) as string;
-      console.log("sendDepositTx:::::channelAddress: ", channelAddress);
+      // return tx;
+
+      const createReceipt = await tx.getValue().wait();
       this.logger.info(
-        {
-          method: "sendDepositTx",
-          txHash: txReceipt.transactionHash,
-          logs: txReceipt.logs,
-          events: (txReceipt as any).events,
-        },
-        "Multisig deposit confirmed",
+        { txHash: createReceipt.transactionHash, method: "sendDepositATx", assetId },
+        "Channel creation confirmed",
       );
     }
 
+    this.logger.info({ method: "sendDepositATx", assetId, amount }, "Channel is deployed, sending deposit");
     if (sender === channelState.participants[0]) {
       return this.sendDepositATx(channelState, amount, assetId);
     } else {
@@ -117,6 +151,68 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     throw new Error("Method not implemented.");
+  }
+
+  private async approveTokens(
+    spender: string,
+    owner: string,
+    amount: string,
+    assetId: string,
+    chainId: number,
+  ): Promise<Result<providers.TransactionResponse | undefined, OnchainError>> {
+    const signer = this.signers.get(chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+    }
+
+    this.logger.info({ assetId, channelAddress: spender }, "Approving token");
+    const erc20 = new Contract(assetId, ERC20Abi, signer);
+    const checkApprovalRes = await this.sendTxAndParseResponse(erc20.allowance(owner, spender));
+    if (checkApprovalRes.isError) {
+      this.logger.error(
+        {
+          method: "approveTokens",
+          spender,
+          owner,
+          assetId,
+          error: checkApprovalRes.getError()?.message,
+        },
+        "Error checking approved tokens for deposit A",
+      );
+      return checkApprovalRes;
+    }
+
+    if (BigNumber.from(checkApprovalRes.getValue()).gte(amount)) {
+      this.logger.info(
+        {
+          method: "approveTokens",
+          assetId,
+          spender,
+          owner,
+          approved: checkApprovalRes.getValue().toString(),
+        },
+        "Allowance is sufficient",
+      );
+      return Result.ok(undefined);
+    }
+    const approveRes = await this.sendTxAndParseResponse(erc20.approve(spender, amount));
+    if (approveRes.isError) {
+      this.logger.error(
+        {
+          method: "approveTokens",
+          spender,
+          error: approveRes.getError()?.message,
+        },
+        "Error approving tokens for deposit A",
+      );
+      return approveRes;
+    }
+    const approveTx = approveRes.getValue();
+    this.logger.info(
+      { txHash: approveTx.hash, method: "approveTokens", assetId, amount },
+      "Approve token tx submitted",
+    );
+    return approveRes;
   }
 
   private async sendDepositATx(
@@ -132,8 +228,13 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     if (assetId !== constants.AddressZero) {
       // need to approve
       this.logger.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
-      const erc20 = new Contract(channelState.networkContext.channelFactoryAddress, ERC20Abi, signer);
-      const approveRes = await this.sendTxAndParseResponse(erc20.approve(channelState.channelAddress, amount));
+      const approveRes = await this.approveTokens(
+        channelState.channelAddress,
+        channelState.participants[0],
+        amount,
+        assetId,
+        channelState.networkContext.chainId,
+      );
       if (approveRes.isError) {
         this.logger.error(
           {
@@ -143,18 +244,16 @@ export class VectorTransactionService extends VectorOnchainService implements IV
           },
           "Error approving tokens for deposit A",
         );
-        return approveRes;
+        return Result.fail(approveRes.getError()!);
       }
       const approveTx = approveRes.getValue();
-      this.logger.info(
-        { txHash: approveTx.hash, method: "sendDepositATx", assetId },
-        "Approved token, waiting for confirmation",
-      );
-      await approveTx.wait();
-      this.logger.info({ txHash: approveTx.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
+      if (approveTx) {
+        await approveTx.wait();
+      }
+      this.logger.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
     }
     const vectorChannel = new Contract(channelState.channelAddress, ChannelMastercopy.abi, signer);
-    return this.sendTxAndParseResponse(vectorChannel.depositA(amount, assetId));
+    return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount));
   }
 
   private async sendDepositBTx(

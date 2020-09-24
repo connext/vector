@@ -187,14 +187,9 @@ export class VectorOnchainService implements IVectorOnchainService {
       return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
 
-    const vectorChannel = new utils.Interface(ChannelFactory.abi);
-    const data = vectorChannel.encodeFunctionData("getChannelAddress", [initiator, responder]);
+    const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const derivedAddress = await provider.call({
-        data,
-        to: channelFactoryAddress,
-        value: 0,
-      });
+      const derivedAddress = await vectorChannel.getChannelAddress(initiator, responder, chainId);
       return Result.ok(derivedAddress);
     } catch (e) {
       return Result.fail(e);

@@ -37,7 +37,7 @@ describe("ChannelFactory", () => {
     const created = new Promise(res => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
-    const tx = await channelFactory.createChannel(initiator.address, responder.address);
+    const tx = await channelFactory.createChannel(initiator.address, responder.address, chainId);
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -65,7 +65,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(deployer)
-      .createChannelAndDepositA(initiator.address, responder.address, constants.AddressZero, value, { value });
+      .createChannelAndDepositA(initiator.address, responder.address, chainId, constants.AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
