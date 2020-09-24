@@ -1,7 +1,5 @@
 import {
-  ChainProviders,
   FullChannelState,
-  IMultichainTransactionService,
   IVectorTransactionService,
   MinimalTransaction,
   OnchainError,
@@ -9,66 +7,25 @@ import {
   ERC20Abi,
 } from "@connext/vector-types";
 import { constants, providers, utils, Wallet } from "ethers";
-import { ChannelFactory, ChannelMastercopy } from "@connext/vector-contracts";
+import { ChannelFactory, ChannelMastercopy, VectorOnchainService } from "@connext/vector-contracts";
 import { BaseLogger } from "pino";
 
 export type ChainSigners = {
   [chainId: number]: providers.JsonRpcSigner;
 };
 
-export class MultichainTransactionService implements IMultichainTransactionService {
+export class VectorTransactionService extends VectorOnchainService implements IVectorTransactionService {
   private signers: Map<number, Wallet> = new Map();
   constructor(
-    private readonly chainProviderUrls: ChainProviders,
+    private readonly _chainProviders: { [chainId: string]: providers.JsonRpcProvider },
     private readonly privateKey: string,
     private readonly logger: BaseLogger,
   ) {
-    Object.entries(chainProviderUrls).forEach(([chainId, url]: [string, string]) => {
-      this.signers.set(parseInt(chainId), new Wallet(privateKey, new providers.JsonRpcProvider(url)));
+    super(_chainProviders, logger.child({ module: "VectorOnchainService" }));
+    Object.entries(_chainProviders).forEach(([chainId, provider]) => {
+      this.signers.set(parseInt(chainId), new Wallet(privateKey, provider));
     });
   }
-
-  async getCode(address: string, chainId: number): Promise<Result<string, OnchainError>> {
-    const signer = this.signers.get(chainId);
-    if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
-    }
-
-    try {
-      const code = await signer.provider.getCode(address);
-      return Result.ok(code);
-    } catch (e) {
-      return Result.fail(e);
-    }
-  }
-
-  async sendTx(
-    minTx: MinimalTransaction,
-    chainId: number,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
-    const signer = this.signers.get(chainId);
-    if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
-    }
-
-    try {
-      const tx = await signer.sendTransaction(minTx);
-      return Result.ok(tx);
-    } catch (e) {
-      let error = e;
-      if (e.message.includes("sender doesn't have enough funds")) {
-        error = new OnchainError(OnchainError.reasons.NotEnoughFunds);
-      }
-      return Result.fail(error);
-    }
-  }
-}
-
-export class VectorTransactionService implements IVectorTransactionService {
-  constructor(
-    private readonly onchainTransactionService: IMultichainTransactionService,
-    private readonly logger: BaseLogger,
-  ) {}
 
   async sendDepositTx(
     channelState: FullChannelState<any>,
@@ -80,10 +37,7 @@ export class VectorTransactionService implements IVectorTransactionService {
       return Result.fail(new OnchainError(OnchainError.reasons.SenderNotInChannel));
     }
     // first check if multisig is needed to deploy
-    const multisigRes = await this.onchainTransactionService.getCode(
-      channelState.channelAddress,
-      channelState.networkContext.chainId,
-    );
+    const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
 
     if (multisigRes.isError) {
       return Result.fail(multisigRes.getError()!);
@@ -98,7 +52,11 @@ export class VectorTransactionService implements IVectorTransactionService {
         channelState.participants[0],
         channelState.participants[1],
       ]);
-      const txRes = await this.onchainTransactionService.sendTx(
+      console.log(
+        "channelState.networkContext.channelFactoryAddress: ",
+        channelState.networkContext.channelFactoryAddress,
+      );
+      const txRes = await this.sendTx(
         {
           to: channelState.networkContext.channelFactoryAddress,
           value: 0,
@@ -145,7 +103,7 @@ export class VectorTransactionService implements IVectorTransactionService {
     const vectorChannel = new utils.Interface(ChannelMastercopy.abi);
     const data = vectorChannel.encodeFunctionData("initiatorDeposit", [amount, assetId]);
     if (assetId === constants.AddressZero) {
-      return this.onchainTransactionService.sendTx(
+      return this.sendTx(
         {
           data,
           to: channelState.channelAddress,
@@ -158,7 +116,7 @@ export class VectorTransactionService implements IVectorTransactionService {
       this.logger.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
       const erc20 = new utils.Interface(ERC20Abi);
       const data = erc20.encodeFunctionData("approve", [channelState.channelAddress, amount]);
-      const approveRes = await this.onchainTransactionService.sendTx(
+      const approveRes = await this.sendTx(
         {
           to: assetId,
           value: 0,
@@ -172,7 +130,7 @@ export class VectorTransactionService implements IVectorTransactionService {
       const approveTx = approveRes.getValue();
       this.logger.info({ txHash: approveTx.hash }, "Approved token, waiting for confirmation");
       await approveTx.wait();
-      return this.onchainTransactionService.sendTx(
+      return this.sendTx(
         {
           data,
           to: channelState.channelAddress,
@@ -189,7 +147,7 @@ export class VectorTransactionService implements IVectorTransactionService {
     assetId: string,
   ): Promise<Result<providers.TransactionResponse, OnchainError>> {
     if (assetId === constants.AddressZero) {
-      return this.onchainTransactionService.sendTx(
+      return this.sendTx(
         {
           data: "0x",
           to: channelState.channelAddress,
@@ -200,7 +158,7 @@ export class VectorTransactionService implements IVectorTransactionService {
     } else {
       const erc20 = new utils.Interface(ERC20Abi);
       const data = erc20.encodeFunctionData("transfer", [channelState.channelAddress, amount]);
-      return this.onchainTransactionService.sendTx(
+      return this.sendTx(
         {
           to: assetId,
           value: 0,
@@ -208,6 +166,27 @@ export class VectorTransactionService implements IVectorTransactionService {
         },
         channelState.networkContext.chainId,
       );
+    }
+  }
+
+  async sendTx(
+    minTx: MinimalTransaction,
+    chainId: number,
+  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+    const signer = this.signers.get(chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+    }
+
+    try {
+      const tx = await signer.sendTransaction(minTx);
+      return Result.ok(tx);
+    } catch (e) {
+      let error = e;
+      if (e.message.includes("sender doesn't have enough funds")) {
+        error = new OnchainError(OnchainError.reasons.NotEnoughFunds);
+      }
+      return Result.fail(error);
     }
   }
 }

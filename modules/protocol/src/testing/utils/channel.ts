@@ -72,7 +72,7 @@ export const createVectorInstances = async (
 ): Promise<IVectorProtocol[]> => {
   const sharedMessaging = new MemoryMessagingService();
   const sharedLock = new MemoryLockService();
-  const sharedChain = new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) });
+  const sharedChain = new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) }, Pino());
   return Promise.all(
     Array(numberOfEngines)
       .fill(0)
@@ -80,9 +80,13 @@ export const createVectorInstances = async (
         const instanceOverrides = overrides[idx] || {};
         const messagingService = shareServices ? sharedMessaging : new MemoryMessagingService();
         const lockService = shareServices ? sharedLock : new MemoryLockService();
+        const log = instanceOverrides.logger ?? Pino();
         const onchainService = shareServices
           ? sharedChain
-          : new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) });
+          : new VectorOnchainService(
+              { [chainId]: new JsonRpcProvider(providerUrl) },
+              log.child({ module: "VectorOnchainService" }),
+            );
         return createVectorInstance({
           messagingService,
           lockService,
@@ -99,7 +103,10 @@ export const createVectorInstance = async (overrides: Partial<VectorTestOverride
     lockService: new MemoryLockService(),
     storeService: new MemoryStoreService(),
     signer: getRandomChannelSigner(env.chainProviders[chainId]),
-    onchainService: new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) }),
+    onchainService: new VectorOnchainService(
+      { [chainId]: new JsonRpcProvider(providerUrl) },
+      overrides.logger ?? Pino(),
+    ),
     logger: getTestLoggers("vector").log,
     ...overrides,
   };

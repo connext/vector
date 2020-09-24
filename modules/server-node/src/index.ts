@@ -3,14 +3,14 @@ import fastifyOas from "fastify-oas";
 import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
-import { Wallet } from "ethers";
+import { providers, Wallet } from "ethers";
 import { ChannelRpcMethods, OnchainError, ServerNodeParams, ServerNodeResponses } from "@connext/vector-types";
 
 import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { MultichainTransactionService, VectorTransactionService } from "./services/onchain";
+import { VectorTransactionService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
 
 const server = fastify();
@@ -29,12 +29,12 @@ let vectorEngine: VectorEngine;
 const pk = Wallet.fromMnemonic(config.mnemonic!).privateKey;
 const signer = new ChannelSigner(pk);
 
-const multichainTx = new MultichainTransactionService(
-  config.chainProviders,
-  pk,
-  logger.child({ module: "MultichainTransactionService" }),
-);
-const vectorTx = new VectorTransactionService(multichainTx, logger.child({ module: "VectorTransactionService" }));
+const _providers: { [chainId: string]: providers.JsonRpcProvider } = {};
+Object.entries(config.chainProviders).forEach(([chainId, url]: any) => {
+  _providers[chainId] = new providers.JsonRpcProvider(url);
+});
+
+const vectorTx = new VectorTransactionService(_providers, pk, logger.child({ module: "VectorTransactionService" }));
 const store = new PrismaStore();
 server.addHook("onReady", async () => {
   const messaging = new NatsMessagingService(
@@ -137,7 +137,6 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
       if (depositRes.getError()!.message === OnchainError.reasons.NotEnoughFunds) {
         return reply.status(400).send({ message: depositRes.getError()!.message });
       }
-      console.log("depositRes.getError(): ", depositRes.getError()?.message);
       return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });

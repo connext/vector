@@ -8,6 +8,7 @@ import {
   LinkedTransferResolverEncoding,
   LinkedTransferState,
   LinkedTransferStateEncoding,
+  NetworkContext,
   ResolveUpdateDetails,
   SetupUpdateDetails,
   UpdateParams,
@@ -26,7 +27,10 @@ export type PartialChannelUpdate<T extends UpdateType> = Partial<
 >;
 
 export type PartialFullChannelState<T extends UpdateType> = Partial<
-  Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
+  Omit<FullChannelState, "latestUpdate" | "networkContext"> & {
+    latestUpdate: PartialChannelUpdate<T>;
+    networkContext: Partial<NetworkContext>;
+  }
 >;
 
 export type PartialUpdateParams<T extends UpdateType> = Partial<
@@ -184,6 +188,18 @@ export function createTestCoreChannelState(
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
   const nonce = overrides.nonce ?? 1;
+
+  const { latestUpdate: latestUpdateOverrides, networkContext, ...rest } = overrides;
+
+  const latestUpdate = createTestChannelUpdate(type, {
+    channelAddress,
+    fromIdentifier: publicIdentifiers[0],
+    toIdentifier: publicIdentifiers[1],
+    assetId: assetIds[0],
+    nonce,
+    ...latestUpdateOverrides,
+  });
+
   return {
     assetIds,
     balances: [
@@ -200,44 +216,18 @@ export function createTestCoreChannelState(
     ],
     channelAddress,
     latestDepositNonce: 1,
-    lockedBalance: ["1", "2"],
+    latestUpdate,
     merkleRoot: mkHash(),
-    nonce,
-    participants,
-    timeout: "1",
-    ...overrides,
-  };
-}
-
-export function createTestChannelState<T extends UpdateType = typeof UpdateType.setup>(
-  type: T,
-  overrides: PartialFullChannelState<T> = {},
-): FullChannelState<T> {
-  const channelAddress = overrides.channelAddress || mkAddress("0xccc");
-  const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
-  const nonce = overrides.nonce ?? 1;
-  const coreChannelState = createTestCoreChannelState({ ...overrides });
-  // Get some default values that should be consistent between
-  // the channel state and the channel update
-  const publicIdentifiers = overrides.publicIdentifiers ?? [mkPublicIdentifier("indraA"), mkPublicIdentifier("indraB")];
-  return {
-    latestUpdate: createTestChannelUpdate(type, {
-      channelAddress,
-      fromIdentifier: publicIdentifiers[0],
-      toIdentifier: publicIdentifiers[1],
-      assetId: assetIds[0],
-      nonce,
-      ...(overrides.latestUpdate ?? {}),
-    }) as any,
     networkContext: {
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
       providerUrl: "http://localhost:8545",
       channelMastercopyAddress: mkAddress("0xmast"),
+      ...(networkContext ?? {}),
     },
     publicIdentifiers,
-    ...coreChannelState,
-    ...overrides,
+    timeout: "1",
+    ...rest,
   };
 }
 
