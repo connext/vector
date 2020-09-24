@@ -32,16 +32,15 @@ export async function outbound(
   onchainService: IVectorOnchainService,
   messagingService: IMessagingService,
   signer: IChannelSigner,
-  logger: pino.BaseLogger = pino(),
+  logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
   // Before doing anything, run the validation
   // If this passes, it is safe to force-unwrap various things that may
   // be undefined. While we may still handle the error here, it should be
   // never actually reach that code (since the validation should catch any
   // errors first)
-  const validationRes = await validateOutbound(params, storeService, signer, logger);
+  const validationRes = await validateOutbound(params, storeService, signer);
   if (validationRes.isError) {
-    logger.error({ method: "outbound", variable: "validationRes", error: validationRes.getError()?.message });
     return Result.fail(validationRes.getError()!);
   }
 
@@ -61,7 +60,12 @@ export async function outbound(
     logger,
   );
   if (updateRes.isError) {
-    logger.error({ method: "outbound", variable: "updateRes", error: updateRes.getError()?.message });
+    logger.error({
+      method: "outbound",
+      variable: "updateRes",
+      error: updateRes.getError()?.message,
+      context: updateRes.getError()?.context,
+    });
     return Result.fail(updateRes.getError()!);
   }
   const updateValue = updateRes.getValue();
@@ -302,7 +306,7 @@ export async function inbound(
 
     // Only sync an update IFF it is double signed
     // NOTE: validation will ensure the signatures present are valid
-    if (previousUpdate.signatures.filter(x => !!x).length !== 2) {
+    if (previousUpdate.signatures.filter((x) => !!x).length !== 2) {
       return returnError(InboundChannelUpdateError.reasons.SyncSingleSigned, previousUpdate, previousState);
     }
 
@@ -406,7 +410,7 @@ const syncStateAndRecreateUpdate = async (
   // this is indicative of a different issue (perhaps lock failure?).
   // Present signatures are already asserted to be valid via the validation,
   // here simply assert the length
-  if (counterpartyUpdate.signatures.filter(x => !!x).length !== 2) {
+  if (counterpartyUpdate.signatures.filter((x) => !!x).length !== 2) {
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SyncSingleSigned,

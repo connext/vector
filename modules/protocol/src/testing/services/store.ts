@@ -20,6 +20,13 @@ export class MemoryStoreService implements IVectorStore {
     return Promise.resolve();
   }
 
+  clear(): Promise<void> {
+    this.channelStates.clear();
+    this.transfersInChannel.clear();
+    this.transfers.clear();
+    return Promise.resolve();
+  }
+
   getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
     const { state } = this.channelStates.get(channelAddress) ?? {};
     return Promise.resolve(state);
@@ -31,7 +38,7 @@ export class MemoryStoreService implements IVectorStore {
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
     return Promise.resolve(
-      [...this.channelStates.values()].find(channelState => {
+      [...this.channelStates.values()].find((channelState) => {
         channelState.state.participants[0] === participantA &&
           channelState.state.participants[1] === participantB &&
           channelState.state.networkContext.chainId === chainId;
@@ -40,7 +47,7 @@ export class MemoryStoreService implements IVectorStore {
   }
 
   getChannelStates(): Promise<FullChannelState[]> {
-    return Promise.resolve([...this.channelStates.values()].map(c => c.state));
+    return Promise.resolve([...this.channelStates.values()].map((c) => c.state));
   }
 
   saveChannelState(
@@ -72,7 +79,7 @@ export class MemoryStoreService implements IVectorStore {
       // This is a `resolve` update, so remove from channel
       this.transfersInChannel.set(
         channelState.channelAddress,
-        activeTransfers.filter(x => x !== transfer.transferId),
+        activeTransfers.filter((x) => x !== transfer.transferId),
       );
       return Promise.resolve();
     }
@@ -84,7 +91,7 @@ export class MemoryStoreService implements IVectorStore {
 
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
     const active = [...(this.transfersInChannel.get(channelAddress) ?? [])];
-    const all = active.map(id => this.transfers.get(id)).filter(x => !!x);
+    const all = active.map((id) => this.transfers.get(id)).filter((x) => !!x);
     return Promise.resolve(all as FullTransferState[]);
   }
 

@@ -16,6 +16,7 @@ export interface IVectorStore {
     commitment: ChannelCommitmentData,
     transfer?: FullTransferState,
   ): Promise<void>;
+  clear(): Promise<void>;
 
   // Should return all initial transfer state data needed to
   // create the merkle root

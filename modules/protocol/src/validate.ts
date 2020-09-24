@@ -44,7 +44,6 @@ export async function validateOutbound<T extends UpdateType = any>(
   params: UpdateParams<T>,
   storeService: IVectorStore,
   signer: IChannelSigner,
-  logger: pino.BaseLogger = pino(),
 ): Promise<OutboundValidationResult<T>> {
   // Create a helper to handle errors
   const returnError = (
@@ -440,7 +439,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // and chain service
 
       // Update the active transfers
-      activeTransfers = previousActiveTransfers.filter(t => t.transferId === transferId);
+      activeTransfers = previousActiveTransfers.filter((t) => t.transferId === transferId);
 
       // Regenerate the merkle tree
 
