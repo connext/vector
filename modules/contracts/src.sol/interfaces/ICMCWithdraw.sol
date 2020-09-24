@@ -3,7 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 
-interface ICMCExecutor {
+interface ICMCWithdraw {
 
     function execTransaction(
         address to,

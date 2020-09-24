@@ -2,12 +2,12 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/ICMCExecutor.sol";
+import "./interfaces/ICMCWithdraw.sol";
 import "./CMCCore.sol";
 import "./lib/LibChannelCrypto.sol";
 
 
-contract CMCExecutor is CMCCore, ICMCExecutor {
+contract CMCWithdraw is CMCCore, ICMCWithdraw {
 
     using LibChannelCrypto for bytes32;
 
