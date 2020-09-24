@@ -1,4 +1,3 @@
-import { LinkedTransfer } from "@connext/vector-contracts";
 import {
   getSignerAddressFromPublicIdentifier,
   hashCoreTransferState,
@@ -326,6 +325,7 @@ function generateCreateUpdate(
     transferState: transferInitialState,
     channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
+    transferResolver: undefined,
     meta,
   };
   const transferHash = hashCoreTransferState(transferState);
@@ -421,7 +421,7 @@ async function generateResolveUpdate(
     transfer: {
       ...transferToResolve,
       transferState: { ...transferToResolve.transferState, balance: { ...transferBalance } },
-      transferResolver: { ...params.details.transferResolver },
+      transferResolver: { ...transferResolver },
     },
     unsigned,
   };
