@@ -58,7 +58,7 @@ async function handleWithdrawResolve(
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
 
   // Get the recipient + amount from the transfer state
-  const { balance, initiatorSignature, signers, data, nonce, fee } = transferInitialState as WithdrawState;
+  const { balance, nonce } = transferInitialState as WithdrawState;
 
   // TODO: properly account for fees?
   const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
@@ -76,7 +76,6 @@ async function handleWithdrawResolve(
 
   // Generate your signature on the withdrawal commitment
   const responderSignature = await signer.signMessage(commitment.hashToSign());
-  // TODO: add sigs to commitment?
 
   // Resolve the withdrawal
   const resolveRes = await vector.resolve({ transferResolver: { responderSignature }, transferId, channelAddress });
