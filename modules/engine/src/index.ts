@@ -75,11 +75,11 @@ export class VectorEngine {
     // unlock transfer if encrypted preimage exists
     this.vector.on(
       ProtocolEventName.CHANNEL_UPDATE_EVENT,
-      (data) => {
+      data => {
         if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
         }
       },
-      (data) => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
+      data => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
     );
 
     // TODO: this subscription should be part of the MessagingService
@@ -179,7 +179,7 @@ export class VectorEngine {
     }
     const transfers = await this.store.getActiveTransfers(params.channelAddress);
     let transfer: FullTransferState | undefined;
-    transfers.find((instance) => instance.meta.routingId === params.routingId);
+    transfers.find(instance => instance.meta.routingId === params.routingId);
     if (!transfer) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
