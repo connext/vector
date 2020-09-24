@@ -372,13 +372,15 @@ async function generateResolveUpdate(
   // - nonce
   // - merkle root
 
+  const { transferId, transferResolver } = params.details;
+
   // First generate latest merkle tree data
-  const transferState = transfers.find(x => x.transferId === params.details.transferId);
-  if (!transferState) {
-    throw new Error(`Could not find transfer for id ${params.details.transferId}`);
+  const transferToResolve = transfers.find(x => x.transferId === transferId);
+  if (!transferToResolve) {
+    throw new Error(`Could not find transfer for id ${transferId}`);
   }
   const hashes = transfers
-    .filter(x => x.transferId !== params.details.transferId)
+    .filter(x => x.transferId !== transferId)
     .map(state => {
       return hashCoreTransferState(state);
     });
@@ -386,9 +388,9 @@ async function generateResolveUpdate(
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(
-    { ...transferState, transferResolver: params.details.transferResolver },
+    { ...transferToResolve, transferResolver },
     state.networkContext.chainId,
-    LinkedTransfer.bytecode,
+    //LinkedTransfer.bytecode, // TODO: include bytecode
   );
 
   if (transferBalanceResult.isError) {
@@ -397,19 +399,19 @@ async function generateResolveUpdate(
   const transferBalance = transferBalanceResult.getValue()!;
 
   // Convert transfer balance to channel update balance
-  const balance = getUpdatedChannelBalance(UpdateType.resolve, transferState.assetId, transferBalance, state);
+  const balance = getUpdatedChannelBalance(UpdateType.resolve, transferToResolve.assetId, transferBalance, state);
 
   // Generate the unsigned update from the params
   const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
-    assetId: transferState.assetId,
+    assetId: transferToResolve.assetId,
     details: {
-      transferId: params.details.transferId,
-      transferDefinition: transferState.transferDefinition,
-      transferResolver: params.details.transferResolver,
-      transferEncodings: transferState.transferEncodings,
+      transferId,
+      transferDefinition: transferToResolve.transferDefinition,
+      transferResolver,
+      transferEncodings: transferToResolve.transferEncodings,
       merkleRoot: root === "0x" ? constants.HashZero : root,
     },
     signatures: [],
@@ -417,9 +419,9 @@ async function generateResolveUpdate(
 
   return {
     transfer: {
-      ...transferState,
-      transferState: { ...transferState.transferState, balance: transferBalance },
-      transferResolver: params.details.transferResolver,
+      ...transferToResolve,
+      transferState: { ...transferToResolve.transferState, balance: { ...transferBalance } },
+      transferResolver: { ...params.details.transferResolver },
     },
     unsigned,
   };

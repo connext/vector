@@ -407,7 +407,28 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       } = details as ResolveUpdateDetails;
 
       // Ensure transfer exists in store
-      transfer = await storeService.getTransferState(transferId);
+      const storedTransfer = (await storeService.getTransferState(transferId))!;
+
+      // Get the final transfer balance from contract
+      const transferBalanceResult = await onchainService.resolve(
+        { ...storedTransfer, transferResolver },
+        previousState.networkContext.chainId,
+      );
+
+      if (transferBalanceResult.isError) {
+        throw transferBalanceResult.getError()!;
+      }
+      const transferBalance = transferBalanceResult.getValue()!;
+
+      // Update the transfer
+      transfer = {
+        ...storedTransfer,
+        transferResolver,
+        transferState: {
+          ...storedTransfer.transferState,
+          balance: transferBalance,
+        },
+      };
 
       // Ensure the transfer exists within the active transfers
 

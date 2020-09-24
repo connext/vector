@@ -355,7 +355,6 @@ export const resolveTransfer = async (
   const channel = ret.getValue();
   const stored = await redeemer.getTransferState(transfer.transferId);
   expect(stored!.transferResolver).to.deep.eq(params.transferResolver);
-
   expect(await redeemer.getChannelState(channelAddress)).to.be.deep.eq(channel);
   expect(await counterparty.getChannelState(channelAddress)).to.be.deep.eq(channel);
   expect(await counterparty.getTransferState(transfer.transferId)).to.be.deep.eq(stored);
