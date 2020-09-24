@@ -7,18 +7,29 @@ import {
   ProtocolEventName,
   UpdateType,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 
-export async function setupListeners(vector: IVectorProtocol, messaging: IMessagingService, signer: IChannelSigner) {
+export async function setupListeners(
+  vector: IVectorProtocol,
+  messaging: IMessagingService,
+  signer: IChannelSigner,
+): Promise<void> {
   // Set up withdraw listener and handler
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     data => handleWithdrawResolve(data),
-    data =>
-      data.updatedChannelState.latestUpdate.type == UpdateType.create &&
-      (data.updatedChannelState.latestUpdate.details as CreateUpdateDetails).transferDefinition ===
-        data.updatedChannelState.networkContext.withdrawDefinition &&
-      getSignerAddressFromPublicIdentifier(data.updatedChannelState.latestUpdate.fromIdentifier) !== signer.address,
+    data => {
+      const {
+        updatedChannelState: {
+          latestUpdate: { toIdentifier, type, details },
+          networkContext: { withdrawDefinition },
+        },
+      } = data;
+      return (
+        toIdentifier === signer.publicIdentifier &&
+        type === UpdateType.create &&
+        (details as CreateUpdateDetails).transferDefinition === withdrawDefinition
+      );
+    },
   );
 }
 

@@ -1,5 +1,12 @@
-import { ChannelUpdateEvent, IChannelSigner, IVectorProtocol, UpdateType } from "@connext/vector-types";
-import { createTestChannelState, getRandomChannelSigner, mkAddress } from "@connext/vector-utils";
+import {
+  ChannelUpdateEvent,
+  IChannelSigner,
+  IVectorProtocol,
+  ProtocolEventName,
+  ProtocolEventPayloadsMap,
+  UpdateType,
+} from "@connext/vector-types";
+import { createTestChannelState, getRandomChannelSigner, mkAddress, mkPublicIdentifier } from "@connext/vector-utils";
 import { Evt } from "evt";
 
 import { setupListeners } from "../listeners";
@@ -22,10 +29,14 @@ describe.only("listeners", () => {
   // Create an EVT to post to, that can be aliased as a
   // vector instance
 
-  const evt: Evt<ChannelUpdateEvent> = Evt.create();
+  const evt = Evt.create<ChannelUpdateEvent>();
 
   const vector: IVectorProtocol = {
-    on: (...args: any[]) => addEvtHandler(evt, args[0], args[1], args[2]),
+    on: (
+      event: ProtocolEventName,
+      callback: (payload: ProtocolEventPayloadsMap[typeof event]) => void | Promise<void>,
+      filter: (payload) => boolean = _payload => true,
+    ) => evt.pipe(filter).attach(callback),
   } as any;
 
   const messaging = {} as any;
@@ -36,8 +47,9 @@ describe.only("listeners", () => {
     it("should work", async () => {
       await setupListeners(vector, messaging, signer);
 
-      const updatedChannelState = await createTestChannelState(UpdateType.create, {
+      const updatedChannelState = createTestChannelState(UpdateType.create, {
         latestUpdate: {
+          fromIdentifier: mkPublicIdentifier(),
           details: { transferDefinition: mkAddress("0xdef") },
         },
         networkContext: {
