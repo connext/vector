@@ -26,7 +26,7 @@ export const createChannel = async (): Promise<Contract> => {
     await tx.wait();
     const channelAddress = await doneBeingCreated;
     expect(channelAddress).to.be.a("string");
-    return new Contract(channelAddress, ChannelMastercopy.abi, provider);
+    return new Contract(channelAddress, VectorChannel.abi, provider);
 };
 
 describe("Channel Creation", () => {

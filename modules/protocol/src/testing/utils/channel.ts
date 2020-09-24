@@ -1,4 +1,4 @@
-import { ChannelFactory, TestToken, ChannelMastercopy, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelFactory, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import {
   Contract,
   FullChannelState,
@@ -147,7 +147,7 @@ export const deployChannelWithInitiatorDeposit = async (
   expect(deployedAddr).to.be.eq(channelAddress);
 
   // Verify onchain values updated
-  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).getLatestDeposit(assetId);
+  const latestDeposit = await new Contract(channelAddress, VectorChannel.abi, alice).getLatestDeposit(assetId);
   expect(latestDeposit.nonce).to.be.eq(1);
   expect(latestDeposit.amount).to.be.eq(depositAmount);
 
@@ -194,7 +194,7 @@ export const sendInitiatorDeposit = async (
     await deployChannelWithInitiatorDeposit(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
   } else {
     // Call deposit on the multisig
-    const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).initiatorDeposit(assetId, value, {
+    const tx = await new Contract(channelAddress, VectorChannel.abi, depositorSigner).initiatorDeposit(assetId, value, {
       value,
     });
     await tx.wait();

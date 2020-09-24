@@ -13,7 +13,7 @@ describe("Duet Setup", () => {
     const channel = await setupChannel(env.aliceUrl, {
       chainId,
       counterpartyIdentifier: bob.publicIdentifier,
-      timeout: "0",
+      timeout: "8640",
     });
     expect(channel.channelAddress).to.be.ok;
   });

@@ -7,7 +7,7 @@ import {
   ERC20Abi,
 } from "@connext/vector-types";
 import { constants, providers, utils, Wallet } from "ethers";
-import { ChannelFactory, ChannelMastercopy, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelFactory, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import { BaseLogger } from "pino";
 
 export type ChainSigners = {
@@ -100,7 +100,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     amount: string,
     assetId: string,
   ): Promise<Result<providers.TransactionResponse, OnchainError>> {
-    const vectorChannel = new utils.Interface(ChannelMastercopy.abi);
+    const vectorChannel = new utils.Interface(VectorChannel.abi);
     const data = vectorChannel.encodeFunctionData("initiatorDeposit", [amount, assetId]);
     if (assetId === constants.AddressZero) {
       return this.sendTx(
