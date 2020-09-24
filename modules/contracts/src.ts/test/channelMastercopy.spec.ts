@@ -3,7 +3,7 @@ import { constants, Contract, ContractFactory } from "ethers";
 
 import { ChannelMastercopy } from "../artifacts";
 
-import { initiator } from "./constants";
+import { alice } from "./constants";
 import { expect } from "./utils";
 
 const { AddressZero, HashZero, Zero } = constants;
@@ -13,7 +13,7 @@ describe("ChannelMastercopy", () => {
 
   beforeEach(async () => {
     mastercopy = await (
-      new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, initiator)
+      new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, alice)
     ).deploy();
     await mastercopy.deployed();
   });
@@ -42,7 +42,7 @@ describe("ChannelMastercopy", () => {
 
   it("should revert if sent eth bc it's the mastercopy", async () => {
     await expect(
-      initiator.sendTransaction({ to: mastercopy.address, value: Zero }),
+      alice.sendTransaction({ to: mastercopy.address, value: Zero }),
     ).to.be.revertedWith("This contract is the mastercopy");
   });
 

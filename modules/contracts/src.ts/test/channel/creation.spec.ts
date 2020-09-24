@@ -1,16 +1,16 @@
 import { Contract, ContractFactory } from "ethers";
 
 import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../../artifacts";
-import { initiator, counterparty, provider } from "../constants";
+import { alice, bob, provider } from "../constants";
 import { expect } from "../utils";
 
 export const createChannel = async (): Promise<Contract> => {
     const channelMastercopy = await (
-      new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, initiator)
+      new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, alice)
     ).deploy();
     await channelMastercopy.deployed();
     const channelFactory = await (
-      new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, initiator)
+      new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, alice)
     ).deploy(
       channelMastercopy.address,
     );
@@ -19,8 +19,8 @@ export const createChannel = async (): Promise<Contract> => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
     const tx = await channelFactory.createChannel(
-      initiator.address,
-      counterparty.address,
+      alice.address,
+      bob.address,
     );
     expect(tx.hash).to.be.a("string");
     await tx.wait();
@@ -44,7 +44,7 @@ describe("Channel Creation", () => {
 
   it("should return correct participants from getParticipants()", async () => {
     const participants = await channel.getParticipants();
-    expect(participants[0]).to.equal(initiator.address);
-    expect(participants[1]).to.equal(counterparty.address);
+    expect(participants[0]).to.equal(alice.address);
+    expect(participants[1]).to.equal(bob.address);
   });
 });

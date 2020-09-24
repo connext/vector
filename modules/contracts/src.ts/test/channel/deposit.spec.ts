@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { Contract } from "ethers";
 
-import { addressZero, initiator, counterparty, one } from "../constants";
+import { addressZero, alice, bob, one } from "../constants";
 import { expect } from "../utils";
 
 import { createChannel } from "./creation.spec";
@@ -19,7 +19,7 @@ describe("Channel Deposits", () => {
     const assetId = addressZero;
     const directDeposit = { to: channel.address, value };
     const latestDepositBefore = await channel.getLatestDeposit(assetId);
-    await expect(counterparty.sendTransaction(directDeposit)).to.be.fulfilled;
+    await expect(bob.sendTransaction(directDeposit)).to.be.fulfilled;
     const latestDepositAfter = await channel.getLatestDeposit(assetId);
     expect(latestDepositBefore.nonce).to.equal(latestDepositAfter.nonce);
     expect(latestDepositBefore.amount).to.equal(latestDepositAfter.amount);
@@ -29,7 +29,7 @@ describe("Channel Deposits", () => {
     const assetId = addressZero;
     const depositTx = await channel.populateTransaction.initiatorDeposit(assetId, value, { value });
     const nonceBefore = (await channel.getLatestDeposit(assetId)).nonce;
-    await expect(initiator.sendTransaction(depositTx)).to.be.fulfilled;
+    await expect(alice.sendTransaction(depositTx)).to.be.fulfilled;
     const latestDeposit = await channel.getLatestDeposit(assetId);
     expect(latestDeposit.amount).to.equal(value);
     expect(latestDeposit.nonce).to.equal(nonceBefore.add(value));

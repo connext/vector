@@ -7,12 +7,12 @@ import { Contract, ContractFactory, BigNumber } from "ethers";
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
 import { VectorOnchainService } from "../onchainService";
 
-import { addressZero, initiator, counterparty, provider } from "./constants";
+import { addressZero, alice, bob, provider } from "./constants";
 import { expect, getOnchainTxService } from "./utils";
 
 describe("ChannelFactory", () => {
-  const initiatorPubId = getPublicIdentifierFromPublicKey(initiator.publicKey);
-  const counterpartyPubId = getPublicIdentifierFromPublicKey(counterparty.publicKey);
+  const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
+  const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
   let channelFactory: Contract;
   let channelMastercopy: Contract;
   let onchainService: VectorOnchainService;
@@ -21,10 +21,10 @@ describe("ChannelFactory", () => {
   beforeEach(async () => {
     chainId = (await provider.getNetwork()).chainId;
 
-    channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, initiator).deploy();
+    channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, alice).deploy();
     await channelMastercopy.deployed();
 
-    channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, initiator).deploy(
+    channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, alice).deploy(
       channelMastercopy.address,
     );
     await channelFactory.deployed();
@@ -39,13 +39,13 @@ describe("ChannelFactory", () => {
     const created = new Promise((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
-    const tx = await channelFactory.createChannel(initiator.address, counterparty.address);
+    const tx = await channelFactory.createChannel(alice.address, bob.address);
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
     const computedAddr = await getCreate2MultisigAddress(
-      initiatorPubId,
-      counterpartyPubId,
+      alicePubId,
+      bobPubId,
       chainId,
       channelFactory.address,
       channelMastercopy.address,
@@ -56,7 +56,7 @@ describe("ChannelFactory", () => {
   });
 
   it("should create a channel with a deposit", async () => {
-    // Use funded account for initiator
+    // Use funded account for alice
     const created = new Promise<string>((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
         res(data);
@@ -64,10 +64,10 @@ describe("ChannelFactory", () => {
     });
     const value = BigNumber.from("1000");
     const tx = await channelFactory
-      .connect(initiator)
+      .connect(alice)
       .createChannelAndDeposit(
-        initiator.address,
-        counterparty.address,
+        alice.address,
+        bob.address,
         addressZero,
         value,
         { value },
@@ -76,8 +76,8 @@ describe("ChannelFactory", () => {
     await tx.wait();
     const channelAddress = await created;
     const computedAddr = await getCreate2MultisigAddress(
-      initiatorPubId,
-      counterpartyPubId,
+      alicePubId,
+      bobPubId,
       chainId,
       channelFactory.address,
       channelMastercopy.address,
@@ -93,7 +93,7 @@ describe("ChannelFactory", () => {
     expect(code).to.not.be.eq("0x");
 
     const latestDeposit = await (
-      new Contract(channelAddress, ChannelMastercopy.abi, initiator)
+      new Contract(channelAddress, ChannelMastercopy.abi, alice)
     ).getLatestDeposit(
       addressZero,
     );

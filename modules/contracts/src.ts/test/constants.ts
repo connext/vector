@@ -9,6 +9,6 @@ export const one = constants.One;
 export const two = constants.Two;
 
 export const provider = waffle.provider;
-export const initiator = provider.getWallets()[0];
-export const counterparty = provider.getWallets()[1];
+export const alice = provider.getWallets()[0];
+export const bob = provider.getWallets()[1];
 export const rando = provider.getWallets()[2];

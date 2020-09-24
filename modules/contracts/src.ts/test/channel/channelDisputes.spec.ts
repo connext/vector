@@ -9,9 +9,9 @@ import { Contract } from "ethers";
 
 import {
   addressZero,
-  counterparty,
+  bob,
   hashZero,
-  initiator,
+  alice,
   provider,
   two,
 } from "../constants";
@@ -26,22 +26,22 @@ describe("Channel Disputes", () => {
   let signatures: string[];
 
   beforeEach(async () => {
-    channel = (await createChannel()).connect(initiator);
+    channel = (await createChannel()).connect(alice);
     channelState = {
       assetIds: [addressZero],
-      balances: [{ amount: ["0", "1"], to: [initiator.address, counterparty.address] }],
+      balances: [{ amount: ["0", "1"], to: [alice.address, bob.address] }],
       channelAddress: channel.address,
       latestDepositNonce: 1,
       lockedBalance: ["1", "2"],
       merkleRoot: hashZero,
       nonce: 1,
-      participants: [initiator.address, counterparty.address],
+      participants: [alice.address, bob.address],
       timeout: "1",
     };
     hashedState = hashCoreChannelState(channelState);
     signatures = [
-      await signChannelMessage(hashedState, initiator.privateKey),
-      await signChannelMessage(hashedState, counterparty.privateKey),
+      await signChannelMessage(hashedState, alice.privateKey),
+      await signChannelMessage(hashedState, bob.privateKey),
     ];
   });
 

@@ -5,7 +5,7 @@ import { TestToken } from "../artifacts";
 import { WithdrawCommitment } from "../commitment";
 
 import { createChannel } from "./channel/creation.spec";
-import { counterparty, initiator, provider } from "./constants";
+import { bob, alice, provider } from "./constants";
 import { expect } from "./utils";
 
 describe("withdrawCommitment", () => {
@@ -15,13 +15,13 @@ describe("withdrawCommitment", () => {
 
   beforeEach(async () => {
     channel = await createChannel();
-    const tx = await initiator.sendTransaction({
+    const tx = await alice.sendTransaction({
       to: channel.address,
       value: BigNumber.from(amount).mul(2),
     });
     await tx.wait();
     token = await (
-      new ContractFactory(TestToken.abi, TestToken.bytecode, initiator)
+      new ContractFactory(TestToken.abi, TestToken.bytecode, alice)
     ).deploy("Test", "TST");
     await token.mint(channel.address, BigNumber.from(amount).mul(2));
   });
@@ -29,39 +29,36 @@ describe("withdrawCommitment", () => {
   it("can successfully withdraw Eth", async () => {
     const commitment = new WithdrawCommitment(
       channel.address,
-      [initiator.address, counterparty.address],
-      initiator.address,
+      [alice.address, bob.address],
+      alice.address,
       constants.AddressZero,
       amount,
       "1",
     );
-    const hash = commitment.hashToSign();
-    const signatureA = await signChannelMessage(hash, initiator.privateKey);
-    const signatureB = await signChannelMessage(hash, counterparty.privateKey);
-    await commitment.addSignatures(signatureA, signatureB);
-    const tx = await commitment.getSignedTransaction();
+    await commitment.addSignatures(
+      await signChannelMessage(commitment.hashToSign(), alice.privateKey),
+      await signChannelMessage(commitment.hashToSign(), bob.privateKey),
+    );
     expect((await provider.getBalance(channel.address)).eq(BigNumber.from(amount).mul(2)));
-    await initiator.sendTransaction(tx);
-    // Check after balance
+    await alice.sendTransaction(await commitment.getSignedTransaction());
     expect((await provider.getBalance(channel.address)).eq(BigNumber.from(amount)));
   });
 
   it("can successfully withdraw Tokens", async () => {
     const commitment = new WithdrawCommitment(
       channel.address,
-      [initiator.address, counterparty.address],
-      initiator.address,
+      [alice.address, bob.address],
+      alice.address,
       token.address,
       amount,
       "1",
     );
-    const hash = commitment.hashToSign();
-    const signatureA = await signChannelMessage(hash, initiator.privateKey);
-    const signatureB = await signChannelMessage(hash, counterparty.privateKey);
-    await commitment.addSignatures(signatureA, signatureB);
-    const tx = await commitment.getSignedTransaction();
+    await commitment.addSignatures(
+      await signChannelMessage(commitment.hashToSign(), alice.privateKey),
+      await signChannelMessage(commitment.hashToSign(), bob.privateKey),
+    );
     expect((await token.balanceOf(channel.address)).eq(BigNumber.from(amount).mul(2)));
-    await initiator.sendTransaction(tx);
+    await alice.sendTransaction(await commitment.getSignedTransaction());
     expect((await token.balanceOf(channel.address)).eq(BigNumber.from(amount)));
   });
 

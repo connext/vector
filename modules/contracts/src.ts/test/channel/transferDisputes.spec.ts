@@ -9,9 +9,9 @@ import { Contract } from "ethers";
 
 import {
   addressZero,
-  counterparty,
+  bob,
   hashZero,
-  initiator,
+  alice,
   provider,
 } from "../constants";
 import { expect } from "../utils";
@@ -25,9 +25,9 @@ describe("Transfer Disputes", () => {
   let merkleProof: string[];
 
   beforeEach(async () => {
-    channel = (await createChannel()).connect(initiator);
+    channel = (await createChannel()).connect(alice);
     transferState = {
-      initialBalance: { amount: ["0", "1"], to: [initiator.address, counterparty.address] },
+      initialBalance: { amount: ["0", "1"], to: [alice.address, bob.address] },
       assetId: addressZero,
       channelAddress: channel.address,
       transferId: getRandomBytes32(),
