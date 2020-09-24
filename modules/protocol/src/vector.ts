@@ -145,6 +145,7 @@ export class Vector implements IVectorProtocol {
         received.update,
         received.previousUpdate,
         inbox,
+        this.onchainService,
         this.storeService,
         this.messagingService,
         this.signer,

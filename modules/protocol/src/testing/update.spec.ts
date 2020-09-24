@@ -419,12 +419,12 @@ type GenerateUpdateTestParams = {
 };
 
 describe("generateUpdate", () => {
-
   // FIXME: THESE ARE BLOCKING TESTS!
   it.skip("should fail if it fails parameter validation", () => {});
   it.skip("should fail if it is unable to reconcile the deposit", () => {});
   it.skip("should fail if trying to resolve an inactive transfer", () => {});
-  it.skip("should fail if fails to call resolve using chain service", () => {});it.skip("should work if creating a transfer to someone outside of channel", () => {});
+  it.skip("should fail if fails to call resolve using chain service", () => {});
+  it.skip("should work if creating a transfer to someone outside of channel", () => {});
   it.skip("should work if resolving a transfer to someone outside of channel", () => {});
 
   // Get channel constants
@@ -594,6 +594,24 @@ describe("generateUpdate", () => {
           meta: emptyLinkedTransfer.meta,
         },
       },
+      expectedTransfer: {
+        ...emptyLinkedTransfer,
+        chainId: networkContext.chainId,
+        initialBalance: { to: participants, amount: ["7", "0"] },
+        channelFactoryAddress: networkContext.channelFactoryAddress,
+        transferState: {
+          ...emptyLinkedTransfer.transferState,
+          balance: { to: participants, amount: ["7", "0"] },
+        },
+        initialStateHash: hashTransferState(
+          {
+            ...emptyLinkedTransfer.transferState,
+            balance: { to: participants, amount: ["7", "0"] },
+          },
+          LinkedTransferStateEncoding,
+        ),
+        transferResolver: undefined,
+      },
     },
     {
       name: "should work for resolve (bob resolves)",
@@ -622,11 +640,10 @@ describe("generateUpdate", () => {
         },
       },
       expectedTransfer: {
-        ...emptyLinkedTransfer,
-        initialBalance: { to: participants, amount: ["7", "0"] },
+        transferId: emptyLinkedTransfer.transferId,
         transferState: {
           ...emptyLinkedTransfer.transferState,
-          balance: { to: participants, amount: ["7", "0"] },
+          balance: { to: participants, amount: ["0", "7"] },
         },
         initialStateHash: hashTransferState(
           {
@@ -635,7 +652,7 @@ describe("generateUpdate", () => {
           },
           LinkedTransferStateEncoding,
         ),
-        transferResolver: undefined,
+        transferResolver: emptyLinkedTransfer.transferResolver,
       },
       resolveBalance: { to: participants, amount: ["0", "7"] },
     },
@@ -664,7 +681,11 @@ describe("generateUpdate", () => {
       // Generate the transfer from the params IFF the update type is resolve
       let transfer: FullTransferState | undefined = undefined;
       if (updateType === UpdateType.resolve) {
-        transfer = createTestFullLinkedTransferState(expectedTransfer);
+        transfer = createTestFullLinkedTransferState({
+          ...expectedTransfer,
+          initialBalance: { ...resolveBalance!, amount: [resolveBalance!.amount[1], resolveBalance!.amount[0]] },
+        });
+        transfer.transferResolver = undefined;
       }
 
       // Generate the params
@@ -690,8 +711,6 @@ describe("generateUpdate", () => {
           })
         : state;
       store.getChannelState.resolves(inStore);
-      store.getTransferState.resolves(transfer);
-      store.getActiveTransfers.resolves([transfer].filter(x => !!x) as any);
 
       // Chain service mocks are only used by deposit/resolve
       chainService.getLatestDepositByAssetId.resolves(
@@ -702,14 +721,21 @@ describe("generateUpdate", () => {
       chainService.resolve.resolves(Result.ok(resolveBalance ?? { to: participants, amount: ["0", "0"] }));
 
       // Execute function call
-      const result = await vectorUpdate.generateUpdate(params, state, store, chainService, from ?? signers[0]);
+      const result = await vectorUpdate.generateUpdate(
+        params,
+        state,
+        [transfer].filter(x => !!x) as any,
+        transfer,
+        chainService,
+        from ?? signers[0],
+      );
 
       // Verify result
       if (error) {
         expect(result.getError()?.message).to.be.eq(error);
       } else if (expectedUpdate) {
         expect(result.getError()).to.be.undefined;
-        const { update, transfer } = result.getValue()!;
+        const { update, transfer: updatedTransfer } = result.getValue()!;
 
         // Verify expected update
         const expected = createTestChannelUpdateWithSigners(signers, updateType, {
@@ -737,7 +763,10 @@ describe("generateUpdate", () => {
         });
 
         // Verify transfer
-        expect(transfer).to.containSubset(expectedTransfer);
+        if (transfer) {
+          const { transferId: expectedId, ...sanitizedTransfer } = expectedTransfer ?? {};
+          expect(updatedTransfer).to.containSubset(sanitizedTransfer);
+        }
 
         // Verify update initiator added sigs
         expect(

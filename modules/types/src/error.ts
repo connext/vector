@@ -47,6 +47,7 @@ export abstract class VectorError extends Error {
     OutboundChannelUpdateError: "OutboundChannelUpdateError",
     InboundChannelUpdateError: "InboundChannelUpdateError",
     OnchainError: "OnchainError",
+    ValidationError: "ValidationError",
     // etc.
   } as const;
 
@@ -63,6 +64,28 @@ export abstract class VectorError extends Error {
   }
 }
 
+export class ValidationError extends VectorError {
+  readonly type = VectorError.errors.ValidationError;
+
+  static readonly reasons = {
+    BadUpdateType: "Unrecognized update type",
+    ChannelAlreadySetup: "Channel is already setup",
+    ChannelNotFound: "No channel found in storage",
+    SetupTimeoutInvalid: "Provided state timeout is invalid",
+    TransferNotFound: "No transfer found in storage",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
+    public readonly params: UpdateParams<any> | ChannelUpdate<any>,
+    public readonly state?: FullChannelState<any>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context?: any,
+  ) {
+    super(message, context);
+  }
+}
+
 // Thrown by the protocol when initiating an update
 export class OutboundChannelUpdateError extends VectorError {
   readonly type = VectorError.errors.OutboundChannelUpdateError;
@@ -76,6 +99,7 @@ export class OutboundChannelUpdateError extends VectorError {
     Create2Failed: "Failed to get create2 address",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
+    OutboundValidationFailed: "Requested update is invalid",
     RestoreNeeded: "Channel too far out of sync, must be restored",
     RegenerateUpdateFailed: "Failed to regenerate update after sync",
     SaveChannelFailed: "Failed to save channel",
@@ -83,6 +107,7 @@ export class OutboundChannelUpdateError extends VectorError {
     StaleChannel: "Channel state is behind, cannot apply update",
     SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
     SyncFailure: "Failed to sync channel from counterparty update",
+    SyncValidationFailed: "Failed to validate update for sync",
     TransferNotFound: "No transfer found in storage",
   } as const;
   
@@ -108,6 +133,7 @@ export class InboundChannelUpdateError extends VectorError {
     ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     DifferentIdentifiers: "Update changes channel publicIdentifiers",
     DifferentChannelAddress: "Update changes channelAddress",
+    InboundValidationFailed: "Failed to validate incoming update",
     InvalidAssetId: "Update `assetId` is invalid address",
     InvalidChannelAddress: "Update `channelAddress` is invalid",
     MergeUpdateFailed: "Failed to merge update",
@@ -117,6 +143,8 @@ export class InboundChannelUpdateError extends VectorError {
     StaleUpdate: "Update does not progress channel nonce",
     StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
     SaveChannelFailed: "Failed to save channel",
+    SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
+    SyncFailure: "Failed to sync channel from counterparty update",
     TransferNotFound: "No transfer found in storage",
   } as const;
 
