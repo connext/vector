@@ -34,12 +34,8 @@ import { env } from "./utils";
 
 describe("inbound", () => {
   // FIXME: These are blocking tests!
-  it.skip("should fail if there is no channel in store and it is not a setup update", async () => {});
-  it.skip("should fail if there is no transfer in the store and it is a resolve update", async () => {});
   it.skip("should fail if you are 3+ states behind the update", async () => {});
   it.skip("should fail if validating the update fails", async () => {});
-  it.skip("should fail if applying the update fails", async () => {});
-  it.skip("should fail if signing the data fails", async () => {});
   it.skip("should fail if saving the data fails", async () => {});
   it.skip("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {});
   describe.skip("should sync channel and retry update IFF state nonce is behind by 2 updates", async () => {
