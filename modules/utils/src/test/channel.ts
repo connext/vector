@@ -189,6 +189,18 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
   const nonce = overrides.nonce ?? 1;
+
+  const { latestUpdate: latestUpdateOverrides, networkContext, ...rest } = overrides;
+
+  const latestUpdate = createTestChannelUpdate(type, {
+    channelAddress,
+    fromIdentifier: publicIdentifiers[0],
+    toIdentifier: publicIdentifiers[1],
+    assetId: assetIds[0],
+    nonce,
+    ...latestUpdateOverrides,
+  });
+
   return {
     assetIds,
     balances: [
@@ -206,27 +218,20 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     lockedBalance: ["1", "2"],
     channelAddress,
     latestDepositNonce: 1,
-    latestUpdate: createTestChannelUpdate(type, {
-      channelAddress,
-      fromIdentifier: publicIdentifiers[0],
-      toIdentifier: publicIdentifiers[1],
-      assetId: assetIds[0],
-      nonce,
-      ...(overrides.latestUpdate ?? {}),
-    }) as any,
+    latestUpdate,
     merkleRoot: mkHash(),
     networkContext: {
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
       providerUrl: "http://localhost:8545",
       channelMastercopyAddress: mkAddress("0xmast"),
-      ...(overrides.networkContext ?? {}),
-    } as any,
+      ...(networkContext ?? {}),
+    },
     nonce,
     participants,
     publicIdentifiers,
     timeout: "1",
-    ...overrides,
+    ...rest,
   };
 }
 
