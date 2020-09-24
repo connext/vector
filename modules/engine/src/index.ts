@@ -19,6 +19,7 @@ import {
   FullTransferState,
   ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
+  IVectorEngine,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -32,7 +33,7 @@ import {
 
 const ajv = new Ajv();
 
-export class VectorEngine {
+export class VectorEngine implements IVectorEngine {
   private constructor(
     private readonly messaging: IMessagingService,
     private readonly store: IVectorStore,
