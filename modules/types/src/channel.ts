@@ -28,7 +28,7 @@ export type DepositParams = {
 };
 
 export type CreateTransferParams = {
-  channelAddress: string;
+  channelAddress: string; // TODO: does this need to be in the details AND params?
   amount: string;
   assetId: string;
   transferDefinition: string;
@@ -39,7 +39,7 @@ export type CreateTransferParams = {
 };
 
 export type ResolveTransferParams = {
-  channelAddress: string;
+  channelAddress: string; // TODO: does this need to be in the details AND params?
   transferId: string;
   transferResolver: TransferResolver;
   meta?: any;

@@ -134,8 +134,8 @@ export const deployChannelWithInitiatorDeposit = async (
 
   // Deploy with deposit
   const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, alice);
-  const created = new Promise<string>((res) => {
-    factory.once(factory.filters.ChannelCreation(), (data) => {
+  const created = new Promise<string>(res => {
+    factory.once(factory.filters.ChannelCreation(), data => {
       res(data);
     });
   });
@@ -164,7 +164,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       providerUrl,
       channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
     },
-    timeout: "3600",
+    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
   });
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;
@@ -253,13 +253,15 @@ export const depositInChannel = async (
   );
   expect(postDeposit.assetIds).to.be.deep.eq([...new Set(channel!.assetIds.concat(assetId))]);
 
-  const assetIdx = postDeposit!.assetIds.findIndex((a) => a === assetId);
+  const assetIdx = postDeposit!.assetIds.findIndex(a => a === assetId);
   const postDepositBal = postDeposit.balances[assetIdx];
   const postDepositLocked = postDeposit.lockedBalance[assetIdx] || "0";
 
   // Make sure the onchain balance of the channel is equal to the
   // sum of the locked balance + channel balance
-  const channelTotal = BigNumber.from(postDepositLocked).add(postDepositBal.amount[0]).add(postDepositBal.amount[1]);
+  const channelTotal = BigNumber.from(postDepositLocked)
+    .add(postDepositBal.amount[0])
+    .add(postDepositBal.amount[1]);
 
   const onchainTotal =
     assetId === constants.AddressZero
@@ -308,7 +310,7 @@ export const createTransfer = async (
   expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
 
   const { transferId } = (channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details;
-  const transfer = (await payee.getTransferState(transferId))!;
+  const transfer = await payee.getTransferState(transferId);
   expect(transfer).to.containSubset({
     initialBalance: balance,
     assetId,
@@ -326,7 +328,7 @@ export const createTransfer = async (
   return {
     channel,
     transfer: {
-      ...transfer,
+      ...transfer!,
       transferResolver: { preImage },
     },
   };
@@ -351,7 +353,6 @@ export const resolveTransfer = async (
   const channel = ret.getValue();
   const stored = await redeemer.getTransferState(transfer.transferId);
   expect(stored!.transferResolver).to.deep.eq(params.transferResolver);
-
   expect(await redeemer.getChannelState(channelAddress)).to.be.deep.eq(channel);
   expect(await counterparty.getChannelState(channelAddress)).to.be.deep.eq(channel);
   expect(await counterparty.getTransferState(transfer.transferId)).to.be.deep.eq(stored);

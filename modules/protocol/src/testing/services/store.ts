@@ -20,6 +20,13 @@ export class MemoryStoreService implements IVectorStore {
     return Promise.resolve();
   }
 
+  clear(): Promise<void> {
+    this.channelStates.clear();
+    this.transfersInChannel.clear();
+    this.transfers.clear();
+    return Promise.resolve();
+  }
+
   getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
     const { state } = this.channelStates.get(channelAddress) ?? {};
     return Promise.resolve(state);

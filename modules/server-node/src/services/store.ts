@@ -18,6 +18,7 @@ import {
   Update,
   Balance as BalanceEntity,
   UpdateCreateInput,
+  Transfer,
 } from "@prisma/client";
 
 const convertChannelEntityToFullChannelState = (
@@ -31,12 +32,12 @@ const convertChannelEntityToFullChannelState = (
 
   // get balances and locked value for each assetId
   const lockedBalance: string[] = [];
-  const balances: Balance[] = assetIds.map((assetId) => {
+  const balances: Balance[] = assetIds.map(assetId => {
     const balanceA = channelEntity.balances.find(
-      (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantA,
+      bal => bal.assetId === assetId && bal.participant === channelEntity.participantA,
     );
     const balanceB = channelEntity.balances.find(
-      (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantB,
+      bal => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
     lockedBalance.push(balanceA!.lockedBalance);
     return {
@@ -122,6 +123,41 @@ const convertChannelEntityToFullChannelState = (
     },
   };
   return channel;
+};
+
+const convertTransferEntityToFullTransferState = (
+  transfer: Transfer & {
+    createUpdate: Update & {
+      channel: Channel | null;
+    };
+    resolveUpdate:
+      | (Update & {
+          channel: Channel | null;
+        })
+      | null;
+  },
+) => {
+  const fullTransfer: FullTransferState = {
+    channelFactoryAddress: transfer.createUpdate.channel!.channelFactoryAddress,
+    assetId: transfer.createUpdate.assetId,
+    chainId: transfer.createUpdate.channel!.chainId,
+    channelAddress: transfer.createUpdate.channelAddress!,
+    initialBalance: {
+      amount: [transfer.initialAmountA, transfer.initialAmountB],
+      to: [transfer.initialToA, transfer.initialAmountB],
+    },
+    initialStateHash: transfer.initialStateHash,
+    transferDefinition: transfer.createUpdate.transferDefinition!,
+    transferEncodings: transfer.createUpdate.transferEncodings!.split(","),
+    transferId: transfer.createUpdate.transferId!,
+    transferState: JSON.parse(transfer.createUpdate.transferInitialState!),
+    transferTimeout: transfer.createUpdate.transferTimeout!,
+    meta: transfer.createUpdate.meta ? JSON.parse(transfer.createUpdate.meta) : undefined,
+    transferResolver: transfer.resolveUpdate?.transferResolver
+      ? JSON.parse(transfer.resolveUpdate?.transferResolver)
+      : undefined,
+  };
+  return fullTransfer;
 };
 
 export class PrismaStore implements IVectorStore {
@@ -392,8 +428,23 @@ export class PrismaStore implements IVectorStore {
     });
   }
 
-  getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
-    throw new Error("Method not implemented.");
+  async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
+    const transferEntities = await this.prisma.transfer.findMany({
+      where: { AND: [{ createUpdate: { channelAddressId: channelAddress } }, { resolveUpdateChannelAddressId: null }] },
+      include: {
+        createUpdate: {
+          include: {
+            channel: true,
+          },
+        },
+        resolveUpdate: {
+          include: {
+            channel: true,
+          },
+        },
+      },
+    });
+    return transferEntities.map(convertTransferEntityToFullTransferState);
   }
 
   async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
@@ -431,27 +482,7 @@ export class PrismaStore implements IVectorStore {
       return undefined;
     }
 
-    const fullTransfer: FullTransferState = {
-      channelFactoryAddress: transfer.createUpdate.channel!.channelFactoryAddress,
-      assetId: transfer.createUpdate.assetId,
-      chainId: transfer.createUpdate.channel!.chainId,
-      channelAddress: transfer.createUpdate.channelAddress!,
-      initialBalance: {
-        amount: [transfer.initialAmountA, transfer.initialAmountB],
-        to: [transfer.initialToA, transfer.initialAmountB],
-      },
-      initialStateHash: transfer.initialStateHash,
-      transferDefinition: transfer.createUpdate.transferDefinition!,
-      transferEncodings: transfer.createUpdate.transferEncodings!.split(","),
-      transferId,
-      transferState: JSON.parse(transfer.createUpdate.transferInitialState!),
-      transferTimeout: transfer.createUpdate.transferTimeout!,
-      meta: transfer.createUpdate.meta ? JSON.parse(transfer.createUpdate.meta) : undefined,
-      transferResolver: transfer.resolveUpdate?.transferResolver
-        ? JSON.parse(transfer.resolveUpdate?.transferResolver)
-        : undefined,
-    };
-    return fullTransfer;
+    return convertTransferEntityToFullTransferState(transfer);
   }
 
   async clear(): Promise<void> {

@@ -89,7 +89,12 @@ export class Vector implements IVectorProtocol {
     );
 
     if (outboundRes.isError) {
-      this.logger.error({ method: "lockedOperation", variable: "outboundRes", error: outboundRes.getError()?.message });
+      this.logger.error({
+        method: "lockedOperation",
+        variable: "outboundRes",
+        error: outboundRes.getError()?.message,
+        context: outboundRes.getError()?.context,
+      });
       return outboundRes;
     }
 
@@ -145,6 +150,7 @@ export class Vector implements IVectorProtocol {
         received.update,
         received.previousUpdate,
         inbox,
+        this.onchainService,
         this.storeService,
         this.messagingService,
         this.signer,
@@ -165,7 +171,7 @@ export class Vector implements IVectorProtocol {
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
     await Promise.all(
-      channels.map(channel =>
+      channels.map((channel) =>
         sync
           .outbound(
             channel.latestUpdate,
@@ -175,7 +181,7 @@ export class Vector implements IVectorProtocol {
             this.signer,
             this.logger,
           )
-          .catch(e =>
+          .catch((e) =>
             this.logger.error({ channel: channel.channelAddress, error: e.message }, `Failed to sync channel`),
           ),
       ),
@@ -188,7 +194,7 @@ export class Vector implements IVectorProtocol {
     const valid = validate(params);
     if (!valid) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
-        errors: validate.errors?.map(e => e.message).join(),
+        errors: validate.errors?.map((e) => e.message).join(),
       });
     }
     return undefined;
@@ -349,6 +355,6 @@ export class Vector implements IVectorProtocol {
       return;
     }
 
-    Object.keys(ProtocolEventName).forEach(k => this.evts[k].detach());
+    Object.keys(ProtocolEventName).forEach((k) => this.evts[k].detach());
   }
 }

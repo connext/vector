@@ -33,10 +33,11 @@ export async function generateSignedChannelCommitment(
 ): Promise<ChannelCommitmentData> {
   const { networkContext, ...core } = newState;
 
-  const unsigned = {
+  const unsigned: ChannelCommitmentData = {
     chainId: networkContext.chainId,
     state: core,
     channelFactoryAddress: networkContext.channelFactoryAddress,
+    signatures: [],
   };
   const filteredSigs = updateSignatures.filter(x => !!x);
   if (filteredSigs.length === 2) {
@@ -49,7 +50,7 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
-  const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
+  const sig = await signer.signMessage(hashChannelCommitment(unsigned));
   const idx = newState.participants.findIndex(p => p === signer.address);
   const signed = {
     ...unsigned,
@@ -62,11 +63,11 @@ export async function generateSignedChannelCommitment(
 export async function validateChannelUpdateSignatures(
   state: FullChannelState,
   updateSignatures: string[],
-  requiredSigs: 1 | 2 = 1,
+  requiredSigners: 1 | 2 = 1,
 ): Promise<string | undefined> {
   const present = updateSignatures.filter(x => !!x).length;
-  if (present < requiredSigs) {
-    return `Only ${present}/${requiredSigs} signatures present`;
+  if (present < requiredSigners) {
+    return `Only ${present}/${requiredSigners} signatures present`;
   }
   // generate the commitment
   const { networkContext, ...core } = state;
@@ -76,21 +77,24 @@ export async function validateChannelUpdateSignatures(
     channelFactoryAddress: networkContext.channelFactoryAddress,
     signatures: [],
   });
-  const valid = (
+
+  const results = (
     await Promise.all(
       updateSignatures.map(async (sigToVerify, idx) => {
         if (!sigToVerify) {
           return undefined;
         }
         const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
-        return recovered === state.participants[idx] ? sigToVerify : undefined;
+        if (!state.participants.includes(recovered)) {
+          return `Recovered ${recovered}, expected one of ${state.participants.toString()}`;
+        }
+        return recovered === state.participants[idx]
+          ? undefined
+          : `Recovered ${recovered}, expected ${state.participants[idx]}`;
       }),
     )
   ).filter(x => !!x);
-  if (valid.length < requiredSigs) {
-    return `Only ${valid.length}/${requiredSigs} are valid signatures`;
-  }
-  return undefined;
+  return results.length === 0 ? undefined : results.toString();
 }
 
 export const reconcileDeposit = async (
