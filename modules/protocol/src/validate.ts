@@ -14,9 +14,10 @@ import {
   FullTransferState,
   ChannelCommitmentData,
   ValidationError,
+  CreateUpdateDetails,
   ResolveUpdateDetails,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier, hashTransferState } from "@connext/vector-utils";
 import { BigNumber, constants } from "ethers";
 import pino from "pino";
 
@@ -259,7 +260,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   const { nextState, validUpdate, transfer, activeTransfers } = res.getValue()!;
 
   // Verify at least one signature exists (and any present are valid)
-  const sigRes = await validateChannelUpdateSignatures(nextState, validUpdate.signatures);
+  const sigRes = await validateChannelUpdateSignatures(nextState, validUpdate.signatures, 1);
   if (sigRes) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, validUpdate, nextState, {
@@ -271,9 +272,12 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   // Generate the cosigned commitment
   const signed = await generateSignedChannelCommitment(nextState, signer, validUpdate.signatures);
 
+  // Add the signature to the state
+  const signedNextState = { ...nextState, latestUpdate: { ...nextState.latestUpdate, signatures: signed.signatures } };
+
   // Return the validated update, resultant state, double signed
   // commitment, and the transfer data
-  return Result.ok({ validUpdate, nextState, commitment: signed, activeTransfers, transfer });
+  return Result.ok({ validUpdate, nextState: signedNextState, commitment: signed, activeTransfers, transfer });
 }
 
 async function validateAndApplyChannelUpdate<T extends UpdateType>(
@@ -343,6 +347,14 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.create: {
+      const {
+        transferId,
+        transferDefinition,
+        transferTimeout,
+        transferInitialState,
+        transferEncodings,
+        meta,
+      } = details as CreateUpdateDetails;
       // Ensure the transferId is properly formatted
 
       // Ensure the transferDefinition is properly formatted
@@ -352,7 +364,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // Ensure the transferTimeout is above the minimum
 
       // Ensure the transferInitialState is correctly structured
-      
+
       // Ensure there is sufficient balance in the channel for the
       // proposed transfer for the appropriate asset
 
@@ -368,10 +380,31 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // Ensure the same merkleRoot is generated
 
       // Create the valid transfer object
+      transfer = {
+        initialBalance: { ...transferInitialState.balance },
+        assetId,
+        channelAddress,
+        transferId,
+        transferDefinition,
+        transferTimeout,
+        initialStateHash: hashTransferState(transferInitialState, transferEncodings[0]),
+        channelFactoryAddress: previousState.networkContext.channelFactoryAddress,
+        chainId: previousState.networkContext.chainId,
+        transferEncodings,
+        transferState: { ...transferInitialState },
+        meta,
+      };
       break;
     }
     case UpdateType.resolve: {
-      const { transferId, transferDefinition,transferResolver, transferEncodings, merkleRoot, meta } = details as ResolveUpdateDetails;
+      const {
+        transferId,
+        transferDefinition,
+        transferResolver,
+        transferEncodings,
+        merkleRoot,
+        meta,
+      } = details as ResolveUpdateDetails;
 
       // Ensure transfer exists in store
       transfer = await storeService.getTransferState(transferId);

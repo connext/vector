@@ -65,7 +65,7 @@ export async function applyUpdate<T extends UpdateType>(
       return Result.ok({
         ...state,
         balances,
-        assetIds: !!state.assetIds.find((a) => a === update.assetId)
+        assetIds: !!state.assetIds.find(a => a === update.assetId)
           ? state.assetIds
           : [...state.assetIds, update.assetId],
         nonce: update.nonce,
@@ -151,6 +151,7 @@ export async function generateUpdate<T extends UpdateType>(
 > {
   // Create the update from user parameters based on type
   let unsigned: ChannelUpdate<any>;
+  let updatedTransfer: FullTransferState | undefined = undefined;
   switch (params.type) {
     case UpdateType.setup: {
       unsigned = generateSetupUpdate(params as UpdateParams<"setup">, signer);
@@ -161,7 +162,9 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.create: {
-      unsigned = generateCreateUpdate(state!, params as UpdateParams<"create">, signer, activeTransfers);
+      const result = generateCreateUpdate(state!, params as UpdateParams<"create">, signer, activeTransfers);
+      unsigned = result.unsigned;
+      updatedTransfer = result.transfer;
       break;
     }
     case UpdateType.resolve: {
@@ -170,7 +173,16 @@ export async function generateUpdate<T extends UpdateType>(
           new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params, state),
         );
       }
-      unsigned = await generateResolveUpdate(state!, params as UpdateParams<"resolve">, signer, activeTransfers, onchainService, logger);
+      const result = await generateResolveUpdate(
+        state!,
+        params as UpdateParams<"resolve">,
+        signer,
+        activeTransfers,
+        onchainService,
+        logger,
+      );
+      unsigned = result.unsigned;
+      updatedTransfer = result.transfer;
       break;
     }
     default: {
@@ -181,7 +193,7 @@ export async function generateUpdate<T extends UpdateType>(
   }
 
   // Create a signed commitment for the new state
-  const result = await applyUpdate(unsigned, state!, transfer);
+  const result = await applyUpdate(unsigned, state!, updatedTransfer);
   if (result.isError) {
     // Cast to an outbound error (see note in applyUpdate, safe to any cast)
     const inboundError = result.getError()!;
@@ -195,7 +207,7 @@ export async function generateUpdate<T extends UpdateType>(
       ...unsigned,
       signatures: commitment.signatures,
     },
-    transfer,
+    transfer: updatedTransfer,
     channelState: result.getValue(),
   });
 }
@@ -256,7 +268,7 @@ async function generateDepositUpdate(
   // Determine the locked value and existing balance using the
   // assetIdx
   const { assetId } = params.details;
-  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  const assetIdx = state.assetIds.findIndex(a => a === assetId);
   const existingLockedBalance = assetIdx === -1 ? "0" : state.lockedBalance[assetIdx] ?? "0";
   const existingChannelBalance =
     assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.balances[assetIdx];
@@ -288,7 +300,7 @@ function generateCreateUpdate(
   params: UpdateParams<"create">,
   signer: IChannelSigner,
   transfers: CoreTransferState[],
-): ChannelUpdate<"create"> {
+): { unsigned: ChannelUpdate<"create">; transfer: FullTransferState } {
   const {
     details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
   } = params;
@@ -314,9 +326,10 @@ function generateCreateUpdate(
     transferState: transferInitialState,
     channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
+    meta,
   };
   const transferHash = hashCoreTransferState(transferState);
-  const hashes = [...transfers, transferState].map((state) => {
+  const hashes = [...transfers, transferState].map(state => {
     return hashCoreTransferState(state);
   });
   const merkle = new MerkleTree(hashes, utils.keccak256);
@@ -340,7 +353,7 @@ function generateCreateUpdate(
     },
     signatures: [],
   };
-  return unsigned;
+  return { transfer: transferState, unsigned };
 }
 
 // Generates resolve update from user input params
@@ -351,7 +364,7 @@ async function generateResolveUpdate(
   transfers: FullTransferState[],
   chainService: IVectorOnchainService,
   logger: pino.BaseLogger,
-): Promise<ChannelUpdate<"resolve">> {
+): Promise<{ unsigned: ChannelUpdate<"resolve">; transfer: FullTransferState }> {
   // A transfer resolution update can effect the following
   // channel fields:
   // - balances
@@ -360,13 +373,13 @@ async function generateResolveUpdate(
   // - merkle root
 
   // First generate latest merkle tree data
-  const transferState = transfers.find((x) => x.transferId === params.details.transferId);
+  const transferState = transfers.find(x => x.transferId === params.details.transferId);
   if (!transferState) {
     throw new Error(`Could not find transfer for id ${params.details.transferId}`);
   }
   const hashes = transfers
-    .filter((x) => x.transferId !== params.details.transferId)
-    .map((state) => {
+    .filter(x => x.transferId !== params.details.transferId)
+    .map(state => {
       return hashCoreTransferState(state);
     });
   const merkle = new MerkleTree(hashes, hashCoreTransferState);
@@ -382,7 +395,6 @@ async function generateResolveUpdate(
     throw transferBalanceResult.getError()!;
   }
   const transferBalance = transferBalanceResult.getValue()!;
-
 
   // Convert transfer balance to channel update balance
   const balance = getUpdatedChannelBalance(UpdateType.resolve, transferState.assetId, transferBalance, state);
@@ -403,7 +415,14 @@ async function generateResolveUpdate(
     signatures: [],
   };
 
-  return unsigned;
+  return {
+    transfer: {
+      ...transferState,
+      transferState: { ...transferState.transferState, balance: transferBalance },
+      transferResolver: params.details.transferResolver,
+    },
+    unsigned,
+  };
 }
 
 // Holds the logic that is the same between all update types:
@@ -420,7 +439,7 @@ function generateBaseUpdate<T extends UpdateType>(
     channelAddress: state.channelAddress,
     type: params.type,
     fromIdentifier: signer.publicIdentifier,
-    toIdentifier: state.publicIdentifiers.find((id) => id !== signer.publicIdentifier)!,
+    toIdentifier: state.publicIdentifiers.find(id => id !== signer.publicIdentifier)!,
   };
 }
 
@@ -431,7 +450,7 @@ function getUpdatedChannelBalance(
   state: FullChannelState,
 ): Balance {
   // Get the existing balances to update
-  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  const assetIdx = state.assetIds.findIndex(a => a === assetId);
   if (assetIdx === -1) {
     throw new Error(`Asset id not found in channel ${assetId}`);
   }
@@ -441,8 +460,12 @@ function getUpdatedChannelBalance(
   // based on the transfer amount using the update type
   const updateExistingAmount = (existing: string, update: string): string => {
     return type === UpdateType.create
-      ? BigNumber.from(existing).sub(update).toString()
-      : BigNumber.from(existing).add(update).toString();
+      ? BigNumber.from(existing)
+          .sub(update)
+          .toString()
+      : BigNumber.from(existing)
+          .add(update)
+          .toString();
   };
 
   // NOTE: in the transfer.balance, there is no guarantee that the
@@ -451,11 +474,11 @@ function getUpdatedChannelBalance(
 
   // Create an array holding the appropriate index in the transfer
   // balance.to for the existing balance.to
-  const existingToIndexes = balanceToReconcile.to.map((addr) => existing.to.findIndex((a) => a === addr));
+  const existingToIndexes = balanceToReconcile.to.map(addr => existing.to.findIndex(a => a === addr));
 
   // Create an updated amount
   const updatedAmount = existingToIndexes
-    .map((existingIdx) => {
+    .map(existingIdx => {
       if (existingIdx == -1) {
         // the balance.to value is not in the existing.to value,
         // so there is no corresponding channel balance update
@@ -463,10 +486,10 @@ function getUpdatedChannelBalance(
       }
       // balance.to is a channel participant, so update the
       // corresponding amount
-      const balanceIdx = balanceToReconcile.to.findIndex((a) => a === existing.to[existingIdx]);
+      const balanceIdx = balanceToReconcile.to.findIndex(a => a === existing.to[existingIdx]);
       return updateExistingAmount(existing.amount[existingIdx], balanceToReconcile.amount[balanceIdx]);
     })
-    .filter((x) => !!x) as string[];
+    .filter(x => !!x) as string[];
 
   // NOTE: you should *always* use the existing balance because you are
   // reconciling a transfer balance with a channel balance. The reconciled
@@ -487,7 +510,7 @@ function reconcileBalanceWithExisting(
   assetIds: string[],
 ): Balance[] {
   // Update the balances array at the appropriate index
-  const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
+  const assetIdx = assetIds.findIndex(a => a === assetToReconcile);
   if (assetIdx === -1) {
     // Add new balance to array (new asset id)
     return [...existing, balanceToReconcile];
@@ -511,7 +534,7 @@ function reconcileLockedBalance(
   assetIds: string[],
 ): string[] {
   // Get the assetId index
-  const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
+  const assetIdx = assetIds.findIndex(a => a === assetToReconcile);
   if (assetIdx === -1) {
     throw new Error(`Cannot find asset ${assetToReconcile} in channel`);
   }
@@ -534,8 +557,12 @@ function reconcileLockedBalance(
   }
   updated[assetIdx] =
     type === UpdateType.create
-      ? BigNumber.from(locked).add(transferLocked).toString()
-      : BigNumber.from(locked).sub(transferLocked).toString();
+      ? BigNumber.from(locked)
+          .add(transferLocked)
+          .toString()
+      : BigNumber.from(locked)
+          .sub(transferLocked)
+          .toString();
 
   return updated;
 }

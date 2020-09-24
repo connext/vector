@@ -12,6 +12,7 @@ import {
   OutboundChannelUpdateError,
   Values,
   IVectorOnchainService,
+  FullTransferState,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { constants } from "ethers";
@@ -46,7 +47,7 @@ export async function outbound(
 
   // Get the valid previous state and the valid parameters from the
   // validation result
-  const { validParams, validState, activeTransfers, transfer } = validationRes.getValue()!;
+  const { validParams, validState, activeTransfers, transfer: validTransfer } = validationRes.getValue()!;
   let previousState = validState;
 
   // Generate the signed update
@@ -54,7 +55,7 @@ export async function outbound(
     validParams,
     previousState,
     activeTransfers,
-    transfer,
+    validTransfer,
     onchainService,
     signer,
     logger,
@@ -66,6 +67,7 @@ export async function outbound(
   const updateValue = updateRes.getValue();
   let update = updateValue.update;
   let updatedChannel = updateValue.channelState;
+  let transfer = updateValue.transfer;
 
   // send and wait for response
   logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Sending protocol message");
@@ -100,7 +102,12 @@ export async function outbound(
     }
 
     // Retry sending update to counterparty
-    const { regeneratedUpdate, syncedChannel, proposedChannel } = syncedResult.getValue()!;
+    const {
+      regeneratedUpdate,
+      syncedChannel,
+      proposedChannel,
+      transfer: regeneratedTransfer,
+    } = syncedResult.getValue()!;
     result = await messagingService.sendProtocolMessage(regeneratedUpdate, syncedChannel.latestUpdate);
 
     // Update error values + stored channel value
@@ -108,6 +115,7 @@ export async function outbound(
     previousState = syncedChannel;
     update = regeneratedUpdate;
     updatedChannel = proposedChannel;
+    transfer = regeneratedTransfer;
   }
 
   // Error object should now be either the error from trying to sync, or the
@@ -124,14 +132,10 @@ export async function outbound(
 
   logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Received protocol response");
 
-  const channelUpdateFromCounterparty = result.getValue();
+  const { update: counterpartyUpdate } = result.getValue();
 
   // verify sigs on update
-  const sigRes = await validateChannelUpdateSignatures(
-    updatedChannel,
-    channelUpdateFromCounterparty.update.signatures,
-    2,
-  );
+  const sigRes = await validateChannelUpdateSignatures(updatedChannel, counterpartyUpdate.signatures, 2);
   if (sigRes) {
     const error = new OutboundChannelUpdateError(
       OutboundChannelUpdateError.reasons.BadSignatures,
@@ -145,23 +149,23 @@ export async function outbound(
 
   try {
     await storeService.saveChannelState(
-      { ...updatedChannel, latestUpdate: channelUpdateFromCounterparty.update },
+      { ...updatedChannel, latestUpdate: counterpartyUpdate },
       {
         channelFactoryAddress: updatedChannel.networkContext.channelFactoryAddress,
         state: updatedChannel,
         chainId: updatedChannel.networkContext.chainId,
-        signatures: channelUpdateFromCounterparty.update.signatures,
+        signatures: counterpartyUpdate.signatures,
       },
       transfer,
     );
-    return Result.ok({ ...updatedChannel, latestUpdate: channelUpdateFromCounterparty.update });
+    return Result.ok({ ...updatedChannel, latestUpdate: counterpartyUpdate });
   } catch (e) {
     console.log("e", e.message);
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SaveChannelFailed,
         params,
-        { ...updatedChannel, latestUpdate: channelUpdateFromCounterparty.update },
+        { ...updatedChannel, latestUpdate: counterpartyUpdate },
         {
           error: e.message,
         },
@@ -194,12 +198,7 @@ export async function inbound(
       { method: "inbound", channel: update.channelAddress, error: reason },
       "Error responding to channel update",
     );
-    const error = new InboundChannelUpdateError(
-      reason,
-      prevUpdate,
-      state,
-      context,
-    );
+    const error = new InboundChannelUpdateError(reason, prevUpdate, state, context);
     await messagingService.respondWithProtocolError(inbox, error);
     return Result.fail(error);
   };
@@ -370,6 +369,7 @@ type OutboundSync = {
   regeneratedUpdate: ChannelUpdate<any>;
   syncedChannel: FullChannelState<any>;
   proposedChannel: FullChannelState<any>;
+  transfer?: FullTransferState;
 };
 const syncStateAndRecreateUpdate = async (
   receivedError: InboundChannelUpdateError,
@@ -463,8 +463,11 @@ const syncStateAndRecreateUpdate = async (
       ),
     );
   }
-  const { update: regeneratedUpdate, channelState: proposedChannel } = generateRes.getValue()!;
-  console.log("generate returned channel state", proposedChannel);
+  const {
+    update: regeneratedUpdate,
+    channelState: proposedChannel,
+    transfer: regeneratedTransfer,
+  } = generateRes.getValue()!;
   // Return the updated channel state and the regenerated update
-  return Result.ok({ syncedChannel, regeneratedUpdate, proposedChannel });
+  return Result.ok({ syncedChannel, regeneratedUpdate, proposedChannel, transfer: regeneratedTransfer });
 };
