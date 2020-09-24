@@ -1,2 +1,2 @@
-// export * from "./channel-commitment";
 export * from "./multisig-commitment";
+export * from "./withdraw-commitment";

@@ -42,6 +42,10 @@ export type MinimalTransaction = {
   data: HexString;
 };
 
+export type MultisigTransaction = MinimalTransaction & {
+  nonce: BigNumberish;
+}
+
 export interface IVectorOnchainService {
   getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
 

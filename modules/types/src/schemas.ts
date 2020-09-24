@@ -129,7 +129,7 @@ const SharedConditionalTransferParamsSchema = Type.Object({
   recipientChainId: Type.Optional(TChainId),
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
-  routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
+  routingId: Type.Optional(TBytes32), // This is needed for hopped transfers, but it might get confusing against transferId
   meta: Type.Any(),
 });
 
@@ -149,6 +149,7 @@ const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema])
 const SharedResolveTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
+  meta: Type.Any(),
 });
 
 const ResolveLinkedTransferParamsSchema = Type.Intersect([

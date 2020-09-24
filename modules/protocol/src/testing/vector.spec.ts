@@ -31,12 +31,12 @@ import { MemoryLockService } from "./services/lock";
 import { MemoryStoreService } from "./services/store";
 import { expect } from "./utils";
 
-let chainService: Sinon.SinonStubbedInstance<IVectorOnchainService>;
-let lockService: Sinon.SinonStubbedInstance<ILockService>;
-let messagingService: Sinon.SinonStubbedInstance<IMessagingService>;
-let storeService: Sinon.SinonStubbedInstance<IVectorStore>;
-
 describe("Vector", () => {
+  let chainService: Sinon.SinonStubbedInstance<IVectorOnchainService>;
+  let lockService: Sinon.SinonStubbedInstance<ILockService>;
+  let messagingService: Sinon.SinonStubbedInstance<IMessagingService>;
+  let storeService: Sinon.SinonStubbedInstance<IVectorStore>;
+
   beforeEach(async () => {
     chainService = Sinon.createStubInstance(VectorOnchainService);
     chainService.getChannelFactoryBytecode.resolves(Result.ok(mkHash()));
@@ -265,7 +265,6 @@ describe("Vector", () => {
 
     it("should work", async () => {
       const { details } = createTestUpdateParams(UpdateType.create);
-      console.log("details", details);
       const result = await vector.create(details);
       expect(result.getError()).to.be.undefined;
       expect(lockService.acquireLock.callCount).to.be.eq(1);

@@ -40,6 +40,7 @@ export class VectorEngine {
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: pino.BaseLogger,
+    private readonly signer: IChannelSigner,
   ) {}
 
   static async connect(
@@ -64,7 +65,7 @@ export class VectorEngine {
       chainService,
       logger.child({ module: "VectorProtocol" }),
     );
-    const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger);
+    const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger, signer);
     await engine.setupListener();
     logger.info("Vector Engine connected 🚀!");
     return engine;
@@ -157,7 +158,7 @@ export class VectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = convertConditionalTransferParams(params, channel!);
+    const createResult = convertConditionalTransferParams(params, this.signer, channel!);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -215,7 +216,7 @@ export class VectorEngine {
     }
 
     // First, get translated `create` params from withdraw
-    const createResult = convertWithdrawParams(params, channel!);
+    const createResult = await convertWithdrawParams(params, this.signer, channel!);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -225,6 +226,9 @@ export class VectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
+
+    // TODO should we wait for the resolve here?
+
     return Result.ok(res); // TODO what do we return here?
   }
 
