@@ -31,7 +31,7 @@ describe("ChannelMastercopy", () => {
   it("all public methods should revert bc it's the mastercopy", async () => {
     for (const method of [
       { name: "getParticipants", args: [] },
-      { name: "execTransaction", args: [AddressZero, Zero, HashZero, Zero, [HashZero]] },
+      { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, [HashZero]] },
       { name: "initiatorDeposit", args: [AddressZero, Zero] },
     ]) {
       await expect(

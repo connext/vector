@@ -5,10 +5,10 @@ pragma experimental ABIEncoderV2;
 
 interface ICMCWithdraw {
 
-    function execTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
+    function withdraw(
+        address payable recipient,
+        address assetId,
+        uint256 amount,
         uint256 nonce,
         bytes[] memory signatures
     ) external;

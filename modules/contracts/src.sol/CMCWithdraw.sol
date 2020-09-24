@@ -3,8 +3,9 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCWithdraw.sol";
-import "./CMCCore.sol";
+import "./interfaces/IERC20.sol";
 import "./lib/LibChannelCrypto.sol";
+import "./CMCCore.sol";
 
 
 contract CMCWithdraw is CMCCore, ICMCWithdraw {
@@ -13,61 +14,14 @@ contract CMCWithdraw is CMCCore, ICMCWithdraw {
 
     mapping(bytes32 => bool) isExecuted;
 
-    function encodeTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
-        uint256 nonce,
-        bytes[] memory signatures
-    )
-        public
-        view
-        onlyOnProxy
-        returns (bytes memory)
-    {
-        return abi.encodePacked(
-            address(this),
-            to,
-            value,
-            keccak256(data),
-            nonce
-        );
-    }
-
-    function hashTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
-        uint256 nonce,
-        bytes[] memory signatures
-    )
-        public
-        view
-        onlyOnProxy
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                address(this),
-                to,
-                value,
-                keccak256(data),
-                nonce
-            )
-        );
-    }
-
-    /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
-    /// This transaction is a message CALL
-    /// @param to The destination address of the message call
-    /// @param value The amount of ETH being forwarded in the message call
-    /// @param data Any calldata being sent along with the message call
-    /// @param nonce ???
+    /// @param recipient The address to which we're withdrawing funds to
+    /// @param assetId The token address of the asset we're withdrawing (address(0)=eth)
+    /// @param amount The number of units of asset we're withdrawing
     /// @param signatures A sorted bytes string of concatenated signatures of each owner
-    function execTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
+    function withdraw(
+        address payable recipient,
+        address assetId,
+        uint256 amount,
         uint256 nonce,
         bytes[] memory signatures
     )
@@ -75,39 +29,45 @@ contract CMCWithdraw is CMCCore, ICMCWithdraw {
         override
         onlyOnProxy
     {
-        bytes32 transactionHash = keccak256(
+        bytes32 withdrawHash = keccak256(
             abi.encodePacked(
-                address(this),
-                to,
-                value,
-                keccak256(data),
+                recipient,
+                assetId,
+                amount,
                 nonce
             )
         );
         require(
-            !isExecuted[transactionHash],
+            !isExecuted[withdrawHash],
             "Transacation has already been executed"
         );
-        isExecuted[transactionHash] = true;
+        isExecuted[withdrawHash] = true;
         for (uint256 i = 0; i < participants.length; i++) {
             require(
-                participants[i] == transactionHash.verifyChannelMessage(signatures[i]),
-                "execTransaction: Invalid signature"
+                participants[i] == withdrawHash.verifyChannelMessage(signatures[i]),
+                "CMCWithdraw: Invalid signature"
             );
         }
-        execute(to, value, data);
+        // TODO: update channel state?
+        // TODO: what if in dispute?
+        // TODO: update alice's balance onchain?
+        if (assetId == address(0)) {
+            require(
+                address(this).balance >= amount,
+                "CMCWithdraw: insufficient balance"
+            );
+            recipient.transfer(amount);
+        } else {
+            safeTransfer(assetId, recipient, amount);
+        }
     }
 
-    /// @notice Execute a CALL on behalf of the multisignature wallet
-    /// @notice This is largely used for withdrawing from the channel + migrations
-    /// @return success A boolean indicating if the transaction was successful or not
-    function execute(address to, uint256 value, bytes memory data)
-        internal
-        returns (bool success)
-    {
-        assembly {
-            success := call(not(0), to, value, add(data, 0x20), mload(data), 0, 0)
-        }
+    // uses uniswap transfer helper for non-confirming ERC20 tokens
+    // https://github.com/Uniswap/uniswap-lib/blob/master/contracts/libraries/TransferHelper.sol
+    function safeTransfer(address token, address to, uint value) internal {
+        // bytes4(keccak256(bytes('transfer(address,uint256)')));
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0xa9059cbb, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'CMCWithdraw: ERC20 transfer failed');
     }
 
 }
