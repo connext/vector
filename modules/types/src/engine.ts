@@ -16,7 +16,7 @@ export type ConditionalTransferResponse = {
 // Emitted when transfer created
 export const CONDITIONAL_TRANFER_CREATED_EVENT = "CONDITIONAL_TRANFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
-  transferName: TransferName;
+  channelAddress: string;
   routingId: Bytes32;
   transfer: FullTransferState;
   channelBalance: Balance;
@@ -29,6 +29,7 @@ export type ConditionalTransferResolvedPayload = ConditionalTransferCreatedPaylo
 // Emitted when an onchain deposit is reconciled with offchain balance
 export const DEPOSIT_RECONCILED_EVENT = "DEPOSIT_RECONCILED";
 export type DepositReconciledPayload = {
+  channelAddress: string;
   assetId: string;
   channelBalance: Balance;
 };
@@ -36,6 +37,7 @@ export type DepositReconciledPayload = {
 // Emitted when a withdrawal transfer is created
 export const WITHDRAWAL_CREATED_EVENT = "WITHDRAWAL_CREATED";
 export type WithdrawalCreatedPayload = {
+  channelAddress: string;
   assetId: string;
   amount: string;
   recipient: string;
@@ -49,6 +51,7 @@ export type WithdrawalResolvedPayload = WithdrawalCreatedPayload;
 // Emitted when withdrawal commitment is submitted to chain
 export const WITHDRAWAL_RECONCILED_EVENT = "WITHDRAWAL_RECONCILED";
 export type WithdrawalReconciledPayload = {
+  channelAddress: string;
   transactionHash: string;
 };
 
