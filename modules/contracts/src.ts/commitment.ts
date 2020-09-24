@@ -1,23 +1,39 @@
-import { EthereumCommitment } from "@connext/types";
 import { MinimalTransaction } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { BigNumber, utils } from "ethers";
+import { BigNumber, constants, utils } from "ethers";
 
-import { ChannelMastercopy } from "../artifacts";
+import { ChannelMastercopy, ERC20 } from "./artifacts";
 
 const { Interface, keccak256, solidityKeccak256, solidityPack } = utils;
 
-// A commitment to make ChannelMastercopy perform a message call
-export abstract class MultisigCommitment implements EthereumCommitment {
-  constructor(
-    readonly multisigAddress: string,
-    readonly multisigOwners: string[],
-    readonly nonce: string,
-    private initiatorSignature?: string,
-    private responderSignature?: string,
+export class WithdrawCommitment {
+  private initiatorSignature?: string;
+  private responderSignature?: string;
+
+  public constructor(
+    public readonly multisigAddress: string,
+    public readonly multisigOwners: string[],
+    public readonly recipient: string,
+    public readonly assetId: string,
+    public readonly amount: string,
+    public readonly nonce: string,
   ) {}
 
-  abstract getTransactionDetails(): MinimalTransaction;
+  public getTransactionDetails(): MinimalTransaction {
+    if (this.assetId == constants.AddressZero) {
+      return {
+        to: this.recipient,
+        value: BigNumber.from(this.amount),
+        data: "0x",
+      };
+    } else {
+      return {
+        to: this.assetId,
+        value: 0,
+        data: new Interface(ERC20.abi).encodeFunctionData("transfer", [this.recipient, BigNumber.from(this.amount)]),
+      };
+    }
+  }
 
   get signatures(): string[] {
     if (!this.initiatorSignature && !this.responderSignature) {

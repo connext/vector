@@ -13,6 +13,50 @@ contract CMCExecutor is CMCCore, ICMCExecutor {
 
     mapping(bytes32 => bool) isExecuted;
 
+    function encodeTransaction(
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint256 nonce,
+        bytes[] memory signatures
+    )
+        public
+        view
+        onlyOnProxy
+        returns (bytes memory)
+    {
+        return abi.encodePacked(
+            address(this),
+            to,
+            value,
+            keccak256(data),
+            nonce
+        );
+    }
+
+    function hashTransaction(
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint256 nonce,
+        bytes[] memory signatures
+    )
+        public
+        view
+        onlyOnProxy
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                address(this),
+                to,
+                value,
+                keccak256(data),
+                nonce
+            )
+        );
+    }
+
     /// @notice Execute an n-of-n signed transaction specified by a (to, value, data, op) tuple
     /// This transaction is a message CALL
     /// @param to The destination address of the message call
@@ -48,7 +92,7 @@ contract CMCExecutor is CMCCore, ICMCExecutor {
         for (uint256 i = 0; i < participants.length; i++) {
             require(
                 participants[i] == transactionHash.verifyChannelMessage(signatures[i]),
-                "Invalid signature"
+                "execTransaction: Invalid signature"
             );
         }
         execute(to, value, data);

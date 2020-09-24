@@ -1,6 +1,6 @@
 # Vector Contracts
 
-The contracts module contains the core solidity files that back Vector's security onchain. **IMPORTANT: Do not edit these contracts unless you know exactly what you're doing**, even small changes to commitment interfaces or parameters can render the *entire* system undisputable.
+The contracts module contains the core solidity files that back Vector's security onchain.
 
 Contents:
 - [Developing and Running Tests](https://github.com/connext/vector/tree/master/modules/contracts#developing)
@@ -13,15 +13,9 @@ Contents:
 ## Developing and Running Tests
 
 In `~/vector` (root), run:
-- `make` to build the contracts
+- `make contracts` to build just the contracts & it's dependencies
 - `make test-contracts` to run the tests
 - `make watch-contracts` to test in watch-mode
-
-## Control Flow
-
-The contract control flow in Vector is inverted compared to CF (it is more similar to StateChannels):
-
-![alt text](https://i.ibb.co/gyqFSzg/vector-Contract-Control-Flow.png)
 
 ## Simplifying Assumptions
 
@@ -37,41 +31,41 @@ The Vector contracts make some simplifying assumptions compared to CounterFactua
 
 The dispute flow works as follows:
 
-1. A party calls `forceChannelConsensus()` passing in their latest state. This begins the `consensus` phase of the dispute game. The counterparty has the ability to respond with a higher-nonced state within the phase. Note that for now we just wait out the entire phase, but it would be possible to implement a shortcut where if both parties submit updates then the phase can be skipped.
+1. A party calls `disputeChannel()` passing in their latest state. This begins the `consensus` phase of the dispute game. The counterparty has the ability to respond with a higher-nonced state within the phase. Note that for now we just wait out the entire phase, but it would be possible to implement a shortcut where if both parties submit updates then the phase can be skipped.
    - Also note that once a dispute has been initiated, the channel should be considered halted. **Neither party should make or accept offchain updates during this time.**
 2. After the consensus phase is complete, the latest state of the channel is available onchain. Then, the `defund` phase of the dispute game begins.
 3. During the `defund` phase, either party may call `defundChannel()` with an array of `assetId`s to remove those assets from the channel (for both parties).
 4. It is also possible for either party to dispute transfers directly during this phase. The process for this looks somewhat similar to disputing channels. First, parties call `forceTransferConsensus()` which starts a timeout window within which the transfer state must be finalized. `forceTransferConsensus()` checks that the hash of the passed in transfer state is a part of the merkle root checkpointed onchain during the channel `consensus` phase. 
    - Note that the merkle root is updated to include transfer state during the `create` channel op (where balances are locked into the transfer), and then is updated again to remove the transfer state during the `resolve` channel op (where balances are reintroduced to the core channel state). This means that a disputed transfer can only ever be in it's initial state, which keeps things really simple.
-5. Once a transfer is in dispute, anyone can resolve it manually onchain using `emptyTransfer` anytime before the transfer dispute window expires. This will call the `TransferDefinition` to get an updated set of balances, and then send those balances to both parties onchain. If no transfer resolver is available, the dispute window will expire and then `emptyTransfer` can be called (once again by anyone) to pay out the initial balances of the transfer via `adjudicatorTransfer` on the `VectorChannel` contract.
+5. Once a transfer is in dispute, anyone can resolve it manually onchain using `defundTransfer` anytime before the transfer dispute window expires. This will call the `TransferDefinition` to get an updated set of balances, and then send those balances to both parties onchain. If no transfer resolver is available, the dispute window will expire and then `defundTransfer` can be called (once again by anyone) to pay out the initial balances of the transfer via `adjudicatorTransfer` on the `VectorChannel` contract.
 
 ## Funding a Channel
 
 In Vector, channel funding is asymmetric.
 
-The initiator of a channel (as determined by `participants[]`), _must_ deposit using the `initatorDeposit` function in the `Multisig.sol` contract. The responder of a channel can deposit simply by sending funds to the multisig address.
+The initiator of a channel (as determined by `participants[]`), _must_ deposit using the `initatorDeposit` function in the channel contract. The responder of a channel can deposit simply by sending funds to the channel address.
 
 Calling `initatorDeposit` registers Alice's deposit `amount`, `assetId`, `depositNonce` as the latest deposit onchain. This means that Alice's flow for depositing funds is:
 
 1. Call `initatorDeposit` with funds (if this is the first deposit, Alice can do this while also deploying the proxy)
 2. Attempt to reconcile the latest deposit in Alice's balance offchain with Bob (i.e. add `deposit.amount` to `balanceA`)
-3. If Bob does not reconcile the balance, at any time before her next deposit, Alice can `forceChannelConsensus()`, finalize her latest state onchain, and then call `defundChannel()`.
+3. If Bob does not reconcile the balance, at any time before her next deposit, Alice can `disputeChannel()`, finalize her latest state onchain, and then call `defundChannel()`.
 
-For Alice, `defundChannel()` works by checking the latest state passed in (which is itself validated against the latest state hash registered onchain in `forceChannelConsensus()`). If the `state.depositNonce` is equal to deposit nonce from the multisig data, that means that the latest deposit was reconciled against the balance. If the `state.depositNonce` is one behind the deposit nonce onchain, then that means that the the latest deposit was _not_ reconciled against the balances. -- Note that all other cases should _never_ happen.
+For Alice, `defundChannel()` works by checking the latest state passed in (which is itself validated against the latest state hash registered onchain in `disputeChannel()`). If the `state.depositNonce` is equal to deposit nonce from the channel data, that means that the latest deposit was reconciled against the balance. If the `state.depositNonce` is one behind the deposit nonce onchain, then that means that the latest deposit was _not_ reconciled against the balances. -- Note that all other cases should _never_ happen.
 
-In the former case, Alice's balance is equal to her `state.balanceA`. In the latter, her balance is equal to `state.balanceA + multisigData.deposit.amount`.
+In the former case, Alice's balance is equal to her `state.balanceA`. In the latter, her balance is equal to `state.balanceA + channel.deposit.amount`.
 
 For Bob, depositing works somewhat similarly:
 
-1. Send funds to multisig directly
+1. Send funds to channel directly
 2. Attempt to reconcile the latest deposit in Bob's balance offchain with Alice (i.e. add `deposit.amount` to `balanceB`)
-3. If Alice does not reconcile the balance, Bob can `forceChannelConsensus()` and then `defundChannel()` as above.
+3. If Alice does not reconcile the balance, Bob can `disputeChannel()` and then `defundChannel()` as above.
 
-For Bob, `defundChannel()` will pay out based on the following logic: We calculate Alice's balance as above (including the possibly unmerged latest deposit). Then, Bob's balance is `multisigOnchainBalance - (balanceA(including potential deposit) + lockedBalance)` where `lockedBalance` is the total amount of funds in the channel currently allocated to any transfers. Another way to say the above is that the protocol will assume that any excess funds that are not explicitly a part of Alice's state OR Alice's unmerged deposits OR locked transfer value must belong to Bob.
+For Bob, `defundChannel()` will pay out based on the following logic: We calculate Alice's balance as above (including the possibly unmerged latest deposit). Then, Bob's balance is `channelOnchainBalance - (balanceA(including potential deposit) + lockedBalance)` where `lockedBalance` is the total amount of funds in the channel currently allocated to any transfers. Another way to say the above is that the protocol will assume that any excess funds that are not explicitly a part of Alice's state OR Alice's unmerged deposits OR locked transfer value must belong to Bob.
 
 The above flows have a few consequences:
 
-- Bob can send funds to the multisig at any time with any frequency and eventually reconcile them with his balances
+- Bob can send funds to the channel at any time with any frequency and eventually reconcile them with his balances
 - Alice does not need to do preparatory work before sending her deposit to chain. The onchain part of her deposit is entirely decoupled from offchain reconciliation.
 - We need to pass in an `assetId[]` array into `defundChannel()` in order for it to work. The benefit here is that you dont actually need to dispute the entire balance in a single tx, which means that we shouldn't ever get into a case where the channel state is too large to dispute (even if there are 1000s of tokens).
 - Alice's cannot deposit many times concurrently (we can potentially modify the `latestDeposit` to track historic balances and aggregate them to allow this, however)
@@ -115,7 +109,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 
 #### Adjudicator
 - [ ] Add constructor and pass in `ChannelFactory` address
-- [X] Change timeouts in `forceChannelConsensus` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
+- [X] Change timeouts in `disputeChannel` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
 - [ ] Only allow recipient of a transfer to use `transferResolver` to `resolve` a transfer onchain in `defundTransfer`. Either party should be able to defund it with the existing state, however.
 - [ ] Don't need `onlyParticipants` anymore if we're allowing anybody to dispute.
 - [ ] `getChannelAddress` needs to be implemented using participants, chainId (from onchain data), hardcoded vector domain separator, and hardcoded `ChannelFactory` address.

@@ -25,7 +25,6 @@ struct CoreChannelState {
     bytes32 merkleRoot;
 }
 
-
 struct CoreTransferState {
     Balance initialBalance;
     address assetId;
