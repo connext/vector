@@ -690,8 +690,6 @@ describe("generateUpdate", () => {
           })
         : state;
       store.getChannelState.resolves(inStore);
-      store.getTransferState.resolves(transfer);
-      store.getActiveTransfers.resolves([transfer].filter(x => !!x) as any);
 
       // Chain service mocks are only used by deposit/resolve
       chainService.getLatestDepositByAssetId.resolves(
@@ -702,7 +700,7 @@ describe("generateUpdate", () => {
       chainService.resolve.resolves(Result.ok(resolveBalance ?? { to: participants, amount: ["0", "0"] }));
 
       // Execute function call
-      const result = await vectorUpdate.generateUpdate(params, state, store, chainService, from ?? signers[0]);
+      const result = await vectorUpdate.generateUpdate(params, state, [transfer].filter(x => !!x) as any, transfer, chainService, from ?? signers[0]);
 
       // Verify result
       if (error) {

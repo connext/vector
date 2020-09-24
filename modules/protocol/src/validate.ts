@@ -12,13 +12,16 @@ import {
   Values,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
+  ChannelCommitmentData,
+  ValidationError,
+  ResolveUpdateDetails,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
-import { ValidationError } from "ajv";
-import { BigNumber, constants, utils } from "ethers";
+import { BigNumber, constants } from "ethers";
 import pino from "pino";
 
-const { getAddress } = utils;
+import { applyUpdate } from "./update";
+import { generateSignedChannelCommitment, validateChannelUpdateSignatures } from "./utils";
 
 // This function performs all update *initiator* side validation
 // and is called from within the `sync.outbound` function.
@@ -39,7 +42,6 @@ type OutboundValidationResult<T extends UpdateType = any> = Result<
 export async function validateOutbound<T extends UpdateType = any>(
   params: UpdateParams<T>,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<OutboundValidationResult<T>> {
@@ -164,8 +166,6 @@ export async function validateOutbound<T extends UpdateType = any>(
 
       // Ensure participants both have sufficient funds of asset
       // to create the transfer
-      // TODO: the params here seem to assume transfers will have
-      // a single asset, what about in channel swaps?
 
       // Ensure the encodings will work properly for the state
       // TODO: can we assert the resolver encodings in a similar way?
@@ -222,179 +222,191 @@ export async function validateOutbound<T extends UpdateType = any>(
 
 // This function performs all update validation when you are receiving
 // a proposed update for the counterparty -- in `sync.inbound` as well
-// as `sync.outbound` when you are out of sync but proposed an update
+// as `sync.outbound` when you are out of sync but proposed an update.
+// It will validate the update, apply the update, validate that there
+// is at least one signature, and that all signatures present are
+// invalid. (Must apply update to validate signatures)
 
 // NOTE: NONE of the parameters here should be assumed valid, since
 // this information is passed over the wire and is not validated
 // using the defined schemas. Additionally, this function is called
 // by `sync.inbound` (primarily), which is registered on a messaging
 // callback.
-
-// Als
-export async function validateInbound<T extends UpdateType = any>(
+type InboundValidationResult<T extends UpdateType = any> = Result<
+  {
+    validUpdate: ChannelUpdate<T>;
+    nextState: FullChannelState<T>;
+    commitment: ChannelCommitmentData;
+    activeTransfers: FullTransferState[]; // after applyUpdate
+    transfer?: FullTransferState; // after applyUpdate
+  },
+  InboundChannelUpdateError
+>;
+export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
   storeService: IVectorStore,
   onchainService: IVectorOnchainService,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
-): Promise<Result<void, InboundChannelUpdateError>> {
-  // There is no need to validate items in the state since this will always
-  // be a double signed state
+): Promise<InboundValidationResult> {
+  // Validate + apply the update
+  const res = await validateAndApplyChannelUpdate(update, state, storeService, onchainService);
+  if (res.isError) {
+    return Result.fail(res.getError()!);
+  }
 
-  // First, validate all the common fields within the channel update
-  const { channelAddress, fromIdentifier, toIdentifier, nonce, assetId } = update;
+  const { nextState, validUpdate, transfer, activeTransfers } = res.getValue()!;
 
-  // The channel address should not change from the state
-  if (channelAddress !== state.channelAddress) {
+  // Verify at least one signature exists (and any present are valid)
+  const sigRes = await validateChannelUpdateSignatures(nextState, validUpdate.signatures);
+  if (sigRes) {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.DifferentChannelAddress, update, state),
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, validUpdate, nextState, {
+        error: sigRes,
+      }),
     );
   }
 
-  // Channel address should be an address
-  if (!isAddress(channelAddress)) {
+  // Generate the cosigned commitment
+  const signed = await generateSignedChannelCommitment(nextState, signer, validUpdate.signatures);
+
+  // Return the validated update, resultant state, double signed
+  // commitment, and the transfer data
+  return Result.ok({ validUpdate, nextState, commitment: signed, activeTransfers, transfer });
+}
+
+async function validateAndApplyChannelUpdate<T extends UpdateType>(
+  update: ChannelUpdate<T>,
+  previousState: FullChannelState,
+  storeService: IVectorStore,
+  onchainService: IVectorOnchainService,
+): Promise<
+  Result<
+    {
+      validUpdate: ChannelUpdate<T>;
+      nextState: FullChannelState<T>;
+      activeTransfers: FullTransferState[]; // after applyUpdate
+      transfer?: FullTransferState; // after applyUpdate
+    },
+    InboundChannelUpdateError
+  >
+> {
+  // Create a helper to handle errors properly
+  const returnError = (
+    validationError: Values<typeof ValidationError.reasons>,
+    state: FullChannelState = previousState,
+    context: any = {},
+  ): InboundValidationResult => {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InvalidChannelAddress, update, state),
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InboundValidationFailed, update, state, {
+        error: validationError,
+        ...context,
+      }),
     );
-  }
+  };
 
-  // The identifiers should be the same
-  if (JSON.stringify([fromIdentifier, toIdentifier]) !== JSON.stringify([...state.publicIdentifiers])) {
-    return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.DifferentIdentifiers, update, state),
-    );
-  }
+  const { channelAddress, fromIdentifier, toIdentifier, type, nonce, balance, assetId, details } = update;
+  // Get the active transfers for the channel
+  const previousActiveTransfers = await storeService.getActiveTransfers(channelAddress);
 
-  // The update nonce should be exactly one more than the state nonce
-  if (nonce !== state.nonce + 1) {
-    return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StaleChannel, update, state));
-  }
+  // Perform all common update validation -- see note above
+  // calling function
+  // Ensure the toIdentifier is ours
 
-  // Make sure the assetId is a valid address
-  if (!isAddress(assetId)) {
-    return Result.fail(new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InvalidAssetId, update, state));
-  }
+  // Ensure the fromIdentifier is the counterparties
 
-  // Validate signatures
-  //
+  // Ensure the nonce == previousState.nonce + 1
 
-  // Then break out into type-specific validation
-  switch (update.type) {
+  // Ensure the assetId is valid
+
+  // Perform update-type specific validation, and get transfer values
+  // to manipulate (if needed)
+  let transfer: FullTransferState | undefined = undefined;
+  let activeTransfers = [...previousActiveTransfers];
+  switch (type) {
     case UpdateType.setup: {
-      return validateSetup(update as ChannelUpdate<"setup">, state as FullChannelState<"setup">, logger);
+      // Ensure the channelAddress is correctly generated
+
+      // Ensure the timeout is reasonable
+
+      // TODO: There is no way to validate the network context,
+      // this should either be implemented in the protocol consumer
+      // or within the chain service
+      break;
     }
+
     case UpdateType.deposit: {
-      return validateDeposit(update as ChannelUpdate<"deposit">, state as FullChannelState<"deposit">, logger);
+      // Ensure the balance has been correctly reconciled
+
+      // Ensure the latestDepositNonce is correct
+      break;
     }
     case UpdateType.create: {
-      return validateCreate(update as ChannelUpdate<"create">, state as FullChannelState<"create">, logger);
+      // Ensure the transferId is properly formatted
+
+      // Ensure the transferDefinition is properly formatted
+
+      // If present, ensure the meta is an object
+
+      // Ensure the transferTimeout is above the minimum
+
+      // Ensure the transferInitialState is correctly structured
+      
+      // Ensure there is sufficient balance in the channel for the
+      // proposed transfer for the appropriate asset
+
+      // Ensure the transferEncoding is correct for the state
+      // TODO: no way to verify resolver encodings!
+
+      // Update the active transfers
+
+      // Recreate the merkle tree
+
+      // Ensure the merkleProofData is correct
+
+      // Ensure the same merkleRoot is generated
+
+      // Create the valid transfer object
+      break;
     }
     case UpdateType.resolve: {
-      return validateResolve(update as ChannelUpdate<"resolve">, state as FullChannelState<"resolve">, logger);
+      const { transferId, transferDefinition,transferResolver, transferEncodings, merkleRoot, meta } = details as ResolveUpdateDetails;
+
+      // Ensure transfer exists in store
+      transfer = await storeService.getTransferState(transferId);
+
+      // Ensure the transfer exists within the active transfers
+
+      // Ensure the initiators transfer information is the same as ours:
+      // - transferDefintion
+      // - transferEncodings
+
+      // Verify the balance is the same from update initiator
+      // and chain service
+
+      // Update the active transfers
+      activeTransfers = previousActiveTransfers.filter(t => t.transferId === transferId);
+
+      // Regenerate the merkle tree
+
+      // Verify the merkle root is correct
+
+      // If exists, verify the meta is an object
+      break;
     }
     default: {
-      throw new Error(`Unexpected UpdateType in received update: ${update.type}`);
+      return returnError(ValidationError.reasons.BadUpdateType);
     }
   }
-}
 
-// NOTE: all the below helpers should validate the `details` field
-// of the specific update. See the `ChannelUpdateDetailsMap` type
-
-function validateSetup(
-  update: ChannelUpdate<"setup">,
-  state: FullChannelState<"setup">,
-  logger: pino.BaseLogger = pino(),
-): Result<undefined, InboundChannelUpdateError> {
-  // Validate channel doesnt exist in storage
-
-  // Validate it is the correct channel address
-
-  // Validate public identifiers are correctly formatted and the
-  // participants are correctly derived
-
-  // Validate network context has correct addresses
-  // TODO: validate factory onchain
-
-  // Validate timeout is reasonable
-
-  // Validate balances and locked value is 0
-
-  // Validate initial nonce + latestDepositNonce
-  // TODO: is initial nonce 0 or 1?
-
-  // Validate merkle root is empty hash, assetIds are empty
-  logger.error("validateSetup not implemented", { update, state });
-  return Result.ok(undefined);
-}
-
-function validateDeposit(
-  update: ChannelUpdate<"deposit">,
-  state: FullChannelState<"deposit">,
-  logger: pino.BaseLogger = pino(),
-): Result<undefined, InboundChannelUpdateError> {
-  // Validate the latest deposit nonce from chain
-
-  // TODO: Best way to reconcile on and offchain balances?
-  // Should we check the state balances + lockedVal + update.amount
-  // === currentMultisigBalance?
-  logger.error("validateDeposit not implemented", { update, state });
-  return Result.ok(undefined);
-}
-
-function validateCreate(
-  update: ChannelUpdate<"create">,
-  state: FullChannelState<"create">,
-  logger: pino.BaseLogger = pino(),
-): Result<undefined, InboundChannelUpdateError> {
-  // Validate transfer id
-
-  // Validate transfer definition
-
-  // Validate reasonable timeout
-
-  // Validate tranfer initial state
-  // TODO: this will require a provider!
-
-  // Validate transfer encodings are correct
-  // TODO: can we get this from chain?
-
-  // Validate merkle proof data
-
-  // Recalculate + validate merkle root
-  // TODO: this will require all transfer initial states!
-  logger.error("validateCreate not implemented", { update, state });
-  return Result.ok(undefined);
-}
-
-function validateResolve(
-  update: ChannelUpdate<"resolve">,
-  state: FullChannelState<"resolve">,
-  logger: pino.BaseLogger = pino(),
-): Result<undefined, InboundChannelUpdateError> {
-  // Validate transfer id
-
-  // Validate transfer definition
-
-  // Validate resolver
-  // TODO: define transfer types
-
-  // Validate merkle proof data
-
-  // Recalculate + validate merkle root
-  // TODO: this will require all transfer initial states!
-  logger.error("validateResolve not implemented", { update, state });
-  return Result.ok(undefined);
-}
-
-function isAddress(addr: any): boolean {
-  if (!addr) return false;
-  if (typeof addr !== "string") return false;
-  try {
-    getAddress(addr);
-    return true;
-  } catch (e) {
-    return false;
+  // Apply the update
+  const applyRes = await applyUpdate(update, previousState, transfer);
+  if (applyRes.isError) {
+    // Returns an inbound channel error, so don't use helper to preserve
+    // apply error
+    return Result.fail(applyRes.getError()!);
   }
+
+  return Result.ok({ nextState: applyRes.getValue()!, transfer, activeTransfers, validUpdate: update });
 }

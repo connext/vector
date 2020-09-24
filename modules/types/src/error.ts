@@ -68,6 +68,7 @@ export class ValidationError extends VectorError {
   readonly type = VectorError.errors.ValidationError;
 
   static readonly reasons = {
+    BadUpdateType: "Unrecognized update type",
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
@@ -132,6 +133,7 @@ export class InboundChannelUpdateError extends VectorError {
     ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     DifferentIdentifiers: "Update changes channel publicIdentifiers",
     DifferentChannelAddress: "Update changes channelAddress",
+    InboundValidationFailed: "Failed to validate incoming update",
     InvalidAssetId: "Update `assetId` is invalid address",
     InvalidChannelAddress: "Update `channelAddress` is invalid",
     MergeUpdateFailed: "Failed to merge update",
@@ -141,6 +143,8 @@ export class InboundChannelUpdateError extends VectorError {
     StaleUpdate: "Update does not progress channel nonce",
     StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
     SaveChannelFailed: "Failed to save channel",
+    SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
+    SyncFailure: "Failed to sync channel from counterparty update",
     TransferNotFound: "No transfer found in storage",
   } as const;
 
