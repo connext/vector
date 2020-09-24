@@ -56,7 +56,7 @@ Setup also performs one more highly critical task -- the channel initiator/respo
 
 ### Deposit
 
-A deposit update should occur after deposits have been send to chain (either by calling the `depositA` function for the channel initiator, or simply sending funds to the multisig for the channel responder).
+A deposit update should occur after deposits have been send to chain (either by calling the `initatorDeposit` function for the channel initiator, or simply sending funds to the multisig for the channel responder).
 
 The deposit update is used to confirm an already-mined deposit tx into the channel `balance`. To do this safely, the following must occur:
 

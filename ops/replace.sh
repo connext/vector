@@ -25,6 +25,7 @@ then
     .github/workflows/* \
     Makefile \
     modules/*/ops \
+    modules/*/README.md \
     modules/*/src \
     modules/*/src.sol \
     modules/*/src.ts \

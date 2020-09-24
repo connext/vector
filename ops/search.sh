@@ -16,5 +16,6 @@ grep "$@" --exclude=*.swp --exclude=*.pdf --color=auto -r "$target" \
   modules/*/src.sol \
   modules/*/src.ts \
   modules/server-node/schema.prisma \
+  modules/*/README.md \
   ops \
   package.json

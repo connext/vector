@@ -49,11 +49,11 @@ The dispute flow works as follows:
 
 In Vector, channel funding is asymmetric.
 
-The initiator of a channel (as determined by `participants[]`), _must_ deposit using the `depositA` function in the `Multisig.sol` contract. The responder of a channel can deposit simply by sending funds to the multisig address.
+The initiator of a channel (as determined by `participants[]`), _must_ deposit using the `initatorDeposit` function in the `Multisig.sol` contract. The responder of a channel can deposit simply by sending funds to the multisig address.
 
-Calling `depositA` registers Alice's deposit `amount`, `assetId`, `depositNonce` as the latest deposit onchain. This means that Alice's flow for depositing funds is:
+Calling `initatorDeposit` registers Alice's deposit `amount`, `assetId`, `depositNonce` as the latest deposit onchain. This means that Alice's flow for depositing funds is:
 
-1. Call `depositA` with funds (if this is the first deposit, Alice can do this while also deploying the proxy)
+1. Call `initatorDeposit` with funds (if this is the first deposit, Alice can do this while also deploying the proxy)
 2. Attempt to reconcile the latest deposit in Alice's balance offchain with Bob (i.e. add `deposit.amount` to `balanceA`)
 3. If Bob does not reconcile the balance, at any time before her next deposit, Alice can `forceChannelConsensus()`, finalize her latest state onchain, and then call `defundChannel()`.
 
@@ -124,7 +124,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 
 #### VectorChannel
 - [ ] Add events/event listening for deposits
-- [ ] Circumvent sig verificatin in `depositA` if being called by `owners[0]` (we still need possible sig to handle the case where it is called by the `ChannelFactory`)
+- [ ] Circumvent sig verificatin in `initatorDeposit` if being called by `owners[0]` (we still need possible sig to handle the case where it is called by the `ChannelFactory`)
 - [X] Write the `adjudicatorTransfer` fn
 - [ ] Update `getTransactionHash` to use nonce-based replay protection
 - [X] Clean up + add missing functions to interface
