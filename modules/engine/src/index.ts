@@ -216,7 +216,7 @@ export class VectorEngine {
     }
 
     // First, get translated `create` params from withdraw
-    const createResult = convertWithdrawParams(params, this.signer, channel!);
+    const createResult = await convertWithdrawParams(params, this.signer, channel!);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -226,6 +226,9 @@ export class VectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
+
+    // TODO should we wait for the resolve here?
+
     return Result.ok(res); // TODO what do we return here?
   }
 

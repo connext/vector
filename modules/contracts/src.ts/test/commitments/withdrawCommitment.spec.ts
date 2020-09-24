@@ -4,7 +4,7 @@ import { ChannelMastercopy, TestToken } from "../../artifacts";
 import { WithdrawCommitment } from "../../commitments";
 import { expect, provider } from "../utils";
 
-describe.only("withdrawCommitment", () => {
+describe("withdrawCommitment", () => {
     let deployer: Wallet;
     let channelMastercopy: Contract;
     let token: Contract;

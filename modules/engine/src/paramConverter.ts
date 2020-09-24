@@ -1,3 +1,4 @@
+import { WithdrawCommitment } from "@connext/vector-contracts";
 import {
   CreateTransferParams,
   ConditionalTransferType,
@@ -97,36 +98,40 @@ export function convertResolveConditionParams(
   });
 }
 
-export function convertWithdrawParams(
+export async function convertWithdrawParams(
   params: EngineParams.Withdraw,
   signer: IChannelSigner,
   channel: FullChannelState,
-): Result<CreateTransferParams, InvalidTransferType> {
+): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const { channelAddress, assetId, recipient, fee } = params;
+
+  // If there is a fee being charged, add the fee to the amount.
   const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
-  // TODO create withdraw commitment (need to add util for this)
+  const commitment = new WithdrawCommitment(
+    channel.channelAddress,
+    channel.participants,
+    params.recipient,
+    assetId,
+    // Important: Use params.amount here which doesn't include fee!!
+    params.amount,
+    // Use channel nonce as a way to keep withdraw hashes unique
+    channel.nonce.toString()
+  )
 
-  // TODO hash the withdraw commitment
-  const data = ""; // TODO
-
-  // TODO sign the withdraw commitment
-
-  const initiatorSignature = ""; // TODO!
+  const initiatorSignature = await signer.signMessage(commitment.hashToSign())
 
   const counterpartySigner = channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
 
   const transferInitialState: WithdrawState = {
     balance: {
       amount: [amount, "0"],
-      // TODO we need to figure out if to[1] is participant[0] or participant[1]!!!
-      to: [recipient, channel.participants[1]],
+      to: [recipient, counterpartySigner],
     },
     initiatorSignature,
-    // TODO ordering!!
-    signers: channel.participants,
-    data,
-    nonce: "1", // TODO -- how do we do this?
+    signers: [signer.address, counterpartySigner],
+    data: commitment.hashToSign(),
+    nonce: channel.nonce.toString(),
     fee: fee ? fee : "0",
   };
 
@@ -138,5 +143,9 @@ export function convertWithdrawParams(
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+    // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise. 
+    meta: {
+      withdrawNonce: channel.nonce.toString()
+    }
   });
 }
