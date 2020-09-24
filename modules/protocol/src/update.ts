@@ -61,12 +61,12 @@ export async function applyUpdate<T extends UpdateType>(
       // Generate the new balance field for the channel
       const { latestDepositNonce } = (update as ChannelUpdate<"deposit">).details;
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
+      const assetIdExists = !!state.assetIds.find((a: string) => a === update.assetId);
       return Result.ok({
         ...state,
         balances,
-        assetIds: !!state.assetIds.find(a => a === update.assetId)
-          ? state.assetIds
-          : [...state.assetIds, update.assetId],
+        lockedBalance: assetIdExists ? state.lockedBalance : [...state.lockedBalance, "0"],
+        assetIds: assetIdExists ? state.assetIds : [...state.assetIds, update.assetId],
         nonce: update.nonce,
         latestDepositNonce,
         latestUpdate: update,
@@ -271,6 +271,8 @@ async function generateDepositUpdate(
   const existingLockedBalance = assetIdx === -1 ? "0" : state.lockedBalance[assetIdx] ?? "0";
   const existingChannelBalance =
     assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.balances[assetIdx];
+
+  // TODO: dont unwrap, check for error first
   const { balance, latestDepositNonce } = (
     await reconcileDeposit(
       state.channelAddress,

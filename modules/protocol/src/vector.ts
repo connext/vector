@@ -157,7 +157,6 @@ export class Vector implements IVectorProtocol {
         this.logger,
       );
       if (inboundRes.isError) {
-        this.logger.error({ method: "inbound", error: inboundRes.getError()?.message }, "Error validating update");
         return;
       }
 

@@ -225,6 +225,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
     }
 
+    const vectorChannel = new Contract(channelState.channelAddress, ChannelMastercopy.abi, signer);
     if (assetId !== constants.AddressZero) {
       // need to approve
       this.logger.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
@@ -251,9 +252,9 @@ export class VectorTransactionService extends VectorOnchainService implements IV
         await approveTx.wait();
       }
       this.logger.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
+      return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount));
     }
-    const vectorChannel = new Contract(channelState.channelAddress, ChannelMastercopy.abi, signer);
-    return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount));
+    return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount, { value: amount }));
   }
 
   private async sendDepositBTx(
