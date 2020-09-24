@@ -12,6 +12,7 @@ import {
   LinkedTransferState,
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
+  NetworkContext,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -25,7 +26,10 @@ export type PartialChannelUpdate<T extends UpdateType> = Partial<
 >;
 
 export type PartialFullChannelState<T extends UpdateType> = Partial<
-  Omit<FullChannelState, "latestUpdate"> & { latestUpdate: PartialChannelUpdate<T> }
+  Omit<FullChannelState, "latestUpdate" | "networkContext"> & {
+    latestUpdate: PartialChannelUpdate<T>;
+    networkContext: Partial<NetworkContext>;
+  }
 >;
 
 export type PartialUpdateParams<T extends UpdateType> = Partial<
@@ -216,7 +220,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
       providerUrl: "http://localhost:8545",
       channelMastercopyAddress: mkAddress("0xmast"),
-    },
+      ...(overrides.networkContext ?? {}),
+    } as any,
     nonce,
     participants,
     publicIdentifiers,
