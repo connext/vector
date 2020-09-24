@@ -1,19 +1,18 @@
 import {
+  UpdateType,
   ChannelUpdate,
   ChannelUpdateDetailsMap,
-  CoreChannelState,
-  CreateUpdateDetails,
-  DepositUpdateDetails,
   FullChannelState,
-  LinkedTransferResolverEncoding,
-  LinkedTransferState,
-  LinkedTransferStateEncoding,
-  NetworkContext,
-  ResolveUpdateDetails,
-  SetupUpdateDetails,
   UpdateParams,
   UpdateParamsMap,
-  UpdateType,
+  CreateUpdateDetails,
+  DepositUpdateDetails,
+  ResolveUpdateDetails,
+  SetupUpdateDetails,
+  LinkedTransferState,
+  LinkedTransferStateEncoding,
+  LinkedTransferResolverEncoding,
+  NetworkContext,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -179,11 +178,13 @@ export function createTestChannelUpdate<T extends UpdateType>(
   } as ChannelUpdate<T>;
 }
 
-export function createTestCoreChannelState(
-  overrides: Partial<CoreChannelState> = {},
-): CoreChannelState {
+export function createTestChannelState<T extends UpdateType = typeof UpdateType.setup>(
+  type: T,
+  overrides: PartialFullChannelState<T> = {},
+): FullChannelState<T> {
   // Get some default values that should be consistent between
   // the channel state and the channel update
+  const publicIdentifiers = overrides.publicIdentifiers ?? [mkPublicIdentifier("indraA"), mkPublicIdentifier("indraB")];
   const participants = overrides.participants ?? [mkAddress("0xaaa"), mkAddress("0xbbb")];
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
@@ -214,6 +215,7 @@ export function createTestCoreChannelState(
         to: [...participants],
       },
     ],
+    lockedBalance: ["1", "2"],
     channelAddress,
     latestDepositNonce: 1,
     latestUpdate,
@@ -225,6 +227,8 @@ export function createTestCoreChannelState(
       channelMastercopyAddress: mkAddress("0xmast"),
       ...(networkContext ?? {}),
     },
+    nonce,
+    participants,
     publicIdentifiers,
     timeout: "1",
     ...rest,

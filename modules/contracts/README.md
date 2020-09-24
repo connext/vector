@@ -74,7 +74,7 @@ The above flows have a few consequences:
 - Bob can send funds to the multisig at any time with any frequency and eventually reconcile them with his balances
 - Alice does not need to do preparatory work before sending her deposit to chain. The onchain part of her deposit is entirely decoupled from offchain reconciliation.
 - We need to pass in an `assetId[]` array into `defundChannel()` in order for it to work. The benefit here is that you dont actually need to dispute the entire balance in a single tx, which means that we shouldn't ever get into a case where the channel state is too large to dispute (even if there are 1000s of tokens).
-- Alice's cannot deposit many times concurrently (we can potentially modify the `latestDepositByAssetId` to track historic balances and aggregate them to allow this, however)
+- Alice's cannot deposit many times concurrently (we can potentially modify the `latestDeposit` to track historic balances and aggregate them to allow this, however)
 
 ## Commitments
 One of the biggest headaches in CF is that we use multiple different types of commitments for channel disputes vs app disputes. This creates an attack vector where, in a single roundtrip, one party can choose to sign some of the commitments but not others (this is why we have `propose` and `install` as two separate protocols in CF).
