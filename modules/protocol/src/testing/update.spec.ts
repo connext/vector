@@ -84,9 +84,9 @@ describe("applyUpdate", () => {
       },
       expected: {
         timeout: "8267345",
-        latestDepositNonce: 0,
         balances: [],
-        lockedBalance: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
         assetIds: [],
         merkleRoot: mkHash(),
       },
@@ -98,19 +98,19 @@ describe("applyUpdate", () => {
         nonce: 1,
         balances: [],
         assetIds: [],
-        lockedBalance: [],
-        latestDepositNonce: 0,
+        processedDepositsA: [],
+        processedDepositsB: [],
       },
       updateOverrides: {
-        details: { latestDepositNonce: 0 },
+        details: { totalDepositedA: "5", totalDepositedB: "12" },
         nonce: 2,
         balance: { to: participants, amount: ["0", "17"] },
         assetId: mkAddress("0xaddee"),
       },
       expected: {
-        latestDepositNonce: 0,
         balances: [{ to: participants, amount: ["0", "17"] }],
-        lockedBalance: [],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         assetIds: [mkAddress("0xaddee")],
       },
     },
@@ -125,25 +125,25 @@ describe("applyUpdate", () => {
           { to: participants, amount: ["4", "7"] },
         ],
         assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
-        lockedBalance: ["", "", "7"],
-        latestDepositNonce: 7,
+        processedDepositsA: ["", "10", "1"],
+        processedDepositsB: ["5", "7", "9"],
       },
       updateOverrides: {
-        details: { latestDepositNonce: 8 },
+        details: { totalDepositedA: "12", totalDepositedB: "7" },
         nonce: 16,
         balance: { to: participants, amount: ["16", "17"] },
         assetId: mkAddress("0xfed"),
       },
       expected: {
         nonce: 16,
-        latestDepositNonce: 8,
         balances: [
           { to: participants, amount: ["0", "17"] },
           { to: participants, amount: ["16", "17"] },
           { to: participants, amount: ["4", "7"] },
         ],
-        lockedBalance: ["", "", "7"],
         assetIds: [mkAddress(), mkAddress("0xfed"), mkAddress("0xasdf")],
+        processedDepositsA: ["", "12", "1"],
+        processedDepositsB: ["5", "7", "9"],
       },
     },
     {
@@ -157,7 +157,8 @@ describe("applyUpdate", () => {
           { to: participants, amount: ["4", "2"] },
         ],
         assetIds: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
-        lockedBalance: ["", "5", "7"],
+        processedDepositsA: ["", "12", "1"],
+        processedDepositsB: ["5", "7", "9"],
         merkleRoot: mkHash("0xafeb"),
       },
       updateOverrides: {
@@ -174,7 +175,8 @@ describe("applyUpdate", () => {
       expected: {
         nonce: 6,
         balances: [{ to: participants, amount: ["13", "2"] }],
-        lockedBalance: ["", "9", "7"],
+        processedDepositsA: ["", "12", "1"],
+        processedDepositsB: ["5", "7", "9"],
         assetIds: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
         merkleRoot,
       },
@@ -186,7 +188,8 @@ describe("applyUpdate", () => {
         nonce: 5,
         balances: [{ to: participants, amount: ["43", "22"] }],
         assetIds: [mkAddress()],
-        lockedBalance: [],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         merkleRoot: mkHash(),
       },
       updateOverrides: {
@@ -201,7 +204,8 @@ describe("applyUpdate", () => {
       },
       expected: {
         balances: [{ to: participants, amount: ["29", "22"] }],
-        lockedBalance: ["14"],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         assetIds: [mkAddress()],
         merkleRoot,
       },
@@ -213,7 +217,8 @@ describe("applyUpdate", () => {
         nonce: 5,
         balances: [{ to: participants, amount: ["43", "22"] }],
         assetIds: [mkAddress()],
-        lockedBalance: [],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         merkleRoot: mkHash(),
       },
       updateOverrides: {
@@ -226,7 +231,8 @@ describe("applyUpdate", () => {
       },
       expected: {
         balances: [{ to: participants, amount: ["29", "22"] }],
-        lockedBalance: ["14"],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         assetIds: [mkAddress()],
         merkleRoot,
       },
@@ -238,7 +244,8 @@ describe("applyUpdate", () => {
         nonce: 5,
         balances: [{ to: participants, amount: ["3", "4"] }],
         assetIds: [mkAddress()],
-        lockedBalance: ["8"],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         merkleRoot,
       },
       updateOverrides: {
@@ -253,7 +260,8 @@ describe("applyUpdate", () => {
       },
       expected: {
         balances: [{ to: participants, amount: ["3", "12"] }],
-        lockedBalance: [],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         assetIds: [mkAddress()],
         merkleRoot: mkHash(),
       },
@@ -265,7 +273,8 @@ describe("applyUpdate", () => {
         nonce: 5,
         balances: [{ to: participants, amount: ["13", "2"] }],
         assetIds: [mkAddress()],
-        lockedBalance: ["9"],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         merkleRoot,
       },
       updateOverrides: {
@@ -280,7 +289,8 @@ describe("applyUpdate", () => {
       },
       expected: {
         balances: [{ to: participants, amount: ["22", "2"] }],
-        lockedBalance: [],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         assetIds: [mkAddress()],
         merkleRoot: mkHash(),
       },
@@ -292,7 +302,8 @@ describe("applyUpdate", () => {
         nonce: 5,
         balances: [{ to: participants, amount: ["7", "22"] }],
         assetIds: [mkAddress()],
-        lockedBalance: ["14"],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         merkleRoot,
       },
       updateOverrides: {
@@ -305,7 +316,8 @@ describe("applyUpdate", () => {
       },
       expected: {
         balances: [{ to: participants, amount: ["7", "22"] }],
-        lockedBalance: [],
+        processedDepositsA: ["5"],
+        processedDepositsB: ["12"],
         assetIds: [mkAddress()],
         merkleRoot: mkHash(),
       },
@@ -414,7 +426,7 @@ type GenerateUpdateTestParams = {
   // Mock values
   storedChannel?: PartialFullChannelState<any>;
   onchainBalance?: BigNumber;
-  depositA?: { nonce: BigNumber; amount: BigNumber };
+  depositA?: BigNumber;
   resolveBalance?: Balance;
 };
 
@@ -489,12 +501,12 @@ describe("generateUpdate", () => {
       stateOverrides: {
         assetIds: [],
         balances: [],
-        lockedBalance: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
         merkleRoot: mkHash(),
         nonce: 0,
         timeout: "0",
         latestUpdate: {} as any, // There is no latest update on setup
-        latestDepositNonce: 0,
       },
       expectedUpdate: {
         nonce: 1,
@@ -518,16 +530,16 @@ describe("generateUpdate", () => {
       stateOverrides: {
         assetIds: [],
         balances: [],
-        lockedBalance: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
         merkleRoot: mkHash(),
         nonce: 1,
-        latestDepositNonce: 0,
       },
       expectedUpdate: {
         nonce: 2,
         assetId: mkAddress(),
         balance: { to: participants, amount: ["0", "10"] },
-        details: { latestDepositNonce: 0 },
+        details: { totalDepositedA: "0", totalDepositedB: "10" },
       },
       onchainBalance: BigNumber.from(10),
       from: signers[1],
@@ -543,19 +555,19 @@ describe("generateUpdate", () => {
       stateOverrides: {
         assetIds: [],
         balances: [],
-        lockedBalance: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
         merkleRoot: mkHash(),
         nonce: 1,
-        latestDepositNonce: 0,
       },
       expectedUpdate: {
         nonce: 2,
         assetId: mkAddress(),
         balance: { to: participants, amount: ["10", "0"] },
-        details: { latestDepositNonce: 1 },
+        details: { totalDepositedA: "10", totalDepositedB: "0" },
       },
       onchainBalance: BigNumber.from(10),
-      depositA: { nonce: BigNumber.from(1), amount: BigNumber.from(10) },
+      depositA: BigNumber.from(10),
     },
     {
       name: "should work for create (alice creates)",
@@ -574,7 +586,8 @@ describe("generateUpdate", () => {
       },
       stateOverrides: {
         assetIds: [mkAddress()],
-        lockedBalance: [],
+        processedDepositsA: [],
+        processedDepositsB: [],
         balances: [{ to: participants, amount: ["14", "8"] }],
         nonce: 3,
       },
@@ -624,7 +637,8 @@ describe("generateUpdate", () => {
       },
       stateOverrides: {
         assetIds: [mkAddress()],
-        lockedBalance: ["7"],
+        processedDepositsA: [],
+        processedDepositsB: [],
         balances: [{ to: participants, amount: ["7", "8"] }],
         nonce: 3,
       },
@@ -713,9 +727,9 @@ describe("generateUpdate", () => {
       store.getChannelState.resolves(inStore);
 
       // Chain service mocks are only used by deposit/resolve
-      chainService.getLatestDepositByAssetId.resolves(
-        Result.ok(depositA ?? { nonce: BigNumber.from(0), amount: BigNumber.from(0) }),
-      );
+      chainService.getTotalDepositedA.resolves(Result.ok(depositA ?? BigNumber.from(0)));
+      chainService.getTotalDepositedB.resolves(Result.ok(depositA ?? BigNumber.from(0)));
+
       chainService.getChannelOnchainBalance.resolves(Result.ok(onchainBalance ?? BigNumber.from(0)));
 
       chainService.resolve.resolves(Result.ok(resolveBalance ?? { to: participants, amount: ["0", "0"] }));

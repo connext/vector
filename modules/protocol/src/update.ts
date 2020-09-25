@@ -261,10 +261,8 @@ async function generateDepositUpdate(
   const assetIdx = state.assetIds.findIndex(a => a === assetId);
   const existingChannelBalance =
     assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.balances[assetIdx];
-  const processedDepositsAOfAssetId =
-    assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.processedDepositsA[assetIdx];
-  const processedDepositsBOfAssetId =
-    assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.processedDepositsB[assetIdx];
+  const processedDepositsAOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsA[assetIdx];
+  const processedDepositsBOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsB[assetIdx];
 
   // TODO: dont unwrap, check for error first
   const { balance, totalDepositedA, totalDepositedB } = (
@@ -516,4 +514,30 @@ function reconcileBalanceWithExisting(
   const updated = [...existing];
   updated[assetIdx] = balanceToReconcile;
   return updated;
+}
+
+function reconcileProcessedDepositsWithExisting(
+  existingProcessedDepositsA: string[],
+  existingProcessedDepositsB: string[],
+  depositToReconcileA: string,
+  depositToReconcileB: string,
+  assetToReconcile: string,
+  assetIds: string[],
+): { processedDepositsA: string[]; processedDepositsB: string[] } {
+  // Update the arrays at the appropriate index
+  const assetIdx = assetIds.findIndex(a => a === assetToReconcile);
+  if (assetIdx === -1) {
+    // Add new deposit to array (new asset id)
+    return {
+      processedDepositsA: [...existingProcessedDepositsA, depositToReconcileA],
+      processedDepositsB: [...existingProcessedDepositsB, depositToReconcileB],
+    };
+  }
+
+  // Otherwise, update the array at the given index
+  const updatedA = [...existingProcessedDepositsA];
+  const updatedB = [...existingProcessedDepositsB];
+  updatedA[assetIdx] = depositToReconcileA;
+  updatedB[assetIdx] = depositToReconcileB;
+  return { processedDepositsA: updatedA, processedDepositsB: updatedB };
 }

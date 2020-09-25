@@ -77,12 +77,12 @@ export async function validateOutbound<T extends UpdateType = any>(
 
     state = {
       nonce: 0,
-      latestDepositNonce: 0,
       channelAddress,
       timeout: "0",
       participants: [signer.address, getSignerAddressFromPublicIdentifier(counterpartyIdentifier)],
       balances: [],
-      lockedBalance: [],
+      processedDepositsA: [],
+      processedDepositsB: [],
       assetIds: [],
       merkleRoot: constants.HashZero,
       latestUpdate: {} as any,
@@ -439,7 +439,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // and chain service
 
       // Update the active transfers
-      activeTransfers = previousActiveTransfers.filter((t) => t.transferId === transferId);
+      activeTransfers = previousActiveTransfers.filter(t => t.transferId === transferId);
 
       // Regenerate the merkle tree
 
