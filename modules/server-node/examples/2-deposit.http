@@ -15,3 +15,14 @@ Content-Type: application/json
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000"
 }
+
+##############
+### Reconcile Deposit
+# Alice deposit ETH
+POST {{aliceUrl}}/deposit
+Content-Type: application/json
+
+{
+  "channelAddress": "{{aliceBobChannel}}",
+  "assetId": "0x0000000000000000000000000000000000000000"
+}

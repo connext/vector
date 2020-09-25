@@ -1,4 +1,10 @@
-import { ChannelUpdate, IMessagingService, InboundChannelUpdateError, Result } from "@connext/vector-types";
+import {
+  ChannelUpdate,
+  IMessagingService,
+  InboundChannelUpdateError,
+  OutboundChannelUpdateError,
+  Result,
+} from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
 
@@ -34,11 +40,14 @@ export class MemoryMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout = 20_000,
     numRetries = 0,
-  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
+  ): Promise<
+    Result<
+      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
+      OutboundChannelUpdateError | InboundChannelUpdateError
+    >
+  > {
     const inbox = getRandomBytes32();
-    const responsePromise = this.evt
-      .pipe((e) => e.inbox === inbox)
-      .waitFor(timeout);
+    const responsePromise = this.evt.pipe(e => e.inbox === inbox).waitFor(timeout);
     this.evt.post({
       to: channelUpdate.toIdentifier,
       from: channelUpdate.fromIdentifier,

@@ -34,14 +34,15 @@ contract ChannelFactory is IChannelFactory {
     /// @param counterparty address of the other channel participant
     function getChannelAddress(
         address initiator,
-        address counterparty
+        address counterparty,
+        uint256 chainId
     )
         public
         override
         view
         returns (address)
     {
-        bytes32 salt = generateSalt(initiator, counterparty);
+        bytes32 salt = generateSalt(initiator, counterparty, chainId);
         bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, masterCopy));
         return address(uint256(
             keccak256(abi.encodePacked(
@@ -58,13 +59,14 @@ contract ChannelFactory is IChannelFactory {
     /// @param counterparty address of the other channel participant
     function createChannel(
         address initiator,
-        address counterparty
+        address counterparty,
+        uint256 chainId
     )
         public
         override
         returns (IVectorChannel channel)
     {
-        channel = deployChannelProxy(initiator, counterparty);
+        channel = deployChannelProxy(initiator, counterparty, chainId);
         channel.setup([initiator, counterparty]);
         emit ChannelCreation(channel);
     }
@@ -74,6 +76,7 @@ contract ChannelFactory is IChannelFactory {
     function createChannelAndDeposit(
         address initiator,
         address counterparty,
+        uint256 chainId,
         address assetId,
         uint256 amount
     )
@@ -82,7 +85,7 @@ contract ChannelFactory is IChannelFactory {
         override
         returns (IVectorChannel channel)
     {
-        channel = createChannel(initiator, counterparty);
+        channel = createChannel(initiator, counterparty, chainId);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
         if (assetId != address(0)) {
@@ -107,19 +110,21 @@ contract ChannelFactory is IChannelFactory {
     /// @param counterparty address of the other channel participant
     function deployChannelProxy(
         address initiator,
-        address counterparty
+        address counterparty,
+        uint256 chainId
     )
         internal
         returns (IVectorChannel)
     {
-        bytes32 salt = generateSalt(initiator, counterparty);
+        bytes32 salt = generateSalt(initiator, counterparty, chainId);
         Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
         return IVectorChannel(address(proxy));
     }
 
     function generateSalt(
         address initiator,
-        address counterparty
+        address counterparty,
+        uint256 chainId
     )
         internal
         pure
@@ -129,17 +134,10 @@ contract ChannelFactory is IChannelFactory {
             abi.encodePacked(
                 initiator,
                 counterparty,
-                chainId(),
+                chainId,
                 domainSalt
             )
         );
-    }
-
-    function chainId() internal pure returns (uint256 id) {
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            id := chainid()
-        }
     }
 
 }

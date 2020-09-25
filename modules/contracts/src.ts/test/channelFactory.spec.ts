@@ -39,7 +39,7 @@ describe("ChannelFactory", () => {
     const created = new Promise((res) => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
-    const tx = await channelFactory.createChannel(alice.address, bob.address);
+    const tx = await channelFactory.createChannel(alice.address, bob.address, chainId);
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -68,6 +68,7 @@ describe("ChannelFactory", () => {
       .createChannelAndDeposit(
         alice.address,
         bob.address,
+        chainId,
         addressZero,
         value,
         { value },

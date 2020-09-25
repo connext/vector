@@ -199,7 +199,7 @@ export async function inbound(
     context: any = {},
   ): Promise<Result<FullChannelState, InboundChannelUpdateError>> => {
     logger.error(
-      { method: "inbound", channel: update.channelAddress, error: reason },
+      { method: "inbound", channel: update.channelAddress, error: reason, context },
       "Error responding to channel update",
     );
     const error = new InboundChannelUpdateError(reason, prevUpdate, state, context);
@@ -306,7 +306,7 @@ export async function inbound(
 
     // Only sync an update IFF it is double signed
     // NOTE: validation will ensure the signatures present are valid
-    if (previousUpdate.signatures.filter((x) => !!x).length !== 2) {
+    if (previousUpdate.signatures.filter(x => !!x).length !== 2) {
       return returnError(InboundChannelUpdateError.reasons.SyncSingleSigned, previousUpdate, previousState);
     }
 
@@ -410,7 +410,7 @@ const syncStateAndRecreateUpdate = async (
   // this is indicative of a different issue (perhaps lock failure?).
   // Present signatures are already asserted to be valid via the validation,
   // here simply assert the length
-  if (counterpartyUpdate.signatures.filter((x) => !!x).length !== 2) {
+  if (counterpartyUpdate.signatures.filter(x => !!x).length !== 2) {
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SyncSingleSigned,
