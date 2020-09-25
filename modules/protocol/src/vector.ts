@@ -16,7 +16,7 @@ import {
   OutboundChannelUpdateError,
   ProtocolParams,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { Evt } from "evt";
 import pino from "pino";
@@ -73,12 +73,16 @@ export class Vector implements IVectorProtocol {
     return this.signer.publicIdentifier;
   }
 
-  // separate out this function so that we can atomically
-  // return and release the lock
-  private async lockedOperation(
+  // Primary protocol execution from the leader side
+  private async executeUpdate(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
-    // Send the update to counterparty
+    this.logger.info({ method: "executeUpdate", step: "start", params });
+
+    ////////////////////////////////////////
+    // LOCK ON
+    const key = await this.lockService.acquireLock(params.channelAddress);
+
     const outboundRes = await sync.outbound(
       params,
       this.storeService,
@@ -87,7 +91,6 @@ export class Vector implements IVectorProtocol {
       this.signer,
       this.logger,
     );
-
     if (outboundRes.isError) {
       this.logger.error({
         method: "lockedOperation",
@@ -97,24 +100,15 @@ export class Vector implements IVectorProtocol {
       });
       return outboundRes;
     }
-
     // Post to channel update evt
     const updatedChannelState = outboundRes.getValue();
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
       updatedChannelState,
     });
 
-    return outboundRes;
-  }
-
-  // Primary protocol execution from the leader side
-  private async executeUpdate(
-    params: UpdateParams<any>,
-  ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
-    this.logger.info({ method: "executeUpdate", step: "start", params });
-    const key = await this.lockService.acquireLock(params.channelAddress);
-    const outboundRes = await this.lockedOperation(params);
     await this.lockService.releaseLock(params.channelAddress, key);
+    // LOCK OFF
+    ////////////////////////////////////////
 
     return outboundRes;
   }
@@ -241,12 +235,6 @@ export class Vector implements IVectorProtocol {
       );
     }
     const channelAddress = create2Res.getValue();
-    const contractChannelAddress = await this.onchainService.getChannelAddress(
-      getSignerAddressFromPublicIdentifier(this.publicIdentifier),
-      getSignerAddressFromPublicIdentifier(params.counterpartyIdentifier),
-      params.networkContext.channelFactoryAddress,
-      params.networkContext.chainId,
-    );
 
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"setup"> = {

@@ -107,13 +107,21 @@ export const reconcileDeposit = async (
   onchainService: IVectorOnchainService,
 ): Promise<Result<{ balance: Balance; totalDepositedA: string; totalDepositedB: string }, Error>> => {
   // First get totalDepositedA and totalDepositedB
-  const totalDepositedARes = await onchainService.getTotalDepositedA(channelAddress, chainId, assetId);
+  const totalDepositedARes = await onchainService.getTotalDepositedA(
+    channelAddress,
+    chainId,
+    assetId,
+  );
   if (totalDepositedARes.isError) {
     return Result.fail(totalDepositedARes.getError()!);
   }
   const totalDepositedA = totalDepositedARes.getValue();
 
-  const totalDepositedBRes = await onchainService.getTotalDepositedB(channelAddress, chainId, assetId);
+  const totalDepositedBRes = await onchainService.getTotalDepositedB(
+    channelAddress,
+    chainId,
+    assetId,
+  );
   if (totalDepositedBRes.isError) {
     return Result.fail(totalDepositedBRes.getError()!);
   }

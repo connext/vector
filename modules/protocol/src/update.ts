@@ -149,7 +149,13 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer, onchainService);
+      unsigned = await generateDepositUpdate(
+        state!,
+        params as UpdateParams<"deposit">,
+        signer,
+        onchainService,
+        logger,
+      );
       break;
     }
     case UpdateType.create: {
@@ -243,12 +249,15 @@ async function generateDepositUpdate(
   params: UpdateParams<"deposit">,
   signer: IChannelSigner,
   onchainService: IVectorOnchainService,
+  logger: pino.BaseLogger,
 ): Promise<ChannelUpdate<"deposit">> {
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
   // - balances
   // - assetIds
   // - nonce (general update helper)
+  // - processedDepositsA
+  // - processedDepositsB
   // while the remaining fields are consistent
 
   // Initiating a deposit update should happen *after* money is
@@ -280,6 +289,8 @@ async function generateDepositUpdate(
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
     balance,
+    processedDepositsA: totalDepositedA,
+    processedDepositsB: totalDepositedB,
     assetId,
     details: { totalDepositedA, totalDepositedB },
     signatures: [],

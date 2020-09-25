@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { IVectorProtocol } from "@connext/vector-types";
 
 import { createVectorInstances, setupChannel, getTestLoggers } from "../utils";

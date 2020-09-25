@@ -35,7 +35,7 @@ import Sinon from "sinon";
 import * as vectorUpdate from "../update";
 
 import { MemoryStoreService } from "./services/store";
-import { env } from "./utils";
+import { env } from "./env";
 
 type ApplyUpdateTestParams = {
   name: string;

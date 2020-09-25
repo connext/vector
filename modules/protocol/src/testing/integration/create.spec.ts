@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
@@ -41,7 +42,7 @@ describe(testName, () => {
       transferAmount,
     );
 
-    const { transferResolver, ...toCompare } = transfer;
+    const { ...toCompare } = transfer;
 
     expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);

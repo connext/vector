@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
 
@@ -47,6 +48,6 @@ describe(testName, () => {
   it.skip("should work after multiple deposits", async () => {});
   it.skip("should work if there have been no deposits onchain", async () => {});
   it.skip("should work if the channel is out of sync", async () => {});
-  it.skip("should work concurrently", async () => {})
+  it.skip("should work concurrently", async () => {});
   it.skip("should work if channel is out of sync", async () => {});
 });

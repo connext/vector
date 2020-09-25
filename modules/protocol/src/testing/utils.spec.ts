@@ -7,7 +7,7 @@ import { VectorOnchainService } from "@connext/vector-contracts";
 
 import { reconcileDeposit } from "../utils";
 
-import { env } from "./utils";
+import { env } from "./env";
 
 type MockOnchainStubType = {
   [K in keyof IVectorOnchainService]: IVectorOnchainService[K];

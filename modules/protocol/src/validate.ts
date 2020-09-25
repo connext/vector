@@ -40,6 +40,7 @@ type OutboundValidationResult<T extends UpdateType = any> = Result<
   },
   OutboundChannelUpdateError
 >;
+
 export async function validateOutbound<T extends UpdateType = any>(
   params: UpdateParams<T>,
   storeService: IVectorStore,
@@ -186,7 +187,7 @@ export async function validateOutbound<T extends UpdateType = any>(
       // The validity of the transferId and meta structures are
       // asserted by the schemas
       const {
-        details: { transferId, transferResolver },
+        details: { transferId },
       } = params as UpdateParams<typeof UpdateType.resolve>;
 
       // Transfer should exist in store
@@ -257,6 +258,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   }
 
   const { nextState, validUpdate, transfer, activeTransfers } = res.getValue()!;
+  logger.debug(nextState, "nextState");
 
   // Verify at least one signature exists (and any present are valid)
   const sigRes = await validateChannelUpdateSignatures(nextState, validUpdate.signatures, 1);

@@ -2,45 +2,30 @@ import { ChannelFactory, TestToken, ChannelMastercopy, VectorOnchainService } fr
 import {
   Contract,
   FullChannelState,
-  FullTransferState,
   IChannelSigner,
   ILockService,
   IMessagingService,
   IVectorProtocol,
   IVectorStore,
-  JsonRpcProvider,
-  CreateTransferParams,
   DEFAULT_TRANSFER_TIMEOUT,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
-  ChannelUpdate,
-  UpdateType,
-  ResolveTransferParams,
-  TransferResolver,
   IVectorOnchainService,
 } from "@connext/vector-types";
 import {
-  createLinkedHash,
-  createTestLinkedTransferState,
-  getRandomBytes32,
   getRandomChannelSigner,
-  hashTransferState,
 } from "@connext/vector-utils";
-import { Wallet, utils, BigNumber, BigNumberish, constants } from "ethers";
+import { BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
+import { env } from "../env";
+import { chainId, provider } from "../constants";
 import { Vector } from "../../vector";
 import { MemoryLockService } from "../services/lock";
 import { MemoryMessagingService } from "../services/messaging";
 import { MemoryStoreService } from "../services/store";
 
-import { env } from "./env";
 import { expect } from "./expect";
-
-import { getTestLoggers } from ".";
-
-const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-const providerUrl = env.chainProviders[chainId];
+import { fundAddress } from "./funding";
+import { getTestLoggers } from "./logger";
 
 type VectorTestOverrides = {
   messagingService: IMessagingService;
@@ -51,19 +36,6 @@ type VectorTestOverrides = {
   logger: Pino.BaseLogger;
 };
 
-const fundAddress = async (to: string, sugarDaddy: Wallet): Promise<void> => {
-  // Fund with eth
-  const ethTx = await sugarDaddy.sendTransaction({ to, value: utils.parseEther("100") });
-  if (!ethTx.hash) throw new Error(`Couldn't fund account ${to}`);
-  await ethTx.wait();
-  // Fund with tokens
-  const tokenTx = await new Contract(env.chainAddresses[chainId].TestToken.address, TestToken.abi, sugarDaddy).transfer(
-    to,
-    utils.parseEther("1000"),
-  );
-  await tokenTx.wait();
-};
-
 export const createVectorInstances = async (
   shareServices = true,
   numberOfEngines = 2,
@@ -71,7 +43,7 @@ export const createVectorInstances = async (
 ): Promise<IVectorProtocol[]> => {
   const sharedMessaging = new MemoryMessagingService();
   const sharedLock = new MemoryLockService();
-  const sharedChain = new VectorOnchainService({ [chainId]: new JsonRpcProvider(providerUrl) }, Pino());
+  const sharedChain = new VectorOnchainService({ [chainId]: provider }, Pino());
   return Promise.all(
     Array(numberOfEngines)
       .fill(0)
@@ -83,14 +55,14 @@ export const createVectorInstances = async (
         const onchainService = shareServices
           ? sharedChain
           : new VectorOnchainService(
-              { [chainId]: new JsonRpcProvider(providerUrl) },
+              { [chainId]: provider },
               logger.child({ module: "VectorOnchainService" }),
             );
         const opts = {
           messagingService,
           lockService,
           storeService: new MemoryStoreService(),
-          signer: getRandomChannelSigner(env.chainProviders[chainId]),
+          signer: getRandomChannelSigner(provider),
           onchainService,
           logger,
           ...instanceOverrides,
@@ -111,7 +83,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
     networkContext: {
       chainId,
       channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-      providerUrl,
+      providerUrl: provider.connection.url,
       channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
     },
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
@@ -157,13 +129,17 @@ export const depositInChannel = async (
     const value = BigNumber.from(amount);
     // Call deposit on the multisig
     try {
-      const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).depositA(assetId, value, {
+      const tx = await (
+        new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner)
+      ).depositA(
+        assetId,
         value,
-      });
+        { value },
+      );
       await tx.wait();
     } catch (e) {
       // Assume this happened because it wasn't deployed
-      await depositorSigner.connectProvider(env.chainProviders[chainId]);
+      await depositorSigner.connectProvider(provider);
       // Get the previous balance before deploying
       const prev =
         assetId === constants.AddressZero
@@ -226,88 +202,8 @@ export const depositInChannel = async (
   //     ? await depositorSigner.provider!.getBalance(channelAddress)
   //     : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
   // expect(onchainTotal).to.be.eq(channelTotal);
+  console.log(`Success! yay`);
   return postDeposit;
-};
-
-// Will create a linked transfer in the channel, and return the full
-// transfer state (including the necessary resolver)
-// TODO: Should be improved to create any type of state, though maybe
-// this is out of scope for integration test utils
-export const createTransfer = async (
-  channelAddress: string,
-  payor: IVectorProtocol,
-  payee: IVectorProtocol,
-  assetId: string = constants.AddressZero,
-  amount: BigNumberish = 10,
-): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
-  // Create the transfer information
-  const preImage = getRandomBytes32();
-  const linkedHash = createLinkedHash(preImage);
-  const balance = {
-    to: [payor.signerAddress, payee.signerAddress],
-    amount: [amount.toString(), "0"],
-  };
-  const transferInitialState = createTestLinkedTransferState({ linkedHash, assetId, balance });
-  const params: CreateTransferParams = {
-    channelAddress,
-    amount: amount.toString(),
-    transferDefinition: env.chainAddresses[chainId].LinkedTransfer.address,
-    transferInitialState,
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-    encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-    meta: { test: "field" },
-    assetId,
-  };
-  const ret = await payor.create(params);
-  expect(ret.getError()).to.be.undefined;
-  const channel = ret.getValue();
-  expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
-  const { transferId } = (channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details;
-  const transfer = await payee.getTransferState(transferId);
-  expect(transfer).to.containSubset({
-    initialBalance: balance,
-    assetId,
-    channelAddress,
-    transferId,
-    initialStateHash: hashTransferState(transferInitialState, params.encodings[0]),
-    transferDefinition: params.transferDefinition,
-    channelFactoryAddress: channel.networkContext.channelFactoryAddress,
-    chainId,
-    transferEncodings: params.encodings,
-    transferState: params.transferInitialState,
-    meta: params.meta,
-  });
-  return {
-    channel,
-    transfer: {
-      ...transfer!,
-      transferResolver: { preImage },
-    },
-  };
-};
-
-export const resolveTransfer = async (
-  channelAddress: string,
-  transfer: FullTransferState,
-  redeemer: IVectorProtocol,
-  counterparty: IVectorProtocol,
-  resolver?: TransferResolver,
-): Promise<FullChannelState> => {
-  const params: ResolveTransferParams = {
-    channelAddress,
-    transferId: transfer.transferId,
-    transferResolver: resolver || transfer.transferResolver!,
-    meta: { test: "field" },
-  };
-  const ret = await redeemer.resolve(params);
-  expect(ret.getError()).to.be.undefined;
-  const channel = ret.getValue();
-  const stored = await redeemer.getTransferState(transfer.transferId);
-  expect(stored!.transferResolver).to.deep.eq(params.transferResolver);
-  expect(await redeemer.getChannelState(channelAddress)).to.be.deep.eq(channel);
-  expect(await counterparty.getChannelState(channelAddress)).to.be.deep.eq(channel);
-  expect(await counterparty.getTransferState(transfer.transferId)).to.be.deep.eq(stored);
-  return channel;
 };
 
 // This function will return a setup channel between two participants
@@ -324,13 +220,12 @@ export const getSetupChannel = async (
 }> => {
   // First, get the signers and fund the accounts
   const [aliceSigner, bobSigner] = [
-    getRandomChannelSigner(env.chainProviders[chainId]),
-    getRandomChannelSigner(env.chainProviders[chainId]),
+    getRandomChannelSigner(provider),
+    getRandomChannelSigner(provider),
   ];
   // Fund the signer addresses with the sugar daddy account
-  const wallet = env.sugarDaddy.connect(new JsonRpcProvider(env.chainProviders[chainId]));
-  await fundAddress(aliceSigner.address, wallet);
-  await fundAddress(bobSigner.address, wallet);
+  await fundAddress(aliceSigner.address);
+  await fundAddress(bobSigner.address);
   // Create the vector instances
   const [alice, bob] = await createVectorInstances(true, 2, [
     { signer: aliceSigner, logger: getTestLoggers(testName).log },
@@ -367,18 +262,15 @@ export const getFundedChannel = async (
   for (const requestedDeposit of balances) {
     const { assetId, amount } = requestedDeposit;
     const [depositAlice, depositBob] = amount;
-
     // Perform the alice deposit
     if (constants.Zero.lt(depositAlice)) {
       await depositInChannel(setupChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAlice);
     }
-
     // Perform the bob deposit
     if (constants.Zero.lt(depositBob)) {
       await depositInChannel(setupChannel.channelAddress, bob, bobSigner, alice, assetId, depositBob);
     }
   }
-
   const channel = (await alice.getChannelState(setupChannel.channelAddress))!;
   return {
     channel,

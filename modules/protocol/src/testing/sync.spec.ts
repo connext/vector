@@ -30,7 +30,7 @@ import { inbound, outbound } from "../sync";
 
 import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";
-import { env } from "./utils";
+import { env } from "./env";
 
 describe("inbound", () => {
   // FIXME: These are blocking tests!

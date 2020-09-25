@@ -1,4 +1,5 @@
 export * from "./channel";
-export * from "./env";
 export * from "./expect";
+export * from "./funding";
 export * from "./logger";
+export * from "./transfer";
