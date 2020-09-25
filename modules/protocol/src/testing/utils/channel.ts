@@ -110,7 +110,6 @@ export const depositInChannel = async (
 ): Promise<FullChannelState<any>> => {
   // If amount is not supplied, simply reconcile
   // deposits immediately
-  console.log(`Depositing ${amount} ${assetId} into channel ${channelAddress}`);
   if (!amount) {
     const ret = await depositor.deposit({
       assetId,
@@ -138,11 +137,8 @@ export const depositInChannel = async (
         { value },
       );
       await tx.wait();
-      console.log(`Deposit mined, hopefully it worked`);
       expect(await channel.totalDepositedA(assetId)).to.equal(totalDepositedA.add(value));
-      console.log(`Cool, so far so good`);
     } catch (e) {
-      console.log(`Oh no looks like the channel isn't deployed yet`);
       // Assume this happened because it wasn't deployed
       await depositorSigner.connectProvider(provider);
       // Get the previous balance before deploying
@@ -150,19 +146,16 @@ export const depositInChannel = async (
         assetId === constants.AddressZero
           ? await depositorSigner.provider!.getBalance(channelAddress)
           : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-      console.log(`Creating contract`);
       const factory = new Contract(
         env.chainAddresses[chainId].ChannelFactory.address,
         ChannelFactory.abi,
         depositorSigner,
       );
-      console.log(`Creating listener`);
       const created = new Promise<string>(res => {
         factory.once(factory.filters.ChannelCreation(), data => {
           res(data);
         });
       });
-      console.log(`sending tx`);
       const tx = await factory.createChannelAndDepositA(
         depositorSigner.address,
         counterparty.signerAddress,
@@ -171,9 +164,7 @@ export const depositInChannel = async (
         value,
         { value },
       );
-      console.log(`waiting for tx to get mined`);
       await tx.wait();
-      console.log(`noice!`);
       const deployedAddr = await created;
       expect(deployedAddr).to.be.eq(channelAddress);
       // Verify onchain values updated
@@ -221,7 +212,6 @@ export const depositInChannel = async (
   //     ? await depositorSigner.provider!.getBalance(channelAddress)
   //     : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
   // expect(onchainTotal).to.be.eq(channelTotal);
-  console.log(`Success! yay`);
   return postDeposit;
 };
 
