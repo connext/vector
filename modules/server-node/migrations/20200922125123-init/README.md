@@ -27,7 +27,6 @@ CREATE TABLE "channel" (
     "assetIds" TEXT NOT NULL,
     "timeout" TEXT NOT NULL,
     "nonce" INTEGER NOT NULL,
-    "latestDepositNonce" INTEGER NOT NULL,
     "merkleRoot" TEXT NOT NULL,
     "channelFactoryAddress" TEXT NOT NULL,
     "channelMastercopyAddress" TEXT NOT NULL,
@@ -59,7 +58,6 @@ CREATE TABLE "update" (
     "meta" TEXT,
     "transferResolver" TEXT,
     "merkleRoot" TEXT,
-    "latestDepositNonce" INTEGER,
 
     FOREIGN KEY ("channelAddress") REFERENCES "channel"("channelAddress") ON DELETE SET NULL ON UPDATE CASCADE,
 PRIMARY KEY ("channelAddressId","nonce")
@@ -134,7 +132,6 @@ migration ..20200922125123-init
 +  assetIds                       String
 +  timeout                        String
 +  nonce                          Int
-+  latestDepositNonce             Int
 +  merkleRoot                     String
 +  balances                       Balance[]
 +  channelFactoryAddress          String
@@ -184,7 +181,6 @@ migration ..20200922125123-init
 +  merkleRoot       String?
 +
 +  // deposit details
-+  latestDepositNonce Int?
 +
 +  // setup inferred from channel params
 +

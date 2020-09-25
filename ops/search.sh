@@ -10,12 +10,13 @@ fi
 grep "$@" --exclude=*.swp --exclude=*.pdf --color=auto -r "$target" \
   .github/workflows/* \
   Makefile \
+  modules/*/migrations \
   modules/*/ops \
   modules/*/package.json \
+  modules/*/README.md \
   modules/*/src \
   modules/*/src.sol \
   modules/*/src.ts \
   modules/server-node/schema.prisma \
-  modules/*/README.md \
   ops \
   package.json

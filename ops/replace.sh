@@ -24,6 +24,7 @@ then
   find \
     .github/workflows/* \
     Makefile \
+    modules/*/migrations \
     modules/*/ops \
     modules/*/README.md \
     modules/*/src \
