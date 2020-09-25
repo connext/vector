@@ -16,7 +16,7 @@ export class WithdrawCommitment extends MultisigCommitment {
     public readonly amount: string,
     public readonly nonce: string,
   ) {
-    super(multisigAddress, multisigOwners, nonce);
+    super(multisigAddress, multisigOwners, nonce, assetId);
   }
 
   public getTransactionDetails(): MinimalTransaction {
@@ -29,7 +29,8 @@ export class WithdrawCommitment extends MultisigCommitment {
     } else {
       return {
         to: this.assetId,
-        value: 0,
+        // Intentionally include it here -- it gets removed in the exec withdraw fn
+        value: BigNumber.from(this.amount),
         data: new Interface(ERC20.abi).encodeFunctionData("transfer", [this.recipient, BigNumber.from(this.amount)]),
       };
     }

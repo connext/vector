@@ -13,6 +13,7 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     readonly multisigAddress: string,
     readonly multisigOwners: string[],
     readonly nonce: string,
+    readonly assetId: string,
     private initiatorSignature?: string,
     private responderSignature?: string,
   ) {}
@@ -47,9 +48,10 @@ export abstract class MultisigCommitment implements EthereumCommitment {
     await this.assertSignatures();
     const multisigInput = this.getTransactionDetails();
 
-    const txData = new Interface(ChannelMastercopy.abi).encodeFunctionData("execTransaction", [
+    const txData = new Interface(ChannelMastercopy.abi).encodeFunctionData("execWithdraw", [
       multisigInput.to,
       multisigInput.value,
+      this.assetId,
       multisigInput.data,
       BigNumber.from(this.nonce),
       this.signatures,
@@ -61,8 +63,8 @@ export abstract class MultisigCommitment implements EthereumCommitment {
   public encode(): string {
     const { to, value, data } = this.getTransactionDetails();
     return solidityPack(
-      ["address", "address", "uint256", "bytes32", "uint256"],
-      [this.multisigAddress, to, value, solidityKeccak256(["bytes"], [data]), BigNumber.from(this.nonce)],
+      ["address", "address", "uint256", "address", "bytes32", "uint256"],
+      [this.multisigAddress, to, value, this.assetId, solidityKeccak256(["bytes"], [data]), BigNumber.from(this.nonce)],
     );
   }
 
