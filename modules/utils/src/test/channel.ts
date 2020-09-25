@@ -138,7 +138,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
       break;
     case UpdateType.deposit:
       details = {
-        latestDepositNonce: 1,
+        totalDepositedA: "10",
+        totalDepositedB: "5",
       } as DepositUpdateDetails;
       break;
     case UpdateType.create:
@@ -215,9 +216,9 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
         to: [...participants],
       },
     ],
-    lockedBalance: ["1", "2"],
+    processedDepositsA: ["1", "2"],
+    processedDepositsB: ["1", "2"],
     channelAddress,
-    latestDepositNonce: 1,
     latestUpdate,
     merkleRoot: mkHash(),
     networkContext: {

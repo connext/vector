@@ -9,7 +9,8 @@ import {
 } from "@connext/vector-utils";
 
 import { LinkedTransfer } from "../../artifacts";
-import { expect, provider } from "../utils";
+import { provider } from "../constants";
+import { expect } from "../utils";
 
 const { HashZero, Zero } = constants;
 

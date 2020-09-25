@@ -21,6 +21,7 @@ contract TestToken is IERC20 {
     string private _symbol;
     uint8 private _decimals;
 
+    // TODO: just hardcode name & symbol??
     constructor (string memory name, string memory symbol) {
         _name = name;
         _symbol = symbol;

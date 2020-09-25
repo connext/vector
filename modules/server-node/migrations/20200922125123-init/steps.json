@@ -235,13 +235,6 @@
     {
       "tag": "CreateField",
       "model": "Channel",
-      "field": "latestDepositNonce",
-      "type": "Int",
-      "arity": "Required"
-    },
-    {
-      "tag": "CreateField",
-      "model": "Channel",
       "field": "merkleRoot",
       "type": "String",
       "arity": "Required"
@@ -545,13 +538,6 @@
       "model": "Update",
       "field": "merkleRoot",
       "type": "String",
-      "arity": "Optional"
-    },
-    {
-      "tag": "CreateField",
-      "model": "Update",
-      "field": "latestDepositNonce",
-      "type": "Int",
       "arity": "Optional"
     },
     {

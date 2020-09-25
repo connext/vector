@@ -74,13 +74,13 @@ export type Balance = {
 
 export const CoreChannelStateEncoding = tidy(`tuple(
   ${BalanceEncoding}[] balances,
-  uint256[] lockedBalance,
   address[] assetIds,
   address channelAddress,
-  address[] participants,
+  address[2] participants,
+  uint256[] processedDepositsA,
+  uint256[] processedDepositsB,
   uint256 timeout,
   uint256 nonce,
-  uint256 latestDepositNonce,
   bytes32 merkleRoot
 )`);
 
@@ -88,15 +88,15 @@ export const CoreChannelStateEncoding = tidy(`tuple(
 // participants array ordering (but value in `to` field may
 // not always be the participants addresses)
 export interface CoreChannelState {
-  channelAddress: Address;
-  participants: Address[]; // Signer keys
-  timeout: string;
-  balances: Balance[]; // Indexed by assetId
-  lockedBalance: string[]; // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
-  nonce: number;
-  latestDepositNonce: number;
+  balances: Balance[]; // Indexed by assetId
+  channelAddress: Address;
   merkleRoot: string;
+  nonce: number;
+  participants: Address[]; // Signer keys
+  processedDepositsA: string[]; // Indexed by assetId
+  processedDepositsB: string[]; // Indexed by assetId
+  timeout: string;
 }
 
 // Includes any additional info that doesn't need to be sent to chain
@@ -197,7 +197,8 @@ export type ResolveUpdateDetails = {
 };
 
 export type DepositUpdateDetails = {
-  latestDepositNonce: number;
+  totalDepositedA: string;
+  totalDepositedB: string;
 };
 
 export type SetupUpdateDetails = {

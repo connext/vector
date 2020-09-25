@@ -2,7 +2,7 @@
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 eslint="$root/node_modules/.bin/eslint -c $root/.eslintrc.js"
-solium="$root/node_modules/.bin/solium -c $root/.soliumrc.json"
+solhint="$root/node_modules/.bin/solhint -c $root/.solhint.json"
 
 for package in `ls modules`
 do
@@ -14,7 +14,7 @@ do
   elif [[ -d "src.ts" && -d "src.sol" ]]
   then
     eval "$eslint 'src.ts' $@"
-    eval "$solium --dir 'src.sol' $@"
+    eval "$solhint 'src.sol/**/*.sol' $@"
   fi
   cd "${root}"
 done

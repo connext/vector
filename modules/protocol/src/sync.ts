@@ -164,7 +164,7 @@ export async function outbound(
     );
     return Result.ok({ ...updatedChannel, latestUpdate: counterpartyUpdate });
   } catch (e) {
-    console.log("e", e.message);
+    logger.error("e", e.message);
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SaveChannelFailed,
@@ -243,13 +243,13 @@ export async function inbound(
       networkContext,
       assetIds: [],
       balances: [],
-      lockedBalance: [],
+      processedDepositsA: [],
+      processedDepositsB: [],
       merkleRoot: constants.HashZero,
       nonce: 0,
       publicIdentifiers,
       timeout,
       latestUpdate: {} as any, // There is no latest update on setup
-      latestDepositNonce: 0,
     };
   }
 
@@ -275,13 +275,13 @@ export async function inbound(
   // - n >= k + 3: we must restore state
 
   // Get the difference between the stored and received nonces
-  const diff = update.nonce - channelFromStore.nonce;
+  const diff = update.nonce - channelFromStore!.nonce;
 
   // If we are ahead, or even, do not process update
   if (diff <= 0) {
     // NOTE: when you are out of sync as a protocol initiator, you will
     // use the information from this error to sync, then retry your update
-    return returnError(InboundChannelUpdateError.reasons.StaleUpdate, channelFromStore.latestUpdate, channelFromStore);
+    return returnError(InboundChannelUpdateError.reasons.StaleUpdate, channelFromStore!.latestUpdate, channelFromStore);
   }
 
   // If we are behind by more than 3, we cannot sync from their latest
@@ -296,7 +296,7 @@ export async function inbound(
   // behind by one update. We can progress the state to the correct
   // state to be updated by applying the counterparty's supplied
   // latest action
-  let previousState = { ...channelFromStore };
+  let previousState = { ...channelFromStore! };
   if (diff === 2) {
     // Create the proper state to play the update on top of using the
     // latest update

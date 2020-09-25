@@ -48,6 +48,9 @@ jobs:
       - run: make global
       - run: make start-global
       - run: make test-global
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 global_auth
 
   node:
     runs-on: ubuntu-latest
@@ -57,6 +60,9 @@ jobs:
       - run: make node
       - run: make start-node
       - run: make test-node
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 node_node
 
   duet:
     runs-on: ubuntu-latest
@@ -66,3 +72,6 @@ jobs:
       - run: make duet
       - run: make start-duet
       - run: make test-duet
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 duet_alice && docker service logs --tail 200 duet_bob

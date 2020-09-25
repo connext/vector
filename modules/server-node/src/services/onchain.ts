@@ -7,7 +7,7 @@ import {
   ERC20Abi,
 } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers, Wallet } from "ethers";
-import { ChannelFactory, ChannelMastercopy, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelFactory, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import { BaseLogger } from "pino";
 
 export type ChainSigners = {
@@ -225,7 +225,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
     }
 
-    const vectorChannel = new Contract(channelState.channelAddress, ChannelMastercopy.abi, signer);
+    const vectorChannel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
     if (assetId !== constants.AddressZero) {
       // need to approve
       this.logger.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
