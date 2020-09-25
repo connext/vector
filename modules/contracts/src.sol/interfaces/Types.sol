@@ -14,15 +14,15 @@ struct LatestDeposit {
 }
 
 struct CoreChannelState {
-    address[] assetIds;
     Balance[] balances; // TODO index by assetId? // alice, bob
+    address[] assetIds;
     address channelAddress;
-    bytes32 merkleRoot;
-    uint256 nonce;
     address[2] participants; // Signer keys -- does NOT have to be the same as balances.to[]
-    string[] processedDepositsA; // indexed by assetId
-    string[] processedDepositsB; // indexed by assetId
+    uint256[] processedDepositsA; // indexed by assetId
+    uint256[] processedDepositsB; // indexed by assetId
     uint256 timeout;
+    uint256 nonce;
+    bytes32 merkleRoot;
 }
 
 struct CoreTransferState {
