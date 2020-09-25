@@ -32,7 +32,7 @@ describe("ChannelMastercopy", () => {
     for (const method of [
       { name: "getParticipants", args: [] },
       { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, [HashZero]] },
-      { name: "initiatorDeposit", args: [AddressZero, Zero] },
+      { name: "depositA", args: [AddressZero, Zero] },
     ]) {
       await expect(
         mastercopy[method.name](...method.args),

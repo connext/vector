@@ -98,7 +98,7 @@ contract ChannelFactory is IChannelFactory {
                 "ChannelFactory: token approve failed"
             );
         }
-        channel.initiatorDeposit{value: msg.value}(assetId, amount);
+        channel.depositA{value: msg.value}(assetId, amount);
     }
 
     ////////////////////////////////////////

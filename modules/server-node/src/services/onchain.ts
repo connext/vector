@@ -140,7 +140,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
 
     this.logger.info({ method: "sendDepositATx", assetId, amount }, "Channel is deployed, sending deposit");
     if (sender === channelState.participants[0]) {
-      return this.sendInitiatorDepositTx(channelState, amount, assetId);
+      return this.sendDepositATx(channelState, amount, assetId);
     } else {
       return this.sendDepositBTx(channelState, amount, assetId);
     }

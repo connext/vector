@@ -29,7 +29,7 @@ describe(testName, () => {
     });
   });
 
-  it("should deposit eth for Alice (initiatorDeposit)", async () => {
+  it("should deposit eth for Alice (depositA)", async () => {
     const depositAmount = BigNumber.from("1000");
     const assetId = constants.AddressZero;
 

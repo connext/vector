@@ -414,7 +414,7 @@ type GenerateUpdateTestParams = {
   // Mock values
   storedChannel?: PartialFullChannelState<any>;
   onchainBalance?: BigNumber;
-  initiatorDeposit?: { nonce: BigNumber; amount: BigNumber };
+  depositA?: { nonce: BigNumber; amount: BigNumber };
   resolveBalance?: Balance;
 };
 
@@ -555,7 +555,7 @@ describe("generateUpdate", () => {
         details: { latestDepositNonce: 1 },
       },
       onchainBalance: BigNumber.from(10),
-      initiatorDeposit: { nonce: BigNumber.from(1), amount: BigNumber.from(10) },
+      depositA: { nonce: BigNumber.from(1), amount: BigNumber.from(10) },
     },
     {
       name: "should work for create (alice creates)",
@@ -669,7 +669,7 @@ describe("generateUpdate", () => {
       expectedTransfer,
       storedChannel,
       onchainBalance,
-      initiatorDeposit,
+      depositA,
       resolveBalance,
       from,
     } = test;
@@ -714,7 +714,7 @@ describe("generateUpdate", () => {
 
       // Chain service mocks are only used by deposit/resolve
       chainService.getLatestDepositByAssetId.resolves(
-        Result.ok(initiatorDeposit ?? { nonce: BigNumber.from(0), amount: BigNumber.from(0) }),
+        Result.ok(depositA ?? { nonce: BigNumber.from(0), amount: BigNumber.from(0) }),
       );
       chainService.getChannelOnchainBalance.resolves(Result.ok(onchainBalance ?? BigNumber.from(0)));
 

@@ -19,7 +19,7 @@ type ReconcileDepositTest = {
   latestDepositNonce: number;
   lockedBalance: string;
   assetId: string;
-  aliceDeposit: BigNumberish; // initiatorDeposit deposit
+  aliceDeposit: BigNumberish; // depositA deposit
   bobDeposit: BigNumberish; // user deposit
   stubs: Partial<MockOnchainStubType>;
   expected: Omit<Balance, "to"> & { latestDepositNonce: number };
@@ -79,7 +79,7 @@ describe("utils", () => {
       const onchain = Sinon.createStubInstance(VectorOnchainService);
       // set return values
       const mockedValues = {
-        // Default the value onchain + initiatorDeposit + multisig deposit
+        // Default the value onchain + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
 
         // Default is nonce 1, deposit 0

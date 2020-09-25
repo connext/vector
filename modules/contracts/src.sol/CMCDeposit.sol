@@ -33,7 +33,7 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         return _latestDeposit[assetId];
     }
 
-    function initiatorDeposit(
+    function depositA(
         address assetId,
         uint256 amount
     )

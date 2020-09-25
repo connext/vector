@@ -27,7 +27,7 @@ describe("Channel Deposits", () => {
 
   it("should update latestDeposit if accepting an eth deposit via contract method", async () => {
     const assetId = addressZero;
-    const depositTx = await channel.populateTransaction.initiatorDeposit(assetId, value, { value });
+    const depositTx = await channel.populateTransaction.depositA(assetId, value, { value });
     const nonceBefore = (await channel.getLatestDeposit(assetId)).nonce;
     await expect(alice.sendTransaction(depositTx)).to.be.fulfilled;
     const latestDeposit = await channel.getLatestDeposit(assetId);
