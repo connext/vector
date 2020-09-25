@@ -1,16 +1,14 @@
 import {
   ChainAddresses,
-  ConditionalTransferParams,
   ConditionalTransferType,
   CreateTransferParams,
   DEFAULT_TRANSFER_TIMEOUT,
+  EngineParams,
   FullChannelState,
   FullTransferState,
-  LinkedTransferParams,
   LinkedTransferResolver,
   LinkedTransferResolverEncoding,
   LinkedTransferStateEncoding,
-  ResolveConditionParams,
   ResolveTransferParams,
   WithdrawResolverEncoding,
   WithdrawStateEncoding,
@@ -52,19 +50,19 @@ describe("ParamConverter", () => {
     },
   };
   describe("convertConditionalTransferParams", () => {
-    const generateParams = (): ConditionalTransferParams<"LinkedTransfer"> => {
+    const generateParams = (): EngineParams.ConditionalTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
         amount: "8",
         assetId: mkAddress("0x0"),
         recipient: mkAddress("0xb"),
-        recipientChainId: "1",
+        recipientChainId: 1,
         recipientAssetId: mkAddress("0x1"),
         conditionType: ConditionalTransferType.LinkedTransfer,
         routingId: mkHash("0xtest"),
         details: {
           linkedHash: getRandomBytes32(),
-        } as LinkedTransferParams,
+        },
         meta: {
           message: "test",
         },
@@ -98,10 +96,14 @@ describe("ParamConverter", () => {
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: {
           routingId: params.routingId,
-          recipientAssetId: params.recipientAssetId,
-          recipientChainId: params.recipientChainId,
-          recipient: params.recipient,
-          meta: params.meta,
+          path: [
+            {
+              recipientAssetId: params.recipientAssetId,
+              recipientChainId: params.recipientChainId,
+              recipient: params.recipient,
+            },
+          ],
+          ...params.meta,
         },
       });
     });
@@ -133,18 +135,21 @@ describe("ParamConverter", () => {
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: {
           routingId: params.routingId,
-          recipientAssetId: params.recipientAssetId,
-          recipientChainId: params.recipientChainId,
-          recipient: params.recipient,
-          meta: params.meta,
+          path: [
+            {
+              recipientAssetId: params.recipientAssetId,
+              recipientChainId: params.recipientChainId,
+              recipient: params.recipient,
+            },
+          ],
+          ...params.meta,
         },
       });
     });
 
     it("should fail if invalid type", async () => {
-      const params = generateParams();
+      const params: any = generateParams();
       // Set incorrect type
-      //@ts-ignore
       params.conditionType = "FailingTest";
       const channelState: FullChannelState = createTestChannelState("setup", {
         channelAddress: params.channelAddress,
@@ -161,7 +166,7 @@ describe("ParamConverter", () => {
   });
 
   describe("convertResolveConditionParams", () => {
-    const generateParams = (): ResolveConditionParams<"LinkedTransfer"> => {
+    const generateParams = (): EngineParams.ResolveTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
         conditionType: ConditionalTransferType.LinkedTransfer,
@@ -195,9 +200,8 @@ describe("ParamConverter", () => {
     });
 
     it("should fail if invalid type", async () => {
-      const params = generateParams();
+      const params: any = generateParams();
       // Set incorrect type
-      //@ts-ignore
       params.conditionType = "FailingTest";
       const transferState: FullTransferState = createTestFullLinkedTransferState({
         channelAddress: params.channelAddress,

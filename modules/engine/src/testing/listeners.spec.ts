@@ -9,20 +9,13 @@ import {
   WithdrawState,
   WithdrawStateEncoding,
 } from "@connext/vector-types";
-import {
-  createTestChannelState,
-  delay,
-  getRandomChannelSigner,
-  mkAddress,
-  mkPublicIdentifier,
-  mkSig,
-} from "@connext/vector-utils";
+import { createTestChannelState, delay, getRandomChannelSigner, mkAddress, mkSig } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
 import Sinon from "sinon";
+import { expect } from "chai";
 
 import { setupListeners } from "../listeners";
-import { expect } from "chai";
 
 // Adds a handler to an evt instance and returns the result
 // based on the input arguments
@@ -38,7 +31,7 @@ export function addEvtHandler<T = any>(
   return evt.attach(...attachArgs);
 }
 
-describe.only("listeners", () => {
+describe("listeners", () => {
   // Create an EVT to post to, that can be aliased as a
   // vector instance
 

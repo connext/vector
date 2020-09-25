@@ -1,0 +1,8 @@
+@aliceUrl = http://localhost:8001
+@aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+# 0.01 ETH
+@ethAmount = 10000000000000000
+
+##############
+### CREATE TRANSFER
+### Alice

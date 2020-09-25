@@ -28,7 +28,10 @@ export function convertConditionalTransferParams(
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
 
-  const participants = channel.participants[0] == signer.address ? channel.participants : [channel.participants[1], channel.participants[0]];
+  const participants =
+    channel.participants[0] == signer.address
+      ? channel.participants
+      : [channel.participants[1], channel.participants[0]];
   const recipientChainId = params.recipientChainId ? params.recipientChainId : channel.networkContext.chainId;
   const recipientAssetId = params.recipientAssetId ? params.recipientAssetId : params.assetId;
 
@@ -51,11 +54,9 @@ export function convertConditionalTransferParams(
   }
 
   const meta = {
-    recipient,
-    recipientChainId,
-    recipientAssetId,
     routingId,
-    meta: params.meta,
+    path: [{ recipient, recipientChainId, recipientAssetId }],
+    ...params.meta,
   };
 
   return Result.ok({
@@ -87,7 +88,7 @@ export function convertResolveConditionParams(
 
   const meta = {
     routingId,
-    meta: params.meta
+    meta: params.meta,
   };
 
   return Result.ok({
@@ -106,7 +107,11 @@ export async function convertWithdrawParams(
   const { channelAddress, assetId, recipient, fee } = params;
 
   // If there is a fee being charged, add the fee to the amount.
-  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
+  const amount = fee
+    ? BigNumber.from(params.amount)
+        .add(fee)
+        .toString()
+    : params.amount;
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
@@ -116,12 +121,13 @@ export async function convertWithdrawParams(
     // Important: Use params.amount here which doesn't include fee!!
     params.amount,
     // Use channel nonce as a way to keep withdraw hashes unique
-    channel.nonce.toString()
-  )
+    channel.nonce.toString(),
+  );
 
-  const initiatorSignature = await signer.signMessage(commitment.hashToSign())
+  const initiatorSignature = await signer.signMessage(commitment.hashToSign());
 
-  const counterpartySigner = channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
+  const counterpartySigner =
+    channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
 
   const transferInitialState: WithdrawState = {
     balance: {
@@ -143,9 +149,9 @@ export async function convertWithdrawParams(
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
-    // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise. 
+    // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
-      withdrawNonce: channel.nonce.toString()
-    }
+      withdrawNonce: channel.nonce.toString(),
+    },
   });
 }
