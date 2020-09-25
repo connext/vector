@@ -56,7 +56,6 @@ const fundAddress = async (to: string, sugarDaddy: Wallet): Promise<void> => {
   const ethTx = await sugarDaddy.sendTransaction({ to, value: utils.parseEther("100") });
   if (!ethTx.hash) throw new Error(`Couldn't fund account ${to}`);
   await ethTx.wait();
-
   // Fund with tokens
   const tokenTx = await new Contract(env.chainAddresses[chainId].TestToken.address, TestToken.abi, sugarDaddy).transfer(
     to,
@@ -76,82 +75,34 @@ export const createVectorInstances = async (
   return Promise.all(
     Array(numberOfEngines)
       .fill(0)
-      .map((_, idx) => {
+      .map(async (_, idx) => {
         const instanceOverrides = overrides[idx] || {};
         const messagingService = shareServices ? sharedMessaging : new MemoryMessagingService();
         const lockService = shareServices ? sharedLock : new MemoryLockService();
-        const log = instanceOverrides.logger ?? Pino();
+        const logger = instanceOverrides.logger ?? Pino();
         const onchainService = shareServices
           ? sharedChain
           : new VectorOnchainService(
               { [chainId]: new JsonRpcProvider(providerUrl) },
-              log.child({ module: "VectorOnchainService" }),
+              logger.child({ module: "VectorOnchainService" }),
             );
-        return createVectorInstance({
+        const opts = {
           messagingService,
           lockService,
+          storeService: new MemoryStoreService(),
+          signer: getRandomChannelSigner(env.chainProviders[chainId]),
           onchainService,
+          logger,
           ...instanceOverrides,
-        });
+        };
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        const vector = await Vector.connect(...Object.values(opts));
+        expect(vector.signerAddress).to.be.eq(opts.signer.address);
+        expect(vector.publicIdentifier).to.be.eq(opts.signer.publicIdentifier);
+        return vector;
       }),
   );
-};
-
-export const createVectorInstance = async (overrides: Partial<VectorTestOverrides> = {}): Promise<IVectorProtocol> => {
-  const opts = {
-    messagingService: new MemoryMessagingService(),
-    lockService: new MemoryLockService(),
-    storeService: new MemoryStoreService(),
-    signer: getRandomChannelSigner(env.chainProviders[chainId]),
-    onchainService: new VectorOnchainService(
-      { [chainId]: new JsonRpcProvider(providerUrl) },
-      overrides.logger ?? Pino(),
-    ),
-    logger: getTestLoggers("vector").log,
-    ...overrides,
-  };
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  const vector = await Vector.connect(...Object.values(opts));
-  expect(vector.signerAddress).to.be.eq(opts.signer.address);
-  expect(vector.publicIdentifier).to.be.eq(opts.signer.publicIdentifier);
-  return vector;
-};
-
-export const deployChannelWithDepositA = async (
-  channelAddress: string,
-  depositAmount: BigNumber,
-  assetId: string,
-  alice: IChannelSigner,
-  bobAddr: string,
-): Promise<string> => {
-  await alice.connectProvider(env.chainProviders[chainId]);
-  // Get the previous balance before deploying
-  const prev =
-    assetId === constants.AddressZero
-      ? await alice.provider!.getBalance(channelAddress)
-      : await new Contract(assetId, TestToken.abi, alice).balanceOf(channelAddress);
-
-  // Deploy with deposit
-  const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, alice);
-  const created = new Promise<string>(res => {
-    factory.once(factory.filters.ChannelCreation(), data => {
-      res(data);
-    });
-  });
-  const tx = await factory.createChannelAndDepositA(alice.address, bobAddr, assetId, depositAmount, {
-    value: depositAmount,
-  });
-  await tx.wait();
-  const deployedAddr = await created;
-  expect(deployedAddr).to.be.eq(channelAddress);
-
-  // Verify onchain values updated
-  const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).totalDepositedA(assetId);
-  expect(totalDepositedA).to.be.eq(depositAmount);
-
-  expect(await alice.provider!.getBalance(channelAddress)).to.be.eq(depositAmount.add(prev));
-  return channelAddress;
 };
 
 export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState<any>> => {
@@ -167,7 +118,6 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   });
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;
-
   // Verify stored channel
   const aliceChannel = await alice.getChannelState(channel.channelAddress);
   const bobChannel = await bob.getChannelState(channel.channelAddress);
@@ -176,26 +126,6 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   expect(channel.participants).to.be.deep.eq([alice.signerAddress, bob.signerAddress]);
   expect(channel.publicIdentifiers).to.be.deep.eq([alice.publicIdentifier, bob.publicIdentifier]);
   return channel;
-};
-
-export const depositAOnchain = async (
-  channelAddress: string,
-  depositorSigner: IChannelSigner,
-  counterparty: IVectorProtocol,
-  assetId: string = constants.AddressZero,
-  amount: BigNumberish = 15,
-): Promise<void> => {
-  const value = BigNumber.from(amount);
-  // Call deposit on the multisig
-  try {
-    const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).depositA(assetId, value, {
-      value,
-    });
-    await tx.wait();
-  } catch (e) {
-    // Assume this happened because it wasn't deployed
-    await deployChannelWithDepositA(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
-  }
 };
 
 export const depositInChannel = async (
@@ -216,9 +146,7 @@ export const depositInChannel = async (
     expect(ret.getError()).to.be.undefined;
     return ret.getValue();
   }
-
   const value = BigNumber.from(amount);
-
   // Deploy multsig if needed
   const channel = await depositor.getChannelState(channelAddress);
   const isDepositA = channel!.publicIdentifiers[0] === depositor.publicIdentifier;
@@ -226,52 +154,77 @@ export const depositInChannel = async (
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
   if (isDepositA) {
-    await depositAOnchain(channelAddress, depositorSigner, counterparty, assetId, amount);
+    const value = BigNumber.from(amount);
+    // Call deposit on the multisig
+    try {
+      const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).depositA(assetId, value, {
+        value,
+      });
+      await tx.wait();
+    } catch (e) {
+      // Assume this happened because it wasn't deployed
+      await depositorSigner.connectProvider(env.chainProviders[chainId]);
+      // Get the previous balance before deploying
+      const prev =
+        assetId === constants.AddressZero
+          ? await depositorSigner.provider!.getBalance(channelAddress)
+          : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
+      // Deploy with deposit
+      const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, depositorSigner);
+      const created = new Promise<string>(res => {
+        factory.once(factory.filters.ChannelCreation(), data => {
+          res(data);
+        });
+      });
+      const tx = await factory.createChannelAndDepositA(depositorSigner.address, counterparty.address, assetId, value, {
+        value,
+      });
+      await tx.wait();
+      const deployedAddr = await created;
+      expect(deployedAddr).to.be.eq(channelAddress);
+      // Verify onchain values updated
+      const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).totalDepositedA(assetId);
+      expect(totalDepositedA).to.be.eq(value);
+      expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
+      return channelAddress;
+    }
   } else {
     // Deposit onchain
     const tx =
       assetId === constants.AddressZero
         ? await depositorSigner.sendTransaction({ value, to: channelAddress })
         : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
-
     await tx.wait();
   }
-
   // Reconcile with channel
   const ret = await depositor.deposit({
     assetId,
     channelAddress,
   });
   expect(ret.getError()).to.be.undefined;
-
   const postDeposit = ret.getValue()!;
   expect(postDeposit.assetIds).to.be.deep.eq([...new Set(channel!.assetIds.concat(assetId))]);
-
   const assetIdx = postDeposit!.assetIds.findIndex(a => a === assetId);
-  const postDepositBal = postDeposit.balances[assetIdx];
-
   if (isDepositA) {
-    expect(value.add(channel!.processedDepositsA[assetIdx]).eq(BigNumber.from(postDeposit.processedDepositsA))).to.be
-      .true;
+    expect(
+      value.add(channel!.processedDepositsA[assetIdx] || "0"),
+    ).to.equal(
+      BigNumber.from(postDeposit.processedDepositsA[0]),
+    );
   } else {
     expect(value.add(channel!.processedDepositsB[assetIdx]).eq(BigNumber.from(postDeposit.processedDepositsB))).to.be
       .true;
   }
-
   // Make sure the onchain balance of the channel is equal to the
   // sum of the locked balance + channel balance
-
   // TODO does this even make sense to do anymore?
-
   // const totalDeposited = BigNumber.from(channel!.processedDepositsA[assetIdx]).add(
   //   channel!.processedDepositsB[assetIdx],
   // );
-
   // const onchainTotal =
   //   assetId === constants.AddressZero
   //     ? await depositorSigner.provider!.getBalance(channelAddress)
   //     : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-
   // expect(onchainTotal).to.be.eq(channelTotal);
   return postDeposit;
 };
@@ -290,13 +243,11 @@ export const createTransfer = async (
   // Create the transfer information
   const preImage = getRandomBytes32();
   const linkedHash = createLinkedHash(preImage);
-
   const balance = {
     to: [payor.signerAddress, payee.signerAddress],
     amount: [amount.toString(), "0"],
   };
   const transferInitialState = createTestLinkedTransferState({ linkedHash, assetId, balance });
-
   const params: CreateTransferParams = {
     channelAddress,
     amount: amount.toString(),
@@ -307,12 +258,10 @@ export const createTransfer = async (
     meta: { test: "field" },
     assetId,
   };
-
   const ret = await payor.create(params);
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
   expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
-
   const { transferId } = (channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details;
   const transfer = await payee.getTransferState(transferId);
   expect(transfer).to.containSubset({
@@ -328,7 +277,6 @@ export const createTransfer = async (
     transferState: params.transferInitialState,
     meta: params.meta,
   });
-
   return {
     channel,
     transfer: {
@@ -351,7 +299,6 @@ export const resolveTransfer = async (
     transferResolver: resolver || transfer.transferResolver!,
     meta: { test: "field" },
   };
-
   const ret = await redeemer.resolve(params);
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
@@ -380,18 +327,15 @@ export const getSetupChannel = async (
     getRandomChannelSigner(env.chainProviders[chainId]),
     getRandomChannelSigner(env.chainProviders[chainId]),
   ];
-
   // Fund the signer addresses with the sugar daddy account
   const wallet = env.sugarDaddy.connect(new JsonRpcProvider(env.chainProviders[chainId]));
   await fundAddress(aliceSigner.address, wallet);
   await fundAddress(bobSigner.address, wallet);
-
   // Create the vector instances
   const [alice, bob] = await createVectorInstances(true, 2, [
     { signer: aliceSigner, logger: getTestLoggers(testName).log },
     { signer: bobSigner, logger: getTestLoggers(testName).log },
   ]);
-
   // Setup the channel
   const channel = await setupChannel(alice, bob);
   return {

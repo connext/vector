@@ -1,8 +1,7 @@
 import { IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { getTestLoggers } from "../utils";
-import { createTransfer, getFundedChannel, resolveTransfer } from "../utils/channel";
+import { createTransfer, getFundedChannel, resolveTransfer, getTestLoggers } from "../utils";
 
 const testName = "Resolve Integrations";
 const { log } = getTestLoggers(testName);

@@ -1,7 +1,13 @@
 import { constants } from "ethers";
 
-import { expect, getTestLoggers } from "../utils";
-import { createTransfer, depositInChannel, getSetupChannel, resolveTransfer } from "../utils/channel";
+import {
+  createTransfer,
+  depositInChannel,
+  expect,
+  getSetupChannel,
+  getTestLoggers,
+  resolveTransfer,
+} from "../utils";
 
 const testName = "Happy Integration";
 const { log } = getTestLoggers(testName);

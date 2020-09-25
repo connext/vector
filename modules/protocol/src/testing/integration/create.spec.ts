@@ -1,8 +1,7 @@
 import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { expect, getTestLoggers } from "../utils";
-import { createTransfer, getFundedChannel } from "../utils/channel";
+import { createTransfer, expect, getFundedChannel, getTestLoggers } from "../utils";
 
 const testName = "Create Integrations";
 const { log } = getTestLoggers(testName);

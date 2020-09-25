@@ -1,8 +1,7 @@
 import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
 
-import { getTestLoggers } from "../utils";
-import { depositInChannel, getSetupChannel } from "../utils/channel";
+import { depositInChannel, getSetupChannel, getTestLoggers } from "../utils";
 
 const testName = "Deposit Integrations";
 const { log } = getTestLoggers(testName);

@@ -15,8 +15,8 @@ type MockOnchainStubType = {
 
 type ReconcileDepositTest = {
   initialBalance: Omit<Balance, "to">;
-  processedDepositsA: string;
-  processedDepositsB: string;
+  processedDepositsA: string[];
+  processedDepositsB: string[];
   assetId: string;
   aliceDeposit: BigNumberish; // depositA deposit
   bobDeposit: BigNumberish; // user deposit
@@ -80,8 +80,8 @@ describe("utils", () => {
         // Default the value onchain + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
 
-        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsA!)),
-        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add(processedDepositsB!)),
+        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsA ? (processedDepositsA[0] || 0) : 0)),
+        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsB ? (processedDepositsB[0] || 0) : 0)),
 
         ...stubs,
       };
@@ -103,16 +103,16 @@ describe("utils", () => {
         name: "should work for Alice Eth deposit when onchain deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        processedDepositsA: "10",
-        processedDepositsB: "9",
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         expected: { amount: ["18", "9"], totalDepositedA: "25", totalDepositedB: "9" },
       },
       {
         name: "should work for Alice Token deposit when onchain deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        processedDepositsA: "10",
-        processedDepositsB: "9",
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         assetId: mkAddress("0xdddd"),
         expected: { amount: ["18", "9"], totalDepositedA: "25", totalDepositedB: "9" },
       },
@@ -120,8 +120,8 @@ describe("utils", () => {
         name: "should work for Bob Eth deposit when onchain deposit was successful",
         bobDeposit: 7,
         initialBalance: { amount: ["3", "9"] },
-        processedDepositsA: "10",
-        processedDepositsB: "9",
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         expected: { amount: ["3", "16"], totalDepositedA: "10", totalDepositedB: "16" },
       },
       {
@@ -129,8 +129,8 @@ describe("utils", () => {
         bobDeposit: 7,
         initialBalance: { amount: ["3", "9"] },
         assetId: mkAddress("0xdddd"),
-        processedDepositsA: "10",
-        processedDepositsB: "9",
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         expected: { amount: ["3", "16"], totalDepositedA: "10", totalDepositedB: "16" },
       },
       {
@@ -138,8 +138,8 @@ describe("utils", () => {
         bobDeposit: 7,
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        processedDepositsA: "10",
-        processedDepositsB: "9",
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
       },
       {
@@ -147,8 +147,8 @@ describe("utils", () => {
         bobDeposit: 7,
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        processedDepositsA: "10",
-        processedDepositsB: "9",
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         assetId: mkAddress("0xdddd"),
         expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
       },
@@ -165,8 +165,8 @@ describe("utils", () => {
           channelAddress,
           chainId,
           { ...(initialBalance ?? { amount: ["0", "0"] }), to },
-          processedDepositsA ?? "0",
-          processedDepositsB ?? "0",
+          processedDepositsA ?? ["0"],
+          processedDepositsB ?? ["0"],
           assetId ?? constants.AddressZero,
           chainService,
         );
