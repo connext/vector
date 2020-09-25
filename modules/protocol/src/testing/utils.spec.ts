@@ -25,7 +25,7 @@ type ReconcileDepositTest = {
   error: Error;
 };
 
-describe("utils", () => {
+describe.only("utils", () => {
   describe.skip("addEvtHandler", () => {
     it("should attach with callback", async () => {});
     it("should attach with callback + filter", async () => {});
@@ -67,7 +67,7 @@ describe("utils", () => {
     const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];
 
     const getOnchainService = (testParams: Partial<ReconcileDepositTest>) => {
-      const { initialBalance, stubs, aliceDeposit, bobDeposit } = testParams;
+      const { initialBalance, stubs, aliceDeposit, bobDeposit, processedDepositsA, processedDepositsB } = testParams;
       const initialChainBalance = (initialBalance?.amount ?? []).reduce(
         (prev, curr) => prev.add(curr),
         BigNumber.from(0),
@@ -80,9 +80,8 @@ describe("utils", () => {
         // Default the value onchain + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
 
-        // Default is 0
-        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0)),
-        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0)),
+        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsA!)),
+        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add(processedDepositsB!)),
 
         ...stubs,
       };
@@ -141,7 +140,7 @@ describe("utils", () => {
         initialBalance: { amount: ["3", "9"] },
         processedDepositsA: "10",
         processedDepositsB: "9",
-        expected: { amount: ["10", "24"], totalDepositedA: "17", totalDepositedB: "24" },
+        expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
       },
       {
         name: "should work for both token deposit when onchain deposits were successful",
@@ -151,7 +150,7 @@ describe("utils", () => {
         processedDepositsA: "10",
         processedDepositsB: "9",
         assetId: mkAddress("0xdddd"),
-        expected: { amount: ["10", "24"], totalDepositedA: "17", totalDepositedB: "24" },
+        expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
       },
     ];
 

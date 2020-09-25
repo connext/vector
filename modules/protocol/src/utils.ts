@@ -120,7 +120,7 @@ export const reconcileDeposit = async (
   const totalDepositedB = totalDepositedBRes.getValue();
 
   // Now calculate the amount deposited that has not yet been reconciled
-  const depositsReconciled = [
+  const depositsToReconcile = [
     BigNumber.from(totalDepositedA).sub(processedDepositsA),
     BigNumber.from(totalDepositedB).sub(processedDepositsB),
   ];
@@ -131,10 +131,10 @@ export const reconcileDeposit = async (
     ...initialBalance,
     amount: [
       BigNumber.from(initialBalance.amount[0])
-        .add(depositsReconciled[0])
+        .add(depositsToReconcile[0])
         .toString(),
       BigNumber.from(initialBalance.amount[1])
-        .add(depositsReconciled[1])
+        .add(depositsToReconcile[1])
         .toString(),
     ],
   };
