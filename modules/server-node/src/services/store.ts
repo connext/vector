@@ -76,7 +76,7 @@ const convertChannelEntityToFullChannelState = (
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
           transferTimeout: channelEntity.latestUpdate.transferTimeout!,
           transferId: channelEntity.latestUpdate.transferId!,
-          transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
+          transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferInitialState: JSON.parse(channelEntity.latestUpdate.transferInitialState!),
         } as CreateUpdateDetails;
         break;
@@ -84,7 +84,7 @@ const convertChannelEntityToFullChannelState = (
         details = {
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
-          transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
+          transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferId: channelEntity.latestUpdate.transferId!,
           transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
         } as ResolveUpdateDetails;
@@ -150,7 +150,7 @@ const convertTransferEntityToFullTransferState = (
     },
     initialStateHash: transfer.initialStateHash,
     transferDefinition: transfer.createUpdate.transferDefinition!,
-    transferEncodings: transfer.createUpdate.transferEncodings!.split(","),
+    transferEncodings: transfer.createUpdate.transferEncodings!.split("$"),
     transferId: transfer.createUpdate.transferId!,
     transferState: JSON.parse(transfer.createUpdate.transferInitialState!),
     transferTimeout: transfer.createUpdate.transferTimeout!,
@@ -263,7 +263,7 @@ export class PrismaStore implements IVectorStore {
         merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
         transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
         transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
-          ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings)
+          ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
           : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
@@ -446,9 +446,7 @@ export class PrismaStore implements IVectorStore {
         },
       },
     });
-    console.log("transferEntities: ", transferEntities);
     const transfers = transferEntities.map(convertTransferEntityToFullTransferState);
-    console.log("transfers: ", transfers);
     return transfers;
   }
 

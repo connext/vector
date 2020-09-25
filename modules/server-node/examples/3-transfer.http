@@ -1,4 +1,5 @@
 @aliceUrl = http://localhost:8001
+@bobUrl = http://localhost:8002
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
 # 0.01 ETH
 @ethAmount = 1000000000000000
@@ -28,7 +29,7 @@ Content-Type: application/json
 ##############
 ### Resolve Transfer ETH
 ### Alice
-POST {{aliceUrl}}/linked-transfer/resolve
+POST {{bobUrl}}/linked-transfer/resolve
 Content-Type: application/json
 
 {
