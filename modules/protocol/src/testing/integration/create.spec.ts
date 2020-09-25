@@ -33,7 +33,6 @@ describe(testName, () => {
     // Set test constants
     const assetId = constants.AddressZero;
     const transferAmount = "7";
-
     const { channel, transfer } = await createTransfer(
       preCreateChannel.channelAddress,
       alice,
@@ -41,9 +40,8 @@ describe(testName, () => {
       assetId,
       transferAmount,
     );
-
-    const { ...toCompare } = transfer;
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { transferResolver, ...toCompare } = transfer;
     expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
     expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);

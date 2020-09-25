@@ -73,16 +73,11 @@ export class Vector implements IVectorProtocol {
     return this.signer.publicIdentifier;
   }
 
-  // Primary protocol execution from the leader side
-  private async executeUpdate(
+  // separate out this function so that we can atomically return and release the lock
+  private async lockedOperation(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
-    this.logger.info({ method: "executeUpdate", step: "start", params });
-
-    ////////////////////////////////////////
-    // LOCK ON
-    const key = await this.lockService.acquireLock(params.channelAddress);
-
+    // Send the update to counterparty
     const outboundRes = await sync.outbound(
       params,
       this.storeService,
@@ -105,11 +100,17 @@ export class Vector implements IVectorProtocol {
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
       updatedChannelState,
     });
+    return outboundRes;
+  }
 
+  // Primary protocol execution from the leader side
+  private async executeUpdate(
+    params: UpdateParams<any>,
+  ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+    this.logger.info({ method: "executeUpdate", step: "start", params });
+    const key = await this.lockService.acquireLock(params.channelAddress);
+    const outboundRes = await this.lockedOperation(params);
     await this.lockService.releaseLock(params.channelAddress, key);
-    // LOCK OFF
-    ////////////////////////////////////////
-
     return outboundRes;
   }
 

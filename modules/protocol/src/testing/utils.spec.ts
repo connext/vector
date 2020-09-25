@@ -73,23 +73,19 @@ describe("utils", () => {
         (prev, curr) => prev.add(curr),
         BigNumber.from(0),
       );
-
       // Creat the mock with defaults
       const onchain = Sinon.createStubInstance(VectorOnchainService);
       // set return values
       const mockedValues = {
         // Default the value onchain + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
-
-        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsA ? (processedDepositsA[0] || 0) : 0)),
-        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsB ? (processedDepositsB[0] || 0) : 0)),
-
+        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsA!)),
+        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add(processedDepositsB!)),
         ...stubs,
       };
       Object.entries(mockedValues).forEach(([method, stub]) => {
         onchain[method].resolves(stub);
       });
-
       // Return the onchain service
       return onchain;
     };
