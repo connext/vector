@@ -431,7 +431,7 @@ type GenerateUpdateTestParams = {
   resolveBalance?: Balance;
 };
 
-describe.only("generateUpdate", () => {
+describe("generateUpdate", () => {
   // FIXME: THESE ARE BLOCKING TESTS!
   it.skip("should fail if it fails parameter validation", () => {});
   it.skip("should fail if it is unable to reconcile the deposit", () => {});
