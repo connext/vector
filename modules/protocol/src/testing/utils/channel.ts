@@ -147,11 +147,8 @@ export const deployChannelWithDepositA = async (
   expect(deployedAddr).to.be.eq(channelAddress);
 
   // Verify onchain values updated
-  const latestDeposit = await new Contract(channelAddress, ChannelMastercopy.abi, alice).latestDepositByAssetId(
-    assetId,
-  );
-  expect(latestDeposit.nonce).to.be.eq(1);
-  expect(latestDeposit.amount).to.be.eq(depositAmount);
+  const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).totalDepositedA(assetId);
+  expect(totalDepositedA).to.be.eq(depositAmount);
 
   expect(await alice.provider!.getBalance(channelAddress)).to.be.eq(depositAmount.add(prev));
   return channelAddress;
@@ -183,23 +180,21 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
 
 export const depositAOnchain = async (
   channelAddress: string,
-  latestDepositNonce: number,
   depositorSigner: IChannelSigner,
   counterparty: IVectorProtocol,
   assetId: string = constants.AddressZero,
   amount: BigNumberish = 15,
 ): Promise<void> => {
   const value = BigNumber.from(amount);
-  if (latestDepositNonce === 0) {
-    // First node deposit, must deploy channel
-    // Deploy multisig with deposit
-    await deployChannelWithDepositA(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
-  } else {
-    // Call deposit on the multisig
+  // Call deposit on the multisig
+  try {
     const tx = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).depositA(assetId, value, {
       value,
     });
     await tx.wait();
+  } catch (e) {
+    // Assume this happened because it wasn't deployed
+    await deployChannelWithDepositA(channelAddress, value, assetId, depositorSigner, counterparty.signerAddress);
   }
 };
 
@@ -231,7 +226,7 @@ export const depositInChannel = async (
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
   if (isDepositA) {
-    await depositAOnchain(channelAddress, channel!.latestDepositNonce, depositorSigner, counterparty, assetId, amount);
+    await depositAOnchain(channelAddress, depositorSigner, counterparty, assetId, amount);
   } else {
     // Deposit onchain
     const tx =
@@ -250,27 +245,34 @@ export const depositInChannel = async (
   expect(ret.getError()).to.be.undefined;
 
   const postDeposit = ret.getValue()!;
-  expect(postDeposit.latestDepositNonce).to.be.eq(
-    isDepositA ? channel!.latestDepositNonce + 1 : channel!.latestDepositNonce,
-  );
   expect(postDeposit.assetIds).to.be.deep.eq([...new Set(channel!.assetIds.concat(assetId))]);
 
   const assetIdx = postDeposit!.assetIds.findIndex(a => a === assetId);
   const postDepositBal = postDeposit.balances[assetIdx];
-  const postDepositLocked = postDeposit.lockedBalance[assetIdx] || "0";
+
+  if (isDepositA) {
+    expect(value.add(channel!.processedDepositsA[assetIdx]).eq(BigNumber.from(postDeposit.processedDepositsA))).to.be
+      .true;
+  } else {
+    expect(value.add(channel!.processedDepositsB[assetIdx]).eq(BigNumber.from(postDeposit.processedDepositsB))).to.be
+      .true;
+  }
 
   // Make sure the onchain balance of the channel is equal to the
   // sum of the locked balance + channel balance
-  const channelTotal = BigNumber.from(postDepositLocked)
-    .add(postDepositBal.amount[0])
-    .add(postDepositBal.amount[1]);
 
-  const onchainTotal =
-    assetId === constants.AddressZero
-      ? await depositorSigner.provider!.getBalance(channelAddress)
-      : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
+  // TODO does this even make sense to do anymore?
 
-  expect(onchainTotal).to.be.eq(channelTotal);
+  // const totalDeposited = BigNumber.from(channel!.processedDepositsA[assetIdx]).add(
+  //   channel!.processedDepositsB[assetIdx],
+  // );
+
+  // const onchainTotal =
+  //   assetId === constants.AddressZero
+  //     ? await depositorSigner.provider!.getBalance(channelAddress)
+  //     : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
+
+  // expect(onchainTotal).to.be.eq(channelTotal);
   return postDeposit;
 };
 
