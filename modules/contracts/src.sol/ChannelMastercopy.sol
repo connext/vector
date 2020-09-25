@@ -23,8 +23,8 @@ contract ChannelMastercopy is IVectorChannel {
 
   mapping(bytes32 => bool) isExecuted;
 
-  mapping(address => uint256) internal _totalAmountDepositedA;
-  mapping(address => uint256) internal _totalAmountWithdrawn;
+  mapping(address => uint256) internal _totalDepositedA;
+  mapping(address => uint256) internal _totalWithdrawn;
 
   address[2] private _owners;
 
@@ -67,7 +67,7 @@ contract ChannelMastercopy is IVectorChannel {
       require(IERC20(assetId).transferFrom(msg.sender, address(this), amount), "oh no");
     }
     // NOTE: explicitly do NOT use safemath here
-    _totalAmountDepositedA[assetId] += amount;
+    _totalDepositedA[assetId] += amount;
   }
 
   // Workaround, because I was not able to convince the compiler
@@ -75,13 +75,13 @@ contract ChannelMastercopy is IVectorChannel {
   // auto-generated getter of an overriding state variable
   // if said variable is a mapping with a struct as value type.
   // In other words, I had to write the getter myself...
-  function totalAmountDepositedA(address assetId) public override view returns (uint256 memory) {
-    return _totalAmountDepositedA[assetId];
+  function totalDepositedA(address assetId) public override view returns (uint256) {
+    return _totalDepositedA[assetId];
   }
 
   // Calculated using invariant onchain properties. Note we DONT use safemath here
-  function totalAmountDepositedB(address assetId) public override view returns (uint256 memory) {
-    return getBalance(assetId) + _totalAmountWithdrawn[assetId] - _totalAmountDepositedA[assetId];
+  function totalDepositedB(address assetId) public override view returns (uint256) {
+    return getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedA[assetId];
   }
 
   function managedTransfer(Balance memory balances, address assetId) public override onlyFactory {
@@ -120,11 +120,11 @@ contract ChannelMastercopy is IVectorChannel {
       require(_owners[i] == transactionHash.verifyChannelMessage(signatures[i]), "Invalid signature");
     }
 
-    // Add to totalAmountWithdrawn
-    _totalAmountWithdrawn[assetId] += amount;
+    // Add to totalWithdrawn
+    _totalWithdrawn[assetId] += amount;
 
     // Then, execute the tx
-    if (assetId = address(0)) {
+    if (assetId == address(0)) {
       execute(recipient, amount, data);
     } else {
       execute(recipient, 0, data);
