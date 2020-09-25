@@ -101,44 +101,47 @@ export const reconcileDeposit = async (
   channelAddress: string,
   chainId: number,
   initialBalance: Balance,
-  latestDepositNonce: number,
-  lockedBalance: string,
+  processedDepositsA: string,
+  processedDepositsB: string,
   assetId: string,
   onchainService: IVectorOnchainService,
-): Promise<Result<{ balance: Balance; latestDepositNonce: number }, Error>> => {
-  const balanceRes = await onchainService.getChannelOnchainBalance(channelAddress, chainId, assetId);
-  if (balanceRes.isError) {
-    return Result.fail(balanceRes.getError()!);
+): Promise<Result<{ balance: Balance; totalDepositedA: string; totalDepositedB: string }, Error>> => {
+  // First get totalDepositedA and totalDepositedB
+  const totalDepositedARes = await onchainService.getTotalDepositedA(channelAddress, chainId, assetId);
+  if (totalDepositedARes.isError) {
+    return Result.fail(totalDepositedARes.getError());
   }
-  const onchainBalance = balanceRes.getValue();
+  const totalDepositedA = totalDepositedARes.getValue();
 
-  const latestDepositARes = await onchainService.getLatestDepositByAssetId(
-    channelAddress,
-    chainId,
-    assetId,
-    latestDepositNonce,
-  );
-  if (latestDepositARes.isError) {
-    return Result.fail(latestDepositARes.getError()!);
+  const totalDepositedBRes = await onchainService.getTotalDepositedB(channelAddress, chainId, assetId);
+  if (totalDepositedBRes.isError) {
+    return Result.fail(totalDepositedBRes.getError());
   }
-  const latestDepositA = latestDepositARes.getValue();
+  const totalDepositedB = totalDepositedBRes.getValue();
 
-  const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
-    ? latestDepositA.amount.add(initialBalance.amount[0])
-    : BigNumber.from(initialBalance.amount[0]);
+  // Now calculate the amount deposited that has not yet been reconciled
+  const depositsReconciled = [
+    BigNumber.from(totalDepositedA).sub(processedDepositsA),
+    BigNumber.from(totalDepositedB).sub(processedDepositsB),
+  ];
+
+  // Lastly, calculate the new balance
 
   const balance = {
     ...initialBalance,
     amount: [
-      balanceA.toString(),
-      BigNumber.from(onchainBalance)
-        .sub(balanceA.add(lockedBalance))
+      BigNumber.from(initialBalance.amount[0])
+        .add(depositsReconciled[0])
+        .toString(),
+      BigNumber.from(initialBalance.amount[1])
+        .add(depositsReconciled[1])
         .toString(),
     ],
   };
 
   return Result.ok({
     balance,
-    latestDepositNonce: latestDepositA.nonce.toNumber(),
+    totalDepositedA,
+    totalDepositedB,
   });
 };
