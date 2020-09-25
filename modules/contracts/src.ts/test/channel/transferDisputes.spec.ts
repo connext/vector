@@ -40,9 +40,7 @@ describe("Transfer Disputes", () => {
   });
 
   it.skip("should validate & store a new transfer dispute", async () => {
-    console.log(`Starting dispute`);
     const tx = await channel.disputeTransfer(transferState, merkleProof);
-    console.log(`Dispute started`);
     await tx.wait();
     const txReciept = await provider.getTransactionReceipt(tx.hash);
     const start = toBN(txReciept.blockNumber);

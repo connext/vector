@@ -164,7 +164,7 @@ export async function outbound(
     );
     return Result.ok({ ...updatedChannel, latestUpdate: counterpartyUpdate });
   } catch (e) {
-    console.log("e", e.message);
+    logger.error("e", e.message);
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SaveChannelFailed,

@@ -139,9 +139,14 @@ export const deployChannelWithDepositA = async (
       res(data);
     });
   });
-  const tx = await factory.createChannelAndDeposit(alice.address, bobAddr, assetId, depositAmount, {
-    value: depositAmount,
-  });
+  const tx = await factory.createChannelAndDeposit(
+    alice.address,
+    bobAddr,
+    chainId,
+    assetId,
+    depositAmount,
+    { value: depositAmount },
+  );
   await tx.wait();
   const deployedAddr = await created;
   expect(deployedAddr).to.be.eq(channelAddress);

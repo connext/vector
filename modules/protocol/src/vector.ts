@@ -241,14 +241,7 @@ export class Vector implements IVectorProtocol {
       );
     }
     const channelAddress = create2Res.getValue();
-    console.log("channelAddress: ", channelAddress);
-    const contractChannelAddress = await this.onchainService.getChannelAddress(
-      getSignerAddressFromPublicIdentifier(this.publicIdentifier),
-      getSignerAddressFromPublicIdentifier(params.counterpartyIdentifier),
-      params.networkContext.channelFactoryAddress,
-      params.networkContext.chainId,
-    );
-    console.log("contractChannelAddress: ", contractChannelAddress.getValue());
+    this.logger.info("channelAddress: ", channelAddress);
 
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"setup"> = {

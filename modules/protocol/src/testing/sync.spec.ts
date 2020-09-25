@@ -237,9 +237,7 @@ describe("outbound", () => {
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
     outboundValidationStub.resolves(Result.fail(error));
 
-    console.log("trying to call outbound...");
     const res = await outbound(params, store, chainService, messaging, signers[0], logger);
-    console.log("res", res);
     expect(res.getError()).to.be.deep.eq(error);
   });
 
