@@ -60,7 +60,7 @@ export class VectorEngine {
     const vector = await Vector.connect(
       messaging,
       lock,
-      store as IVectorStore,
+      store,
       signer,
       chainService,
       logger.child({ module: "VectorProtocol" }),
@@ -89,7 +89,7 @@ export class VectorEngine {
     const validate = ajv.compile(TAddress);
     const valid = validate(channelAddress);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
     const channel = await this.vector.getChannelState(channelAddress);
     return Result.ok(channel);
@@ -98,10 +98,10 @@ export class VectorEngine {
   private async getChannelStateByParticipants(
     params: EngineParams.GetChannelStateByParticipants,
   ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
-    const validate = ajv.compile(TAddress);
+    const validate = ajv.compile(EngineParams.GetChannelStateByParticipantsSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
     const channel = await this.vector.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
     return Result.ok(channel);
@@ -119,7 +119,7 @@ export class VectorEngine {
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     return this.vector.setup({
@@ -142,7 +142,7 @@ export class VectorEngine {
     const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     return this.vector.deposit(params);
@@ -154,7 +154,7 @@ export class VectorEngine {
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     const channel = await this.store.getChannelState(params.channelAddress);
@@ -182,7 +182,7 @@ export class VectorEngine {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
     const transfers = await this.store.getActiveTransfers(params.channelAddress);
     let transfer: FullTransferState | undefined;
@@ -212,7 +212,7 @@ export class VectorEngine {
     const validate = ajv.compile(EngineParams.WithdrawSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     const channel = await this.store.getChannelState(params.channelAddress);

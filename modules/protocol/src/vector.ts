@@ -16,7 +16,7 @@ import {
   OutboundChannelUpdateError,
   ProtocolParams,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress } from "@connext/vector-utils";
+import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import Ajv from "ajv";
 import { Evt } from "evt";
 import pino from "pino";
