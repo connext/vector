@@ -11,32 +11,33 @@ datasource db {
 
 model Balance {
   @@map(name: "balance")
-  participant    String
-  assetId        String
-  to             String
-  amount         String
-  Channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
-  channelAddress String
+  participant      String
+  assetId          String
+  to               String
+  amount           String
+  processedDeposit String
+  Channel          Channel @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress   String
   @@id([participant, channelAddress, assetId])
 }
 
 model Channel {
   @@map(name: "channel")
-  channelAddress                 String    @id
-  publicIdentifierA              String
-  publicIdentifierB              String
-  participantA                   String
-  participantB                   String
-  assetIds                       String
-  timeout                        String
-  nonce                          Int
-  merkleRoot                     String
-  balances                       Balance[]
-  channelFactoryAddress          String
+  channelAddress           String    @id
+  publicIdentifierA        String
+  publicIdentifierB        String
+  participantA             String
+  participantB             String
+  assetIds                 String
+  timeout                  String
+  nonce                    Int
+  merkleRoot               String
+  balances                 Balance[]
+  channelFactoryAddress    String
   channelMastercopyAddress String
-  chainId                        Int
-  providerUrl                    String
-  latestUpdate                   Update
+  chainId                  Int
+  providerUrl              String
+  latestUpdate             Update
 
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
@@ -65,6 +66,10 @@ model Update {
   signatureB String?
 
   // DETAILS
+  // deposit details
+  totalDepositedA String?
+  totalDepositedB String?
+
   // create details
   transferId           String?
   transferDefinition   String?

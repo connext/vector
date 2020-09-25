@@ -31,13 +31,17 @@ const convertChannelEntityToFullChannelState = (
   const assetIds = channelEntity!.assetIds ? channelEntity!.assetIds?.split(",") : [];
 
   // get balances and locked value for each assetId
+  const processedDepositsA: string[] = [];
+  const processedDepositsB: string[] = [];
   const balances: Balance[] = assetIds.map(assetId => {
     const balanceA = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantA,
     );
+    processedDepositsA.push(balanceA!.processedDeposit);
     const balanceB = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
+    processedDepositsB.push(balanceB!.processedDeposit);
     return {
       amount: [balanceA!.amount, balanceB!.amount],
       to: [balanceA!.to, balanceB!.to],
@@ -61,6 +65,8 @@ const convertChannelEntityToFullChannelState = (
         break;
       case "deposit":
         details = {
+          totalDepositedA: channelEntity.latestUpdate.totalDepositedA,
+          totalDepositedB: channelEntity.latestUpdate.totalDepositedB,
         } as DepositUpdateDetails;
         break;
       case "create":
@@ -76,7 +82,6 @@ const convertChannelEntityToFullChannelState = (
         break;
       case "resolve":
         details = {
-          merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
           transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
@@ -92,8 +97,8 @@ const convertChannelEntityToFullChannelState = (
     balances,
     channelAddress: channelEntity.channelAddress,
     merkleRoot: channelEntity.merkleRoot,
-    processedDepositsA: [],
-    processedDepositsB: [],
+    processedDepositsA,
+    processedDepositsB,
     networkContext: {
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
@@ -247,6 +252,9 @@ export class PrismaStore implements IVectorStore {
 
         // details
         // deposit
+        totalDepositedA: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositedA,
+        totalDepositedB: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositedB,
+
         // create transfer
         transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
@@ -331,12 +339,14 @@ export class PrismaStore implements IVectorStore {
                   participant: channelState.participants[0],
                   to: channelState.balances[index].to[0],
                   assetId,
+                  processedDeposit: channelState.processedDepositsA[index],
                 },
                 {
                   amount: channelState.balances[index].amount[1],
                   participant: channelState.participants[1],
                   to: channelState.balances[index].to[1],
                   assetId,
+                  processedDeposit: channelState.processedDepositsB[index],
                 },
               ];
             },
@@ -373,11 +383,13 @@ export class PrismaStore implements IVectorStore {
                     amount: channelState.balances[index].amount[0],
                     participant: channelState.participants[0],
                     to: channelState.balances[index].to[0],
+                    processedDeposit: channelState.processedDepositsA[index],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[0],
                     to: channelState.balances[index].to[0],
+                    processedDeposit: channelState.processedDepositsA[index],
                   },
                   where: {
                     participant_channelAddress_assetId: {
@@ -392,11 +404,13 @@ export class PrismaStore implements IVectorStore {
                     amount: channelState.balances[index].amount[1],
                     participant: channelState.participants[1],
                     to: channelState.balances[index].to[1],
+                    processedDeposit: channelState.processedDepositsB[index],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[1],
                     to: channelState.balances[index].to[1],
+                    processedDeposit: channelState.processedDepositsB[index],
                   },
                   where: {
                     participant_channelAddress_assetId: {

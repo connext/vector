@@ -14,15 +14,18 @@ import {
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
-console.log("env.sugarDaddy: ", env.sugarDaddy);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 
-describe("Duet Happy", () => {
+describe.only("Duet Happy", () => {
   let alice: { publicIdentifier: string; signerAddress: string };
   let bob: { publicIdentifier: string; signerAddress: string };
   before(async () => {
     alice = await getConfig(env.aliceUrl);
+    expect(alice.signerAddress).to.be.a("string");
+    expect(alice.publicIdentifier).to.be.a("string");
     bob = await getConfig(env.bobUrl);
+    expect(bob.signerAddress).to.be.a("string");
+    expect(bob.publicIdentifier).to.be.a("string");
 
     let tx = await wallet.sendTransaction({ to: alice.signerAddress, value: utils.parseEther("0.1") });
     await tx.wait();
@@ -38,9 +41,7 @@ describe("Duet Happy", () => {
     });
     expect(channel.channelAddress).to.be.ok;
     const aliceChannel = await getChannelState(env.aliceUrl, channel.channelAddress);
-    console.log("aliceChannel: ", aliceChannel);
     const bobChannel = await getChannelState(env.bobUrl, channel.channelAddress);
-    console.log("bobChannel: ", bobChannel);
     expect(aliceChannel).to.deep.eq(bobChannel);
   });
 

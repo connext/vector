@@ -16,10 +16,7 @@ describe("messaging", () => {
 
   beforeEach(async () => {
     signerA = getRandomChannelSigner();
-    console.log("signerA: ", signerA.publicIdentifier);
     signerB = getRandomChannelSigner();
-    console.log("signerB: ", signerB.publicIdentifier);
-    console.log("config.natsUrl: ", config.natsUrl);
     messagingA = new NatsMessagingService(
       {
         messagingUrl: config.natsUrl,

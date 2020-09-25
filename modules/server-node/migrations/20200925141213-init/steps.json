@@ -58,7 +58,7 @@
     {
       "tag": "CreateField",
       "model": "Balance",
-      "field": "lockedBalance",
+      "field": "processedDeposit",
       "type": "String",
       "arity": "Required"
     },
@@ -474,6 +474,20 @@
       "tag": "CreateField",
       "model": "Update",
       "field": "signatureB",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "totalDepositedA",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "totalDepositedB",
       "type": "String",
       "arity": "Optional"
     },
