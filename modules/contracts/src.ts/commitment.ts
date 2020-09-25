@@ -7,7 +7,7 @@ import { ChannelMastercopy } from "./artifacts";
 const { Interface, keccak256, solidityPack } = utils;
 
 export class WithdrawCommitment {
-  private initiatorSignature?: string;
+  private aliceSignature?: string;
   private responderSignature?: string;
 
   public constructor(
@@ -21,8 +21,8 @@ export class WithdrawCommitment {
 
   get signatures(): string[] {
     const sigs: string[] = [];
-    if (this.initiatorSignature) {
-      sigs.push(this.initiatorSignature);
+    if (this.aliceSignature) {
+      sigs.push(this.aliceSignature);
     }
     if (this.responderSignature) {
       sigs.push(this.responderSignature);
@@ -56,7 +56,7 @@ export class WithdrawCommitment {
       const hash = this.hashToSign();
       const recovered = await recoverAddressFromChannelMessage(hash, sig);
       if (recovered === this.participants[0]) {
-        this.initiatorSignature = sig;
+        this.aliceSignature = sig;
       } else if (recovered === this.participants[1]) {
         this.responderSignature = sig;
       } else {

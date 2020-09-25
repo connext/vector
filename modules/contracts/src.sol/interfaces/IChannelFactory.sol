@@ -13,20 +13,20 @@ interface IChannelFactory {
     function proxyCreationCode() external pure returns (bytes memory);
 
     function getChannelAddress(
-        address initiator,
-        address counterparty,
+        address alice,
+        address bob,
         uint256 chainId
     ) external view returns (address);
 
     function createChannel(
-        address initiator,
-        address counterparty,
+        address alice,
+        address bob,
         uint256 chainId
     ) external returns (IVectorChannel);
 
     function createChannelAndDeposit(
-        address initiator,
-        address counterparty,
+        address alice,
+        address bob,
         uint256 chainId,
         address assetId,
         uint256 amount

@@ -7,7 +7,7 @@ import {
   Result,
   OnchainError,
 } from "@connext/vector-types";
-import { BigNumber, constants, Contract, providers, utils } from "ethers";
+import { BigNumber, constants, Contract, providers } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import Pino from "pino";
 
@@ -176,7 +176,7 @@ export class VectorOnchainService implements IVectorOnchainService {
   }
 
   async getChannelAddress(
-    initiator: string,
+    alice: string,
     responder: string,
     channelFactoryAddress: string,
     chainId: number,
@@ -189,7 +189,7 @@ export class VectorOnchainService implements IVectorOnchainService {
 
     const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const derivedAddress = await vectorChannel.getChannelAddress(initiator, responder, chainId);
+      const derivedAddress = await vectorChannel.getChannelAddress(alice, responder, chainId);
       return Result.ok(derivedAddress);
     } catch (e) {
       return Result.fail(e);

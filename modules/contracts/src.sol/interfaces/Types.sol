@@ -14,7 +14,7 @@ struct LatestDeposit {
 }
 
 struct CoreChannelState {
-    Balance[] balances; // TODO index by assetId? // initiator, responder
+    Balance[] balances; // TODO index by assetId? // alice, bob
     uint256[] lockedBalance; // Indexed by assetId -- should always be changed in lockstep with transfers
     address[] assetIds;
     address channelAddress;
