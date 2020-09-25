@@ -293,7 +293,7 @@ const postLinkedTransferBodySchema = Type.Object({
   channelAddress: TAddress,
   amount: TIntegerString,
   assetId: TAddress,
-  preImage: TBytes32,
+  linkedHash: TBytes32,
   routingId: TBytes32,
   recipient: Type.Optional(TPublicIdentifier),
   recipientChainId: Type.Optional(TChainId),

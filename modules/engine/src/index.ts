@@ -148,7 +148,7 @@ export class VectorEngine {
     return this.vector.deposit(params);
   }
 
-  private async conditionalTransfer(
+  private async createTransfer(
     params: EngineParams.ConditionalTransfer,
   ): Promise<Result<FullChannelState, InvalidTransferType | OutboundChannelUpdateError>> {
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
@@ -165,11 +165,12 @@ export class VectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = convertConditionalTransferParams(params, this.signer, channel!);
+    const createResult = convertConditionalTransferParams(params, this.signer, channel!, this.chainAddresses);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
+    console.log("createParams: ", createParams);
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -178,7 +179,7 @@ export class VectorEngine {
     return Result.ok(res);
   }
 
-  private async resolveCondition(params: EngineParams.ResolveTransfer): Promise<Result<FullChannelState, Error>> {
+  private async resolveTransfer(params: EngineParams.ResolveTransfer): Promise<Result<FullChannelState, Error>> {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {

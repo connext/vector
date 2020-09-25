@@ -115,8 +115,8 @@ server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelState
     const res = await vectorEngine.request<"chan_getChannelStates">(params);
     return reply.status(200).send(res.map(chan => chan.channelAddress));
   } catch (e) {
-    logger.error({ message: e.message, stack: e.stack });
-    return reply.status(500).send({ message: e.message });
+    logger.error({ message: e.message, stack: e.stack, context: e.context });
+    return reply.status(500).send({ message: e.message, context: e.context });
   }
 });
 
@@ -133,8 +133,8 @@ server.post<{ Body: ServerNodeParams.Setup }>(
       const res = await vectorEngine.request<"chan_setup">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
   },
 );
@@ -175,8 +175,8 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
       const res = await vectorEngine.request<"chan_deposit">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
   },
 );
@@ -194,15 +194,15 @@ server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
       recipient: request.body.recipient,
       routingId: request.body.routingId,
       details: {
-        preImage: request.body.preImage,
+        linkedHash: request.body.linkedHash,
       },
-    } as any);
+    });
     try {
       const res = await vectorEngine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
   },
 );
