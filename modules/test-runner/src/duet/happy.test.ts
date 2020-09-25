@@ -16,7 +16,7 @@ const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
 const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 
-describe.only("Duet Happy", () => {
+describe("Duet Happy", () => {
   let alice: { publicIdentifier: string; signerAddress: string };
   let bob: { publicIdentifier: string; signerAddress: string };
   before(async () => {
@@ -45,7 +45,7 @@ describe.only("Duet Happy", () => {
     expect(aliceChannel).to.deep.eq(bobChannel);
   });
 
-  it.only("alice can deposit ETH into channel", async () => {
+  it("alice can deposit ETH into channel", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channel: FullChannelState = await getChannelStateByParticipants(env.aliceUrl, {
@@ -53,7 +53,6 @@ describe.only("Duet Happy", () => {
       bob: bob.publicIdentifier,
       chainId,
     });
-    console.log("channel: ", channel);
     const depositTx = await sendDepositTx(env.aliceUrl, {
       amount: depositAmt.toString(),
       assetId,
@@ -61,24 +60,21 @@ describe.only("Duet Happy", () => {
     });
 
     expect(depositTx.txHash).to.be.a("string");
-    const receipt = await provider.waitForTransaction(depositTx.txHash);
-    console.log("receipt: ", receipt);
+    await provider.waitForTransaction(depositTx.txHash);
 
     const deposit = await reconcileDeposit(env.aliceUrl, { assetId, channelAddress: channel.channelAddress });
-    console.log("deposit: ", deposit);
+    expect(deposit.channelAddress).to.be.a("string");
     const aliceChannel = await getChannelStateByParticipants(env.aliceUrl, {
       alice: alice.publicIdentifier,
       bob: bob.publicIdentifier,
       chainId,
     });
-    console.log("aliceChannel: ", aliceChannel);
 
     const bobChannel = await getChannelStateByParticipants(env.bobUrl, {
       alice: alice.publicIdentifier,
       bob: bob.publicIdentifier,
       chainId,
     });
-    console.log("bobChannel: ", bobChannel);
 
     expect(aliceChannel).to.deep.eq(bobChannel);
   });
