@@ -13,6 +13,7 @@ contract CMCWithdraw is CMCCore, ICMCWithdraw {
     using LibChannelCrypto for bytes32;
 
     mapping(bytes32 => bool) isExecuted;
+    mapping(address => uint256) internal _totalWithdrawn;
 
     /// @param recipient The address to which we're withdrawing funds to
     /// @param assetId The token address of the asset we're withdrawing (address(0)=eth)
@@ -29,33 +30,26 @@ contract CMCWithdraw is CMCCore, ICMCWithdraw {
         override
         onlyOnProxy
     {
+        // Replay protection
         bytes32 withdrawHash = keccak256(
-            abi.encodePacked(
-                recipient,
-                assetId,
-                amount,
-                nonce
-            )
+            abi.encodePacked(recipient, assetId, amount, nonce)
         );
-        require(
-            !isExecuted[withdrawHash],
-            "Transacation has already been executed"
-        );
+        require(!isExecuted[withdrawHash], "Transacation has already been executed");
         isExecuted[withdrawHash] = true;
+
+        // Validate signatures
         for (uint256 i = 0; i < participants.length; i++) {
             require(
                 participants[i] == withdrawHash.verifyChannelMessage(signatures[i]),
                 "CMCWithdraw: Invalid signature"
             );
         }
-        // TODO: update channel state?
-        // TODO: what if in dispute?
-        // TODO: update alice's balance onchain?
+
+        // Add to totalWithdrawn
+        _totalWithdrawn[assetId] += amount;
+
+        // Execute the withdraw
         if (assetId == address(0)) {
-            require(
-                address(this).balance >= amount,
-                "CMCWithdraw: insufficient balance"
-            );
             recipient.transfer(amount);
         } else {
             safeTransfer(assetId, recipient, amount);

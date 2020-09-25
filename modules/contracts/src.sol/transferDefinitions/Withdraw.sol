@@ -18,7 +18,7 @@ contract Withdraw is ITransferDefinition {
         bytes initiatorSignature;
         address[2] signers; // must be multisig participants with withdrawer at [0]
         bytes32 data;
-        bytes32 nonce; // included so that each withdraw commitment has a unique hash
+        uint256 nonce; // included so that each withdraw commitment has a unique hash
         uint256 fee;
     }
 
@@ -42,7 +42,7 @@ contract Withdraw is ITransferDefinition {
             "Cannot create withdraw with empty signers"
         );
         require(state.data != bytes32(0), "Cannot create withdraw with empty commitment data");
-        require(state.nonce != bytes32(0), "Cannot create withdraw with empty nonce");
+        require(state.nonce != uint256(0), "Cannot create withdraw with empty nonce");
         require(state.fee <= state.balance.amount[0], "Cannot create withdraw with fee greater than amount in balance");
         return true;
     }

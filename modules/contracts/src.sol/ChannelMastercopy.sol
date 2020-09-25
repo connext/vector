@@ -8,7 +8,6 @@ import "./CMCWithdraw.sol";
 import "./CMCDeposit.sol";
 import "./CMCAdjudicator.sol";
 
-
 /// @title Vector Channel
 /// @author Arjun Bhuptani <arjun@connext.network>
 /// @notice

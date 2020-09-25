@@ -7,9 +7,9 @@ import "./Types.sol";
 
 interface ICMCDeposit {
 
-    function getLatestDeposit(
-        address assetId
-    ) external view returns (LatestDeposit memory);
+    function totalDepositedA(address assetId) external view returns (uint256);
+
+    function totalDepositedB(address assetId) external view returns (uint256);
 
     function depositA(
         address assetId,

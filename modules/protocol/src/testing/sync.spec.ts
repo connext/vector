@@ -237,7 +237,9 @@ describe("outbound", () => {
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
     outboundValidationStub.resolves(Result.fail(error));
 
+    console.log("trying to call outbound...");
     const res = await outbound(params, store, chainService, messaging, signers[0], logger);
+    console.log("res", res);
     expect(res.getError()).to.be.deep.eq(error);
   });
 
@@ -343,8 +345,8 @@ describe("outbound", () => {
       const assetId = constants.AddressZero;
       const userBBalance = BigNumber.from(9);
       const missedUpdateNonce = 2;
-      const depositAmt = BigNumber.from(14);
-      const depositNonce = BigNumber.from(1);
+      const depositAAmt = BigNumber.from(14);
+      const depositANonce = BigNumber.from(1);
       const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
         channelAddress,
         details: { assetId },
@@ -352,9 +354,9 @@ describe("outbound", () => {
 
       beforeEach(() => {
         // Set the chain service mock
-        chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: depositNonce, amount: depositAmt }));
+        chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: depositANonce, amount: depositAAmt }));
 
-        chainService.getChannelOnchainBalance.resolves(Result.ok(userBBalance.add(depositAmt)));
+        chainService.getChannelOnchainBalance.resolves(Result.ok(userBBalance.add(depositAAmt)));
       });
 
       afterEach(() => {

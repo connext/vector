@@ -82,6 +82,50 @@ export class VectorOnchainService implements IVectorOnchainService {
     return Result.ok(latestDepositA);
   }
 
+  async getTotalDepositedA(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, OnchainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+    }
+
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+    let totalDepositedA: BigNumber;
+    try {
+      totalDepositedA = await channelContract.totalDepositedA(assetId);
+    } catch (e) {
+      // TODO: check for reason?
+      // Channel contract was not deployed, use 0 value
+      totalDepositedA = BigNumber.from(0);
+    }
+    return Result.ok(totalDepositedA);
+  }
+
+  async getTotalDepositedB(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, OnchainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+    }
+
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+    let totalDepositedB: BigNumber;
+    try {
+      totalDepositedB = await channelContract.totalDepositedB(assetId);
+    } catch (e) {
+      // TODO: check for reason?
+      // Channel contract was not deployed, use 0 value
+      totalDepositedB = BigNumber.from(0);
+    }
+    return Result.ok(totalDepositedB);
+  }
+
   async getChannelFactoryBytecode(
     channelFactoryAddress: string,
     chainId: number,

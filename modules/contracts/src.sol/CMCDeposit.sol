@@ -17,20 +17,23 @@ import "./CMCCore.sol";
 
 contract CMCDeposit is CMCCore, ICMCDeposit {
 
-    mapping(address => LatestDeposit) internal _latestDeposit;
+    mapping(address => uint256) internal _totalDepositedA;
 
     receive() external payable onlyOnProxy {}
 
-    function getLatestDeposit(
-        address assetId
-    )
-        public
-        override
-        view
-        onlyOnProxy
-        returns (LatestDeposit memory)
-    {
-        return _latestDeposit[assetId];
+    function getBalance(address assetId) public override view returns (uint256) {
+        return assetId == address(0)
+            ? address(this).balance
+            : IERC20(assetId).balanceOf(address(this));
+    }
+
+    function totalDepositedA(address assetId) public override view returns (uint256) {
+        return _totalDepositedA[assetId];
+    }
+
+    // Calculated using invariant onchain properties. Note we DONT use safemath here
+    function totalDepositedB(address assetId) public override view returns (uint256) {
+        return getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedA[assetId];
     }
 
     function depositA(
@@ -38,9 +41,8 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         uint256 amount
     )
         public
-        payable
         override
-        onlyOnProxy
+        payable
     {
         if (assetId == address(0)) {
             require(
@@ -53,8 +55,8 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
                 "ERC20: transferFrom failed"
             );
         }
-        _latestDeposit[assetId].amount = amount;
-        _latestDeposit[assetId].nonce++;
+        // NOTE: explicitly do NOT use safemath here
+        _totalDepositedA[assetId] += amount;
     }
 
 }
