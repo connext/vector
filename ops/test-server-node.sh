@@ -9,6 +9,8 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
+cmd="${1:-test}"
+
 ####################
 # Load env vars
 
@@ -55,6 +57,7 @@ database_image="${project}_database:$version"
 bash $root/ops/pull-images.sh $database_image > /dev/null
 
 pg_port="5432"
+nats_port="4222"
 
 ########################################
 # Global services / chain provider config
@@ -108,7 +111,7 @@ docker run \
   --env="VECTOR_CONTRACT_ADDRESSES=$VECTOR_CONTRACT_ADDRESSES" \
   --env="VECTOR_ENV=$VECTOR_ENV" \
   --env="VECTOR_LOG_LEVEL=$VECTOR_LOG_LEVEL" \
-  --env="VECTOR_NATS_SERVERS=$nats://nats:$nats_port" \
+  --env="VECTOR_NATS_SERVERS=nats://nats:$nats_port" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@${project}_database:$pg_port/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \
   --env="VECTOR_PORT=$node_port" \

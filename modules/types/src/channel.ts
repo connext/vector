@@ -28,7 +28,7 @@ export type DepositParams = {
 };
 
 export type CreateTransferParams = {
-  channelAddress: string;
+  channelAddress: string; // TODO: does this need to be in the details AND params?
   amount: string;
   assetId: string;
   transferDefinition: string;
@@ -39,7 +39,7 @@ export type CreateTransferParams = {
 };
 
 export type ResolveTransferParams = {
-  channelAddress: string;
+  channelAddress: string; // TODO: does this need to be in the details AND params?
   transferId: string;
   transferResolver: TransferResolver;
   meta?: any;
@@ -67,7 +67,6 @@ export type UpdateParams<T extends UpdateType> = {
   details: UpdateParamsMap[T];
 };
 
-// TODO update this in contracts
 export type Balance = {
   amount: string[];
   to: Address[];
@@ -75,13 +74,13 @@ export type Balance = {
 
 export const CoreChannelStateEncoding = tidy(`tuple(
   ${BalanceEncoding}[] balances,
-  uint256[] lockedBalance,
   address[] assetIds,
   address channelAddress,
-  address[] participants,
+  address[2] participants,
+  uint256[] processedDepositsA,
+  uint256[] processedDepositsB,
   uint256 timeout,
   uint256 nonce,
-  uint256 latestDepositNonce,
   bytes32 merkleRoot
 )`);
 
@@ -89,15 +88,15 @@ export const CoreChannelStateEncoding = tidy(`tuple(
 // participants array ordering (but value in `to` field may
 // not always be the participants addresses)
 export interface CoreChannelState {
-  channelAddress: Address;
-  participants: Address[]; // Signer keys
-  timeout: string;
-  balances: Balance[]; // Indexed by assetId
-  lockedBalance: string[]; // Indexed by assetId -- should always be changed in lockstep with transfers
   assetIds: Address[];
-  nonce: number;
-  latestDepositNonce: number;
+  balances: Balance[]; // Indexed by assetId
+  channelAddress: Address;
   merkleRoot: string;
+  nonce: number;
+  participants: Address[]; // Signer keys
+  processedDepositsA: string[]; // Indexed by assetId
+  processedDepositsB: string[]; // Indexed by assetId
+  timeout: string;
 }
 
 // Includes any additional info that doesn't need to be sent to chain
@@ -110,7 +109,7 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
 export interface ChannelCommitmentData {
   state: CoreChannelState;
   signatures: string[];
-  adjudicatorAddress: Address;
+  channelFactoryAddress: Address;
   chainId: number;
 }
 
@@ -125,7 +124,7 @@ export interface CoreTransferState {
 }
 
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
-  adjudicatorAddress: string; // networkContext?
+  channelFactoryAddress: string; // networkContext?
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: TransferStateMap[T];
@@ -135,7 +134,7 @@ export type FullTransferState<T extends TransferName = any> = CoreTransferState 
 
 export interface TransferCommitmentData {
   state: CoreTransferState;
-  adjudicatorAddress: Address;
+  channelFactoryAddress: Address;
   chainId: number;
   merkleProofData: string[];
 }
@@ -146,8 +145,7 @@ export type ChainAddresses = {
 
 export type ContractAddresses = {
   channelFactoryAddress: Address;
-  vectorChannelMastercopyAddress: Address;
-  adjudicatorAddress: Address;
+  channelMastercopyAddress: Address;
   linkedTransferDefinition?: Address;
   withdrawDefinition?: Address;
 };
@@ -199,7 +197,8 @@ export type ResolveUpdateDetails = {
 };
 
 export type DepositUpdateDetails = {
-  latestDepositNonce: number;
+  totalDepositedA: string;
+  totalDepositedB: string;
 };
 
 export type SetupUpdateDetails = {

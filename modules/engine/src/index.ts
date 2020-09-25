@@ -4,11 +4,6 @@ import {
   Address,
   ChainAddresses,
   ChainProviders,
-  ChannelUpdateError,
-  ConditionalTransferParams,
-  ConditionalTransferResponse,
-  ConditionalTransferType,
-  CreateTransferParams,
   FullChannelState,
   IChannelSigner,
   ILockService,
@@ -16,18 +11,14 @@ import {
   IVectorProtocol,
   IVectorStore,
   ProtocolEventName,
-  ResolveConditionParams,
-  ResolveTransferParams,
   Result,
-  TransferParams,
-  WithdrawParams,
-  SetupInput,
-  SetupInputSchema,
-  DepositInputSchema,
-  DepositInput,
-  RpcRequestInput,
-  EthAddressSchema,
   JsonRpcProvider,
+  EngineParams,
+  OutboundChannelUpdateError,
+  TAddress,
+  FullTransferState,
+  ChannelRpcMethods,
+  ChannelRpcMethodsResponsesMap,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -50,6 +41,7 @@ export class VectorEngine {
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: pino.BaseLogger,
+    private readonly signer: IChannelSigner,
   ) {}
 
   static async connect(
@@ -63,46 +55,81 @@ export class VectorEngine {
   ): Promise<VectorEngine> {
     const hydratedProviders = {};
     Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
-      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl, chainId);
+      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl);
     });
-    const chainService = new VectorOnchainService(hydratedProviders);
+    const chainService = new VectorOnchainService(hydratedProviders, logger.child({ module: "VectorOnchainService" }));
     const vector = await Vector.connect(
       messaging,
       lock,
-      store as IVectorStore,
+      store,
       signer,
       chainService,
       logger.child({ module: "VectorProtocol" }),
     );
-    const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger);
-    await engine.setupListeners();
-
-    // It should clean up unresolved transfers -- note, is there a way to just queue up calls here and return? That way we're not blocking startup?
-
-    // It should check to see if a deposit happened and automatically call the deposit protocol
+    const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger, signer);
+    await engine.setupListener();
     logger.info("Vector Engine connected 🚀!");
     return engine;
   }
 
-  public async setupListeners(): Promise<void> {
-    // return setupListeners();
+  private async setupListener(): Promise<void> {
+    // unlock transfer if encrypted preimage exists
+    this.vector.on(
+      ProtocolEventName.CHANNEL_UPDATE_EVENT,
+      data => {
+        if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
+        }
+      },
+      data => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
+    );
   }
 
-  public async setup(params: SetupInput): Promise<Result<any, ChannelUpdateError | Error>> {
-    const validate = ajv.compile(SetupInputSchema);
+  private async getChannelState(
+    channelAddress: Address,
+  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(TAddress);
+    const valid = validate(channelAddress);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const channel = await this.vector.getChannelState(channelAddress);
+    return Result.ok(channel);
+  }
+
+  private async getChannelStateByParticipants(
+    params: EngineParams.GetChannelStateByParticipants,
+  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(EngineParams.GetChannelStateByParticipantsSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const channel = await this.vector.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
+    return Result.ok(channel);
+  }
+
+  private async getChannelStates(): Promise<Result<FullChannelState[], Error | OutboundChannelUpdateError>> {
+    const channel = await this.vector.getChannelStates();
+    return Result.ok(channel);
+  }
+
+  private async setup(
+    params: EngineParams.Setup,
+  ): Promise<Result<FullChannelState, OutboundChannelUpdateError | Error>> {
+    this.logger.info({ params, method: "setup" }, "Method called");
+    const validate = ajv.compile(EngineParams.SetupSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     return this.vector.setup({
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
-        adjudicatorAddress: this.chainAddresses[params.chainId].adjudicatorAddress,
         linkedTransferDefinition: this.chainAddresses[params.chainId].linkedTransferDefinition,
         withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
-        vectorChannelMastercopyAddress: this.chainAddresses[params.chainId].vectorChannelMastercopyAddress,
+        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         chainId: params.chainId,
         providerUrl: this.chainProviders[params.chainId],
@@ -110,28 +137,96 @@ export class VectorEngine {
     });
   }
 
-  public async deposit(params: DepositInput): Promise<Result<FullChannelState, ChannelUpdateError | Error>> {
-    const validate = ajv.compile(DepositInputSchema);
+  private async deposit(
+    params: EngineParams.Deposit,
+  ): Promise<Result<FullChannelState, OutboundChannelUpdateError | Error>> {
+    const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     return this.vector.deposit(params);
   }
 
-  public async conditionalTransfer<T extends ConditionalTransferType = any>(
-    params: ConditionalTransferParams<T>,
-  ): Promise<Result<ConditionalTransferResponse, InvalidTransferType | ChannelUpdateError>> {
-    // TODO types
-    // TODO input validation
+  private async createTransfer(
+    params: EngineParams.ConditionalTransfer,
+  ): Promise<Result<FullChannelState, InvalidTransferType | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+
     const channel = await this.store.getChannelState(params.channelAddress);
     if (!channel) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = convertConditionalTransferParams(params, this.chainAddresses, channel!);
+    const createResult = convertConditionalTransferParams(params, this.signer, channel!, this.chainAddresses);
+    if (createResult.isError) {
+      return Result.fail(createResult.getError()!);
+    }
+    const createParams = createResult.getValue();
+    console.log("createParams: ", createParams);
+    const protocolRes = await this.vector.create(createParams);
+    if (protocolRes.isError) {
+      return Result.fail(protocolRes.getError()!);
+    }
+    const res = protocolRes.getValue();
+    return Result.ok(res);
+  }
+
+  private async resolveTransfer(params: EngineParams.ResolveTransfer): Promise<Result<FullChannelState, Error>> {
+    const validate = ajv.compile(EngineParams.ResolveTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+
+    // TODO: consider a store method to find active transfer by routingId
+    const transfers = await this.store.getActiveTransfers(params.channelAddress);
+    const transfer = transfers.find(instance => instance.meta.routingId === params.routingId);
+    if (!transfer) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+      );
+    }
+    // TODO validate that transfer hasn't already been resolved?
+
+    // First, get translated `create` params using the passed in conditional transfer ones
+    const resolveResult = convertResolveConditionParams(params, transfer!);
+    if (resolveResult.isError) {
+      return Result.fail(resolveResult.getError()!);
+    }
+    const resolveParams = resolveResult.getValue();
+    const protocolRes = await this.vector.resolve(resolveParams);
+    if (protocolRes.isError) {
+      return Result.fail(protocolRes.getError()!);
+    }
+    const res = protocolRes.getValue();
+    return Result.ok(res);
+  }
+
+  private async withdraw(params: EngineParams.Withdraw): Promise<Result<FullChannelState, Error>> {
+    const validate = ajv.compile(EngineParams.WithdrawSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+
+    const channel = await this.store.getChannelState(params.channelAddress);
+    if (!channel) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
+
+    // First, get translated `create` params from withdraw
+    const createResult = await convertWithdrawParams(params, this.signer, channel!);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -141,54 +236,21 @@ export class VectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    return Result.ok({ routingId: params.routingId });
-  }
 
-  public async getChannelState(channelAddress: Address): Promise<Result<FullChannelState, Error | ChannelUpdateError>> {
-    const validate = ajv.compile(EthAddressSchema);
-    const valid = validate(channelAddress);
-    if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
-    }
-    const channel = await this.store.getChannelState(channelAddress);
-    if (!channel) {
-      return Result.fail(new ChannelUpdateError(ChannelUpdateError.reasons.ChannelNotFound));
-    }
-    return Result.ok(channel);
-  }
+    // TODO should we wait for the resolve here?
 
-  public async resolveCondition(params: ResolveConditionParams): Promise<Result<any>> {
-    // TODO types
-    // TODO input validation
-
-    // First, get translated `resolve` params using the passed in resolve condition ones
-    const resolveParams: ResolveTransferParams = await convertResolveConditionParams(params);
-    return this.vector.resolve(resolveParams);
-  }
-
-  public async withdraw(params: WithdrawParams): Promise<Result<any>> {
-    // TODO types
-    // TODO input validation
-
-    const withdrawParams: CreateTransferParams = await convertWithdrawParams(params, this.chainAddresses);
-    return this.vector.create(withdrawParams);
-  }
-
-  public async transfer(params: TransferParams): Promise<Result<any>> {
-    // TODO input validation
-
-    // TODO convert this into linked transfer to recipient params in conditionalTransfer
-    let updatedParams;
-    return this.conditionalTransfer(updatedParams);
+    return Result.ok(res); // TODO what do we return here?
   }
 
   // JSON RPC interface -- this will accept:
   // - "vector_deposit"
   // - "vector_createTransfer"
   // - "vector_resolveTransfer"
-  // TODO add rpc request type
-  public async request(payload: RpcRequestInput): Promise<any> {
-    const validate = ajv.compile(DepositInputSchema);
+  public async request<T extends ChannelRpcMethods>(
+    payload: EngineParams.RpcRequest,
+  ): Promise<ChannelRpcMethodsResponsesMap[T]> {
+    this.logger.info({ payload, method: "request" }, "Method called");
+    const validate = ajv.compile(EngineParams.RpcRequestSchema);
     const valid = validate(payload);
     if (!valid) {
       // dont use result type since this could go over the wire

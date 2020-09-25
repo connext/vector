@@ -1,8 +1,11 @@
+import { constants } from "ethers";
+
 import { fund } from "../commands/fund";
 import { migrate } from "../commands/migrate";
 import { newToken } from "../commands/new-token";
 
-import { expect, provider } from "./utils";
+import { provider } from "./constants";
+import { expect } from "./utils";
 
 const addressBookPath = "/tmp/address-book.json";
 
@@ -10,7 +13,7 @@ describe("CLI", () => {
   const wallets = provider.getWallets();
 
   it("has a 'fund' command that runs without error", async () => {
-    const done = fund(wallets[0], wallets[1].address, "1");
+    const done = fund(wallets[0], wallets[1].address, "1", constants.AddressZero, true);
     await expect(done).to.be.fulfilled;
   });
 
@@ -20,7 +23,7 @@ describe("CLI", () => {
   });
 
   it("has a 'new-token' command that runs without error", async () => {
-    const done = newToken(wallets[0], addressBookPath);
+    const done = newToken(wallets[0], addressBookPath, false, true);
     return expect(done).to.be.fulfilled;
   });
 

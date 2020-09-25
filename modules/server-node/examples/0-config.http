@@ -1,5 +1,10 @@
 @aliceUrl = http://localhost:8001
 @bobUrl = http://localhost:8002
+@channelAddress = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+@adminToken = cxt1234
+@alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
+@bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@chainId = 1337
 
 ##############
 ### GET CONFIG
@@ -8,3 +13,45 @@ GET {{aliceUrl}}/config
 
 ### Bob
 GET {{bobUrl}}/config
+
+##############
+### GET CHANNELS
+### Alice
+GET {{aliceUrl}}/channel
+
+### Bob
+GET {{bobUrl}}/channel
+
+##############
+### GET CHANNEL
+### Alice
+GET {{aliceUrl}}/channel/{{channelAddress}}
+
+### Bob
+GET {{bobUrl}}/channel/{{channelAddress}}
+
+##############
+### GET CHANNEL BY PARTICIPANTS
+### Alice
+GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
+
+### Bob
+GET {{bobUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
+
+##############
+### CLEAR STORE
+### Alice
+POST {{aliceUrl}}/clear-store
+Content-Type: application/json
+
+{
+  "adminToken": "{{adminToken}}"
+}
+
+### Bob
+POST {{bobUrl}}/clear-store
+Content-Type: application/json
+
+{
+  "adminToken": "{{adminToken}}"
+}

@@ -106,6 +106,7 @@ else
   then webpack --config ops/webpack.config.js
   fi
 
+  set -o pipefail
   if [[ -n "`which pino-pretty`" ]]
   then mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target | pino-pretty --colorize
   else mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target

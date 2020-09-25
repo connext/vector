@@ -1,6 +1,28 @@
-import { IMessagingService, MessagingConfig } from "@connext/vector-types";
+import {
+  ChannelUpdate,
+  InboundChannelUpdateError,
+  IMessagingService,
+  MessagingConfig,
+  Result,
+  IChannelSigner,
+  OutboundChannelUpdateError,
+} from "@connext/vector-types";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 import { BaseLogger } from "pino";
+import axios, { AxiosResponse } from "axios";
+
+import { config } from "../config";
+
+export const getBearerTokenFunction = (signer: IChannelSigner) => async (): Promise<string> => {
+  const nonceResponse = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
+  const nonce = nonceResponse.data;
+  const sig = await signer.signMessage(nonce);
+  const verifyResponse: AxiosResponse<string> = await axios.post(`${config.authUrl}/auth`, {
+    sig,
+    userIdentifier: signer.publicIdentifier,
+  });
+  return verifyResponse.data;
+};
 
 export class NatsMessagingService implements IMessagingService {
   private connection: INatsService | undefined;
@@ -51,23 +73,119 @@ export class NatsMessagingService implements IMessagingService {
     }
   }
 
-  public async onReceive(subject: string, callback: (msg: any) => void): Promise<void> {
-    this.assertConnected();
-    await this.connection!.subscribe(`${subject}.>`, (msg: any, err?: any): void => {
-      if (err || !msg || !msg.data) {
-        this.log.error(`Encountered an error while handling callback for message ${msg}: ${err}`);
-      } else {
-        const data = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
-        this.log.debug(`Received message for ${subject}: ${JSON.stringify(data)}`);
-        callback(data);
-      }
-    });
+  async disconnect(): Promise<void> {
+    this.connection?.disconnect();
   }
 
-  public async send(to: string, msg: any): Promise<void> {
+  async sendProtocolMessage(
+    channelUpdate: ChannelUpdate<any>,
+    previousUpdate?: ChannelUpdate<any>,
+    timeout = 30_000,
+    numRetries = 0,
+  ): Promise<
+    Result<
+      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
+      OutboundChannelUpdateError | InboundChannelUpdateError
+    >
+  > {
     this.assertConnected();
-    this.log.debug(`Sending message to ${to}: ${JSON.stringify(msg)}`);
-    return this.connection!.publish(`${to}.${msg.from}`, JSON.stringify(msg));
+    try {
+      const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
+      const msgBody = JSON.stringify({
+        update: channelUpdate,
+        previousUpdate,
+      });
+      this.log.debug({ method: "sendProtocolMessage", msgBody }, "Sending message");
+      const msg = await this.connection!.request(subject, timeout, msgBody);
+      this.log.debug({ method: "sendProtocolMessage", msgBody, msg }, "Received response");
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        return Result.fail(
+          new InboundChannelUpdateError(
+            InboundChannelUpdateError.reasons.MessageFailed,
+            channelUpdate,
+            undefined,
+            parsedMsg.data.error,
+          ),
+        );
+      }
+      // TODO: validate message structure
+      return Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.update });
+    } catch (e) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.MessageFailed, channelUpdate, undefined, e),
+      );
+    }
+  }
+
+  async onReceiveProtocolMessage(
+    myPublicIdentifier: string,
+    callback: (
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    const subscriptionSubject = `${myPublicIdentifier}.>`;
+    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method: "onReceiveProtocolMessage", msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      if (err) {
+        callback(Result.fail(new InboundChannelUpdateError(err, msg.data.update)), from, msg.reply);
+      }
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      // TODO: validate msg structure
+      if (!parsedMsg.reply) {
+        return;
+      }
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        callback(Result.fail(parsedMsg.data.error), from, parsedMsg.reply);
+        return;
+      }
+      callback(
+        Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.previousUpdate }),
+        from,
+        parsedMsg.reply,
+      );
+    });
+    this.log.debug({ method: "onReceiveProtocolMessage", subject: subscriptionSubject }, `Subscription created`);
+  }
+
+  async respondToProtocolMessage(
+    inbox: string,
+    channelUpdate: ChannelUpdate<any>,
+    previousUpdate?: ChannelUpdate<any>,
+  ): Promise<void> {
+    this.assertConnected();
+    const subject = inbox;
+    this.log.debug(
+      { method: "respondToProtocolMessage", subject, channelUpdate, previousUpdate },
+      `Sending protocol response`,
+    );
+    await this.connection!.publish(
+      subject,
+      JSON.stringify({
+        update: channelUpdate,
+        previousUpdate,
+      }),
+    );
+  }
+
+  async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
+    this.assertConnected();
+    const subject = inbox;
+    this.log.debug({ method: "respondWithProtocolError", subject, error }, `Sending protocol error response`);
+    await this.connection!.publish(
+      subject,
+      JSON.stringify({
+        error,
+      }),
+    );
   }
 
   // Generic methods
@@ -103,7 +221,7 @@ export class NatsMessagingService implements IMessagingService {
   public async unsubscribe(subject: string): Promise<void> {
     this.assertConnected();
     const unsubscribeFrom = this.getSubjectsToUnsubscribeFrom(subject);
-    unsubscribeFrom.forEach((sub) => {
+    unsubscribeFrom.forEach(sub => {
       this.connection!.unsubscribe(sub);
     });
   }
@@ -122,9 +240,9 @@ export class NatsMessagingService implements IMessagingService {
     // `*` represents any set of characters
     // if no match for split, will return [subject]
     const substrsToMatch = subject.split(`>`)[0].split(`*`);
-    subscribedTo.forEach((subscribedSubject) => {
+    subscribedTo.forEach(subscribedSubject => {
       let subjectIncludesAllSubstrings = true;
-      substrsToMatch.forEach((match) => {
+      substrsToMatch.forEach(match => {
         if (!subscribedSubject.includes(match) && match !== ``) {
           subjectIncludesAllSubstrings = false;
         }

@@ -14,29 +14,33 @@ export const newToken = async (
   wallet: Wallet,
   addressBookPath: string,
   force = false,
+  silent = false,
 ): Promise<void> => {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const log = silent ? () => {} : console.log;
+
   const chainId = process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId;
   if (chainId === 1 && !force) {
-    console.log(`Will not deploy new token to mainnet`);
+    log(`Will not deploy new token to mainnet`);
     return;
   }
   const addressBook = getAddressBook(addressBookPath, chainId.toString());
   const savedAddress = addressBook.getEntry(name).address;
-  if (force || !(await isContractDeployed(name, savedAddress, addressBook, wallet.provider))) {
-    console.log(`Preparing to deploy new token to chain w id: ${chainId}\n`);
+  if (force || !(await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))) {
+    log(`Preparing to deploy new token to chain w id: ${chainId}\n`);
     const constructorArgs = [
       { name: "symbol", value: "TEST" },
       { name: "name", value: name },
     ];
-    const token = await deployContract(name, constructorArgs, wallet, addressBook);
-    console.log(`Success!`);
+    const token = await deployContract(name, constructorArgs, wallet, addressBook, silent);
+    log(`Success!`);
     await token.mint(wallet.address, initialSupply);
-    console.log(
+    log(
       `Minted ${utils.formatEther(initialSupply)} tokens & gave them all to ${wallet.address}`,
     );
   } else {
-    console.log(`Token is up to date, no action required`);
-    console.log(`Address: ${savedAddress}`);
+    log(`Token is up to date, no action required`);
+    log(`Address: ${savedAddress}`);
   }
 };
 
@@ -48,13 +52,15 @@ export const newTokenCommand = {
       .option("a", cliOpts.addressBook)
       .option("m", cliOpts.mnemonic)
       .option("p", cliOpts.ethProvider)
-      .option("f", cliOpts.force);
+      .option("f", cliOpts.force)
+      .option("s", cliOpts.silent);
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     await newToken(
       Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider)),
       argv.addressBook,
       argv.force,
+      argv.silent,
     );
   },
 };

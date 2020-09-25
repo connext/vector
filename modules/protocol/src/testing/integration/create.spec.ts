@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { expect, getTestLoggers } from "../utils";
-import { createTransfer, getFundedChannel } from "../utils/channel";
+import { createTransfer, expect, getFundedChannel, getTestLoggers } from "../utils";
 
 const testName = "Create Integrations";
 const { log } = getTestLoggers(testName);
@@ -33,7 +33,6 @@ describe(testName, () => {
     // Set test constants
     const assetId = constants.AddressZero;
     const transferAmount = "7";
-  
     const { channel, transfer } = await createTransfer(
       preCreateChannel.channelAddress,
       alice,
@@ -41,22 +40,18 @@ describe(testName, () => {
       assetId,
       transferAmount,
     );
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { transferResolver, ...toCompare } = transfer;
-
     expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
     expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
   });
 
-  // TODO: is this important at the protocol integration layer if it has
-  // no conception of what this means?
-  // Arjun: yes -- we don't need to care about the details themselves, but we do need to test
-  //        that creating works in *both directions* to test that the states are being formed
-  //        correctly. Similarly, for concurrent creates, we want to make sure that each transfer
-  //        is totally isolated.
-  it.skip("should work for Alice paying Bob", async () => {});
-  it.skip("should work for Bob paying Alice", async () => {});
+  it.skip("should work for alice creating transfer to bob", async () => {});
+  it.skip("should work for alice creating transfer out of channel", async () => {});
+  it.skip("should work for bob creating transfer to alice", async () => {});
+  it.skip("should work for bob creating transfer out of channel", async () => {});
   it.skip("should work for many concurrent transfers with multiple parties", async () => {});
+  it.skip("should work if channel is out of sync", async () => {});
 });

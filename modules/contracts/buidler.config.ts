@@ -1,5 +1,4 @@
-import { BuidlerConfig } from "@nomiclabs/buidler/config";
-import { usePlugin } from "@nomiclabs/buidler/config";
+import { BuidlerConfig, usePlugin } from "@nomiclabs/buidler/config";
 import { BigNumber } from "ethers";
 
 import * as packageJson from "./package.json";

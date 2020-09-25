@@ -1,52 +1,14 @@
-import * as evm from "@connext/pure-evm-wasm";
 import {
-  Contract,
   Balance,
   ChannelCommitmentData,
   FullChannelState,
   IChannelSigner,
-  CoreChannelState,
-  VectorChannelMessage,
-  VectorErrorMessage,
-  FullTransferState,
   IVectorOnchainService,
   Result,
 } from "@connext/vector-types";
-import { TransferDefinition } from "@connext/vector-contracts";
-import { BigNumber, Signer, utils } from "ethers";
-import { hashChannelCommitment } from "@connext/vector-utils";
+import { BigNumber } from "ethers";
+import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { Evt } from "evt";
-import pino from "pino";
-
-const { defaultAbiCoder } = utils;
-
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isChannelMessage(msg: any): msg is VectorChannelMessage {
-  if (msg?.error) return false;
-  if (!msg?.data?.update) return false;
-  return true;
-}
-
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isErrorMessage(msg: any): msg is VectorErrorMessage {
-  if (!msg?.error) return false;
-  if (msg?.data) return false;
-  return true;
-}
-
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function isChannelState(blob: any): blob is CoreChannelState {
-  if (!blob?.channelAddress) return false;
-  if (!blob?.participants) return false;
-  if (!blob?.timeout) return false;
-  if (!blob?.balances) return false;
-  if (!blob?.lockedBalance) return false;
-  if (!blob?.assetIds) return false;
-  if (typeof blob?.nonce !== "number") return false;
-  if (typeof blob?.latestDepositNonce !== "number") return false;
-  if (!blob?.merkleRoot) return false;
-  return true;
-}
 
 // Adds a handler to an evt instance and returns the result
 // based on the input arguments
@@ -58,17 +20,9 @@ export function addEvtHandler<T = any>(
 ): Evt<T> | Promise<T> {
   // NOTE: If this type is not an array with a length, then using
   // the spread operator will cause errors on the evt package
-  const attachArgs = [filter, timeout, callback].filter((x) => !!x) as [any, any, any];
+  const attachArgs = [filter, timeout, callback].filter(x => !!x) as [any, any, any];
   return evt.attach(...attachArgs);
 }
-
-// We might need to convert this file to JS...
-// https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
-export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
-  evm.exec(
-    Uint8Array.from(Buffer.from(bytecode.replace(/^0x/, ""), "hex")),
-    Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
-  );
 
 // This function signs the state after the update is applied,
 // not for the update that exists
@@ -77,121 +31,125 @@ export async function generateSignedChannelCommitment(
   signer: IChannelSigner,
   updateSignatures: string[],
 ): Promise<ChannelCommitmentData> {
-  const { publicIdentifiers, networkContext, ...core } = newState;
+  const { networkContext, ...core } = newState;
 
-  const unsigned = {
+  const unsigned: ChannelCommitmentData = {
     chainId: networkContext.chainId,
     state: core,
-    adjudicatorAddress: networkContext.adjudicatorAddress,
+    channelFactoryAddress: networkContext.channelFactoryAddress,
+    signatures: [],
   };
-  const filteredSigs = updateSignatures.filter((x) => !!x);
+  const filteredSigs = updateSignatures.filter(x => !!x);
   if (filteredSigs.length === 2) {
     // No need to sign, we have already signed
     return {
       ...unsigned,
-      signatures: filteredSigs,
+      signatures: updateSignatures,
     };
   }
 
   // Only counterparty has signed
   const [counterpartySignature] = filteredSigs;
-  const sig = await signer.signMessage(hashChannelCommitment({ ...unsigned, signatures: [] }));
-  const idx = publicIdentifiers.findIndex((p) => p === signer.publicIdentifier);
-  return {
+  const sig = await signer.signMessage(hashChannelCommitment(unsigned));
+  const idx = newState.participants.findIndex(p => p === signer.address);
+  const signed = {
     ...unsigned,
     signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
   };
+  return signed;
 }
 
-export const create = async (
-  transfer: FullTransferState,
-  signer: Signer,
-  bytecode?: string,
-  logger: pino.BaseLogger = pino(),
-): Promise<boolean> => {
-  const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
-  const contract = new Contract(transfer.transferId, TransferDefinition.abi, signer);
-  // TODO: use pure-evm
-  if (bytecode) {
-    try {
-      const data = contract.interface.encodeFunctionData("create", [encodedState]);
-      const output = await execEvmBytecode(bytecode, data);
-      return contract.interface.decodeFunctionResult("create", output)[0];
-    } catch (e) {
-      logger.debug(`Failed to create with pure-evm`, { error: e.message });
-    }
+// TODO: make a result type?
+export async function validateChannelUpdateSignatures(
+  state: FullChannelState,
+  updateSignatures: string[],
+  requiredSigners: 1 | 2 = 1,
+): Promise<string | undefined> {
+  const present = updateSignatures.filter(x => !!x).length;
+  if (present < requiredSigners) {
+    return `Only ${present}/${requiredSigners} signatures present`;
   }
-  return contract.create(encodedState);
-};
+  // generate the commitment
+  const { networkContext, ...core } = state;
+  const hash = hashChannelCommitment({
+    chainId: networkContext.chainId,
+    state: core,
+    channelFactoryAddress: networkContext.channelFactoryAddress,
+    signatures: [],
+  });
 
-export const resolve = async (
-  transfer: FullTransferState,
-  signer: Signer,
-  bytecode?: string,
-  logger: pino.BaseLogger = pino(),
-): Promise<Balance> => {
-  const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
-  const encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);
-  const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, signer);
-  if (bytecode) {
-    try {
-      const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);
-      const output = await execEvmBytecode(bytecode, data);
-      const ret = contract.interface.decodeFunctionResult("resolve", output)[0];
-      return {
-        to: ret.to,
-        amount: ret.amount,
-      };
-    } catch (e) {
-      logger.debug(`Failed to create with pure-evm`, { error: e.message });
-    }
-  }
-  const ret = await contract.resolve(encodedState, encodedResolver);
-  // NOTE: contract values are returned as an array type, so transform the
-  // returned value to the proper object
-  return {
-    to: ret.to,
-    amount: ret.amount.map((a) => a.toString()),
-  };
-};
+  const results = (
+    await Promise.all(
+      updateSignatures.map(async (sigToVerify, idx) => {
+        if (!sigToVerify) {
+          return undefined;
+        }
+        const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
+        if (!state.participants.includes(recovered)) {
+          return `Recovered ${recovered}, expected one of ${state.participants.toString()}`;
+        }
+        return recovered === state.participants[idx]
+          ? undefined
+          : `Recovered ${recovered}, expected ${state.participants[idx]}`;
+      }),
+    )
+  ).filter(x => !!x);
+  return results.length === 0 ? undefined : results.toString();
+}
 
 export const reconcileDeposit = async (
   channelAddress: string,
   chainId: number,
   initialBalance: Balance,
-  latestDepositNonce: number,
-  lockedBalance: string,
+  processedDepositA: string,
+  processedDepositB: string,
   assetId: string,
   onchainService: IVectorOnchainService,
-): Promise<Result<{ balance: Balance; latestDepositNonce: number }, Error>> => {
-  const balanceRes = await onchainService.getChannelOnchainBalance(channelAddress, chainId, assetId);
-  if (balanceRes.isError) {
-    return Result.fail(balanceRes.getError()!);
-  }
-  const onchainBalance = balanceRes.getValue();
-
-  const latestDepositARes = await onchainService.getLatestDepositByAssetId(
+): Promise<Result<{ balance: Balance; totalDepositedA: string; totalDepositedB: string }, Error>> => {
+  // First get totalDepositedA and totalDepositedB
+  const totalDepositedARes = await onchainService.getTotalDepositedA(
     channelAddress,
     chainId,
     assetId,
-    latestDepositNonce,
   );
-  if (latestDepositARes.isError) {
-    return Result.fail(latestDepositARes.getError()!);
+  if (totalDepositedARes.isError) {
+    return Result.fail(totalDepositedARes.getError()!);
   }
-  const latestDepositA = latestDepositARes.getValue();
+  const totalDepositedA = totalDepositedARes.getValue();
 
-  const balanceA = latestDepositA.nonce.gt(latestDepositNonce)
-    ? latestDepositA.amount.add(initialBalance.amount[0])
-    : BigNumber.from(initialBalance.amount[0]);
+  const totalDepositedBRes = await onchainService.getTotalDepositedB(
+    channelAddress,
+    chainId,
+    assetId,
+  );
+  if (totalDepositedBRes.isError) {
+    return Result.fail(totalDepositedBRes.getError()!);
+  }
+  const totalDepositedB = totalDepositedBRes.getValue();
+
+  // Now calculate the amount deposited that has not yet been reconciled
+  const depositsToReconcile = [
+    BigNumber.from(totalDepositedA).sub(processedDepositA),
+    BigNumber.from(totalDepositedB).sub(processedDepositB),
+  ];
+
+  // Lastly, calculate the new balance
 
   const balance = {
     ...initialBalance,
-    amount: [balanceA.toString(), BigNumber.from(onchainBalance).sub(balanceA.add(lockedBalance)).toString()],
+    amount: [
+      BigNumber.from(initialBalance.amount[0])
+        .add(depositsToReconcile[0])
+        .toString(),
+      BigNumber.from(initialBalance.amount[1])
+        .add(depositsToReconcile[1])
+        .toString(),
+    ],
   };
 
   return Result.ok({
     balance,
-    latestDepositNonce: latestDepositA.nonce.toNumber(),
+    totalDepositedA: totalDepositedA.toString(),
+    totalDepositedB: totalDepositedB.toString(),
   });
 };

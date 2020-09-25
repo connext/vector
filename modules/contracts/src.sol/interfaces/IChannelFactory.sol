@@ -3,6 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./IVectorChannel.sol";
+import "./Types.sol";
 
 
 interface IChannelFactory {
@@ -12,20 +13,25 @@ interface IChannelFactory {
     function proxyCreationCode() external pure returns (bytes memory);
 
     function getChannelAddress(
-        address initiator,
-        address responder
+        address alice,
+        address bob,
+        uint256 chainId
     ) external view returns (address);
 
     function createChannel(
-        address initiator,
-        address responder
+        address alice,
+        address bob,
+        uint256 chainId
     ) external returns (IVectorChannel);
 
     function createChannelAndDepositA(
-        address initiator,
-        address responder,
+        address alice,
+        address bob,
+        uint256 chainId,
         address assetId,
         uint256 amount
     ) external payable returns (IVectorChannel);
 
+
 }
+

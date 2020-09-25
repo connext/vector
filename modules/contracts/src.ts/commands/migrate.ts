@@ -10,7 +10,14 @@ import { isContractDeployed, deployContract } from "../deploy";
 const { EtherSymbol, Zero } = constants;
 const { formatEther } = utils;
 
-export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<void> => {
+export const migrate = async (
+  wallet: Wallet,
+  addressBookPath: string,
+  silent = false,
+): Promise<void> => {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const log = silent ? () => {} : console.log;
+
   ////////////////////////////////////////
   // Environment Setup
 
@@ -19,8 +26,8 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
   const nonce = await wallet.getTransactionCount();
   const providerUrl = (wallet.provider as providers.JsonRpcProvider).connection.url;
 
-  console.log(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
-  console.log(
+  log(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
+  log(
     `Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`,
   );
 
@@ -39,34 +46,31 @@ export const migrate = async (wallet: Wallet, addressBookPath: string): Promise<
     const savedAddress = addressBook.getEntry(name)["address"];
     if (
       savedAddress &&
-      (await isContractDeployed(name, savedAddress, addressBook, wallet.provider))
+      (await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))
     ) {
-      console.log(`${name} is up to date, no action required. Address: ${savedAddress}`);
+      log(`${name} is up to date, no action required. Address: ${savedAddress}`);
       return new Contract(savedAddress, artifacts[name].abi, wallet);
     } else {
-      return await deployContract(name, args || [], wallet, addressBook);
+      return await deployContract(name, args || [], wallet, addressBook, silent);
     }
   };
 
-  const adjudicator = await deployHelper("Adjudicator", []);
-  const mastercopy = await deployHelper("VectorChannel", []);
+  const mastercopy = await deployHelper("ChannelMastercopy", []);
   await deployHelper("ChannelFactory", [
     { name: "mastercopy", value: mastercopy.address },
-    { name: "adjudicator", value: adjudicator.address },
   ]);
 
   // Transfers
-  await deployHelper("TransferDefinition", []);
   await deployHelper("LinkedTransfer", []);
   await deployHelper("Withdraw", []);
 
   ////////////////////////////////////////
   // Print summary
 
-  console.log("\nAll done!");
+  log("\nAll done!");
   const spent = formatEther(balance.sub(await wallet.getBalance()));
   const nTx = (await wallet.getTransactionCount()) - nonce;
-  console.log(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);
+  log(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);
 };
 
 export const migrateCommand = {
@@ -76,15 +80,14 @@ export const migrateCommand = {
     return yargs
       .option("a", cliOpts.addressBook)
       .option("m", cliOpts.mnemonic)
-      .option("p", cliOpts.ethProvider);
+      .option("p", cliOpts.ethProvider)
+      .option("s", cliOpts.silent);
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
-    console.log(
-      `Migration started: ethprovider - ${argv.ethProvider} | addressBook - ${argv.addressBook}`,
-    );
     await migrate(
       Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider)),
       argv.addressBook,
+      argv.silent,
     );
   },
 };

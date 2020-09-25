@@ -11,35 +11,33 @@ datasource db {
 
 model Balance {
   @@map(name: "balance")
-  participant    String
-  assetId        String
-  to             String
-  amount         String
-  lockedBalance  String
-  Channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
-  channelAddress String
+  participant      String
+  assetId          String
+  to               String
+  amount           String
+  processedDeposit String
+  Channel          Channel @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress   String
   @@id([participant, channelAddress, assetId])
 }
 
 model Channel {
   @@map(name: "channel")
-  channelAddress                 String    @id
-  publicIdentifierA              String
-  publicIdentifierB              String
-  participantA                   String
-  participantB                   String
-  assetIds                       String
-  timeout                        String
-  nonce                          Int
-  latestDepositNonce             Int
-  merkleRoot                     String
-  balances                       Balance[]
-  channelFactoryAddress          String
-  vectorChannelMastercopyAddress String
-  adjudicatorAddress             String
-  chainId                        Int
-  providerUrl                    String
-  latestUpdate                   Update
+  channelAddress           String    @id
+  publicIdentifierA        String
+  publicIdentifierB        String
+  participantA             String
+  participantB             String
+  assetIds                 String
+  timeout                  String
+  nonce                    Int
+  merkleRoot               String
+  balances                 Balance[]
+  channelFactoryAddress    String
+  channelMastercopyAddress String
+  chainId                  Int
+  providerUrl              String
+  latestUpdate             Update
 
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
@@ -68,6 +66,10 @@ model Update {
   signatureB String?
 
   // DETAILS
+  // deposit details
+  totalDepositedA String?
+  totalDepositedB String?
+
   // create details
   transferId           String?
   transferDefinition   String?
@@ -80,9 +82,6 @@ model Update {
   // resolve details
   transferResolver String?
   merkleRoot       String?
-
-  // deposit details
-  latestDepositNonce Int?
 
   // setup inferred from channel params
 

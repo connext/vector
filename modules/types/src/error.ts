@@ -44,10 +44,10 @@ export type Values<E> = E[keyof E];
 export abstract class VectorError extends Error {
   // These will define the subclasses of errors.
   static readonly errors = {
-    ChannelUpdateError: "ChannelUpdateError",
-    DepositError: "DepositError",
-    UpdateValidationError: "UpdateValidationError",
-    OnchainTransactionError: "OnchainTransactionError",
+    OutboundChannelUpdateError: "OutboundChannelUpdateError",
+    InboundChannelUpdateError: "InboundChannelUpdateError",
+    OnchainError: "OnchainError",
+    ValidationError: "ValidationError",
     // etc.
   } as const;
 
@@ -56,67 +56,136 @@ export abstract class VectorError extends Error {
 
   constructor(
     public readonly message: Values<typeof VectorError.reasons>,
-    public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
-    public readonly state?: FullChannelState,
+    // public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
+    // public readonly state?: FullChannelState,
     public readonly context?: any,
   ) {
     super(message);
   }
 }
 
-// Thrown by the `generateUpdate`
-export class ChannelUpdateError extends VectorError {
-  readonly type = VectorError.errors.ChannelUpdateError;
+export class ValidationError extends VectorError {
+  readonly type = VectorError.errors.ValidationError;
 
-  // This is the message that will be thrown by the error
-  // and all other details will be logged
   static readonly reasons = {
-    InvalidParams: "Invalid params",
-    ApplyUpdateFailed: "Failed to apply update",
-    BadSignatures: "Could not recover signers",
-    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
-    StaleUpdateNonce: "Update does not progress state nonce",
-    StaleChannelNonce: "Stored nonce is stale for requested update",
-    MergeUpdateFailed: "Failed to merge update",
-    SaveChannelFailed: "Failed to save channel",
-    StaleChannelNonceNoUpdate: "Stored nonce is one behind, no latest update from counterparty",
-    MessageFailed: "Failed to send message",
-    TransferNotFound: "No transfer found in storage",
     BadUpdateType: "Unrecognized update type",
-    Create2Failed: "Failed to get create2 address",
+    ChannelAlreadySetup: "Channel is already setup",
+    ChannelNotFound: "No channel found in storage",
+    SetupTimeoutInvalid: "Provided state timeout is invalid",
+    TransferNotFound: "No transfer found in storage",
   } as const;
 
   constructor(
-    public readonly message: Values<typeof ChannelUpdateError.reasons>,
-    public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
-    public readonly state?: FullChannelState,
+    public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
+    public readonly params: UpdateParams<any> | ChannelUpdate<any>,
+    public readonly state?: FullChannelState<any>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
-    super(message, update, state, context);
+    super(message, context);
   }
 }
 
-// Thrown by validate.ts
-export class UpdateValidationError extends VectorError {
-  readonly type = VectorError.errors.UpdateValidationError;
+// Thrown by the protocol when initiating an update
+export class OutboundChannelUpdateError extends VectorError {
+  readonly type = VectorError.errors.OutboundChannelUpdateError;
 
-  // This is the message that will be thrown by the error
-  // and all other details will be logged
   static readonly reasons = {
-    DifferentChannelAddress: "Update has different channel address than state",
-    InvalidChannelAddress: "Channel address is not valid address",
-    DifferentIdentifiers: "Update has different identifiers than state", // See note in `processChannel`
-    StaleChannelNonce: "Nonce does not advance state",
-    InvalidAssetId: "AssetId is not valid address",
-    UnexpectedUpdateType: "Unexpected UpdateType in received update",
+    ApplyUpdateFailed: "Failed to apply update",
+    BadSignatures: "Could not recover signers",
+    BadUpdateType: "Unrecognized update type",
+    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
+    CounterpartyFailure: "Counterparty failed to apply update",
+    Create2Failed: "Failed to get create2 address",
+    InvalidParams: "Invalid params",
+    MessageFailed: "Failed to send message",
+    OutboundValidationFailed: "Requested update is invalid",
+    RestoreNeeded: "Channel too far out of sync, must be restored",
+    RegenerateUpdateFailed: "Failed to regenerate update after sync",
+    SaveChannelFailed: "Failed to save channel",
+    StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
+    StaleChannel: "Channel state is behind, cannot apply update",
+    SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
+    SyncFailure: "Failed to sync channel from counterparty update",
+    SyncValidationFailed: "Failed to validate update for sync",
+    TransferNotFound: "No transfer found in storage",
+  } as const;
+  
+  constructor(
+    public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
+    public readonly params: UpdateParams<any>,
+    public readonly state?: FullChannelState<any>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context?: any,
+  ) {
+    super(message, context);
+  }
+}
+
+// Thrown by the protocol when applying an update
+export class InboundChannelUpdateError extends VectorError {
+  readonly type = VectorError.errors.InboundChannelUpdateError;
+
+  static readonly reasons = {
+    ApplyUpdateFailed: "Failed to apply update",
+    BadSignatures: "Could not recover signers",
+    BadUpdateType: "Unrecognized update type",
+    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
+    DifferentIdentifiers: "Update changes channel publicIdentifiers",
+    DifferentChannelAddress: "Update changes channelAddress",
+    InboundValidationFailed: "Failed to validate incoming update",
+    InvalidAssetId: "Update `assetId` is invalid address",
+    InvalidChannelAddress: "Update `channelAddress` is invalid",
+    MergeUpdateFailed: "Failed to merge update",
+    MessageFailed: "Failed to send message",
+    RestoreNeeded: "Channel too far out of sync, must be restored",
+    StaleChannel: "Channel state is behind, cannot apply update",
+    StaleUpdate: "Update does not progress channel nonce",
+    StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
+    SaveChannelFailed: "Failed to save channel",
+    SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
+    SyncFailure: "Failed to sync channel from counterparty update",
+    TransferNotFound: "No transfer found in storage",
   } as const;
 
   constructor(
-    public readonly message: Values<typeof UpdateValidationError.reasons>,
+    public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
-    public readonly state?: FullChannelState,
-    public readonly context: any = undefined,
+    public readonly state?: FullChannelState<any>,
+    public readonly context?: any,
   ) {
-    super(message, update, state, context);
+    super(message, context);
   }
 }
+
+// Thrown by the `generateUpdate`
+// export class ChannelUpdateError extends VectorError {
+//   readonly type = VectorError.errors.ChannelUpdateError;
+
+//   // This is the message that will be thrown by the error
+//   // and all other details will be logged
+//   static readonly reasons = {
+//     InvalidParams: "Invalid params",
+//     ApplyUpdateFailed: "Failed to apply update",
+//     BadSignatures: "Could not recover signers",
+//     ChannelNotFound: "No channel found in storage", // See note in `processChannel`
+//     StaleUpdateNonce: "Update does not progress state nonce",
+//     StaleChannelNonce: "Stored nonce is stale for requested update",
+//     MergeUpdateFailed: "Failed to merge update",
+//     SaveChannelFailed: "Failed to save channel",
+//     StaleChannelNonceNoUpdate: "Stored nonce is one behind, no latest update from counterparty",
+//     MessageFailed: "Failed to send message",
+//     TransferNotFound: "No transfer found in storage",
+//     BadUpdateType: "Unrecognized update type",
+//     Create2Failed: "Failed to get create2 address",
+//   } as const;
+
+//   constructor(
+//     public readonly message: Values<typeof ChannelUpdateError.reasons>,
+//     public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
+//     public readonly state?: FullChannelState,
+//     public readonly context?: any,
+//   ) {
+//     super(message, update, state, context);
+//   }
+// }

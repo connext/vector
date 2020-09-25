@@ -20,6 +20,13 @@ export class MemoryStoreService implements IVectorStore {
     return Promise.resolve();
   }
 
+  clear(): Promise<void> {
+    this.channelStates.clear();
+    this.transfersInChannel.clear();
+    this.transfers.clear();
+    return Promise.resolve();
+  }
+
   getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
     const { state } = this.channelStates.get(channelAddress) ?? {};
     return Promise.resolve(state);
@@ -49,13 +56,16 @@ export class MemoryStoreService implements IVectorStore {
     transfer?: FullTransferState,
   ): Promise<void> {
     const existing = this.channelStates.get(channelState.channelAddress)?.state ?? channelState;
-    this.channelStates.set(channelState.channelAddress, { state: {
-      ...channelState,
-      channelAddress: existing.channelAddress,
-      publicIdentifiers: existing.publicIdentifiers,
-      participants: existing.participants,
-      networkContext: existing.networkContext,
-    }, commitment });
+    this.channelStates.set(channelState.channelAddress, {
+      state: {
+        ...channelState,
+        channelAddress: existing.channelAddress,
+        publicIdentifiers: existing.publicIdentifiers,
+        participants: existing.participants,
+        networkContext: existing.networkContext,
+      },
+      commitment,
+    });
     if (!transfer) {
       return Promise.resolve();
     }
@@ -74,8 +84,6 @@ export class MemoryStoreService implements IVectorStore {
       return Promise.resolve();
     }
 
-    // Otherwise, it is a `create` update, add to channel
-    this.transfers.set(transfer.transferId, transfer);
     this.transfersInChannel.set(channelState.channelAddress, [...activeTransfers, transfer.transferId]);
 
     return Promise.resolve();

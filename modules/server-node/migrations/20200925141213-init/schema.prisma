@@ -1,0 +1,116 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["connectOrCreate"]
+  binaryTargets   = ["native"]
+}
+
+datasource db {
+  provider = ["postgresql", "sqlite"]
+  url = "***"
+}
+
+model Balance {
+  @@map(name: "balance")
+  participant      String
+  assetId          String
+  to               String
+  amount           String
+  processedDeposit String
+  Channel          Channel @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress   String
+  @@id([participant, channelAddress, assetId])
+}
+
+model Channel {
+  @@map(name: "channel")
+  channelAddress           String    @id
+  publicIdentifierA        String
+  publicIdentifierB        String
+  participantA             String
+  participantB             String
+  assetIds                 String
+  timeout                  String
+  nonce                    Int
+  merkleRoot               String
+  balances                 Balance[]
+  channelFactoryAddress    String
+  channelMastercopyAddress String
+  chainId                  Int
+  providerUrl              String
+  latestUpdate             Update
+
+  @@unique([publicIdentifierA, publicIdentifierB, chainId])
+  @@unique([participantA, participantB, chainId])
+}
+
+model Update {
+  @@map(name: "update")
+  // COMMON PARAMS
+  channelAddress   String?
+  channel          Channel? @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddressId String // required for ID so that relation can be removed
+
+  fromIdentifier String
+  toIdentifier   String
+  type           String
+  nonce          Int
+
+  // balance
+  amountA String
+  amountB String
+  toA     String
+  toB     String
+
+  assetId    String
+  signatureA String?
+  signatureB String?
+
+  // DETAILS
+  // deposit details
+  totalDepositedA String?
+  totalDepositedB String?
+
+  // create details
+  transferId           String?
+  transferDefinition   String?
+  transferTimeout      String?
+  transferInitialState String? // JSON string
+  transferEncodings    String?
+  merkleProofData      String? // proofs.join(",")
+  meta                 String?
+
+  // resolve details
+  transferResolver String?
+  merkleRoot       String?
+
+  // setup inferred from channel params
+
+  // transfers are linked to a separate model
+  createdTransfer  Transfer? @relation("CreatedTransfer")
+  resolvedTransfer Transfer? @relation("ResolvedTransfer")
+
+  @@id([channelAddressId, nonce])
+}
+
+model Transfer {
+  @@map(name: "transfer")
+  routingId     String  @id
+  createUpdate  Update  @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
+  resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
+
+  // initial balance
+  initialAmountA String
+  initialAmountB String
+  initialToA     String
+  initialToB     String
+
+  initialStateHash String
+
+  // created will always exist
+  createUpdateChannelAddressId String
+  createUpdateNonce            Int
+
+  // resolved will not always exist
+  resolveUpdateChannelAddressId String?
+  resolveUpdateNonce            Int?
+}
