@@ -8,4 +8,5 @@ export const env = {
   logLevel: parseInt(process.env.VECTOR_LOG_LEVEL || "0", 10),
   natsUrl: process.env.VECTOR_NATS_URL || "http://nats:4222",
   nodeUrl: process.env.VECTOR_NODE_URL || "http://node:8000",
+  sugarDaddy: process.env.SUGAR_DADDY,
 };

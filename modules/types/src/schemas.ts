@@ -110,6 +110,12 @@ export namespace ProtocolParams {
 ////////////////////////////////////////
 // Engine API Parameter schemas
 
+const GetChannelStateByParticipantsParamsSchema = Type.Object({
+  alice: TPublicIdentifier,
+  bob: TPublicIdentifier,
+  chainId: TChainId,
+});
+
 const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   chainId: TChainId,
@@ -190,6 +196,9 @@ export namespace EngineParams {
   export const GetChannelStateSchema = TAddress;
   export type GetChannelState = Static<typeof GetChannelStateSchema>;
 
+  export const GetChannelStateByParticipantsSchema = GetChannelStateByParticipantsParamsSchema;
+  export type GetChannelStateByParticipants = Static<typeof GetChannelStateByParticipantsSchema>;
+
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
 
@@ -217,9 +226,19 @@ const getChannelStateResponseSchema = {
   200: Type.Any(),
 };
 
+// GET CHANNEL STATES
 const getChannelStatesResponseSchema = {
   200: Type.Array(TAddress),
 };
+
+// GET CHANNEL STATE BY PARTICIPANTS
+const getChannelStateByParticipantsParamsSchema = Type.Object({
+  alice: TPublicIdentifier,
+  bob: TPublicIdentifier,
+  chainId: TChainId,
+});
+
+const getChannelStateByParticipantsResponseSchema = getChannelStateResponseSchema;
 
 // GET CONFIG
 const getConfigResponseSchema = {
@@ -307,6 +326,9 @@ export namespace ServerNodeParams {
   export const GetChannelStateSchema = getChannelStateParamsSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema>;
 
+  export const GetChannelStateByParticipantsSchema = getChannelStateByParticipantsParamsSchema;
+  export type GetChannelStateByParticipants = Static<typeof GetChannelStateByParticipantsSchema>;
+
   export const SetupSchema = postSetupBodySchema;
   export type Setup = Static<typeof SetupSchema>;
 
@@ -328,6 +350,9 @@ export namespace ServerNodeResponses {
   export const GetChannelStateSchema = getChannelStateResponseSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;
 
+  export const GetChannelStateByParticipantsSchema = getChannelStateByParticipantsResponseSchema;
+  export type GetChannelStateByParticipants = Static<typeof GetChannelStateByParticipantsSchema["200"]>;
+
   export const GetChannelStatesSchema = getChannelStatesResponseSchema;
   export type GetChannelStates = Static<typeof GetChannelStatesSchema["200"]>;
 
@@ -341,7 +366,7 @@ export namespace ServerNodeResponses {
   export type Deposit = Static<typeof DepositSchema["200"]>;
 
   export const SendDepositTxSchema = postSendDepositTxResponseSchema;
-  export type SendDepositTx = Static<typeof SendDepositTxSchema>;
+  export type SendDepositTx = Static<typeof SendDepositTxSchema["200"]>;
 
   export const LinkedTransferSchema = postLinkedTransferResponseSchema;
   export type LinkedTransfer = Static<typeof LinkedTransferSchema["200"]>;

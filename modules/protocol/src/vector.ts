@@ -305,6 +305,18 @@ export class Vector implements IVectorProtocol {
     return this.storeService.getChannelState(channelAddress);
   }
 
+  public async getChannelStateByParticipants(
+    alice: string,
+    bob: string,
+    chainId: number,
+  ): Promise<FullChannelState | undefined> {
+    return this.storeService.getChannelStateByParticipants(
+      getSignerAddressFromPublicIdentifier(alice),
+      getSignerAddressFromPublicIdentifier(bob),
+      chainId,
+    );
+  }
+
   public async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
     return this.storeService.getTransferState(transferId);
   }

@@ -1,0 +1,84 @@
+import { FullChannelState } from "@connext/vector-types";
+import { Wallet, utils, constants, providers } from "ethers";
+
+import {
+  env,
+  expect,
+  getChannelState,
+  getChannelStateByParticipants,
+  getConfig,
+  reconcileDeposit,
+  sendDepositTx,
+  setupChannel,
+} from "../utils";
+
+const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
+console.log("env.sugarDaddy: ", env.sugarDaddy);
+const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
+
+describe("Duet Happy", () => {
+  let alice: { publicIdentifier: string; signerAddress: string };
+  let bob: { publicIdentifier: string; signerAddress: string };
+  before(async () => {
+    alice = await getConfig(env.aliceUrl);
+    bob = await getConfig(env.bobUrl);
+
+    let tx = await wallet.sendTransaction({ to: alice.signerAddress, value: utils.parseEther("0.1") });
+    await tx.wait();
+    tx = await wallet.sendTransaction({ to: bob.signerAddress, value: utils.parseEther("0.1") });
+    await tx.wait();
+  });
+
+  it("alice & bob should setup a channel", async () => {
+    const channel = await setupChannel(env.aliceUrl, {
+      chainId,
+      counterpartyIdentifier: bob.publicIdentifier,
+      timeout: "10000",
+    });
+    expect(channel.channelAddress).to.be.ok;
+    const aliceChannel = await getChannelState(env.aliceUrl, channel.channelAddress);
+    console.log("aliceChannel: ", aliceChannel);
+    const bobChannel = await getChannelState(env.bobUrl, channel.channelAddress);
+    console.log("bobChannel: ", bobChannel);
+    expect(aliceChannel).to.deep.eq(bobChannel);
+  });
+
+  it.only("alice can deposit ETH into channel", async () => {
+    const assetId = constants.AddressZero;
+    const depositAmt = utils.parseEther("0.01");
+    const channel: FullChannelState = await getChannelStateByParticipants(env.aliceUrl, {
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
+    console.log("channel: ", channel);
+    const depositTx = await sendDepositTx(env.aliceUrl, {
+      amount: depositAmt.toString(),
+      assetId,
+      channelAddress: channel.channelAddress,
+    });
+
+    expect(depositTx.txHash).to.be.a("string");
+    const receipt = await provider.waitForTransaction(depositTx.txHash);
+    console.log("receipt: ", receipt);
+
+    const deposit = await reconcileDeposit(env.aliceUrl, { assetId, channelAddress: channel.channelAddress });
+    console.log("deposit: ", deposit);
+    const aliceChannel = await getChannelStateByParticipants(env.aliceUrl, {
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
+    console.log("aliceChannel: ", aliceChannel);
+
+    const bobChannel = await getChannelStateByParticipants(env.bobUrl, {
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
+    console.log("bobChannel: ", bobChannel);
+
+    expect(aliceChannel).to.deep.eq(bobChannel);
+  });
+});

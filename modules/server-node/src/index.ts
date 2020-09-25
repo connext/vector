@@ -89,11 +89,31 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   },
 );
 
+server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
+  "/channel/:alice/:bob/:chainId",
+  // TODO: add response schema, if you set it as `Any` it doesn't work properly
+  //  might want to add the full channel state as a schema
+  { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
+  async (request, reply) => {
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
+    try {
+      const res = await vectorEngine.request<"chan_getChannelStateByParticipants">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Channel not found", alice: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
 server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelStatesSchema } }, async (request, reply) => {
   const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
   try {
     const res = await vectorEngine.request<"chan_getChannelStates">(params);
-    return reply.status(200).send(res.map((chan) => chan.channelAddress));
+    return reply.status(200).send(res.map(chan => chan.channelAddress));
   } catch (e) {
     logger.error({ message: e.message, stack: e.stack });
     return reply.status(500).send({ message: e.message });

@@ -20,6 +20,7 @@ else echo "Running in non-interactive mode"
 fi
 
 source $root/dev.env
+eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
 ########################################
 ## Launch test runner
@@ -33,6 +34,7 @@ fi
 common="$interactive $stack_env \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
   --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
+  --env=SUGAR_DADDY=\"$eth_mnemonic\" \
   --env=VECTOR_ALICE_URL=nats://alice:8000 \
   --env=VECTOR_AUTH_URL=nats://auth:5040 \
   --env=VECTOR_BOB_URL=nats://bob:8000 \

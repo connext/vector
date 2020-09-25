@@ -3,6 +3,7 @@ import { EngineParams } from "./schemas";
 
 export const ChannelRpcMethods = {
   chan_getChannelState: "chan_getChannelState",
+  chan_getChannelStateByParticipants: "chan_getChannelStateByParticipants",
   chan_getChannelStates: "chan_getChannelStates",
   chan_setup: "chan_setup",
   chan_deposit: "chan_deposit",
@@ -14,6 +15,7 @@ export type ChannelRpcMethods = typeof ChannelRpcMethods[keyof typeof ChannelRpc
 
 export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getChannelState]: EngineParams.GetChannelState;
+  [ChannelRpcMethods.chan_getChannelStateByParticipants]: EngineParams.GetChannelStateByParticipants;
   [ChannelRpcMethods.chan_getChannelStates]: undefined;
   [ChannelRpcMethods.chan_setup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_deposit]: EngineParams.Deposit;
@@ -24,6 +26,7 @@ export type ChannelRpcMethodsPayloadMap = {
 
 export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_getChannelState]: FullChannelState | undefined;
+  [ChannelRpcMethods.chan_getChannelStateByParticipants]: FullChannelState | undefined;
   [ChannelRpcMethods.chan_getChannelStates]: FullChannelState[];
   [ChannelRpcMethods.chan_setup]: FullChannelState;
   [ChannelRpcMethods.chan_deposit]: FullChannelState;

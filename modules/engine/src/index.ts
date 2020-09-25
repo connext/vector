@@ -75,17 +75,12 @@ export class VectorEngine {
     // unlock transfer if encrypted preimage exists
     this.vector.on(
       ProtocolEventName.CHANNEL_UPDATE_EVENT,
-      (data) => {
+      data => {
         if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
         }
       },
-      (data) => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
+      data => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
     );
-
-    // TODO: this subscription should be part of the MessagingService
-    this.messaging.subscribe(`${this.vector.publicIdentifier}.*.check-in`, async () => {
-      // pull channel out of subject
-    });
   }
 
   private async getChannelState(
@@ -97,6 +92,18 @@ export class VectorEngine {
       return Result.fail(new Error(validate.errors?.join()));
     }
     const channel = await this.vector.getChannelState(channelAddress);
+    return Result.ok(channel);
+  }
+
+  private async getChannelStateByParticipants(
+    params: EngineParams.GetChannelStateByParticipants,
+  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(TAddress);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.join()));
+    }
+    const channel = await this.vector.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
     return Result.ok(channel);
   }
 
@@ -179,7 +186,7 @@ export class VectorEngine {
     }
     const transfers = await this.store.getActiveTransfers(params.channelAddress);
     let transfer: FullTransferState | undefined;
-    transfers.find((instance) => instance.meta.routingId === params.routingId);
+    transfers.find(instance => instance.meta.routingId === params.routingId);
     if (!transfer) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
