@@ -2,7 +2,7 @@ import { env, expect, clearStore, getConfig, setupChannel } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 
-describe("Duet Setup", () => {
+describe.skip("Duet Setup", () => {
   beforeEach(async () => {
     await clearStore(env.aliceUrl);
     await clearStore(env.bobUrl);
