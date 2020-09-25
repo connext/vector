@@ -1,7 +1,7 @@
 @aliceUrl = http://localhost:8001
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
 # 0.01 ETH
-@ethAmount = 10000000000000000
+@ethAmount = 1000000000000000
 
 @preImage = 0x95e02c8389826c723217d30761cfac3e7bd76e6e4c2aa523213a6ddc67029e95
 @linkedHash = 0x7783846bebe64b2dbf16ca981d27a73ada4bc6976e5be3ef92f0057af8368ce1
@@ -11,7 +11,7 @@
 ##############
 ### Create Transfer ETH
 ### Alice
-POST {{aliceUrl}}/linked-transfer
+POST {{aliceUrl}}/linked-transfer/create
 Content-Type: application/json
 
 {
@@ -28,16 +28,11 @@ Content-Type: application/json
 ##############
 ### Resolve Transfer ETH
 ### Alice
-POST {{aliceUrl}}/resolve-transfer
+POST {{aliceUrl}}/linked-transfer/resolve
 Content-Type: application/json
 
 {
   "channelAddress": "{{aliceBobChannel}}",
-  "amount": "{{ethAmount}}",
-  "assetId": "0x0000000000000000000000000000000000000000" ,
-  "linkedHash": "{{linkedHash}}",
   "routingId": "{{routingId}}",
-  "meta": {
-    "hello": "world"
-  }
+  "preImage": "{{preImage}}"
 }

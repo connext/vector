@@ -89,16 +89,11 @@ export function convertResolveConditionParams(
     return Result.fail(new InvalidTransferType(params.conditionType));
   }
 
-  const meta = {
-    routingId,
-    meta: params.meta,
-  };
-
   return Result.ok({
     channelAddress,
     transferId: transfer.transferId,
     transferResolver,
-    meta,
+    routingId,
   });
 }
 

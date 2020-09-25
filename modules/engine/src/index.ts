@@ -185,9 +185,10 @@ export class VectorEngine {
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
+
+    // TODO: consider a store method to find active transfer by routingId
     const transfers = await this.store.getActiveTransfers(params.channelAddress);
-    let transfer: FullTransferState | undefined;
-    transfers.find(instance => instance.meta.routingId === params.routingId);
+    const transfer = transfers.find(instance => instance.meta.routingId === params.routingId);
     if (!transfer) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),

@@ -446,7 +446,10 @@ export class PrismaStore implements IVectorStore {
         },
       },
     });
-    return transferEntities.map(convertTransferEntityToFullTransferState);
+    console.log("transferEntities: ", transferEntities);
+    const transfers = transferEntities.map(convertTransferEntityToFullTransferState);
+    console.log("transfers: ", transfers);
+    return transfers;
   }
 
   async getTransferState(transferId: string): Promise<FullTransferState | undefined> {

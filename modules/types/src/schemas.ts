@@ -155,7 +155,6 @@ const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema])
 const SharedResolveTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
-  meta: Type.Any(),
 });
 
 const ResolveLinkedTransferParamsSchema = Type.Intersect([
@@ -304,6 +303,19 @@ const postLinkedTransferBodySchema = Type.Object({
 const postLinkedTransferResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
+    routingId: TBytes32,
+  }),
+};
+
+const postResolveLinkedTransfer = Type.Object({
+  channelAddress: TAddress,
+  routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
+  preImage: TBytes32,
+});
+
+const postResolveLinkedTransferResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
   }),
 };
 
@@ -341,6 +353,9 @@ export namespace ServerNodeParams {
   export const LinkedTransferSchema = postLinkedTransferBodySchema;
   export type LinkedTransfer = Static<typeof LinkedTransferSchema>;
 
+  export const ResolveLinkedTransferSchema = postResolveLinkedTransfer;
+  export type ResolveLinkedTransfer = Static<typeof ResolveLinkedTransferSchema>;
+
   export const AdminSchema = postAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
 }
@@ -370,6 +385,9 @@ export namespace ServerNodeResponses {
 
   export const LinkedTransferSchema = postLinkedTransferResponseSchema;
   export type LinkedTransfer = Static<typeof LinkedTransferSchema["200"]>;
+
+  export const ResolveLinkedTransferSchema = postResolveLinkedTransferResponseSchema;
+  export type ResolveLinkedTransfer = Static<typeof ResolveLinkedTransferSchema["200"]>;
 
   export const AdminSchema = postAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;
