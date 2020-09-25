@@ -65,7 +65,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDeposit(
+      .createChannelAndDepositA(
         alice.address,
         bob.address,
         chainId,

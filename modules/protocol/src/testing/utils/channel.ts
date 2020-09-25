@@ -1,4 +1,4 @@
-import { ChannelFactory, TestToken, ChannelMastercopy, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelFactory, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import {
   Contract,
   FullChannelState,
@@ -110,6 +110,7 @@ export const depositInChannel = async (
 ): Promise<FullChannelState<any>> => {
   // If amount is not supplied, simply reconcile
   // deposits immediately
+  console.log(`Depositing ${amount} ${assetId} into channel ${channelAddress}`);
   if (!amount) {
     const ret = await depositor.deposit({
       assetId,
@@ -129,15 +130,19 @@ export const depositInChannel = async (
     const value = BigNumber.from(amount);
     // Call deposit on the multisig
     try {
-      const tx = await (
-        new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner)
-      ).depositA(
+      const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
+      const totalDepositedA = await channel.totalDepositedA(assetId);
+      const tx = await channel.depositA(
         assetId,
         value,
         { value },
       );
       await tx.wait();
+      console.log(`Deposit mined, hopefully it worked`);
+      expect(await channel.totalDepositedA(assetId)).to.equal(totalDepositedA.add(value));
+      console.log(`Cool, so far so good`);
     } catch (e) {
+      console.log(`Oh no looks like the channel isn't deployed yet`);
       // Assume this happened because it wasn't deployed
       await depositorSigner.connectProvider(provider);
       // Get the previous balance before deploying
@@ -145,24 +150,38 @@ export const depositInChannel = async (
         assetId === constants.AddressZero
           ? await depositorSigner.provider!.getBalance(channelAddress)
           : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-      // Deploy with deposit
-      const factory = new Contract(env.chainAddresses[chainId].ChannelFactory.address, ChannelFactory.abi, depositorSigner);
+      console.log(`Creating contract`);
+      const factory = new Contract(
+        env.chainAddresses[chainId].ChannelFactory.address,
+        ChannelFactory.abi,
+        depositorSigner,
+      );
+      console.log(`Creating listener`);
       const created = new Promise<string>(res => {
         factory.once(factory.filters.ChannelCreation(), data => {
           res(data);
         });
       });
-      const tx = await factory.createChannelAndDepositA(depositorSigner.address, counterparty.address, assetId, value, {
+      console.log(`sending tx`);
+      const tx = await factory.createChannelAndDepositA(
+        depositorSigner.address,
+        counterparty.signerAddress,
+        chainId,
+        assetId,
         value,
-      });
+        { value },
+      );
+      console.log(`waiting for tx to get mined`);
       await tx.wait();
+      console.log(`noice!`);
       const deployedAddr = await created;
       expect(deployedAddr).to.be.eq(channelAddress);
       // Verify onchain values updated
-      const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, depositorSigner).totalDepositedA(assetId);
+      const totalDepositedA = await (
+        new Contract(channelAddress, VectorChannel.abi, depositorSigner)
+      ).totalDepositedA(assetId);
       expect(totalDepositedA).to.be.eq(value);
       expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
-      return channelAddress;
     }
   } else {
     // Deposit onchain

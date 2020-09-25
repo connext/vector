@@ -20,6 +20,8 @@ import {
 import { BigNumberish, constants } from "ethers";
 
 import { env } from "../env";
+import { chainId } from "../constants";
+
 import { expect } from "./expect";
 
 // Will create a linked transfer in the channel, and return the full

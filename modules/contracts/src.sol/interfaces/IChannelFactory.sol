@@ -24,7 +24,7 @@ interface IChannelFactory {
         uint256 chainId
     ) external returns (IVectorChannel);
 
-    function createChannelAndDeposit(
+    function createChannelAndDepositA(
         address alice,
         address bob,
         uint256 chainId,

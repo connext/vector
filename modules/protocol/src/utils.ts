@@ -101,8 +101,8 @@ export const reconcileDeposit = async (
   channelAddress: string,
   chainId: number,
   initialBalance: Balance,
-  processedDepositsA: string,
-  processedDepositsB: string,
+  processedDepositA: string,
+  processedDepositB: string,
   assetId: string,
   onchainService: IVectorOnchainService,
 ): Promise<Result<{ balance: Balance; totalDepositedA: string; totalDepositedB: string }, Error>> => {
@@ -116,6 +116,7 @@ export const reconcileDeposit = async (
     return Result.fail(totalDepositedARes.getError()!);
   }
   const totalDepositedA = totalDepositedARes.getValue();
+  console.log(`totalDepositedA: ${totalDepositedA}`);
 
   const totalDepositedBRes = await onchainService.getTotalDepositedB(
     channelAddress,
@@ -126,11 +127,12 @@ export const reconcileDeposit = async (
     return Result.fail(totalDepositedBRes.getError()!);
   }
   const totalDepositedB = totalDepositedBRes.getValue();
+  console.log(`totalDepositedB: ${totalDepositedB}`);
 
   // Now calculate the amount deposited that has not yet been reconciled
   const depositsToReconcile = [
-    BigNumber.from(totalDepositedA).sub(processedDepositsA),
-    BigNumber.from(totalDepositedB).sub(processedDepositsB),
+    BigNumber.from(totalDepositedA).sub(processedDepositA),
+    BigNumber.from(totalDepositedB).sub(processedDepositB),
   ];
 
   // Lastly, calculate the new balance
