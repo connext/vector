@@ -141,19 +141,16 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
         );
         // TODO SECURITY: Beware of reentrancy
         // TODO: keep this? offchain code has to ensure this
+        // TODO: compare against saved deposit values?
         assert(ccs.balances.length == ccs.lockedBalance.length && ccs.balances.length == ccs.assetIds.length);
         for (uint256 i = 0; i < ccs.balances.length; i++) {
             Balance memory balance = ccs.balances[i];
             uint256 lockedBalance = ccs.lockedBalance[i];
             address assetId = ccs.assetIds[i];
-            LatestDeposit memory latestDeposit = getLatestDeposit(assetId);
             Balance memory transfer;
             transfer.to[0] = balance.to[0];
             transfer.to[1] = balance.to[1];
             transfer.amount[0] = balance.amount[0];
-            if (latestDeposit.nonce > ccs.latestDepositNonce) {
-                transfer.amount[0] = transfer.amount[0].add(latestDeposit.amount);
-            }
             transfer.amount[1] = getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
             transferAsset(transfer, assetId);
         }
@@ -320,18 +317,6 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     }
 
     // TODO: Asset library
-
-    function getBalance(
-        address assetId
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        return assetId == address(0) ?
-            address(this).balance :
-            IERC20(assetId).balanceOf(address(this));
-    }
 
     function transferAsset(
         Balance memory balances,

@@ -93,8 +93,8 @@ describe("ChannelFactory", () => {
     const code = await provider.getCode(channelAddress);
     expect(code).to.not.be.eq("0x");
 
-    const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, deployer).totalDepositedA(
-      constants.AddressZero,
+    const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).totalDepositedA(
+      addressZero,
     );
     expect(totalDepositedA).to.be.eq(value);
   });

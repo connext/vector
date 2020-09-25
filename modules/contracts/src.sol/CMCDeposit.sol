@@ -17,8 +17,6 @@ import "./CMCCore.sol";
 
 contract CMCDeposit is CMCCore, ICMCDeposit {
 
-    mapping(address => uint256) internal _totalDepositedA;
-
     receive() external payable onlyOnProxy {}
 
     function getBalance(address assetId) public override view returns (uint256) {
@@ -43,6 +41,7 @@ contract CMCDeposit is CMCCore, ICMCDeposit {
         public
         override
         payable
+        onlyOnProxy
     {
         if (assetId == address(0)) {
             require(

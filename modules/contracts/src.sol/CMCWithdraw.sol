@@ -13,7 +13,6 @@ contract CMCWithdraw is CMCCore, ICMCWithdraw {
     using LibChannelCrypto for bytes32;
 
     mapping(bytes32 => bool) isExecuted;
-    mapping(address => uint256) internal _totalWithdrawn;
 
     /// @param recipient The address to which we're withdrawing funds to
     /// @param assetId The token address of the asset we're withdrawing (address(0)=eth)
