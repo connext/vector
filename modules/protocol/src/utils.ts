@@ -109,13 +109,13 @@ export const reconcileDeposit = async (
   // First get totalDepositedA and totalDepositedB
   const totalDepositedARes = await onchainService.getTotalDepositedA(channelAddress, chainId, assetId);
   if (totalDepositedARes.isError) {
-    return Result.fail(totalDepositedARes.getError());
+    return Result.fail(totalDepositedARes.getError()!);
   }
   const totalDepositedA = totalDepositedARes.getValue();
 
   const totalDepositedBRes = await onchainService.getTotalDepositedB(channelAddress, chainId, assetId);
   if (totalDepositedBRes.isError) {
-    return Result.fail(totalDepositedBRes.getError());
+    return Result.fail(totalDepositedBRes.getError()!);
   }
   const totalDepositedB = totalDepositedBRes.getValue();
 
@@ -141,7 +141,7 @@ export const reconcileDeposit = async (
 
   return Result.ok({
     balance,
-    totalDepositedA,
-    totalDepositedB,
+    totalDepositedA: totalDepositedA.toString(),
+    totalDepositedB: totalDepositedB.toString(),
   });
 };
