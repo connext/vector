@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_proxy:latest"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_proxy:latest"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -38,9 +38,10 @@ default: node
 global: auth ethprovider
 node: global database proxy server-node
 duet: global database server-node
+router: global database server-node router
 extras: test-runner
 
-all: node global duet extras
+all: node global duet extras router
 
 ########################################
 # Command & Control Shortcuts
@@ -243,6 +244,17 @@ server-node: server-node-bundle $(shell find modules/server-node/ops $(find_opti
 	$(log_start)
 	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
 	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+router-bundle: engine $(shell find modules/router $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/router && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+router: router-bundle $(shell find modules/router/ops $(find_options))
+	$(log_start)
+	docker build --file modules/router/ops/Dockerfile $(image_cache) --tag $(project)_router modules/router
+	docker tag $(project)_router $(project)_router:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 test-runner-bundle: engine $(shell find modules/test-runner/src $(find_options))

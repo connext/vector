@@ -1,7 +1,8 @@
 import { FullChannelState } from "@connext/vector-types";
 import { getCreate2MultisigAddress } from "@connext/engine";
 import { BigNumber } from "@connext/vector-utils";
-import { Result } from "../auth/node_modules/@connext/vector-types/dist/src";
+
+import { Result } from "../../auth/node_modules/@connext/vector-types/dist/src";
 
 export async function forwardTransferCreation(data, node, store) {
   // TODO we need to figure out the server-node type here
@@ -73,18 +74,20 @@ export async function forwardTransferCreation(data, node, store) {
     // the `amount` plus the `profile.target`
 
     // First set up listener for deposit
-    const depositCompleted = new Promise((res) => {
+    const depositCompleted = new Promise(res => {
       node.on(
         //@ts-ignore
         NodeEventName.DEPOSIT_COMPLETED_EVENT,
-        (data) => res(data),
-        (data) => data.assetId == recipientAssetId && data.channelAdress == recipientChannelAddress,
+        data => res(data),
+        data => data.assetId == recipientAssetId && data.channelAdress == recipientChannelAddress,
       );
     });
 
     await node.deposit(
       recipientChannelAddress,
-      BigNumber.from(amount).add(profile.target).toString(),
+      BigNumber.from(amount)
+        .add(profile.target)
+        .toString(),
       recipientAssetId,
     );
     await depositCompleted;
@@ -146,13 +149,13 @@ export async function forwardTransferResolution(data, node, store) {
 }
 
 export async function handleIsAlive(data, node, store) {
-    // This means the user is online and has checked in. Get all updates that are queued and then execute them.
+  // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAdress);
 
-  updates.forEach(async (update) => {
+  updates.forEach(async update => {
     if (update.type == "TransferCreation") {
       const { channelAddress, amount, assetId, paymentId, conditionData } = update.data;
-      // TODO do we want to try catch this? What should happen if this fails? 
+      // TODO do we want to try catch this? What should happen if this fails?
       await node.conditionalTransfer(channelAddress, amount, assetId, paymentId, conditionData);
     } else if (update.type == "TransferResolution") {
       const { channelAddress, paymentId, resolverData } = update.data;
