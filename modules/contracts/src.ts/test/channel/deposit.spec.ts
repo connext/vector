@@ -6,7 +6,6 @@ import { expect } from "../utils";
 
 import { createChannel } from "./creation.spec";
 
-// TODO: test token deposits
 describe("Channel Deposits", () => {
   const value = one;
   let channel: Contract;
@@ -15,24 +14,20 @@ describe("Channel Deposits", () => {
     channel = await createChannel();
   });
 
-  it("should accept a direct eth deposit without recording anything", async () => {
-    const assetId = addressZero;
-    const directDeposit = { to: channel.address, value };
-    // const latestDepositBefore = await channel.getLatestDeposit(assetId);
-    await expect(bob.sendTransaction(directDeposit)).to.be.fulfilled;
-    // const latestDepositAfter = await channel.getLatestDeposit(assetId);
-    // expect(latestDepositBefore.nonce).to.equal(latestDepositAfter.nonce);
-    // expect(latestDepositBefore.amount).to.equal(latestDepositAfter.amount);
+  it("should only increase totalDepositedA after receiving a direct deposit", async () => {
+    const aliceDeposits = await channel.totalDepositedA(addressZero);
+    const bobDeposits = await channel.totalDepositedB(addressZero);
+    await expect(bob.sendTransaction({ to: channel.address, value })).to.be.fulfilled;
+    expect(await channel.totalDepositedA(addressZero)).to.equal(aliceDeposits);
+    expect(await channel.totalDepositedB(addressZero)).to.equal(bobDeposits.add(value));
   });
 
-  it("should update latestDeposit if accepting an eth deposit via contract method", async () => {
-    const assetId = addressZero;
-    const depositTx = await channel.populateTransaction.depositA(assetId, value, { value });
-    // const nonceBefore = (await channel.getLatestDeposit(assetId)).nonce;
-    await expect(alice.sendTransaction(depositTx)).to.be.fulfilled;
-    // const latestDeposit = await channel.getLatestDeposit(assetId);
-    // expect(latestDeposit.amount).to.equal(value);
-    // expect(latestDeposit.nonce).to.equal(nonceBefore.add(value));
+  it("should only increase totalDepositedB after recieving a deposit via method call", async () => {
+    const aliceDeposits = await channel.totalDepositedA(addressZero);
+    const bobDeposits = await channel.totalDepositedB(addressZero);
+    await expect(channel.connect(alice).depositA(addressZero, value, { value })).to.be.fulfilled;
+    expect(await channel.totalDepositedA(addressZero)).to.equal(aliceDeposits.add(value));
+    expect(await channel.totalDepositedB(addressZero)).to.equal(bobDeposits);
   });
 
 });
