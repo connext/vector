@@ -81,7 +81,7 @@ export async function applyUpdate<T extends UpdateType>(
       });
     }
     case UpdateType.create: {
-      const { transferInitialState, merkleRoot } = (update as ChannelUpdate<"create">).details;
+      const { merkleRoot } = (update as ChannelUpdate<"create">).details;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(update.balance, update.assetId, state.balances, state.assetIds);
       return Result.ok({

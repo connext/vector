@@ -81,7 +81,6 @@ export const CoreChannelStateEncoding = tidy(`tuple(
   uint256[] processedDepositsB,
   uint256 timeout,
   uint256 nonce,
-  uint256 latestDepositNonce,
   bytes32 merkleRoot
 )`);
 

@@ -427,10 +427,11 @@ type GenerateUpdateTestParams = {
   storedChannel?: PartialFullChannelState<any>;
   onchainBalance?: BigNumber;
   depositA?: BigNumber;
+  depositB?: BigNumber;
   resolveBalance?: Balance;
 };
 
-describe("generateUpdate", () => {
+describe.only("generateUpdate", () => {
   // FIXME: THESE ARE BLOCKING TESTS!
   it.skip("should fail if it fails parameter validation", () => {});
   it.skip("should fail if it is unable to reconcile the deposit", () => {});
@@ -542,6 +543,7 @@ describe("generateUpdate", () => {
         details: { totalDepositedA: "0", totalDepositedB: "10" },
       },
       onchainBalance: BigNumber.from(10),
+      depositB: BigNumber.from(10),
       from: signers[1],
     },
     {
@@ -684,6 +686,7 @@ describe("generateUpdate", () => {
       storedChannel,
       onchainBalance,
       depositA,
+      depositB,
       resolveBalance,
       from,
     } = test;
@@ -728,7 +731,7 @@ describe("generateUpdate", () => {
 
       // Chain service mocks are only used by deposit/resolve
       chainService.getTotalDepositedA.resolves(Result.ok(depositA ?? BigNumber.from(0)));
-      chainService.getTotalDepositedB.resolves(Result.ok(depositA ?? BigNumber.from(0)));
+      chainService.getTotalDepositedB.resolves(Result.ok(depositB ?? BigNumber.from(0)));
 
       chainService.getChannelOnchainBalance.resolves(Result.ok(onchainBalance ?? BigNumber.from(0)));
 

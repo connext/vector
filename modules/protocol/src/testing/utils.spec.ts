@@ -25,7 +25,7 @@ type ReconcileDepositTest = {
   error: Error;
 };
 
-describe.only("utils", () => {
+describe("utils", () => {
   describe.skip("addEvtHandler", () => {
     it("should attach with callback", async () => {});
     it("should attach with callback + filter", async () => {});
