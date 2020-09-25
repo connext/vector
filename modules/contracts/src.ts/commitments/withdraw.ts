@@ -2,7 +2,7 @@ import { MinimalTransaction } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { BigNumber, utils } from "ethers";
 
-import { ChannelMastercopy } from "./artifacts";
+import { ChannelMastercopy } from "../artifacts";
 
 const { Interface, keccak256, solidityPack } = utils;
 
