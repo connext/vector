@@ -31,11 +31,11 @@ describe("Channel Disputes", () => {
       assetIds: [addressZero],
       balances: [{ amount: ["0", "1"], to: [alice.address, bob.address] }],
       channelAddress: channel.address,
-      latestDepositNonce: 1,
-      lockedBalance: ["1", "2"],
       merkleRoot: hashZero,
       nonce: 1,
       participants: [alice.address, bob.address],
+      processedDepositsA: [],
+      processedDepositsB: [],
       timeout: "1",
     };
     hashedState = hashCoreChannelState(channelState);

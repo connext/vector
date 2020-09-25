@@ -300,7 +300,6 @@ describe("outbound", () => {
 
     // Set the onchain service mocks
     chainService.getChannelOnchainBalance.resolves(Result.ok(depositBAmt));
-    chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: BigNumber.from(0), amount: BigNumber.from(0) }));
 
     // Stub the validation mocks
     outboundValidationStub.resolves(Result.ok({ validParams: {}, validState: { nonce: 2 }, activeTransfers: [] }));
@@ -354,8 +353,6 @@ describe("outbound", () => {
 
       beforeEach(() => {
         // Set the chain service mock
-        chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: depositANonce, amount: depositAAmt }));
-
         chainService.getChannelOnchainBalance.resolves(Result.ok(userBBalance.add(depositAAmt)));
       });
 

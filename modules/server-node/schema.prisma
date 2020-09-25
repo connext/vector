@@ -15,7 +15,6 @@ model Balance {
   assetId        String
   to             String
   amount         String
-  lockedBalance  String
   Channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
   channelAddress String
   @@id([participant, channelAddress, assetId])
@@ -31,7 +30,6 @@ model Channel {
   assetIds                       String
   timeout                        String
   nonce                          Int
-  latestDepositNonce             Int
   merkleRoot                     String
   balances                       Balance[]
   channelFactoryAddress          String
@@ -79,9 +77,6 @@ model Update {
   // resolve details
   transferResolver String?
   merkleRoot       String?
-
-  // deposit details
-  latestDepositNonce Int?
 
   // setup inferred from channel params
 

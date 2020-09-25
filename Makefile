@@ -154,7 +154,7 @@ watch-engine: protocol
 
 test-server-node: node
 	bash ops/test-server-node.sh test
-watch-server-node: node
+watch-server-node: engine
 	bash ops/test-server-node.sh watch
 
 # Integration Tests

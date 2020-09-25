@@ -342,7 +342,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     case UpdateType.deposit: {
       // Ensure the balance has been correctly reconciled
 
-      // Ensure the latestDepositNonce is correct
       break;
     }
     case UpdateType.create: {

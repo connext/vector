@@ -103,19 +103,10 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     //      require(!channelDispute.assetDefunded[assetIds[i]])
     //      channelDispute.assetDefunded[assetIds[i]] = true
     //      ChannelMastercopy channel = ChannelMastercopy(channelAddress)
-    //      LatestDeposit latestDeposit = channel.latestDepositA(assetIds[i])
     //
     //      Balance memory aBalance, bBalance; //Bad syntax here, I know
     //      aBalance.to = state.balA.to
     //      bBalance.to = state.balB.to
-    //      if(latestDeposit.nonce < state.latestDepositNonce) {
-    //          aBalance.amount = state.balA.add(latestDeposit.amount)
-    //          // TODO can we assume that assetIds[i] == lockedBalance[i]? probably not
-    //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
-    //      } else if (latestDeposit.nonce == state.latestDepositNonce) {
-    //          aBalance.amount = state.balA;
-    //          bBalance.amount = channel.getBalance(assetIds[i]).sub((aBalance.add(state.lockedBalance[i])))
-    //      }
     //
     //      channel.transfer([aBalance, bBalance], assetIds[i]);
     //  }
@@ -142,18 +133,15 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
         // TODO SECURITY: Beware of reentrancy
         // TODO: keep this? offchain code has to ensure this
         // TODO: compare against saved deposit values?
-        assert(ccs.balances.length == ccs.lockedBalance.length && ccs.balances.length == ccs.assetIds.length);
-        for (uint256 i = 0; i < ccs.balances.length; i++) {
-            Balance memory balance = ccs.balances[i];
-            uint256 lockedBalance = ccs.lockedBalance[i];
-            address assetId = ccs.assetIds[i];
-            Balance memory transfer;
-            transfer.to[0] = balance.to[0];
-            transfer.to[1] = balance.to[1];
-            transfer.amount[0] = balance.amount[0];
-            transfer.amount[1] = getBalance(assetId).sub(transfer.amount[0].add(lockedBalance));
-            transferAsset(transfer, assetId);
-        }
+        // for (uint256 i = 0; i < ccs.balances.length; i++) {
+        //     Balance memory balance = ccs.balances[i];
+        //     address assetId = ccs.assetIds[i];
+        //     Balance memory transfer;
+        //     transfer.to[0] = balance.to[0];
+        //     transfer.to[1] = balance.to[1];
+        //     transfer.amount[0] = balance.amount[0];
+        //     transferAsset(transfer, assetId);
+        // }
     }
 
     // PSEUDOCODE: Please don't delete yet!

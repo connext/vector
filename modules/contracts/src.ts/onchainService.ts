@@ -55,33 +55,6 @@ export class VectorOnchainService implements IVectorOnchainService {
     return Result.ok(onchainBalance);
   }
 
-  async getLatestDepositByAssetId(
-    channelAddress: string,
-    chainId: number,
-    assetId: string,
-    latestDepositNonce: number,
-  ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, OnchainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
-    }
-
-    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    let latestDepositA: { nonce: BigNumber; amount: BigNumber };
-    try {
-      latestDepositA = await channelContract.getLatestDeposit(assetId);
-    } catch (e) {
-      if (latestDepositNonce !== 0) {
-        return Result.fail(e);
-      }
-      // TODO: check for reason?
-      // Channel contract was not deployed, use 0 value
-      latestDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) };
-    }
-
-    return Result.ok(latestDepositA);
-  }
-
   async getTotalDepositedA(
     channelAddress: string,
     chainId: number,
