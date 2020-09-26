@@ -125,7 +125,7 @@ async function handleDepositReconciliation(
   signer: IChannelSigner,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
-  logger: Pino.BaseLogger = Pino(),
+  logger: Pino.BaseLogger,
 ): Promise<void> {
   // Emit the properly structured event
   const {
@@ -141,7 +141,7 @@ async function handleConditionalTransferCreation(
   signer: IChannelSigner,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
-  logger: Pino.BaseLogger = Pino(),
+  logger: Pino.BaseLogger,
 ): Promise<void> {
   // Emit the properly structured event
   // TODO: add automatic resolution for given transfer types
@@ -152,7 +152,7 @@ async function handleConditionalTransferResolution(
   signer: IChannelSigner,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
-  logger: Pino.BaseLogger = Pino(),
+  logger: Pino.BaseLogger,
 ): Promise<void> {
   // Emit the properly structured event
 }
@@ -162,7 +162,7 @@ async function handleWithdrawalTransferCreation(
   signer: IChannelSigner,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
-  logger: Pino.BaseLogger = Pino(),
+  logger: Pino.BaseLogger,
 ): Promise<void> {
   // If you receive a withdrawal creation, you should
   // resolve the withdrawal with your signature
@@ -191,6 +191,7 @@ async function handleWithdrawalTransferCreation(
     amount: withdrawalAmount.toString(),
     recipient: balance.to[0],
     channelBalance: balances[assetIdx],
+    channelAddress,
   };
   evts[EngineEvents.WITHDRAWAL_CREATED].post(payload);
 
