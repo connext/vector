@@ -73,8 +73,7 @@ export class Vector implements IVectorProtocol {
     return this.signer.publicIdentifier;
   }
 
-  // separate out this function so that we can atomically
-  // return and release the lock
+  // separate out this function so that we can atomically return and release the lock
   private async lockedOperation(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
@@ -87,7 +86,6 @@ export class Vector implements IVectorProtocol {
       this.signer,
       this.logger,
     );
-
     if (outboundRes.isError) {
       this.logger.error({
         method: "lockedOperation",
@@ -97,13 +95,11 @@ export class Vector implements IVectorProtocol {
       });
       return outboundRes;
     }
-
     // Post to channel update evt
     const updatedChannelState = outboundRes.getValue();
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
       updatedChannelState,
     });
-
     return outboundRes;
   }
 
@@ -115,7 +111,6 @@ export class Vector implements IVectorProtocol {
     const key = await this.lockService.acquireLock(params.channelAddress);
     const outboundRes = await this.lockedOperation(params);
     await this.lockService.releaseLock(params.channelAddress, key);
-
     return outboundRes;
   }
 
@@ -157,7 +152,6 @@ export class Vector implements IVectorProtocol {
         this.logger,
       );
       if (inboundRes.isError) {
-        this.logger.error({ method: "inbound", error: inboundRes.getError()?.message }, "Error validating update");
         return;
       }
 
@@ -242,14 +236,6 @@ export class Vector implements IVectorProtocol {
       );
     }
     const channelAddress = create2Res.getValue();
-    console.log("channelAddress: ", channelAddress);
-    const contractChannelAddress = await this.onchainService.getChannelAddress(
-      getSignerAddressFromPublicIdentifier(this.publicIdentifier),
-      getSignerAddressFromPublicIdentifier(params.counterpartyIdentifier),
-      params.networkContext.channelFactoryAddress,
-      params.networkContext.chainId,
-    );
-    console.log("contractChannelAddress: ", contractChannelAddress.getValue());
 
     // Convert the API input to proper UpdateParam format
     const updateParams: UpdateParams<"setup"> = {
@@ -317,6 +303,18 @@ export class Vector implements IVectorProtocol {
   // STORE METHODS
   public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     return this.storeService.getChannelState(channelAddress);
+  }
+
+  public async getChannelStateByParticipants(
+    alice: string,
+    bob: string,
+    chainId: number,
+  ): Promise<FullChannelState | undefined> {
+    return this.storeService.getChannelStateByParticipants(
+      getSignerAddressFromPublicIdentifier(alice),
+      getSignerAddressFromPublicIdentifier(bob),
+      chainId,
+    );
   }
 
   public async getTransferState(transferId: string): Promise<FullTransferState | undefined> {

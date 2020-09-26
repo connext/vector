@@ -1,2 +1,2 @@
 import "./config.test";
-import "./setup.test";
+import "./happy.test";

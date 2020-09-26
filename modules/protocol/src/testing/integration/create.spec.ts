@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { expect, getTestLoggers } from "../utils";
-import { createTransfer, getFundedChannel } from "../utils/channel";
+import { createTransfer, expect, getFundedChannel, getTestLoggers } from "../utils";
 
 const testName = "Create Integrations";
 const { log } = getTestLoggers(testName);
@@ -33,7 +33,6 @@ describe(testName, () => {
     // Set test constants
     const assetId = constants.AddressZero;
     const transferAmount = "7";
-
     const { channel, transfer } = await createTransfer(
       preCreateChannel.channelAddress,
       alice,
@@ -41,9 +40,8 @@ describe(testName, () => {
       assetId,
       transferAmount,
     );
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { transferResolver, ...toCompare } = transfer;
-
     expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
     expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);

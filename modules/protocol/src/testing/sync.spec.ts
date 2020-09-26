@@ -30,7 +30,7 @@ import { inbound, outbound } from "../sync";
 
 import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";
-import { env } from "./utils";
+import { env } from "./env";
 
 describe("inbound", () => {
   // FIXME: These are blocking tests!
@@ -237,9 +237,7 @@ describe("outbound", () => {
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
     outboundValidationStub.resolves(Result.fail(error));
 
-    console.log("trying to call outbound...");
     const res = await outbound(params, store, chainService, messaging, signers[0], logger);
-    console.log("res", res);
     expect(res.getError()).to.be.deep.eq(error);
   });
 
@@ -300,7 +298,6 @@ describe("outbound", () => {
 
     // Set the onchain service mocks
     chainService.getChannelOnchainBalance.resolves(Result.ok(depositBAmt));
-    chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: BigNumber.from(0), amount: BigNumber.from(0) }));
 
     // Stub the validation mocks
     outboundValidationStub.resolves(Result.ok({ validParams: {}, validState: { nonce: 2 }, activeTransfers: [] }));
@@ -354,8 +351,6 @@ describe("outbound", () => {
 
       beforeEach(() => {
         // Set the chain service mock
-        chainService.getLatestDepositByAssetId.resolves(Result.ok({ nonce: depositANonce, amount: depositAAmt }));
-
         chainService.getChannelOnchainBalance.resolves(Result.ok(userBBalance.add(depositAAmt)));
       });
 

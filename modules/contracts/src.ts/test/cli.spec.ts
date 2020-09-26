@@ -4,7 +4,8 @@ import { fund } from "../commands/fund";
 import { migrate } from "../commands/migrate";
 import { newToken } from "../commands/new-token";
 
-import { expect, provider } from "./utils";
+import { provider } from "./constants";
+import { expect } from "./utils";
 
 const addressBookPath = "/tmp/address-book.json";
 
@@ -17,7 +18,7 @@ describe("CLI", () => {
   });
 
   it("has a 'migrate' command that runs without error", async () => {
-    const done = migrate(wallets[0], addressBookPath, true);
+    const done = migrate(wallets[0], addressBookPath);
     return expect(done).to.be.fulfilled;
   });
 

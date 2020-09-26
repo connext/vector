@@ -89,14 +89,34 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   },
 );
 
+server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
+  "/channel/:alice/:bob/:chainId",
+  // TODO: add response schema, if you set it as `Any` it doesn't work properly
+  //  might want to add the full channel state as a schema
+  { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
+  async (request, reply) => {
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
+    try {
+      const res = await vectorEngine.request<"chan_getChannelStateByParticipants">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Channel not found", alice: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
 server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelStatesSchema } }, async (request, reply) => {
   const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
   try {
     const res = await vectorEngine.request<"chan_getChannelStates">(params);
-    return reply.status(200).send(res.map((chan) => chan.channelAddress));
+    return reply.status(200).send(res.map(chan => chan.channelAddress));
   } catch (e) {
-    logger.error({ message: e.message, stack: e.stack });
-    return reply.status(500).send({ message: e.message });
+    logger.error({ message: e.message, stack: e.stack, context: e.context });
+    return reply.status(500).send({ message: e.message, context: e.context });
   }
 });
 
@@ -113,8 +133,8 @@ server.post<{ Body: ServerNodeParams.Setup }>(
       const res = await vectorEngine.request<"chan_setup">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
   },
 );
@@ -155,14 +175,14 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
       const res = await vectorEngine.request<"chan_deposit">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
   },
 );
 
 server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
-  "/linked-transfer",
+  "/linked-transfer/create",
   { schema: { body: ServerNodeParams.LinkedTransferSchema, response: ServerNodeResponses.LinkedTransferSchema } },
   async (request, reply) => {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, {
@@ -174,15 +194,47 @@ server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
       recipient: request.body.recipient,
       routingId: request.body.routingId,
       details: {
-        preImage: request.body.preImage,
+        linkedHash: request.body.linkedHash,
       },
-    } as any);
+    });
     try {
       const res = await vectorEngine.request<"chan_createTransfer">(rpc);
-      return reply.status(200).send(res);
+      return reply.status(200).send({
+        channelAddress: res.channelAddress,
+        routingId: request.body.routingId,
+      } as ServerNodeResponses.LinkedTransfer);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: ServerNodeParams.ResolveLinkedTransfer }>(
+  "/linked-transfer/resolve",
+  {
+    schema: {
+      body: ServerNodeParams.ResolveLinkedTransferSchema,
+      response: ServerNodeResponses.ResolveLinkedTransferSchema,
+    },
+  },
+  async (request, reply) => {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, {
+      channelAddress: request.body.channelAddress,
+      conditionType: "LinkedTransfer",
+      details: {
+        preImage: request.body.preImage,
+      },
+      routingId: request.body.routingId,
+    });
+    try {
+      const res = await vectorEngine.request<"chan_resolveTransfer">(rpc);
+      return reply.status(200).send({
+        channelAddress: res.channelAddress,
+      } as ServerNodeResponses.ResolveLinkedTransfer);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
   },
 );

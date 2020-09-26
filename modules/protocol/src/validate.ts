@@ -40,6 +40,7 @@ type OutboundValidationResult<T extends UpdateType = any> = Result<
   },
   OutboundChannelUpdateError
 >;
+
 export async function validateOutbound<T extends UpdateType = any>(
   params: UpdateParams<T>,
   storeService: IVectorStore,
@@ -77,12 +78,12 @@ export async function validateOutbound<T extends UpdateType = any>(
 
     state = {
       nonce: 0,
-      latestDepositNonce: 0,
       channelAddress,
       timeout: "0",
       participants: [signer.address, getSignerAddressFromPublicIdentifier(counterpartyIdentifier)],
       balances: [],
-      lockedBalance: [],
+      processedDepositsA: [],
+      processedDepositsB: [],
       assetIds: [],
       merkleRoot: constants.HashZero,
       latestUpdate: {} as any,
@@ -186,7 +187,7 @@ export async function validateOutbound<T extends UpdateType = any>(
       // The validity of the transferId and meta structures are
       // asserted by the schemas
       const {
-        details: { transferId, transferResolver },
+        details: { transferId },
       } = params as UpdateParams<typeof UpdateType.resolve>;
 
       // Transfer should exist in store
@@ -257,6 +258,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   }
 
   const { nextState, validUpdate, transfer, activeTransfers } = res.getValue()!;
+  logger.debug(nextState, "nextState");
 
   // Verify at least one signature exists (and any present are valid)
   const sigRes = await validateChannelUpdateSignatures(nextState, validUpdate.signatures, 1);
@@ -342,7 +344,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     case UpdateType.deposit: {
       // Ensure the balance has been correctly reconciled
 
-      // Ensure the latestDepositNonce is correct
       break;
     }
     case UpdateType.create: {
@@ -439,7 +440,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // and chain service
 
       // Update the active transfers
-      activeTransfers = previousActiveTransfers.filter((t) => t.transferId === transferId);
+      activeTransfers = previousActiveTransfers.filter(t => t.transferId === transferId);
 
       // Regenerate the merkle tree
 

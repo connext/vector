@@ -8,14 +8,6 @@ import { utils } from "ethers";
 
 const { keccak256, solidityPack, defaultAbiCoder } = utils;
 
-export const hashlockedBalance = (value: string): string => {
-  return keccak256(solidityPack(["uint256"], [value]));
-};
-
-export const hashlockedBalances = (values: string[]): string => {
-  return keccak256(solidityPack(["bytes32[]"], [values.map(hashlockedBalance)]));
-};
-
 export const hashBalance = (balance: Balance): string => {
   return keccak256(
     solidityPack(

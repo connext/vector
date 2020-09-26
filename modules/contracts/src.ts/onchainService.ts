@@ -7,7 +7,7 @@ import {
   Result,
   OnchainError,
 } from "@connext/vector-types";
-import { BigNumber, constants, Contract, providers, utils } from "ethers";
+import { BigNumber, constants, Contract, providers } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import Pino from "pino";
 
@@ -55,31 +55,48 @@ export class VectorOnchainService implements IVectorOnchainService {
     return Result.ok(onchainBalance);
   }
 
-  async getLatestDepositByAssetId(
+  async getTotalDepositedA(
     channelAddress: string,
     chainId: number,
     assetId: string,
-    latestDepositNonce: number,
-  ): Promise<Result<{ nonce: BigNumber; amount: BigNumber }, OnchainError>> {
+  ): Promise<Result<BigNumber, OnchainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
 
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    let latestDepositA: { nonce: BigNumber; amount: BigNumber };
+    let totalDepositedA: BigNumber;
     try {
-      latestDepositA = await channelContract.latestDepositByAssetId(assetId);
+      totalDepositedA = await channelContract.totalDepositedA(assetId);
     } catch (e) {
-      if (latestDepositNonce !== 0) {
-        return Result.fail(e);
-      }
       // TODO: check for reason?
       // Channel contract was not deployed, use 0 value
-      latestDepositA = { amount: BigNumber.from(0), nonce: BigNumber.from(0) };
+      totalDepositedA = BigNumber.from(0);
+    }
+    return Result.ok(totalDepositedA);
+  }
+
+  async getTotalDepositedB(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, OnchainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
     }
 
-    return Result.ok(latestDepositA);
+    const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
+    let totalDepositedB: BigNumber;
+    try {
+      totalDepositedB = await channelContract.totalDepositedB(assetId);
+    } catch (e) {
+      // TODO: check for reason?
+      // Channel contract was not deployed, use 0 value
+      totalDepositedB = BigNumber.from(0);
+    }
+    return Result.ok(totalDepositedB);
   }
 
   async getChannelFactoryBytecode(
@@ -142,6 +159,10 @@ export class VectorOnchainService implements IVectorOnchainService {
     // Try to encode
     let encodedState: string;
     let encodedResolver: string;
+    console.log("transfer.transferState: ", transfer.transferState);
+    console.log("transfer.transferResolver: ", transfer.transferResolver);
+    console.log("transfer.transferEncodings[0]: ", transfer.transferEncodings[0]);
+    console.log("transfer.transferEncodings[1]: ", transfer.transferEncodings[1]);
     try {
       encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
       encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);
@@ -176,7 +197,7 @@ export class VectorOnchainService implements IVectorOnchainService {
   }
 
   async getChannelAddress(
-    initiator: string,
+    alice: string,
     responder: string,
     channelFactoryAddress: string,
     chainId: number,
@@ -189,7 +210,7 @@ export class VectorOnchainService implements IVectorOnchainService {
 
     const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const derivedAddress = await vectorChannel.getChannelAddress(initiator, responder, chainId);
+      const derivedAddress = await vectorChannel.getChannelAddress(alice, responder, chainId);
       return Result.ok(derivedAddress);
     } catch (e) {
       return Result.fail(e);

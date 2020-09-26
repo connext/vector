@@ -20,6 +20,7 @@ else echo "Running in non-interactive mode"
 fi
 
 source $root/dev.env
+eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
 ########################################
 ## Launch test runner

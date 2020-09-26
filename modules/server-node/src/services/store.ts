@@ -31,15 +31,17 @@ const convertChannelEntityToFullChannelState = (
   const assetIds = channelEntity!.assetIds ? channelEntity!.assetIds?.split(",") : [];
 
   // get balances and locked value for each assetId
-  const lockedBalance: string[] = [];
+  const processedDepositsA: string[] = [];
+  const processedDepositsB: string[] = [];
   const balances: Balance[] = assetIds.map(assetId => {
     const balanceA = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantA,
     );
+    processedDepositsA.push(balanceA!.processedDeposit);
     const balanceB = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
-    lockedBalance.push(balanceA!.lockedBalance);
+    processedDepositsB.push(balanceB!.processedDeposit);
     return {
       amount: [balanceA!.amount, balanceB!.amount],
       to: [balanceA!.to, balanceB!.to],
@@ -63,7 +65,8 @@ const convertChannelEntityToFullChannelState = (
         break;
       case "deposit":
         details = {
-          latestDepositNonce: channelEntity.latestUpdate.latestDepositNonce,
+          totalDepositedA: channelEntity.latestUpdate.totalDepositedA,
+          totalDepositedB: channelEntity.latestUpdate.totalDepositedB,
         } as DepositUpdateDetails;
         break;
       case "create":
@@ -73,16 +76,15 @@ const convertChannelEntityToFullChannelState = (
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
           transferTimeout: channelEntity.latestUpdate.transferTimeout!,
           transferId: channelEntity.latestUpdate.transferId!,
-          transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
+          transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferInitialState: JSON.parse(channelEntity.latestUpdate.transferInitialState!),
         } as CreateUpdateDetails;
         break;
       case "resolve":
         details = {
-          merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
-          transferEncodings: JSON.parse(channelEntity.latestUpdate.transferEncodings!),
+          transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferId: channelEntity.latestUpdate.transferId!,
           transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
         } as ResolveUpdateDetails;
@@ -94,9 +96,9 @@ const convertChannelEntityToFullChannelState = (
     assetIds,
     balances,
     channelAddress: channelEntity.channelAddress,
-    latestDepositNonce: channelEntity.latestDepositNonce,
-    lockedBalance,
     merkleRoot: channelEntity.merkleRoot,
+    processedDepositsA,
+    processedDepositsB,
     networkContext: {
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
@@ -148,7 +150,7 @@ const convertTransferEntityToFullTransferState = (
     },
     initialStateHash: transfer.initialStateHash,
     transferDefinition: transfer.createUpdate.transferDefinition!,
-    transferEncodings: transfer.createUpdate.transferEncodings!.split(","),
+    transferEncodings: transfer.createUpdate.transferEncodings!.split("$"),
     transferId: transfer.createUpdate.transferId!,
     transferState: JSON.parse(transfer.createUpdate.transferInitialState!),
     transferTimeout: transfer.createUpdate.transferTimeout!,
@@ -250,7 +252,9 @@ export class PrismaStore implements IVectorStore {
 
         // details
         // deposit
-        latestDepositNonce: channelState.latestUpdate?.details.latestDepositNonce,
+        totalDepositedA: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositedA,
+        totalDepositedB: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositedB,
+
         // create transfer
         transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
@@ -259,7 +263,7 @@ export class PrismaStore implements IVectorStore {
         merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
         transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,
         transferEncodings: (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings
-          ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings)
+          ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
           : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
@@ -316,7 +320,6 @@ export class PrismaStore implements IVectorStore {
         chainId: channelState.networkContext.chainId,
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
-        latestDepositNonce: channelState.latestDepositNonce,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
         participantA: channelState.participants[0],
@@ -333,17 +336,17 @@ export class PrismaStore implements IVectorStore {
                 ...create,
                 {
                   amount: channelState.balances[index].amount[0],
-                  lockedBalance: channelState.lockedBalance[index],
                   participant: channelState.participants[0],
                   to: channelState.balances[index].to[0],
                   assetId,
+                  processedDeposit: channelState.processedDepositsA[index],
                 },
                 {
                   amount: channelState.balances[index].amount[1],
-                  lockedBalance: channelState.lockedBalance[index],
                   participant: channelState.participants[1],
                   to: channelState.balances[index].to[1],
                   assetId,
+                  processedDeposit: channelState.processedDepositsB[index],
                 },
               ];
             },
@@ -356,7 +359,6 @@ export class PrismaStore implements IVectorStore {
       },
       update: {
         assetIds,
-        latestDepositNonce: channelState.latestDepositNonce,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
@@ -379,15 +381,15 @@ export class PrismaStore implements IVectorStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[0],
-                    lockedBalance: channelState.lockedBalance[index],
                     participant: channelState.participants[0],
                     to: channelState.balances[index].to[0],
+                    processedDeposit: channelState.processedDepositsA[index],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[0],
-                    lockedBalance: channelState.lockedBalance[index],
                     to: channelState.balances[index].to[0],
+                    processedDeposit: channelState.processedDepositsA[index],
                   },
                   where: {
                     participant_channelAddress_assetId: {
@@ -400,15 +402,15 @@ export class PrismaStore implements IVectorStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[1],
-                    lockedBalance: channelState.lockedBalance[index],
                     participant: channelState.participants[1],
                     to: channelState.balances[index].to[1],
+                    processedDeposit: channelState.processedDepositsB[index],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[1],
-                    lockedBalance: channelState.lockedBalance[index],
                     to: channelState.balances[index].to[1],
+                    processedDeposit: channelState.processedDepositsB[index],
                   },
                   where: {
                     participant_channelAddress_assetId: {
@@ -444,7 +446,8 @@ export class PrismaStore implements IVectorStore {
         },
       },
     });
-    return transferEntities.map(convertTransferEntityToFullTransferState);
+    const transfers = transferEntities.map(convertTransferEntityToFullTransferState);
+    return transfers;
   }
 
   async getTransferState(transferId: string): Promise<FullTransferState | undefined> {

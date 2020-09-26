@@ -16,6 +16,7 @@ import {
   WithdrawResolverEncoding,
   EngineParams,
   IChannelSigner,
+  ChainAddresses,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
@@ -25,6 +26,7 @@ export function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
   signer: IChannelSigner,
   channel: FullChannelState,
+  chainAddresses: ChainAddresses,
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
 
@@ -40,7 +42,7 @@ export function convertConditionalTransferParams(
   let encodings: string[];
 
   if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
-    transferDefinition = channel.networkContext.linkedTransferDefinition;
+    transferDefinition = chainAddresses[channel.networkContext.chainId].linkedTransferDefinition;
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
@@ -53,12 +55,11 @@ export function convertConditionalTransferParams(
     return Result.fail(new InvalidTransferType(params.conditionType));
   }
 
+  // TODO: enforce that passed in meta is an object
   const meta = {
-    recipient,
-    recipientChainId,
-    recipientAssetId,
     routingId,
-    meta: params.meta,
+    path: [{ recipient, recipientChainId, recipientAssetId }],
+    ...params.meta,
   };
 
   return Result.ok({
@@ -88,16 +89,11 @@ export function convertResolveConditionParams(
     return Result.fail(new InvalidTransferType(params.conditionType));
   }
 
-  const meta = {
-    routingId,
-    meta: params.meta,
-  };
-
   return Result.ok({
     channelAddress,
     transferId: transfer.transferId,
     transferResolver,
-    meta,
+    routingId,
   });
 }
 

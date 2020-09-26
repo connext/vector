@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, constants, BigNumberish } from "ethers";
 import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
 import { mkAddress } from "@connext/vector-utils";
@@ -7,7 +8,7 @@ import { VectorOnchainService } from "@connext/vector-contracts";
 
 import { reconcileDeposit } from "../utils";
 
-import { env } from "./utils";
+import { env } from "./env";
 
 type MockOnchainStubType = {
   [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
@@ -15,13 +16,13 @@ type MockOnchainStubType = {
 
 type ReconcileDepositTest = {
   initialBalance: Omit<Balance, "to">;
-  latestDepositNonce: number;
-  lockedBalance: string;
+  processedDepositsA: string[];
+  processedDepositsB: string[];
   assetId: string;
   aliceDeposit: BigNumberish; // depositA deposit
   bobDeposit: BigNumberish; // user deposit
   stubs: Partial<MockOnchainStubType>;
-  expected: Omit<Balance, "to"> & { latestDepositNonce: number };
+  expected: Omit<Balance, "to"> & { totalDepositedA: string; totalDepositedB: string };
   error: Error;
 };
 
@@ -67,31 +68,24 @@ describe("utils", () => {
     const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];
 
     const getOnchainService = (testParams: Partial<ReconcileDepositTest>) => {
-      const { initialBalance, latestDepositNonce, stubs, aliceDeposit, bobDeposit } = testParams;
+      const { initialBalance, stubs, aliceDeposit, bobDeposit, processedDepositsA, processedDepositsB } = testParams;
       const initialChainBalance = (initialBalance?.amount ?? []).reduce(
         (prev, curr) => prev.add(curr),
         BigNumber.from(0),
       );
-
       // Creat the mock with defaults
       const onchain = Sinon.createStubInstance(VectorOnchainService);
       // set return values
       const mockedValues = {
         // Default the value onchain + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
-
-        // Default is nonce 1, deposit 0
-        getLatestDepositByAssetId: Result.ok<{ nonce: BigNumber; amount: BigNumber }>({
-          nonce: BigNumber.from((latestDepositNonce ?? 0) + 1),
-          amount: BigNumber.from(aliceDeposit ?? 0),
-        }),
-
+        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add((processedDepositsA as any)!)),
+        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add((processedDepositsB as any)!)),
         ...stubs,
       };
       Object.entries(mockedValues).forEach(([method, stub]) => {
         onchain[method].resolves(stub);
       });
-
       // Return the onchain service
       return onchain;
     };
@@ -106,51 +100,59 @@ describe("utils", () => {
         name: "should work for Alice Eth deposit when onchain deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        latestDepositNonce: 0,
-        expected: { amount: ["18", "9"], latestDepositNonce: 1 },
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
+        expected: { amount: ["18", "9"], totalDepositedA: "25", totalDepositedB: "9" },
       },
       {
         name: "should work for Alice Token deposit when onchain deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        latestDepositNonce: 0,
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         assetId: mkAddress("0xdddd"),
-        expected: { amount: ["18", "9"], latestDepositNonce: 1 },
+        expected: { amount: ["18", "9"], totalDepositedA: "25", totalDepositedB: "9" },
       },
       {
         name: "should work for Bob Eth deposit when onchain deposit was successful",
         bobDeposit: 7,
         initialBalance: { amount: ["3", "9"] },
-        expected: { amount: ["3", "16"], latestDepositNonce: 1 },
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
+        expected: { amount: ["3", "16"], totalDepositedA: "10", totalDepositedB: "16" },
       },
       {
         name: "should work for Bob Token deposit when onchain deposit was successful",
         bobDeposit: 7,
         initialBalance: { amount: ["3", "9"] },
         assetId: mkAddress("0xdddd"),
-        expected: { amount: ["3", "16"], latestDepositNonce: 1 },
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
+        expected: { amount: ["3", "16"], totalDepositedA: "10", totalDepositedB: "16" },
       },
       {
         name: "should work for both Eth deposit when onchain deposits were successful",
         bobDeposit: 7,
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        latestDepositNonce: 0,
-        expected: { amount: ["18", "16"], latestDepositNonce: 1 },
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
+        expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
       },
       {
         name: "should work for both token deposit when onchain deposits were successful",
         bobDeposit: 7,
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
-        latestDepositNonce: 0,
+        processedDepositsA: ["10"],
+        processedDepositsB: ["9"],
         assetId: mkAddress("0xdddd"),
-        expected: { amount: ["18", "16"], latestDepositNonce: 1 },
+        expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
       },
     ];
 
     for (const test of tests) {
-      const { name, initialBalance, latestDepositNonce, lockedBalance, assetId, error, expected } = test;
+      const { name, initialBalance, processedDepositsA, processedDepositsB, assetId, error, expected } = test;
       it(name, async () => {
         // Create the onchain service
         const chainService = getOnchainService(test);
@@ -160,8 +162,8 @@ describe("utils", () => {
           channelAddress,
           chainId,
           { ...(initialBalance ?? { amount: ["0", "0"] }), to },
-          latestDepositNonce ?? 0,
-          lockedBalance ?? "0",
+          processedDepositsA ? (processedDepositsA[0] || "0") : "0",
+          processedDepositsB ? (processedDepositsB[0] || "0") : "0",
           assetId ?? constants.AddressZero,
           chainService,
         );
@@ -173,7 +175,8 @@ describe("utils", () => {
           const returned = result.getValue()!;
           expect(returned).to.containSubset({
             balance: { amount: expected.amount, to },
-            latestDepositNonce: expected.latestDepositNonce,
+            totalDepositedA: expected.totalDepositedA,
+            totalDepositedB: expected.totalDepositedB,
           });
         }
       });

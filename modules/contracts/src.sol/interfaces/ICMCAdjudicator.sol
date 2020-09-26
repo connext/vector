@@ -5,9 +5,15 @@ pragma experimental ABIEncoderV2;
 import "./Types.sol";
 
 
-interface IAdjudicator {
+interface ICMCAdjudicator {
 
-    function forceChannelConsensus(
+    function getLatestChannelDispute(
+    ) external view returns (ChannelDispute memory);
+
+    function getLatestTransferDispute(
+    ) external view returns (TransferDispute memory);
+
+    function disputeChannel(
         CoreChannelState memory ccs,
         bytes[2] memory signatures
     ) external;
@@ -18,7 +24,7 @@ interface IAdjudicator {
     ) external;
 
 
-    function forceTransferConsensus(
+    function disputeTransfer(
         CoreTransferState memory cts,
         bytes32[] memory merkeProofData
     ) external;

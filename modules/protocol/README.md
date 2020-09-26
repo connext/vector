@@ -62,9 +62,8 @@ The deposit update is used to confirm an already-mined deposit tx into the chann
 
 1. The update initiator's balance must be incremented by the deposit amount (calculating new balances for each party using onchain data as described in the [Funding a Channel](https://github.com/connext/vector/blob/master/modules/contracts/README.md#funding-a-channel) writeup). Note that this is per-assetId, so a new assetId may need to be added to the `assetId` array.
 2. The channel nonce must be updated by 1.
-3. The `latestDepositNonce` in state must be set to whatever is onchain for Alice.
-4. A new `ChannelCommitment` must be generated using the above and signed by both parties.
-5. Set this update to `state.latestUpdate`.
+3. A new `ChannelCommitment` must be generated using the above and signed by both parties.
+4. Set this update to `state.latestUpdate`.
 
 ### Create
 

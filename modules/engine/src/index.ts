@@ -84,7 +84,7 @@ export class VectorEngine implements IVectorEngine {
     const vector = await Vector.connect(
       messaging,
       lock,
-      store as IVectorStore,
+      store,
       signer,
       chainService,
       logger.child({ module: "VectorProtocol" }),
@@ -106,11 +106,6 @@ export class VectorEngine implements IVectorEngine {
       },
       data => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
     );
-
-    // TODO: this subscription should be part of the MessagingService
-    this.messaging.subscribe(`${this.vector.publicIdentifier}.*.check-in`, async () => {
-      // pull channel out of subject
-    });
   }
 
   private async getChannelState(
@@ -119,9 +114,21 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(TAddress);
     const valid = validate(channelAddress);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
     const channel = await this.vector.getChannelState(channelAddress);
+    return Result.ok(channel);
+  }
+
+  private async getChannelStateByParticipants(
+    params: EngineParams.GetChannelStateByParticipants,
+  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
+    const validate = ajv.compile(EngineParams.GetChannelStateByParticipantsSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const channel = await this.vector.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
     return Result.ok(channel);
   }
 
@@ -137,7 +144,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     return this.vector.setup({
@@ -160,19 +167,19 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     return this.vector.deposit(params);
   }
 
-  private async conditionalTransfer(
+  private async createTransfer(
     params: EngineParams.ConditionalTransfer,
   ): Promise<Result<FullChannelState, InvalidTransferType | OutboundChannelUpdateError>> {
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     const channel = await this.store.getChannelState(params.channelAddress);
@@ -183,11 +190,12 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = convertConditionalTransferParams(params, this.signer, channel!);
+    const createResult = convertConditionalTransferParams(params, this.signer, channel!, this.chainAddresses);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
+    console.log("createParams: ", createParams);
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -196,15 +204,16 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(res);
   }
 
-  private async resolveCondition(params: EngineParams.ResolveTransfer): Promise<Result<FullChannelState, Error>> {
+  private async resolveTransfer(params: EngineParams.ResolveTransfer): Promise<Result<FullChannelState, Error>> {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
+
+    // TODO: consider a store method to find active transfer by routingId
     const transfers = await this.store.getActiveTransfers(params.channelAddress);
-    let transfer: FullTransferState | undefined;
-    transfers.find(instance => instance.meta.routingId === params.routingId);
+    const transfer = transfers.find(instance => instance.meta.routingId === params.routingId);
     if (!transfer) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
@@ -230,7 +239,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.WithdrawSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.join()));
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
     const channel = await this.store.getChannelState(params.channelAddress);

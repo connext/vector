@@ -1,5 +1,5 @@
 import { ChannelUpdate } from "./channel";
-import { InboundChannelUpdateError, Result } from "./error";
+import { InboundChannelUpdateError, OutboundChannelUpdateError, Result } from "./error";
 
 export interface IMessagingService {
   connect(): Promise<void>;
@@ -16,7 +16,12 @@ export interface IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>>;
+  ): Promise<
+    Result<
+      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
+      OutboundChannelUpdateError | InboundChannelUpdateError
+    >
+  >;
   respondToProtocolMessage(
     inbox: string,
     channelUpdate: ChannelUpdate<any>,

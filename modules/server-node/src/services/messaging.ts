@@ -5,6 +5,7 @@ import {
   MessagingConfig,
   Result,
   IChannelSigner,
+  OutboundChannelUpdateError,
 } from "@connext/vector-types";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 import { BaseLogger } from "pino";
@@ -81,7 +82,12 @@ export class NatsMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout = 30_000,
     numRetries = 0,
-  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>> {
+  ): Promise<
+    Result<
+      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
+      OutboundChannelUpdateError | InboundChannelUpdateError
+    >
+  > {
     this.assertConnected();
     try {
       const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
@@ -95,11 +101,21 @@ export class NatsMessagingService implements IMessagingService {
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        return Result.fail(
+          new InboundChannelUpdateError(
+            InboundChannelUpdateError.reasons.MessageFailed,
+            channelUpdate,
+            undefined,
+            parsedMsg.data.error,
+          ),
+        );
+      }
       // TODO: validate message structure
       return Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.update });
     } catch (e) {
       return Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.MessageFailed, channelUpdate, undefined, e),
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.MessageFailed, channelUpdate, undefined, e),
       );
     }
   }
@@ -205,7 +221,7 @@ export class NatsMessagingService implements IMessagingService {
   public async unsubscribe(subject: string): Promise<void> {
     this.assertConnected();
     const unsubscribeFrom = this.getSubjectsToUnsubscribeFrom(subject);
-    unsubscribeFrom.forEach((sub) => {
+    unsubscribeFrom.forEach(sub => {
       this.connection!.unsubscribe(sub);
     });
   }
@@ -224,9 +240,9 @@ export class NatsMessagingService implements IMessagingService {
     // `*` represents any set of characters
     // if no match for split, will return [subject]
     const substrsToMatch = subject.split(`>`)[0].split(`*`);
-    subscribedTo.forEach((subscribedSubject) => {
+    subscribedTo.forEach(subscribedSubject => {
       let subjectIncludesAllSubstrings = true;
-      substrsToMatch.forEach((match) => {
+      substrsToMatch.forEach(match => {
         if (!subscribedSubject.includes(match) && match !== ``) {
           subjectIncludesAllSubstrings = false;
         }
