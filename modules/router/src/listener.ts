@@ -1,50 +1,39 @@
-export async function setupListeners(node: any): Promise<void> {
+import { EngineEvents } from "@connext/vector-types";
+import { BaseLogger } from "pino";
+
+import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
+import { IServerNodeService } from "./services/server-node";
+import { IRouterStore } from "./services/store";
+
+export async function setupListeners(node: IServerNodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
   node.on(
-    //@ts-ignore
-    NodeEventName.TRANSFER_CREATED_EVENT, // TODO types
+    EngineEvents.CONDITIONAL_TRANFER_CREATED, // TODO types
     async data => {
-      await forwardTransferCreation(data);
+      await forwardTransferCreation(data, node, store, logger);
     },
-    data => data.fromIdentifier !== node.publicIdentifier,
   );
 
   // Set up listener to handle transfer resolution
   node.on(
-    //@ts-ignore
-    NodeEventName.TRANSFER_RESOLVED_EVENT, // TODO types
+    EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, // TODO types
     async data => {
-      await forwardTransferResolution(data);
+      await forwardTransferResolution(data, node, store, logger);
     },
-    data => data.fromIdentifier !== node.publicIdentifier,
   );
 
   node.on(
-    //@ts-ignore
-    NodeEventName.TRANSFER_CREATED_EVENT, // TODO types
+    EngineEvents.DEPOSIT_RECONCILED, // TODO types
     async data => {
-      await handleCollateralization(data);
+      // await handleCollateralization(data);
     },
-    data => data.fromIdentifier === node.publicIdentifier,
   );
 
-  // Set up listener to handle transfer resolution
-  node.on(
-    //@ts-ignore
-    NodeEventName.TRANSFER_RESOLVED_EVENT, // TODO types
-    async data => {
-      await handleReclaim(data);
-    },
-    data => data.fromIdentifier === node.publicIdentifier,
-  );
-
-  node.on(
-    //@ts-ignore
-    NodeEventName.IS_ALIVE_EVENT, // TODO types
-    async data => {
-      await handleIsAlive(data);
-    },
-    data => data.fromIdentifier === node.publicIdentifier,
-  );
+  // node.on(
+  //   EngineEvents.IS_ALIVE, // TODO types
+  //   async data => {
+  //     await handleIsAlive(data);
+  //   },
+  // );
 }

@@ -33,12 +33,11 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: node
+default: router
 
 global: auth ethprovider
-node: global database proxy server-node
+node: global database proxy server-node router
 duet: global database server-node
-router: global database server-node router
 extras: test-runner
 
 all: node global duet extras router

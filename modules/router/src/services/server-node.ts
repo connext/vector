@@ -20,7 +20,7 @@ export interface IServerNodeService {
     bob: string,
     chainId: number,
   ): Promise<Result<FullChannelState | undefined, Error>>;
-  getStateChannel(channelAddress: number): Promise<Result<FullChannelState | undefined, Error>>;
+  getStateChannel(channelAddress: string): Promise<Result<FullChannelState | undefined, Error>>;
   deposit(
     params: ServerNodeParams.SendDepositTx,
     chainId: number,
@@ -30,6 +30,11 @@ export interface IServerNodeService {
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>>;
 
   once<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    filter?: (payload: EngineEventMap[T]) => boolean,
+  ): void;
+  on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
@@ -92,7 +97,7 @@ export class RestServerNodeService implements IServerNodeService {
     }
   }
 
-  async getStateChannel(channelAddress: number): Promise<Result<FullChannelState | undefined, Error>> {
+  async getStateChannel(channelAddress: string): Promise<Result<FullChannelState | undefined, Error>> {
     try {
       const res = await Axios.get<ServerNodeResponses.GetChannelState>(
         `${this.serverNodeUrl}/channel/${channelAddress}`,
@@ -156,6 +161,10 @@ export class RestServerNodeService implements IServerNodeService {
   }
 
   once(event: string, callback: (payload: any) => void | Promise<void>, filter?: (payload: any) => boolean): void {
+    throw new Error("Method not implemented.");
+  }
+
+  on(event: string, callback: (payload: any) => void | Promise<void>, filter?: (payload: any) => boolean): void {
     throw new Error("Method not implemented.");
   }
 }

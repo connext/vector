@@ -1,7 +1,6 @@
 import { Bytes32 } from "./basic";
 import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
-import { TransferName } from "./transferDefinitions";
 import { ChannelRpcMethods, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
 
 export const ConditionalTransferType = {
@@ -20,6 +19,7 @@ export type ConditionalTransferCreatedPayload = {
   routingId: Bytes32;
   transfer: FullTransferState;
   channelBalance: Balance;
+  conditionType: ConditionalTransferType;
 };
 
 // Emitted when transfer resolved

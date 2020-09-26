@@ -1,10 +1,17 @@
-import { EngineEvents, Result, Values, VectorError } from "@connext/vector-types";
+import {
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferResolvedPayload,
+  Result,
+  Values,
+  VectorError,
+} from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
 
 import { getSwappedAmount } from "./services/swap";
 import { IServerNodeService, ServerNodeError } from "./services/server-node";
 import { getRebalanceProfile } from "./services/rebalance";
+import { IRouterStore } from "./services/store";
 
 export class ForwardTransferError extends VectorError {
   readonly type = VectorError.errors.RouterError;
@@ -27,9 +34,9 @@ export class ForwardTransferError extends VectorError {
 }
 
 export async function forwardTransferCreation(
-  data: any,
+  data: ConditionalTransferCreatedPayload,
   node: IServerNodeService,
-  store: any,
+  store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<any, ForwardTransferError>> {
   /*
@@ -53,18 +60,19 @@ export async function forwardTransferCreation(
   */
 
   const {
-    senderAmount,
-    senderAssetId,
-    recipientChainId,
-    recipientIdentifier,
-    recipientAssetId,
-    requireOnline,
-    senderChannelAddress,
-    conditionData,
+    transfer: {
+      initialBalance: {
+        amount: [senderAmount],
+      },
+      assetId: senderAssetId,
+      meta,
+      transferState: conditionData,
+      channelAddress: senderChannelAddress,
+    },
     routingId,
-    meta,
     conditionType,
   } = data;
+  const { recipientChainId, recipient: recipientIdentifier, recipientAssetId, requireOnline } = meta;
 
   // TODO validate the above params
 
@@ -91,13 +99,21 @@ export async function forwardTransferCreation(
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
   if (recipientAssetId !== senderAssetId) {
-    recipientAmount = await getSwappedAmount(
+    const swapRes = await getSwappedAmount(
       senderAmount,
       senderAssetId,
       senderChainId,
       recipientAssetId,
       recipientChainId,
     );
+    if (swapRes.isError) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.UnableToCalculateSwap, {
+          message: swapRes.getError()?.message,
+        }),
+      );
+    }
+    recipientAmount = swapRes.getValue();
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
@@ -167,11 +183,11 @@ export async function forwardTransferCreation(
   const transfer = await node.conditionalTransfer({
     amount: recipientAmount,
     meta,
-    conditionType,
     assetId: recipientAssetId,
     channelAddress: recipientChannel.channelAddress,
     details: conditionData,
     routingId,
+    conditionType,
   }); // TODO interface
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === ServerNodeError.reasons.Timeout) {
@@ -195,39 +211,41 @@ export async function forwardTransferCreation(
   return Result.ok(transfer.getValue());
 }
 
-// export async function forwardTransferResolution(data, node, store) {
-//   let { recipientChannelAddress, paymentId, resolverData } = data;
+export async function forwardTransferResolution(
+  data: ConditionalTransferResolvedPayload,
+  node: IServerNodeService,
+  store: IRouterStore,
+  logger: BaseLogger,
+) {
+  // let { recipientChannelAddress, paymentId, resolverData } = data;
+  // const senderChannelAddress = await getSenderChannelAddressFromPaymentId(paymentId, recipientChannelAddress);
+  // try {
+  //   await node.resolveCondtion(senderChannelAddress, paymentId, resolverData);
+  //   // TODO attempt a reclaim in here (Ideally not in the same try block)
+  //   return;
+  // } catch (e) {
+  //   // Always store and retry this later
+  // }
+  // const type = "TransferResolution";
+  // await store.queueUpdate(type, {
+  //   channelAddress: senderChannelAddress,
+  //   paymentId,
+  //   resolverData,
+  // });
+}
 
-//   const senderChannelAddress = await getSenderChannelAddressFromPaymentId(paymentId, recipientChannelAddress);
-
-//   try {
-//     await node.resolveCondtion(senderChannelAddress, paymentId, resolverData);
-//     // TODO attempt a reclaim in here (Ideally not in the same try block)
-//     return;
-//   } catch (e) {
-//     // Always store and retry this later
-//   }
-//   const type = "TransferResolution";
-//   await store.queueUpdate(type, {
-//     channelAddress: senderChannelAddress,
-//     paymentId,
-//     resolverData,
-//   });
-// }
-
-// export async function handleIsAlive(data, node, store) {
-//   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
-//   const updates = await store.getQueuedUpdates(data.channelAdress);
-
-//   updates.forEach(async update => {
-//     if (update.type == "TransferCreation") {
-//       const { channelAddress, amount, assetId, paymentId, conditionData } = update.data;
-//       // TODO do we want to try catch this? What should happen if this fails?
-//       await node.conditionalTransfer(channelAddress, amount, assetId, paymentId, conditionData);
-//     } else if (update.type == "TransferResolution") {
-//       const { channelAddress, paymentId, resolverData } = update.data;
-//       // TODO same as above
-//       await node.resolveCondtion(channelAddress, paymentId, resolverData);
-//     }
-//   });
-// }
+export async function handleIsAlive(data: any, node: IServerNodeService, store: IRouterStore) {
+  // This means the user is online and has checked in. Get all updates that are queued and then execute them.
+  // const updates = await store.getQueuedUpdates(data.channelAdress);
+  // updates.forEach(async update => {
+  //   if (update.type == "TransferCreation") {
+  //     const { channelAddress, amount, assetId, paymentId, conditionData } = update.data;
+  //     // TODO do we want to try catch this? What should happen if this fails?
+  //     await node.conditionalTransfer(channelAddress, amount, assetId, paymentId, conditionData);
+  //   } else if (update.type == "TransferResolution") {
+  //     const { channelAddress, paymentId, resolverData } = update.data;
+  //     // TODO same as above
+  //     await node.resolveCondtion(channelAddress, paymentId, resolverData);
+  //   }
+  // });
+}
