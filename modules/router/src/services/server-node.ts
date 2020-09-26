@@ -189,6 +189,11 @@ export class RestServerNodeService implements IServerNodeService {
     switch (event) {
       case EngineEvents.CONDITIONAL_TRANFER_CREATED: {
         this.conditionalTransferEvt.pipe(filter!).attach(callback);
+        const res = await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
+          events: [EngineEvents.CONDITIONAL_TRANFER_CREATED],
+          urls: ["http://router:8008/conditional-transfer-created"],
+        });
+        console.log("res: ", res);
       }
     }
   }

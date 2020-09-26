@@ -256,6 +256,20 @@ server.post<{ Body: any }>(
   },
 );
 
+server.get<{ Params: any }>(
+  "/event/:eventName",
+  {
+    schema: {
+      body: undefined,
+      response: undefined,
+    },
+  },
+  async (request, reply) => {
+    const url = store.getSubscription(request.params.eventName);
+    return reply.status(200).send({ url });
+  },
+);
+
 server.post<{ Body: ServerNodeParams.Admin }>(
   "/clear-store",
   { schema: { body: ServerNodeParams.AdminSchema, response: ServerNodeResponses.AdminSchema } },
