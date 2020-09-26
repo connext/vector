@@ -25,7 +25,12 @@ const logger = pino();
 let router: IRouter;
 const store = new RouterStore();
 server.addHook("onReady", async () => {
-  const node = await RestServerNodeService.connect(config.serverNodeUrl, config.chainProviders, conditionalTransferEvt);
+  const node = await RestServerNodeService.connect(
+    config.serverNodeUrl,
+    config.chainProviders,
+    conditionalTransferEvt,
+    logger.child({ module: "RestServerNodeService" }),
+  );
   router = await Router.connect(node, store, logger);
 });
 
