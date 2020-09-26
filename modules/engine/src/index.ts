@@ -10,13 +10,11 @@ import {
   IMessagingService,
   IVectorProtocol,
   IVectorStore,
-  ProtocolEventName,
   Result,
   JsonRpcProvider,
   EngineParams,
   OutboundChannelUpdateError,
   TAddress,
-  FullTransferState,
   ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
@@ -96,15 +94,14 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async setupListener(): Promise<void> {
-    await setupEngineListeners(this.evts, this.vector, this.messaging, this.signer, this.chainAddresses, this.logger);
-    // unlock transfer if encrypted preimage exists
-    this.vector.on(
-      ProtocolEventName.CHANNEL_UPDATE_EVENT,
-      data => {
-        if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
-        }
-      },
-      data => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
+    await setupEngineListeners(
+      this.evts,
+      this.vector,
+      this.messaging,
+      this.signer,
+      this.store,
+      this.chainAddresses,
+      this.logger,
     );
   }
 

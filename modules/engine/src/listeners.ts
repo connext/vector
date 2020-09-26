@@ -2,12 +2,14 @@ import { WithdrawCommitment } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
+  ConditionalTransferCreatedPayload,
   CreateUpdateDetails,
   EngineEvents,
   FullChannelState,
   IChannelSigner,
   IMessagingService,
   IVectorProtocol,
+  IVectorStore,
   ProtocolEventName,
   ResolveUpdateDetails,
   UpdateType,
@@ -24,6 +26,7 @@ export async function setupEngineListeners(
   vector: IVectorProtocol,
   messaging: IMessagingService,
   signer: IChannelSigner,
+  store: IVectorStore,
   chainAddresses: ChainAddresses,
   logger: Pino.BaseLogger,
 ): Promise<void> {
@@ -44,7 +47,7 @@ export async function setupEngineListeners(
   // Setup listener for conditional transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleConditionalTransferCreation(event, signer, vector, evts, logger),
+    event => handleConditionalTransferCreation(event, signer, vector, store, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -140,10 +143,30 @@ async function handleConditionalTransferCreation(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   vector: IVectorProtocol,
+  store: IVectorStore,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
   // Emit the properly structured event
+  // TODO: consider a store method to find active transfer by routingId
+  const transfers = await store.getActiveTransfers(event.updatedChannelState.channelAddress);
+  const transfer = transfers.find(
+    instance =>
+      instance.meta.routingId ===
+      (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
+  );
+
+  const assetIdx = event.updatedChannelState.assetIds.findIndex(
+    a => a === event.updatedChannelState.latestUpdate.assetId,
+  );
+  const payload: ConditionalTransferCreatedPayload = {
+    channelAddress: event.updatedChannelState.channelAddress,
+    channelBalance: event.updatedChannelState.balances[assetIdx],
+    routingId: (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
+    transfer: transfer!,
+  };
+  evts[EngineEvents.CONDITIONAL_TRANFER_CREATED].post(payload);
+
   // TODO: add automatic resolution for given transfer types
 }
 
