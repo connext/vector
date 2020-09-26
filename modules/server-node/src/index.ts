@@ -181,28 +181,22 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
+server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
   "/linked-transfer/create",
-  { schema: { body: ServerNodeParams.LinkedTransferSchema, response: ServerNodeResponses.LinkedTransferSchema } },
+  {
+    schema: {
+      body: ServerNodeParams.ConditionalTransferSchema,
+      response: ServerNodeResponses.ConditionalTransferSchema,
+    },
+  },
   async (request, reply) => {
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, {
-      amount: request.body.amount,
-      assetId: request.body.assetId,
-      channelAddress: request.body.channelAddress,
-      conditionType: "LinkedTransfer",
-      meta: request.body.meta,
-      recipient: request.body.recipient,
-      routingId: request.body.routingId,
-      details: {
-        linkedHash: request.body.linkedHash,
-      },
-    });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, request.body);
     try {
       const res = await vectorEngine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
         routingId: request.body.routingId,
-      } as ServerNodeResponses.LinkedTransfer);
+      } as ServerNodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -210,28 +204,21 @@ server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.ResolveLinkedTransfer }>(
+server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
   "/linked-transfer/resolve",
   {
     schema: {
-      body: ServerNodeParams.ResolveLinkedTransferSchema,
-      response: ServerNodeResponses.ResolveLinkedTransferSchema,
+      body: ServerNodeParams.ResolveTransferSchema,
+      response: ServerNodeResponses.ResolveTransferSchema,
     },
   },
   async (request, reply) => {
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, {
-      channelAddress: request.body.channelAddress,
-      conditionType: "LinkedTransfer",
-      details: {
-        preImage: request.body.preImage,
-      },
-      routingId: request.body.routingId,
-    });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, request.body);
     try {
       const res = await vectorEngine.request<"chan_resolveTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
-      } as ServerNodeResponses.ResolveLinkedTransfer);
+      } as ServerNodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

@@ -139,15 +139,14 @@ const SharedConditionalTransferParamsSchema = Type.Object({
   meta: Type.Any(),
 });
 
-const LinkedTransferParamsSchema = Type.Intersect([
-  SharedConditionalTransferParamsSchema,
-  Type.Object({
-    conditionType: Type.Literal("LinkedTransfer"),
-    details: Type.Object({
-      linkedHash: TBytes32,
-    }),
+const LinkedTransferDetailsSchema = Type.Object({
+  conditionType: Type.Literal("LinkedTransfer"),
+  details: Type.Object({
+    linkedHash: TBytes32,
   }),
-]);
+});
+
+const LinkedTransferParamsSchema = Type.Intersect([SharedConditionalTransferParamsSchema, LinkedTransferDetailsSchema]);
 
 // TODO: resolves to any, revisit when we have more conditional transfers
 const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema]);
@@ -288,32 +287,18 @@ const postSendDepositTxResponseSchema = {
 };
 
 // POST LINKED TRANSFER
-const postLinkedTransferBodySchema = Type.Object({
-  channelAddress: TAddress,
-  amount: TIntegerString,
-  assetId: TAddress,
-  linkedHash: TBytes32,
-  routingId: TBytes32,
-  recipient: Type.Optional(TPublicIdentifier),
-  recipientChainId: Type.Optional(TChainId),
-  recipientAssetId: Type.Optional(TAddress),
-  meta: Type.Optional(Type.Any()),
-});
+const postConditionalTransferBodySchema = LinkedTransferParamsSchema;
 
-const postLinkedTransferResponseSchema = {
+const postConditionalTransferResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
     routingId: TBytes32,
   }),
 };
 
-const postResolveLinkedTransfer = Type.Object({
-  channelAddress: TAddress,
-  routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
-  preImage: TBytes32,
-});
+const postResolveTransfer = ResolveLinkedTransferParamsSchema;
 
-const postResolveLinkedTransferResponseSchema = {
+const postResolveTransferResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
   }),
@@ -350,11 +335,11 @@ export namespace ServerNodeParams {
   export const SendDepositTxSchema = postSendDepositTxBodySchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema>;
 
-  export const LinkedTransferSchema = postLinkedTransferBodySchema;
-  export type LinkedTransfer = Static<typeof LinkedTransferSchema>;
+  export const ConditionalTransferSchema = postConditionalTransferBodySchema;
+  export type ConditionalTransfer = Static<typeof ConditionalTransferSchema>;
 
-  export const ResolveLinkedTransferSchema = postResolveLinkedTransfer;
-  export type ResolveLinkedTransfer = Static<typeof ResolveLinkedTransferSchema>;
+  export const ResolveTransferSchema = postResolveTransfer;
+  export type ResolveTransfer = Static<typeof ResolveTransferSchema>;
 
   export const AdminSchema = postAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
@@ -383,11 +368,11 @@ export namespace ServerNodeResponses {
   export const SendDepositTxSchema = postSendDepositTxResponseSchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema["200"]>;
 
-  export const LinkedTransferSchema = postLinkedTransferResponseSchema;
-  export type LinkedTransfer = Static<typeof LinkedTransferSchema["200"]>;
+  export const ConditionalTransferSchema = postConditionalTransferResponseSchema;
+  export type ConditionalTransfer = Static<typeof ConditionalTransferSchema["200"]>;
 
-  export const ResolveLinkedTransferSchema = postResolveLinkedTransferResponseSchema;
-  export type ResolveLinkedTransfer = Static<typeof ResolveLinkedTransferSchema["200"]>;
+  export const ResolveTransferSchema = postResolveTransferResponseSchema;
+  export type ResolveTransfer = Static<typeof ResolveTransferSchema["200"]>;
 
   export const AdminSchema = postAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;

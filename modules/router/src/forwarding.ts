@@ -61,7 +61,9 @@ export async function forwardTransferCreation(
     requireOnline,
     senderChannelAddress,
     conditionData,
-    paymentId,
+    routingId,
+    meta,
+    conditionType,
   } = data;
 
   // TODO validate the above params
@@ -162,7 +164,15 @@ export async function forwardTransferCreation(
   }
 
   // If the above is not the case, we can make the transfer!
-  const transfer = await node.conditionalTransfer({ amount, assetId, channelAddress, routingId }); // TODO interface
+  const transfer = await node.conditionalTransfer({
+    amount: recipientAmount,
+    meta,
+    conditionType,
+    assetId: recipientAssetId,
+    channelAddress: recipientChannel.channelAddress,
+    details: conditionData,
+    routingId,
+  }); // TODO interface
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === ServerNodeError.reasons.Timeout) {
       // store transfer
@@ -171,7 +181,7 @@ export async function forwardTransferCreation(
         channelAddress: recipientChannel.channelAddress,
         amount: recipientAmount,
         assetId: recipientAssetId,
-        paymentId,
+        routingId,
         conditionData,
       });
     }

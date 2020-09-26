@@ -26,8 +26,8 @@ export interface IServerNodeService {
     chainId: number,
   ): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>>;
   conditionalTransfer(
-    params: ServerNodeParams.LinkedTransfer,
-  ): Promise<Result<ServerNodeResponses.LinkedTransfer, ServerNodeError>>;
+    params: ServerNodeParams.ConditionalTransfer,
+  ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>>;
 
   once<T extends EngineEvent>(
     event: T,
@@ -142,10 +142,10 @@ export class RestServerNodeService implements IServerNodeService {
   }
 
   async conditionalTransfer(
-    params: ServerNodeParams.LinkedTransfer,
-  ): Promise<Result<ServerNodeResponses.LinkedTransfer, ServerNodeError>> {
+    params: ServerNodeParams.ConditionalTransfer,
+  ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>> {
     try {
-      const res = await Axios.post<ServerNodeResponses.LinkedTransfer>(
+      const res = await Axios.post<ServerNodeResponses.ConditionalTransfer>(
         `${this.serverNodeUrl}/linked-transfer/create`,
         params,
       );
