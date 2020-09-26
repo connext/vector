@@ -2,6 +2,7 @@ import {
   ChainProviders,
   EngineEvent,
   EngineEventMap,
+  EngineEvents,
   FullChannelState,
   Result,
   ServerNodeParams,
@@ -11,6 +12,7 @@ import {
 } from "@connext/vector-types";
 import Axios from "axios";
 import { providers } from "ethers";
+import { Evt } from "evt";
 
 export interface IServerNodeService {
   publicIdentifier: string;
@@ -33,12 +35,12 @@ export interface IServerNodeService {
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): void;
+  ): Promise<void>;
   on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): void;
+  ): Promise<void>;
 }
 
 export class ServerNodeError extends VectorError {
@@ -63,14 +65,22 @@ export class RestServerNodeService implements IServerNodeService {
   public signerAddress = "";
   public chainProviders: { [chainId: string]: providers.JsonRpcProvider } = {};
 
-  private constructor(private readonly serverNodeUrl: string, private readonly providerUrls: ChainProviders) {
+  private constructor(
+    private readonly serverNodeUrl: string,
+    private readonly providerUrls: ChainProviders,
+    private readonly conditionalTransferEvt: Evt<any>,
+  ) {
     Object.entries(providerUrls).forEach(([chainId, url]) => {
       this.chainProviders[chainId] = new providers.JsonRpcProvider(url);
     });
   }
 
-  static async connect(serverNodeUrl: string, providerUrls: ChainProviders): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, providerUrls);
+  static async connect(
+    serverNodeUrl: string,
+    providerUrls: ChainProviders,
+    conditionalTransferEvt: Evt<any>,
+  ): Promise<RestServerNodeService> {
+    const service = new RestServerNodeService(serverNodeUrl, providerUrls, conditionalTransferEvt);
     const configRes = await service.getConfig();
     if (configRes.isError) {
       throw configRes.getError();
@@ -160,11 +170,23 @@ export class RestServerNodeService implements IServerNodeService {
     }
   }
 
-  once(event: string, callback: (payload: any) => void | Promise<void>, filter?: (payload: any) => boolean): void {
+  async once<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    filter?: (payload: EngineEventMap[T]) => boolean,
+  ): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
-  on(event: string, callback: (payload: any) => void | Promise<void>, filter?: (payload: any) => boolean): void {
-    throw new Error("Method not implemented.");
+  async on<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    filter?: (payload: EngineEventMap[T]) => boolean,
+  ): Promise<void> {
+    switch (event) {
+      case EngineEvents.CONDITIONAL_TRANFER_CREATED: {
+        this.conditionalTransferEvt.pipe(filter!).attach(callback);
+      }
+    }
   }
 }

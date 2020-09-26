@@ -1,11 +1,14 @@
 import fastify from "fastify";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
+import { Evt } from "evt";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { RestServerNodeService } from "./services/server-node";
 import { RouterStore } from "./services/store";
+
+const conditionalTransferEvt = Evt.create<any>();
 
 const server = fastify();
 server.register(fastifyOas, {
@@ -28,6 +31,11 @@ server.addHook("onReady", async () => {
 
 server.get("/ping", async () => {
   return "pong\n";
+});
+
+server.post("/conditional-transfer-created", async (request, response) => {
+  console.log("request: ", request.body);
+  conditionalTransferEvt.post(request.body);
 });
 
 server.listen(config.port, "0.0.0.0", (err, address) => {
