@@ -88,13 +88,12 @@ export async function setupEngineListeners(
       const {
         updatedChannelState: {
           latestUpdate: { type, details },
-          networkContext: { withdrawDefinition },
+          networkContext: { chainId },
         },
       } = event;
       return (
         type === UpdateType.create &&
-        !!withdrawDefinition &&
-        (details as CreateUpdateDetails).transferDefinition === withdrawDefinition
+        (details as CreateUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawDefinition
       );
     },
   );
@@ -107,13 +106,12 @@ export async function setupEngineListeners(
       const {
         updatedChannelState: {
           latestUpdate: { type, details },
-          networkContext: { withdrawDefinition },
+          networkContext: { chainId },
         },
       } = event;
       return (
         type === UpdateType.resolve &&
-        !!withdrawDefinition &&
-        (details as ResolveUpdateDetails).transferDefinition === withdrawDefinition
+        (details as ResolveUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawDefinition
       );
     },
   );

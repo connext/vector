@@ -1,5 +1,7 @@
 import {
   ChainProviders,
+  EngineEvent,
+  EngineEventMap,
   FullChannelState,
   Result,
   ServerNodeParams,
@@ -27,12 +29,10 @@ export interface IServerNodeService {
     params: ServerNodeParams.LinkedTransfer,
   ): Promise<Result<ServerNodeResponses.LinkedTransfer, ServerNodeError>>;
 
-  // TODO: types
-  once(
-    event: string,
-    callback: (payload: any) => void | Promise<void>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter?: (payload: any) => boolean,
+  once<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    filter?: (payload: EngineEventMap[T]) => boolean,
   ): void;
 }
 
@@ -41,6 +41,7 @@ export class ServerNodeError extends VectorError {
 
   static readonly reasons = {
     ProviderNotFound: "Provider not available for chain",
+    Timeout: "Timeout",
   } as const;
 
   constructor(

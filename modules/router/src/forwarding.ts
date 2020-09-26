@@ -1,9 +1,9 @@
-import { Result, Values, VectorError } from "@connext/vector-types";
+import { EngineEvents, Result, Values, VectorError } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
 
 import { getSwappedAmount } from "./services/swap";
-import { IServerNodeService } from "./services/server-node";
+import { IServerNodeService, ServerNodeError } from "./services/server-node";
 import { getRebalanceProfile } from "./services/rebalance";
 
 export class ForwardTransferError extends VectorError {
@@ -14,6 +14,7 @@ export class ForwardTransferError extends VectorError {
     RecipientChannelNotFound: "Recipient channel not found",
     UnableToCalculateSwap: "Could not calculate swap",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
+    ErrorForwardingTransfer: "Error forwarding transfer",
   } as const;
 
   constructor(
@@ -139,16 +140,6 @@ export async function forwardTransferCreation(
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
-    // First set up listener for deposit
-    const depositCompleted = new Promise(res => {
-      node.once(
-        //@ts-ignore
-        NodeEventName.DEPOSIT_COMPLETED_EVENT,
-        data => res(data),
-        data => data.assetId == recipientAssetId && data.channelAddress == recipientChannel.channelAddress,
-      );
-    });
-
     await node.deposit(
       {
         channelAddress: recipientChannel.channelAddress,
@@ -159,7 +150,6 @@ export async function forwardTransferCreation(
       },
       recipientChainId,
     );
-    await depositCompleted;
     // TODO we'll need to check for a failed deposit here too.
 
     // TODO what do we do here about concurrent deposits? Do we want to set a lock?
@@ -172,64 +162,62 @@ export async function forwardTransferCreation(
   }
 
   // If the above is not the case, we can make the transfer!
-  try {
-    await node.conditionalTransfer({ amount, assetId, channelAddress }); // TODO interface
-    // TODO We should also attempt a collateralization here. However, it **should not** happen inside this try block.
-    return;
-  } catch (e) {
-    // If the transfer *specifically* fails with a timeout + `requireOnline` is false, then we should
-    // cache the transfer. Else, we should hard error.
-    if (!requireOnline && e.message.contains("timeout")) {
-      // TODO what does the error look like?
-      //@ts-ignore
-      return Result.error;
-      // TODO cancel the sender payment here too!! -- How can we structure the catch block correctly here?
+  const transfer = await node.conditionalTransfer({ amount, assetId, channelAddress, routingId }); // TODO interface
+  if (transfer.isError) {
+    if (!requireOnline && transfer.getError()?.message === ServerNodeError.reasons.Timeout) {
+      // store transfer
+      const type = "TransferCreation";
+      await store.queueUpdate(type, {
+        channelAddress: recipientChannel.channelAddress,
+        amount: recipientAmount,
+        assetId: recipientAssetId,
+        paymentId,
+        conditionData,
+      });
     }
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
+        message: transfer.getError()?.message,
+      }),
+    );
   }
-  // Fall through if we can store and forward this later
-  const type = "TransferCreation";
-  await store.queueUpdate(type, {
-    channelAddress: recipientChannelAddress,
-    amount,
-    assetId: recipientAssetId,
-    paymentId,
-    conditionData,
-  });
+  // either a successful transfer or an error
+  return Result.ok(transfer.getValue());
 }
 
-export async function forwardTransferResolution(data, node, store) {
-  let { recipientChannelAddress, paymentId, resolverData } = data;
+// export async function forwardTransferResolution(data, node, store) {
+//   let { recipientChannelAddress, paymentId, resolverData } = data;
 
-  const senderChannelAddress = await getSenderChannelAddressFromPaymentId(paymentId, recipientChannelAddress);
+//   const senderChannelAddress = await getSenderChannelAddressFromPaymentId(paymentId, recipientChannelAddress);
 
-  try {
-    await node.resolveCondtion(senderChannelAddress, paymentId, resolverData);
-    // TODO attempt a reclaim in here (Ideally not in the same try block)
-    return;
-  } catch (e) {
-    // Always store and retry this later
-  }
-  const type = "TransferResolution";
-  await store.queueUpdate(type, {
-    channelAddress: senderChannelAddress,
-    paymentId,
-    resolverData,
-  });
-}
+//   try {
+//     await node.resolveCondtion(senderChannelAddress, paymentId, resolverData);
+//     // TODO attempt a reclaim in here (Ideally not in the same try block)
+//     return;
+//   } catch (e) {
+//     // Always store and retry this later
+//   }
+//   const type = "TransferResolution";
+//   await store.queueUpdate(type, {
+//     channelAddress: senderChannelAddress,
+//     paymentId,
+//     resolverData,
+//   });
+// }
 
-export async function handleIsAlive(data, node, store) {
-  // This means the user is online and has checked in. Get all updates that are queued and then execute them.
-  const updates = await store.getQueuedUpdates(data.channelAdress);
+// export async function handleIsAlive(data, node, store) {
+//   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
+//   const updates = await store.getQueuedUpdates(data.channelAdress);
 
-  updates.forEach(async update => {
-    if (update.type == "TransferCreation") {
-      const { channelAddress, amount, assetId, paymentId, conditionData } = update.data;
-      // TODO do we want to try catch this? What should happen if this fails?
-      await node.conditionalTransfer(channelAddress, amount, assetId, paymentId, conditionData);
-    } else if (update.type == "TransferResolution") {
-      const { channelAddress, paymentId, resolverData } = update.data;
-      // TODO same as above
-      await node.resolveCondtion(channelAddress, paymentId, resolverData);
-    }
-  });
-}
+//   updates.forEach(async update => {
+//     if (update.type == "TransferCreation") {
+//       const { channelAddress, amount, assetId, paymentId, conditionData } = update.data;
+//       // TODO do we want to try catch this? What should happen if this fails?
+//       await node.conditionalTransfer(channelAddress, amount, assetId, paymentId, conditionData);
+//     } else if (update.type == "TransferResolution") {
+//       const { channelAddress, paymentId, resolverData } = update.data;
+//       // TODO same as above
+//       await node.resolveCondtion(channelAddress, paymentId, resolverData);
+//     }
+//   });
+// }
