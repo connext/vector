@@ -10,18 +10,26 @@ import {
   IMessagingService,
   IVectorProtocol,
   IVectorStore,
-  ProtocolEventName,
   Result,
   JsonRpcProvider,
   EngineParams,
   OutboundChannelUpdateError,
   TAddress,
-  FullTransferState,
   ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
+  IVectorEngine,
+  EngineEvents,
+  EngineEventMap,
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferResolvedPayload,
+  DepositReconciledPayload,
+  WithdrawalCreatedPayload,
+  WithdrawalResolvedPayload,
+  WithdrawalReconciledPayload,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
+import { Evt } from "evt";
 
 import { InvalidTransferType } from "./errors";
 import {
@@ -29,10 +37,24 @@ import {
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "./paramConverter";
+import { setupEngineListeners } from "./listeners";
 
 const ajv = new Ajv();
 
-export class VectorEngine {
+export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventMap[K]> };
+
+export class VectorEngine implements IVectorEngine {
+  // Setup event container to emit events from vector
+  // FIXME: Is this JSON RPC compatible?
+  private readonly evts: EngineEvtContainer = {
+    [EngineEvents.CONDITIONAL_TRANFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
+    [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt.create<ConditionalTransferResolvedPayload>(),
+    [EngineEvents.DEPOSIT_RECONCILED]: Evt.create<DepositReconciledPayload>(),
+    [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),
+    [EngineEvents.WITHDRAWAL_RESOLVED]: Evt.create<WithdrawalResolvedPayload>(),
+    [EngineEvents.WITHDRAWAL_RECONCILED]: Evt.create<WithdrawalReconciledPayload>(),
+  };
+
   private constructor(
     private readonly messaging: IMessagingService,
     private readonly store: IVectorStore,
@@ -72,14 +94,14 @@ export class VectorEngine {
   }
 
   private async setupListener(): Promise<void> {
-    // unlock transfer if encrypted preimage exists
-    this.vector.on(
-      ProtocolEventName.CHANNEL_UPDATE_EVENT,
-      data => {
-        if (!data.updatedChannelState.latestUpdate?.details.meta.encryptedPreImage) {
-        }
-      },
-      data => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
+    await setupEngineListeners(
+      this.evts,
+      this.vector,
+      this.messaging,
+      this.signer,
+      this.store,
+      this.chainAddresses,
+      this.logger,
     );
   }
 

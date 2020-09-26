@@ -15,7 +15,7 @@ import { Evt } from "evt";
 import Sinon from "sinon";
 import { expect } from "chai";
 
-import { setupListeners } from "../listeners";
+import { setupEngineListeners } from "../listeners";
 
 // Adds a handler to an evt instance and returns the result
 // based on the input arguments
@@ -59,7 +59,7 @@ describe("listeners", () => {
 
   describe("withdraw", () => {
     it("should work", async () => {
-      await setupListeners(vector, messaging, bob);
+      await setupEngineListeners(vector, messaging, bob);
 
       const withdrawInitialState: WithdrawState = {
         balance: { to: [alice.address, bob.address], amount: ["5", "0"] },
