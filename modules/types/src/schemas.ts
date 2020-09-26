@@ -304,6 +304,18 @@ const postResolveTransferResponseSchema = {
   }),
 };
 
+// REGISTER LISTENER
+const postRegisterListenerBodySchema = Type.Object({
+  events: Type.Array(Type.String()),
+  urls: Type.Array(Type.String()),
+});
+
+const postRegisterListenerResponseSchema = {
+  200: Type.Object({
+    message: Type.String(),
+  }),
+};
+
 // ADMIN
 const postAdminBodySchema = Type.Object({
   adminToken: Type.String({
@@ -341,6 +353,9 @@ export namespace ServerNodeParams {
   export const ResolveTransferSchema = postResolveTransfer;
   export type ResolveTransfer = Static<typeof ResolveTransferSchema>;
 
+  export const RegisterListener = postRegisterListenerBodySchema;
+  export type RegisterListener = Static<typeof RegisterListener>;
+
   export const AdminSchema = postAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
 }
@@ -373,6 +388,9 @@ export namespace ServerNodeResponses {
 
   export const ResolveTransferSchema = postResolveTransferResponseSchema;
   export type ResolveTransfer = Static<typeof ResolveTransferSchema["200"]>;
+
+  export const RegisterListenerSchema = postRegisterListenerResponseSchema;
+  export type RegisterListener = Static<typeof RegisterListenerSchema["200"]>;
 
   export const AdminSchema = postAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;

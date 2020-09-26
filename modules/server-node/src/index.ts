@@ -4,7 +4,13 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { providers, Wallet } from "ethers";
-import { ChannelRpcMethods, OnchainError, ServerNodeParams, ServerNodeResponses } from "@connext/vector-types";
+import {
+  ChannelRpcMethods,
+  EngineEvents,
+  OnchainError,
+  ServerNodeParams,
+  ServerNodeResponses,
+} from "@connext/vector-types";
 
 import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
@@ -12,6 +18,7 @@ import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { VectorTransactionService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
+import Axios from "axios";
 
 const server = fastify();
 server.register(fastifyOas, {
@@ -56,6 +63,13 @@ server.addHook("onReady", async () => {
     config.contractAddresses,
     logger.child({ module: "VectorEngine" }),
   );
+
+  vectorEngine.on(EngineEvents.CONDITIONAL_TRANFER_CREATED, async data => {
+    const url = store.getSubscription(EngineEvents.CONDITIONAL_TRANFER_CREATED);
+    if (url) {
+      await Axios.post(url, data);
+    }
+  });
 });
 
 server.get("/ping", async () => {
@@ -223,6 +237,22 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
     }
+  },
+);
+
+server.post<{ Body: any }>(
+  "/event/subscribe",
+  {
+    schema: {
+      body: undefined,
+      response: undefined,
+    },
+  },
+  async (request, reply) => {
+    request.body.events.forEach((event: any, index: number) => {
+      store.registerSubscription(event, request.body.urls[index]);
+    });
+    return reply.status(200).send({ message: "success" });
   },
 );
 

@@ -9,6 +9,7 @@ import {
   ChannelCommitmentData,
   FullTransferState,
   UpdateType,
+  EngineEvent,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
@@ -20,6 +21,10 @@ import {
   UpdateCreateInput,
   Transfer,
 } from "@prisma/client";
+
+export interface IServerNodeStore extends IVectorStore {
+  registerSubscription<T extends EngineEvent>(event: T, url: string): void;
+}
 
 const convertChannelEntityToFullChannelState = (
   channelEntity: Channel & {
@@ -162,11 +167,21 @@ const convertTransferEntityToFullTransferState = (
   return fullTransfer;
 };
 
-export class PrismaStore implements IVectorStore {
+export class PrismaStore implements IServerNodeStore {
+  private eventSubscriptions: { [event: string]: string } = {};
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+  }
+
+  registerSubscription<T extends EngineEvent>(event: T, url: string): void {
+    console.log("registerSubscription: ", event, url);
+    this.eventSubscriptions[event] = url;
+  }
+
+  getSubscription<T extends EngineEvent>(event: T): string | undefined {
+    return this.eventSubscriptions[event];
   }
 
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {

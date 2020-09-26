@@ -25,7 +25,7 @@ const logger = pino();
 let router: IRouter;
 const store = new RouterStore();
 server.addHook("onReady", async () => {
-  const node = await RestServerNodeService.connect(config.serverNodeUrl, config.chainProviders);
+  const node = await RestServerNodeService.connect(config.serverNodeUrl, config.chainProviders, conditionalTransferEvt);
   router = await Router.connect(node, store, logger);
 });
 
@@ -36,6 +36,7 @@ server.get("/ping", async () => {
 server.post("/conditional-transfer-created", async (request, response) => {
   console.log("request: ", request.body);
   conditionalTransferEvt.post(request.body);
+  return response.status(200).send({ message: "success" });
 });
 
 server.listen(config.port, "0.0.0.0", (err, address) => {

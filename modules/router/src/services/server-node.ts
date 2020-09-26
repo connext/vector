@@ -13,6 +13,7 @@ import {
 import Axios from "axios";
 import { providers } from "ethers";
 import { Evt } from "evt";
+import { BaseLogger } from "pino";
 
 export interface IServerNodeService {
   publicIdentifier: string;
@@ -69,6 +70,7 @@ export class RestServerNodeService implements IServerNodeService {
     private readonly serverNodeUrl: string,
     private readonly providerUrls: ChainProviders,
     private readonly conditionalTransferEvt: Evt<any>,
+    private readonly logger: BaseLogger,
   ) {
     Object.entries(providerUrls).forEach(([chainId, url]) => {
       this.chainProviders[chainId] = new providers.JsonRpcProvider(url);
@@ -79,8 +81,9 @@ export class RestServerNodeService implements IServerNodeService {
     serverNodeUrl: string,
     providerUrls: ChainProviders,
     conditionalTransferEvt: Evt<any>,
+    logger: BaseLogger,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, providerUrls, conditionalTransferEvt);
+    const service = new RestServerNodeService(serverNodeUrl, providerUrls, conditionalTransferEvt, logger);
     const configRes = await service.getConfig();
     if (configRes.isError) {
       throw configRes.getError();

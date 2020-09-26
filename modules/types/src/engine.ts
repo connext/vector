@@ -76,4 +76,17 @@ export interface EngineEventMap {
 
 export interface IVectorEngine {
   request<T extends ChannelRpcMethods>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
+  on<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: EngineEventMap[T]) => boolean,
+  ): void;
+  once<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: EngineEventMap[T]) => boolean,
+  ): void;
+  off<T extends EngineEvent>(event?: T): void;
 }
