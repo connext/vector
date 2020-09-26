@@ -1,50 +1,20 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
 import {
   ChannelUpdateEvent,
-  CreateUpdateDetails,
   FullChannelState,
   IChannelSigner,
-  IMessagingService,
   IVectorProtocol,
-  ProtocolEventName,
   UpdateType,
   WithdrawState,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import Pino from "pino";
 
-export async function setupListeners(
-  vector: IVectorProtocol,
-  messaging: IMessagingService,
-  signer: IChannelSigner,
-  logger: Pino.BaseLogger = Pino(),
-): Promise<void> {
-  // Set up withdraw listener and handler
-  vector.on(
-    ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleWithdrawResolve(event, signer, vector, logger),
-    event => {
-      const {
-        updatedChannelState: {
-          latestUpdate: { toIdentifier, type, details },
-          networkContext: { withdrawDefinition },
-        },
-      } = event;
-      return (
-        toIdentifier === signer.publicIdentifier &&
-        type === UpdateType.create &&
-        !!withdrawDefinition &&
-        (details as CreateUpdateDetails).transferDefinition === withdrawDefinition
-      );
-    },
-  );
-}
-
-async function handleWithdrawResolve(
+export async function handleWithdrawResolve(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   vector: IVectorProtocol,
-  logger: Pino.BaseLogger = Pino(),
+  logger: Pino.BaseLogger,
 ): Promise<void> {
   // If you receive a withdraw from your counterparty, you should
   // resolve the withdrawal with your signature

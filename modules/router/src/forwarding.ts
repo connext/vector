@@ -1,34 +1,59 @@
-import { FullChannelState } from "@connext/vector-types";
-import { getCreate2MultisigAddress } from "@connext/engine";
-import { BigNumber } from "@connext/vector-utils";
+import { Result, Values, VectorError } from "@connext/vector-types";
+import { BaseLogger } from "pino";
+import { BigNumber } from "ethers";
 
-import { Result } from "../../auth/node_modules/@connext/vector-types/dist/src";
+import { getSwappedAmount } from "./services/swap";
+import { IServerNodeService } from "./services/server-node";
+import { getRebalanceProfile } from "./services/rebalance";
 
-export async function forwardTransferCreation(data, node, store) {
-  // TODO we need to figure out the server-node type here
+export class ForwardTransferError extends VectorError {
+  readonly type = VectorError.errors.RouterError;
+
+  static readonly reasons = {
+    SenderChannelNotFound: "Sender channel not found",
+    RecipientChannelNotFound: "Recipient channel not found",
+    UnableToCalculateSwap: "Could not calculate swap",
+    UnableToGetRebalanceProfile: "Could not get rebalance profile",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof ForwardTransferError.reasons>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context?: any,
+  ) {
+    super(message, context);
+  }
+}
+
+export async function forwardTransferCreation(
+  data: any,
+  node: IServerNodeService,
+  store: any,
+  logger: BaseLogger,
+): Promise<Result<any, ForwardTransferError>> {
   /*
-        A note on the transfer event data and conditionalTransfer() params:
+  A note on the transfer event data and conditionalTransfer() params:
 
-        In Indra, we have business logic bleed into several different parts of the stack. This means that adding support for new transfers
-        involves making changes to several different places to add support for new params and event types.
+  In Indra, we have business logic bleed into several different parts of the stack. This means that adding support for new transfers
+  involves making changes to several different places to add support for new params and event types.
 
-        Ideally, all of these changes should now be isolated to the engine. The challenge with this is that consumers of the engine interface
-        (or server-node interface) need to pass in the correct params for a given transfer. This means that in the router, we'd need to
-        retain context into a conditional transfer type to correctly call the node conditionalTransfer() fn.
+  Ideally, all of these changes should now be isolated to the engine. The challenge with this is that consumers of the engine interface
+  (or server-node interface) need to pass in the correct params for a given transfer. This means that in the router, we'd need to
+  retain context into a conditional transfer type to correctly call the node conditionalTransfer() fn.
 
-        We specifically don't want the router to operate this way. Given this, the best approach I can think of is to structure event/param objects
-        for conditional transfer as follows:
-        1. Have named fields for all of the data that would actually be needed by the router. This would be: `amount`, `assetId`, `recipientChainId`,
-           `recipient`, `recipientAssetId`, `requireOnline`.
-        2. Put all other params (basically everything related to the specifics of the condition: `type`, `lockHash`, etc.) into an opaque object
-           that the router just catches from the transfer event and passes directly to the server-node.
+  We specifically don't want the router to operate this way. Given this, the best approach I can think of is to structure event/param objects
+  for conditional transfer as follows:
+  1. Have named fields for all of the data that would actually be needed by the router. This would be: `amount`, `assetId`, `recipientChainId`,
+      `recipient`, `recipientAssetId`, `requireOnline`.
+  2. Put all other params (basically everything related to the specifics of the condition: `type`, `lockHash`, etc.) into an opaque object
+      that the router just catches from the transfer event and passes directly to the server-node.
 
-        Because we're validating the actual conditional params + allowed transfer definitions at the lower levels, this feels safe to do.
-    */
+  Because we're validating the actual conditional params + allowed transfer definitions at the lower levels, this feels safe to do.
+  */
 
-  let {
-    amount,
-    assetId,
+  const {
+    senderAmount,
+    senderAssetId,
     recipientChainId,
     recipientIdentifier,
     recipientAssetId,
@@ -40,27 +65,68 @@ export async function forwardTransferCreation(data, node, store) {
 
   // TODO validate the above params
 
-  const senderChannel: FullChannelState = await node.getStateChannel(senderChannelAddress);
+  const senderChannelRes = await node.getStateChannel(senderChannelAddress);
+  if (senderChannelRes.isError) {
+    return Result.fail(
+      new ForwardTransferError(
+        ForwardTransferError.reasons.SenderChannelNotFound,
+        senderChannelRes.getError()?.message,
+      ),
+    );
+  }
+  const senderChannel = senderChannelRes.getValue();
+  if (!senderChannel) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
+        channelAddress: senderChannelAddress,
+      }),
+    );
+  }
   const senderChainId = senderChannel.networkContext.chainId;
 
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
-
-  // TODO ideally these are both combined into a better type?
-  if (!recipientChainId) recipientChainId = senderChainId;
-  if (!recipientAssetId) {
-    recipientAssetId = assetId;
-  } else {
-    // TODO use a provider or service pattern here so we can unit test
-    amount = await getSwappedAmount(amount, assetId, senderChainId, recipientAssetId, recipientChainId);
+  let recipientAmount = senderAmount;
+  if (recipientAssetId !== senderAssetId) {
+    recipientAmount = await getSwappedAmount(
+      senderAmount,
+      senderAssetId,
+      senderChainId,
+      recipientAssetId,
+      recipientChainId,
+    );
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
-  const recipientChannelAddress = await getCreate2MultisigAddress(node.publicIdentifier, recipientIdentifier); //TODO how can we do this?
-  const recipientChannel: FullChannelState = await node.getStateChannel(recipientChannelAddress);
+  const recipientChannelRes = await node.getStateChannelByParticipants(
+    node.publicIdentifier,
+    recipientIdentifier,
+    recipientChainId,
+  );
+  if (recipientChannelRes.isError) {
+    return Result.fail(
+      new ForwardTransferError(
+        ForwardTransferError.reasons.SenderChannelNotFound,
+        senderChannelRes.getError()?.message,
+      ),
+    );
+  }
+  const recipientChannel = recipientChannelRes.getValue();
+  if (!recipientChannel) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
+        channelAddress: senderChannelAddress,
+      }),
+    );
+  }
 
   // TODO use a provider or service pattern here so we can unit test
-  const profile = await getRebalanceProfile(recipientChannelAddress, recipientAssetId, recipientChainId);
+  const profileRes = await getRebalanceProfile(recipientChannel.channelAddress, recipientAssetId);
+  if (profileRes.isError) {
+    return Result.fail(profileRes.getError()!);
+  }
+
+  const profile = profileRes.getValue();
 
   // Figure out router balance
   const routerBalanceInRecipientChannel =
@@ -69,26 +135,29 @@ export async function forwardTransferCreation(data, node, store) {
       : recipientChannel.balances[recipientAssetId].amount[1];
 
   // If there are not enough funds, fall back to sending the entire transfer amount + required collateral amount
-  if (BigNumber.from(routerBalanceInRecipientChannel).lt(amount)) {
+  if (BigNumber.from(routerBalanceInRecipientChannel).lt(recipientAmount)) {
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
     // First set up listener for deposit
     const depositCompleted = new Promise(res => {
-      node.on(
+      node.once(
         //@ts-ignore
         NodeEventName.DEPOSIT_COMPLETED_EVENT,
         data => res(data),
-        data => data.assetId == recipientAssetId && data.channelAdress == recipientChannelAddress,
+        data => data.assetId == recipientAssetId && data.channelAddress == recipientChannel.channelAddress,
       );
     });
 
     await node.deposit(
-      recipientChannelAddress,
-      BigNumber.from(amount)
-        .add(profile.target)
-        .toString(),
-      recipientAssetId,
+      {
+        channelAddress: recipientChannel.channelAddress,
+        assetId: recipientAssetId,
+        amount: BigNumber.from(recipientAmount)
+          .add(profile.target)
+          .toString(),
+      },
+      recipientChainId,
     );
     await depositCompleted;
     // TODO we'll need to check for a failed deposit here too.
@@ -104,7 +173,7 @@ export async function forwardTransferCreation(data, node, store) {
 
   // If the above is not the case, we can make the transfer!
   try {
-    await node.conditionalTransfer(recipientChannelAddress, amount, recipientAssetId, paymentId, conditionData); // TODO interface
+    await node.conditionalTransfer({ amount, assetId, channelAddress }); // TODO interface
     // TODO We should also attempt a collateralization here. However, it **should not** happen inside this try block.
     return;
   } catch (e) {

@@ -16,9 +16,10 @@ import {
   EngineParams,
   OutboundChannelUpdateError,
   TAddress,
-  FullTransferState,
   ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
+  UpdateType,
+  CreateUpdateDetails,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -29,7 +30,7 @@ import {
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "./paramConverter";
-import { setupListeners } from "./listeners";
+import { handleWithdrawResolve } from "./listeners";
 
 const ajv = new Ajv();
 
@@ -81,6 +82,25 @@ export class VectorEngine {
         }
       },
       data => data.updatedChannelState.latestUpdate?.details.meta?.recipient === this.vector.publicIdentifier,
+    );
+
+    // handle withdrawal
+    this.vector.on(
+      ProtocolEventName.CHANNEL_UPDATE_EVENT,
+      event => handleWithdrawResolve(event, this.signer, this.vector, this.logger),
+      event => {
+        const {
+          updatedChannelState: {
+            latestUpdate: { toIdentifier, type, details },
+            networkContext: { chainId },
+          },
+        } = event;
+        return (
+          toIdentifier === this.signer.publicIdentifier &&
+          type === UpdateType.create &&
+          (details as CreateUpdateDetails).transferDefinition === this.chainAddresses[chainId].withdrawDefinition
+        );
+      },
     );
   }
 
