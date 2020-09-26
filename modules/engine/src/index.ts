@@ -96,7 +96,7 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async setupListener(): Promise<void> {
-    await setupEngineListeners(this.evts, this.vector, this.messaging, this.signer, this.logger);
+    await setupEngineListeners(this.evts, this.vector, this.messaging, this.signer, this.chainAddresses, this.logger);
     // unlock transfer if encrypted preimage exists
     this.vector.on(
       ProtocolEventName.CHANNEL_UPDATE_EVENT,
