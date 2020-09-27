@@ -39,6 +39,8 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<any, ForwardTransferError>> {
+  logger.info({ data, method: "forwardTransferCreation" }, "Received transfer event, starting forwarding");
+
   /*
   A note on the transfer event data and conditionalTransfer() params:
 

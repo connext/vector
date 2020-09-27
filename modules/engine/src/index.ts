@@ -48,7 +48,7 @@ export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
   // FIXME: Is this JSON RPC compatible?
   private readonly evts: EngineEvtContainer = {
-    [EngineEvents.CONDITIONAL_TRANFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
+    [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
     [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt.create<ConditionalTransferResolvedPayload>(),
     [EngineEvents.DEPOSIT_RECONCILED]: Evt.create<DepositReconciledPayload>(),
     [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),

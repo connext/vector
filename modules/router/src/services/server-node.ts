@@ -187,13 +187,16 @@ export class RestServerNodeService implements IServerNodeService {
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void> {
     switch (event) {
-      case EngineEvents.CONDITIONAL_TRANFER_CREATED: {
+      case EngineEvents.CONDITIONAL_TRANSFER_CREATED: {
+        const url = "http://router:8008/conditional-transfer-created";
         this.conditionalTransferEvt.pipe(filter!).attach(callback);
-        const res = await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
-          events: [EngineEvents.CONDITIONAL_TRANFER_CREATED],
-          urls: ["http://router:8008/conditional-transfer-created"],
+        await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
+          [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: url,
         });
-        console.log("res: ", res);
+        this.logger.info(
+          { eventName: EngineEvents.CONDITIONAL_TRANSFER_CREATED, url },
+          "Engine event subscription created",
+        );
       }
     }
   }

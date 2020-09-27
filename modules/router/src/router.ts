@@ -18,6 +18,7 @@ export class Router implements IRouter {
   static async connect(node: IServerNodeService, store: IRouterStore, logger: BaseLogger): Promise<Router> {
     const router = new Router(node, store, logger);
     await router.startup();
+    logger.info("Vector Router connected 🚀");
     return router;
   }
 

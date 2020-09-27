@@ -8,22 +8,22 @@ import { IRouterStore } from "./services/store";
 export async function setupListeners(node: IServerNodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
-  node.on(
-    EngineEvents.CONDITIONAL_TRANFER_CREATED, // TODO types
+  await node.on(
+    EngineEvents.CONDITIONAL_TRANSFER_CREATED, // TODO types
     async data => {
       await forwardTransferCreation(data, node, store, logger);
     },
   );
 
   // Set up listener to handle transfer resolution
-  node.on(
+  await node.on(
     EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, // TODO types
     async data => {
       await forwardTransferResolution(data, node, store, logger);
     },
   );
 
-  node.on(
+  await node.on(
     EngineEvents.DEPOSIT_RECONCILED, // TODO types
     async data => {
       // await handleCollateralization(data);

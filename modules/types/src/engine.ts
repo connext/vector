@@ -13,7 +13,7 @@ export type ConditionalTransferResponse = {
 };
 
 // Emitted when transfer created
-export const CONDITIONAL_TRANFER_CREATED_EVENT = "CONDITIONAL_TRANFER_CREATED";
+export const CONDITIONAL_TRANSFER_CREATED_EVENT = "CONDITIONAL_TRANSFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
   channelAddress: string;
   routingId: Bytes32;
@@ -57,7 +57,7 @@ export type WithdrawalReconciledPayload = {
 
 // Grouped event types
 export const EngineEvents = {
-  [CONDITIONAL_TRANFER_CREATED_EVENT]: CONDITIONAL_TRANFER_CREATED_EVENT,
+  [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
   [DEPOSIT_RECONCILED_EVENT]: DEPOSIT_RECONCILED_EVENT,
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
@@ -66,7 +66,7 @@ export const EngineEvents = {
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
 export interface EngineEventMap {
-  [CONDITIONAL_TRANFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
+  [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;
   [DEPOSIT_RECONCILED_EVENT]: DepositReconciledPayload;
   [WITHDRAWAL_CREATED_EVENT]: WithdrawalCreatedPayload;

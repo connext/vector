@@ -6,11 +6,13 @@ import { ChannelSigner } from "@connext/vector-utils";
 import { providers, Wallet } from "ethers";
 import {
   ChannelRpcMethods,
+  EngineEvent,
   EngineEvents,
   OnchainError,
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
+import Axios from "axios";
 
 import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
@@ -18,7 +20,6 @@ import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { VectorTransactionService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
-import Axios from "axios";
 
 const server = fastify();
 server.register(fastifyOas, {
@@ -64,8 +65,8 @@ server.addHook("onReady", async () => {
     logger.child({ module: "VectorEngine" }),
   );
 
-  vectorEngine.on(EngineEvents.CONDITIONAL_TRANFER_CREATED, async data => {
-    const url = store.getSubscription(EngineEvents.CONDITIONAL_TRANFER_CREATED);
+  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
+    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
     if (url) {
       await Axios.post(url, data);
     }
@@ -240,33 +241,55 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
   },
 );
 
-server.post<{ Body: any }>(
+server.post<{ Body: ServerNodeParams.RegisterListener }>(
   "/event/subscribe",
   {
     schema: {
-      body: undefined,
-      response: undefined,
+      body: ServerNodeParams.RegisterListenerSchema,
+      response: ServerNodeResponses.RegisterListenerSchema,
     },
   },
   async (request, reply) => {
-    request.body.events.forEach((event: any, index: number) => {
-      store.registerSubscription(event, request.body.urls[index]);
-    });
-    return reply.status(200).send({ message: "success" });
+    try {
+      await Promise.all(
+        Object.entries(request.body).map(([eventName, url]) =>
+          store.registerSubscription(eventName as EngineEvent, url as string),
+        ),
+      );
+      return reply.status(200).send({ message: "success" });
+    } catch (e) {
+      return reply.status(500).send({ message: e.message });
+    }
   },
 );
 
-server.get<{ Params: any }>(
+server.get<{ Params: ServerNodeParams.GetListener }>(
   "/event/:eventName",
   {
     schema: {
-      body: undefined,
-      response: undefined,
+      params: ServerNodeParams.GetListenerSchema,
+      response: ServerNodeResponses.GetListenerSchema,
     },
   },
   async (request, reply) => {
-    const url = store.getSubscription(request.params.eventName);
+    const url = await store.getSubscription(request.params.eventName as EngineEvent);
+    if (!url) {
+      return reply.status(404).send({ message: "Subscription URL not found" });
+    }
     return reply.status(200).send({ url });
+  },
+);
+
+server.get(
+  "/event",
+  {
+    schema: {
+      response: ServerNodeResponses.GetListenersSchema,
+    },
+  },
+  async (request, reply) => {
+    const subs = await store.getSubscriptions();
+    return reply.status(200).send(subs);
   },
 );
 

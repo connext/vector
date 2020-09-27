@@ -248,6 +248,20 @@ const getConfigResponseSchema = {
   }),
 };
 
+// GET LISTENER
+const getListenerParamsSchema = Type.Object({
+  eventName: Type.String(),
+});
+
+const getListenerResponseSchema = {
+  200: Type.Object({ url: Type.String({ format: "uri" }) }),
+};
+
+// GET LISTENERS
+const getListenersResponseSchema = {
+  200: Type.Map(Type.String({ format: "uri" })),
+};
+
 // POST SETUP
 const postSetupBodySchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
@@ -305,10 +319,7 @@ const postResolveTransferResponseSchema = {
 };
 
 // REGISTER LISTENER
-const postRegisterListenerBodySchema = Type.Object({
-  events: Type.Array(Type.String()),
-  urls: Type.Array(Type.String()),
-});
+const postRegisterListenerBodySchema = Type.Map(Type.String({ format: "uri" }));
 
 const postRegisterListenerResponseSchema = {
   200: Type.Object({
@@ -338,6 +349,9 @@ export namespace ServerNodeParams {
   export const GetChannelStateByParticipantsSchema = getChannelStateByParticipantsParamsSchema;
   export type GetChannelStateByParticipants = Static<typeof GetChannelStateByParticipantsSchema>;
 
+  export const GetListenerSchema = getListenerParamsSchema;
+  export type GetListener = Static<typeof GetListenerSchema>;
+
   export const SetupSchema = postSetupBodySchema;
   export type Setup = Static<typeof SetupSchema>;
 
@@ -353,8 +367,8 @@ export namespace ServerNodeParams {
   export const ResolveTransferSchema = postResolveTransfer;
   export type ResolveTransfer = Static<typeof ResolveTransferSchema>;
 
-  export const RegisterListener = postRegisterListenerBodySchema;
-  export type RegisterListener = Static<typeof RegisterListener>;
+  export const RegisterListenerSchema = postRegisterListenerBodySchema;
+  export type RegisterListener = Static<typeof RegisterListenerSchema>;
 
   export const AdminSchema = postAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
@@ -370,6 +384,12 @@ export namespace ServerNodeResponses {
 
   export const GetChannelStatesSchema = getChannelStatesResponseSchema;
   export type GetChannelStates = Static<typeof GetChannelStatesSchema["200"]>;
+
+  export const GetListenerSchema = getListenerResponseSchema;
+  export type GetListener = Static<typeof GetListenerSchema["200"]>;
+
+  export const GetListenersSchema = getListenersResponseSchema;
+  export type GetListeners = Static<typeof GetListenersSchema["200"]>;
 
   export const GetConfigSchema = getConfigResponseSchema;
   export type GetConfig = Static<typeof GetConfigSchema["200"]>;

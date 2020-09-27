@@ -23,7 +23,9 @@ import {
 } from "@prisma/client";
 
 export interface IServerNodeStore extends IVectorStore {
-  registerSubscription<T extends EngineEvent>(event: T, url: string): void;
+  registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
+  getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined>;
+  getSubscriptions(): Promise<{ [event: string]: string }>;
 }
 
 const convertChannelEntityToFullChannelState = (
@@ -175,13 +177,17 @@ export class PrismaStore implements IServerNodeStore {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
   }
 
-  registerSubscription<T extends EngineEvent>(event: T, url: string): void {
+  async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
     console.log("registerSubscription: ", event, url);
     this.eventSubscriptions[event] = url;
   }
 
-  getSubscription<T extends EngineEvent>(event: T): string | undefined {
+  async getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined> {
     return this.eventSubscriptions[event];
+  }
+
+  async getSubscriptions(): Promise<{ [event: string]: string }> {
+    return this.eventSubscriptions;
   }
 
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {

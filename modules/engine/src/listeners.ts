@@ -173,7 +173,7 @@ async function handleConditionalTransferCreation(
     transfer: transfer!,
     conditionType: conditionType!,
   };
-  evts[EngineEvents.CONDITIONAL_TRANFER_CREATED].post(payload);
+  evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
 
   // TODO: add automatic resolution for given transfer types
 }
