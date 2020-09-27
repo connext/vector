@@ -157,6 +157,9 @@ test-server-node: node
 watch-server-node: engine
 	bash ops/test-server-node.sh watch
 
+test-router: router
+	bash ops/test-unit.sh router test
+
 # Integration Tests
 
 test-global: test-runner global

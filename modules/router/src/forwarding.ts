@@ -74,7 +74,7 @@ export async function forwardTransferCreation(
     routingId,
     conditionType,
   } = data;
-  const { recipientChainId, recipient: recipientIdentifier, recipientAssetId, requireOnline } = meta;
+  let { recipientChainId, recipient: recipientIdentifier, recipientAssetId, requireOnline } = meta;
 
   // TODO validate the above params
 
@@ -96,6 +96,11 @@ export async function forwardTransferCreation(
     );
   }
   const senderChainId = senderChannel.networkContext.chainId;
+
+  // Defaults
+  recipientAssetId = recipientAssetId ? recipientAssetId : senderAssetId;
+  requireOnline = requireOnline ? requireOnline : false;
+  recipientChainId = recipientChainId ? recipientChainId : senderChainId;
 
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
@@ -127,16 +132,17 @@ export async function forwardTransferCreation(
   if (recipientChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
-        ForwardTransferError.reasons.SenderChannelNotFound,
-        senderChannelRes.getError()?.message,
+        ForwardTransferError.reasons.RecipientChannelNotFound,
+        recipientChannelRes.getError()?.message,
       ),
     );
   }
   const recipientChannel = recipientChannelRes.getValue();
   if (!recipientChannel) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
-        channelAddress: senderChannelAddress,
+      new ForwardTransferError(ForwardTransferError.reasons.RecipientChannelNotFound, {
+        participants: [node.publicIdentifier, recipientIdentifier],
+        chainId: recipientChainId,
       }),
     );
   }
@@ -150,10 +156,11 @@ export async function forwardTransferCreation(
   const profile = profileRes.getValue();
 
   // Figure out router balance
+  const assetIdx = recipientChannel.assetIds.findIndex((a: string) => a === recipientAssetId);
   const routerBalanceInRecipientChannel =
     node.signerAddress == recipientChannel.participants[0]
-      ? recipientChannel.balances[recipientAssetId].amount[0]
-      : recipientChannel.balances[recipientAssetId].amount[1];
+      ? recipientChannel.balances[assetIdx].amount[0]
+      : recipientChannel.balances[assetIdx].amount[1];
 
   // If there are not enough funds, fall back to sending the entire transfer amount + required collateral amount
   if (BigNumber.from(routerBalanceInRecipientChannel).lt(recipientAmount)) {
