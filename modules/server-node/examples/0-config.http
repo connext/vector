@@ -1,9 +1,12 @@
 @aliceUrl = http://localhost:8001
 @bobUrl = http://localhost:8002
-@channelAddress = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+@nodeUrl = http://localhost:8000
+@aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+@aliceNodeChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
 @adminToken = cxt1234
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@nodePublicIdentifier = indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR
 @chainId = 1337
 
 ##############
@@ -13,6 +16,9 @@ GET {{aliceUrl}}/config
 
 ### Bob
 GET {{bobUrl}}/config
+
+### Node
+GET {{nodeUrl}}/config
 
 ##############
 ### GET CHANNELS
@@ -25,10 +31,10 @@ GET {{bobUrl}}/channel
 ##############
 ### GET CHANNEL
 ### Alice
-GET {{aliceUrl}}/channel/{{channelAddress}}
+GET {{aliceUrl}}/channel/{{aliceNodeChannel}}
 
 ### Bob
-GET {{bobUrl}}/channel/{{channelAddress}}
+GET {{bobUrl}}/channel/{{aliceBobChannel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS

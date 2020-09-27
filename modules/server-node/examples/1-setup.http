@@ -1,10 +1,34 @@
 @aliceUrl = http://localhost:8001
+@nodeUrl = http://localhost:8000
+@alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@nodePublicIdentifier = indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR
 @chainId = 1337
 
 ##############
 ### Setup Channel
+### Alice -> Bob
 POST {{aliceUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{bobPublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "36000"
+}
+
+### Node -> Alice
+POST {{nodeUrl}}/setup
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{alicePublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "timeout": "36000"
+}
+
+### Node -> Bob
+POST {{nodeUrl}}/setup
 Content-Type: application/json
 
 {
