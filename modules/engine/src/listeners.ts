@@ -221,7 +221,7 @@ async function handleWithdrawalTransferCreation(
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
 
   // Get the recipient + amount from the transfer state
-  const { balance, nonce, initiatorSignature } = transferInitialState as WithdrawState;
+  const { balance, nonce, aliceSignature } = transferInitialState as WithdrawState;
 
   // TODO: properly account for fees?
   const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
@@ -262,15 +262,15 @@ async function handleWithdrawalTransferCreation(
   );
 
   // Generate your signature on the withdrawal commitment
-  const responderSignature = await signer.signMessage(commitment.hashToSign());
+  const bobSignature = await signer.signMessage(commitment.hashToSign());
   // TODO: fix withdrawal sigs!
-  // await commitment.addSignatures(initiatorSignature, responderSignature);
+  // await commitment.addSignatures(aliceSignature, bobSignature);
 
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
   // Resolve the withdrawal
-  const resolveRes = await vector.resolve({ transferResolver: { responderSignature }, transferId, channelAddress });
+  const resolveRes = await vector.resolve({ transferResolver: { bobSignature }, transferId, channelAddress });
 
   // Handle the error
   if (resolveRes.isError) {
@@ -342,10 +342,7 @@ async function handleWithdrawalTransferResolution(
     withdrawalAmount.toString(),
     transfer.transferState.nonce,
   );
-  await commitment.addSignatures(
-    transfer.transferState.initiatorSignature,
-    transfer.transferResolver!.responderSignature,
-  );
+  await commitment.addSignatures(transfer.transferState.aliceSignature, transfer.transferResolver!.bobSignature);
 
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());

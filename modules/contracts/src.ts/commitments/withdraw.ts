@@ -8,11 +8,11 @@ const { Interface, keccak256, solidityPack } = utils;
 
 export class WithdrawCommitment {
   private aliceSignature?: string;
-  private responderSignature?: string;
+  private bobSignature?: string;
 
   public constructor(
     public readonly channelAddress: string,
-    public readonly participants: string[],
+    public readonly signers: string[],
     public readonly recipient: string,
     public readonly assetId: string,
     public readonly amount: string,
@@ -24,8 +24,8 @@ export class WithdrawCommitment {
     if (this.aliceSignature) {
       sigs.push(this.aliceSignature);
     }
-    if (this.responderSignature) {
-      sigs.push(this.responderSignature);
+    if (this.bobSignature) {
+      sigs.push(this.bobSignature);
     }
     return sigs;
   }
@@ -33,9 +33,9 @@ export class WithdrawCommitment {
   public toJson(): WithdrawCommitmentJson {
     return {
       aliceSignature: this.aliceSignature,
-      responderSignature: this.responderSignature,
+      bobSignature: this.bobSignature,
       channelAddress: this.channelAddress,
-      participants: this.participants,
+      signers: this.signers,
       recipient: this.recipient,
       assetId: this.assetId,
       amount: this.amount,
@@ -46,14 +46,14 @@ export class WithdrawCommitment {
   public static async fromJson(json: WithdrawCommitmentJson): Promise<WithdrawCommitment> {
     const commitment = new WithdrawCommitment(
       json.channelAddress,
-      json.participants,
+      json.signers,
       json.recipient,
       json.assetId,
       json.amount,
       json.nonce,
     );
-    if (json.aliceSignature || json.responderSignature) {
-      await commitment.addSignatures(json.aliceSignature, json.responderSignature);
+    if (json.aliceSignature || json.bobSignature) {
+      await commitment.addSignatures(json.aliceSignature, json.bobSignature);
     }
     return commitment;
   }
@@ -93,12 +93,12 @@ export class WithdrawCommitment {
       } catch (e) {
         recovered = e.message;
       }
-      if (recovered === this.participants[0]) {
+      if (recovered === this.signers[0]) {
         this.aliceSignature = sig;
-      } else if (recovered === this.participants[1]) {
-        this.responderSignature = sig;
+      } else if (recovered === this.signers[1]) {
+        this.bobSignature = sig;
       } else {
-        throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.participants}`);
+        throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.signers}`);
       }
     }
   }

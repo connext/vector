@@ -84,7 +84,7 @@ describe.skip(testName, () => {
       const withdrawInitialState: WithdrawState = {
         balance: { to: [alice.address, bob.address], amount: ["5", "0"] },
         nonce: "1",
-        initiatorSignature: mkSig(),
+        aliceSignature: mkSig(),
         signers: [alice.address, bob.address],
         data: "0x",
         fee: "1",
@@ -139,7 +139,7 @@ describe.skip(testName, () => {
       const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
       expect(storeTransferId).to.be.eq(updatedChannelState.latestUpdate.details.transferId);
       expect(withdrawCommitment.aliceSignature).to.be.ok;
-      expect(withdrawCommitment.responderSignature).to.be.ok;
+      expect(withdrawCommitment.bobSignature).to.be.ok;
 
       // Verify that resolve was called correctly
       expect(vector.resolve.callCount).to.be.eq(1);

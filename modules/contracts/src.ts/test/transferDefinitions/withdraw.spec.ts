@@ -23,8 +23,8 @@ const { Zero } = constants;
 describe("Withdraw", () => {
   let deployer: Wallet;
   let definition: Contract;
-  let initiator: Wallet;
-  let responder: Wallet;
+  let alice: Wallet;
+  let bob: Wallet;
 
   const encodeTransferState = (state: WithdrawState): string => {
     return utils.defaultAbiCoder.encode([WithdrawStateEncoding], [state]);
@@ -36,8 +36,8 @@ describe("Withdraw", () => {
 
   beforeEach(async () => {
     deployer = provider.getWallets()[0];
-    initiator = provider.getWallets()[1];
-    responder = provider.getWallets()[2];
+    alice = provider.getWallets()[1];
+    bob = provider.getWallets()[2];
     definition = await new ContractFactory(Withdraw.abi, Withdraw.bytecode, deployer).deploy();
     await definition.deployed();
   });
@@ -48,8 +48,8 @@ describe("Withdraw", () => {
         amount: ["10000", Zero.toString()],
         to: [getRandomAddress(), getRandomAddress()],
       },
-      initiatorSignature: await signChannelMessage(data, initiator.privateKey),
-      signers: [initiator.address, responder.address],
+      aliceSignature: await signChannelMessage(data, alice.privateKey),
+      signers: [alice.address, bob.address],
       data,
       nonce: getRandomBytes32(),
       fee: "0",
@@ -74,7 +74,7 @@ describe("Withdraw", () => {
     resolver: WithdrawResolver,
     result: Balance,
   ): Promise<void> => {
-    if (recoverAddressFromChannelMessage(initialState.data, resolver.responderSignature)) {
+    if (await recoverAddressFromChannelMessage(initialState.data, resolver.bobSignature)) {
       // Withdraw completed
       expect(result.to).to.deep.equal(initialState.balance.to);
       expect(result.amount[0].toString()).to.eq("0");
@@ -101,18 +101,18 @@ describe("Withdraw", () => {
     it("should resolve successfully", async () => {
       const data = getRandomBytes32();
       const initialState = await createInitialState(data);
-      const responderSignature = await signChannelMessage(data, responder.privateKey);
-      const result = await resolveTransfer(initialState, { responderSignature });
-      await validateResult(initialState, { responderSignature }, result);
+      const bobSignature = await signChannelMessage(data, bob.privateKey);
+      const result = await resolveTransfer(initialState, { bobSignature });
+      await validateResult(initialState, { bobSignature }, result);
     });
 
     it("should resolve successfully with fees", async () => {
       const data = getRandomBytes32();
       const initialState = await createInitialState(data);
       initialState.fee = "100";
-      const responderSignature = await signChannelMessage(data, responder.privateKey);
-      const result = await resolveTransfer(initialState, { responderSignature });
-      await validateResult(initialState, { responderSignature }, result);
+      const bobSignature = await signChannelMessage(data, bob.privateKey);
+      const result = await resolveTransfer(initialState, { bobSignature });
+      await validateResult(initialState, { bobSignature }, result);
     });
   });
 });

@@ -123,7 +123,7 @@ export async function convertWithdrawParams(
     channel.nonce.toString(),
   );
 
-  const initiatorSignature = await signer.signMessage(commitment.hashToSign());
+  const aliceSignature = await signer.signMessage(commitment.hashToSign());
 
   const counterpartySigner =
     channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
@@ -133,7 +133,7 @@ export async function convertWithdrawParams(
       amount: [amount, "0"],
       to: [recipient, counterpartySigner],
     },
-    initiatorSignature,
+    aliceSignature,
     signers: [signer.address, counterpartySigner],
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
