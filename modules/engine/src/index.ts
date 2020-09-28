@@ -20,6 +20,7 @@ import {
   EngineEventMap,
   IEngineStore,
   EngineEvent,
+  EngineEvents,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
