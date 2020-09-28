@@ -7,9 +7,9 @@ import {
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
+import { IServerNodeService, ServerNodeError } from "@connext/vector-utils";
 
 import { getSwappedAmount } from "./services/swap";
-import { IServerNodeService, ServerNodeError } from "./services/server-node";
 import { getRebalanceProfile } from "./services/rebalance";
 import { IRouterStore } from "./services/store";
 
@@ -74,7 +74,8 @@ export async function forwardTransferCreation(
     routingId,
     conditionType,
   } = data;
-  let { recipientChainId, recipient: recipientIdentifier, recipientAssetId, requireOnline } = meta;
+  let { recipientChainId, recipientAssetId, requireOnline } = meta;
+  const recipientIdentifier = meta.recipient;
 
   // TODO validate the above params
 

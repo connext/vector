@@ -2,10 +2,10 @@ import fastify from "fastify";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
 import { Evt } from "evt";
+import { RestServerNodeService } from "@connext/vector-utils";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
-import { RestServerNodeService } from "./services/server-node";
 import { RouterStore } from "./services/store";
 
 const conditionalTransferEvt = Evt.create<any>();
@@ -27,6 +27,7 @@ const store = new RouterStore();
 server.addHook("onReady", async () => {
   const node = await RestServerNodeService.connect(
     config.serverNodeUrl,
+    "http://router:8008",
     config.chainProviders,
     conditionalTransferEvt,
     logger.child({ module: "RestServerNodeService" }),

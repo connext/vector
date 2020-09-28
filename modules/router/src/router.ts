@@ -1,7 +1,7 @@
 import { BaseLogger } from "pino";
+import { IServerNodeService } from "@connext/vector-utils";
 
 import { setupListeners } from "./listener";
-import { IServerNodeService } from "./services/server-node";
 import { IRouterStore } from "./services/store";
 
 export interface IRouter {

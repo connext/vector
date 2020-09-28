@@ -68,6 +68,7 @@ export class RestServerNodeService implements IServerNodeService {
 
   private constructor(
     private readonly serverNodeUrl: string,
+    private readonly callbackUrlBase: string,
     private readonly providerUrls: ChainProviders,
     private readonly conditionalTransferEvt: Evt<any>,
     private readonly logger: BaseLogger,
@@ -79,11 +80,18 @@ export class RestServerNodeService implements IServerNodeService {
 
   static async connect(
     serverNodeUrl: string,
+    callbackUrlBase: string,
     providerUrls: ChainProviders,
     conditionalTransferEvt: Evt<any>,
     logger: BaseLogger,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, providerUrls, conditionalTransferEvt, logger);
+    const service = new RestServerNodeService(
+      serverNodeUrl,
+      callbackUrlBase,
+      providerUrls,
+      conditionalTransferEvt,
+      logger,
+    );
     const configRes = await service.getConfig();
     if (configRes.isError) {
       throw configRes.getError();
@@ -146,7 +154,6 @@ export class RestServerNodeService implements IServerNodeService {
         `${this.serverNodeUrl}/send-deposit-tx`,
         params,
       );
-      console.log("sendDepositTxRes.data.txHash: ", sendDepositTxRes.data.txHash);
       await provider.waitForTransaction(sendDepositTxRes.data.txHash);
 
       const res = await Axios.post<ServerNodeResponses.Deposit>(`${this.serverNodeUrl}/deposit`, {
@@ -188,7 +195,7 @@ export class RestServerNodeService implements IServerNodeService {
   ): Promise<void> {
     switch (event) {
       case EngineEvents.CONDITIONAL_TRANSFER_CREATED: {
-        const url = "http://router:8008/conditional-transfer-created";
+        const url = `${this.callbackUrlBase}/conditional-transfer-created`;
         this.conditionalTransferEvt.pipe(filter!).attach(callback);
         await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
           [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: url,

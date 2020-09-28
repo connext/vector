@@ -1,8 +1,8 @@
 import { EngineEvents } from "@connext/vector-types";
+import { IServerNodeService } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
-import { IServerNodeService } from "./services/server-node";
 import { IRouterStore } from "./services/store";
 
 export async function setupListeners(node: IServerNodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
