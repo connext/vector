@@ -28,7 +28,7 @@ In `~/vector` (root), run:
 
 The contracts are structured as follows:
 
-// TODO IMAGE
+![alt](https://i.ibb.co/2hB4C3w/vector-Contract-Control-Flow-2.png)
 
 - **ChannelMastercopy** is the primary contract used by Vector channels. It contains logic to handle depositing/withdrawing as well as to adjudicate a channel dispute. To save on the gas cost of repeatedly deploying the contract, we structure this contract as a singleton "Mastercopy" and deploy proxies per-channel.
 - **ChannelFactory** is a factory contract that deploys channel proxies to deterministically-generated addresses using the CREATE2 Ethereum opcode.
