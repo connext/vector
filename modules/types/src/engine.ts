@@ -102,7 +102,7 @@ export interface IVectorEngine {
 
 export interface IEngineStore extends IVectorStore {
   // Getters
-  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson>;
+  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined>;
 
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;

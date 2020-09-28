@@ -1,4 +1,5 @@
 import {
+  ChainAddresses,
   ChannelUpdateEvent,
   IChannelSigner,
   ProtocolEventName,
@@ -9,14 +10,7 @@ import {
   WithdrawState,
   WithdrawStateEncoding,
 } from "@connext/vector-types";
-import {
-  createTestChannelState,
-  getTestLoggers,
-  delay,
-  getRandomChannelSigner,
-  mkAddress,
-  mkSig,
-} from "@connext/vector-utils";
+import { createTestChannelState, getTestLoggers, delay, getRandomChannelSigner, mkSig } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
 import Sinon from "sinon";
@@ -31,13 +25,24 @@ import { env } from "./env";
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
 
-describe.only(testName, () => {
+describe(testName, () => {
+  // Get env constants
+  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+  const withdrawDefinition = env.contractAddresses[chainId].Withdraw.address;
+  const chainAddresses: ChainAddresses = {
+    [chainId]: {
+      withdrawDefinition,
+      channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
+      channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
+      linkedTransferDefinition: env.contractAddresses[chainId].LinkedTransfer.address,
+    },
+  };
+
   // Get test constants
   const alice: IChannelSigner = getRandomChannelSigner();
   const bob: IChannelSigner = getRandomChannelSigner();
   const messaging = {} as any;
   const container = getEngineEvtContainer();
-  const chainAddresses = env.chainAddresses;
 
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
@@ -81,13 +86,14 @@ describe.only(testName, () => {
         latestUpdate: {
           toIdentifier: bob.publicIdentifier,
           details: {
-            transferDefinition: mkAddress("0xdef"),
+            transferDefinition: withdrawDefinition,
             transferInitialState: withdrawInitialState,
             transferEncodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
           },
         },
         networkContext: {
-          withdrawDefinition: mkAddress("0xdef"),
+          withdrawDefinition,
+          chainId,
         },
       });
 

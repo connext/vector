@@ -79,7 +79,7 @@ export function convertResolveConditionParams(
   params: EngineParams.ResolveTransfer,
   transfer: FullTransferState,
 ): Result<ResolveTransferParams, InvalidTransferType> {
-  const { channelAddress, routingId, details } = params;
+  const { channelAddress, routingId, details, meta } = params;
   let transferResolver: LinkedTransferResolver;
 
   if (params.conditionType == ConditionalTransferType.LinkedTransfer) {
@@ -94,7 +94,7 @@ export function convertResolveConditionParams(
     channelAddress,
     transferId: transfer.transferId,
     transferResolver,
-    routingId,
+    meta: { details: meta ?? {}, routingId },
   });
 }
 

@@ -129,6 +129,7 @@ async function handleDepositReconciliation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught deposit reconciliation event");
   // Emit the properly structured event
   const {
     channelAddress,
@@ -147,6 +148,7 @@ async function handleConditionalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught conditional transfer create event");
   // Emit the properly structured event
   // TODO: consider a store method to find active transfer by routingId
   const transfers = await store.getActiveTransfers(event.updatedChannelState.channelAddress);
@@ -185,6 +187,10 @@ async function handleConditionalTransferResolution(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
+  logger.info(
+    { channelAddress: event.updatedChannelState.channelAddress },
+    "Caught conditional transfer resolve event",
+  );
   // Emit the properly structured event
 }
 
@@ -195,6 +201,7 @@ async function handleWithdrawalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal resolve event");
   // If you receive a withdrawal creation, you should
   // resolve the withdrawal with your signature
   const {
@@ -275,4 +282,6 @@ async function handleWithdrawalTransferResolution(
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger = Pino(),
-): Promise<void> {}
+): Promise<void> {
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal resolve event");
+}
