@@ -48,6 +48,8 @@ export abstract class VectorError extends Error {
     InboundChannelUpdateError: "InboundChannelUpdateError",
     OnchainError: "OnchainError",
     ValidationError: "ValidationError",
+    RouterError: "RouterError",
+    ServerNodeError: "ServerNodeError",
     // etc.
   } as const;
 
@@ -110,7 +112,7 @@ export class OutboundChannelUpdateError extends VectorError {
     SyncValidationFailed: "Failed to validate update for sync",
     TransferNotFound: "No transfer found in storage",
   } as const;
-  
+
   constructor(
     public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
     public readonly params: UpdateParams<any>,

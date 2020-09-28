@@ -39,6 +39,8 @@ model Channel {
   providerUrl              String
   latestUpdate             Update
 
+  activeTransfers Transfer[]
+
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
 }
@@ -85,7 +87,6 @@ model Update {
 
   // setup inferred from channel params
 
-  // transfers are linked to a separate model
   createdTransfer  Transfer? @relation("CreatedTransfer")
   resolvedTransfer Transfer? @relation("ResolvedTransfer")
 
@@ -94,8 +95,10 @@ model Update {
 
 model Transfer {
   @@map(name: "transfer")
-  routingId     String  @id
-  createUpdate  Update  @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
+  transferId String @id
+  routingId  String @unique
+
+  createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
 
   // initial balance
@@ -106,9 +109,12 @@ model Transfer {
 
   initialStateHash String
 
+  channel        Channel? @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress String?
+
   // created will always exist
-  createUpdateChannelAddressId String
-  createUpdateNonce            Int
+  createUpdateChannelAddressId String?
+  createUpdateNonce            Int?
 
   // resolved will not always exist
   resolveUpdateChannelAddressId String?

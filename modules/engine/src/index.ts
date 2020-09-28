@@ -26,6 +26,7 @@ import {
   WithdrawalCreatedPayload,
   WithdrawalResolvedPayload,
   WithdrawalReconciledPayload,
+  EngineEvent,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -47,7 +48,7 @@ export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
   // FIXME: Is this JSON RPC compatible?
   private readonly evts: EngineEvtContainer = {
-    [EngineEvents.CONDITIONAL_TRANFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
+    [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
     [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt.create<ConditionalTransferResolvedPayload>(),
     [EngineEvents.DEPOSIT_RECONCILED]: Evt.create<DepositReconciledPayload>(),
     [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),
@@ -291,5 +292,44 @@ export class VectorEngine implements IVectorEngine {
       throw res.getError();
     }
     return res.getValue();
+  }
+
+  ///////////////////////////////////
+  // EVENT METHODS
+
+  public on<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+  ): void {
+    this.evts[event].pipe(filter).attach(callback);
+  }
+
+  public once<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+  ): void {
+    this.evts[event].pipe(filter).attachOnce(callback);
+  }
+
+  public waitFor<T extends EngineEvent>(
+    event: T,
+    timeout: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+  ): Promise<EngineEventMap[T]> {
+    return this.evts[event].pipe(filter).waitFor(timeout);
+  }
+
+  public off<T extends EngineEvent>(event?: T): void {
+    if (event) {
+      this.evts[event].detach();
+      return;
+    }
+
+    Object.keys(EngineEvents).forEach(k => this.evts[k].detach());
   }
 }

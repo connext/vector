@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es6",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "strict": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/*.ts", "src/**/*.ts"],
+  "exclude": ["**/*.spec.ts", "test/*.ts"]
+}

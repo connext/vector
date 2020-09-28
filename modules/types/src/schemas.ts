@@ -139,15 +139,14 @@ const SharedConditionalTransferParamsSchema = Type.Object({
   meta: Type.Any(),
 });
 
-const LinkedTransferParamsSchema = Type.Intersect([
-  SharedConditionalTransferParamsSchema,
-  Type.Object({
-    conditionType: Type.Literal("LinkedTransfer"),
-    details: Type.Object({
-      linkedHash: TBytes32,
-    }),
+const LinkedTransferDetailsSchema = Type.Object({
+  conditionType: Type.Literal("LinkedTransfer"),
+  details: Type.Object({
+    linkedHash: TBytes32,
   }),
-]);
+});
+
+const LinkedTransferParamsSchema = Type.Intersect([SharedConditionalTransferParamsSchema, LinkedTransferDetailsSchema]);
 
 // TODO: resolves to any, revisit when we have more conditional transfers
 const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema]);
@@ -249,6 +248,20 @@ const getConfigResponseSchema = {
   }),
 };
 
+// GET LISTENER
+const getListenerParamsSchema = Type.Object({
+  eventName: Type.String(),
+});
+
+const getListenerResponseSchema = {
+  200: Type.Object({ url: Type.String({ format: "uri" }) }),
+};
+
+// GET LISTENERS
+const getListenersResponseSchema = {
+  200: Type.Map(Type.String({ format: "uri" })),
+};
+
 // POST SETUP
 const postSetupBodySchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
@@ -288,34 +301,29 @@ const postSendDepositTxResponseSchema = {
 };
 
 // POST LINKED TRANSFER
-const postLinkedTransferBodySchema = Type.Object({
-  channelAddress: TAddress,
-  amount: TIntegerString,
-  assetId: TAddress,
-  linkedHash: TBytes32,
-  routingId: TBytes32,
-  recipient: Type.Optional(TPublicIdentifier),
-  recipientChainId: Type.Optional(TChainId),
-  recipientAssetId: Type.Optional(TAddress),
-  meta: Type.Optional(Type.Any()),
-});
+const postConditionalTransferBodySchema = LinkedTransferParamsSchema;
 
-const postLinkedTransferResponseSchema = {
+const postConditionalTransferResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
     routingId: TBytes32,
   }),
 };
 
-const postResolveLinkedTransfer = Type.Object({
-  channelAddress: TAddress,
-  routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
-  preImage: TBytes32,
-});
+const postResolveTransfer = ResolveLinkedTransferParamsSchema;
 
-const postResolveLinkedTransferResponseSchema = {
+const postResolveTransferResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
+  }),
+};
+
+// REGISTER LISTENER
+const postRegisterListenerBodySchema = Type.Map(Type.String({ format: "uri" }));
+
+const postRegisterListenerResponseSchema = {
+  200: Type.Object({
+    message: Type.String(),
   }),
 };
 
@@ -341,6 +349,9 @@ export namespace ServerNodeParams {
   export const GetChannelStateByParticipantsSchema = getChannelStateByParticipantsParamsSchema;
   export type GetChannelStateByParticipants = Static<typeof GetChannelStateByParticipantsSchema>;
 
+  export const GetListenerSchema = getListenerParamsSchema;
+  export type GetListener = Static<typeof GetListenerSchema>;
+
   export const SetupSchema = postSetupBodySchema;
   export type Setup = Static<typeof SetupSchema>;
 
@@ -350,11 +361,14 @@ export namespace ServerNodeParams {
   export const SendDepositTxSchema = postSendDepositTxBodySchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema>;
 
-  export const LinkedTransferSchema = postLinkedTransferBodySchema;
-  export type LinkedTransfer = Static<typeof LinkedTransferSchema>;
+  export const ConditionalTransferSchema = postConditionalTransferBodySchema;
+  export type ConditionalTransfer = Static<typeof ConditionalTransferSchema>;
 
-  export const ResolveLinkedTransferSchema = postResolveLinkedTransfer;
-  export type ResolveLinkedTransfer = Static<typeof ResolveLinkedTransferSchema>;
+  export const ResolveTransferSchema = postResolveTransfer;
+  export type ResolveTransfer = Static<typeof ResolveTransferSchema>;
+
+  export const RegisterListenerSchema = postRegisterListenerBodySchema;
+  export type RegisterListener = Static<typeof RegisterListenerSchema>;
 
   export const AdminSchema = postAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
@@ -371,6 +385,12 @@ export namespace ServerNodeResponses {
   export const GetChannelStatesSchema = getChannelStatesResponseSchema;
   export type GetChannelStates = Static<typeof GetChannelStatesSchema["200"]>;
 
+  export const GetListenerSchema = getListenerResponseSchema;
+  export type GetListener = Static<typeof GetListenerSchema["200"]>;
+
+  export const GetListenersSchema = getListenersResponseSchema;
+  export type GetListeners = Static<typeof GetListenersSchema["200"]>;
+
   export const GetConfigSchema = getConfigResponseSchema;
   export type GetConfig = Static<typeof GetConfigSchema["200"]>;
 
@@ -383,11 +403,14 @@ export namespace ServerNodeResponses {
   export const SendDepositTxSchema = postSendDepositTxResponseSchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema["200"]>;
 
-  export const LinkedTransferSchema = postLinkedTransferResponseSchema;
-  export type LinkedTransfer = Static<typeof LinkedTransferSchema["200"]>;
+  export const ConditionalTransferSchema = postConditionalTransferResponseSchema;
+  export type ConditionalTransfer = Static<typeof ConditionalTransferSchema["200"]>;
 
-  export const ResolveLinkedTransferSchema = postResolveLinkedTransferResponseSchema;
-  export type ResolveLinkedTransfer = Static<typeof ResolveLinkedTransferSchema["200"]>;
+  export const ResolveTransferSchema = postResolveTransferResponseSchema;
+  export type ResolveTransfer = Static<typeof ResolveTransferSchema["200"]>;
+
+  export const RegisterListenerSchema = postRegisterListenerResponseSchema;
+  export type RegisterListener = Static<typeof RegisterListenerSchema["200"]>;
 
   export const AdminSchema = postAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;

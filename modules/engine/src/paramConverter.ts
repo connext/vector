@@ -1,4 +1,5 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
+import { getRandomBytes32 } from "@connext/vector-utils";
 import {
   CreateTransferParams,
   ConditionalTransferType,
@@ -57,7 +58,7 @@ export function convertConditionalTransferParams(
 
   // TODO: enforce that passed in meta is an object
   const meta = {
-    routingId,
+    routingId: routingId ?? getRandomBytes32(),
     path: [{ recipient, recipientChainId, recipientAssetId }],
     ...params.meta,
   };

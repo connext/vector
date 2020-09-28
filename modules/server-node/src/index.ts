@@ -4,7 +4,15 @@ import pino from "pino";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { providers, Wallet } from "ethers";
-import { ChannelRpcMethods, OnchainError, ServerNodeParams, ServerNodeResponses } from "@connext/vector-types";
+import {
+  ChannelRpcMethods,
+  EngineEvent,
+  EngineEvents,
+  OnchainError,
+  ServerNodeParams,
+  ServerNodeResponses,
+} from "@connext/vector-types";
+import Axios from "axios";
 
 import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
@@ -56,6 +64,13 @@ server.addHook("onReady", async () => {
     config.contractAddresses,
     logger.child({ module: "VectorEngine" }),
   );
+
+  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
+    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+    if (url) {
+      await Axios.post(url, data);
+    }
+  });
 });
 
 server.get("/ping", async () => {
@@ -181,28 +196,22 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
+server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
   "/linked-transfer/create",
-  { schema: { body: ServerNodeParams.LinkedTransferSchema, response: ServerNodeResponses.LinkedTransferSchema } },
+  {
+    schema: {
+      body: ServerNodeParams.ConditionalTransferSchema,
+      response: ServerNodeResponses.ConditionalTransferSchema,
+    },
+  },
   async (request, reply) => {
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, {
-      amount: request.body.amount,
-      assetId: request.body.assetId,
-      channelAddress: request.body.channelAddress,
-      conditionType: "LinkedTransfer",
-      meta: request.body.meta,
-      recipient: request.body.recipient,
-      routingId: request.body.routingId,
-      details: {
-        linkedHash: request.body.linkedHash,
-      },
-    });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, request.body);
     try {
       const res = await vectorEngine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
         routingId: request.body.routingId,
-      } as ServerNodeResponses.LinkedTransfer);
+      } as ServerNodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -210,32 +219,77 @@ server.post<{ Body: ServerNodeParams.LinkedTransfer }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.ResolveLinkedTransfer }>(
+server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
   "/linked-transfer/resolve",
   {
     schema: {
-      body: ServerNodeParams.ResolveLinkedTransferSchema,
-      response: ServerNodeResponses.ResolveLinkedTransferSchema,
+      body: ServerNodeParams.ResolveTransferSchema,
+      response: ServerNodeResponses.ResolveTransferSchema,
     },
   },
   async (request, reply) => {
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, {
-      channelAddress: request.body.channelAddress,
-      conditionType: "LinkedTransfer",
-      details: {
-        preImage: request.body.preImage,
-      },
-      routingId: request.body.routingId,
-    });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, request.body);
     try {
       const res = await vectorEngine.request<"chan_resolveTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
-      } as ServerNodeResponses.ResolveLinkedTransfer);
+      } as ServerNodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
     }
+  },
+);
+
+server.post<{ Body: ServerNodeParams.RegisterListener }>(
+  "/event/subscribe",
+  {
+    schema: {
+      body: ServerNodeParams.RegisterListenerSchema,
+      response: ServerNodeResponses.RegisterListenerSchema,
+    },
+  },
+  async (request, reply) => {
+    try {
+      await Promise.all(
+        Object.entries(request.body).map(([eventName, url]) =>
+          store.registerSubscription(eventName as EngineEvent, url as string),
+        ),
+      );
+      return reply.status(200).send({ message: "success" });
+    } catch (e) {
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetListener }>(
+  "/event/:eventName",
+  {
+    schema: {
+      params: ServerNodeParams.GetListenerSchema,
+      response: ServerNodeResponses.GetListenerSchema,
+    },
+  },
+  async (request, reply) => {
+    const url = await store.getSubscription(request.params.eventName as EngineEvent);
+    if (!url) {
+      return reply.status(404).send({ message: "Subscription URL not found" });
+    }
+    return reply.status(200).send({ url });
+  },
+);
+
+server.get(
+  "/event",
+  {
+    schema: {
+      response: ServerNodeResponses.GetListenersSchema,
+    },
+  },
+  async (request, reply) => {
+    const subs = await store.getSubscriptions();
+    return reply.status(200).send(subs);
   },
 );
 
