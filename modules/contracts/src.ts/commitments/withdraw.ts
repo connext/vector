@@ -1,4 +1,4 @@
-import { MinimalTransaction } from "@connext/vector-types";
+import { MinimalTransaction, WithdrawCommitmentJson } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { BigNumber, utils } from "ethers";
 
@@ -30,11 +30,41 @@ export class WithdrawCommitment {
     return sigs;
   }
 
+  public toJson(): WithdrawCommitmentJson {
+    return {
+      aliceSignature: this.aliceSignature,
+      responderSignature: this.responderSignature,
+      channelAddress: this.channelAddress,
+      participants: this.participants,
+      recipient: this.recipient,
+      assetId: this.assetId,
+      amount: this.amount,
+      nonce: this.nonce,
+    };
+  }
+
+  public static async fromJson(json: WithdrawCommitmentJson): Promise<WithdrawCommitment> {
+    const commitment = new WithdrawCommitment(
+      json.channelAddress,
+      json.participants,
+      json.recipient,
+      json.assetId,
+      json.amount,
+      json.nonce,
+    );
+    if (json.aliceSignature || json.responderSignature) {
+      await commitment.addSignatures(json.aliceSignature, json.responderSignature);
+    }
+    return commitment;
+  }
+
   public hashToSign(): string {
-    return keccak256(solidityPack(
-      ["address", "address", "uint256", "uint256"],
-      [this.recipient, this.assetId, this.amount, BigNumber.from(this.nonce)],
-    ));
+    return keccak256(
+      solidityPack(
+        ["address", "address", "uint256", "uint256"],
+        [this.recipient, this.assetId, this.amount, BigNumber.from(this.nonce)],
+      ),
+    );
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {
@@ -51,8 +81,11 @@ export class WithdrawCommitment {
     return { to: this.channelAddress, value: 0, data: txData };
   }
 
-  public async addSignatures(signature1: string, signature2: string): Promise<void> {
+  public async addSignatures(signature1?: string, signature2?: string): Promise<void> {
     for (const sig of [signature1, signature2]) {
+      if (!sig) {
+        continue;
+      }
       const hash = this.hashToSign();
       const recovered = await recoverAddressFromChannelMessage(hash, sig);
       if (recovered === this.participants[0]) {
@@ -64,5 +97,4 @@ export class WithdrawCommitment {
       }
     }
   }
-
 }

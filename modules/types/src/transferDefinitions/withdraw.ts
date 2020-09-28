@@ -30,3 +30,14 @@ export const WithdrawStateEncoding = tidy(`tuple(
 export const WithdrawResolverEncoding = tidy(`tuple(
     bytes responderSignature
   )`);
+
+export type WithdrawCommitmentJson = {
+  aliceSignature?: string;
+  responderSignature?: string;
+  channelAddress: string;
+  participants: string[];
+  recipient: string;
+  assetId: string;
+  amount: string;
+  nonce: string;
+};
