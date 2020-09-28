@@ -282,6 +282,13 @@
       "arity": "Required"
     },
     {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "activeTransfers",
+      "type": "Transfer",
+      "arity": "List"
+    },
+    {
       "tag": "CreateDirective",
       "location": {
         "path": {
@@ -671,6 +678,24 @@
     {
       "tag": "CreateField",
       "model": "Transfer",
+      "field": "transferId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "transferId"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
       "field": "routingId",
       "type": "String",
       "arity": "Required"
@@ -683,7 +708,7 @@
           "model": "Transfer",
           "field": "routingId"
         },
-        "directive": "id"
+        "directive": "unique"
       }
     },
     {
@@ -691,7 +716,7 @@
       "model": "Transfer",
       "field": "createUpdate",
       "type": "Update",
-      "arity": "Required"
+      "arity": "Optional"
     },
     {
       "tag": "CreateDirective",
@@ -844,16 +869,69 @@
     {
       "tag": "CreateField",
       "model": "Transfer",
+      "field": "channel",
+      "type": "Channel",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "channel"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "Transfer",
+          "field": "channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
+      "field": "channelAddress",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
       "field": "createUpdateChannelAddressId",
       "type": "String",
-      "arity": "Required"
+      "arity": "Optional"
     },
     {
       "tag": "CreateField",
       "model": "Transfer",
       "field": "createUpdateNonce",
       "type": "Int",
-      "arity": "Required"
+      "arity": "Optional"
     },
     {
       "tag": "CreateField",

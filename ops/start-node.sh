@@ -166,6 +166,25 @@ else
       - '$prisma_port:$prisma_port'"
 fi
 
+########################################
+## Router config
+
+router_port="8008"
+
+if [[ $VECTOR_ENV == "prod" ]]
+then
+  router_image_name="${project}_router"
+  bash $root/ops/pull-images.sh $version $router_image_name > /dev/null
+  router_image="image: '$router_image_name:$version'"
+else
+  router_image="image: '${project}_builder'
+    entrypoint: 'bash modules/router/ops/entry.sh'
+    volumes:
+      - '$root:/root'
+    ports:
+      - '$router_port:$router_port'"
+fi
+
 ####################
 # Launch Indra stack
 
@@ -224,6 +243,26 @@ services:
     secrets:
       - '$db_secret'
       - '$mnemonic_secret_name'
+
+  router:
+    $common
+    $router_image
+    ports:
+      - '$router_port:$router_port'
+    environment:
+      VECTOR_NODE_URL: 'http://node:$node_port'
+      VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
+      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
+      VECTOR_PG_DATABASE: '$pg_db'
+      VECTOR_PG_HOST: '$pg_host'
+      VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
+      VECTOR_PG_PORT: '$pg_port'
+      VECTOR_PG_USERNAME: '$pg_user'
+      VECTOR_PORT: '$router_port'
+      VECTOR_ENV: '$VECTOR_ENV'
+    secrets:
+      - '$db_secret'
 
   database:
     $common

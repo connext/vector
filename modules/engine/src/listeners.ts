@@ -3,6 +3,7 @@ import {
   ChainAddresses,
   ChannelUpdateEvent,
   ConditionalTransferCreatedPayload,
+  ConditionalTransferType,
   CreateUpdateDetails,
   EngineEvents,
   FullChannelState,
@@ -47,7 +48,7 @@ export async function setupEngineListeners(
   // Setup listener for conditional transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleConditionalTransferCreation(event, signer, vector, store, evts, logger),
+    event => handleConditionalTransferCreation(event, signer, vector, store, chainAddresses, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -88,13 +89,12 @@ export async function setupEngineListeners(
       const {
         updatedChannelState: {
           latestUpdate: { type, details },
-          networkContext: { withdrawDefinition },
+          networkContext: { chainId },
         },
       } = event;
       return (
         type === UpdateType.create &&
-        !!withdrawDefinition &&
-        (details as CreateUpdateDetails).transferDefinition === withdrawDefinition
+        (details as CreateUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawDefinition
       );
     },
   );
@@ -107,13 +107,12 @@ export async function setupEngineListeners(
       const {
         updatedChannelState: {
           latestUpdate: { type, details },
-          networkContext: { withdrawDefinition },
+          networkContext: { chainId },
         },
       } = event;
       return (
         type === UpdateType.resolve &&
-        !!withdrawDefinition &&
-        (details as ResolveUpdateDetails).transferDefinition === withdrawDefinition
+        (details as ResolveUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawDefinition
       );
     },
   );
@@ -144,6 +143,7 @@ async function handleConditionalTransferCreation(
   signer: IChannelSigner,
   vector: IVectorProtocol,
   store: IVectorStore,
+  chainAddresses: ChainAddresses,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
@@ -156,6 +156,13 @@ async function handleConditionalTransferCreation(
       (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
   );
 
+  let conditionType: ConditionalTransferType | undefined;
+  switch (transfer?.transferDefinition) {
+    case chainAddresses[event.updatedChannelState.networkContext.chainId].linkedTransferDefinition:
+      conditionType = ConditionalTransferType.LinkedTransfer;
+      break;
+  }
+
   const assetIdx = event.updatedChannelState.assetIds.findIndex(
     a => a === event.updatedChannelState.latestUpdate.assetId,
   );
@@ -164,8 +171,9 @@ async function handleConditionalTransferCreation(
     channelBalance: event.updatedChannelState.balances[assetIdx],
     routingId: (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
     transfer: transfer!,
+    conditionType: conditionType!,
   };
-  evts[EngineEvents.CONDITIONAL_TRANFER_CREATED].post(payload);
+  evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
 
   // TODO: add automatic resolution for given transfer types
 }

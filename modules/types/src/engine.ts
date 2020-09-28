@@ -20,12 +20,13 @@ export type ConditionalTransferResponse = {
 ///////////////////////////////////
 ////// Engine event types
 // Emitted when transfer created
-export const CONDITIONAL_TRANFER_CREATED_EVENT = "CONDITIONAL_TRANFER_CREATED";
+export const CONDITIONAL_TRANSFER_CREATED_EVENT = "CONDITIONAL_TRANSFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
   channelAddress: string;
   routingId: Bytes32;
   transfer: FullTransferState;
   channelBalance: Balance;
+  conditionType: ConditionalTransferType;
 };
 
 // Emitted when transfer resolved
@@ -63,7 +64,7 @@ export type WithdrawalReconciledPayload = {
 
 // Grouped event types
 export const EngineEvents = {
-  [CONDITIONAL_TRANFER_CREATED_EVENT]: CONDITIONAL_TRANFER_CREATED_EVENT,
+  [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
   [DEPOSIT_RECONCILED_EVENT]: DEPOSIT_RECONCILED_EVENT,
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
@@ -72,7 +73,7 @@ export const EngineEvents = {
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
 export interface EngineEventMap {
-  [CONDITIONAL_TRANFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
+  [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;
   [DEPOSIT_RECONCILED_EVENT]: DepositReconciledPayload;
   [WITHDRAWAL_CREATED_EVENT]: WithdrawalCreatedPayload;
@@ -84,6 +85,19 @@ export interface EngineEventMap {
 ////// Core engine interfaces
 export interface IVectorEngine {
   request<T extends ChannelRpcMethods>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
+  on<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: EngineEventMap[T]) => boolean,
+  ): void;
+  once<T extends EngineEvent>(
+    event: T,
+    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: (payload: EngineEventMap[T]) => boolean,
+  ): void;
+  off<T extends EngineEvent>(event?: T): void;
 }
 
 export interface IEngineStore extends IVectorStore {

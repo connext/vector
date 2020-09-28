@@ -40,7 +40,7 @@ common="$interactive $stack_env \
   --env=VECTOR_CHAIN_PROVIDERS=`cat $root/.chaindata/chain-providers.json | tr -d ' \n'` \
   --env=VECTOR_CONTRACT_ADDRESSES=`cat $root/.chaindata/address-book.json | tr -d ' \n'` \
   --env=VECTOR_ENV=${ENV:-dev} \
-  --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-0} \
+  --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error} \
   --env=VECTOR_NATS_URL=nats://nats:4222 \
   --env=VECTOR_NODE_URL=http://node:8000 \
   --name=${project}_test_runner \

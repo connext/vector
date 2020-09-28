@@ -64,12 +64,15 @@ type TestLinkedTransferOptions = {
   balance: Balance;
   assetId: string;
   preImage: string;
+  meta: any;
+  channelFactoryAddress: string;
+  chainId: number;
 } & CoreTransferState;
 export function createTestFullLinkedTransferState(
   overrides: Partial<TestLinkedTransferOptions> = {},
 ): FullTransferState<typeof TransferName.LinkedTransfer> {
   // get overrides/defaults values
-  const { balance, assetId, preImage, ...core } = overrides;
+  const { balance, assetId, preImage, meta, ...core } = overrides;
 
   const transferEncodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
   const transferResolver = { preImage: preImage ?? getRandomBytes32() };
@@ -92,7 +95,7 @@ export function createTestFullLinkedTransferState(
     channelFactoryAddress: mkAddress("0xaaaaddddffff"),
     initialBalance: { ...transferState.balance, amount: [transferValue.toString(), "0"] },
     initialStateHash: hashTransferState(transferState, transferEncodings[0]),
-    meta: { super: "cool stuff" },
+    meta: meta ?? { super: "cool stuff", routingId: mkHash("0xaabb") },
     transferDefinition: mkAddress("0xdef"),
     transferEncodings,
     transferId: getRandomBytes32(),

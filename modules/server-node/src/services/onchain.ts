@@ -65,7 +65,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
 
     const multisigCode = multisigRes.getValue();
     // alice needs to deploy the multisig
-    if (multisigCode === `0x` && sender === channelState.participants[0]) {
+    if (multisigCode === `0x`) {
       this.logger.info(
         { method: "sendDepositTx", channelAddress: channelState.channelAddress, assetId, amount },
         `Deploying channel with deposit`,
@@ -138,10 +138,18 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       );
     }
 
-    this.logger.info({ method: "sendDepositATx", assetId, amount }, "Channel is deployed, sending deposit");
+    this.logger.info({ method: "sendDepositTx", assetId, amount }, "Channel is deployed, sending deposit");
     if (sender === channelState.participants[0]) {
+      this.logger.info(
+        { method: "sendDepositTx", sender, participants: channelState.participants },
+        "Detected participant A",
+      );
       return this.sendDepositATx(channelState, amount, assetId);
     } else {
+      this.logger.info(
+        { method: "sendDepositTx", sender, participants: channelState.participants },
+        "Detected participant B",
+      );
       return this.sendDepositBTx(channelState, amount, assetId);
     }
   }
@@ -272,7 +280,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
         {
           data: "0x",
           to: channelState.channelAddress,
-          value: amount,
+          value: BigNumber.from(amount),
         },
         channelState.networkContext.chainId,
       );

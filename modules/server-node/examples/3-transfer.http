@@ -1,6 +1,11 @@
 @aliceUrl = http://localhost:8001
 @bobUrl = http://localhost:8002
+@nodeUrl = http://localhost:8000
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+@aliceNodeChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
+
+@bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+
 # 0.01 ETH
 @ethAmount = 1000000000000000
 
@@ -16,11 +21,15 @@ POST {{aliceUrl}}/linked-transfer/create
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceBobChannel}}",
+  "conditionType": "LinkedTransfer",
+  "channelAddress": "{{aliceNodeChannel}}",
   "amount": "{{ethAmount}}",
-  "assetId": "0x0000000000000000000000000000000000000000" ,
-  "linkedHash": "{{linkedHash}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "details": {
+    "linkedHash": "{{linkedHash}}"
+  },
   "routingId": "{{routingId}}",
+  "recipient": "{{bobPublicIdentifier}}",
   "meta": {
     "hello": "world"
   }
