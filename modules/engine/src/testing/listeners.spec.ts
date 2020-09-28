@@ -29,7 +29,7 @@ import { MemoryStoreService } from "./services/store";
 import { env } from "./env";
 
 const testName = "Engine listeners unit";
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel);
 
 describe.only(testName, () => {
   // Get test constants

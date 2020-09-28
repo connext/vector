@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
+import { getTestLoggers } from "@connext/vector-utils";
 import { IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { createTransfer, getFundedChannel, resolveTransfer, getTestLoggers } from "../utils";
+import { createTransfer, getFundedChannel, resolveTransfer } from "../utils";
+import { env } from "../env";
 
 const testName = "Resolve Integrations";
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;

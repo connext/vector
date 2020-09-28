@@ -1,16 +1,11 @@
+import { getTestLoggers } from "@connext/vector-utils";
 import { constants } from "ethers";
 
-import {
-  createTransfer,
-  depositInChannel,
-  expect,
-  getSetupChannel,
-  getTestLoggers,
-  resolveTransfer,
-} from "../utils";
+import { env } from "../env";
+import { createTransfer, depositInChannel, expect, getSetupChannel, resolveTransfer } from "../utils";
 
 const testName = "Happy Integration";
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel);
 
 describe(testName, () => {
   it("should work for a simple ETH setup -> deposit -> create -> resolve flow", async () => {
