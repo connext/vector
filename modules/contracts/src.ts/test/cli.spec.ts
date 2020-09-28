@@ -1,3 +1,4 @@
+import { expect } from "@connext/vector-utils";
 import { constants } from "ethers";
 
 import { fund } from "../commands/fund";
@@ -5,7 +6,6 @@ import { migrate } from "../commands/migrate";
 import { newToken } from "../commands/new-token";
 
 import { provider } from "./constants";
-import { expect } from "./utils";
 
 const addressBookPath = "/tmp/address-book.json";
 
@@ -26,5 +26,4 @@ describe("CLI", () => {
     const done = newToken(wallets[0], addressBookPath, false, true);
     return expect(done).to.be.fulfilled;
   });
-
 });

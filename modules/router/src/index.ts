@@ -40,7 +40,6 @@ server.get("/ping", async () => {
 });
 
 server.post("/conditional-transfer-created", async (request, response) => {
-  console.log("request: ", request.body);
   conditionalTransferEvt.post(request.body);
   return response.status(200).send({ message: "success" });
 });

@@ -1,20 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { CoreTransferState } from "@connext/vector-types";
-import {
-  getRandomBytes32,
-  hashCoreTransferState,
-  toBN,
-} from "@connext/vector-utils";
+import { getRandomBytes32, hashCoreTransferState, toBN, expect } from "@connext/vector-utils";
 import { Contract } from "ethers";
 
-import {
-  addressZero,
-  bob,
-  hashZero,
-  alice,
-  provider,
-} from "../constants";
-import { expect } from "../utils";
+import { addressZero, bob, hashZero, alice, provider } from "../constants";
 
 import { createChannel } from "./creation.spec";
 
@@ -45,13 +34,10 @@ describe("Transfer Disputes", () => {
     const txReciept = await provider.getTransactionReceipt(tx.hash);
     const start = toBN(txReciept.blockNumber);
     const transferDispute = await channel.getLatestTransferDispute();
-    expect(transferDispute.transferDisputeExpiry).to.equal(
-      start.add(toBN(transferState.transferTimeout)),
-    );
+    expect(transferDispute.transferDisputeExpiry).to.equal(start.add(toBN(transferState.transferTimeout)));
     expect(transferDispute.transferStateHash).to.equal(hashedState);
     expect(transferDispute.isDefunded).to.be.false;
   });
 
   it.skip("should accept an update to an existing transfer dispute", async () => {});
-
 });

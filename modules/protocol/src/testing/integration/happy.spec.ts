@@ -1,8 +1,8 @@
-import { getTestLoggers } from "@connext/vector-utils";
+import { getTestLoggers, expect } from "@connext/vector-utils";
 import { constants } from "ethers";
 
 import { env } from "../env";
-import { createTransfer, depositInChannel, expect, getSetupChannel, resolveTransfer } from "../utils";
+import { createTransfer, depositInChannel, getSetupChannel, resolveTransfer } from "../utils";
 
 const testName = "Happy Integration";
 const { log } = getTestLoggers(testName, env.logLevel);

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
+import { expect } from "@connext/vector-utils";
 import { Contract } from "ethers";
 
 import { addressZero, alice, bob, one } from "../constants";
-import { expect } from "../utils";
 
 import { createChannel } from "./creation.spec";
 
@@ -29,5 +29,4 @@ describe("Channel Deposits", () => {
     expect(await channel.totalDepositedA(addressZero)).to.equal(aliceDeposits.add(value));
     expect(await channel.totalDepositedB(addressZero)).to.equal(bobDeposits);
   });
-
 });

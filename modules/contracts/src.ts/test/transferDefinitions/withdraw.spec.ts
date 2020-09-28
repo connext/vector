@@ -12,11 +12,11 @@ import {
   signChannelMessage,
   recoverAddressFromChannelMessage,
   keyify,
+  expect,
 } from "@connext/vector-utils";
 
 import { Withdraw } from "../../artifacts";
 import { provider } from "../constants";
-import { expect } from "../utils";
 
 const { Zero } = constants;
 

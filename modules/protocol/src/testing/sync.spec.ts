@@ -7,6 +7,7 @@ import {
   createTestUpdateParams,
   mkAddress,
   mkSig,
+  expect,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -17,7 +18,6 @@ import {
   UpdateParams,
 } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
-import { expect } from "chai";
 import pino from "pino";
 import Sinon from "sinon";
 import { VectorOnchainService } from "@connext/vector-contracts";

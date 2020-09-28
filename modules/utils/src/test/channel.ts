@@ -56,8 +56,9 @@ export function createTestUpdateParams<T extends UpdateType>(
           providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           channelMastercopyAddress: mkAddress("0xcccaaa"),
+          withdrawDefinition: mkAddress("0xadfe4441"),
         },
-      };
+      } as SetupUpdateDetails;
       break;
     case UpdateType.deposit:
       details = {

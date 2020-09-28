@@ -1,10 +1,9 @@
-import { getRandomAddress } from "@connext/vector-utils";
+import { getRandomAddress, expect } from "@connext/vector-utils";
 import { constants, Contract, ContractFactory } from "ethers";
 
 import { ChannelMastercopy } from "../artifacts";
 
 import { alice } from "./constants";
-import { expect } from "./utils";
 
 const { AddressZero, HashZero, Zero } = constants;
 
@@ -12,9 +11,7 @@ describe("ChannelMastercopy", () => {
   let mastercopy: Contract;
 
   beforeEach(async () => {
-    mastercopy = await (
-      new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, alice)
-    ).deploy();
+    mastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, alice).deploy();
     await mastercopy.deployed();
   });
 
@@ -23,9 +20,9 @@ describe("ChannelMastercopy", () => {
   });
 
   it("setup() should revert bc it's the mastercopy", async () => {
-    await expect(
-      mastercopy.setup([getRandomAddress(), getRandomAddress()]),
-    ).to.be.revertedWith("This contract is the mastercopy");
+    await expect(mastercopy.setup([getRandomAddress(), getRandomAddress()])).to.be.revertedWith(
+      "This contract is the mastercopy",
+    );
   });
 
   it("all public methods should revert bc it's the mastercopy", async () => {
@@ -34,16 +31,13 @@ describe("ChannelMastercopy", () => {
       { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, [HashZero]] },
       { name: "depositA", args: [AddressZero, Zero] },
     ]) {
-      await expect(
-        mastercopy[method.name](...method.args),
-      ).to.be.revertedWith("This contract is the mastercopy");
+      await expect(mastercopy[method.name](...method.args)).to.be.revertedWith("This contract is the mastercopy");
     }
   });
 
   it("should revert if sent eth bc it's the mastercopy", async () => {
-    await expect(
-      alice.sendTransaction({ to: mastercopy.address, value: Zero }),
-    ).to.be.revertedWith("This contract is the mastercopy");
+    await expect(alice.sendTransaction({ to: mastercopy.address, value: Zero })).to.be.revertedWith(
+      "This contract is the mastercopy",
+    );
   });
-
 });

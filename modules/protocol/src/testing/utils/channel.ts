@@ -9,8 +9,9 @@ import {
   IVectorStore,
   DEFAULT_TRANSFER_TIMEOUT,
   IVectorOnchainService,
+  NetworkContext,
 } from "@connext/vector-types";
-import { getRandomChannelSigner, getTestLoggers } from "@connext/vector-utils";
+import { getRandomChannelSigner, getTestLoggers, expect } from "@connext/vector-utils";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
@@ -21,7 +22,6 @@ import { MemoryLockService } from "../services/lock";
 import { MemoryMessagingService } from "../services/messaging";
 import { MemoryStoreService } from "../services/store";
 
-import { expect } from "./expect";
 import { fundAddress } from "./funding";
 
 type VectorTestOverrides = {
@@ -74,14 +74,14 @@ export const createVectorInstances = async (
 export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState<any>> => {
   const ret = await alice.setup({
     counterpartyIdentifier: bob.publicIdentifier,
+    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     networkContext: {
       chainId,
+      providerUrl: Object.values(env.chainProviders)[0],
       channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-      providerUrl: provider.connection.url,
       channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
       withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
-    },
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    } as NetworkContext,
   });
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;

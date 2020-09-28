@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, constants, BigNumberish } from "ethers";
 import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
-import { mkAddress } from "@connext/vector-utils";
-import { expect } from "chai";
+import { mkAddress, expect } from "@connext/vector-utils";
 import Sinon from "sinon";
 import { VectorOnchainService } from "@connext/vector-contracts";
 
@@ -162,8 +161,8 @@ describe("utils", () => {
           channelAddress,
           chainId,
           { ...(initialBalance ?? { amount: ["0", "0"] }), to },
-          processedDepositsA ? (processedDepositsA[0] || "0") : "0",
-          processedDepositsB ? (processedDepositsB[0] || "0") : "0",
+          processedDepositsA ? processedDepositsA[0] || "0" : "0",
+          processedDepositsB ? processedDepositsB[0] || "0" : "0",
           assetId ?? constants.AddressZero,
           chainService,
         );

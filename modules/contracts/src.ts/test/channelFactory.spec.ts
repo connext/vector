@@ -1,14 +1,11 @@
-import {
-  getCreate2MultisigAddress,
-  getPublicIdentifierFromPublicKey,
-} from "@connext/vector-utils";
+import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
 import { Contract, ContractFactory, BigNumber } from "ethers";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
 import { VectorOnchainService } from "../onchainService";
 
 import { addressZero, alice, bob, provider } from "./constants";
-import { expect, getOnchainTxService } from "./utils";
+import { getOnchainTxService } from "./utils";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
@@ -36,7 +33,7 @@ describe("ChannelFactory", () => {
   });
 
   it("should create a channel", async () => {
-    const created = new Promise((res) => {
+    const created = new Promise(res => {
       channelFactory.once(channelFactory.filters.ChannelCreation(), res);
     });
     const tx = await channelFactory.createChannel(alice.address, bob.address, chainId);
@@ -57,22 +54,15 @@ describe("ChannelFactory", () => {
 
   it("should create a channel with a deposit", async () => {
     // Use funded account for alice
-    const created = new Promise<string>((res) => {
-      channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
+    const created = new Promise<string>(res => {
+      channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
         res(data);
       });
     });
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDepositA(
-        alice.address,
-        bob.address,
-        chainId,
-        addressZero,
-        value,
-        { value },
-      );
+      .createChannelAndDepositA(alice.address, bob.address, chainId, addressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;

@@ -1,21 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { CoreChannelState } from "@connext/vector-types";
-import {
-  hashCoreChannelState,
-  signChannelMessage,
-  toBN,
-} from "@connext/vector-utils";
+import { hashCoreChannelState, signChannelMessage, toBN, expect } from "@connext/vector-utils";
 import { Contract } from "ethers";
 
-import {
-  addressZero,
-  bob,
-  hashZero,
-  alice,
-  provider,
-  two,
-} from "../constants";
-import { expect } from "../utils";
+import { addressZero, bob, hashZero, alice, provider, two } from "../constants";
 
 import { createChannel } from "./creation.spec";
 
@@ -60,5 +48,4 @@ describe("Channel Disputes", () => {
   });
 
   it.skip("should accept an update to an existing channel dispute", async () => {});
-
 });

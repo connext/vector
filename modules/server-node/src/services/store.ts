@@ -172,7 +172,6 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
-    console.log("registerSubscription: ", event, url);
     this.eventSubscriptions[event] = url;
   }
 

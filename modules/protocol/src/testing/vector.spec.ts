@@ -8,6 +8,7 @@ import {
   createTestChannelState,
   createTestUpdateParams,
   mkHash,
+  expect,
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
@@ -29,7 +30,6 @@ import * as vectorSync from "../sync";
 import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 import { MemoryStoreService } from "./services/store";
-import { expect } from "./utils";
 
 describe("Vector", () => {
   let chainService: Sinon.SinonStubbedInstance<IVectorOnchainService>;
@@ -110,6 +110,7 @@ describe("Vector", () => {
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
         channelMastercopyAddress: mkAddress("0xeee"),
+        withdrawDefinition: mkAddress("0xdef"),
       };
       const validParams = {
         counterpartyIdentifier: mkPublicIdentifier(),
@@ -131,6 +132,16 @@ describe("Vector", () => {
           name: "should fail if there is no chainId",
           params: { ...validParams, networkContext: { ...network, chainId: undefined } },
           error: "should have required property 'chainId'",
+        },
+        {
+          name: "should fail if there is no withdrawDefinition",
+          params: { ...validParams, networkContext: { ...network, withdrawDefinition: undefined } },
+          error: "should have required property 'withdrawDefinition'",
+        },
+        {
+          name: "should fail if there is an invalid withdrawDefinition",
+          params: { ...validParams, networkContext: { ...network, withdrawDefinition: "fail" } },
+          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {
           name: "should fail if there is an invalid chainId (is a string)",

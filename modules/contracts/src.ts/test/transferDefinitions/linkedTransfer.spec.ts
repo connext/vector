@@ -6,11 +6,11 @@ import {
   getRandomAddress,
   getRandomBytes32,
   keyify,
+  expect,
 } from "@connext/vector-utils";
 
 import { LinkedTransfer } from "../../artifacts";
 import { provider } from "../constants";
-import { expect } from "../utils";
 
 const { HashZero, Zero } = constants;
 
@@ -111,7 +111,6 @@ describe("LinkedTransfer", () => {
       const preImage = getRandomBytes32();
       const initialState = await createInitialState(preImage);
       const result = await resolveTransfer(initialState, { preImage });
-      // console.log(`Result: ${stringify(result)}`);
       await validateResult(initialState, { preImage }, result);
     });
 

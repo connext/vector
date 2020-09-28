@@ -26,8 +26,8 @@ import {
   createTestFullLinkedTransferState,
   ChannelSigner,
   hashTransferState,
+  expect,
 } from "@connext/vector-utils";
-import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { MerkleTree } from "merkletreejs";
 import Sinon from "sinon";

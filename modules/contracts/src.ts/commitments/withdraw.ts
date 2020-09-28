@@ -87,7 +87,12 @@ export class WithdrawCommitment {
         continue;
       }
       const hash = this.hashToSign();
-      const recovered = await recoverAddressFromChannelMessage(hash, sig);
+      let recovered: string;
+      try {
+        recovered = await recoverAddressFromChannelMessage(hash, sig);
+      } catch (e) {
+        recovered = e.message;
+      }
       if (recovered === this.participants[0]) {
         this.aliceSignature = sig;
       } else if (recovered === this.participants[1]) {

@@ -6,15 +6,23 @@ import {
   ProtocolEventPayloadsMap,
   Result,
   UpdateType,
+  WithdrawalCreatedPayload,
+  WITHDRAWAL_CREATED_EVENT,
   WithdrawResolverEncoding,
   WithdrawState,
   WithdrawStateEncoding,
 } from "@connext/vector-types";
-import { createTestChannelState, getTestLoggers, delay, getRandomChannelSigner, mkSig } from "@connext/vector-utils";
+import {
+  createTestChannelState,
+  getTestLoggers,
+  getRandomChannelSigner,
+  mkSig,
+  mkAddress,
+  expect,
+} from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
 import Sinon from "sinon";
-import { expect } from "chai";
 
 import { setupEngineListeners } from "../listeners";
 import { getEngineEvtContainer } from "../utils";
@@ -25,7 +33,7 @@ import { env } from "./env";
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
 
-describe(testName, () => {
+describe.skip(testName, () => {
   // Get env constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const withdrawDefinition = env.contractAddresses[chainId].Withdraw.address;
@@ -84,6 +92,7 @@ describe(testName, () => {
 
       const updatedChannelState = createTestChannelState(UpdateType.create, {
         latestUpdate: {
+          assetId: mkAddress(),
           toIdentifier: bob.publicIdentifier,
           details: {
             transferDefinition: withdrawDefinition,
@@ -108,10 +117,29 @@ describe(testName, () => {
         ),
       );
 
+      const createdEvent = new Promise<WithdrawalCreatedPayload>(resolve =>
+        container[WITHDRAWAL_CREATED_EVENT].attachOnce(5000, resolve),
+      );
+
       // Post to the evt
       evt.post({ updatedChannelState });
-      // Wait a bit to give handler time to react
-      await delay(1500);
+      const emitted = await createdEvent;
+
+      // Verify the emitted event
+      expect(emitted).to.containSubset({
+        assetId: updatedChannelState.latestUpdate.assetId,
+        amount: "5",
+        recipient: alice.address,
+        channelBalance: updatedChannelState.latestUpdate.balance,
+        channelAddress: updatedChannelState.channelAddress,
+      });
+
+      // Verify the double signed commitment was stored
+      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(1);
+      const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
+      expect(storeTransferId).to.be.eq(updatedChannelState.latestUpdate.details.transferId);
+      expect(withdrawCommitment.aliceSignature).to.be.ok;
+      expect(withdrawCommitment.responderSignature).to.be.ok;
 
       // Verify that resolve was called correctly
       expect(vector.resolve.callCount).to.be.eq(1);

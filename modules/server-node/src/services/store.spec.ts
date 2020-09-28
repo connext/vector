@@ -1,7 +1,12 @@
 import { Balance } from "@connext/vector-types";
-import { createTestFullLinkedTransferState, createTestChannelState, mkBytes32, mkHash } from "@connext/vector-utils";
+import {
+  createTestFullLinkedTransferState,
+  createTestChannelState,
+  mkBytes32,
+  mkHash,
+  expect,
+} from "@connext/vector-utils";
 
-import { expect } from "../test/utils/assert";
 import { config } from "../config";
 
 import { PrismaStore } from "./store";

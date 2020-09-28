@@ -112,14 +112,12 @@ export const reconcileDeposit = async (
     return Result.fail(totalDepositedARes.getError()!);
   }
   const totalDepositedA = totalDepositedARes.getValue();
-  console.log("totalDepositedA: ", totalDepositedA.toString());
 
   const totalDepositedBRes = await onchainService.getTotalDepositedB(channelAddress, chainId, assetId);
   if (totalDepositedBRes.isError) {
     return Result.fail(totalDepositedBRes.getError()!);
   }
   const totalDepositedB = totalDepositedBRes.getValue();
-  console.log("totalDepositedB: ", totalDepositedB.toString());
 
   // Now calculate the amount deposited that has not yet been reconciled
   const depositsToReconcile = [

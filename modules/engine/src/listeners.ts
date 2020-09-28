@@ -7,14 +7,17 @@ import {
   CreateUpdateDetails,
   EngineEvents,
   FullChannelState,
+  FullTransferState,
   IChannelSigner,
+  IEngineStore,
   IMessagingService,
   IVectorProtocol,
-  IVectorStore,
   ProtocolEventName,
   ResolveUpdateDetails,
+  TransferName,
   UpdateType,
   WithdrawalCreatedPayload,
+  WithdrawalResolvedPayload,
   WithdrawState,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
@@ -27,7 +30,7 @@ export async function setupEngineListeners(
   vector: IVectorProtocol,
   messaging: IMessagingService,
   signer: IChannelSigner,
-  store: IVectorStore,
+  store: IEngineStore,
   chainAddresses: ChainAddresses,
   logger: Pino.BaseLogger,
 ): Promise<void> {
@@ -84,7 +87,7 @@ export async function setupEngineListeners(
   // Set up listener for withdrawal transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleWithdrawalTransferCreation(event, signer, vector, evts, logger),
+    event => handleWithdrawalTransferCreation(event, signer, vector, store, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -102,7 +105,7 @@ export async function setupEngineListeners(
   // Setup listener for withdrawal resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleWithdrawalTransferResolution(event, signer, vector, evts, logger),
+    event => handleWithdrawalTransferResolution(event, signer, vector, store, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -143,7 +146,7 @@ async function handleConditionalTransferCreation(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   vector: IVectorProtocol,
-  store: IVectorStore,
+  store: IEngineStore,
   chainAddresses: ChainAddresses,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
@@ -198,6 +201,7 @@ async function handleWithdrawalTransferCreation(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   vector: IVectorProtocol,
+  store: IEngineStore,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
@@ -217,7 +221,7 @@ async function handleWithdrawalTransferCreation(
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
 
   // Get the recipient + amount from the transfer state
-  const { balance, nonce } = transferInitialState as WithdrawState;
+  const { balance, nonce, initiatorSignature } = transferInitialState as WithdrawState;
 
   // TODO: properly account for fees?
   const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
@@ -259,6 +263,11 @@ async function handleWithdrawalTransferCreation(
 
   // Generate your signature on the withdrawal commitment
   const responderSignature = await signer.signMessage(commitment.hashToSign());
+  // TODO: fix withdrawal sigs!
+  // await commitment.addSignatures(initiatorSignature, responderSignature);
+
+  // Store the double signed commitment
+  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
   // Resolve the withdrawal
   const resolveRes = await vector.resolve({ transferResolver: { responderSignature }, transferId, channelAddress });
@@ -280,8 +289,64 @@ async function handleWithdrawalTransferResolution(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   vector: IVectorProtocol,
+  store: IEngineStore,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<void> {
   logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal resolve event");
+
+  const {
+    channelAddress,
+    participants,
+    balances,
+    assetIds,
+    latestUpdate: {
+      details: { transferId },
+      assetId,
+      fromIdentifier,
+    },
+  } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
+
+  // Get the withdrawal amount
+  const transfer = (await vector.getTransferState(transferId)) as FullTransferState<typeof TransferName.Withdraw>;
+  if (!transfer) {
+    logger.warn({ transferId, channelAddress }, "Could not find transfer for withdrawal resolution");
+    return;
+  }
+
+  // TODO: properly account for fees?
+  const withdrawalAmount = transfer.initialBalance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
+
+  // Post to evt
+  const assetIdx = assetIds.findIndex(a => a === assetId);
+  const payload: WithdrawalResolvedPayload = {
+    assetId,
+    amount: withdrawalAmount.toString(),
+    recipient: transfer.initialBalance.to[0],
+    channelBalance: balances[assetIdx],
+    channelAddress,
+  };
+  evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
+
+  // If it is not from counterparty, do not respond
+  if (fromIdentifier === signer.publicIdentifier) {
+    return;
+  }
+
+  // Generate our own commitment, and save the double signed version
+  const commitment = new WithdrawCommitment(
+    channelAddress,
+    participants,
+    transfer.initialBalance.to[0],
+    assetId,
+    withdrawalAmount.toString(),
+    transfer.transferState.nonce,
+  );
+  await commitment.addSignatures(
+    transfer.transferState.initiatorSignature,
+    transfer.transferResolver!.responderSignature,
+  );
+
+  // Store the double signed commitment
+  await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 }
