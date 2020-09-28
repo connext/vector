@@ -78,12 +78,6 @@ export async function forwardTransferCreation(
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;
-  console.log(
-    "!recipientIdentifier || recipientIdentifier === node.publicIdentifier: ",
-    !recipientIdentifier || recipientIdentifier === node.publicIdentifier,
-  );
-  console.log("recipientIdentifier: ", recipientIdentifier);
-  console.log("node.publicIdentifier: ", node.publicIdentifier);
   if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
     logger.info({ path, method: "forwardTransferCreation" }, "No path to follow");
     return Result.ok(undefined);
@@ -171,7 +165,9 @@ export async function forwardTransferCreation(
   // Figure out router balance
   const assetIdx = recipientChannel.assetIds.findIndex((a: string) => a === recipientAssetId);
   const routerBalanceInRecipientChannel =
-    node.signerAddress == recipientChannel.participants[0]
+    assetIdx === -1
+      ? "0"
+      : node.signerAddress == recipientChannel.participants[0]
       ? recipientChannel.balances[assetIdx].amount[0]
       : recipientChannel.balances[assetIdx].amount[1];
 
@@ -210,7 +206,7 @@ export async function forwardTransferCreation(
     details: conditionData,
     routingId,
     conditionType,
-  }); // TODO interface
+  });
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === ServerNodeError.reasons.Timeout) {
       // store transfer
