@@ -210,7 +210,6 @@ async function handleWithdrawalTransferCreation(
   // resolve the withdrawal with your signature
   const {
     channelAddress,
-    participants,
     balances,
     assetIds,
     latestUpdate: {
@@ -221,7 +220,7 @@ async function handleWithdrawalTransferCreation(
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
 
   // Get the recipient + amount from the transfer state
-  const { balance, nonce, aliceSignature } = transferInitialState as WithdrawState;
+  const { balance, nonce, aliceSignature, signers } = transferInitialState as WithdrawState;
 
   // TODO: properly account for fees?
   const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
@@ -254,7 +253,7 @@ async function handleWithdrawalTransferCreation(
   // is properly signed before its been merged into your channel
   const commitment = new WithdrawCommitment(
     channelAddress,
-    participants,
+    signers,
     balance.to[0],
     assetId,
     withdrawalAmount.toString(),
@@ -263,8 +262,7 @@ async function handleWithdrawalTransferCreation(
 
   // Generate your signature on the withdrawal commitment
   const bobSignature = await signer.signMessage(commitment.hashToSign());
-  // TODO: fix withdrawal sigs!
-  // await commitment.addSignatures(aliceSignature, bobSignature);
+  await commitment.addSignatures(aliceSignature, bobSignature);
 
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
