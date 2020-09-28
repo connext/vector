@@ -20,6 +20,8 @@ import {
   Balance as BalanceEntity,
   UpdateCreateInput,
   Transfer,
+  TransferUpdateManyWithoutChannelInput,
+  TransferCreateWithoutChannelInput,
 } from "@prisma/client";
 
 export interface IServerNodeStore extends IVectorStore {
@@ -85,6 +87,7 @@ const convertChannelEntityToFullChannelState = (
           transferId: channelEntity.latestUpdate.transferId!,
           transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferInitialState: JSON.parse(channelEntity.latestUpdate.transferInitialState!),
+          meta: channelEntity.latestUpdate!.meta ? JSON.parse(channelEntity.latestUpdate!.meta) : undefined,
         } as CreateUpdateDetails;
         break;
       case "resolve":
@@ -94,6 +97,7 @@ const convertChannelEntityToFullChannelState = (
           transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferId: channelEntity.latestUpdate.transferId!,
           transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
+          meta: channelEntity.latestUpdate!.meta ? JSON.parse(channelEntity.latestUpdate!.meta) : undefined,
         } as ResolveUpdateDetails;
         break;
     }
@@ -135,33 +139,24 @@ const convertChannelEntityToFullChannelState = (
 };
 
 const convertTransferEntityToFullTransferState = (
-  transfer: Transfer & {
-    createUpdate: Update & {
-      channel: Channel | null;
-    };
-    resolveUpdate:
-      | (Update & {
-          channel: Channel | null;
-        })
-      | null;
-  },
+  transfer: Transfer & { channel: Channel | null; createUpdate: Update | null; resolveUpdate: Update | null },
 ) => {
   const fullTransfer: FullTransferState = {
-    channelFactoryAddress: transfer.createUpdate.channel!.channelFactoryAddress,
-    assetId: transfer.createUpdate.assetId,
-    chainId: transfer.createUpdate.channel!.chainId,
-    channelAddress: transfer.createUpdate.channelAddress!,
+    channelFactoryAddress: transfer.channel!.channelFactoryAddress,
+    assetId: transfer.createUpdate!.assetId,
+    chainId: transfer.channel!.chainId,
+    channelAddress: transfer.channel!.channelAddress!,
     initialBalance: {
       amount: [transfer.initialAmountA, transfer.initialAmountB],
-      to: [transfer.initialToA, transfer.initialAmountB],
+      to: [transfer.initialToA, transfer.initialToB],
     },
     initialStateHash: transfer.initialStateHash,
-    transferDefinition: transfer.createUpdate.transferDefinition!,
-    transferEncodings: transfer.createUpdate.transferEncodings!.split("$"),
-    transferId: transfer.createUpdate.transferId!,
-    transferState: JSON.parse(transfer.createUpdate.transferInitialState!),
-    transferTimeout: transfer.createUpdate.transferTimeout!,
-    meta: transfer.createUpdate.meta ? JSON.parse(transfer.createUpdate.meta) : undefined,
+    transferDefinition: transfer.createUpdate!.transferDefinition!,
+    transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
+    transferId: transfer.createUpdate!.transferId!,
+    transferState: JSON.parse(transfer.createUpdate!.transferInitialState!),
+    transferTimeout: transfer.createUpdate!.transferTimeout!,
+    meta: transfer.createUpdate!.meta ? JSON.parse(transfer.createUpdate!.meta) : undefined,
     transferResolver: transfer.resolveUpdate?.transferResolver
       ? JSON.parse(transfer.resolveUpdate?.transferResolver)
       : undefined,
@@ -254,6 +249,36 @@ export class PrismaStore implements IServerNodeStore {
     commitment: ChannelCommitmentData,
     transfer?: FullTransferState,
   ): Promise<void> {
+    const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
+      channelState.latestUpdate.type === UpdateType.create
+        ? {
+            transferId: transfer!.transferId,
+            routingId: transfer!.meta.routingId,
+            initialAmountA: transfer!.initialBalance.amount[0],
+            initialToA: transfer!.initialBalance.to[0],
+            initialAmountB: transfer!.initialBalance.amount[1],
+            initialToB: transfer!.initialBalance.to[1],
+            initialStateHash: transfer!.initialStateHash,
+          }
+        : undefined;
+
+    const activeTransfers: TransferUpdateManyWithoutChannelInput | undefined =
+      channelState.latestUpdate.type === UpdateType.create
+        ? {
+            connectOrCreate: {
+              where: {
+                transferId: transfer!.transferId,
+              },
+              create: createTransferEntity!,
+            },
+          }
+        : channelState.latestUpdate.type === UpdateType.resolve
+        ? {
+            disconnect: {
+              transferId: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferId,
+            },
+          }
+        : undefined;
     // create the latest update db structure from the input data
     let latestUpdateModel: UpdateCreateInput | undefined;
     if (channelState.latestUpdate) {
@@ -299,20 +324,13 @@ export class PrismaStore implements IServerNodeStore {
 
         // if create, add createdTransfer
         createdTransfer:
-          transfer?.meta?.routingId && channelState.latestUpdate.type === UpdateType.create
+          channelState.latestUpdate.type === UpdateType.create
             ? {
                 connectOrCreate: {
                   where: {
-                    routingId: transfer.meta.routingId,
+                    transferId: transfer!.transferId,
                   },
-                  create: {
-                    routingId: transfer.meta.routingId,
-                    initialAmountA: transfer.initialBalance.amount[0],
-                    initialToA: transfer.initialBalance.to[0],
-                    initialAmountB: transfer.initialBalance.amount[1],
-                    initialToB: transfer.initialBalance.to[1],
-                    initialStateHash: transfer.initialStateHash,
-                  },
+                  create: createTransferEntity!,
                 },
               }
             : undefined,
@@ -338,6 +356,7 @@ export class PrismaStore implements IServerNodeStore {
       where: { channelAddress: channelState.channelAddress },
       create: {
         assetIds,
+        activeTransfers,
         chainId: channelState.networkContext.chainId,
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
@@ -380,6 +399,7 @@ export class PrismaStore implements IServerNodeStore {
       },
       update: {
         assetIds,
+        activeTransfers,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
@@ -453,19 +473,8 @@ export class PrismaStore implements IServerNodeStore {
 
   async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
     const transferEntities = await this.prisma.transfer.findMany({
-      where: { AND: [{ createUpdate: { channelAddressId: channelAddress } }, { resolveUpdateChannelAddressId: null }] },
-      include: {
-        createUpdate: {
-          include: {
-            channel: true,
-          },
-        },
-        resolveUpdate: {
-          include: {
-            channel: true,
-          },
-        },
-      },
+      where: { channelAddress },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
     const transfers = transferEntities.map(convertTransferEntityToFullTransferState);
     return transfers;
@@ -473,33 +482,9 @@ export class PrismaStore implements IServerNodeStore {
 
   async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
     // should be only 1, verify this is always true
-    const [transfer] = await this.prisma.transfer.findMany({
-      where: {
-        OR: [
-          {
-            createUpdate: {
-              transferId,
-            },
-          },
-          {
-            resolveUpdate: {
-              transferId,
-            },
-          },
-        ],
-      },
-      include: {
-        createUpdate: {
-          include: {
-            channel: true,
-          },
-        },
-        resolveUpdate: {
-          include: {
-            channel: true,
-          },
-        },
-      },
+    const transfer = await this.prisma.transfer.findOne({
+      where: { transferId },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
 
     if (!transfer) {

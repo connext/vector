@@ -3,7 +3,7 @@
 @aliceNodeChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
 
 # 0.1 ETH
-@ethAmount = 100000000000000000
+@ethAmount = 10000000000000000
 
 ##############
 ### Send Deposit Tx

@@ -11,7 +11,14 @@ export async function setupListeners(node: IServerNodeService, store: IRouterSto
   await node.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED, // TODO types
     async data => {
-      await forwardTransferCreation(data, node, store, logger);
+      const res = await forwardTransferCreation(data, node, store, logger);
+      if (res.isError) {
+        return logger.error(
+          { method: "forwardTransferCreation", error: res.getError()?.message, context: res.getError()?.context },
+          "Error forwarding transfer",
+        );
+      }
+      logger.info({ method: "forwardTransferCreation", result: res.getValue() }, "Successfully forwarded transfer");
     },
   );
 

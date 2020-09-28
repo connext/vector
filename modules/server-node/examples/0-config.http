@@ -3,6 +3,7 @@
 @nodeUrl = http://localhost:8000
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
 @aliceNodeChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
+@bobNodeChannel = 0x927c6026c3b8130251f528ef0CAFfab4fae57402
 @adminToken = cxt1234
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
@@ -34,7 +35,7 @@ GET {{bobUrl}}/channel
 GET {{aliceUrl}}/channel/{{aliceNodeChannel}}
 
 ### Bob
-GET {{bobUrl}}/channel/{{aliceBobChannel}}
+GET {{bobUrl}}/channel/{{bobNodeChannel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS

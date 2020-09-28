@@ -65,7 +65,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
 
     const multisigCode = multisigRes.getValue();
     // alice needs to deploy the multisig
-    if (multisigCode === `0x` && sender === channelState.participants[0]) {
+    if (multisigCode === `0x`) {
       this.logger.info(
         { method: "sendDepositTx", channelAddress: channelState.channelAddress, assetId, amount },
         `Deploying channel with deposit`,
