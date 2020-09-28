@@ -159,10 +159,6 @@ export class VectorOnchainService implements IVectorOnchainService {
     // Try to encode
     let encodedState: string;
     let encodedResolver: string;
-    console.log("transfer.transferState: ", transfer.transferState);
-    console.log("transfer.transferResolver: ", transfer.transferResolver);
-    console.log("transfer.transferEncodings[0]: ", transfer.transferEncodings[0]);
-    console.log("transfer.transferEncodings[1]: ", transfer.transferEncodings[1]);
     try {
       encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
       encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);

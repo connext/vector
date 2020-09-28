@@ -136,7 +136,7 @@ const SharedConditionalTransferParamsSchema = Type.Object({
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
   routingId: Type.Optional(TBytes32), // This is needed for hopped transfers, but it might get confusing against transferId
-  meta: Type.Any(),
+  meta: Type.Optional(Type.Any()),
 });
 
 const LinkedTransferDetailsSchema = Type.Object({

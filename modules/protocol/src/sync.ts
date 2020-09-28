@@ -41,8 +41,20 @@ export async function outbound(
   // errors first)
   const validationRes = await validateOutbound(params, storeService, signer);
   if (validationRes.isError) {
+    logger.error({
+      method: "outbound",
+      variable: "validationRes",
+      error: validationRes.getError()?.message,
+      context: validationRes.getError()?.context,
+    });
     return Result.fail(validationRes.getError()!);
   }
+  logger.error(
+    {
+      method: "outbound",
+    },
+    "Validated outbound",
+  );
 
   // Get the valid previous state and the valid parameters from the
   // validation result

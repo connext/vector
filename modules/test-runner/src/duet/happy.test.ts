@@ -40,7 +40,7 @@ describe(testName, () => {
     await tx.wait();
   });
 
-  it.skip("alice & bob should setup a channel", async () => {
+  it("alice & bob should setup a channel", async () => {
     const channelRes = await alice.setup({
       chainId,
       counterpartyIdentifier: bob.publicIdentifier,
@@ -115,7 +115,7 @@ describe(testName, () => {
     expect(BigNumber.from(bobBefore).add(depositAmt)).to.eq(bobAfter);
   });
 
-  it("alice can transfer to bob", async () => {
+  it("alice can transfer to bob and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await alice.getStateChannelByParticipants(alice.publicIdentifier, bob.publicIdentifier, chainId);
@@ -144,5 +144,19 @@ describe(testName, () => {
     const channelAfterTransfer = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
     const aliceAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
     expect(aliceAfterTransfer).to.be.eq(BigNumber.from(aliceBefore).sub(transferAmt));
+
+    const resolveRes = await bob.resolveTransfer({
+      channelAddress: channel.channelAddress,
+      conditionType: "LinkedTransfer",
+      details: {
+        preImage,
+      },
+      routingId,
+    });
+    expect(resolveRes.isError).to.not.be.ok;
+
+    const channelAfterResolve = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
+    const bobAfterResolve = assetIdx === -1 ? "0" : channelAfterResolve.balances[assetIdx].amount[1];
+    expect(bobAfterResolve).to.be.eq(BigNumber.from(bobBefore).add(transferAmt));
   });
 });
