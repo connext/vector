@@ -24,6 +24,7 @@ export interface IServerNodeService {
     chainId: number,
   ): Promise<Result<FullChannelState | undefined, Error>>;
   getStateChannel(channelAddress: string): Promise<Result<FullChannelState | undefined, Error>>;
+  setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>>;
   deposit(
     params: ServerNodeParams.SendDepositTx,
     chainId: number,
@@ -31,6 +32,9 @@ export interface IServerNodeService {
   conditionalTransfer(
     params: ServerNodeParams.ConditionalTransfer,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>>;
+  resolveTransfer(
+    params: ServerNodeParams.ResolveTransfer,
+  ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>>;
 
   once<T extends EngineEvent>(
     event: T,
@@ -144,6 +148,19 @@ export class RestServerNodeService implements IServerNodeService {
     }
   }
 
+  async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>> {
+    try {
+      const res = await Axios.post<ServerNodeResponses.Setup>(`${this.serverNodeUrl}/setup`, {
+        counterpartyIdentifier: params.counterpartyIdentifier,
+        chainId: params.chainId,
+        timeout: params.timeout,
+      });
+      return Result.ok(res.data);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async deposit(
     params: ServerNodeParams.SendDepositTx,
     chainId: number,
@@ -154,7 +171,9 @@ export class RestServerNodeService implements IServerNodeService {
         `${this.serverNodeUrl}/send-deposit-tx`,
         params,
       );
+      this.logger.info({ txHash: sendDepositTxRes.data.txHash }, "Waiting for tx to be mined");
       await provider.waitForTransaction(sendDepositTxRes.data.txHash);
+      this.logger.info({ txHash: sendDepositTxRes.data.txHash }, "Tx has been mined");
 
       const res = await Axios.post<ServerNodeResponses.Deposit>(`${this.serverNodeUrl}/deposit`, {
         channelAddress: params.channelAddress,
@@ -180,6 +199,20 @@ export class RestServerNodeService implements IServerNodeService {
     }
   }
 
+  async resolveTransfer(
+    params: ServerNodeParams.ResolveTransfer,
+  ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
+    try {
+      const res = await Axios.post<ServerNodeResponses.ResolveTransfer>(
+        `${this.serverNodeUrl}/linked-transfer/create`,
+        params,
+      );
+      return Result.ok(res.data);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
@@ -193,18 +226,32 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void> {
+    let url: string | undefined;
     switch (event) {
       case EngineEvents.CONDITIONAL_TRANSFER_CREATED: {
-        const url = `${this.callbackUrlBase}/conditional-transfer-created`;
+        url = `${this.callbackUrlBase}/conditional-transfer-created`;
         this.conditionalTransferEvt.pipe(filter!).attach(callback);
         await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
           [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: url,
         });
+        break;
+      }
+      case EngineEvents.CONDITIONAL_TRANSFER_RESOLVED: {
+        url = `${this.callbackUrlBase}/conditional-transfer-resolved`;
+        this.conditionalTransferEvt.pipe(filter!).attach(callback);
+        await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
+          [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: url,
+        });
         this.logger.info(
-          { eventName: EngineEvents.CONDITIONAL_TRANSFER_CREATED, url },
+          { eventName: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, url },
           "Engine event subscription created",
         );
+        break;
       }
     }
+    this.logger.info(
+      { eventName: EngineEvents.CONDITIONAL_TRANSFER_CREATED, url },
+      "Engine event subscription created",
+    );
   }
 }
