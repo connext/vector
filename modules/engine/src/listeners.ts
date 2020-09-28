@@ -236,7 +236,7 @@ async function handleWithdrawalTransferCreation(
   const commitment = new WithdrawCommitment(
     channelAddress,
     participants,
-    balance.to[0], // TODO: correct recipient
+    balance.to[0],
     assetId,
     withdrawalAmount.toString(),
     nonce,
@@ -251,9 +251,10 @@ async function handleWithdrawalTransferCreation(
   // Handle the error
   if (resolveRes.isError) {
     logger.error(
-      { method: "handleWithdrawResolve", error: resolveRes.getError()!.message, transferId, channelAddress },
-      "Failed to resolve withdrawal",
+      { method: "handleWithdrawResolve", error: resolveRes.getError()!, transferId, channelAddress },
+      `Failed to resolve withdrawal: ${resolveRes.getError()!.message}`,
     );
+    return;
   }
 
   // Withdrawal successfully resolved
@@ -265,12 +266,5 @@ async function handleWithdrawalTransferResolution(
   signer: IChannelSigner,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
-  logger: Pino.BaseLogger = Pino(),
-): Promise<void> {}
-
-async function handleWithdrawalReconciliation(
-  event: ChannelUpdateEvent,
-  signer: IChannelSigner,
-  vector: IVectorProtocol,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<void> {}

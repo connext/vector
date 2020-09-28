@@ -9,37 +9,42 @@ import {
   WithdrawState,
   WithdrawStateEncoding,
 } from "@connext/vector-types";
-import { createTestChannelState, delay, getRandomChannelSigner, mkAddress, mkSig } from "@connext/vector-utils";
+import {
+  createTestChannelState,
+  getTestLoggers,
+  delay,
+  getRandomChannelSigner,
+  mkAddress,
+  mkSig,
+} from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { Evt } from "evt";
 import Sinon from "sinon";
 import { expect } from "chai";
 
 import { setupEngineListeners } from "../listeners";
+import { getEngineEvtContainer } from "../utils";
 
-// Adds a handler to an evt instance and returns the result
-// based on the input arguments
-export function addEvtHandler<T = any>(
-  evt: Evt<T>,
-  callback: (event: T) => void | Promise<void>,
-  filter?: (event: T) => boolean,
-  timeout?: number,
-): Evt<T> | Promise<T> {
-  // NOTE: If this type is not an array with a length, then using
-  // the spread operator will cause errors on the evt package
-  const attachArgs = [filter, timeout, callback].filter(x => !!x) as [any, any, any];
-  return evt.attach(...attachArgs);
-}
+import { MemoryStoreService } from "./services/store";
+import { env } from "./env";
 
-describe("listeners", () => {
-  // Create an EVT to post to, that can be aliased as a
-  // vector instance
+const testName = "Engine listeners unit";
+const { log } = getTestLoggers(testName);
 
-  const evt = Evt.create<ChannelUpdateEvent>();
+describe.only(testName, () => {
+  // Get test constants
   const alice: IChannelSigner = getRandomChannelSigner();
   const bob: IChannelSigner = getRandomChannelSigner();
   const messaging = {} as any;
+  const container = getEngineEvtContainer();
+  const chainAddresses = env.chainAddresses;
 
+  // Declare mocks
+  let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
+
+  // Create an EVT to post to, that can be aliased as a
+  // vector instance
+  const evt = Evt.create<ChannelUpdateEvent>();
   // Set vector stub to interact with this EVT instance
   const on = (
     event: ProtocolEventName,
@@ -50,8 +55,10 @@ describe("listeners", () => {
   let vector: Sinon.SinonStubbedInstance<Vector>;
 
   beforeEach(() => {
+    // Create the mocked instances
+    store = Sinon.createStubInstance(MemoryStoreService);
+
     vector = Sinon.createStubInstance(Vector);
-    // TODO: good way to work with events and sinon?
     vector.on = on as any;
   });
 
@@ -59,7 +66,7 @@ describe("listeners", () => {
 
   describe("withdraw", () => {
     it("should work", async () => {
-      await setupEngineListeners(vector, messaging, bob);
+      await setupEngineListeners(container, vector, messaging, bob, store, chainAddresses, log);
 
       const withdrawInitialState: WithdrawState = {
         balance: { to: [alice.address, bob.address], amount: ["5", "0"] },
