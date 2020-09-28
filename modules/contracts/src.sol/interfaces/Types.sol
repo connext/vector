@@ -32,6 +32,8 @@ struct CoreTransferState {
   address transferDefinition;
   uint256 transferTimeout;
   bytes32 initialStateHash;
+  address[2] signers; // Signer keys, not same as channel.participants
+  // OR balance.to
 }
 
 struct ChannelDispute {

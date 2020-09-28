@@ -353,6 +353,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         transferTimeout,
         transferInitialState,
         transferEncodings,
+        signers: transferSigners,
         meta,
       } = details as CreateUpdateDetails;
       // Ensure the transferId is properly formatted
@@ -392,6 +393,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         chainId: previousState.networkContext.chainId,
         transferEncodings,
         transferState: { ...transferInitialState },
+        signers: transferSigners,
         meta,
       };
       break;

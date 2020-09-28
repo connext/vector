@@ -21,6 +21,7 @@ import {
   IVectorStore,
   UpdateType,
   Result,
+  CreateTransferParams,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
@@ -283,17 +284,28 @@ describe("Vector", () => {
     });
 
     describe("should validate parameters", () => {
-      const validParams = {
+      const validParams: CreateTransferParams = {
         channelAddress: mkAddress("0xccc"),
         amount: "123214",
         assetId: mkAddress("0xaaa"),
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestLinkedTransferState(),
         timeout: "133215",
+        signers: [mkAddress("0x111"), mkAddress("0x222")],
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [
+        {
+          name: "should fail if signers are undefined",
+          params: { ...validParams, signers: undefined },
+          error: "should have required property 'signers'",
+        },
+        {
+          name: "should fail if signers are invalid",
+          params: { ...validParams, signers: ["fail"] },
+          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
+        },
         {
           name: "should fail if channelAddress is undefined",
           params: { ...validParams, channelAddress: undefined },

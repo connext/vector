@@ -35,6 +35,7 @@ export type CreateTransferParams = {
   transferInitialState: TransferState;
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
+  signers: Address[];
   meta?: any;
 };
 
@@ -121,6 +122,7 @@ export interface CoreTransferState {
   transferDefinition: Address;
   transferTimeout: string;
   initialStateHash: string;
+  signers: Address[];
 }
 
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
@@ -182,6 +184,7 @@ export type CreateUpdateDetails = {
   transferEncodings: string[]; // Initial state, resolver state
   merkleProofData: string[];
   merkleRoot: string;
+  signers: string[];
   meta?: any;
 };
 

@@ -52,6 +52,7 @@ export const createTransfer = async (
     encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
     meta: { test: "field" },
     assetId,
+    signers: [payor.signerAddress, payee.signerAddress],
   };
 
   const ret = await payor.create(params);
@@ -73,6 +74,7 @@ export const createTransfer = async (
     transferEncodings: params.encodings,
     transferState: params.transferInitialState,
     meta: params.meta,
+    signers: params.signers,
   });
 
   return {

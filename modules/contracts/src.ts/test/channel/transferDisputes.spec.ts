@@ -23,6 +23,7 @@ describe("Transfer Disputes", () => {
       transferDefinition: addressZero,
       transferTimeout: "1",
       initialStateHash: hashZero,
+      signers: [alice.address, bob.address],
     };
     merkleProof = [hashZero];
     hashedState = hashCoreTransferState(transferState);

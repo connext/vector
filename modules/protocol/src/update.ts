@@ -149,13 +149,7 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      unsigned = await generateDepositUpdate(
-        state!,
-        params as UpdateParams<"deposit">,
-        signer,
-        onchainService,
-        logger,
-      );
+      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer, onchainService, logger);
       break;
     }
     case UpdateType.create: {
@@ -306,7 +300,7 @@ function generateCreateUpdate(
   transfers: CoreTransferState[],
 ): { unsigned: ChannelUpdate<"create">; transfer: FullTransferState } {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta, signers },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -330,6 +324,7 @@ function generateCreateUpdate(
     channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
     transferResolver: undefined,
+    signers,
     meta,
   };
   const transferHash = hashCoreTransferState(transferState);
@@ -354,6 +349,7 @@ function generateCreateUpdate(
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
+      signers,
     },
     signatures: [],
   };

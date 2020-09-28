@@ -76,6 +76,7 @@ export function createTestUpdateParams<T extends UpdateType>(
         timeout: "1",
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: { test: "meta" },
+        signers: [mkAddress("0x1"), mkAddress("0x2")],
       };
       break;
     case UpdateType.resolve:

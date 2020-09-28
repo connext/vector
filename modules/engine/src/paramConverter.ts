@@ -31,7 +31,7 @@ export function convertConditionalTransferParams(
 ): Result<CreateTransferParams, InvalidTransferType> {
   const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
 
-  const participants =
+  const signers =
     channel.participants[0] == signer.address
       ? channel.participants
       : [channel.participants[1], channel.participants[0]];
@@ -47,7 +47,7 @@ export function convertConditionalTransferParams(
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
-        to: participants,
+        to: signers,
       },
       linkedHash: details.linkedHash,
     };
@@ -67,6 +67,7 @@ export function convertConditionalTransferParams(
     channelAddress,
     amount,
     assetId,
+    signers,
     transferDefinition: transferDefinition!,
     transferInitialState,
     timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
@@ -128,13 +129,15 @@ export async function convertWithdrawParams(
   const counterpartySigner =
     channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
 
+  const signers = [signer.address, counterpartySigner];
+
   const transferInitialState: WithdrawState = {
     balance: {
       amount: [amount, "0"],
       to: [recipient, counterpartySigner],
     },
     aliceSignature,
-    signers: [signer.address, counterpartySigner],
+    signers,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
     fee: fee ? fee : "0",
@@ -148,6 +151,7 @@ export async function convertWithdrawParams(
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+    signers,
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       withdrawNonce: channel.nonce.toString(),
