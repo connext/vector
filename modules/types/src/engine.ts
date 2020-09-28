@@ -1,9 +1,13 @@
 import { Bytes32 } from "./basic";
 import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
-import { TransferName } from "./transferDefinitions";
+import { IVectorStore } from "./store";
+import { WithdrawCommitmentJson } from "./transferDefinitions";
 import { ChannelRpcMethods, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
 
+///////////////////////////////////
+////// Engine transfer types
+// Conditional transfers
 export const ConditionalTransferType = {
   LinkedTransfer: "LinkedTransfer",
 } as const;
@@ -13,6 +17,8 @@ export type ConditionalTransferResponse = {
   routingId: Bytes32;
 };
 
+///////////////////////////////////
+////// Engine event types
 // Emitted when transfer created
 export const CONDITIONAL_TRANFER_CREATED_EVENT = "CONDITIONAL_TRANFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
@@ -74,6 +80,16 @@ export interface EngineEventMap {
   [WITHDRAWAL_RECONCILED_EVENT]: WithdrawalReconciledPayload;
 }
 
+///////////////////////////////////
+////// Core engine interfaces
 export interface IVectorEngine {
   request<T extends ChannelRpcMethods>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
+}
+
+export interface IEngineStore extends IVectorStore {
+  // Getters
+  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson>;
+
+  // Setters
+  saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
 }

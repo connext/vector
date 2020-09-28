@@ -9,7 +9,6 @@ import {
   ILockService,
   IMessagingService,
   IVectorProtocol,
-  IVectorStore,
   Result,
   JsonRpcProvider,
   EngineParams,
@@ -18,14 +17,8 @@ import {
   ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
-  EngineEvents,
   EngineEventMap,
-  ConditionalTransferCreatedPayload,
-  ConditionalTransferResolvedPayload,
-  DepositReconciledPayload,
-  WithdrawalCreatedPayload,
-  WithdrawalResolvedPayload,
-  WithdrawalReconciledPayload,
+  IEngineStore,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -38,6 +31,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
+import { getEngineEvtContainer } from "./utils";
 
 const ajv = new Ajv();
 
@@ -46,18 +40,11 @@ export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventM
 export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
   // FIXME: Is this JSON RPC compatible?
-  private readonly evts: EngineEvtContainer = {
-    [EngineEvents.CONDITIONAL_TRANFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
-    [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt.create<ConditionalTransferResolvedPayload>(),
-    [EngineEvents.DEPOSIT_RECONCILED]: Evt.create<DepositReconciledPayload>(),
-    [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),
-    [EngineEvents.WITHDRAWAL_RESOLVED]: Evt.create<WithdrawalResolvedPayload>(),
-    [EngineEvents.WITHDRAWAL_RECONCILED]: Evt.create<WithdrawalReconciledPayload>(),
-  };
+  private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private constructor(
     private readonly messaging: IMessagingService,
-    private readonly store: IVectorStore,
+    private readonly store: IEngineStore,
     private readonly vector: IVectorProtocol,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
@@ -68,7 +55,7 @@ export class VectorEngine implements IVectorEngine {
   static async connect(
     messaging: IMessagingService,
     lock: ILockService,
-    store: IVectorStore,
+    store: IEngineStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
