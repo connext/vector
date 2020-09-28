@@ -107,7 +107,7 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 ## Contract TODOs
 
 #### Adjudicator
-- [ ] Add constructor and pass in `ChannelFactory` address
+- [X] Make accessible from mastercopy
 - [X] Change timeouts in `disputeChannel` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
 - [ ] Only allow recipient of a transfer to use `transferResolver` to `resolve` a transfer onchain in `defundTransfer`. Either party should be able to defund it with the existing state, however.
 - [ ] Don't need `onlyParticipants` anymore if we're allowing anybody to dispute.
@@ -117,20 +117,19 @@ Despite not being a "real" commitment, the `CoreTransferState` is a part of the 
 
 #### VectorChannel
 - [ ] Add events/event listening for deposits
-- [ ] Circumvent sig verificatin in `depositA` if being called by `owners[0]` (we still need possible sig to handle the case where it is called by the `ChannelFactory`)
 - [X] Write the `adjudicatorTransfer` fn
-- [ ] Update `getTransactionHash` to use nonce-based replay protection
+- [X] Update `getTransactionHash` to use nonce-based replay protection
 - [X] Clean up + add missing functions to interface
 - [X] Remove update functionality for adjudicator
 
 #### ChannelFactory
-- [ ] Combine this into the `Adjudicator` to avoid cyclic dependency issue
 - [ ] `createChannelAndDepositA` is very ugly + we need two onchain txs no matter what because of approve/transferFrom
 
 #### Other
 - [ ] Do we want to downgrade to 0.6? Possibly not -- TODO/open an issue
 - [ ] Change encoding of `Balance` offchain to be fixed size arrays
 - [ ] Remove transfer encodings from CoreTransferState offchain
+- [ ] Comments / NatSpec
 
 #### Later
 - [ ] Solidify asset handling: deal with non-standard-conforming tokens, reverts, reentrancy, etc.
