@@ -82,6 +82,12 @@ export class VectorEngine implements IVectorEngine {
     return engine;
   }
 
+  // TODO: create injected validation that handles submitting transactions
+  // IFF there was a fee involved. Should:
+  // - check if fee > 0
+  //    - yes && my withdrawal: make sure transaction hash is included in
+  //      the meta (verify tx)
+
   private async setupListener(): Promise<void> {
     await setupEngineListeners(
       this.evts,

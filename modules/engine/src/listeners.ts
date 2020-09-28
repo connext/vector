@@ -205,7 +205,7 @@ async function handleWithdrawalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal resolve event");
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal create event");
   // If you receive a withdrawal creation, you should
   // resolve the withdrawal with your signature
   const {
@@ -220,16 +220,16 @@ async function handleWithdrawalTransferCreation(
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
 
   // Get the recipient + amount from the transfer state
-  const { balance, nonce, aliceSignature, signers } = transferInitialState as WithdrawState;
+  const { balance, nonce, aliceSignature, signers, fee } = transferInitialState as WithdrawState;
 
-  // TODO: properly account for fees?
-  const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
+  const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
 
   // Post to evt
   const assetIdx = assetIds.findIndex(a => a === assetId);
   const payload: WithdrawalCreatedPayload = {
     assetId,
     amount: withdrawalAmount.toString(),
+    fee,
     recipient: balance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,
@@ -247,7 +247,14 @@ async function handleWithdrawalTransferCreation(
       },
       "Waiting for counterparty sig on withdrawal",
     );
+    return;
   }
+
+  // TODO: If there is a fee, try to send transaction to chain after signing
+  // and include the transaction hash in resolve meta
+  // IF you do not have sufficient funds to send withdrawal tx and your counter-
+  // party was expecting you to, store withdrawal commitment (counterparty will
+  // not cosign the resolve until the transaction hash is included)
 
   // TODO: should inject validation to make sure that a withdrawal transfer
   // is properly signed before its been merged into your channel
@@ -312,14 +319,16 @@ async function handleWithdrawalTransferResolution(
     return;
   }
 
-  // TODO: properly account for fees?
-  const withdrawalAmount = transfer.initialBalance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0));
+  const withdrawalAmount = transfer.initialBalance.amount
+    .reduce((prev, curr) => prev.add(curr), BigNumber.from(0))
+    .sub(transfer.transferState.fee);
 
   // Post to evt
   const assetIdx = assetIds.findIndex(a => a === assetId);
   const payload: WithdrawalResolvedPayload = {
     assetId,
     amount: withdrawalAmount.toString(),
+    fee,
     recipient: transfer.initialBalance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,

@@ -45,6 +45,8 @@ export type DepositReconciledPayload = {
 export const WITHDRAWAL_CREATED_EVENT = "WITHDRAWAL_CREATED";
 export type WithdrawalCreatedPayload = {
   channelAddress: string;
+  transfer: FullTransferState;
+  fee: string;
   assetId: string;
   amount: string;
   recipient: string;

@@ -113,7 +113,7 @@ describe.only(testName, () => {
       return { resolver: { bobSignature }, state, commitment: commitment.toJson() };
     };
 
-    it("should work for alice withdrawing to her address", async () => {
+    it("should work for eth, recipient in channel", async () => {
       await setupEngineListeners(container, vector, messaging, bob, store, chainAddresses, log);
 
       const { state, resolver, commitment } = await getWithdrawalCommitment();
