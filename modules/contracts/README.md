@@ -139,3 +139,39 @@ The above pattern has a few _highly_ desireable UX consequences:
 Withdrawing works a bit differently:
 
 A withdraw from the channel is done by locking up some funds in a transfer and "burning" them, conditionally upon a withdraw commitment being generated from the channel. Once a commitment is generated, one or both parties _always_ have the ability to put it onchain to get their funds. Because of this, we consider offchain that the withdraw was completed even if it wasn't actually submitted to chain. Note that, in the event of a dispute, both parties MUST submit any pending withdraw commitments to chain to properly receive their remaining funds.
+
+## Contract TODOs
+
+#### Adjudicator
+
+- [x] Make accessible from mastercopy
+- [x] Change timeouts in `disputeChannel` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
+- [ ] Only allow recipient of a transfer to use `transferResolver` to `resolve` a transfer onchain in `defundTransfer`. Either party should be able to defund it with the existing state, however.
+- [ ] Don't need `onlyParticipants` anymore if we're allowing anybody to dispute.
+- [ ] `getChannelAddress` needs to be implemented using participants, chainId (from onchain data), hardcoded vector domain separator, and hardcoded `ChannelFactory` address.
+- [ ] Fill out signing/hashing utils based on any new needs that might have been introduced as a result of the new control flow for contracts.
+- [ ] Events
+
+#### VectorChannel
+
+- [ ] Add events/event listening for deposits
+- [x] Write the `adjudicatorTransfer` fn
+- [x] Update `getTransactionHash` to use nonce-based replay protection
+- [x] Clean up + add missing functions to interface
+- [x] Remove update functionality for adjudicator
+
+#### ChannelFactory
+
+- [ ] `createChannelAndDepositA` is very ugly + we need two onchain txs no matter what because of approve/transferFrom
+
+#### Other
+
+- [ ] Do we want to downgrade to 0.6? Possibly not -- TODO/open an issue
+- [ ] Change encoding of `Balance` offchain to be fixed size arrays
+- [ ] Remove transfer encodings from CoreTransferState offchain
+- [ ] Comments / NatSpec
+
+#### Later
+
+- [ ] Solidify asset handling: deal with non-standard-conforming tokens, reverts, reentrancy, etc.
+- [ ] Allow to selectively defund assets (?)
