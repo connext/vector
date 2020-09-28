@@ -1,4 +1,4 @@
-import { Balance, FullChannelState } from "@connext/vector-types";
+import { Balance } from "@connext/vector-types";
 import { createTestFullLinkedTransferState, createTestChannelState, mkBytes32, mkHash } from "@connext/vector-utils";
 
 import { expect } from "../test/utils/assert";
@@ -17,6 +17,7 @@ describe("store", () => {
     await store.prisma.balance.deleteMany({});
     await store.prisma.channel.deleteMany({});
     await store.prisma.update.deleteMany({});
+    await store.prisma.transfer.deleteMany({});
   });
 
   after(async () => {
@@ -50,21 +51,49 @@ describe("store", () => {
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(depositState);
 
+    const transfer = createTestFullLinkedTransferState({
+      transferId: mkHash("0x111"),
+      meta: { routingId: mkBytes32("0xddd") },
+      chainId: depositState.networkContext.chainId,
+    });
     const createState = createTestChannelState("create", {
+      channelAddress: transfer.channelAddress,
+      networkContext: { channelFactoryAddress: transfer.channelFactoryAddress, chainId: transfer.chainId },
       nonce: depositState.nonce + 1,
+      latestUpdate: {
+        details: {
+          transferInitialState: transfer.transferState,
+          transferId: transfer.transferId,
+          meta: transfer.meta,
+          transferDefinition: transfer.transferDefinition,
+          transferEncodings: transfer.transferEncodings,
+          transferTimeout: transfer.transferTimeout,
+        },
+        nonce: depositState.nonce + 1,
+      },
     });
-    await store.saveChannelState(createState, {
-      channelFactoryAddress: createState.networkContext.channelFactoryAddress,
-      chainId: createState.networkContext.chainId,
-      signatures: createState.latestUpdate.signatures,
-      state: createState,
-    });
+    await store.saveChannelState(
+      createState,
+      {
+        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
+        chainId: createState.networkContext.chainId,
+        signatures: createState.latestUpdate.signatures,
+        state: createState,
+      },
+      transfer,
+    );
 
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(createState);
 
     const resolveState = createTestChannelState("resolve", {
       nonce: createState.nonce + 1,
+      latestUpdate: {
+        nonce: createState.nonce + 1,
+        details: {
+          transferId: transfer.transferId,
+        },
+      },
     });
     await store.saveChannelState(resolveState, {
       channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,

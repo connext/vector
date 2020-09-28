@@ -97,7 +97,6 @@ const convertChannelEntityToFullChannelState = (
           transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferId: channelEntity.latestUpdate.transferId!,
           transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
-          meta: channelEntity.latestUpdate!.meta ? JSON.parse(channelEntity.latestUpdate!.meta) : undefined,
         } as ResolveUpdateDetails;
         break;
     }
@@ -356,7 +355,10 @@ export class PrismaStore implements IServerNodeStore {
       where: { channelAddress: channelState.channelAddress },
       create: {
         assetIds,
-        activeTransfers,
+        activeTransfers: {
+          ...activeTransfers,
+          disconnect: undefined,
+        } as any,
         chainId: channelState.networkContext.chainId,
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
