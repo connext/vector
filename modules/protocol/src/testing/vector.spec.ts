@@ -435,7 +435,7 @@ describe("Vector", () => {
           name: "should fail if transferResolver is invalid",
           params: { ...validParams, transferResolver: { test: "fail" } },
           error:
-            "should have required property 'preImage',should have required property 'responderSignature',should match exactly one schema in oneOf",
+            "should have required property 'preImage',should have required property 'bobSignature',should match exactly one schema in oneOf",
         },
       ];
 
