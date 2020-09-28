@@ -74,8 +74,20 @@ export async function forwardTransferCreation(
     routingId,
     conditionType,
   } = data;
-  let { recipientChainId, recipientAssetId, requireOnline } = meta;
-  const recipientIdentifier = meta.recipient;
+  let { requireOnline } = meta;
+  const [path] = meta.path;
+
+  const recipientIdentifier = path.recipient;
+  console.log(
+    "!recipientIdentifier || recipientIdentifier === node.publicIdentifier: ",
+    !recipientIdentifier || recipientIdentifier === node.publicIdentifier,
+  );
+  console.log("recipientIdentifier: ", recipientIdentifier);
+  console.log("node.publicIdentifier: ", node.publicIdentifier);
+  if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
+    logger.info({ path, method: "forwardTransferCreation" }, "No path to follow");
+    return Result.ok(undefined);
+  }
 
   // TODO validate the above params
 
@@ -99,9 +111,9 @@ export async function forwardTransferCreation(
   const senderChainId = senderChannel.networkContext.chainId;
 
   // Defaults
-  recipientAssetId = recipientAssetId ? recipientAssetId : senderAssetId;
+  const recipientAssetId = path.recipientAssetId ? path.recipientAssetId : senderAssetId;
   requireOnline = requireOnline ? requireOnline : false;
-  recipientChainId = recipientChainId ? recipientChainId : senderChainId;
+  const recipientChainId = path.recipientChainId ? path.recipientChainId : senderChainId;
 
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
