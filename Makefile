@@ -177,6 +177,11 @@ test-duet: test-runner duet
 watch-duet: test-runner duet
 	bash ops/test-integration.sh duet watch
 
+test-trio: test-runner node duet
+	bash ops/test-integration.sh trio test
+watch-trio: test-runner node duet
+	bash ops/test-integration.sh trio watch
+
 ########################################
 # Begin Real Build Rules
 

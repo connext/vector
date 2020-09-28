@@ -74,8 +74,14 @@ export async function forwardTransferCreation(
     routingId,
     conditionType,
   } = data;
-  let { recipientChainId, recipientAssetId, requireOnline } = meta;
-  const recipientIdentifier = meta.recipient;
+  let { requireOnline } = meta;
+  const [path] = meta.path;
+
+  const recipientIdentifier = path.recipient;
+  if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
+    logger.info({ path, method: "forwardTransferCreation" }, "No path to follow");
+    return Result.ok(undefined);
+  }
 
   // TODO validate the above params
 
@@ -99,9 +105,9 @@ export async function forwardTransferCreation(
   const senderChainId = senderChannel.networkContext.chainId;
 
   // Defaults
-  recipientAssetId = recipientAssetId ? recipientAssetId : senderAssetId;
+  const recipientAssetId = path.recipientAssetId ? path.recipientAssetId : senderAssetId;
   requireOnline = requireOnline ? requireOnline : false;
-  recipientChainId = recipientChainId ? recipientChainId : senderChainId;
+  const recipientChainId = path.recipientChainId ? path.recipientChainId : senderChainId;
 
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
@@ -159,7 +165,9 @@ export async function forwardTransferCreation(
   // Figure out router balance
   const assetIdx = recipientChannel.assetIds.findIndex((a: string) => a === recipientAssetId);
   const routerBalanceInRecipientChannel =
-    node.signerAddress == recipientChannel.participants[0]
+    assetIdx === -1
+      ? "0"
+      : node.signerAddress == recipientChannel.participants[0]
       ? recipientChannel.balances[assetIdx].amount[0]
       : recipientChannel.balances[assetIdx].amount[1];
 
@@ -198,7 +206,7 @@ export async function forwardTransferCreation(
     details: conditionData,
     routingId,
     conditionType,
-  }); // TODO interface
+  });
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === ServerNodeError.reasons.Timeout) {
       // store transfer

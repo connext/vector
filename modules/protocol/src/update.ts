@@ -149,13 +149,7 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      unsigned = await generateDepositUpdate(
-        state!,
-        params as UpdateParams<"deposit">,
-        signer,
-        onchainService,
-        logger,
-      );
+      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer, onchainService, logger);
       break;
     }
     case UpdateType.create: {
@@ -188,6 +182,7 @@ export async function generateUpdate<T extends UpdateType>(
       );
     }
   }
+  logger.info({ method: "generateUpdate", unsigned, updatedTransfer }, "Generated unsigned update");
 
   // Create a signed commitment for the new state
   const result = await applyUpdate(unsigned, state!, updatedTransfer);
@@ -197,6 +192,7 @@ export async function generateUpdate<T extends UpdateType>(
     return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, state));
   }
   const commitment = await generateSignedChannelCommitment(result.getValue(), signer, []);
+  logger.info({ method: "generateUpdate", commitment }, "Applied and signed update");
 
   // Return the validated update to send to counterparty
   return Result.ok({
@@ -379,6 +375,10 @@ async function generateResolveUpdate(
 
   // First generate latest merkle tree data
   const transferToResolve = transfers.find(x => x.transferId === transferId);
+  logger.info(
+    { method: "generateResolveUpdate", numTransfers: transfers.length, channelAddress: state.channelAddress },
+    "Generating resolve update",
+  );
   if (!transferToResolve) {
     throw new Error(`Could not find transfer for id ${transferId}`);
   }
@@ -400,12 +400,28 @@ async function generateResolveUpdate(
     throw transferBalanceResult.getError()!;
   }
   const transferBalance = transferBalanceResult.getValue()!;
+  logger.info(
+    {
+      method: "generateResolveUpdate",
+      channelAddress: state.channelAddress,
+      transferBalance,
+    },
+    "Generated transfer resolution",
+  );
 
   // Convert transfer balance to channel update balance
   const balance = getUpdatedChannelBalance(UpdateType.resolve, transferToResolve.assetId, transferBalance, state);
 
   // Generate the unsigned update from the params
   const root = merkle.getHexRoot();
+  logger.info(
+    {
+      method: "generateResolveUpdate",
+      channelAddress: state.channelAddress,
+      root,
+    },
+    "Generated new merkle root",
+  );
   const unsigned: ChannelUpdate<"resolve"> = {
     ...generateBaseUpdate(state, params, signer),
     balance,
