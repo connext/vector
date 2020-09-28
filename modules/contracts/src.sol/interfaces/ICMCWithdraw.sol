@@ -10,7 +10,8 @@ interface ICMCWithdraw {
         address assetId,
         uint256 amount,
         uint256 nonce,
-        bytes[] memory signatures
+        bytes memory aliceSignature,
+        bytes memory bobSignature
     ) external;
 
 }

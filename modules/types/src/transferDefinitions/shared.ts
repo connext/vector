@@ -34,7 +34,8 @@ export const CoreTransferStateEncoding = tidy(`tuple(
   address transferDefinition,
   uint256 transferTimeout,
   bytes32 initialStateHash,
-  address[2] signers
+  address initiator,
+  address responder
 )`);
 
 export interface TransferStateMap {

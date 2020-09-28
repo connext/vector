@@ -7,8 +7,9 @@ export const WithdrawName = "Withdraw";
 
 export type WithdrawState = {
   balance: Balance;
-  aliceSignature: SignatureString;
-  signers: Address[];
+  initiatorSignature: SignatureString;
+  initiator: Address;
+  responder: Address;
   data: Bytes32;
   nonce: Bytes32;
   fee: string;
@@ -20,8 +21,9 @@ export type WithdrawResolver = {
 
 export const WithdrawStateEncoding = tidy(`tuple(
     ${BalanceEncoding} balance,
-    bytes aliceSignature,
-    address[2] signers,
+    bytes initiatorSignature,
+    address initiator,
+    address responder,
     bytes32 data,
     bytes32 nonce,
     uint256 fee
@@ -32,10 +34,11 @@ export const WithdrawResolverEncoding = tidy(`tuple(
   )`);
 
 export type WithdrawCommitmentJson = {
-  aliceSignature?: string;
-  bobSignature?: string;
+  initiatorSignature?: string;
+  responderSignature?: string;
   channelAddress: string;
-  signers: string[];
+  initiator: string;
+  responder: string;
   recipient: string;
   assetId: string;
   amount: string;

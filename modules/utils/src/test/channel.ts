@@ -188,7 +188,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = overrides.publicIdentifiers ?? [mkPublicIdentifier("indraA"), mkPublicIdentifier("indraB")];
-  const participants = overrides.participants ?? [mkAddress("0xaaa"), mkAddress("0xbbb")];
+  const participants = [overrides.alice ?? mkAddress("0xaaa"), overrides.bob ?? mkAddress("0xbbb")];
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
   const nonce = overrides.nonce ?? 1;
@@ -232,7 +232,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       ...(networkContext ?? {}),
     },
     nonce,
-    participants,
+    alice: participants[0],
+    bob: participants[1],
     publicIdentifiers,
     timeout: "1",
     ...rest,
@@ -245,10 +246,10 @@ export function createTestChannelStateWithSigners<T extends UpdateType = typeof 
   overrides: PartialFullChannelState<T> = {},
 ): FullChannelState<T> {
   const publicIdentifiers = signers.map(s => s.publicIdentifier);
-  const participants = signers.map(s => s.address);
   const signerOverrides = {
     publicIdentifiers,
-    participants,
+    alice: signers[0].address,
+    bob: signers[1].address,
     ...(overrides ?? {}),
   };
   return createTestChannelState(type, signerOverrides) as FullChannelState<T>;

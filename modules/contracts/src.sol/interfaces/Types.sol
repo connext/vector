@@ -16,7 +16,8 @@ struct CoreChannelState {
   Balance[] balances; // TODO index by assetId? // alice, bob
   address[] assetIds;
   address channelAddress;
-  address[2] participants; // Signer keys -- does NOT have to be the same as balances.to[]
+  address alice;
+  address bob;
   uint256[] processedDepositsA; // indexed by assetId
   uint256[] processedDepositsB; // indexed by assetId
   uint256 timeout;
@@ -32,8 +33,8 @@ struct CoreTransferState {
   address transferDefinition;
   uint256 transferTimeout;
   bytes32 initialStateHash;
-  address[2] signers; // Signer keys, not same as channel.participants
-  // OR balance.to
+  address initiator;
+  address responder;
 }
 
 struct ChannelDispute {

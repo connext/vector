@@ -25,7 +25,8 @@ describe("withdrawCommitment", () => {
   it("can successfully withdraw Eth", async () => {
     const commitment = new WithdrawCommitment(
       channel.address,
-      [alice.address, bob.address],
+      alice.address,
+      bob.address,
       alice.address,
       constants.AddressZero,
       amount,
@@ -43,7 +44,8 @@ describe("withdrawCommitment", () => {
   it("can successfully withdraw Tokens", async () => {
     const commitment = new WithdrawCommitment(
       channel.address,
-      [alice.address, bob.address],
+      alice.address,
+      bob.address,
       alice.address,
       token.address,
       amount,
