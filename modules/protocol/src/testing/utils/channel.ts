@@ -79,6 +79,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
       providerUrl: provider.connection.url,
       channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
+      withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
     },
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
   });

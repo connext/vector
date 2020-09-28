@@ -65,8 +65,8 @@ const SetupProtocolParamsSchema = Type.Object({
   networkContext: Type.Object({
     channelFactoryAddress: TAddress,
     channelMastercopyAddress: TAddress,
+    withdrawDefinition: TAddress,
     linkedTransferDefinition: Type.Optional(TAddress),
-    withdrawDefinition: Type.Optional(TAddress),
     chainId: TChainId,
     providerUrl: Type.String({ format: "uri" }),
   }),

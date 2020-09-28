@@ -226,6 +226,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
       providerUrl: "http://localhost:8545",
       channelMastercopyAddress: mkAddress("0xmast"),
+      withdrawDefinition: mkAddress("0xasde1234dsae"),
       ...(networkContext ?? {}),
     },
     nonce,

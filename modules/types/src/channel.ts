@@ -146,8 +146,8 @@ export type ChainAddresses = {
 export type ContractAddresses = {
   channelFactoryAddress: Address;
   channelMastercopyAddress: Address;
+  withdrawDefinition: Address;
   linkedTransferDefinition?: Address;
-  withdrawDefinition?: Address;
 };
 
 export type NetworkContext = ContractAddresses & {
