@@ -65,6 +65,7 @@ jobs:
         run: |
           docker service logs --tail 200 trio_alice
           docker service logs --tail 200 trio_bob
+
   trio:
     runs-on: ubuntu-latest
     steps:
@@ -103,5 +104,6 @@ jobs:
       - run: make test-router
       - name: Print logs
         if: failure()
-        run: docker service logs --tail 200 router_node
-        run: docker service logs --tail 200 router_router
+        run: |
+          docker service logs --tail 200 router_node
+          docker service logs --tail 200 router_router

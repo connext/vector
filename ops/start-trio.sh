@@ -65,6 +65,17 @@ common="networks:
           max-size: '100m'"
 
 ########################################
+# Global services / chain provider config
+
+sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+
+auth_url="http://auth:5040"
+bash $root/ops/start-global.sh
+
+VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
+VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
+
+########################################
 ## Database config
 
 database_image="${project}_database:$version"
@@ -78,33 +89,28 @@ database_env="environment:
       POSTGRES_USER: '$project'"
 
 ########################################
-# Global services / chain provider config
-
-carol_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
-dave_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
-sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-
-auth_url="http://auth:5040"
-bash $root/ops/start-global.sh
-
-VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
-VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
-VECTOR_MNEMONIC_FILE="/run/secrets/${project}_mnemonic_dev"
-
-########################################
 ## Node config
 
-node_port="8000"
-prisma_port="5555"
+internal_node_port="8000"
+internal_prisma_port="5555"
 nats_port="4222"
 
-carol_port="8001"
+carol_node_port="8001"
+carol_prisma_port="5556"
 carol_database="database_c"
+carol_mnemonic="owner warrior discover outer physical intact secret goose all photo napkin fall"
 
-dave_port="8002"
+dave_node_port="8002"
+dave_prisma_port="5557"
 dave_database="database_d"
+dave_mnemonic="woman benefit lawn ignore glove marriage crumble roast tool area cool payment"
 
-public_url="http://localhost:$carol_port"
+roger_node_port="8003"
+roger_prisma_port="5558"
+roger_database="database_r"
+roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
+
+public_url="http://localhost:$roger_node_port"
 
 VECTOR_ADMIN_TOKEN="${VECTOR_ADMIN_TOKEN:-cxt1234}";
 
@@ -120,7 +126,7 @@ node_env="environment:
       VECTOR_PG_PASSWORD: '$project'
       VECTOR_PG_PORT: '$pg_port'
       VECTOR_PG_USERNAME: '$project'
-      VECTOR_PORT: '$node_port'
+      VECTOR_PORT: '$internal_node_port'
       VECTOR_REDIS_URL: '$redis_url'
       VECTOR_SUGAR_DADDY: '$sugardaddy_mnemonic'"
 
@@ -138,9 +144,6 @@ fi
 
 ########################################
 ## Router config
-
-roger_port="8002"
-roger_database="database_r"
 
 router_port="8008"
 
@@ -178,8 +181,8 @@ services:
       VECTOR_PG_HOST: '$carol_database'
       VECTOR_MNEMONIC: '$carol_mnemonic'
     ports:
-      - '$carol_port:$node_port'
-      - '$prisma_port:$prisma_port'
+      - '$carol_node_port:$internal_node_port'
+      - '$carol_prisma_port:$internal_prisma_port'
 
   dave:
     $common
@@ -188,8 +191,8 @@ services:
       VECTOR_PG_HOST: '$dave_database'
       VECTOR_MNEMONIC: '$dave_mnemonic'
     ports:
-      - '$dave_port:$node_port'
-      - '$prisma_port:$prisma_port'
+      - '$dave_node_port:$internal_node_port'
+      - '$dave_prisma_port:$internal_prisma_port'
 
   roger:
     $common
@@ -198,8 +201,8 @@ services:
       VECTOR_PG_HOST: '$roger_database'
       VECTOR_MNEMONIC: '$roger_mnemonic'
     ports:
-      - '$roger_port:$node_port'
-      - '$prisma_port:$prisma_port'
+      - '$roger_node_port:$internal_node_port'
+      - '$roger_prisma_port:$internal_prisma_port'
 
   router:
     $common
@@ -207,19 +210,17 @@ services:
     ports:
       - '$router_port:$router_port'
     environment:
-      VECTOR_NODE_URL: 'http://node:$node_port'
-      VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
-      VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
-      VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: '$pg_host'
-      VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
-      VECTOR_PG_PORT: '$pg_port'
-      VECTOR_PG_USERNAME: '$pg_user'
-      VECTOR_PORT: '$router_port'
+      VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_ENV: '$VECTOR_ENV'
-    secrets:
-      - '$db_secret'
+      VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
+      VECTOR_NODE_URL: 'http://roger:$internal_node_port'
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_HOST: '$roger_database'
+      VECTOR_PG_PASSWORD: '$project'
+      VECTOR_PG_PORT: '$pg_port'
+      VECTOR_PG_USERNAME: '$project'
+      VECTOR_PORT: '$router_port'
 
   $carol_database:
     $common
