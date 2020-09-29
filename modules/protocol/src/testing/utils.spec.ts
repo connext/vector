@@ -1,12 +1,18 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, constants, BigNumberish } from "ethers";
-import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
-import { mkAddress } from "@connext/vector-utils";
+import { Balance, Result, IVectorOnchainService, ChannelCommitmentData, FullChannelState } from "@connext/vector-types";
+import {
+  createTestChannelState,
+  getRandomChannelSigner,
+  hashChannelCommitment,
+  mkAddress,
+  stringify,
+} from "@connext/vector-utils";
 import { expect } from "chai";
 import Sinon from "sinon";
 import { VectorOnchainService } from "@connext/vector-contracts";
 
-import { reconcileDeposit } from "../utils";
+import { generateSignedChannelCommitment, reconcileDeposit } from "../utils";
 
 import { env } from "./env";
 
@@ -34,13 +40,75 @@ describe("utils", () => {
     it("should attach with callback + filter + timeout", async () => {});
   });
 
-  // FIXME: THESE ARE BLOCKING TESTS!
-  describe.skip("generateSignedChannelCommitment", () => {
-    it("should not sign anything if there are two signatures", () => {});
-    it("should work for participants[0] if there is not a counterparty signature included", () => {});
-    it("should work for participants[1] if there is not a counterparty signature included", () => {});
-    it("should work for participants[0] if there is a counterparty signature included", () => {});
-    it("should work for participants[1] if there is a counterparty signature included", () => {});
+  describe("generateSignedChannelCommitment", async () => {
+    const signer = getRandomChannelSigner();
+    const counterpartyAddress = mkAddress();
+    const aliceState = createTestChannelState("create", { participants: [signer.address, counterpartyAddress] });
+    const bobState = createTestChannelState("create", { participants: [counterpartyAddress, signer.address] });
+
+    const tests: any = [
+      {
+        name: "should not sign anything if there are two signatures",
+        state: aliceState,
+        updateSignatures: ["test1", "test2"],
+        expected: ["test1", "test2"],
+      },
+      {
+        name: "should work for participants[0] if there is not a counterparty signature included",
+        state: aliceState,
+        updateSignatures: [],
+        expected: ["sig", undefined],
+      },
+      {
+        name: "should work for participants[1] if there is not a counterparty signature included",
+        state: bobState,
+        updateSignatures: [],
+        expected: [undefined, "sig"],
+      },
+      {
+        name: "should work for participants[0] if there is a counterparty signature included",
+        state: aliceState,
+        updateSignatures: ["test2"],
+        expected: ["sig", "test2"],
+      },
+      {
+        name: "should work for participants[1] if there is a counterparty signature included",
+        state: bobState,
+        updateSignatures: ["test1"],
+        expected: ["test1", "sig"],
+      },
+    ];
+
+    for (const test of tests) {
+      const { name, updateSignatures, expected, state } = test;
+
+      it(name, async () => {
+        const { networkContext, ...core } = state;
+        const unsigned = {
+          chainId: networkContext.chainId,
+          state: core,
+          channelFactoryAddress: networkContext.channelFactoryAddress,
+          signatures: [],
+        };
+        // Run the test
+        const result = await generateSignedChannelCommitment(state, signer, updateSignatures);
+
+        // Doing this really dumb thing because, for some reason, signature functions are causing tests to be skipped
+        let expectedSigs: string[] = [];
+        for (let i = 0; i < 2; i++) {
+          if (expected[i] == "sig") {
+            expectedSigs[i] = await signer.signMessage(hashChannelCommitment(unsigned));
+          } else {
+            expectedSigs[i] = expected[i];
+          }
+        }
+
+        expect(result).to.deep.eq({
+          ...unsigned,
+          signatures: expectedSigs,
+        });
+      });
+    }
   });
 
   // FIXME: THESE ARE BLOCKING TESTS!
@@ -162,8 +230,8 @@ describe("utils", () => {
           channelAddress,
           chainId,
           { ...(initialBalance ?? { amount: ["0", "0"] }), to },
-          processedDepositsA ? (processedDepositsA[0] || "0") : "0",
-          processedDepositsB ? (processedDepositsB[0] || "0") : "0",
+          processedDepositsA ? processedDepositsA[0] || "0" : "0",
+          processedDepositsB ? processedDepositsB[0] || "0" : "0",
           assetId ?? constants.AddressZero,
           chainService,
         );
