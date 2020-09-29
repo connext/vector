@@ -5,6 +5,7 @@ export const ChannelRpcMethods = {
   chan_getChannelState: "chan_getChannelState",
   chan_getChannelStateByParticipants: "chan_getChannelStateByParticipants",
   chan_getChannelStates: "chan_getChannelStates",
+  // chan_getTransferState: "chan_getTransferState",
   chan_setup: "chan_setup",
   chan_deposit: "chan_deposit",
   chan_createTransfer: "chan_createTransfer",

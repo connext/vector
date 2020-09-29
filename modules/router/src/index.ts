@@ -14,7 +14,7 @@ const server = fastify();
 server.register(fastifyOas, {
   swagger: {
     info: {
-      title: "Vector Server-Node",
+      title: "Vector Routing-Node",
       version: "0.0.1",
     },
   },
