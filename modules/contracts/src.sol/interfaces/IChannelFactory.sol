@@ -32,6 +32,4 @@ interface IChannelFactory {
         uint256 amount
     ) external payable returns (IVectorChannel);
 
-
 }
-

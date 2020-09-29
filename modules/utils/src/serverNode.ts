@@ -204,7 +204,7 @@ export class RestServerNodeService implements IServerNodeService {
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
     try {
       const res = await Axios.post<ServerNodeResponses.ResolveTransfer>(
-        `${this.serverNodeUrl}/linked-transfer/create`,
+        `${this.serverNodeUrl}/linked-transfer/resolve`,
         params,
       );
       return Result.ok(res.data);

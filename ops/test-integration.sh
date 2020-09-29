@@ -11,7 +11,14 @@ docker network create --attachable --driver overlay $project 2> /dev/null || tru
 stack="${1:-node}"
 cmd="${2:-test}"
 
-bash $root/ops/start-$stack.sh
+if [[ "$stack" == "trio" ]]
+then 
+  bash $root/ops/start-duet.sh
+  bash $root/ops/start-node.sh
+else
+  bash $root/ops/start-$stack.sh
+fi
+
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
@@ -24,12 +31,6 @@ eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble swe
 
 ########################################
 ## Launch test runner
-
-if [[ "$stack" == "duet" ]]
-then stack_env=" \
-  --env=VECTOR_ALICE_URL=http://alice:8000 \
-  --env=VECTOR_BOB_URL=http://bob:8000"
-fi
 
 common="$interactive $stack_env \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \

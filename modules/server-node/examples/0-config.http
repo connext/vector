@@ -24,7 +24,7 @@ GET {{nodeUrl}}/config
 ##############
 ### GET CHANNELS
 ### Alice
-GET {{aliceUrl}}/channel
+GET {{nodeUrl}}/channel
 
 ### Bob
 GET {{bobUrl}}/channel
@@ -40,7 +40,7 @@ GET {{bobUrl}}/channel/{{bobNodeChannel}}
 ##############
 ### GET CHANNEL BY PARTICIPANTS
 ### Alice
-GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
+GET {{nodeUrl}}/channel/{{nodePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
 
 ### Bob
 GET {{bobUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
