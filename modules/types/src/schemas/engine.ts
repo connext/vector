@@ -2,11 +2,18 @@
 
 import { Static, TStringLiteral, Type } from "@sinclair/typebox";
 
-import { TPublicIdentifier, TChainId, TIntegerString, ChannelRpcMethods } from "..";
-import { TAddress, TBytes32 } from "../schemas";
+import { ChannelRpcMethod, ChannelRpcMethods } from "../vectorProvider";
 import { TransferName } from "../transferDefinitions";
 
-import { LinkedTransferResolverSchema, TBasicMeta } from "./basic";
+import {
+  LinkedTransferResolverSchema,
+  TBasicMeta,
+  TAddress,
+  TBytes32,
+  TPublicIdentifier,
+  TChainId,
+  TIntegerString,
+} from "./basic";
 
 ////////////////////////////////////////
 // Engine API Parameter schemas
@@ -99,10 +106,11 @@ const WithdrawParamsSchema = Type.Object({
   meta: TBasicMeta,
 });
 
-// Rpc request schema
+// Rpc method names schema
 const RpcRequestEngineMethodNamesSchema = Type.Union(
-  Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<string>],
+  Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<ChannelRpcMethod>],
 );
+type RpcRequestEngineMethodNames = Static<typeof RpcRequestEngineMethodNamesSchema>;
 
 const RpcRequestEngineMethodParamsSchemaMap = Type.Object({
   [ChannelRpcMethods.chan_setup]: SetupEngineParamsSchema,
@@ -116,11 +124,11 @@ const RpcRequestEngineMethodParamsSchemaMap = Type.Object({
   // [ChannelRpcMethods.chan_getTransferState]: ,
 });
 
-const RpcRequestEngineParamsSchema = <G extends Static<typeof RpcRequestEngineMethodNamesSchema>>(T: G) =>
+const RpcRequestEngineParamsSchema = <G extends RpcRequestEngineMethodNames>(T: G) =>
   Type.Object({
     id: Type.Number({ minimum: 1 }),
     jsonrpc: Type.Literal("2.0"),
-    method: T,
+    method: Type.Literal(T),
     params: RpcRequestEngineMethodParamsSchemaMap[T],
   });
 

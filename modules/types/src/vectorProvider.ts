@@ -12,7 +12,7 @@ export const ChannelRpcMethods = {
   chan_resolveTransfer: "chan_resolveTransfer",
   chan_withdraw: "chan_withdraw",
 } as const;
-export type ChannelRpcMethods = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
+export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
 export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getChannelState]: EngineParams.GetChannelState;

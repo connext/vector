@@ -3,7 +3,7 @@ import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
 import { IVectorStore } from "./store";
 import { WithdrawCommitmentJson } from "./transferDefinitions";
-import { ChannelRpcMethods, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
+import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
 
 ///////////////////////////////////
 ////// Engine transfer types
@@ -86,7 +86,7 @@ export interface EngineEventMap {
 ///////////////////////////////////
 ////// Core engine interfaces
 export interface IVectorEngine {
-  request<T extends ChannelRpcMethods>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
+  request<T extends ChannelRpcMethod>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
   on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
