@@ -11,14 +11,7 @@ docker network create --attachable --driver overlay $project 2> /dev/null || tru
 stack="${1:-node}"
 cmd="${2:-test}"
 
-if [[ "$stack" == "trio" ]]
-then 
-  bash $root/ops/start-duet.sh
-  bash $root/ops/start-node.sh
-else
-  bash $root/ops/start-$stack.sh
-fi
-
+bash $root/ops/start-$stack.sh
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
@@ -38,12 +31,16 @@ common="$interactive $stack_env \
   --env=VECTOR_ALICE_URL=nats://alice:8000 \
   --env=VECTOR_AUTH_URL=nats://auth:5040 \
   --env=VECTOR_BOB_URL=nats://bob:8000 \
+  --env=VECTOR_CAROL_URL=nats://carol:8000 \
   --env=VECTOR_CHAIN_PROVIDERS=`cat $root/.chaindata/chain-providers.json | tr -d ' \n'` \
   --env=VECTOR_CONTRACT_ADDRESSES=`cat $root/.chaindata/address-book.json | tr -d ' \n'` \
+  --env=VECTOR_DAVE_URL=nats://dave:8000 \
   --env=VECTOR_ENV=${ENV:-dev} \
   --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error} \
   --env=VECTOR_NATS_URL=nats://nats:4222 \
   --env=VECTOR_NODE_URL=http://node:8000 \
+  --env=VECTOR_ROGER_URL=nats://roger:8000 \
+  --env=VECTOR_ROUTER_URL=nats://router:8008 \
   --name=${project}_test_runner \
   --network=$project \
   --rm \
@@ -62,11 +59,11 @@ then
   fi
   image=${project}_test_runner:$version
   echo "Executing $cmd w image $image"
-  exec docker run $common $image $cmd $stack
+  docker run $common $image $cmd $stack
 
 else
   echo "Executing $cmd w image ${project}_builder"
-  exec docker run \
+  docker run \
     $common \
     --entrypoint=bash \
     --volume="$root:/root" \

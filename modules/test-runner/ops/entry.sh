@@ -55,9 +55,10 @@ then
 
 elif [[ "$stack" == "trio" ]]
 then
-  wait_for "node" "$VECTOR_NODE_URL"
-  wait_for "bob" "$VECTOR_ALICE_URL"
-  wait_for "alice" "$VECTOR_BOB_URL"
+  wait_for "carol" "$VECTOR_CAROL_URL"
+  wait_for "dave" "$VECTOR_DAVE_URL"
+  wait_for "roger" "$VECTOR_ROGER_URL"
+  wait_for "router" "$VECTOR_ROUTER_URL"
 fi
 
 ########################################

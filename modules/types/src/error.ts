@@ -1,4 +1,5 @@
 import { ChannelUpdate, FullChannelState, UpdateParams } from "./channel";
+
 export class Result<T, Y = any> {
   private value?: T;
   private error?: Y;
@@ -17,7 +18,7 @@ export class Result<T, Y = any> {
 
   public getValue(): T {
     if (this.isError) {
-      throw new Error("Can't get the value of an error result. Use 'errorValue' instead.");
+      throw new Error(`Can't getValue() of error result: ${this.error}`);
     }
     return this.value as T;
   }
