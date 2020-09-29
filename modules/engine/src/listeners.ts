@@ -193,7 +193,6 @@ async function handleConditionalTransferCreation(
   const payload: ConditionalTransferCreatedPayload = {
     channelAddress,
     channelBalance: balances[assetIdx],
-    routingId,
     transfer,
     conditionType: conditionType!,
   };
@@ -239,7 +238,6 @@ async function handleConditionalTransferResolution(
   const payload: ConditionalTransferResolvedPayload = {
     channelAddress,
     channelBalance: balances[assetIds.findIndex(a => a === assetId)],
-    routingId: meta?.routingId,
     transfer: (await vector.getTransferState(transferId))!,
     conditionType: conditionType!,
   };

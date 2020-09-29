@@ -123,7 +123,7 @@ describe(testName, () => {
     );
     const carolChannel = carolChannelRes.getValue()!;
 
-    const daveChannelRes = await carol.getStateChannelByParticipants(
+    const daveChannelRes = await dave.getStateChannelByParticipants(
       roger.publicIdentifier,
       dave.publicIdentifier,
       chainId,
@@ -146,24 +146,27 @@ describe(testName, () => {
       details: {
         linkedHash,
       },
-      meta: {},
-      routingId,
+      meta: {
+        routingId,
+      },
       recipient: dave.publicIdentifier,
     });
     expect(transferRes.getError()).to.not.be.ok;
 
-    const channelAfterTransfer = (await carol.getStateChannel(carolChannel.channelAddress)).getValue()!;
-    // console.log("channelAfterTransfer: ", channelAfterTransfer);
-    const carolAfterTransfer = carolAssetIdx === -1 ? "0" : channelAfterTransfer.balances[carolAssetIdx].amount[0];
-    expect(carolAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
+    const carolChannelAfterTransfer = (await carol.getStateChannel(carolChannel.channelAddress)).getValue()!;
+    const carolBalanceAfterTransfer =
+      carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[0];
+    expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
 
+    // Get daves transfer
+    const daveChannelAfterTransfer = (await dave.getStateChannel(daveChannel.channelAddress)).getValue()!;
     const resolveRes = await dave.resolveTransfer({
       channelAddress: daveChannel.channelAddress,
       conditionType: "LinkedTransfer",
       details: {
         preImage,
       },
-      routingId,
+      transferId: daveChannelAfterTransfer.latestUpdate.details.transferId,
     });
     expect(resolveRes.getError()).to.not.be.ok;
 

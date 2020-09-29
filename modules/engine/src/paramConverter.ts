@@ -18,7 +18,7 @@ import {
   EngineParams,
   IChannelSigner,
   ChainAddresses,
-  Router,
+  RouterSchemas,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
@@ -41,7 +41,7 @@ export function convertConditionalTransferParams(
   // NOTE: While the engine and protocol do not care about the structure
   // of the meta, this is where several relevant default values are
   // set for the higher level modules to parse
-  let baseRoutingMeta: Router.RouterMeta | undefined = undefined;
+  let baseRoutingMeta: RouterSchemas.RouterMeta | undefined = undefined;
   if (recipient && getSignerAddressFromPublicIdentifier(recipient) !== channelCounterparty) {
     baseRoutingMeta = {
       requireOnline: false, // TODO: change with more transfer types?

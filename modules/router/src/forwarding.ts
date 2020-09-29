@@ -5,6 +5,7 @@ import {
   ServerNodeResponses,
   Values,
   VectorError,
+  RouterSchemas,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
@@ -74,19 +75,15 @@ export async function forwardTransferCreation(
         amount: [senderAmount],
       },
       assetId: senderAssetId,
-      meta,
+      meta: untypedMeta,
       transferState: conditionData,
       channelAddress: senderChannelAddress,
       initiator,
-      responder,
     },
-    routingId,
     conditionType,
   } = data;
-  let { requireOnline } = meta;
-  if (!meta.path) {
-    throw new Error(`No "path" field in the meta data, got [${Object.keys(meta)}]`);
-  }
+  const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
+  const { routingId } = meta;
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;
@@ -123,7 +120,7 @@ export async function forwardTransferCreation(
 
   // Defaults
   const recipientAssetId = path.recipientAssetId ? path.recipientAssetId : senderAssetId;
-  requireOnline = requireOnline ? requireOnline : false;
+  const requireOnline = meta.requireOnline ?? false;
   const recipientChainId = path.recipientChainId ? path.recipientChainId : senderChainId;
 
   // Below, we figure out the correct params needed for the receiver's channel. This includes
@@ -231,11 +228,15 @@ export async function forwardTransferCreation(
   // If the above is not the case, we can make the transfer!
   const transfer = await node.conditionalTransfer({
     amount: recipientAmount,
-    meta,
     assetId: recipientAssetId,
     channelAddress: recipientChannel.channelAddress,
     details: conditionData,
-    routingId,
+    meta: {
+      // Node is never the initiator, that is always payment sender
+      senderIdentifier:
+        initiator === senderChannel.bobIdentifier ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
+      ...meta,
+    },
     conditionType,
   });
   if (transfer.isError) {
@@ -273,16 +274,10 @@ export async function forwardTransferResolution(
   );
   const {
     channelAddress,
-    routingId,
-    transfer: { transferId, responder, transferResolver },
+    transfer: { transferId, responder, transferResolver, meta },
     conditionType,
   } = data;
-
-  // If there is no routingId, do nothing
-  if (!routingId) {
-    logger.warn({ transferId, routingId, channelAddress }, "No routingId found");
-    return Result.ok(undefined);
-  }
+  const { routingId } = meta as RouterSchemas.RouterMeta;
 
   // If there is no resolver, do nothing
   if (!transferResolver) {

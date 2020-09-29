@@ -128,7 +128,6 @@ describe(testName, () => {
 
     const preImage = getRandomBytes32();
     const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
-    const routingId = getRandomBytes32();
     const transferRes = await alice.conditionalTransfer({
       amount: transferAmt.toString(),
       assetId,
@@ -137,10 +136,9 @@ describe(testName, () => {
       details: {
         linkedHash,
       },
-      meta: {},
-      routingId,
     });
     expect(transferRes.isError).to.not.be.ok;
+    const { transferId } = transferRes.getValue()!;
 
     const channelAfterTransfer = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
     const aliceAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
@@ -152,7 +150,7 @@ describe(testName, () => {
       details: {
         preImage,
       },
-      routingId,
+      transferId,
     });
     expect(resolveRes.isError).to.not.be.ok;
 
@@ -171,7 +169,6 @@ describe(testName, () => {
 
     const preImage = getRandomBytes32();
     const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
-    const routingId = getRandomBytes32();
     const transferRes = await bob.conditionalTransfer({
       amount: transferAmt.toString(),
       assetId,
@@ -180,8 +177,6 @@ describe(testName, () => {
       details: {
         linkedHash,
       },
-      meta: {},
-      routingId,
     });
     expect(transferRes.isError).to.not.be.ok;
 

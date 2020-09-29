@@ -91,7 +91,7 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   //  might want to add the full channel state as a schema
   { schema: { params: ServerNodeParams.GetChannelStateSchema } },
   async (request, reply) => {
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params.channelAddress);
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
     try {
       const res = await vectorEngine.request<"chan_getChannelState">(params);
       if (!res) {
@@ -211,7 +211,7 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
       const res = await vectorEngine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
-        routingId: request.body.routingId,
+        transferId: res.latestUpdate.details.transferId,
       } as ServerNodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });

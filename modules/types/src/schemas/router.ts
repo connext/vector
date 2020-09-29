@@ -31,7 +31,7 @@ const TRoutingMeta = Type.Object({
 
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace Router {
+export namespace RouterSchemas {
   export const RouterMeta = TRoutingMeta;
   export type RouterMeta = Static<typeof TRoutingMeta>;
 }

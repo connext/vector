@@ -23,7 +23,6 @@ export type ConditionalTransferResponse = {
 export const CONDITIONAL_TRANSFER_CREATED_EVENT = "CONDITIONAL_TRANSFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
   channelAddress: string;
-  routingId: Bytes32;
   transfer: FullTransferState;
   channelBalance: Balance;
   conditionType: ConditionalTransferType;
