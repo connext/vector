@@ -82,7 +82,14 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
+      vector = await Vector.connect(
+        messagingService,
+        lockService,
+        storeService,
+        signer,
+        chainService,
+        pino(),
+      );
     });
 
     it("should work", async () => {
@@ -102,6 +109,7 @@ describe("Vector", () => {
       chainService.getChannelFactoryBytecode.resolves(Result.fail(new Error("fail")));
       const { details } = createTestUpdateParams(UpdateType.setup);
       const result = await vector.setup(details);
+      console.log(result.getError());
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.Create2Failed);
     });
 
@@ -133,16 +141,6 @@ describe("Vector", () => {
           name: "should fail if there is no chainId",
           params: { ...validParams, networkContext: { ...network, chainId: undefined } },
           error: "should have required property 'chainId'",
-        },
-        {
-          name: "should fail if there is no withdrawDefinition",
-          params: { ...validParams, networkContext: { ...network, withdrawDefinition: undefined } },
-          error: "should have required property 'withdrawDefinition'",
-        },
-        {
-          name: "should fail if there is an invalid withdrawDefinition",
-          params: { ...validParams, networkContext: { ...network, withdrawDefinition: "fail" } },
-          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {
           name: "should fail if there is an invalid chainId (is a string)",
