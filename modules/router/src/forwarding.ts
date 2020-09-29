@@ -159,7 +159,7 @@ export async function forwardTransferCreation(
   // Figure out router balance
   const assetIdx = recipientChannel.assetIds.findIndex((a: string) => a === recipientAssetId);
   const routerBalanceInRecipientChannel =
-    node.signerAddress == recipientChannel.participants[0]
+    node.signerAddress == recipientChannel.alice
       ? recipientChannel.balances[assetIdx].amount[0]
       : recipientChannel.balances[assetIdx].amount[1];
 
