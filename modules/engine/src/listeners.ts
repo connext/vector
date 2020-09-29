@@ -284,12 +284,6 @@ async function handleWithdrawalTransferCreation(
     return;
   }
 
-  // TODO: If there is a fee, try to send transaction to chain after signing
-  // and include the transaction hash in resolve meta
-  // IF you do not have sufficient funds to send withdrawal tx and your counter-
-  // party was expecting you to, store withdrawal commitment (counterparty will
-  // not cosign the resolve until the transaction hash is included)
-
   // TODO: should inject validation to make sure that a withdrawal transfer
   // is properly signed before its been merged into your channel
   const commitment = new WithdrawCommitment(
@@ -309,8 +303,27 @@ async function handleWithdrawalTransferCreation(
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
-  // Resolve the withdrawal
-  const resolveRes = await vector.resolve({ transferResolver: { responderSignature }, transferId, channelAddress });
+  let transactionHash: string | undefined = undefined;
+  // TODO: FIX!
+  // if (BigNumber.from(fee).gt(0)) {
+  //   // Counterparty sent us a withdrawal transfer that includes a fee > 0.
+  //   // Try to submit the transaction to chain. The withdrawal resolution
+  //   // will not be signed by the counterparty until there is a valid
+  //   // transaction hash provided in the resolution meta (enforced via
+  //   // injected validators)
+  //   // TODO: create injected validators
+  //   // TODO: send transaction via onchain service
+  //   const response = await signer.sendTransaction(await commitment.getSignedTransaction());
+  //   transactionHash = response.hash;
+  // }
+
+  // Safe to resolve withdrawal from counterparty
+  const resolveRes = await vector.resolve({
+    transferResolver: { responderSignature },
+    transferId,
+    channelAddress,
+    meta: { transactionHash },
+  });
 
   // Handle the error
   if (resolveRes.isError) {
