@@ -33,11 +33,7 @@ export function convertConditionalTransferParams(
 
   const recipientChainId = params.recipientChainId ? params.recipientChainId : channel.networkContext.chainId;
   const recipientAssetId = params.recipientAssetId ? params.recipientAssetId : params.assetId;
-  const responder = recipient
-    ? getSignerAddressFromPublicIdentifier(recipient)
-    : signer.address === channel.alice
-    ? channel.bob
-    : channel.alice;
+  const responder = signer.address === channel.alice ? channel.bob : channel.alice;
 
   let transferDefinition: string | undefined;
   let transferInitialState: LinkedTransferState;
