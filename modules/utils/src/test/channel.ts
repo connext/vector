@@ -57,7 +57,6 @@ export function createTestUpdateParams<T extends UpdateType>(
           providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           channelMastercopyAddress: mkAddress("0xcccaaa"),
-          withdrawDefinition: mkAddress("0xadfe4441"),
         },
       } as SetupUpdateDetails;
       break;
@@ -234,7 +233,6 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
       providerUrl: "http://localhost:8545",
       channelMastercopyAddress: mkAddress("0xmast"),
-      withdrawDefinition: mkAddress("0xasde1234dsae"),
       ...(networkContext ?? {}),
     },
     nonce,

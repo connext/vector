@@ -529,13 +529,6 @@
     {
       "tag": "CreateField",
       "model": "Update",
-      "field": "responder",
-      "type": "String",
-      "arity": "Optional"
-    },
-    {
-      "tag": "CreateField",
-      "model": "Update",
       "field": "transferEncodings",
       "type": "String",
       "arity": "Optional"
@@ -551,6 +544,13 @@
       "tag": "CreateField",
       "model": "Update",
       "field": "meta",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "responder",
       "type": "String",
       "arity": "Optional"
     },

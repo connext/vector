@@ -61,7 +61,6 @@ describe("applyUpdate", () => {
   const networkContext: NetworkContext = {
     chainId,
     providerUrl,
-    withdrawDefinition: mkAddress("0xddffee44352"),
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     channelMastercopyAddress: mkAddress("0xbeef"),
   };
@@ -457,7 +456,6 @@ describe("generateUpdate", () => {
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     channelMastercopyAddress: mkAddress("0xbeef"),
-    withdrawDefinition: mkAddress("0xdddffffsssaa123"),
   };
 
   // Get transfer constants

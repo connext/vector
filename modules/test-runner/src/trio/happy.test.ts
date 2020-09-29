@@ -76,7 +76,7 @@ describe(testName, () => {
     expect(bobChannel.getValue()).to.deep.eq(nodeChannel.getValue());
   });
 
-  it.only("alice can deposit ETH into channel", async () => {
+  it("alice can deposit ETH into channel", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await alice.getStateChannelByParticipants(
@@ -111,7 +111,7 @@ describe(testName, () => {
     expect(BigNumber.from(aliceBefore).add(depositAmt)).to.eq(aliceAfter);
   });
 
-  it.only("alice can transfer ETH to bob over node and resolve the transfer", async () => {
+  it("alice can transfer ETH to bob over node and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await alice.getStateChannelByParticipants(

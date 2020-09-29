@@ -241,7 +241,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params from withdraw
-    const createResult = await convertWithdrawParams(params, this.signer, channel!);
+    const createResult = await convertWithdrawParams(params, this.signer, channel!, this.chainAddresses);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
