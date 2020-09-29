@@ -3,6 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./lib/LibAsset.sol";
+import "./lib/LibUtils.sol";
 
 
 contract Withdrawable {
@@ -24,11 +25,15 @@ contract Withdrawable {
             msg.sender == owner || owner == recipient,
             "Withdrawable: Either msg.sender or recipient of funds must be the owner"
         );
-        uint256 amount = withdrawableAmount[assetId][owner];
+
+        uint256 maxAmount = withdrawableAmount[assetId][owner];
         withdrawableAmount[assetId][owner] = 0;
-        (bool success, ) = assetId.transferUpTo(recipient, amount);
+
+        uint256 balance = LibAsset.getOwnBalance(assetId);
+        uint256 amount = LibUtils.min(maxAmount, balance);
+
         require(
-            success,
+            LibAsset.transfer(assetId, recipient, amount),
             "Withdrawable: Transfer failed"
         );
     }
