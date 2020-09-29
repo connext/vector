@@ -1,6 +1,7 @@
+import { expect } from "@connext/vector-utils";
 import axios from "axios";
 
-import { env, expect } from "../utils";
+import { env } from "../utils";
 
 describe("Trio Config", () => {
   it("alice, bob, and node should pong when pinged", async () => {

@@ -62,7 +62,7 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel channel)
     {
         channel = deployChannelProxy(alice, bob, chainId);
-        channel.setup([alice, bob]);
+        channel.setup(alice, bob);
         emit ChannelCreation(channel);
     }
 

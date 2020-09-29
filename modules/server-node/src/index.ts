@@ -188,6 +188,7 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
     });
     try {
       const res = await vectorEngine.request<"chan_deposit">(rpc);
+      console.log("deposit res", res);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });

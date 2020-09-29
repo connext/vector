@@ -1,8 +1,8 @@
-import { getRandomBytes32, IServerNodeService, RestServerNodeService } from "@connext/vector-utils";
+import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
-import { env, expect } from "../utils";
+import { env } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);

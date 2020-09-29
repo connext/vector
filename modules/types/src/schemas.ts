@@ -40,7 +40,8 @@ const LinkedTransferEncodingSchema = Type.Array([
 const WithdrawTransferStateSchema = Type.Object({
   balance: TBalance,
   initiatorSignature: TSignature,
-  signers: Type.Array(TAddress),
+  initiator: TAddress,
+  responder: TAddress,
   data: TBytes32,
   nonce: TIntegerString,
   fee: TIntegerString,
@@ -65,8 +66,8 @@ const SetupProtocolParamsSchema = Type.Object({
   networkContext: Type.Object({
     channelFactoryAddress: TAddress,
     channelMastercopyAddress: TAddress,
+    withdrawDefinition: TAddress,
     linkedTransferDefinition: Type.Optional(TAddress),
-    withdrawDefinition: Type.Optional(TAddress),
     chainId: TChainId,
     providerUrl: Type.String({ format: "uri" }),
   }),
@@ -85,6 +86,7 @@ const CreateProtocolParamsSchema = Type.Object({
   transferInitialState: TransferStateSchema,
   timeout: TIntegerString,
   encodings: TransferEncodingSchema,
+  responder: TAddress,
   meta: Type.Optional(Type.Any()),
 });
 
@@ -154,6 +156,7 @@ const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema])
 const SharedResolveTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
+  meta: Type.Optional(Type.Any()), // TODO: better meta?
 });
 
 const ResolveLinkedTransferParamsSchema = Type.Intersect([

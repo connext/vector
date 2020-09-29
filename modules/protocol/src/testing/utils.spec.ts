@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, constants, BigNumberish } from "ethers";
-import { Balance, Result, IVectorOnchainService, ChannelCommitmentData, FullChannelState } from "@connext/vector-types";
+import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
 import {
-  createTestChannelState,
-  getRandomChannelSigner,
-  hashChannelCommitment,
   mkAddress,
+  expect,
+  getRandomChannelSigner,
+  createTestChannelState,
+  hashChannelCommitment,
 } from "@connext/vector-utils";
-import { expect } from "chai";
 import Sinon from "sinon";
 import { VectorOnchainService } from "@connext/vector-contracts";
 
@@ -93,7 +93,7 @@ describe("utils", () => {
         const result = await generateSignedChannelCommitment(state, signer, updateSignatures);
 
         // Doing this really dumb thing because, for some reason, signature functions are causing tests to be skipped
-        let expectedSigs: string[] = [];
+        const expectedSigs: string[] = [];
         for (let i = 0; i < 2; i++) {
           if (expected[i] == "sig") {
             expectedSigs[i] = await signer.signMessage(hashChannelCommitment(unsigned));
@@ -127,31 +127,31 @@ describe("utils", () => {
       {
         name: "should work for a valid single signed update",
         updateSignatures: [undefined, "bobSig"],
-        requiredSigners: 1,
+        requiredSigners: "bob",
         expected: undefined,
       },
       {
         name: "should work for a valid double signed update",
         updateSignatures: ["aliceSig", "bobSig"],
-        requiredSigners: 2,
+        requiredSigners: "both",
         expected: undefined,
       },
       {
         name: "should fail if there are not at the number of required sigs included",
         updateSignatures: [undefined, "bobSig"],
-        requiredSigners: 2,
+        requiredSigners: "both",
         expected: "Only 1/2 signatures present",
       },
       {
         name: "should fail if any of the signatures are invalid",
         updateSignatures: [undefined, "wrongSig"],
-        requiredSigners: 1,
+        requiredSigners: "alice",
         expected: "expected one of",
       },
       {
         name: "should fail if the signatures are not sorted correctly",
         updateSignatures: ["bobSig", "aliceSig"],
-        requiredSigners: 2,
+        requiredSigners: "both",
         expected: "expected",
       },
     ];
@@ -159,7 +159,7 @@ describe("utils", () => {
     for (const test of tests) {
       const { name, updateSignatures, requiredSigners, expected } = test;
       it(name, async () => {
-        let signatures: (string | undefined)[] = [];
+        const signatures: (string | undefined)[] = [];
 
         // Have to do this because of weird race conditions around looping
         for (let i = 0; i < 2; i++) {
@@ -176,8 +176,9 @@ describe("utils", () => {
 
         const ret = await validateChannelUpdateSignatures(
           state,
-          signatures as string[],
-          requiredSigners as 1 | 2 | undefined,
+          signatures[0],
+          signatures[1],
+          requiredSigners as "alice" | "bob" | "both",
         );
 
         if (expected) {

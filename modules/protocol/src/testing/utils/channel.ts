@@ -9,10 +9,9 @@ import {
   IVectorStore,
   DEFAULT_TRANSFER_TIMEOUT,
   IVectorOnchainService,
+  NetworkContext,
 } from "@connext/vector-types";
-import {
-  getRandomChannelSigner,
-} from "@connext/vector-utils";
+import { getRandomChannelSigner, getTestLoggers, expect, MemoryStoreService } from "@connext/vector-utils";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
@@ -21,11 +20,8 @@ import { chainId, provider } from "../constants";
 import { Vector } from "../../vector";
 import { MemoryLockService } from "../services/lock";
 import { MemoryMessagingService } from "../services/messaging";
-import { MemoryStoreService } from "../services/store";
 
-import { expect } from "./expect";
 import { fundAddress } from "./funding";
-import { getTestLoggers } from "./logger";
 
 type VectorTestOverrides = {
   messagingService: IMessagingService;
@@ -54,10 +50,7 @@ export const createVectorInstances = async (
         const logger = instanceOverrides.logger ?? Pino();
         const onchainService = shareServices
           ? sharedChain
-          : new VectorOnchainService(
-              { [chainId]: provider },
-              logger.child({ module: "VectorOnchainService" }),
-            );
+          : new VectorOnchainService({ [chainId]: provider }, logger.child({ module: "VectorOnchainService" }));
         const opts = {
           messagingService,
           lockService,
@@ -80,13 +73,14 @@ export const createVectorInstances = async (
 export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState<any>> => {
   const ret = await alice.setup({
     counterpartyIdentifier: bob.publicIdentifier,
+    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     networkContext: {
       chainId,
+      providerUrl: Object.values(env.chainProviders)[0],
       channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-      providerUrl: provider.connection.url,
       channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
-    },
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+      withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
+    } as NetworkContext,
   });
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;
@@ -95,8 +89,10 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   const bobChannel = await bob.getChannelState(channel.channelAddress);
   expect(aliceChannel).to.deep.eq(channel);
   expect(bobChannel).to.deep.eq(channel);
-  expect(channel.participants).to.be.deep.eq([alice.signerAddress, bob.signerAddress]);
-  expect(channel.publicIdentifiers).to.be.deep.eq([alice.publicIdentifier, bob.publicIdentifier]);
+  expect(channel.alice).to.be.eq(alice.signerAddress);
+  expect(channel.bob).to.be.eq(bob.signerAddress);
+  expect(channel.aliceIdentifier).to.be.eq(alice.publicIdentifier);
+  expect(channel.bobIdentifier).to.be.eq(bob.publicIdentifier);
   return channel;
 };
 
@@ -121,7 +117,7 @@ export const depositInChannel = async (
   const value = BigNumber.from(amount);
   // Deploy multsig if needed
   const channel = await depositor.getChannelState(channelAddress);
-  const isDepositA = channel!.publicIdentifiers[0] === depositor.publicIdentifier;
+  const isDepositA = channel!.aliceIdentifier === depositor.publicIdentifier;
   // NOTE: sometimes deposit fails, and it seems like its because it is
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
@@ -131,11 +127,7 @@ export const depositInChannel = async (
     try {
       const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
       const totalDepositedA = await channel.totalDepositedA(assetId);
-      const tx = await channel.depositA(
-        assetId,
-        value,
-        { value },
-      );
+      const tx = await channel.depositA(assetId, value, { value });
       await tx.wait();
       expect(await channel.totalDepositedA(assetId)).to.equal(totalDepositedA.add(value));
     } catch (e) {
@@ -168,9 +160,9 @@ export const depositInChannel = async (
       const deployedAddr = await created;
       expect(deployedAddr).to.be.eq(channelAddress);
       // Verify onchain values updated
-      const totalDepositedA = await (
-        new Contract(channelAddress, VectorChannel.abi, depositorSigner)
-      ).totalDepositedA(assetId);
+      const totalDepositedA = await new Contract(channelAddress, VectorChannel.abi, depositorSigner).totalDepositedA(
+        assetId,
+      );
       expect(totalDepositedA).to.be.eq(value);
       expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
     }
@@ -183,9 +175,7 @@ export const depositInChannel = async (
       const tx =
         assetId === constants.AddressZero
           ? await depositorSigner.sendTransaction({ value, to: channelAddress })
-          : await (
-            new Contract(assetId, TestToken.abi, depositorSigner)
-          ).transfer(channelAddress, value);
+          : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
       await tx.wait();
       // Verify onchain values updated
       expect(await channel.totalDepositedB(assetId)).to.be.eq(totalDepositedB.add(value));
@@ -208,25 +198,19 @@ export const depositInChannel = async (
           res(data);
         });
       });
-      const createTx = await factory.createChannel(
-        counterparty.signerAddress,
-        depositorSigner.address,
-        chainId,
-      );
+      const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address, chainId);
       await createTx.wait();
       const deployedAddr = await created;
       expect(deployedAddr).to.equal(channelAddress);
       const tx =
         assetId === constants.AddressZero
           ? await depositorSigner.sendTransaction({ value, to: deployedAddr })
-          : await (
-            new Contract(assetId, TestToken.abi, depositorSigner)
-          ).transfer(deployedAddr, value);
+          : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(deployedAddr, value);
       await tx.wait();
       // Verify onchain values updated
-      const totalDepositedB = await (
-        new Contract(deployedAddr, VectorChannel.abi, depositorSigner)
-      ).totalDepositedB(assetId);
+      const totalDepositedB = await new Contract(deployedAddr, VectorChannel.abi, depositorSigner).totalDepositedB(
+        assetId,
+      );
       expect(totalDepositedB).to.be.eq(value);
       expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
     }
@@ -242,15 +226,11 @@ export const depositInChannel = async (
   expect(postDeposit.assetIds).to.be.deep.eq([...new Set(channel!.assetIds.concat(assetId))]);
   const assetIdx = postDeposit!.assetIds.findIndex(a => a === assetId);
   if (isDepositA) {
-    expect(
-      value.add(channel!.processedDepositsA[assetIdx] || "0"),
-    ).to.equal(
+    expect(value.add(channel!.processedDepositsA[assetIdx] || "0")).to.equal(
       BigNumber.from(postDeposit.processedDepositsA[0]),
     );
   } else {
-    expect(
-      value.add(channel!.processedDepositsB[assetIdx] || "0"),
-    ).to.equal(
+    expect(value.add(channel!.processedDepositsB[assetIdx] || "0")).to.equal(
       BigNumber.from(postDeposit.processedDepositsB[assetIdx]),
     );
   }
@@ -281,17 +261,14 @@ export const getSetupChannel = async (
   bobSigner: IChannelSigner;
 }> => {
   // First, get the signers and fund the accounts
-  const [aliceSigner, bobSigner] = [
-    getRandomChannelSigner(provider),
-    getRandomChannelSigner(provider),
-  ];
+  const [aliceSigner, bobSigner] = [getRandomChannelSigner(provider), getRandomChannelSigner(provider)];
   // Fund the signer addresses with the sugar daddy account
   await fundAddress(aliceSigner.address);
   await fundAddress(bobSigner.address);
   // Create the vector instances
   const [alice, bob] = await createVectorInstances(true, 2, [
-    { signer: aliceSigner, logger: getTestLoggers(testName).log },
-    { signer: bobSigner, logger: getTestLoggers(testName).log },
+    { signer: aliceSigner, logger: getTestLoggers(testName, env.logLevel).log },
+    { signer: bobSigner, logger: getTestLoggers(testName, env.logLevel).log },
   ]);
   // Setup the channel
   const channel = await setupChannel(alice, bob);

@@ -1,5 +1,5 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
-import { getRandomBytes32 } from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
   CreateTransferParams,
   ConditionalTransferType,
@@ -29,14 +29,15 @@ export function convertConditionalTransferParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
 ): Result<CreateTransferParams, InvalidTransferType> {
-  const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
+  const { channelAddress, amount, assetId, routingId, recipient, details, timeout } = params;
 
-  const participants =
-    channel.participants[0] == signer.address
-      ? channel.participants
-      : [channel.participants[1], channel.participants[0]];
   const recipientChainId = params.recipientChainId ? params.recipientChainId : channel.networkContext.chainId;
   const recipientAssetId = params.recipientAssetId ? params.recipientAssetId : params.assetId;
+  const responder = recipient
+    ? getSignerAddressFromPublicIdentifier(recipient)
+    : signer.address === channel.alice
+    ? channel.bob
+    : channel.alice;
 
   let transferDefinition: string | undefined;
   let transferInitialState: LinkedTransferState;
@@ -47,7 +48,7 @@ export function convertConditionalTransferParams(
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
-        to: participants,
+        to: [signer.address, responder],
       },
       linkedHash: details.linkedHash,
     };
@@ -69,6 +70,7 @@ export function convertConditionalTransferParams(
     assetId,
     transferDefinition: transferDefinition!,
     transferInitialState,
+    responder,
     timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings,
     meta,
@@ -79,7 +81,7 @@ export function convertResolveConditionParams(
   params: EngineParams.ResolveTransfer,
   transfer: FullTransferState,
 ): Result<ResolveTransferParams, InvalidTransferType> {
-  const { channelAddress, routingId, details } = params;
+  const { channelAddress, routingId, details, meta } = params;
   let transferResolver: LinkedTransferResolver;
 
   if (params.conditionType == ConditionalTransferType.LinkedTransfer) {
@@ -94,7 +96,7 @@ export function convertResolveConditionParams(
     channelAddress,
     transferId: transfer.transferId,
     transferResolver,
-    routingId,
+    meta: { details: meta ?? {}, routingId },
   });
 }
 
@@ -114,7 +116,8 @@ export async function convertWithdrawParams(
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
-    channel.participants,
+    signer.address,
+    signer.address === channel.alice ? channel.bob : channel.alice,
     params.recipient,
     assetId,
     // Important: Use params.amount here which doesn't include fee!!
@@ -125,16 +128,16 @@ export async function convertWithdrawParams(
 
   const initiatorSignature = await signer.signMessage(commitment.hashToSign());
 
-  const counterpartySigner =
-    channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
+  const responder = channel.alice == signer.address ? channel.bob : channel.alice;
 
   const transferInitialState: WithdrawState = {
     balance: {
       amount: [amount, "0"],
-      to: [recipient, counterpartySigner],
+      to: [recipient, responder],
     },
     initiatorSignature,
-    signers: [signer.address, counterpartySigner],
+    initiator: signer.address,
+    responder: responder,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
     fee: fee ? fee : "0",
@@ -148,6 +151,7 @@ export async function convertWithdrawParams(
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+    responder,
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       withdrawNonce: channel.nonce.toString(),

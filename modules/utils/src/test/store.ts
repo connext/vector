@@ -1,6 +1,13 @@
-import { FullChannelState, IVectorStore, ChannelCommitmentData, FullTransferState } from "@connext/vector-types";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import {
+  FullTransferState,
+  FullChannelState,
+  ChannelCommitmentData,
+  IEngineStore,
+  WithdrawCommitmentJson,
+} from "@connext/vector-types";
 
-export class MemoryStoreService implements IVectorStore {
+export class MemoryStoreService implements IEngineStore {
   // Map<channelAddress, transferId[]>
   private transfersInChannel: Map<string, string[]> = new Map();
 
@@ -38,16 +45,16 @@ export class MemoryStoreService implements IVectorStore {
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
     return Promise.resolve(
-      [...this.channelStates.values()].find((channelState) => {
-        channelState.state.participants[0] === participantA &&
-          channelState.state.participants[1] === participantB &&
+      [...this.channelStates.values()].find(channelState => {
+        channelState.state.alice === participantA &&
+          channelState.state.bob === participantB &&
           channelState.state.networkContext.chainId === chainId;
       })?.state,
     );
   }
 
   getChannelStates(): Promise<FullChannelState[]> {
-    return Promise.resolve([...this.channelStates.values()].map((c) => c.state));
+    return Promise.resolve([...this.channelStates.values()].map(c => c.state));
   }
 
   saveChannelState(
@@ -55,14 +62,9 @@ export class MemoryStoreService implements IVectorStore {
     commitment: ChannelCommitmentData,
     transfer?: FullTransferState,
   ): Promise<void> {
-    const existing = this.channelStates.get(channelState.channelAddress)?.state ?? channelState;
     this.channelStates.set(channelState.channelAddress, {
       state: {
         ...channelState,
-        channelAddress: existing.channelAddress,
-        publicIdentifiers: existing.publicIdentifiers,
-        participants: existing.participants,
-        networkContext: existing.networkContext,
       },
       commitment,
     });
@@ -79,7 +81,7 @@ export class MemoryStoreService implements IVectorStore {
       // This is a `resolve` update, so remove from channel
       this.transfersInChannel.set(
         channelState.channelAddress,
-        activeTransfers.filter((x) => x !== transfer.transferId),
+        activeTransfers.filter(x => x !== transfer.transferId),
       );
       return Promise.resolve();
     }
@@ -91,7 +93,7 @@ export class MemoryStoreService implements IVectorStore {
 
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
     const active = [...(this.transfersInChannel.get(channelAddress) ?? [])];
-    const all = active.map((id) => this.transfers.get(id)).filter((x) => !!x);
+    const all = active.map(id => this.transfers.get(id)).filter(x => !!x);
     return Promise.resolve(all as FullTransferState[]);
   }
 
@@ -109,6 +111,13 @@ export class MemoryStoreService implements IVectorStore {
 
   updateSchemaVersion(version?: number): Promise<void> {
     this.schemaVersion = version;
+    return Promise.resolve();
+  }
+
+  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
+    return Promise.resolve(undefined);
+  }
+  saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
     return Promise.resolve();
   }
 }

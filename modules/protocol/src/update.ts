@@ -40,13 +40,12 @@ export async function applyUpdate<T extends UpdateType>(
   switch (update.type) {
     case UpdateType.setup: {
       const { timeout, networkContext } = (update as ChannelUpdate<"setup">).details;
-      const publicIdentifiers = [update.fromIdentifier, update.toIdentifier];
-      const participants: string[] = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
       return Result.ok({
         nonce: 1,
         channelAddress: update.channelAddress,
         timeout,
-        participants,
+        alice: getSignerAddressFromPublicIdentifier(update.fromIdentifier),
+        bob: getSignerAddressFromPublicIdentifier(update.toIdentifier),
         balances: [],
         processedDepositsA: [],
         processedDepositsB: [],
@@ -54,7 +53,8 @@ export async function applyUpdate<T extends UpdateType>(
         merkleRoot: constants.HashZero,
         latestUpdate: update,
         networkContext,
-        publicIdentifiers,
+        aliceIdentifier: update.fromIdentifier,
+        bobIdentifier: update.toIdentifier,
       });
     }
     case UpdateType.deposit: {
@@ -191,14 +191,15 @@ export async function generateUpdate<T extends UpdateType>(
     const inboundError = result.getError()!;
     return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, state));
   }
-  const commitment = await generateSignedChannelCommitment(result.getValue(), signer, []);
+  const commitment = await generateSignedChannelCommitment(result.getValue(), signer);
   logger.info({ method: "generateUpdate", commitment }, "Applied and signed update");
 
   // Return the validated update to send to counterparty
   return Result.ok({
     update: {
       ...unsigned,
-      signatures: commitment.signatures,
+      aliceSignature: commitment.aliceSignature,
+      bobSignature: commitment.bobSignature,
     },
     transfer: updatedTransfer,
     channelState: result.getValue(),
@@ -232,7 +233,6 @@ function generateSetupUpdate(
       networkContext: params.details.networkContext,
       timeout: params.details.timeout,
     },
-    signatures: [],
     assetId: constants.AddressZero,
   };
 
@@ -265,7 +265,7 @@ async function generateDepositUpdate(
   const { assetId } = params.details;
   const assetIdx = state.assetIds.findIndex(a => a === assetId);
   const existingChannelBalance =
-    assetIdx === -1 ? { to: state.participants, amount: ["0", "0"] } : state.balances[assetIdx];
+    assetIdx === -1 ? { to: [state.alice, state.bob], amount: ["0", "0"] } : state.balances[assetIdx];
   const processedDepositsAOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsA[assetIdx];
   const processedDepositsBOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsB[assetIdx];
 
@@ -289,7 +289,6 @@ async function generateDepositUpdate(
     processedDepositsB: totalDepositedB,
     assetId,
     details: { totalDepositedA, totalDepositedB },
-    signatures: [],
   };
   return unsigned;
 }
@@ -302,7 +301,7 @@ function generateCreateUpdate(
   transfers: CoreTransferState[],
 ): { unsigned: ChannelUpdate<"create">; transfer: FullTransferState } {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta, responder },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -326,6 +325,8 @@ function generateCreateUpdate(
     channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
     transferResolver: undefined,
+    initiator: signer.address,
+    responder,
     meta,
   };
   const transferHash = hashCoreTransferState(transferState);
@@ -350,8 +351,8 @@ function generateCreateUpdate(
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
+      responder,
     },
-    signatures: [],
   };
   return { transfer: transferState, unsigned };
 }
@@ -433,7 +434,6 @@ async function generateResolveUpdate(
       transferEncodings: transferToResolve.transferEncodings,
       merkleRoot: root === "0x" ? constants.HashZero : root,
     },
-    signatures: [],
   };
 
   return {
@@ -460,7 +460,7 @@ function generateBaseUpdate<T extends UpdateType>(
     channelAddress: state.channelAddress,
     type: params.type,
     fromIdentifier: signer.publicIdentifier,
-    toIdentifier: state.publicIdentifiers.find(id => id !== signer.publicIdentifier)!,
+    toIdentifier: signer.publicIdentifier === state.bobIdentifier ? state.aliceIdentifier : state.bobIdentifier,
   };
 }
 
@@ -475,7 +475,7 @@ function getUpdatedChannelBalance(
   if (assetIdx === -1) {
     throw new Error(`Asset id not found in channel ${assetId}`);
   }
-  const existing = state.balances[assetIdx] || { to: state.participants, amount: ["0", "0"] };
+  const existing = state.balances[assetIdx] || { to: [state.alice, state.bob], amount: ["0", "0"] };
 
   // Create a helper to update some existing balance amount
   // based on the transfer amount using the update type
