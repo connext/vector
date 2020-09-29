@@ -159,34 +159,51 @@ async function handleConditionalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught conditional transfer create event");
+  const {
+    assetIds,
+    balances,
+    channelAddress,
+    networkContext: { chainId },
+    latestUpdate: {
+      assetId,
+      details: {
+        transferId,
+        transferDefinition,
+        meta: { routingId },
+      },
+    },
+  } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
+  logger.info({ channelAddress }, "Caught conditional transfer create event");
   // Emit the properly structured event
   // TODO: consider a store method to find active transfer by routingId
-  const transfers = await store.getActiveTransfers(event.updatedChannelState.channelAddress);
-  const transfer = transfers.find(
-    instance =>
-      instance.meta.routingId ===
-      (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
-  );
+  const transfer = await store.getTransferState(transferId);
+  if (!transfer) {
+    logger.warn({ transferId }, "Transfer not found after creation");
+    return;
+  }
 
   let conditionType: ConditionalTransferType | undefined;
-  switch (transfer?.transferDefinition) {
-    case chainAddresses[event.updatedChannelState.networkContext.chainId].linkedTransferDefinition:
+  switch (transferDefinition) {
+    case chainAddresses[chainId].linkedTransferDefinition:
       conditionType = ConditionalTransferType.LinkedTransfer;
       break;
   }
 
-  const assetIdx = event.updatedChannelState.assetIds.findIndex(
-    a => a === event.updatedChannelState.latestUpdate.assetId,
-  );
+  const assetIdx = assetIds.findIndex(a => a === assetId);
   const payload: ConditionalTransferCreatedPayload = {
-    channelAddress: event.updatedChannelState.channelAddress,
-    channelBalance: event.updatedChannelState.balances[assetIdx],
-    routingId: (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
-    transfer: transfer!,
+    channelAddress,
+    channelBalance: balances[assetIdx],
+    routingId,
+    transfer,
     conditionType: conditionType!,
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
+
+  // If we should not route the transfer, do nothing
+  if (!routingId || transfer.meta.routingId !== routingId) {
+    logger.warn({ transferId, routingId, meta: transfer.meta }, "Cannot route transfer");
+    return;
+  }
 
   // TODO: add automatic resolution for given transfer types
 }
