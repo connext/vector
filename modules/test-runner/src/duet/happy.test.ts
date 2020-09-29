@@ -160,4 +160,34 @@ describe(testName, () => {
     const bobAfterResolve = assetIdx === -1 ? "0" : channelAfterResolve.balances[assetIdx].amount[1];
     expect(bobAfterResolve).to.be.eq(BigNumber.from(bobBefore).add(transferAmt));
   });
+
+  it("bob can transfer to alice", async () => {
+    const assetId = constants.AddressZero;
+    const transferAmt = utils.parseEther("0.005");
+    const channelRes = await alice.getStateChannelByParticipants(alice.publicIdentifier, bob.publicIdentifier, chainId);
+    const channel = channelRes.getValue()!;
+
+    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+
+    const preImage = getRandomBytes32();
+    const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
+    const routingId = getRandomBytes32();
+    const transferRes = await bob.conditionalTransfer({
+      amount: transferAmt.toString(),
+      assetId,
+      channelAddress: channel.channelAddress,
+      conditionType: "LinkedTransfer",
+      details: {
+        linkedHash,
+      },
+      meta: {},
+      routingId,
+    });
+    expect(transferRes.isError).to.not.be.ok;
+
+    const channelAfterTransfer = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
+    console.log("channelAfterTransfer: ", channelAfterTransfer);
+    const aliceAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
+    console.log("aliceAfterTransfer: ", aliceAfterTransfer);
+  });
 });
