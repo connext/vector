@@ -42,8 +42,8 @@ describe("utils", () => {
   describe("generateSignedChannelCommitment", () => {
     const signer = getRandomChannelSigner();
     const counterpartyAddress = mkAddress();
-    const aliceState = createTestChannelState("create", { participants: [signer.address, counterpartyAddress] });
-    const bobState = createTestChannelState("create", { participants: [counterpartyAddress, signer.address] });
+    const aliceState = createTestChannelState("create", { alice: signer.address, bob: counterpartyAddress });
+    const bobState = createTestChannelState("create", { alice: counterpartyAddress, bob: signer.address });
 
     const tests: any = [
       {
@@ -114,7 +114,7 @@ describe("utils", () => {
     const aliceSigner = getRandomChannelSigner();
     const bobSigner = getRandomChannelSigner();
     const wrongSigner = getRandomChannelSigner();
-    const state = createTestChannelState("create", { participants: [aliceSigner.address, bobSigner.address] });
+    const state = createTestChannelState("create", { alice: aliceSigner.address, bob: bobSigner.address });
     const { networkContext, ...core } = state;
     const unsigned = {
       chainId: networkContext.chainId,
