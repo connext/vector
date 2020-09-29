@@ -13,6 +13,7 @@ import {
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
   NetworkContext,
+  IChannelSigner,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -247,7 +248,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
 }
 
 export function createTestChannelStateWithSigners<T extends UpdateType = typeof UpdateType.setup>(
-  signers: ChannelSigner[],
+  signers: IChannelSigner[],
   type: T,
   overrides: PartialFullChannelState<T> = {},
 ): FullChannelState<T> {

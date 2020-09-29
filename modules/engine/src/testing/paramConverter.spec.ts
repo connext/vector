@@ -21,6 +21,7 @@ import {
   getRandomChannelSigner,
   mkAddress,
   mkHash,
+  mkPublicIdentifier,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -50,16 +51,16 @@ describe("ParamConverter", () => {
   };
 
   describe("convertConditionalTransferParams", () => {
-    const generateParams = (): EngineParams.ConditionalTransfer => {
+    const generateParams = (bIsRecipient: boolean = true): EngineParams.ConditionalTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
         amount: "8",
         assetId: mkAddress("0x0"),
-        recipient: mkAddress("0xb"),
+        recipient: bIsRecipient ? signerB.publicIdentifier : signerA.publicIdentifier,
         recipientChainId: 1,
         recipientAssetId: mkAddress("0x1"),
         conditionType: ConditionalTransferType.LinkedTransfer,
-        routingId: mkHash("0xtest"),
+        routingId: mkHash("0x123"),
         details: {
           linkedHash: getRandomBytes32(),
         },
@@ -99,7 +100,7 @@ describe("ParamConverter", () => {
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-        signers: [signerA.address, signerB.address],
+        responder: signerB.address,
         meta: {
           routingId: params.routingId,
           path: [
@@ -115,7 +116,7 @@ describe("ParamConverter", () => {
     });
 
     it("should work for B", async () => {
-      const params = generateParams();
+      const params = generateParams(false);
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
@@ -144,7 +145,7 @@ describe("ParamConverter", () => {
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-        signers: [signerB.address, signerA.address],
+        responder: signerA.address,
         meta: {
           routingId: params.routingId,
           path: [
@@ -238,7 +239,8 @@ describe("ParamConverter", () => {
     const generateChainData = (params, channel) => {
       const commitment = new WithdrawCommitment(
         channel.channelAddress,
-        channel.participants,
+        channel.alice,
+        channel.bob,
         params.recipient,
         params.assetId,
         params.amount,
@@ -276,17 +278,18 @@ describe("ParamConverter", () => {
                 .toString(),
               "0",
             ],
-            to: [params.recipient, channelState.participants[1]],
+            to: [params.recipient, channelState.bob],
           },
-          aliceSignature: signature,
-          signers: [signerA.address, signerB.address],
+          initiatorSignature: signature,
+          initiator: signerA.address,
+          responder: signerB.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
           fee: params.fee ? params.fee : "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
-        signers: [signerA.address, signerB.address],
+        responder: signerB.address,
         meta: {
           withdrawNonce: channelState.nonce.toString(),
         },
@@ -322,16 +325,17 @@ describe("ParamConverter", () => {
                 .toString(),
               "0",
             ],
-            to: [params.recipient, channelState.participants[0]],
+            to: [params.recipient, channelState.alice],
           },
-          aliceSignature: signature,
-          signers: [signerB.address, signerA.address],
+          initiatorSignature: signature,
+          responder: signerA.address,
+          initiator: signerB.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
           fee: params.fee ? params.fee : "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        signers: [signerB.address, signerA.address],
+        responder: signerA.address,
         encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
         meta: {
           withdrawNonce: channelState.nonce.toString(),

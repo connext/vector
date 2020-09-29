@@ -1,6 +1,6 @@
 import { MinimalTransaction, WithdrawCommitmentJson } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { BigNumber, utils } from "ethers";
+import { utils } from "ethers";
 
 import { ChannelMastercopy } from "../artifacts";
 
@@ -65,7 +65,7 @@ export class WithdrawCommitment {
     return keccak256(
       solidityPack(
         ["address", "address", "uint256", "uint256"],
-        [this.recipient, this.assetId, this.amount, BigNumber.from(this.nonce)],
+        [this.recipient, this.assetId, this.amount, this.nonce],
       ),
     );
   }
@@ -78,18 +78,18 @@ export class WithdrawCommitment {
       this.recipient,
       this.assetId,
       this.amount,
-      BigNumber.from(this.nonce),
+      this.nonce,
       this.initiatorSignature,
       this.responderSignature,
     ]);
     return { to: this.channelAddress, value: 0, data: txData };
   }
   public async addSignatures(signature1?: string, signature2?: string): Promise<void> {
+    const hash = this.hashToSign();
     for (const sig of [signature1, signature2]) {
       if (!sig) {
         continue;
       }
-      const hash = this.hashToSign();
       let recovered: string;
       try {
         recovered = await recoverAddressFromChannelMessage(hash, sig);

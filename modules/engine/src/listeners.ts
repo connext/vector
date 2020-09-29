@@ -220,7 +220,8 @@ async function handleWithdrawalTransferCreation(
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
 
   // Get the recipient + amount from the transfer state
-  const { balance, nonce, aliceSignature, signers, fee } = transferInitialState as WithdrawState;
+  const transfer = (await store.getTransferState(transferId))!;
+  const { balance, nonce, initiatorSignature, fee, initiator, responder } = transferInitialState as WithdrawState;
 
   const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
 
@@ -233,6 +234,7 @@ async function handleWithdrawalTransferCreation(
     recipient: balance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,
+    transfer,
   };
   evts[EngineEvents.WITHDRAWAL_CREATED].post(payload);
 
@@ -260,7 +262,8 @@ async function handleWithdrawalTransferCreation(
   // is properly signed before its been merged into your channel
   const commitment = new WithdrawCommitment(
     channelAddress,
-    signers,
+    initiator,
+    responder,
     balance.to[0],
     assetId,
     withdrawalAmount.toString(),
@@ -269,7 +272,7 @@ async function handleWithdrawalTransferCreation(
 
   // Generate your signature on the withdrawal commitment
   const responderSignature = await signer.signMessage(commitment.hashToSign());
-  await commitment.addSignatures(aliceSignature, responderSignature);
+  await commitment.addSignatures(initiatorSignature, responderSignature);
 
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
@@ -302,7 +305,6 @@ async function handleWithdrawalTransferResolution(
 
   const {
     channelAddress,
-    participants,
     balances,
     assetIds,
     latestUpdate: {
@@ -328,10 +330,11 @@ async function handleWithdrawalTransferResolution(
   const payload: WithdrawalResolvedPayload = {
     assetId,
     amount: withdrawalAmount.toString(),
-    fee,
+    fee: transfer.transferState.fee,
     recipient: transfer.initialBalance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,
+    transfer,
   };
   evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
 
@@ -343,13 +346,17 @@ async function handleWithdrawalTransferResolution(
   // Generate our own commitment, and save the double signed version
   const commitment = new WithdrawCommitment(
     channelAddress,
-    participants,
+    transfer.initiator,
+    transfer.responder,
     transfer.initialBalance.to[0],
     assetId,
     withdrawalAmount.toString(),
     transfer.transferState.nonce,
   );
-  await commitment.addSignatures(transfer.transferState.aliceSignature, transfer.transferResolver!.responderSignature);
+  await commitment.addSignatures(
+    transfer.transferState.initiatorSignature,
+    transfer.transferResolver!.responderSignature,
+  );
 
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());

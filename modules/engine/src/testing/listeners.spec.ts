@@ -2,6 +2,7 @@ import { WithdrawCommitment } from "@connext/vector-contracts";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
+  FullTransferState,
   IChannelSigner,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
@@ -22,16 +23,17 @@ import {
   mkAddress,
   expect,
   delay,
+  MemoryStoreService,
+  createTestChannelStateWithSigners,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
-import { utils } from "ethers";
+import { BigNumber, utils } from "ethers";
 import { Evt } from "evt";
 import Sinon from "sinon";
 
 import { setupEngineListeners } from "../listeners";
 import { getEngineEvtContainer } from "../utils";
 
-import { MemoryStoreService } from "./services/store";
 import { env } from "./env";
 
 const { hexlify, randomBytes } = utils;
@@ -39,7 +41,7 @@ const { hexlify, randomBytes } = utils;
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);
 
-describe.only(testName, () => {
+describe(testName, () => {
   // Get env constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const withdrawDefinition = env.contractAddresses[chainId].Withdraw.address;
@@ -89,28 +91,35 @@ describe.only(testName, () => {
       overrides: Partial<WithdrawCommitmentJson> = {},
     ): Promise<{ state: WithdrawState; resolver: WithdrawResolver; commitment: WithdrawCommitmentJson }> => {
       // Generate commitment
+      const fee = BigNumber.from(3);
+      const withdrawalAmount = BigNumber.from(4);
       const commitment = await WithdrawCommitment.fromJson({
         channelAddress: mkAddress("0xccc"),
-        signers: [alice.address, bob.address],
+        initiator: alice.address,
+        responder: bob.address,
         recipient: alice.address,
         assetId: mkAddress(),
-        amount: "7",
+        amount: withdrawalAmount.toString(),
         nonce: "1",
         ...overrides,
       });
       // Generate signatures
-      const aliceSignature = await alice.signMessage(commitment.hashToSign());
-      const bobSignature = await bob.signMessage(commitment.hashToSign());
+      const initiatorSignature = await alice.signMessage(commitment.hashToSign());
+      const responderSignature = await bob.signMessage(commitment.hashToSign());
       // Generate state
       const state: WithdrawState = {
-        balance: { to: [alice.address, bob.address], amount: [commitment.amount, "0"] },
+        balance: {
+          to: [commitment.recipient, commitment.responder],
+          amount: [fee.add(commitment.amount).toString(), "0"],
+        },
         nonce: commitment.nonce,
-        aliceSignature,
-        signers: commitment.signers,
+        initiatorSignature,
+        responder: commitment.responder,
+        initiator: commitment.initiator,
         data: hexlify(randomBytes(32)),
-        fee: "3",
+        fee: fee.toString(),
       };
-      return { resolver: { bobSignature }, state, commitment: commitment.toJson() };
+      return { resolver: { responderSignature }, state, commitment: commitment.toJson() };
     };
 
     it("should work for eth, recipient in channel", async () => {
@@ -118,14 +127,16 @@ describe.only(testName, () => {
 
       const { state, resolver, commitment } = await getWithdrawalCommitment();
 
-      const updatedChannelState = createTestChannelState(UpdateType.create, {
+      const updatedChannelState = createTestChannelStateWithSigners([alice, bob], UpdateType.create, {
+        channelAddress: mkAddress("0xccc"),
         latestUpdate: {
           assetId: mkAddress(),
           toIdentifier: bob.publicIdentifier,
           details: {
             transferDefinition: withdrawDefinition,
-            transferInitialState: state,
+            transferInitialState: { ...state },
             transferEncodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+            responder: commitment.responder,
           },
         },
         assetIds: [commitment.assetId],
@@ -146,6 +157,10 @@ describe.only(testName, () => {
         ),
       );
 
+      // transfer should be stored
+      const transfer = {} as FullTransferState;
+      store.getTransferState.resolves(transfer);
+
       const createdEvent = new Promise<WithdrawalCreatedPayload>(resolve =>
         container[WITHDRAWAL_CREATED_EVENT].attachOnce(5000, resolve),
       );
@@ -161,6 +176,8 @@ describe.only(testName, () => {
         assetId: commitment.assetId,
         amount: commitment.amount,
         recipient: alice.address,
+        fee: state.fee,
+        transfer,
         channelBalance:
           updatedChannelState.balances[updatedChannelState.assetIds.findIndex(a => a === commitment.assetId)],
         channelAddress: updatedChannelState.channelAddress,
@@ -170,8 +187,8 @@ describe.only(testName, () => {
       expect(store.saveWithdrawalCommitment.callCount).to.be.eq(1);
       const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
       expect(storeTransferId).to.be.eq(updatedChannelState.latestUpdate.details.transferId);
-      expect(withdrawCommitment.aliceSignature).to.be.ok;
-      expect(withdrawCommitment.bobSignature).to.be.ok;
+      expect(withdrawCommitment.initiatorSignature).to.be.ok;
+      expect(withdrawCommitment.responderSignature).to.be.ok;
 
       // Verify that resolve was called correctly
       expect(vector.resolve.callCount).to.be.eq(1);
