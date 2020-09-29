@@ -39,7 +39,7 @@ const convertChannelEntityToFullChannelState = (
   },
 ): FullChannelState => {
   // use the inputted assetIds to preserve order
-  const assetIds = channelEntity!.assetIds ? channelEntity!.assetIds?.split(",") : [];
+  const assetIds = channelEntity?.assetIds ? channelEntity.assetIds.split(",") : [];
 
   // get balances and locked value for each assetId
   const processedDepositsA: string[] = [];
@@ -48,14 +48,14 @@ const convertChannelEntityToFullChannelState = (
     const balanceA = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantA,
     );
-    processedDepositsA.push(balanceA!.processedDeposit);
+    processedDepositsA.push(balanceA?.processedDeposit ?? "0");
     const balanceB = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
-    processedDepositsB.push(balanceB!.processedDeposit);
+    processedDepositsB.push(balanceB?.processedDeposit ?? "0");
     return {
-      amount: [balanceA!.amount, balanceB!.amount],
-      to: [balanceA!.to, balanceB!.to],
+      amount: [balanceA?.amount ?? "0", balanceB?.amount ?? "0"],
+      to: [balanceA?.to ?? channelEntity.participantA, balanceB?.to ?? channelEntity.participantB],
     };
   });
 
@@ -327,6 +327,7 @@ export class PrismaStore implements IServerNodeStore {
           ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
           : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
+        responder: (channelState.latestUpdate!.details as CreateUpdateDetails).responder,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
         meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
@@ -452,7 +453,7 @@ export class PrismaStore implements IServerNodeStore {
                   },
                   where: {
                     participant_channelAddress_assetId: {
-                      participant: channelState.bob,
+                      participant: channelState.alice,
                       channelAddress: channelState.channelAddress,
                       assetId,
                     },
@@ -473,7 +474,7 @@ export class PrismaStore implements IServerNodeStore {
                   },
                   where: {
                     participant_channelAddress_assetId: {
-                      participant: channelState.alice,
+                      participant: channelState.bob,
                       channelAddress: channelState.channelAddress,
                       assetId,
                     },

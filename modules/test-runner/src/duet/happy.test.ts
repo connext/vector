@@ -82,7 +82,7 @@ describe(testName, () => {
     const aliceAfter = aliceChannel.balances[assetIdx].amount[0];
     expect(aliceChannel).to.deep.eq(bobChannel);
 
-    expect(BigNumber.from(aliceBefore).add(depositAmt)).to.eq(aliceAfter);
+    expect(aliceAfter).to.eq(BigNumber.from(aliceBefore).add(depositAmt));
   });
 
   it("bob can deposit ETH into channel", async () => {

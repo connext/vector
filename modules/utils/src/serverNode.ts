@@ -174,7 +174,6 @@ export class RestServerNodeService implements IServerNodeService {
       this.logger.info({ txHash: sendDepositTxRes.data.txHash }, "Waiting for tx to be mined");
       await provider.waitForTransaction(sendDepositTxRes.data.txHash);
       this.logger.info({ txHash: sendDepositTxRes.data.txHash }, "Tx has been mined");
-
       const res = await Axios.post<ServerNodeResponses.Deposit>(`${this.serverNodeUrl}/deposit`, {
         channelAddress: params.channelAddress,
         assetId: params.assetId,
