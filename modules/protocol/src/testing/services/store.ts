@@ -39,8 +39,8 @@ export class MemoryStoreService implements IVectorStore {
   ): Promise<FullChannelState<any> | undefined> {
     return Promise.resolve(
       [...this.channelStates.values()].find(channelState => {
-        channelState.state.participants[0] === participantA &&
-          channelState.state.participants[1] === participantB &&
+        channelState.state.alice === participantA &&
+          channelState.state.bob === participantB &&
           channelState.state.networkContext.chainId === chainId;
       })?.state,
     );
@@ -55,14 +55,9 @@ export class MemoryStoreService implements IVectorStore {
     commitment: ChannelCommitmentData,
     transfer?: FullTransferState,
   ): Promise<void> {
-    const existing = this.channelStates.get(channelState.channelAddress)?.state ?? channelState;
     this.channelStates.set(channelState.channelAddress, {
       state: {
         ...channelState,
-        channelAddress: existing.channelAddress,
-        publicIdentifiers: existing.publicIdentifiers,
-        participants: existing.participants,
-        networkContext: existing.networkContext,
       },
       commitment,
     });

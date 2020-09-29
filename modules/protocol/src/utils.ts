@@ -29,32 +29,32 @@ export function addEvtHandler<T = any>(
 export async function generateSignedChannelCommitment(
   newState: FullChannelState,
   signer: IChannelSigner,
-  updateSignatures: string[],
+  aliceSignature?: string,
+  bobSignature?: string,
 ): Promise<ChannelCommitmentData> {
   const { networkContext, ...core } = newState;
 
-  const unsigned: ChannelCommitmentData = {
+  const unsigned = {
     chainId: networkContext.chainId,
     state: core,
     channelFactoryAddress: networkContext.channelFactoryAddress,
-    signatures: [],
   };
-  const filteredSigs = updateSignatures.filter(x => !!x);
-  if (filteredSigs.length === 2) {
+  if (aliceSignature && bobSignature) {
     // No need to sign, we have already signed
     return {
       ...unsigned,
-      signatures: updateSignatures,
+      aliceSignature,
+      bobSignature,
     };
   }
 
   // Only counterparty has signed
-  const [counterpartySignature] = filteredSigs;
   const sig = await signer.signMessage(hashChannelCommitment(unsigned));
-  const idx = newState.participants.findIndex(p => p === signer.address);
+  const isAlice = signer.address === newState.alice;
   const signed = {
     ...unsigned,
-    signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
+    aliceSignature: isAlice ? sig : aliceSignature,
+    bobSignature: isAlice ? bobSignature : sig,
   };
   return signed;
 }
@@ -62,39 +62,71 @@ export async function generateSignedChannelCommitment(
 // TODO: make a result type?
 export async function validateChannelUpdateSignatures(
   state: FullChannelState,
-  updateSignatures: string[],
-  requiredSigners: 1 | 2 = 1,
+  aliceSignature?: string,
+  bobSignature?: string,
+  requiredSigners: "alice" | "bob" | "both" = "both",
 ): Promise<string | undefined> {
-  const present = updateSignatures.filter(x => !!x).length;
-  if (present < requiredSigners) {
-    return `Only ${present}/${requiredSigners} signatures present`;
-  }
-  // generate the commitment
+  // Generate the commitment
   const { networkContext, ...core } = state;
   const hash = hashChannelCommitment({
     chainId: networkContext.chainId,
     state: core,
     channelFactoryAddress: networkContext.channelFactoryAddress,
-    signatures: [],
   });
 
-  const results = (
-    await Promise.all(
-      updateSignatures.map(async (sigToVerify, idx) => {
-        if (!sigToVerify) {
-          return undefined;
-        }
-        const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
-        if (!state.participants.includes(recovered)) {
-          return `Recovered ${recovered}, expected one of ${state.participants.toString()}`;
-        }
-        return recovered === state.participants[idx]
-          ? undefined
-          : `Recovered ${recovered}, expected ${state.participants[idx]}`;
-      }),
-    )
-  ).filter(x => !!x);
-  return results.length === 0 ? undefined : results.toString();
+  // Create a recovery helper to catch errors
+  const tryRecovery = async (sig: string): Promise<string> => {
+    let recovered: string;
+    try {
+      recovered = await recoverAddressFromChannelMessage(hash, sig);
+    } catch (e) {
+      recovered = e.message;
+    }
+    return recovered;
+  };
+
+  // Switch on the required signers to return the most descriptive
+  // messages from utility function
+  switch (requiredSigners) {
+    case "both": {
+      if (!aliceSignature || !bobSignature) {
+        return `Missing alice or bobs signature, both required`;
+      }
+      const ralice = await tryRecovery(aliceSignature);
+      const rbob = await tryRecovery(bobSignature);
+      const msgs: string[] = [];
+      if (ralice !== state.alice) {
+        msgs.push(`Recovered ${ralice}, expected Alice: ${state.alice}`);
+      }
+      if (rbob !== state.bob) {
+        msgs.push(`Recovered ${rbob}, expected Bob: ${state.bob}`);
+      }
+      return msgs.length === 0 ? undefined : msgs.toString();
+    }
+    case "alice": {
+      if (!aliceSignature) {
+        return `Missing alices signature`;
+      }
+      const recovered = await tryRecovery(aliceSignature);
+      if (recovered !== state.alice) {
+        return `Recovered ${recovered}, expected Alice: ${state.alice}`;
+      }
+      return undefined;
+    }
+    case "bob": {
+      if (!bobSignature) {
+        return `Missing bobs signature`;
+      }
+      const recovered = await tryRecovery(bobSignature);
+      if (recovered !== state.bob) {
+        return `Recovered ${recovered}, expected Bob: ${state.bob}`;
+      }
+      return undefined;
+    }
+    default: {
+      return `Unrecognized requirement: ${requiredSigners}`;
+    }
+  }
 }
 
 export const reconcileDeposit = async (

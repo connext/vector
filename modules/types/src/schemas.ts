@@ -39,14 +39,15 @@ const LinkedTransferEncodingSchema = Type.Array([
 
 const WithdrawTransferStateSchema = Type.Object({
   balance: TBalance,
-  aliceSignature: TSignature,
-  signers: Type.Array(TAddress),
+  initiatorSignature: TSignature,
+  initiator: TAddress,
+  responder: TAddress,
   data: TBytes32,
   nonce: TIntegerString,
   fee: TIntegerString,
 });
 const WithdrawTransferResolverSchema = Type.Object({
-  bobSignature: TSignature,
+  responderSignature: TSignature,
 });
 const WithdrawTransferEncodingSchema = Type.Array([
   Type.Literal(WithdrawStateEncoding),
@@ -85,7 +86,7 @@ const CreateProtocolParamsSchema = Type.Object({
   transferInitialState: TransferStateSchema,
   timeout: TIntegerString,
   encodings: TransferEncodingSchema,
-  signers: Type.Array(TAddress),
+  responder: TAddress,
   meta: Type.Optional(Type.Any()),
 });
 

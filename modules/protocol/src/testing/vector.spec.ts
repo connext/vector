@@ -291,19 +291,19 @@ describe("Vector", () => {
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestLinkedTransferState(),
         timeout: "133215",
-        signers: [mkAddress("0x111"), mkAddress("0x222")],
+        responder: mkAddress("0x222"),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [
         {
-          name: "should fail if signers are undefined",
-          params: { ...validParams, signers: undefined },
-          error: "should have required property 'signers'",
+          name: "should fail if responder is undefined",
+          params: { ...validParams, responder: undefined },
+          error: "should have required property 'responder'",
         },
         {
-          name: "should fail if signers are invalid",
-          params: { ...validParams, signers: ["fail"] },
+          name: "should fail if responder is invalid",
+          params: { ...validParams, responder: "fail" },
           error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {
@@ -447,7 +447,7 @@ describe("Vector", () => {
           name: "should fail if transferResolver is invalid",
           params: { ...validParams, transferResolver: { test: "fail" } },
           error:
-            "should have required property 'preImage',should have required property 'bobSignature',should match exactly one schema in oneOf",
+            "should have required property 'preImage',should have required property 'responderSignature',should match exactly one schema in oneOf",
         },
       ];
 

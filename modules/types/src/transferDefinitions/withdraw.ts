@@ -16,7 +16,7 @@ export type WithdrawState = {
 };
 
 export type WithdrawResolver = {
-  bobSignature: SignatureString;
+  responderSignature: SignatureString;
 };
 
 export const WithdrawStateEncoding = tidy(`tuple(
@@ -30,7 +30,7 @@ export const WithdrawStateEncoding = tidy(`tuple(
   )`);
 
 export const WithdrawResolverEncoding = tidy(`tuple(
-    bytes bobSignature
+    bytes responderSignature
   )`);
 
 export type WithdrawCommitmentJson = {

@@ -80,7 +80,8 @@ export async function validateOutbound<T extends UpdateType = any>(
       nonce: 0,
       channelAddress,
       timeout: "0",
-      participants: [signer.address, getSignerAddressFromPublicIdentifier(counterpartyIdentifier)],
+      alice: signer.address,
+      bob: getSignerAddressFromPublicIdentifier(counterpartyIdentifier),
       balances: [],
       processedDepositsA: [],
       processedDepositsB: [],
@@ -88,7 +89,8 @@ export async function validateOutbound<T extends UpdateType = any>(
       merkleRoot: constants.HashZero,
       latestUpdate: {} as any,
       networkContext,
-      publicIdentifiers: [signer.publicIdentifier, counterpartyIdentifier],
+      aliceIdentifier: signer.publicIdentifier,
+      bobIdentifier: counterpartyIdentifier,
     };
   }
 
@@ -115,13 +117,13 @@ export async function validateOutbound<T extends UpdateType = any>(
 
       // Validate the channel does not already exist by participants
       const byCounterpartySameOrder = await storeService.getChannelStateByParticipants(
-        state.participants[0],
-        state.participants[1],
+        state.alice,
+        state.bob,
         networkContext.chainId,
       );
       const byCounterpartyDifferentOrder = await storeService.getChannelStateByParticipants(
-        state.participants[1],
-        state.participants[0],
+        state.bob,
+        state.alice,
         networkContext.chainId,
       );
       if (byCounterpartyDifferentOrder || byCounterpartySameOrder) {
@@ -261,7 +263,12 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   logger.debug(nextState, "nextState");
 
   // Verify at least one signature exists (and any present are valid)
-  const sigRes = await validateChannelUpdateSignatures(nextState, validUpdate.signatures, 1);
+  const sigRes = await validateChannelUpdateSignatures(
+    nextState,
+    validUpdate.aliceSignature,
+    validUpdate.bobSignature,
+    signer.address === state.bob ? "alice" : "bob",
+  );
   if (sigRes) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, validUpdate, nextState, {
@@ -271,10 +278,22 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   }
 
   // Generate the cosigned commitment
-  const signed = await generateSignedChannelCommitment(nextState, signer, validUpdate.signatures);
+  const signed = await generateSignedChannelCommitment(
+    nextState,
+    signer,
+    validUpdate.aliceSignature,
+    validUpdate.bobSignature,
+  );
 
   // Add the signature to the state
-  const signedNextState = { ...nextState, latestUpdate: { ...nextState.latestUpdate, signatures: signed.signatures } };
+  const signedNextState = {
+    ...nextState,
+    latestUpdate: {
+      ...nextState.latestUpdate,
+      aliceSignature: signed.aliceSignature,
+      bobSignature: signed.bobSignature,
+    },
+  };
 
   // Return the validated update, resultant state, double signed
   // commitment, and the transfer data
@@ -353,7 +372,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         transferTimeout,
         transferInitialState,
         transferEncodings,
-        signers: transferSigners,
+        responder,
         meta,
       } = details as CreateUpdateDetails;
       // Ensure the transferId is properly formatted
@@ -393,7 +412,8 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         chainId: previousState.networkContext.chainId,
         transferEncodings,
         transferState: { ...transferInitialState },
-        signers: transferSigners,
+        initiator: previousState.alice === responder ? previousState.bob : previousState.alice,
+        responder,
         meta,
       };
       break;

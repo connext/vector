@@ -97,7 +97,6 @@ describe("inbound", () => {
       UpdateType.setup,
       {
         nonce: 1,
-        signatures: [],
       },
     );
     // Set the validation stub
@@ -368,7 +367,8 @@ describe("outbound", () => {
 
         // Create the expected final double signed update state
         const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-          signatures: [mkSig("0xaaabbb"), mkSig("0xcccddd")],
+          aliceSignature: mkSig("0xaaabbb"),
+          bobSignature: mkSig("0xcccddd"),
           nonce: missedUpdateNonce + 1,
         });
 

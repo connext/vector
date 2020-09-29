@@ -268,14 +268,14 @@ async function handleWithdrawalTransferCreation(
   );
 
   // Generate your signature on the withdrawal commitment
-  const bobSignature = await signer.signMessage(commitment.hashToSign());
-  await commitment.addSignatures(aliceSignature, bobSignature);
+  const responderSignature = await signer.signMessage(commitment.hashToSign());
+  await commitment.addSignatures(aliceSignature, responderSignature);
 
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
   // Resolve the withdrawal
-  const resolveRes = await vector.resolve({ transferResolver: { bobSignature }, transferId, channelAddress });
+  const resolveRes = await vector.resolve({ transferResolver: { responderSignature }, transferId, channelAddress });
 
   // Handle the error
   if (resolveRes.isError) {
@@ -349,7 +349,7 @@ async function handleWithdrawalTransferResolution(
     withdrawalAmount.toString(),
     transfer.transferState.nonce,
   );
-  await commitment.addSignatures(transfer.transferState.aliceSignature, transfer.transferResolver!.bobSignature);
+  await commitment.addSignatures(transfer.transferState.aliceSignature, transfer.transferResolver!.responderSignature);
 
   // Store the double signed commitment
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());

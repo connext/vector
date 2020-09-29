@@ -35,7 +35,7 @@ export type CreateTransferParams = {
   transferInitialState: TransferState;
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
-  signers: Address[];
+  responder: Address;
   meta?: any;
 };
 
@@ -101,14 +101,16 @@ export interface CoreChannelState {
 
 // Includes any additional info that doesn't need to be sent to chain
 export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
-  publicIdentifiers: string[];
+  aliceIdentifier: string;
+  bobIdentifier: string;
   latestUpdate: ChannelUpdate<T>;
   networkContext: NetworkContext;
 };
 
 export interface ChannelCommitmentData {
   state: CoreChannelState;
-  signatures: string[];
+  aliceSignature?: string;
+  bobSignature?: string;
   channelFactoryAddress: Address;
   chainId: number;
 }
@@ -166,7 +168,8 @@ export type ChannelUpdate<T extends UpdateType> = {
   balance: Balance;
   assetId: Address;
   details: ChannelUpdateDetailsMap[T];
-  signatures: string[]; // same participants ordering
+  aliceSignature?: string;
+  bobSignature?: string;
 };
 
 export interface ChannelUpdateDetailsMap {
@@ -184,7 +187,7 @@ export type CreateUpdateDetails = {
   transferEncodings: string[]; // Initial state, resolver state
   merkleProofData: string[];
   merkleRoot: string;
-  signers: string[];
+  responder: Address;
   meta?: any;
 };
 

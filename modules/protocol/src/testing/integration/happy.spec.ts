@@ -29,7 +29,9 @@ describe(testName, () => {
     // Validate final balance
     log.error("Verifying deposits");
     expect(postDeposit.assetIds).to.be.deep.eq([assetId]);
-    expect(postDeposit.balances).to.be.deep.eq([{ to: channel.participants, amount: [depositAmount, depositAmount] }]);
+    expect(postDeposit.balances).to.be.deep.eq([
+      { to: [channel.alice, channel.bob], amount: [depositAmount, depositAmount] },
+    ]);
 
     // Create Alice -> Bob transfer
     log.error("Creating transfer", { amount: transferAmount });

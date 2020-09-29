@@ -90,8 +90,10 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   const bobChannel = await bob.getChannelState(channel.channelAddress);
   expect(aliceChannel).to.deep.eq(channel);
   expect(bobChannel).to.deep.eq(channel);
-  expect(channel.participants).to.be.deep.eq([alice.signerAddress, bob.signerAddress]);
-  expect(channel.publicIdentifiers).to.be.deep.eq([alice.publicIdentifier, bob.publicIdentifier]);
+  expect(channel.alice).to.be.eq(alice.signerAddress);
+  expect(channel.bob).to.be.eq(bob.signerAddress);
+  expect(channel.aliceIdentifier).to.be.eq(alice.publicIdentifier);
+  expect(channel.bobIdentifier).to.be.eq(bob.publicIdentifier);
   return channel;
 };
 
@@ -116,7 +118,7 @@ export const depositInChannel = async (
   const value = BigNumber.from(amount);
   // Deploy multsig if needed
   const channel = await depositor.getChannelState(channelAddress);
-  const isDepositA = channel!.publicIdentifiers[0] === depositor.publicIdentifier;
+  const isDepositA = channel!.aliceIdentifier === depositor.publicIdentifier;
   // NOTE: sometimes deposit fails, and it seems like its because it is
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
