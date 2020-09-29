@@ -110,7 +110,7 @@ describe("utils", () => {
     }
   });
 
-  describe("validateChannelUpdateSignatures", () => {
+  describe.only("validateChannelUpdateSignatures", () => {
     const aliceSigner = getRandomChannelSigner();
     const bobSigner = getRandomChannelSigner();
     const wrongSigner = getRandomChannelSigner();
@@ -181,7 +181,7 @@ describe("utils", () => {
         );
 
         if (expected) {
-          expect(ret).includes("expected");
+          expect(ret).includes(expected);
         } else {
           expect(ret).to.be.undefined;
         }
