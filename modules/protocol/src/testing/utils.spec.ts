@@ -7,6 +7,7 @@ import {
   getRandomChannelSigner,
   createTestChannelState,
   hashChannelCommitment,
+  mkSig,
 } from "@connext/vector-utils";
 import Sinon from "sinon";
 import { VectorOnchainService } from "@connext/vector-contracts";
@@ -49,37 +50,67 @@ describe("utils", () => {
       {
         name: "should not sign anything if there are two signatures",
         state: aliceState,
-        updateSignatures: ["test1", "test2"],
-        expected: ["test1", "test2"],
+        update: {
+          aliceSignature: mkSig("0xaaa"),
+          bobSignature: mkSig("0xbbb"),
+        },
+        expected: {
+          aliceSignature: mkSig("0xaaa"),
+          bobSignature: mkSig("0xbbb"),
+        },
       },
       {
         name: "should work for participants[0] if there is not a counterparty signature included",
         state: aliceState,
-        updateSignatures: [],
-        expected: ["sig", undefined],
+        update: {
+          aliceSignature: undefined,
+          bobSignature: undefined,
+        },
+        expected: {
+          aliceSignature: "sig",
+          bobSignature: undefined,
+        },
       },
       {
         name: "should work for participants[1] if there is not a counterparty signature included",
         state: bobState,
-        updateSignatures: [],
-        expected: [undefined, "sig"],
+        update: {
+          aliceSignature: undefined,
+          bobSignature: undefined,
+        },
+        expected: {
+          aliceSignature: undefined,
+          bobSignature: "sig",
+        },
       },
       {
-        name: "should work for participants[0] if there is a counterparty signature included",
-        state: aliceState,
-        updateSignatures: ["test2"],
-        expected: ["sig", "test2"],
-      },
-      {
-        name: "should work for participants[1] if there is a counterparty signature included",
+        name: "should work for bob if there is an alice signature included",
         state: bobState,
-        updateSignatures: ["test1"],
-        expected: ["test1", "sig"],
+        update: {
+          aliceSignature: "test1",
+          bobSignature: undefined,
+        },
+        expected: {
+          aliceSignature: "test1",
+          bobSignature: "sig",
+        },
+      },
+      {
+        name: "should work for alice if there is a bob signature included",
+        state: aliceState,
+        update: {
+          aliceSignature: undefined,
+          bobSignature: "test2",
+        },
+        expected: {
+          aliceSignature: "sig",
+          bobSignature: "test2",
+        },
       },
     ];
 
     for (const test of tests) {
-      const { name, updateSignatures, expected, state } = test;
+      const { name, update, expected, state } = test;
 
       it(name, async () => {
         const { networkContext, ...core } = state;
@@ -87,12 +118,19 @@ describe("utils", () => {
           chainId: networkContext.chainId,
           state: core,
           channelFactoryAddress: networkContext.channelFactoryAddress,
-          signatures: [],
         };
         // Run the test
-        const result = await generateSignedChannelCommitment(state, signer, updateSignatures);
+        const result = await generateSignedChannelCommitment(state, signer, update.aliceSignature, update.bobSignature);
 
-        // Doing this really dumb thing because, for some reason, signature functions are causing tests to be skipped
+        const aliceSignature =
+          expected.aliceSignature === "sig"
+            ? await signer.signMessage(hashChannelCommitment(unsigned))
+            : expected.aliceSignature;
+        const bobSignature =
+          expected.bobSignature === "sig"
+            ? await signer.signMessage(hashChannelCommitment(unsigned))
+            : expected.bobSignature;
+
         const expectedSigs: string[] = [];
         for (let i = 0; i < 2; i++) {
           if (expected[i] == "sig") {
@@ -104,7 +142,8 @@ describe("utils", () => {
 
         expect(result).to.deep.eq({
           ...unsigned,
-          signatures: expectedSigs,
+          aliceSignature,
+          bobSignature,
         });
       });
     }
@@ -140,13 +179,13 @@ describe("utils", () => {
         name: "should fail if there are not at the number of required sigs included",
         updateSignatures: [undefined, "bobSig"],
         requiredSigners: "both",
-        expected: "Only 1/2 signatures present",
+        expected: "Missing alice or bobs signature, both required",
       },
       {
         name: "should fail if any of the signatures are invalid",
         updateSignatures: [undefined, "wrongSig"],
         requiredSigners: "alice",
-        expected: "expected one of",
+        expected: "Missing alices signature",
       },
       {
         name: "should fail if the signatures are not sorted correctly",
