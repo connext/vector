@@ -21,7 +21,6 @@ import {
   getRandomChannelSigner,
   mkAddress,
   mkHash,
-  mkPublicIdentifier,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -51,7 +50,7 @@ describe("ParamConverter", () => {
   };
 
   describe("convertConditionalTransferParams", () => {
-    const generateParams = (bIsRecipient: boolean = true): EngineParams.ConditionalTransfer => {
+    const generateParams = (bIsRecipient = true): EngineParams.ConditionalTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
         amount: "8",
@@ -90,7 +89,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -135,7 +134,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -262,14 +261,16 @@ describe("ParamConverter", () => {
       const withdrawHash = generateChainData(params, channelState);
       const signature = await signerA.signMessage(withdrawHash);
 
-      const ret: CreateTransferParams = (await convertWithdrawParams(params, signerA, channelState)).getValue();
+      const ret: CreateTransferParams = (
+        await convertWithdrawParams(params, signerA, channelState, chainAddresses)
+      ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: BigNumber.from(params.amount)
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawDefinition,
         transferInitialState: {
           balance: {
             amount: [
@@ -309,14 +310,16 @@ describe("ParamConverter", () => {
       const withdrawHash = generateChainData(params, channelState);
       const signature = await signerB.signMessage(withdrawHash);
 
-      const ret: CreateTransferParams = (await convertWithdrawParams(params, signerB, channelState)).getValue();
+      const ret: CreateTransferParams = (
+        await convertWithdrawParams(params, signerB, channelState, chainAddresses)
+      ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: BigNumber.from(params.amount)
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawDefinition,
         transferInitialState: {
           balance: {
             amount: [

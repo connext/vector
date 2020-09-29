@@ -24,7 +24,6 @@ import {
   TransferUpdateManyWithoutChannelInput,
   TransferCreateWithoutChannelInput,
 } from "@prisma/client";
-import { config } from "../config";
 
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
@@ -115,7 +114,6 @@ const convertChannelEntityToFullChannelState = (
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       providerUrl: channelEntity.providerUrl,
-      withdrawDefinition: config.contractAddresses[channelEntity.chainId].withdrawDefinition,
       channelMastercopyAddress: channelEntity.channelMastercopyAddress,
     },
     nonce: channelEntity.nonce,
@@ -181,9 +179,11 @@ export class PrismaStore implements IServerNodeStore {
   constructor(private readonly dbUrl?: string) {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
   }
+
   getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
     throw new Error("Method not implemented.");
   }
+
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
     throw new Error("Method not implemented.");
   }

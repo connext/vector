@@ -104,6 +104,7 @@ export async function convertWithdrawParams(
   params: EngineParams.Withdraw,
   signer: IChannelSigner,
   channel: FullChannelState,
+  chainAddresses: ChainAddresses,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const { channelAddress, assetId, recipient, fee } = params;
 
@@ -147,7 +148,7 @@ export async function convertWithdrawParams(
     channelAddress,
     amount,
     assetId,
-    transferDefinition: channel.networkContext.withdrawDefinition!,
+    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawDefinition!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
