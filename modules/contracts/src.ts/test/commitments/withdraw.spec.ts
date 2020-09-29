@@ -1,11 +1,10 @@
-import { signChannelMessage } from "@connext/vector-utils";
+import { signChannelMessage, expect } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, ContractFactory } from "ethers";
 
 import { TestToken } from "../../artifacts";
 import { WithdrawCommitment } from "../../commitments/withdraw";
 import { createChannel } from "../channel/creation.spec";
 import { bob, alice, provider } from "../constants";
-import { expect } from "../utils";
 
 describe("withdrawCommitment", () => {
   let channel: Contract;
@@ -19,16 +18,15 @@ describe("withdrawCommitment", () => {
       value: BigNumber.from(amount).mul(2),
     });
     await tx.wait();
-    token = await (
-      new ContractFactory(TestToken.abi, TestToken.bytecode, alice)
-    ).deploy("Test", "TST");
+    token = await new ContractFactory(TestToken.abi, TestToken.bytecode, alice).deploy("Test", "TST");
     await token.mint(channel.address, BigNumber.from(amount).mul(2));
   });
 
   it("can successfully withdraw Eth", async () => {
     const commitment = new WithdrawCommitment(
       channel.address,
-      [alice.address, bob.address],
+      alice.address,
+      bob.address,
       alice.address,
       constants.AddressZero,
       amount,
@@ -46,7 +44,8 @@ describe("withdrawCommitment", () => {
   it("can successfully withdraw Tokens", async () => {
     const commitment = new WithdrawCommitment(
       channel.address,
-      [alice.address, bob.address],
+      alice.address,
+      bob.address,
       alice.address,
       token.address,
       amount,
@@ -60,5 +59,4 @@ describe("withdrawCommitment", () => {
     await alice.sendTransaction(await commitment.getSignedTransaction());
     expect((await token.balanceOf(channel.address)).eq(BigNumber.from(amount)));
   });
-
 });

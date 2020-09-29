@@ -5,11 +5,12 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  IVectorStore,
   ChannelCommitmentData,
   FullTransferState,
   UpdateType,
   EngineEvent,
+  IEngineStore,
+  WithdrawCommitmentJson,
 } from "@connext/vector-types";
 import {
   BalanceCreateWithoutChannelInput,
@@ -23,8 +24,9 @@ import {
   TransferUpdateManyWithoutChannelInput,
   TransferCreateWithoutChannelInput,
 } from "@prisma/client";
+import { config } from "../config";
 
-export interface IServerNodeStore extends IVectorStore {
+export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined>;
   getSubscriptions(): Promise<{ [event: string]: string }>;
@@ -37,7 +39,7 @@ const convertChannelEntityToFullChannelState = (
   },
 ): FullChannelState => {
   // use the inputted assetIds to preserve order
-  const assetIds = channelEntity!.assetIds ? channelEntity!.assetIds?.split(",") : [];
+  const assetIds = channelEntity?.assetIds ? channelEntity.assetIds.split(",") : [];
 
   // get balances and locked value for each assetId
   const processedDepositsA: string[] = [];
@@ -46,14 +48,14 @@ const convertChannelEntityToFullChannelState = (
     const balanceA = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantA,
     );
-    processedDepositsA.push(balanceA!.processedDeposit);
+    processedDepositsA.push(balanceA?.processedDeposit ?? "0");
     const balanceB = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
-    processedDepositsB.push(balanceB!.processedDeposit);
+    processedDepositsB.push(balanceB?.processedDeposit ?? "0");
     return {
-      amount: [balanceA!.amount, balanceB!.amount],
-      to: [balanceA!.to, balanceB!.to],
+      amount: [balanceA?.amount ?? "0", balanceB?.amount ?? "0"],
+      to: [balanceA?.to ?? channelEntity.participantA, balanceB?.to ?? channelEntity.participantB],
     };
   });
 
@@ -102,7 +104,7 @@ const convertChannelEntityToFullChannelState = (
     }
   }
 
-  const channel = {
+  const channel: FullChannelState = {
     assetIds,
     balances,
     channelAddress: channelEntity.channelAddress,
@@ -113,11 +115,14 @@ const convertChannelEntityToFullChannelState = (
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       providerUrl: channelEntity.providerUrl,
+      withdrawDefinition: config.contractAddresses[channelEntity.chainId].withdrawDefinition,
       channelMastercopyAddress: channelEntity.channelMastercopyAddress,
     },
     nonce: channelEntity.nonce,
-    participants: [channelEntity.participantA, channelEntity.participantB],
-    publicIdentifiers: [channelEntity.publicIdentifierA, channelEntity.publicIdentifierB],
+    alice: channelEntity.participantA,
+    aliceIdentifier: channelEntity.publicIdentifierA,
+    bob: channelEntity.participantB,
+    bobIdentifier: channelEntity.publicIdentifierB,
     timeout: channelEntity.timeout,
     latestUpdate: {
       assetId: channelEntity.latestUpdate.assetId,
@@ -129,7 +134,8 @@ const convertChannelEntityToFullChannelState = (
       details,
       fromIdentifier: channelEntity.latestUpdate.fromIdentifier,
       nonce: channelEntity.latestUpdate.nonce,
-      signatures: [channelEntity.latestUpdate.signatureA!, channelEntity.latestUpdate.signatureB!],
+      aliceSignature: channelEntity.latestUpdate.signatureA ?? undefined,
+      bobSignature: channelEntity.latestUpdate.signatureB ?? undefined,
       toIdentifier: channelEntity.latestUpdate.toIdentifier,
       type: channelEntity.latestUpdate.type,
     },
@@ -149,6 +155,11 @@ const convertTransferEntityToFullTransferState = (
       amount: [transfer.initialAmountA, transfer.initialAmountB],
       to: [transfer.initialToA, transfer.initialToB],
     },
+    initiator:
+      transfer.createUpdate!.responder === transfer.channel!.participantA
+        ? transfer.channel!.participantB
+        : transfer.channel!.participantB,
+    responder: transfer.createUpdate!.responder!,
     initialStateHash: transfer.initialStateHash,
     transferDefinition: transfer.createUpdate!.transferDefinition!,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
@@ -170,9 +181,14 @@ export class PrismaStore implements IServerNodeStore {
   constructor(private readonly dbUrl?: string) {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
   }
+  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
 
   async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
-    console.log("registerSubscription: ", event, url);
     this.eventSubscriptions[event] = url;
   }
 
@@ -286,8 +302,8 @@ export class PrismaStore implements IServerNodeStore {
         fromIdentifier: channelState.latestUpdate!.fromIdentifier,
         toIdentifier: channelState.latestUpdate!.toIdentifier,
         nonce: channelState.latestUpdate!.nonce,
-        signatureA: channelState.latestUpdate?.signatures[0],
-        signatureB: channelState.latestUpdate?.signatures[1],
+        signatureA: channelState.latestUpdate?.aliceSignature,
+        signatureB: channelState.latestUpdate?.bobSignature,
         amountA: channelState.latestUpdate!.balance.amount[0],
         amountB: channelState.latestUpdate!.balance.amount[1],
         toA: channelState.latestUpdate!.balance.to[0],
@@ -311,6 +327,7 @@ export class PrismaStore implements IServerNodeStore {
           ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
           : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
+        responder: (channelState.latestUpdate!.details as CreateUpdateDetails).responder,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
         meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
@@ -364,11 +381,11 @@ export class PrismaStore implements IServerNodeStore {
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
-        participantA: channelState.participants[0],
-        participantB: channelState.participants[1],
+        participantA: channelState.alice,
+        participantB: channelState.bob,
         providerUrl: channelState.networkContext.providerUrl,
-        publicIdentifierA: channelState.publicIdentifiers[0],
-        publicIdentifierB: channelState.publicIdentifiers[1],
+        publicIdentifierA: channelState.aliceIdentifier,
+        publicIdentifierB: channelState.bobIdentifier,
         timeout: channelState.timeout,
         channelMastercopyAddress: channelState.networkContext.channelMastercopyAddress,
         balances: {
@@ -378,14 +395,14 @@ export class PrismaStore implements IServerNodeStore {
                 ...create,
                 {
                   amount: channelState.balances[index].amount[0],
-                  participant: channelState.participants[0],
+                  participant: channelState.alice,
                   to: channelState.balances[index].to[0],
                   assetId,
                   processedDeposit: channelState.processedDepositsA[index],
                 },
                 {
                   amount: channelState.balances[index].amount[1],
-                  participant: channelState.participants[1],
+                  participant: channelState.bob,
                   to: channelState.balances[index].to[1],
                   assetId,
                   processedDeposit: channelState.processedDepositsB[index],
@@ -424,7 +441,7 @@ export class PrismaStore implements IServerNodeStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[0],
-                    participant: channelState.participants[0],
+                    participant: channelState.alice,
                     to: channelState.balances[index].to[0],
                     processedDeposit: channelState.processedDepositsA[index],
                     assetId,
@@ -436,7 +453,7 @@ export class PrismaStore implements IServerNodeStore {
                   },
                   where: {
                     participant_channelAddress_assetId: {
-                      participant: channelState.participants[0],
+                      participant: channelState.alice,
                       channelAddress: channelState.channelAddress,
                       assetId,
                     },
@@ -445,7 +462,7 @@ export class PrismaStore implements IServerNodeStore {
                 {
                   create: {
                     amount: channelState.balances[index].amount[1],
-                    participant: channelState.participants[1],
+                    participant: channelState.bob,
                     to: channelState.balances[index].to[1],
                     processedDeposit: channelState.processedDepositsB[index],
                     assetId,
@@ -457,7 +474,7 @@ export class PrismaStore implements IServerNodeStore {
                   },
                   where: {
                     participant_channelAddress_assetId: {
-                      participant: channelState.participants[1],
+                      participant: channelState.bob,
                       channelAddress: channelState.channelAddress,
                       assetId,
                     },

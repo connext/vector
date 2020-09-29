@@ -167,7 +167,7 @@ export async function forwardTransferCreation(
   const routerBalanceInRecipientChannel =
     assetIdx === -1
       ? "0"
-      : node.signerAddress == recipientChannel.participants[0]
+      : node.signerAddress == recipientChannel.alice
       ? recipientChannel.balances[assetIdx].amount[0]
       : recipientChannel.balances[assetIdx].amount[1];
 

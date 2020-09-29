@@ -80,6 +80,7 @@ model Update {
   transferEncodings    String?
   merkleProofData      String? // proofs.join(",")
   meta                 String?
+  responder            String?
 
   // resolve details
   transferResolver String?

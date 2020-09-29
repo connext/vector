@@ -1,6 +1,7 @@
+import { expect } from "@connext/vector-utils";
 import axios from "axios";
 
-import { env, expect } from "../utils";
+import { env } from "../utils";
 
 describe("Duet Config", () => {
   it("alice & bob should pong when pinged", async () => {

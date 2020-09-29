@@ -1,8 +1,8 @@
-import { getRandomBytes32, IServerNodeService, RestServerNodeService } from "@connext/vector-utils";
+import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
-import { env, expect } from "../utils";
+import { env } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -46,6 +46,7 @@ describe(testName, () => {
       counterpartyIdentifier: bob.publicIdentifier,
       timeout: "10000",
     });
+    expect(channelRes.getError()).to.be.undefined;
     const channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
     const aliceChannel = await alice.getStateChannel(channel.channelAddress);
@@ -81,7 +82,7 @@ describe(testName, () => {
     const aliceAfter = aliceChannel.balances[assetIdx].amount[0];
     expect(aliceChannel).to.deep.eq(bobChannel);
 
-    expect(BigNumber.from(aliceBefore).add(depositAmt)).to.eq(aliceAfter);
+    expect(aliceAfter).to.eq(BigNumber.from(aliceBefore).add(depositAmt));
   });
 
   it("bob can deposit ETH into channel", async () => {

@@ -7,6 +7,8 @@ import {
   createTestUpdateParams,
   mkAddress,
   mkSig,
+  expect,
+  MemoryStoreService,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -17,7 +19,6 @@ import {
   UpdateParams,
 } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
-import { expect } from "chai";
 import pino from "pino";
 import Sinon from "sinon";
 import { VectorOnchainService } from "@connext/vector-contracts";
@@ -28,7 +29,6 @@ import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
 
-import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";
 import { env } from "./env";
 
@@ -97,7 +97,6 @@ describe("inbound", () => {
       UpdateType.setup,
       {
         nonce: 1,
-        signatures: [],
       },
     );
     // Set the validation stub
@@ -368,7 +367,8 @@ describe("outbound", () => {
 
         // Create the expected final double signed update state
         const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-          signatures: [mkSig("0xaaabbb"), mkSig("0xcccddd")],
+          aliceSignature: mkSig("0xaaabbb"),
+          bobSignature: mkSig("0xcccddd"),
           nonce: missedUpdateNonce + 1,
         });
 

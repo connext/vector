@@ -8,6 +8,8 @@ import {
   createTestChannelState,
   createTestUpdateParams,
   mkHash,
+  MemoryStoreService,
+  expect,
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
@@ -20,6 +22,7 @@ import {
   IVectorStore,
   UpdateType,
   Result,
+  CreateTransferParams,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
@@ -28,8 +31,6 @@ import * as vectorSync from "../sync";
 
 import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
-import { MemoryStoreService } from "./services/store";
-import { expect } from "./utils";
 
 describe("Vector", () => {
   let chainService: Sinon.SinonStubbedInstance<IVectorOnchainService>;
@@ -110,6 +111,7 @@ describe("Vector", () => {
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
         channelMastercopyAddress: mkAddress("0xeee"),
+        withdrawDefinition: mkAddress("0xdef"),
       };
       const validParams = {
         counterpartyIdentifier: mkPublicIdentifier(),
@@ -131,6 +133,16 @@ describe("Vector", () => {
           name: "should fail if there is no chainId",
           params: { ...validParams, networkContext: { ...network, chainId: undefined } },
           error: "should have required property 'chainId'",
+        },
+        {
+          name: "should fail if there is no withdrawDefinition",
+          params: { ...validParams, networkContext: { ...network, withdrawDefinition: undefined } },
+          error: "should have required property 'withdrawDefinition'",
+        },
+        {
+          name: "should fail if there is an invalid withdrawDefinition",
+          params: { ...validParams, networkContext: { ...network, withdrawDefinition: "fail" } },
+          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {
           name: "should fail if there is an invalid chainId (is a string)",
@@ -272,17 +284,28 @@ describe("Vector", () => {
     });
 
     describe("should validate parameters", () => {
-      const validParams = {
+      const validParams: CreateTransferParams = {
         channelAddress: mkAddress("0xccc"),
         amount: "123214",
         assetId: mkAddress("0xaaa"),
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestLinkedTransferState(),
         timeout: "133215",
+        responder: mkAddress("0x222"),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [
+        {
+          name: "should fail if responder is undefined",
+          params: { ...validParams, responder: undefined },
+          error: "should have required property 'responder'",
+        },
+        {
+          name: "should fail if responder is invalid",
+          params: { ...validParams, responder: "fail" },
+          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
+        },
         {
           name: "should fail if channelAddress is undefined",
           params: { ...validParams, channelAddress: undefined },

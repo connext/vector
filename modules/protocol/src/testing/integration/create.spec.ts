@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
+import { getTestLoggers, expect } from "@connext/vector-utils";
 import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
-import { createTransfer, expect, getFundedChannel, getTestLoggers } from "../utils";
+import { env } from "../env";
+import { createTransfer, getFundedChannel } from "../utils";
 
 const testName = "Create Integrations";
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;

@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
+import { getTestLoggers } from "@connext/vector-utils";
 import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
 
-import { depositInChannel, getSetupChannel, getTestLoggers } from "../utils";
+import { depositInChannel, getSetupChannel } from "../utils";
+import { env } from "../env";
 
 const testName = "Deposit Integrations";
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel);
 
 describe(testName, () => {
   let alice: IVectorProtocol;

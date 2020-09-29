@@ -56,6 +56,8 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
     transferDefinition: mkAddress("0xdef"),
     initialStateHash: mkBytes32("0xabcdef"),
     transferTimeout: "1",
+    initiator: mkAddress("0xaa"),
+    responder: mkAddress("0xbbb"),
     ...overrides,
   };
 };
@@ -102,6 +104,8 @@ export function createTestFullLinkedTransferState(
     transferResolver,
     transferState,
     transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    initiator: transferState.balance.to[0],
+    responder: transferState.balance.to[1],
   };
 
   return {

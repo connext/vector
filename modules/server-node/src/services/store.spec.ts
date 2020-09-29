@@ -1,7 +1,12 @@
 import { Balance } from "@connext/vector-types";
-import { createTestFullLinkedTransferState, createTestChannelState, mkBytes32, mkHash } from "@connext/vector-utils";
+import {
+  createTestFullLinkedTransferState,
+  createTestChannelState,
+  mkBytes32,
+  mkHash,
+  expect,
+} from "@connext/vector-utils";
 
-import { expect } from "../test/utils/assert";
 import { config } from "../config";
 
 import { PrismaStore } from "./store";
@@ -29,7 +34,8 @@ describe("store", () => {
     await store.saveChannelState(setupState, {
       channelFactoryAddress: setupState.networkContext.channelFactoryAddress,
       chainId: setupState.networkContext.chainId,
-      signatures: setupState.latestUpdate.signatures,
+      aliceSignature: setupState.latestUpdate.aliceSignature,
+      bobSignature: setupState.latestUpdate.bobSignature,
       state: setupState,
     });
 
@@ -44,7 +50,8 @@ describe("store", () => {
     await store.saveChannelState(depositState, {
       channelFactoryAddress: depositState.networkContext.channelFactoryAddress,
       chainId: depositState.networkContext.chainId,
-      signatures: depositState.latestUpdate.signatures,
+      aliceSignature: depositState.latestUpdate.aliceSignature,
+      bobSignature: depositState.latestUpdate.bobSignature,
       state: depositState,
     });
 
@@ -77,7 +84,8 @@ describe("store", () => {
       {
         channelFactoryAddress: createState.networkContext.channelFactoryAddress,
         chainId: createState.networkContext.chainId,
-        signatures: createState.latestUpdate.signatures,
+        aliceSignature: createState.latestUpdate.aliceSignature,
+        bobSignature: createState.latestUpdate.bobSignature,
         state: createState,
       },
       transfer,
@@ -98,7 +106,8 @@ describe("store", () => {
     await store.saveChannelState(resolveState, {
       channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,
       chainId: resolveState.networkContext.chainId,
-      signatures: resolveState.latestUpdate.signatures,
+      aliceSignature: resolveState.latestUpdate.aliceSignature,
+      bobSignature: resolveState.latestUpdate.bobSignature,
       state: resolveState,
     });
 
@@ -134,7 +143,8 @@ describe("store", () => {
       {
         channelFactoryAddress: createState.networkContext.channelFactoryAddress,
         chainId: createState.networkContext.chainId,
-        signatures: createState.latestUpdate.signatures,
+        aliceSignature: createState.latestUpdate.aliceSignature,
+        bobSignature: createState.latestUpdate.bobSignature,
         state: createState,
       },
       transfer1,
@@ -168,7 +178,8 @@ describe("store", () => {
       {
         channelFactoryAddress: createState.networkContext.channelFactoryAddress,
         chainId: createState.networkContext.chainId,
-        signatures: createState.latestUpdate.signatures,
+        aliceSignature: createState.latestUpdate.aliceSignature,
+        bobSignature: createState.latestUpdate.bobSignature,
         state: updatedState,
       },
       transfer2,

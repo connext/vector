@@ -53,7 +53,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
     }
 
-    if (!channelState.participants.includes(sender)) {
+    if (channelState.alice !== sender && channelState.bob !== sender) {
       return Result.fail(new OnchainError(OnchainError.reasons.SenderNotInChannel));
     }
     // first check if multisig is needed to deploy
@@ -103,11 +103,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       }
 
       const tx = await this.sendTxAndParseResponse(
-        channelFactory.createChannel(
-          channelState.participants[0],
-          channelState.participants[1],
-          channelState.networkContext.chainId,
-        ),
+        channelFactory.createChannel(channelState.alice, channelState.bob, channelState.networkContext.chainId),
       );
 
       // TODO: fix this
@@ -139,15 +135,15 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     }
 
     this.logger.info({ method: "sendDepositTx", assetId, amount }, "Channel is deployed, sending deposit");
-    if (sender === channelState.participants[0]) {
+    if (sender === channelState.alice) {
       this.logger.info(
-        { method: "sendDepositTx", sender, participants: channelState.participants },
+        { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant A",
       );
       return this.sendDepositATx(channelState, amount, assetId);
     } else {
       this.logger.info(
-        { method: "sendDepositTx", sender, participants: channelState.participants },
+        { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant B",
       );
       return this.sendDepositBTx(channelState, amount, assetId);
@@ -239,7 +235,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       this.logger.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
       const approveRes = await this.approveTokens(
         channelState.channelAddress,
-        channelState.participants[0],
+        channelState.alice,
         amount,
         assetId,
         channelState.networkContext.chainId,
