@@ -54,7 +54,7 @@ describe(testName, () => {
     await tx.wait();
   });
 
-  it.skip("roger should setup channels with carol and dave", async () => {
+  it("roger should setup channels with carol and dave", async () => {
     let channelRes = await roger.setup({
       chainId,
       counterpartyIdentifier: carol.publicIdentifier,
@@ -116,15 +116,24 @@ describe(testName, () => {
   it("carol can transfer ETH to dave via roger and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
-    const channelRes = await carol.getStateChannelByParticipants(
+    const carolChannelRes = await carol.getStateChannelByParticipants(
       roger.publicIdentifier,
       carol.publicIdentifier,
       chainId,
     );
-    const channel = channelRes.getValue()!;
+    const carolChannel = carolChannelRes.getValue()!;
 
-    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
-    const carolBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
+    const daveChannelRes = await carol.getStateChannelByParticipants(
+      roger.publicIdentifier,
+      dave.publicIdentifier,
+      chainId,
+    );
+    const daveChannel = daveChannelRes.getValue()!;
+
+    const carolAssetIdx = carolChannel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const carolBefore = carolAssetIdx === -1 ? "0" : carolChannel.balances[carolAssetIdx].amount[1];
+    const daveAssetIdx = daveChannel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const daveBefore = daveAssetIdx === -1 ? "0" : daveChannel.balances[daveAssetIdx].amount[1];
 
     const preImage = getRandomBytes32();
     const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
@@ -132,7 +141,7 @@ describe(testName, () => {
     const transferRes = await carol.conditionalTransfer({
       amount: transferAmt.toString(),
       assetId,
-      channelAddress: channel.channelAddress,
+      channelAddress: carolChannel.channelAddress,
       conditionType: "LinkedTransfer",
       details: {
         linkedHash,
@@ -143,23 +152,23 @@ describe(testName, () => {
     });
     expect(transferRes.getError()).to.not.be.ok;
 
-    const channelAfterTransfer = (await carol.getStateChannel(channel.channelAddress)).getValue()!;
+    const channelAfterTransfer = (await carol.getStateChannel(carolChannel.channelAddress)).getValue()!;
     // console.log("channelAfterTransfer: ", channelAfterTransfer);
-    const carolAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
+    const carolAfterTransfer = carolAssetIdx === -1 ? "0" : channelAfterTransfer.balances[carolAssetIdx].amount[0];
     expect(carolAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
 
-    // const resolveRes = await dave.resolveTransfer({
-    //   channelAddress: channel.channelAddress,
-    //   conditionType: "LinkedTransfer",
-    //   details: {
-    //     preImage,
-    //   },
-    //   routingId,
-    // });
-    // expect(resolveRes.isError).to.not.be.ok;
+    const resolveRes = await dave.resolveTransfer({
+      channelAddress: daveChannel.channelAddress,
+      conditionType: "LinkedTransfer",
+      details: {
+        preImage,
+      },
+      routingId,
+    });
+    expect(resolveRes.getError()).to.not.be.ok;
 
-    // const channelAfterResolve = (await carol.getStateChannel(channel.channelAddress)).getValue()!;
-    // const daveAfterResolve = assetIdx === -1 ? "0" : channelAfterResolve.balances[assetIdx].amount[1];
-    // expect(daveAfterResolve).to.be.eq(BigNumber.from(daveBefore).add(transferAmt));
+    const channelAfterResolve = (await dave.getStateChannel(daveChannel.channelAddress)).getValue()!;
+    const daveAfterResolve = daveAssetIdx === -1 ? "0" : channelAfterResolve.balances[daveAssetIdx].amount[1];
+    expect(daveAfterResolve).to.be.eq(BigNumber.from(daveBefore).add(transferAmt));
   });
 });
