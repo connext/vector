@@ -6,13 +6,14 @@ import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/IERC20.sol";
 import "./CMCCore.sol";
+import "./AssetTransfer.sol";
 import "./CMCDeposit.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 
 /// @title Adjudicator - Dispute logic for ONE channel
-contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
+contract CMCAdjudicator is CMCCore, AssetTransfer, CMCDeposit, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
@@ -107,7 +108,7 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     //     transfer.to[0] = balance.to[0];
     //     transfer.to[1] = balance.to[1];
     //     transfer.amount[0] = balance.amount[0];
-    //     transferAsset(transfer, assetId);
+    //     transfer(assetId, transfer);
     // }
   }
 
@@ -179,7 +180,7 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     } else {
       finalBalance = cts.initialBalance;
     }
-    transferAsset(finalBalance, cts.assetId);
+    transfer(cts.assetId, finalBalance);
   }
 
   function verifySenderIsParticipant(CoreChannelState memory ccs) internal view {
@@ -234,18 +235,4 @@ contract CMCAdjudicator is CMCCore, CMCDeposit, ICMCAdjudicator {
     return keccak256(abi.encode(cts));
   }
 
-  // TODO: Asset library
-
-  function transferAsset(Balance memory balances, address assetId) internal {
-    // TODO: This is quick-and-dirty to allow for basic testing.
-    // We should add dealing with non-standard-conforming tokens,
-    // unexpected reverts, avoid reentrancy, etc.
-    if (assetId == address(0)) {
-      balances.to[0].transfer(balances.amount[0]);
-      balances.to[1].transfer(balances.amount[1]);
-    } else {
-      require(IERC20(assetId).transfer(balances.to[0], balances.amount[0]), "oh no");
-      require(IERC20(assetId).transfer(balances.to[1], balances.amount[1]), "oh no");
-    }
-  }
 }
