@@ -48,7 +48,7 @@ try {
     };
   });
 } catch (e) {
-  console.log(e);
+  console.log("VECTOR_CONTRACT_ADDRESSES=", process.env.VECTOR_CONTRACT_ADDRESSES);
   throw new Error(`VECTOR_CONTRACT_ADDRESSES is a required config item: ${e.message}`);
 }
 

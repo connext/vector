@@ -65,6 +65,8 @@ common="networks:
       options:
           max-size: '100m'"
 
+admin_token="${VECTOR_ADMIN_TOKEN:-cxt1234}"
+
 ####################
 # Proxy config
 
@@ -124,23 +126,35 @@ pg_user="$project"
 
 if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
 then
-  echo "\$VECTOR_AUTH_URL or \$VECTOR_CHAIN_PROVIDERS is missing, starting global services"
-  bash $root/ops/start-global.sh
-  auth_url="http://auth:5040"
-  mnemonic_secret_name="${project}_mnemonic_dev"
-  eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-  bash $root/ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic" > /dev/null
-  VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
-  VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
+  echo "\$VECTOR_AUTH_URL ($VECTOR_AUTH_URL) or \$VECTOR_CHAIN_PROVIDERS ($VECTOR_CHAIN_PROVIDERS) is missing"
+
+  if [[ "$VECTOR_ENV" == "prod" ]]
+  then
+    echo "In prod mode, \$VECTOR_AUTH_URL and \$VECTOR_CHAIN_PROVIDERS must be provided."
+    exit 1
+  else
+    echo "Starting global services"
+    bash $root/ops/start-global.sh
+    auth_url="http://auth:5040"
+    mnemonic_secret_name="${project}_mnemonic_dev"
+    eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+    bash $root/ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic" > /dev/null
+    VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
+    VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
+  fi
 
 else
   echo "Connecting to external global servies: $VECTOR_AUTH_URL & $VECTOR_CHAIN_PROVIDERS"
   auth_url="$VECTOR_AUTH_URL"
   mnemonic_secret_name="${project}_mnemonic"
-  # Prefer top-level address-book otherwise default to one in contracts
-  if [[ -f address-book.json ]]
-  then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
-  else VECTOR_CONTRACT_ADDRESSES="`cat modules/contracts/address-book.json | tr -d ' \n\r'`"
+  if [[ -z "$VECTOR_CONTRACT_ADDRESSES" ]]
+  then
+    if [[ -f "address-book.json" ]]
+    then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
+    elif [[ -f ".chaindata/address-book.json" ]]
+    then VECTOR_CONTRACT_ADDRESSES="`cat .chaindata/address-book.json | tr -d ' \n\r'`"
+    else echo "No \$VECTOR_CONTRACT_ADDRESSES provided & can't find an address-book, aborting"
+    fi
   fi
 fi
 
@@ -168,7 +182,7 @@ else
 fi
 
 ####################
-# Launch Indra stack
+# Launch stack
 
 rm -rf $root/docker-compose.yml $root/$stack.docker-compose.yml
 cat - > $root/$stack.docker-compose.yml <<EOF
@@ -207,7 +221,7 @@ services:
     ports:
       - '$node_port:$node_port'
     environment:
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
@@ -232,7 +246,7 @@ services:
     environment:
       AWS_ACCESS_KEY_ID: '$VECTOR_AWS_ACCESS_KEY_ID'
       AWS_SECRET_ACCESS_KEY: '$VECTOR_AWS_SECRET_ACCESS_KEY'
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_ENV: '$VECTOR_ENV'
       POSTGRES_DB: '$project'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'

@@ -117,7 +117,7 @@ reset: stop-all
 	rm -rf .chaindata/*
 
 reset-images:
-	rm -f .flags/auth .flags/database .flags/ethprovider .flags/node .flags/*proxy
+	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node
 
 purge: clean reset
 
@@ -269,8 +269,8 @@ server-node-bundle: engine $(shell find modules/server-node $(find_options))
 
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
-	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
-	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/server-node
+	docker tag $(project)_node $(project)_node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 router-bundle: engine $(shell find modules/router $(find_options))
