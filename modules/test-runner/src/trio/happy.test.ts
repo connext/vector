@@ -54,7 +54,7 @@ describe(testName, () => {
     await tx.wait();
   });
 
-  it.skip("roger should setup channels with carol and dave", async () => {
+  it("roger should setup channels with carol and dave", async () => {
     let channelRes = await roger.setup({
       chainId,
       counterpartyIdentifier: carol.publicIdentifier,
