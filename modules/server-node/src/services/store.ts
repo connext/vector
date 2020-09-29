@@ -173,7 +173,6 @@ const convertTransferEntityToFullTransferState = (
 };
 
 export class PrismaStore implements IServerNodeStore {
-  private eventSubscriptions: { [event: string]: string } = {};
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
@@ -189,15 +188,31 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
-    this.eventSubscriptions[event] = url;
+    await this.prisma.eventSubscription.upsert({
+      where: {
+        event,
+      },
+      create: {
+        event,
+        url,
+      },
+      update: {
+        url,
+      },
+    });
   }
 
   async getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined> {
-    return this.eventSubscriptions[event];
+    const sub = await this.prisma.eventSubscription.findOne({ where: { event } });
+    return sub ? sub.url : undefined;
   }
 
   async getSubscriptions(): Promise<{ [event: string]: string }> {
-    return this.eventSubscriptions;
+    const subs = await this.prisma.eventSubscription.findMany();
+    return subs.reduce((s, sub) => {
+      s[sub.event] = sub.url;
+      return s;
+    }, {} as { [event: string]: string });
   }
 
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
@@ -353,10 +368,10 @@ export class PrismaStore implements IServerNodeStore {
 
         // if resolve, add resolvedTransfer by routingId
         resolvedTransfer:
-          transfer?.meta?.routingId && channelState.latestUpdate.type === UpdateType.resolve
+          channelState.latestUpdate.type === UpdateType.resolve
             ? {
                 connect: {
-                  routingId: transfer?.meta?.routingId,
+                  transferId: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferId,
                 },
               }
             : undefined,

@@ -50,9 +50,11 @@ describe(testName, () => {
     await tx.wait();
     tx = await wallet.sendTransaction({ to: dave.signerAddress, value: utils.parseEther("0.1") });
     await tx.wait();
+    tx = await wallet.sendTransaction({ to: roger.signerAddress, value: utils.parseEther("0.1") });
+    await tx.wait();
   });
 
-  it("roger should setup channels with carol and dave", async () => {
+  it.skip("roger should setup channels with carol and dave", async () => {
     let channelRes = await roger.setup({
       chainId,
       counterpartyIdentifier: carol.publicIdentifier,
@@ -111,7 +113,7 @@ describe(testName, () => {
     expect(BigNumber.from(carolBefore).add(depositAmt)).to.eq(carolAfter);
   });
 
-  it.skip("carol can transfer ETH to dave via roger and resolve the transfer", async () => {
+  it("carol can transfer ETH to dave via roger and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await carol.getStateChannelByParticipants(

@@ -27,7 +27,7 @@ const store = new RouterStore();
 server.addHook("onReady", async () => {
   const node = await RestServerNodeService.connect(
     config.serverNodeUrl,
-    "http://router:8008",
+    `http://router:${config.port}`,
     config.chainProviders,
     conditionalTransferEvt,
     logger.child({ module: "RestServerNodeService" }),
@@ -41,6 +41,7 @@ server.get("/ping", async () => {
 
 server.post("/conditional-transfer-created", async (request, response) => {
   conditionalTransferEvt.post(request.body);
+  console.log("request.body: ", request.body);
   return response.status(200).send({ message: "success" });
 });
 
