@@ -3,6 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/Types.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
 import "./Withdrawable.sol";
@@ -101,6 +102,13 @@ contract AssetTransfer is Withdrawable {
         }
 
         return success;
+    }
+
+    function transfer(address assetId, Balance memory balance)
+        internal
+    {
+        transferAsset(assetId, balance.to[0], balance.amount[0]);
+        transferAsset(assetId, balance.to[1], balance.amount[1]);
     }
 
 }
