@@ -27,6 +27,7 @@ import {
   ChannelSigner,
   hashTransferState,
   expect,
+  MemoryStoreService,
 } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import { MerkleTree } from "merkletreejs";
@@ -34,7 +35,6 @@ import Sinon from "sinon";
 
 import * as vectorUpdate from "../update";
 
-import { MemoryStoreService } from "./services/store";
 import { env } from "./env";
 
 type ApplyUpdateTestParams = {

@@ -8,6 +8,7 @@ import {
   createTestChannelState,
   createTestUpdateParams,
   mkHash,
+  MemoryStoreService,
   expect,
 } from "@connext/vector-utils";
 import pino from "pino";
@@ -30,7 +31,6 @@ import * as vectorSync from "../sync";
 
 import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
-import { MemoryStoreService } from "./services/store";
 
 describe("Vector", () => {
   let chainService: Sinon.SinonStubbedInstance<IVectorOnchainService>;

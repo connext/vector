@@ -8,6 +8,7 @@ import {
   mkAddress,
   mkSig,
   expect,
+  MemoryStoreService,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -28,7 +29,6 @@ import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
 
-import { MemoryStoreService } from "./services/store";
 import { MemoryMessagingService } from "./services/messaging";
 import { env } from "./env";
 

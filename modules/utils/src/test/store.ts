@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+  FullTransferState,
   FullChannelState,
   ChannelCommitmentData,
-  FullTransferState,
   IEngineStore,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
@@ -33,15 +34,6 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve();
   }
 
-  getSchemaVersion(): Promise<number | undefined> {
-    return Promise.resolve(this.schemaVersion);
-  }
-
-  updateSchemaVersion(version?: number): Promise<void> {
-    this.schemaVersion = version;
-    return Promise.resolve();
-  }
-
   getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
     const { state } = this.channelStates.get(channelAddress) ?? {};
     return Promise.resolve(state);
@@ -54,8 +46,8 @@ export class MemoryStoreService implements IEngineStore {
   ): Promise<FullChannelState<any> | undefined> {
     return Promise.resolve(
       [...this.channelStates.values()].find(channelState => {
-        channelState.state.participants[0] === participantA &&
-          channelState.state.participants[1] === participantB &&
+        channelState.state.alice === participantA &&
+          channelState.state.bob === participantB &&
           channelState.state.networkContext.chainId === chainId;
       })?.state,
     );
@@ -65,37 +57,14 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve([...this.channelStates.values()].map(c => c.state));
   }
 
-  getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
-    const active = [...(this.transfersInChannel.get(channelAddress) ?? [])];
-    const all = active.map(id => this.transfers.get(id)).filter(x => !!x);
-    return Promise.resolve(all as FullTransferState[]);
-  }
-
-  getTransferState(transferId: string): Promise<FullTransferState | undefined> {
-    return Promise.resolve(this.transfers.get(transferId));
-  }
-
-  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
-    return Promise.resolve(this.channelStates.get(channelAddress)?.commitment);
-  }
-
-  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
-    return Promise.resolve(undefined);
-  }
-
   saveChannelState(
     channelState: FullChannelState,
     commitment: ChannelCommitmentData,
     transfer?: FullTransferState,
   ): Promise<void> {
-    const existing = this.channelStates.get(channelState.channelAddress)?.state ?? channelState;
     this.channelStates.set(channelState.channelAddress, {
       state: {
         ...channelState,
-        channelAddress: existing.channelAddress,
-        publicIdentifiers: existing.publicIdentifiers,
-        participants: existing.participants,
-        networkContext: existing.networkContext,
       },
       commitment,
     });
@@ -122,6 +91,32 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve();
   }
 
+  getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
+    const active = [...(this.transfersInChannel.get(channelAddress) ?? [])];
+    const all = active.map(id => this.transfers.get(id)).filter(x => !!x);
+    return Promise.resolve(all as FullTransferState[]);
+  }
+
+  getTransferState(transferId: string): Promise<FullTransferState | undefined> {
+    return Promise.resolve(this.transfers.get(transferId));
+  }
+
+  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
+    return Promise.resolve(this.channelStates.get(channelAddress)?.commitment);
+  }
+
+  getSchemaVersion(): Promise<number | undefined> {
+    return Promise.resolve(this.schemaVersion);
+  }
+
+  updateSchemaVersion(version?: number): Promise<void> {
+    this.schemaVersion = version;
+    return Promise.resolve();
+  }
+
+  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
+    return Promise.resolve(undefined);
+  }
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
     return Promise.resolve();
   }
