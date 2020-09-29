@@ -287,16 +287,6 @@ describe("Vector", () => {
 
       const tests: ParamValidationTest[] = [
         {
-          name: "should fail if responder is undefined",
-          params: { ...validParams, responder: undefined },
-          error: "should have required property 'responder'",
-        },
-        {
-          name: "should fail if responder is invalid",
-          params: { ...validParams, responder: "fail" },
-          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
-        },
-        {
           name: "should fail if channelAddress is undefined",
           params: { ...validParams, channelAddress: undefined },
           error: "should have required property 'channelAddress'",

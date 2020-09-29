@@ -159,7 +159,6 @@ export function createTestChannelUpdate<T extends UpdateType>(
           linkedHash: mkBytes32("0xlinkedhash"),
         } as LinkedTransferState,
         transferTimeout: "0",
-        responder: mkAddress("0xbbb"),
       } as CreateUpdateDetails;
       break;
     case UpdateType.resolve:
