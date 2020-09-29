@@ -3,8 +3,10 @@ import {
   ChainAddresses,
   ChannelUpdateEvent,
   ConditionalTransferCreatedPayload,
+  ConditionalTransferResolvedPayload,
   ConditionalTransferType,
   CreateUpdateDetails,
+  DepositReconciledPayload,
   EngineEvents,
   FullChannelState,
   FullTransferState,
@@ -69,7 +71,7 @@ export async function setupEngineListeners(
   // Setup listener for conditional transfer resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleConditionalTransferResolution(event, signer, vector, evts, logger),
+    event => handleConditionalTransferResolution(event, chainAddresses, vector, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -139,7 +141,13 @@ async function handleDepositReconciliation(
     balances,
     assetIds,
     latestUpdate: { assetId },
-  } = event.updatedChannelState;
+  } = event.updatedChannelState as FullChannelState<typeof UpdateType.deposit>;
+  const payload: DepositReconciledPayload = {
+    channelAddress,
+    assetId,
+    channelBalance: balances[assetIds.findIndex(a => a === assetId)],
+  };
+  evts[EngineEvents.DEPOSIT_RECONCILED].post(payload);
 }
 
 async function handleConditionalTransferCreation(
@@ -185,7 +193,7 @@ async function handleConditionalTransferCreation(
 
 async function handleConditionalTransferResolution(
   event: ChannelUpdateEvent,
-  signer: IChannelSigner,
+  chainAddresses: ChainAddresses,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
@@ -194,7 +202,31 @@ async function handleConditionalTransferResolution(
     { channelAddress: event.updatedChannelState.channelAddress },
     "Caught conditional transfer resolve event",
   );
+  const {
+    channelAddress,
+    assetIds,
+    balances,
+    networkContext: { chainId },
+    latestUpdate: {
+      assetId,
+      details: { transferId, meta, transferDefinition },
+    },
+  } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
   // Emit the properly structured event
+  let conditionType: ConditionalTransferType | undefined;
+  switch (transferDefinition) {
+    case chainAddresses[chainId].linkedTransferDefinition:
+      conditionType = ConditionalTransferType.LinkedTransfer;
+      break;
+  }
+  const payload: ConditionalTransferResolvedPayload = {
+    channelAddress,
+    channelBalance: balances[assetIds.findIndex(a => a === assetId)],
+    routingId: meta?.routingId,
+    transfer: (await vector.getTransferState(transferId))!,
+    conditionType: conditionType!,
+  };
+  evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
 }
 
 async function handleWithdrawalTransferCreation(
