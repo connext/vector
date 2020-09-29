@@ -16,7 +16,6 @@ describe(testName, () => {
   let dave: IServerNodeService;
   let roger: IServerNodeService;
   before(async () => {
-    console.log(`Connecting to carol's node: ${env.carolUrl}`);
     carol = await RestServerNodeService.connect(
       env.carolUrl,
       "",
@@ -27,7 +26,6 @@ describe(testName, () => {
     expect(carol.signerAddress).to.be.a("string");
     expect(carol.publicIdentifier).to.be.a("string");
 
-    console.log(`Connecting to dave's node`);
     dave = await RestServerNodeService.connect(
       env.daveUrl,
       "",
@@ -79,7 +77,6 @@ describe(testName, () => {
   });
 
   it("carol can deposit ETH into channel", async () => {
-    console.log(`Starting tests`);
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await carol.getStateChannelByParticipants(
@@ -87,9 +84,6 @@ describe(testName, () => {
       carol.publicIdentifier,
       chainId,
     );
-    if (channelRes.isError) {
-      throw new Error(channelRes.getError());
-    }
     const channel = channelRes.getValue()!;
 
     let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
@@ -103,9 +97,6 @@ describe(testName, () => {
       },
       channel.networkContext.chainId,
     );
-    if (depositRes.isError) {
-      throw new Error(depositRes.getError());
-    }
     const deposit = depositRes.getValue();
 
     expect(deposit.channelAddress).to.be.a("string");
@@ -151,7 +142,7 @@ describe(testName, () => {
     expect(transferRes.isError).to.not.be.ok;
 
     const channelAfterTransfer = (await carol.getStateChannel(channel.channelAddress)).getValue()!;
-    console.log("channelAfterTransfer: ", channelAfterTransfer);
+    // console.log("channelAfterTransfer: ", channelAfterTransfer);
     const carolAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
     expect(carolAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
 
