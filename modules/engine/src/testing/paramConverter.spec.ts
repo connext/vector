@@ -19,8 +19,8 @@ import {
   createTestFullLinkedTransferState,
   getRandomBytes32,
   getRandomChannelSigner,
+  getRandomIdentifier,
   mkAddress,
-  mkHash,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -50,21 +50,21 @@ describe("ParamConverter", () => {
   };
 
   describe("convertConditionalTransferParams", () => {
-    const generateParams = (bIsRecipient = true): EngineParams.ConditionalTransfer => {
+    const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
         amount: "8",
         assetId: mkAddress("0x0"),
-        recipient: bIsRecipient ? signerB.publicIdentifier : signerA.publicIdentifier,
+        recipient: bIsRecipient ? signerB.publicIdentifier : getRandomIdentifier(),
         recipientChainId: 1,
         recipientAssetId: mkAddress("0x1"),
         conditionType: ConditionalTransferType.LinkedTransfer,
-        routingId: mkHash("0x123"),
         details: {
           linkedHash: getRandomBytes32(),
         },
         meta: {
           message: "test",
+          routingId: getRandomBytes32(),
         },
       };
     };
@@ -100,7 +100,8 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: {
-          routingId: params.routingId,
+          requireOnline: false,
+          routingId: params.meta.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -114,7 +115,7 @@ describe("ParamConverter", () => {
     });
 
     it("should work for B", async () => {
-      const params = generateParams(false);
+      const params = generateParams();
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
@@ -144,7 +145,8 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: {
-          routingId: params.routingId,
+          requireOnline: false,
+          routingId: params.meta.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -180,7 +182,7 @@ describe("ParamConverter", () => {
       return {
         channelAddress: mkAddress("0xa"),
         conditionType: ConditionalTransferType.LinkedTransfer,
-        routingId: mkHash("0xtest"),
+        transferId: getRandomBytes32(),
         details: {
           preImage: getRandomBytes32(),
         } as LinkedTransferResolver,
@@ -203,7 +205,6 @@ describe("ParamConverter", () => {
           preImage: params.details.preImage,
         },
         meta: {
-          routingId: params.routingId,
           details: params.meta,
         },
       });

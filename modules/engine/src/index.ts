@@ -14,13 +14,13 @@ import {
   EngineParams,
   OutboundChannelUpdateError,
   TAddress,
-  ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
   EngineEventMap,
   IEngineStore,
   EngineEvent,
   EngineEvents,
+  ChannelRpcMethod,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -203,8 +203,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // TODO: consider a store method to find active transfer by routingId
-    const transfers = await this.store.getActiveTransfers(params.channelAddress);
-    const transfer = transfers.find(instance => instance.meta.routingId === params.routingId);
+    const transfer = await this.store.getTransferState(params.transferId);
     if (!transfer) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
@@ -213,7 +212,7 @@ export class VectorEngine implements IVectorEngine {
     // TODO validate that transfer hasn't already been resolved?
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const resolveResult = convertResolveConditionParams(params, transfer!);
+    const resolveResult = convertResolveConditionParams(params, transfer);
     if (resolveResult.isError) {
       return Result.fail(resolveResult.getError()!);
     }
@@ -258,14 +257,15 @@ export class VectorEngine implements IVectorEngine {
   }
 
   // JSON RPC interface -- this will accept:
-  // - "vector_deposit"
-  // - "vector_createTransfer"
-  // - "vector_resolveTransfer"
-  public async request<T extends ChannelRpcMethods>(
+  // - "chan_deposit"
+  // - "chan_createTransfer"
+  // - "chan_resolveTransfer"
+  // - etc.
+  public async request<T extends ChannelRpcMethod>(
     payload: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     this.logger.debug({ payload, method: "request" }, "Method called");
-    const validate = ajv.compile(EngineParams.RpcRequestSchema);
+    const validate = ajv.compile(EngineParams.RpcRequestSchema(payload.method));
     const valid = validate(payload);
     if (!valid) {
       // dont use result type since this could go over the wire
