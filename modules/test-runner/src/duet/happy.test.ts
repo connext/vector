@@ -46,6 +46,7 @@ describe(testName, () => {
       counterpartyIdentifier: bob.publicIdentifier,
       timeout: "10000",
     });
+    expect(channelRes.getError()).to.be.undefined;
     const channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
     const aliceChannel = await alice.getStateChannel(channel.channelAddress);

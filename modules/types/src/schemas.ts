@@ -156,7 +156,7 @@ const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema])
 const SharedResolveTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   routingId: TBytes32, // This is needed for hopped transfers, but it might get confusing against transferId
-  meta: Type.Any(), // TODO: better meta?
+  meta: Type.Optional(Type.Any()), // TODO: better meta?
 });
 
 const ResolveLinkedTransferParamsSchema = Type.Intersect([
