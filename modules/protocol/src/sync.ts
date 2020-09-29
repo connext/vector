@@ -240,10 +240,6 @@ export async function inbound(
     if (update.type !== UpdateType.setup && previousUpdate.type !== UpdateType.setup) {
       return returnError(InboundChannelUpdateError.reasons.ChannelNotFound);
     }
-    const publicIdentifiers =
-      update.type === UpdateType.setup
-        ? [update.fromIdentifier, update.toIdentifier]
-        : [previousUpdate.fromIdentifier, previousUpdate.toIdentifier];
     const networkContext =
       update.type === UpdateType.setup
         ? (update.details as SetupUpdateDetails).networkContext
@@ -466,6 +462,8 @@ const syncStateAndRecreateUpdate = async (
   // Update successfully validated and applied to channel, now
   // regenerate the update to send to the counterparty from the
   // given parameters
+  // FIXME: generateBaseUpdate will fail when you are creating updates as
+  // an update responder
   const generateRes = await generateUpdate(
     attemptedParams,
     syncedChannel,

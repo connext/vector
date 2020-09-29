@@ -82,14 +82,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
-      vector = await Vector.connect(
-        messagingService,
-        lockService,
-        storeService,
-        signer,
-        chainService,
-        pino(),
-      );
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
     });
 
     it("should work", async () => {
@@ -289,7 +282,6 @@ describe("Vector", () => {
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestLinkedTransferState(),
         timeout: "133215",
-        responder: mkAddress("0x222"),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
       };
 

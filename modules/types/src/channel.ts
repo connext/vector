@@ -35,7 +35,6 @@ export type CreateTransferParams = {
   transferInitialState: TransferState;
   timeout: string;
   encodings: string[]; // [Initial state, resolve state]
-  responder: Address;
   meta?: any;
 };
 
@@ -187,7 +186,6 @@ export type CreateUpdateDetails = {
   transferEncodings: string[]; // Initial state, resolver state
   merkleProofData: string[];
   merkleRoot: string;
-  responder: Address;
   meta?: any;
 };
 

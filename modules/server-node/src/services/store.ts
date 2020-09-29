@@ -154,10 +154,13 @@ const convertTransferEntityToFullTransferState = (
       to: [transfer.initialToA, transfer.initialToB],
     },
     initiator:
-      transfer.createUpdate!.responder === transfer.channel!.participantA
-        ? transfer.channel!.participantB
+      transfer.createUpdate!.fromIdentifier === transfer.channel?.publicIdentifierA
+        ? transfer.channel!.participantA
         : transfer.channel!.participantB,
-    responder: transfer.createUpdate!.responder!,
+    responder:
+      transfer.createUpdate!.toIdentifier === transfer.channel?.publicIdentifierA
+        ? transfer.channel!.participantA
+        : transfer.channel!.participantB,
     initialStateHash: transfer.initialStateHash,
     transferDefinition: transfer.createUpdate!.transferDefinition!,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
@@ -342,7 +345,6 @@ export class PrismaStore implements IServerNodeStore {
           ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
           : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
-        responder: (channelState.latestUpdate!.details as CreateUpdateDetails).responder,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
         meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)

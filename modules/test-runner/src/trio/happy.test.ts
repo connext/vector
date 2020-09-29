@@ -54,7 +54,7 @@ describe(testName, () => {
     await tx.wait();
   });
 
-  it("roger should setup channels with carol and dave", async () => {
+  it.skip("roger should setup channels with carol and dave", async () => {
     let channelRes = await roger.setup({
       chainId,
       counterpartyIdentifier: carol.publicIdentifier,
@@ -141,7 +141,7 @@ describe(testName, () => {
       routingId,
       recipient: dave.publicIdentifier,
     });
-    expect(transferRes.isError).to.not.be.ok;
+    expect(transferRes.getError()).to.not.be.ok;
 
     const channelAfterTransfer = (await carol.getStateChannel(channel.channelAddress)).getValue()!;
     // console.log("channelAfterTransfer: ", channelAfterTransfer);

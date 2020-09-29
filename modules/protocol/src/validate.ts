@@ -372,7 +372,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         transferTimeout,
         transferInitialState,
         transferEncodings,
-        responder,
         meta,
       } = details as CreateUpdateDetails;
       // Ensure the transferId is properly formatted
@@ -400,6 +399,11 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // Ensure the same merkleRoot is generated
 
       // Create the valid transfer object
+      // The update can be sent from either [aliceIdentifier, bobIdentifier].
+      // The `transfer.initiator` is either alice/bob, depending on who is
+      // creating the transfer (i.e. initiating this update). The responder
+      // is the channel counterparty (i.e. bob/alice respectively), and can
+      // be determined by the update initiators/responders
       transfer = {
         initialBalance: { ...transferInitialState.balance },
         assetId,
@@ -412,8 +416,8 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         chainId: previousState.networkContext.chainId,
         transferEncodings,
         transferState: { ...transferInitialState },
-        initiator: previousState.alice === responder ? previousState.bob : previousState.alice,
-        responder,
+        initiator: fromIdentifier === previousState.aliceIdentifier ? previousState.alice : previousState.bob,
+        responder: toIdentifier === previousState.aliceIdentifier ? previousState.alice : previousState.bob,
         meta,
       };
       break;

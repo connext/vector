@@ -73,6 +73,7 @@ export async function forwardTransferCreation(
       transferState: conditionData,
       channelAddress: senderChannelAddress,
       initiator,
+      responder,
     },
     routingId,
     conditionType,
@@ -91,6 +92,11 @@ export async function forwardTransferCreation(
 
   if (initiator === node.signerAddress) {
     logger.warn({ initiator, method }, "Initiated by our node, doing nothing");
+    return Result.ok(undefined);
+  }
+
+  if (responder !== node.signerAddress) {
+    logger.error({ initiator, responder, node: node.signerAddress }, "Node is not initiator or responder in transfer");
     return Result.ok(undefined);
   }
 

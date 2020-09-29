@@ -331,7 +331,7 @@ function generateCreateUpdate(
   transfers: CoreTransferState[],
 ): { unsigned: ChannelUpdate<"create">; transfer: FullTransferState } {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta, responder },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -356,7 +356,7 @@ function generateCreateUpdate(
     chainId: state.networkContext.chainId,
     transferResolver: undefined,
     initiator: signer.address,
-    responder,
+    responder: signer.address === state.alice ? state.bob : state.alice,
     meta,
   };
   const transferHash = hashCoreTransferState(transferState);
@@ -381,7 +381,6 @@ function generateCreateUpdate(
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
-      responder,
     },
   };
   return { transfer: transferState, unsigned };
