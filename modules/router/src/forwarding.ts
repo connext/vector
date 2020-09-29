@@ -2,6 +2,7 @@ import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   Result,
+  ServerNodeResponses,
   Values,
   VectorError,
 } from "@connext/vector-types";
@@ -23,6 +24,7 @@ export class ForwardTransferError extends VectorError {
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     ErrorForwardingTransfer: "Error forwarding transfer",
     UnableToCollateralize: "Could not collateralize receiver channel",
+    ErrorResolvingTransfer: "Error resolving tranfer",
   } as const;
 
   constructor(
@@ -95,11 +97,6 @@ export async function forwardTransferCreation(
 
   if (initiator === node.signerAddress) {
     logger.warn({ initiator, method }, "Initiated by our node, doing nothing");
-    return Result.ok(undefined);
-  }
-
-  if (responder !== node.signerAddress) {
-    logger.error({ initiator, responder, node: node.signerAddress }, "Node is not initiator or responder in transfer");
     return Result.ok(undefined);
   }
 
@@ -268,22 +265,68 @@ export async function forwardTransferResolution(
   node: IServerNodeService,
   store: IRouterStore,
   logger: BaseLogger,
-) {
-  // let { recipientChannelAddress, paymentId, resolverData } = data;
-  // const senderChannelAddress = await getSenderChannelAddressFromPaymentId(paymentId, recipientChannelAddress);
-  // try {
-  //   await node.resolveCondtion(senderChannelAddress, paymentId, resolverData);
-  //   // TODO attempt a reclaim in here (Ideally not in the same try block)
-  //   return;
-  // } catch (e) {
-  //   // Always store and retry this later
+): Promise<Result<undefined | ServerNodeResponses.ResolveTransfer, ForwardTransferError>> {
+  const method = "forwardTransferResolution";
+  logger.info(
+    { data, method, node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier } },
+    "Received transfer resolution, starting forwarding",
+  );
+  const {
+    channelAddress,
+    routingId,
+    transfer: { transferId, responder, transferResolver },
+    conditionType,
+  } = data;
+
+  // If there is no routingId, do nothing
+  if (!routingId) {
+    logger.warn({ transferId, routingId, channelAddress }, "No routingId found");
+    return Result.ok(undefined);
+  }
+
+  // If there is no resolver, do nothing
+  if (!transferResolver) {
+    logger.warn({ transferId, routingId, channelAddress }, "No resolver found in transfer");
+    return Result.ok(undefined);
+  }
+
+  // If we are the receiver of this transfer, do nothing
+  if (responder === node.signerAddress) {
+    logger.info({ method, routingId }, "Nothing to reclaim");
+    return Result.ok(undefined);
+  }
+
+  // Find the sender channel for the transfer
+  const senderChannelAddress = "";
+
+  // Resolve the sender transfer
+  const resolveParams = {
+    channelAddress: senderChannelAddress,
+    routingId,
+    meta: {},
+    conditionType,
+    details: { ...transferResolver },
+  };
+  throw new Error(`Finish implementing, wouldve called resolve with: ${JSON.stringify(resolveParams)}`);
+  // const resolution = await node.resolveCondtion(resolveParams);
+  // if (resolution.isError) {
+  //   // Store the transfer, retry later
+  //   // TODO: add logic to periodically retry resolving transfers
+  //   const type = "TransferResolution";
+  //   await store.queueUpdate(type, resolveParams);
+  //   return Result.fail(
+  //     new ForwardTransferError(ForwardTransferError.reasons.ErrorResolvingTransfer, {
+  //       message: resolution.getError()?.message,
+  //       routingId,
+  //       transferResolver,
+  //       senderChannelAddress,
+  //       recipientTransferId: transferId,
+  //       recipientChannelAddress: channelAddress,
+  //     }),
+  //   );
   // }
-  // const type = "TransferResolution";
-  // await store.queueUpdate(type, {
-  //   channelAddress: senderChannelAddress,
-  //   paymentId,
-  //   resolverData,
-  // });
+
+  // return Result.ok(resolution.getValue());
 }
 
 export async function handleIsAlive(data: any, node: IServerNodeService, store: IRouterStore) {
