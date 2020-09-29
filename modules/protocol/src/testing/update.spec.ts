@@ -26,15 +26,15 @@ import {
   createTestFullLinkedTransferState,
   ChannelSigner,
   hashTransferState,
+  expect,
+  MemoryStoreService,
 } from "@connext/vector-utils";
-import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { MerkleTree } from "merkletreejs";
 import Sinon from "sinon";
 
 import * as vectorUpdate from "../update";
 
-import { MemoryStoreService } from "./services/store";
 import { env } from "./env";
 
 type ApplyUpdateTestParams = {
@@ -399,8 +399,10 @@ describe("applyUpdate", () => {
         expect(result.getError()).to.be.undefined;
         expect(result.getValue()).to.containSubset({
           channelAddress,
-          publicIdentifiers,
-          participants,
+          aliceIdentifier: publicIdentifiers[0],
+          bobIdentifier: publicIdentifiers[1],
+          alice: participants[0],
+          bob: participants[1],
           latestUpdate: update,
           nonce: previousState.nonce + 1,
           networkContext,
@@ -584,6 +586,7 @@ describe("generateUpdate", () => {
           encodings: emptyLinkedTransfer.transferEncodings,
           timeout: emptyLinkedTransfer.transferTimeout,
           meta: emptyLinkedTransfer.meta,
+          responder: emptyLinkedTransfer.responder,
         },
       },
       stateOverrides: {
@@ -607,6 +610,7 @@ describe("generateUpdate", () => {
           merkleProofData,
           merkleRoot,
           meta: emptyLinkedTransfer.meta,
+          responder: emptyLinkedTransfer.responder,
         },
       },
       expectedTransfer: {
@@ -618,6 +622,8 @@ describe("generateUpdate", () => {
           ...emptyLinkedTransfer.transferState,
           balance: { to: participants, amount: ["7", "0"] },
         },
+        initiator: emptyLinkedTransfer.initiator,
+        responder: emptyLinkedTransfer.responder,
         initialStateHash: hashTransferState(
           {
             ...emptyLinkedTransfer.transferState,
@@ -657,6 +663,8 @@ describe("generateUpdate", () => {
       },
       expectedTransfer: {
         transferId: emptyLinkedTransfer.transferId,
+        initiator: emptyLinkedTransfer.initiator,
+        responder: emptyLinkedTransfer.responder,
         transferState: {
           ...emptyLinkedTransfer.transferState,
           balance: { to: participants, amount: ["0", "7"] },
@@ -711,9 +719,7 @@ describe("generateUpdate", () => {
       // Generate the state
       const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
         channelAddress,
-        participants,
         networkContext,
-        publicIdentifiers,
         ...stateOverrides,
       });
 
@@ -721,9 +727,7 @@ describe("generateUpdate", () => {
       const inStore = !!storedChannel
         ? createTestChannelStateWithSigners(signers, UpdateType.setup, {
             channelAddress,
-            participants,
             networkContext,
-            publicIdentifiers,
             ...storedChannel,
           })
         : state;
@@ -767,7 +771,7 @@ describe("generateUpdate", () => {
         });
 
         // Dont compare signatures
-        const { signatures, details, ...unsigned } = expected;
+        const { aliceSignature, bobSignature, details, ...unsigned } = expected;
 
         // Dont compare transferIds or merkle data
         const { transferId, merkleProofData, merkleRoot, ...sanitizedDetails } = details;
@@ -786,16 +790,8 @@ describe("generateUpdate", () => {
         }
 
         // Verify update initiator added sigs
-        expect(
-          from?.publicIdentifier && from?.publicIdentifier == publicIdentifiers[1]
-            ? update.signatures[1]
-            : update.signatures[0],
-        ).to.be.ok;
-        expect(
-          from?.publicIdentifier && from?.publicIdentifier == publicIdentifiers[1]
-            ? update.signatures[0]
-            : update.signatures[1],
-        ).to.not.be.ok;
+        expect(from?.address && from?.address == state.bob ? update.bobSignature : update.aliceSignature).to.be.ok;
+        expect(from?.address && from?.address == state.bob ? update.aliceSignature : update.bobSignature).to.not.be.ok;
       } else {
         expect(false).to.be.eq("Neither error or expected result provided in test");
       }

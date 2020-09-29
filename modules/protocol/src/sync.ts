@@ -151,7 +151,12 @@ export async function outbound(
   const { update: counterpartyUpdate } = result.getValue();
 
   // verify sigs on update
-  const sigRes = await validateChannelUpdateSignatures(updatedChannel, counterpartyUpdate.signatures, 2);
+  const sigRes = await validateChannelUpdateSignatures(
+    updatedChannel,
+    counterpartyUpdate.aliceSignature,
+    counterpartyUpdate.bobSignature,
+    "both",
+  );
   if (sigRes) {
     const error = new OutboundChannelUpdateError(
       OutboundChannelUpdateError.reasons.BadSignatures,
@@ -170,7 +175,8 @@ export async function outbound(
         channelFactoryAddress: updatedChannel.networkContext.channelFactoryAddress,
         state: updatedChannel,
         chainId: updatedChannel.networkContext.chainId,
-        signatures: counterpartyUpdate.signatures,
+        aliceSignature: counterpartyUpdate.aliceSignature,
+        bobSignature: counterpartyUpdate.bobSignature,
       },
       transfer,
     );
@@ -251,7 +257,8 @@ export async function inbound(
 
     channelFromStore = {
       channelAddress,
-      participants: publicIdentifiers.map(getSignerAddressFromPublicIdentifier),
+      alice: getSignerAddressFromPublicIdentifier(update.fromIdentifier),
+      bob: signer.address,
       networkContext,
       assetIds: [],
       balances: [],
@@ -259,7 +266,8 @@ export async function inbound(
       processedDepositsB: [],
       merkleRoot: constants.HashZero,
       nonce: 0,
-      publicIdentifiers,
+      aliceIdentifier: update.fromIdentifier,
+      bobIdentifier: signer.publicIdentifier,
       timeout,
       latestUpdate: {} as any, // There is no latest update on setup
     };
@@ -318,7 +326,7 @@ export async function inbound(
 
     // Only sync an update IFF it is double signed
     // NOTE: validation will ensure the signatures present are valid
-    if (previousUpdate.signatures.filter(x => !!x).length !== 2) {
+    if (!previousUpdate.aliceSignature || !previousUpdate.bobSignature) {
       return returnError(InboundChannelUpdateError.reasons.SyncSingleSigned, previousUpdate, previousState);
     }
 
@@ -422,7 +430,7 @@ const syncStateAndRecreateUpdate = async (
   // this is indicative of a different issue (perhaps lock failure?).
   // Present signatures are already asserted to be valid via the validation,
   // here simply assert the length
-  if (counterpartyUpdate.signatures.filter(x => !!x).length !== 2) {
+  if (!counterpartyUpdate.aliceSignature || !counterpartyUpdate.bobSignature) {
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SyncSingleSigned,

@@ -68,6 +68,7 @@ server.addHook("onReady", async () => {
   vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
     const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
     if (url) {
+      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_CREATED }, "Relaying event");
       await Axios.post(url, data);
     }
   });
@@ -256,6 +257,7 @@ server.post<{ Body: ServerNodeParams.RegisterListener }>(
           store.registerSubscription(eventName as EngineEvent, url as string),
         ),
       );
+      logger.info({ endpoint: "/event/subscribe", body: request.body }, "Successfully set up subscriptions");
       return reply.status(200).send({ message: "success" });
     } catch (e) {
       return reply.status(500).send({ message: e.message });

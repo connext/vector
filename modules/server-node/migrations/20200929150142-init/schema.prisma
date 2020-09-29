@@ -80,6 +80,7 @@ model Update {
   transferEncodings    String?
   merkleProofData      String? // proofs.join(",")
   meta                 String?
+  responder            String?
 
   // resolve details
   transferResolver String?
@@ -96,7 +97,7 @@ model Update {
 model Transfer {
   @@map(name: "transfer")
   transferId String @id
-  routingId  String @unique
+  routingId  String
 
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
@@ -119,4 +120,11 @@ model Transfer {
   // resolved will not always exist
   resolveUpdateChannelAddressId String?
   resolveUpdateNonce            Int?
+}
+
+model EventSubscription {
+  @@map(name: "event-subscription")
+  id    String @id @default(uuid())
+  event String @unique
+  url   String
 }

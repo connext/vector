@@ -27,7 +27,7 @@ const store = new RouterStore();
 server.addHook("onReady", async () => {
   const node = await RestServerNodeService.connect(
     config.serverNodeUrl,
-    "http://router:8008",
+    `http://router:${config.port}`,
     config.chainProviders,
     conditionalTransferEvt,
     logger.child({ module: "RestServerNodeService" }),

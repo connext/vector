@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "rm -rf ./dist/* && tsc",
-    "test": "ts-mocha --check-leaks --global wallet,networkContext --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/*.spec.ts'"
+    "test": "ts-mocha --check-leaks --global wallet --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/*.spec.ts'"
   },
   "author": "Arjun Bhuptani",
   "license": "MIT",
@@ -31,7 +31,7 @@
     "@types/chai-as-promised": "7.1.3",
     "@types/chai-subset": "1.3.3",
     "@types/mocha": "8.0.3",
-    "@types/pino": "6.3.0",
+    "@types/pino": "6.3.2",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "mocha": "8.1.3",

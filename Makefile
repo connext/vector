@@ -33,14 +33,15 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: router
+default: node router
 
 global: auth ethprovider
-node: global database proxy server-node router
+node: global database proxy server-node
 duet: global database server-node
+trio: global database server-node router
 extras: test-runner
 
-all: node global duet extras router
+all: global node duet trio extras
 
 ########################################
 # Command & Control Shortcuts
@@ -57,6 +58,14 @@ restart-node:
 stop-node:
 	@bash ops/stop.sh node
 
+start-router: router
+	@bash ops/start-router.sh
+restart-router:
+	@bash ops/stop.sh router
+	@bash ops/start-router.sh
+stop-router:
+	@bash ops/stop.sh router
+
 start-duet: duet
 	@bash ops/start-duet.sh
 restart-duet:
@@ -64,6 +73,14 @@ restart-duet:
 	@bash ops/start-duet.sh
 stop-duet:
 	@bash ops/stop.sh duet
+
+start-trio: trio
+	@bash ops/start-trio.sh
+restart-trio:
+	@bash ops/stop.sh trio
+	@bash ops/start-trio.sh
+stop-trio:
+	@bash ops/stop.sh trio
 
 start-global: global
 	@bash ops/start-global.sh
@@ -159,6 +176,8 @@ watch-server-node: engine
 
 test-router: router
 	bash ops/test-unit.sh router test
+watch-router: engine
+	bash ops/test-unit.sh router watch
 
 # Integration Tests
 
@@ -177,9 +196,9 @@ test-duet: test-runner duet
 watch-duet: test-runner duet
 	bash ops/test-integration.sh duet watch
 
-test-trio: test-runner node duet
+test-trio: test-runner trio
 	bash ops/test-integration.sh trio test
-watch-trio: test-runner node duet
+watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
 
 ########################################

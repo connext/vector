@@ -1,8 +1,8 @@
-import { getRandomBytes32, IServerNodeService, RestServerNodeService } from "@connext/vector-utils";
+import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
-import { env, expect } from "../utils";
+import { env } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -46,6 +46,7 @@ describe(testName, () => {
       counterpartyIdentifier: bob.publicIdentifier,
       timeout: "10000",
     });
+    expect(channelRes.getError()).to.be.undefined;
     const channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
     const aliceChannel = await alice.getStateChannel(channel.channelAddress);
@@ -81,7 +82,7 @@ describe(testName, () => {
     const aliceAfter = aliceChannel.balances[assetIdx].amount[0];
     expect(aliceChannel).to.deep.eq(bobChannel);
 
-    expect(BigNumber.from(aliceBefore).add(depositAmt)).to.eq(aliceAfter);
+    expect(aliceAfter).to.eq(BigNumber.from(aliceBefore).add(depositAmt));
   });
 
   it("bob can deposit ETH into channel", async () => {
@@ -158,5 +159,35 @@ describe(testName, () => {
     const channelAfterResolve = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
     const bobAfterResolve = assetIdx === -1 ? "0" : channelAfterResolve.balances[assetIdx].amount[1];
     expect(bobAfterResolve).to.be.eq(BigNumber.from(bobBefore).add(transferAmt));
+  });
+
+  it("bob can transfer to alice", async () => {
+    const assetId = constants.AddressZero;
+    const transferAmt = utils.parseEther("0.005");
+    const channelRes = await alice.getStateChannelByParticipants(alice.publicIdentifier, bob.publicIdentifier, chainId);
+    const channel = channelRes.getValue()!;
+
+    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+
+    const preImage = getRandomBytes32();
+    const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
+    const routingId = getRandomBytes32();
+    const transferRes = await bob.conditionalTransfer({
+      amount: transferAmt.toString(),
+      assetId,
+      channelAddress: channel.channelAddress,
+      conditionType: "LinkedTransfer",
+      details: {
+        linkedHash,
+      },
+      meta: {},
+      routingId,
+    });
+    expect(transferRes.isError).to.not.be.ok;
+
+    const channelAfterTransfer = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
+    console.log("channelAfterTransfer: ", channelAfterTransfer);
+    const aliceAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
+    console.log("aliceAfterTransfer: ", aliceAfterTransfer);
   });
 });

@@ -22,6 +22,7 @@ export class ForwardTransferError extends VectorError {
     UnableToCalculateSwap: "Could not calculate swap",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     ErrorForwardingTransfer: "Error forwarding transfer",
+    UnableToCollateralize: "Could not collateralize receiver channel",
   } as const;
 
   constructor(
@@ -39,7 +40,11 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<any, ForwardTransferError>> {
-  logger.info({ data, method: "forwardTransferCreation" }, "Received transfer event, starting forwarding");
+  const method = "forwardTransferCreation";
+  logger.info(
+    { data, method, node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier } },
+    "Received transfer event, starting forwarding",
+  );
 
   /*
   A note on the transfer event data and conditionalTransfer() params:
@@ -70,16 +75,25 @@ export async function forwardTransferCreation(
       meta,
       transferState: conditionData,
       channelAddress: senderChannelAddress,
+      initiator,
     },
     routingId,
     conditionType,
   } = data;
   let { requireOnline } = meta;
+  if (!meta.path) {
+    throw new Error(`No "path" field in the meta data, got [${Object.keys(meta)}]`);
+  }
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;
   if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
-    logger.info({ path, method: "forwardTransferCreation" }, "No path to follow");
+    logger.warn({ path, method }, "No path to follow");
+    return Result.ok(undefined);
+  }
+
+  if (initiator === node.signerAddress) {
+    logger.warn({ initiator, method }, "Initiated by our node, doing nothing");
     return Result.ok(undefined);
   }
 
@@ -113,6 +127,7 @@ export async function forwardTransferCreation(
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
   if (recipientAssetId !== senderAssetId) {
+    logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
     const swapRes = await getSwappedAmount(
       senderAmount,
       senderAssetId,
@@ -128,6 +143,7 @@ export async function forwardTransferCreation(
       );
     }
     recipientAmount = swapRes.getValue();
+    logger.warn({ method, recipientAssetId, recipientAmount, recipientChainId }, "Inflight swap calculated");
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
@@ -167,16 +183,20 @@ export async function forwardTransferCreation(
   const routerBalanceInRecipientChannel =
     assetIdx === -1
       ? "0"
-      : node.signerAddress == recipientChannel.participants[0]
+      : node.signerAddress == recipientChannel.alice
       ? recipientChannel.balances[assetIdx].amount[0]
       : recipientChannel.balances[assetIdx].amount[1];
 
   // If there are not enough funds, fall back to sending the entire transfer amount + required collateral amount
   if (BigNumber.from(routerBalanceInRecipientChannel).lt(recipientAmount)) {
+    logger.info(
+      { method, routerBalanceInRecipientChannel, recipientAmount },
+      "Just-in-time collateralization required",
+    );
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
-    await node.deposit(
+    const depositRes = await node.deposit(
       {
         channelAddress: recipientChannel.channelAddress,
         assetId: recipientAssetId,
@@ -186,6 +206,14 @@ export async function forwardTransferCreation(
       },
       recipientChainId,
     );
+    if (depositRes.isError) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+          message: depositRes.getError()?.message,
+          context: depositRes.getError()?.context,
+        }),
+      );
+    }
     // TODO we'll need to check for a failed deposit here too.
 
     // TODO what do we do here about concurrent deposits? Do we want to set a lock?

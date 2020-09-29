@@ -1,14 +1,15 @@
+import { expect } from "@connext/vector-utils";
 import axios from "axios";
 
-import { env, expect } from "../utils";
+import { env } from "../utils";
 
 describe("Trio Config", () => {
-  it("alice, bob, and node should pong when pinged", async () => {
-    const alicePong = (await axios.get(`${env.aliceUrl}/ping`)).data;
-    const bobPong = (await axios.get(`${env.bobUrl}/ping`)).data;
-    const nodePong = (await axios.get(`${env.nodeUrl}/ping`)).data;
-    expect(alicePong).to.equal("pong\n");
-    expect(alicePong).to.equal(bobPong);
-    expect(bobPong).to.equal(nodePong);
+  it("carol, dave, and roger should pong when pinged", async () => {
+    const carolPong = (await axios.get(`${env.carolUrl}/ping`)).data;
+    const davePong = (await axios.get(`${env.daveUrl}/ping`)).data;
+    const rogerPong = (await axios.get(`${env.rogerUrl}/ping`)).data;
+    expect(carolPong).to.equal("pong\n");
+    expect(carolPong).to.equal(davePong);
+    expect(davePong).to.equal(rogerPong);
   });
 });

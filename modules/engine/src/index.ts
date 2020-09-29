@@ -9,7 +9,6 @@ import {
   ILockService,
   IMessagingService,
   IVectorProtocol,
-  IVectorStore,
   Result,
   JsonRpcProvider,
   EngineParams,
@@ -18,15 +17,10 @@ import {
   ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
-  EngineEvents,
   EngineEventMap,
-  ConditionalTransferCreatedPayload,
-  ConditionalTransferResolvedPayload,
-  DepositReconciledPayload,
-  WithdrawalCreatedPayload,
-  WithdrawalResolvedPayload,
-  WithdrawalReconciledPayload,
+  IEngineStore,
   EngineEvent,
+  EngineEvents,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -39,6 +33,7 @@ import {
   convertWithdrawParams,
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
+import { getEngineEvtContainer } from "./utils";
 
 const ajv = new Ajv();
 
@@ -47,18 +42,11 @@ export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventM
 export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
   // FIXME: Is this JSON RPC compatible?
-  private readonly evts: EngineEvtContainer = {
-    [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
-    [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt.create<ConditionalTransferResolvedPayload>(),
-    [EngineEvents.DEPOSIT_RECONCILED]: Evt.create<DepositReconciledPayload>(),
-    [EngineEvents.WITHDRAWAL_CREATED]: Evt.create<WithdrawalCreatedPayload>(),
-    [EngineEvents.WITHDRAWAL_RESOLVED]: Evt.create<WithdrawalResolvedPayload>(),
-    [EngineEvents.WITHDRAWAL_RECONCILED]: Evt.create<WithdrawalReconciledPayload>(),
-  };
+  private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private constructor(
     private readonly messaging: IMessagingService,
-    private readonly store: IVectorStore,
+    private readonly store: IEngineStore,
     private readonly vector: IVectorProtocol,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
@@ -69,7 +57,7 @@ export class VectorEngine implements IVectorEngine {
   static async connect(
     messaging: IMessagingService,
     lock: ILockService,
-    store: IVectorStore,
+    store: IEngineStore,
     signer: IChannelSigner,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
@@ -90,9 +78,15 @@ export class VectorEngine implements IVectorEngine {
     );
     const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger, signer);
     await engine.setupListener();
-    logger.info("Vector Engine connected 🚀!");
+    logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
   }
+
+  // TODO: create injected validation that handles submitting transactions
+  // IFF there was a fee involved. Should:
+  // - check if fee > 0
+  //    - yes && my withdrawal: make sure transaction hash is included in
+  //      the meta (verify tx)
 
   private async setupListener(): Promise<void> {
     await setupEngineListeners(
@@ -193,7 +187,6 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
-    console.log("createParams: ", createParams);
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
       return Result.fail(protocolRes.getError()!);
@@ -248,7 +241,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params from withdraw
-    const createResult = await convertWithdrawParams(params, this.signer, channel!);
+    const createResult = await convertWithdrawParams(params, this.signer, channel!, this.chainAddresses);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -271,13 +264,13 @@ export class VectorEngine implements IVectorEngine {
   public async request<T extends ChannelRpcMethods>(
     payload: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
-    this.logger.info({ payload, method: "request" }, "Method called");
+    this.logger.debug({ payload, method: "request" }, "Method called");
     const validate = ajv.compile(EngineParams.RpcRequestSchema);
     const valid = validate(payload);
     if (!valid) {
       // dont use result type since this could go over the wire
       // TODO: how to represent errors over the wire?
-      this.logger.error(validate.errors || {});
+      this.logger.error({ method: "request", payload, ...(validate.errors ?? {}) });
       throw new Error(validate.errors?.join());
     }
 
@@ -285,6 +278,7 @@ export class VectorEngine implements IVectorEngine {
     if (typeof this[methodName] !== "function") {
       throw new Error(`Invalid method: ${methodName}`);
     }
+    this.logger.info({ methodName }, "Method called");
 
     // every method must be a result type
     const res = await this[methodName](payload.params);
