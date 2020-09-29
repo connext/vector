@@ -12,9 +12,10 @@ import { expect } from "chai";
 import Sinon from "sinon";
 import { VectorOnchainService } from "@connext/vector-contracts";
 
-import { generateSignedChannelCommitment, reconcileDeposit } from "../utils";
+import { generateSignedChannelCommitment, reconcileDeposit, validateChannelUpdateSignatures } from "../utils";
 
 import { env } from "./env";
+import { alice } from "./constants";
 
 type MockOnchainStubType = {
   [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
@@ -40,7 +41,7 @@ describe("utils", () => {
     it("should attach with callback + filter + timeout", async () => {});
   });
 
-  describe("generateSignedChannelCommitment", async () => {
+  describe("generateSignedChannelCommitment", () => {
     const signer = getRandomChannelSigner();
     const counterpartyAddress = mkAddress();
     const aliceState = createTestChannelState("create", { participants: [signer.address, counterpartyAddress] });
@@ -111,14 +112,83 @@ describe("utils", () => {
     }
   });
 
-  // FIXME: THESE ARE BLOCKING TESTS!
-  describe.skip("validateChannelUpdateSignatures", () => {
-    it("should work for a valid single signed update", () => {});
-    it("should work for a valid double signed update", () => {});
-    it("should fail if there are not at the number of required sigs included", () => {});
-    it("should fail if number of valid sigs !== number of required sigs", () => {});
-    it("should fail if any of the signatures are invalid", () => {});
-    it("should fail if the signatures are not sorted correctly", () => {});
+  describe("validateChannelUpdateSignatures", () => {
+    const aliceSigner = getRandomChannelSigner();
+    const bobSigner = getRandomChannelSigner();
+    const wrongSigner = getRandomChannelSigner();
+    const state = createTestChannelState("create", { participants: [aliceSigner.address, bobSigner.address] });
+    const { networkContext, ...core } = state;
+    const unsigned = {
+      chainId: networkContext.chainId,
+      state: core,
+      channelFactoryAddress: networkContext.channelFactoryAddress,
+      signatures: [],
+    };
+
+    const tests = [
+      {
+        name: "should work for a valid single signed update",
+        updateSignatures: [undefined, "bobSig"],
+        requiredSigners: 1,
+        expected: undefined,
+      },
+      {
+        name: "should work for a valid double signed update",
+        updateSignatures: ["aliceSig", "bobSig"],
+        requiredSigners: 2,
+        expected: undefined,
+      },
+      {
+        name: "should fail if there are not at the number of required sigs included",
+        updateSignatures: [undefined, "bobSig"],
+        requiredSigners: 2,
+        expected: "Only 1/2 signatures present",
+      },
+      {
+        name: "should fail if any of the signatures are invalid",
+        updateSignatures: [undefined, "wrongSig"],
+        requiredSigners: 1,
+        expected: "expected one of",
+      },
+      {
+        name: "should fail if the signatures are not sorted correctly",
+        updateSignatures: ["bobSig", "aliceSig"],
+        requiredSigners: 2,
+        expected: "expected",
+      },
+    ];
+
+    for (const test of tests) {
+      const { name, updateSignatures, requiredSigners, expected } = test;
+      it(name, async () => {
+        let signatures: (string | undefined)[] = [];
+
+        // Have to do this because of weird race conditions around looping
+        for (let i = 0; i < 2; i++) {
+          if (updateSignatures[i] == "bobSig") {
+            signatures[i] = await bobSigner.signMessage(hashChannelCommitment(unsigned));
+          } else if (updateSignatures[i] == "aliceSig") {
+            signatures[i] = await aliceSigner.signMessage(hashChannelCommitment(unsigned));
+          } else if (updateSignatures[i] == "wrongSig") {
+            signatures[i] = await wrongSigner.signMessage(hashChannelCommitment(unsigned));
+          } else {
+            signatures[i] = updateSignatures[i];
+          }
+        }
+
+        const ret = await validateChannelUpdateSignatures(
+          state,
+          signatures as string[],
+          requiredSigners as 1 | 2 | undefined,
+        );
+
+        if (expected) {
+          expect(ret).includes("expected");
+        } else {
+          expect(ret).to.be.undefined;
+        }
+      });
+    }
   });
 
   describe("reconcileDeposit", () => {
