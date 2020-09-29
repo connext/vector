@@ -6,7 +6,6 @@ import {
   getRandomChannelSigner,
   hashChannelCommitment,
   mkAddress,
-  stringify,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import Sinon from "sinon";
@@ -15,7 +14,6 @@ import { VectorOnchainService } from "@connext/vector-contracts";
 import { generateSignedChannelCommitment, reconcileDeposit, validateChannelUpdateSignatures } from "../utils";
 
 import { env } from "./env";
-import { alice } from "./constants";
 
 type MockOnchainStubType = {
   [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
