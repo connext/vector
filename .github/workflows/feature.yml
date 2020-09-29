@@ -52,6 +52,35 @@ jobs:
         if: failure()
         run: docker service logs --tail 200 global_auth
 
+  duet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make duet
+      - run: make start-duet
+      - run: make test-duet
+      - name: Print logs
+        if: failure()
+        run: |
+          docker service logs --tail 200 trio_alice
+          docker service logs --tail 200 trio_bob
+  trio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make trio
+      - run: make start-trio
+      - run: make test-trio
+      - name: Print logs
+        if: failure()
+        run: |
+          docker service logs --tail 200 trio_roger
+          docker service logs --tail 200 trio_router
+          docker service logs --tail 200 trio_carol
+          docker service logs --tail 200 trio_dave
+
   node:
     runs-on: ubuntu-latest
     steps:
@@ -64,14 +93,15 @@ jobs:
         if: failure()
         run: docker service logs --tail 200 node_node
 
-  duet:
+  router:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
-      - run: make duet
-      - run: make start-duet
-      - run: make test-duet
+      - run: make router
+      - run: make start-router
+      - run: make test-router
       - name: Print logs
         if: failure()
-        run: docker service logs --tail 200 duet_alice && docker service logs --tail 200 duet_bob
+        run: docker service logs --tail 200 router_node
+        run: docker service logs --tail 200 router_router
