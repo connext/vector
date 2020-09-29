@@ -78,7 +78,7 @@ export class VectorEngine implements IVectorEngine {
     );
     const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger, signer);
     await engine.setupListener();
-    logger.info("Vector Engine connected 🚀!");
+    logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
   }
 
@@ -264,13 +264,13 @@ export class VectorEngine implements IVectorEngine {
   public async request<T extends ChannelRpcMethods>(
     payload: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
-    this.logger.info({ payload, method: "request" }, "Method called");
+    this.logger.debug({ payload, method: "request" }, "Method called");
     const validate = ajv.compile(EngineParams.RpcRequestSchema);
     const valid = validate(payload);
     if (!valid) {
       // dont use result type since this could go over the wire
       // TODO: how to represent errors over the wire?
-      this.logger.error(validate.errors || {});
+      this.logger.error({ method: "request", payload, ...(validate.errors ?? {}) });
       throw new Error(validate.errors?.join());
     }
 
@@ -278,6 +278,7 @@ export class VectorEngine implements IVectorEngine {
     if (typeof this[methodName] !== "function") {
       throw new Error(`Invalid method: ${methodName}`);
     }
+    this.logger.info({ methodName }, "Method called");
 
     // every method must be a result type
     const res = await this[methodName](payload.params);

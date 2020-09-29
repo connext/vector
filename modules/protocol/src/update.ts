@@ -182,7 +182,23 @@ export async function generateUpdate<T extends UpdateType>(
       );
     }
   }
-  logger.info({ method: "generateUpdate", unsigned, updatedTransfer }, "Generated unsigned update");
+  logger.debug(
+    {
+      method: "generateUpdate",
+      unsigned,
+      updatedTransfer,
+    },
+    "Generated unsigned update",
+  );
+  logger.info(
+    {
+      method: "generateUpdate",
+      channelAddress: unsigned.channelAddress,
+      unsigned: unsigned.nonce,
+      updatedTransfer: updatedTransfer?.transferId,
+    },
+    "Generated unsigned update",
+  );
 
   // Create a signed commitment for the new state
   const result = await applyUpdate(unsigned, state!, updatedTransfer);
@@ -192,7 +208,21 @@ export async function generateUpdate<T extends UpdateType>(
     return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, state));
   }
   const commitment = await generateSignedChannelCommitment(result.getValue(), signer);
-  logger.info({ method: "generateUpdate", commitment }, "Applied and signed update");
+  logger.debug(
+    {
+      method: "generateUpdate",
+      commitment,
+    },
+    "Applied and signed update",
+  );
+  logger.info(
+    {
+      method: "generateUpdate",
+      aliceSignature: commitment.aliceSignature,
+      bobSignature: commitment.bobSignature,
+    },
+    "Applied and signed update",
+  );
 
   // Return the validated update to send to counterparty
   return Result.ok({

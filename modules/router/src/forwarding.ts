@@ -40,12 +40,9 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<any, ForwardTransferError>> {
+  const method = "forwardTransferCreation";
   logger.info(
-    {
-      data,
-      node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier },
-      method: "forwardTransferCreation",
-    },
+    { data, method, node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier } },
     "Received transfer event, starting forwarding",
   );
 
@@ -91,12 +88,12 @@ export async function forwardTransferCreation(
 
   const recipientIdentifier = path.recipient;
   if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
-    logger.warn({ path, method: "forwardTransferCreation" }, "No path to follow");
+    logger.warn({ path, method }, "No path to follow");
     return Result.ok(undefined);
   }
 
   if (initiator === node.signerAddress) {
-    logger.warn({ initiator, method: "forwardTransferCreation" }, "Initiated by our node, doing nothing");
+    logger.warn({ initiator, method }, "Initiated by our node, doing nothing");
     return Result.ok(undefined);
   }
 
@@ -130,10 +127,7 @@ export async function forwardTransferCreation(
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
   if (recipientAssetId !== senderAssetId) {
-    logger.warn(
-      { method: "forwardTransferCreation", recipientAssetId, senderAssetId, recipientChainId },
-      "Detected inflight swap",
-    );
+    logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
     const swapRes = await getSwappedAmount(
       senderAmount,
       senderAssetId,
@@ -149,10 +143,7 @@ export async function forwardTransferCreation(
       );
     }
     recipientAmount = swapRes.getValue();
-    logger.warn(
-      { method: "forwardTransferCreation", recipientAssetId, recipientAmount, recipientChainId },
-      "Inflight swap calculated",
-    );
+    logger.warn({ method, recipientAssetId, recipientAmount, recipientChainId }, "Inflight swap calculated");
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
@@ -199,7 +190,7 @@ export async function forwardTransferCreation(
   // If there are not enough funds, fall back to sending the entire transfer amount + required collateral amount
   if (BigNumber.from(routerBalanceInRecipientChannel).lt(recipientAmount)) {
     logger.info(
-      { method: "forwardTransferCreation", routerBalanceInRecipientChannel, recipientAmount },
+      { method, routerBalanceInRecipientChannel, recipientAmount },
       "Just-in-time collateralization required",
     );
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
