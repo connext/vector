@@ -4,6 +4,6 @@
   "dependencies": {
     "@nomiclabs/buidler": "1.4.7",
     "ethers": "5.0.14",
-    "ganache-cli": "6.10.2"
+    "ganache-cli": "6.11.0"
   }
 }
