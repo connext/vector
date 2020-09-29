@@ -88,14 +88,17 @@ jobs:
           docker service logs --tail 200 trio_carol
           docker service logs --tail 200 trio_dave
 
-  node:
+  # temporary test just to debug a similar test on master branch
+  prod-node:
     runs-on: ubuntu-latest
+    needs: [build]
     steps:
       - uses: actions/checkout@v1
-      - run: make pull-latest
-      - run: make node
-      - run: make start-node
-      - run: make test-node
+      - run: make node && make test-runner
+      - run: VECTOR_ENV=prod make start-node
+      - run: VECTOR_ENV=prod make test-node
       - name: Print logs
         if: failure()
-        run: docker service logs --tail 200 node_node
+        run: |
+          docker service logs --tail 200 node_proxy
+          docker service logs --tail 200 node_node

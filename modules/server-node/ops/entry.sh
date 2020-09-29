@@ -16,6 +16,8 @@ if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
 then export VECTOR_MNEMONIC="`cat $VECTOR_MNEMONIC_FILE`"
 fi
 
+# TODO: if no *_PG_* env vars provided, spin up an sqlite instance locally & use that?
+
 export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
 
 ########################################
@@ -46,8 +48,12 @@ wait_for "auth" "$VECTOR_AUTH_URL"
 ########################################
 # Launch Node
 
-if [[ "$VECTOR_ENV" == "dev" ]]
+if [[ "$VECTOR_ENV" == "prod" ]]
 then
+  echo "Starting node in prod-mode"
+  exec node --no-deprecation dist/bundle.js
+
+else
 
   # TODO: how do we expose prisma studio on all interfaces (ie 0.0.0.0) instead of just localhost?
   echo "Starting prisma studio in the background"
@@ -71,8 +77,4 @@ then
     ./src/index.ts \
     | ./node_modules/.bin/pino-pretty
 
-else
-  echo "Starting node in prod-mode"
-  exec node --no-deprecation dist/bundle.js
 fi
-

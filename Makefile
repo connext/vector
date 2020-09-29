@@ -144,8 +144,8 @@ lint:
 ########################################
 # Test Commands
 
-test-units: test-utils test-contracts test-protocol test-engine
-test-integrations: test-utils test-contracts test-protocol test-engine
+test-units: test-utils test-contracts test-protocol test-engine test-router
+test-integrations: test-global test-duet test-trio test-node
 test-all: test-units test-integrations
 
 # Unit Tests
@@ -187,11 +187,6 @@ test-global: test-runner global
 watch-global: test-runner global
 	bash ops/test-integration.sh global watch
 
-test-node: test-runner node
-	bash ops/test-integration.sh node test
-watch-node: test-runner node
-	bash ops/test-integration.sh node watch
-
 test-duet: test-runner duet
 	bash ops/test-integration.sh duet test
 watch-duet: test-runner duet
@@ -201,6 +196,11 @@ test-trio: test-runner trio
 	bash ops/test-integration.sh trio test
 watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
+
+test-node: test-runner node
+	bash ops/test-integration.sh node test
+watch-node: test-runner node
+	bash ops/test-integration.sh node watch
 
 ########################################
 # Begin Real Build Rules
