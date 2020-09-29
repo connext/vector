@@ -40,7 +40,14 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<any, ForwardTransferError>> {
-  logger.info({ data, method: "forwardTransferCreation" }, "Received transfer event, starting forwarding");
+  logger.info(
+    {
+      data,
+      node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier },
+      method: "forwardTransferCreation",
+    },
+    "Received transfer event, starting forwarding",
+  );
 
   /*
   A note on the transfer event data and conditionalTransfer() params:
@@ -193,7 +200,7 @@ export async function forwardTransferCreation(
   if (BigNumber.from(routerBalanceInRecipientChannel).lt(recipientAmount)) {
     logger.info(
       { method: "forwardTransferCreation", routerBalanceInRecipientChannel, recipientAmount },
-      "Inflight collateralization required",
+      "Just-in-time collateralization required",
     );
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
