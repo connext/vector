@@ -75,6 +75,9 @@ export async function forwardTransferCreation(
     conditionType,
   } = data;
   let { requireOnline } = meta;
+  if (!meta.path) {
+    throw new Error(`No "path" field in the meta data, got [${Object.keys(meta)}]`);
+  }
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;

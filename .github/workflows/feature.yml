@@ -40,6 +40,12 @@ jobs:
       - uses: actions/checkout@v1
       - run: make test-engine
 
+  router:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-router
+
   global:
     runs-on: ubuntu-latest
     steps:
@@ -93,17 +99,3 @@ jobs:
       - name: Print logs
         if: failure()
         run: docker service logs --tail 200 node_node
-
-  router:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - run: make pull-latest
-      - run: make router
-      - run: make start-router
-      - run: make test-router
-      - name: Print logs
-        if: failure()
-        run: |
-          docker service logs --tail 200 router_node
-          docker service logs --tail 200 router_router

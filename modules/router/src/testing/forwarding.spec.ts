@@ -1,36 +1,29 @@
-import Sinon from "sinon";
-
+/* eslint-disable @typescript-eslint/no-empty-function */
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferType,
-  FullChannelState,
   Result,
 } from "@connext/vector-types";
 import {
-  mkAddress,
-  getRandomBytes32,
-  createTestFullLinkedTransferState,
   createTestChannelState,
+  createTestFullLinkedTransferState,
+  getRandomBytes32,
+  IServerNodeService,
+  mkAddress,
+  RestServerNodeService,
 } from "@connext/vector-utils";
+import { constants } from "ethers";
+import pino from "pino";
+import Sinon from "sinon";
 
-import { IServerNodeService, RestServerNodeService } from "../services/server-node";
 import { RouterStore } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
-import pino from "pino";
-import { constants } from "ethers";
 
 describe("Forwarding", () => {
   describe("transferCreation", () => {
+    const logger = pino({ level: "info" });
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<RouterStore>;
-    const logger = pino({
-      level: "info",
-    });
-
-    beforeEach(async () => {
-      node = Sinon.createStubInstance(RestServerNodeService);
-      store = Sinon.createStubInstance(RouterStore);
-    });
 
     const generateTransferData = (): ConditionalTransferCreatedPayload => {
       const channelAddress = mkAddress("0x1");
@@ -46,9 +39,9 @@ describe("Forwarding", () => {
           to: channelBalance.to,
         },
         assetId: mkAddress("0x0"),
+        meta: { routingId, path: [channelAddress] },
       });
       const conditionType = ConditionalTransferType.LinkedTransfer;
-
       return {
         channelAddress,
         routingId,
@@ -58,12 +51,17 @@ describe("Forwarding", () => {
       };
     };
 
+    beforeEach(async () => {
+      node = Sinon.createStubInstance(RestServerNodeService);
+      store = Sinon.createStubInstance(RouterStore);
+    });
+
     afterEach(() => {
       Sinon.restore();
       Sinon.reset();
     });
 
-    it.only("successfully forwards a transfer creation with no swaps, no cross-chain and no collateralization", async () => {
+    it("successfully forwards a transfer creation with no swaps, no cross-chain and no collateralization", async () => {
       const data = generateTransferData();
       const senderChannel = createTestChannelState("create", {
         channelAddress: data.channelAddress,
@@ -83,9 +81,9 @@ describe("Forwarding", () => {
       node["getStateChannelByParticipants"].resolves(Result.ok(receiverChannel));
       node["signerAddress"] = mkAddress("0xb");
       node["conditionalTransfer"].resolves(Result.ok({} as any));
-
       await forwardTransferCreation(data, node as IServerNodeService, store, logger);
     });
+
     it.skip("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {});
     it.skip("successfully forwards a transfer creation with no swaps, cross-chain and no collateralization", async () => {});
     it.skip("successfully forwards a transfer creation with swaps, cross-chain, and collateralization", async () => {});

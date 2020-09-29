@@ -176,6 +176,8 @@ watch-server-node: engine
 
 test-router: router
 	bash ops/test-unit.sh router test
+watch-router: engine
+	bash ops/test-unit.sh router watch
 
 # Integration Tests
 
