@@ -4,37 +4,38 @@ pragma experimental ABIEncoderV2;
 
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
+import "./lib/SafeMath.sol";
 
 
-contract Withdrawable {
+contract EmergencyWithdrawable {
 
-    using LibAsset for address;
+    using SafeMath for uint256;
 
     mapping(address => mapping(address => uint256)) public withdrawableAmount;
 
-    function addToWithdrawableAmount(address assetId, address owner, uint256 amount)
+    function addToEmergencyWithdrawableAmount(address assetId, address owner, uint256 amount)
         internal
     {
         withdrawableAmount[assetId][owner] += amount;
     }
 
-    function withdraw(address assetId, address owner, address payable recipient)
+    function emergencyWithdraw(address assetId, address owner, address payable recipient)
         external
     {
         require(
             msg.sender == owner || owner == recipient,
-            "Withdrawable: Either msg.sender or recipient of funds must be the owner"
+            "EmergencyWithdrawable: Either msg.sender or recipient of funds must be the owner"
         );
 
         uint256 maxAmount = withdrawableAmount[assetId][owner];
-        withdrawableAmount[assetId][owner] = 0;
-
         uint256 balance = LibAsset.getOwnBalance(assetId);
         uint256 amount = LibUtils.min(maxAmount, balance);
 
+        withdrawableAmount[assetId][owner] = withdrawableAmount[assetId][owner].sub(amount);
+
         require(
             LibAsset.transfer(assetId, recipient, amount),
-            "Withdrawable: Transfer failed"
+            "EmergencyWithdrawable: Transfer failed"
         );
     }
 

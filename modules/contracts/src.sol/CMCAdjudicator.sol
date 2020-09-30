@@ -4,16 +4,15 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
-import "./interfaces/IERC20.sol";
 import "./CMCCore.sol";
-import "./AssetTransfer.sol";
-import "./CMCDeposit.sol";
+import "./CMCAccountant.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 
+
 /// @title Adjudicator - Dispute logic for ONE channel
-contract CMCAdjudicator is CMCCore, AssetTransfer, CMCDeposit, ICMCAdjudicator {
+contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
@@ -108,7 +107,7 @@ contract CMCAdjudicator is CMCCore, AssetTransfer, CMCDeposit, ICMCAdjudicator {
     //     transfer.to[0] = balance.to[0];
     //     transfer.to[1] = balance.to[1];
     //     transfer.amount[0] = balance.amount[0];
-    //     transfer(assetId, transfer);
+    //     transferBalance(assetId, transfer);
     // }
   }
 
@@ -180,7 +179,7 @@ contract CMCAdjudicator is CMCCore, AssetTransfer, CMCDeposit, ICMCAdjudicator {
     } else {
       finalBalance = cts.initialBalance;
     }
-    transfer(cts.assetId, finalBalance);
+    transferBalance(cts.assetId, finalBalance);
   }
 
   function verifySenderIsParticipant(CoreChannelState memory ccs) internal view {

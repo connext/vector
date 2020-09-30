@@ -12,9 +12,6 @@ contract CMCCore is ICMCCore {
   address internal alice;
   address internal bob;
 
-  mapping(address => uint256) internal _totalDepositedA;
-  mapping(address => uint256) internal _totalWithdrawn;
-
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {
     require(masterCopy != address(0), "This contract is the mastercopy");
