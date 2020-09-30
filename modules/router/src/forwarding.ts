@@ -6,6 +6,7 @@ import {
   Values,
   VectorError,
   RouterSchemas,
+  ServerNodeParams,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
@@ -25,11 +26,27 @@ export class ForwardTransferError extends VectorError {
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     ErrorForwardingTransfer: "Error forwarding transfer",
     UnableToCollateralize: "Could not collateralize receiver channel",
-    ErrorResolvingTransfer: "Error resolving tranfer",
   } as const;
 
   constructor(
     public readonly message: Values<typeof ForwardTransferError.reasons>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context?: any,
+  ) {
+    super(message, context);
+  }
+}
+
+export class ForwardResolutionError extends VectorError {
+  readonly type = VectorError.errors.RouterError;
+
+  static readonly reasons = {
+    IncomingChannelNotFound: "Incoming channel for transfer not found",
+    ErrorResolvingTransfer: "Error resolving tranfer",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof ForwardResolutionError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
@@ -257,7 +274,7 @@ export async function forwardTransferCreation(
       }),
     );
   }
-  // either a successful transfer or an error
+
   return Result.ok(transfer.getValue());
 }
 
@@ -266,7 +283,7 @@ export async function forwardTransferResolution(
   node: IServerNodeService,
   store: IRouterStore,
   logger: BaseLogger,
-): Promise<Result<undefined | ServerNodeResponses.ResolveTransfer, ForwardTransferError>> {
+): Promise<Result<undefined | ServerNodeResponses.ResolveTransfer, ForwardResolutionError>> {
   const method = "forwardTransferResolution";
   logger.info(
     { data, method, node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier } },
@@ -291,37 +308,55 @@ export async function forwardTransferResolution(
     return Result.ok(undefined);
   }
 
-  // Find the sender channel for the transfer
-  const senderChannelAddress = "";
+  // Find the channel with the corresponding transfer to unlock
+  const transfersRes = await node.getTransfersByRoutingId(routingId);
+  if (transfersRes.isError) {
+    return Result.fail(
+      new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
+        routingId,
+        error: transfersRes.getError()?.message,
+      }),
+    );
+  }
+
+  // find transfer where node is responder
+  const incomingTransfer = transfersRes.getValue().find(transfer => transfer.responder === node.signerAddress);
+
+  if (!incomingTransfer) {
+    return Result.fail(
+      new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
+        routingId,
+      }),
+    );
+  }
 
   // Resolve the sender transfer
-  const resolveParams = {
-    channelAddress: senderChannelAddress,
-    routingId,
+  const resolveParams: ServerNodeParams.ResolveTransfer = {
+    channelAddress: incomingTransfer.channelAddress,
+    transferId: incomingTransfer.transferId,
     meta: {},
     conditionType,
     details: { ...transferResolver },
   };
-  throw new Error(`Finish implementing, wouldve called resolve with: ${JSON.stringify(resolveParams)}`);
-  // const resolution = await node.resolveCondtion(resolveParams);
-  // if (resolution.isError) {
-  //   // Store the transfer, retry later
-  //   // TODO: add logic to periodically retry resolving transfers
-  //   const type = "TransferResolution";
-  //   await store.queueUpdate(type, resolveParams);
-  //   return Result.fail(
-  //     new ForwardTransferError(ForwardTransferError.reasons.ErrorResolvingTransfer, {
-  //       message: resolution.getError()?.message,
-  //       routingId,
-  //       transferResolver,
-  //       senderChannelAddress,
-  //       recipientTransferId: transferId,
-  //       recipientChannelAddress: channelAddress,
-  //     }),
-  //   );
-  // }
+  const resolution = await node.resolveTransfer(resolveParams);
+  if (resolution.isError) {
+    // Store the transfer, retry later
+    // TODO: add logic to periodically retry resolving transfers
+    const type = "TransferResolution";
+    await store.queueUpdate(type, resolveParams);
+    return Result.fail(
+      new ForwardResolutionError(ForwardResolutionError.reasons.ErrorResolvingTransfer, {
+        message: resolution.getError()?.message,
+        routingId,
+        transferResolver,
+        incomingTransferChannel: incomingTransfer.channelAddress,
+        recipientTransferId: transferId,
+        recipientChannelAddress: channelAddress,
+      }),
+    );
+  }
 
-  // return Result.ok(resolution.getValue());
+  return Result.ok(resolution.getValue());
 }
 
 export async function handleIsAlive(data: any, node: IServerNodeService, store: IRouterStore) {

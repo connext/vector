@@ -31,6 +31,7 @@ export interface IServerNodeService {
     channelAddress: string,
     routingId: string,
   ): Promise<Result<FullTransferState | undefined, Error>>;
+  getTransfersByRoutingId(routingId: string): Promise<Result<FullTransferState[], Error>>;
   setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>>;
   deposit(
     params: ServerNodeParams.SendDepositTx,
@@ -139,12 +140,23 @@ export class RestServerNodeService implements IServerNodeService {
     }
   }
 
+  async getTransfersByRoutingId(routingId: string): Promise<Result<FullTransferState[], Error>> {
+    try {
+      const res = await Axios.get<ServerNodeResponses.GetTransferStatesByRoutingId>(
+        `${this.serverNodeUrl}/transfer/${routingId}`,
+      );
+      return Result.ok(res.data);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getTransferByRoutingId(
     channelAddress: string,
     routingId: string,
   ): Promise<Result<FullTransferState | undefined, Error>> {
     try {
-      const res = await Axios.get<ServerNodeResponses.GetChannelState>(
+      const res = await Axios.get<ServerNodeResponses.GetTransferStateByRoutingId>(
         `${this.serverNodeUrl}/channel/${channelAddress}/transfer/${routingId}`,
       );
       return Result.ok(res.data);

@@ -38,6 +38,16 @@ const GetTransferStateByRoutingIdResponseSchema = {
   200: Type.Union([Type.Undefined, Type.Any()]),
 };
 
+// GET TRANSFERS BY ROUTINGID
+const GetTransferStatesByRoutingIdParamsSchema = Type.Object({
+  routingId: TBytes32,
+});
+
+// TODO: Could be improved by creating a transfer state schema
+const GetTransferStatesByRoutingIdResponseSchema = {
+  200: Type.Array(GetTransferStateByRoutingIdResponseSchema[200]),
+};
+
 // GET CHANNEL STATE
 const GetChannelStateParamsSchema = EngineParams.GetChannelStateSchema;
 
@@ -142,6 +152,9 @@ export namespace ServerNodeParams {
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
 
+  export const GetTransferStatesByRoutingIdSchema = GetTransferStatesByRoutingIdParamsSchema;
+  export type GetTransferStatesByRoutingId = Static<typeof GetTransferStatesByRoutingIdParamsSchema>;
+
   export const GetChannelStateSchema = GetChannelStateParamsSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema>;
 
@@ -180,6 +193,9 @@ export namespace ServerNodeParams {
 export namespace ServerNodeResponses {
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdResponseSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdResponseSchema["200"]>;
+
+  export const GetTransferStatesByRoutingIdSchema = GetTransferStatesByRoutingIdResponseSchema;
+  export type GetTransferStatesByRoutingId = Static<typeof GetTransferStatesByRoutingIdResponseSchema["200"]>;
 
   export const GetChannelStateSchema = GetChannelStateResponseSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;

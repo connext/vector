@@ -101,6 +101,10 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve(this.transfers.get(transferId));
   }
 
+  getTransfersByRoutingId(routingId: string): Promise<FullTransferState<any>[]> {
+    throw new Error("Method not implemented.");
+  }
+
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
     return Promise.resolve(this.channelStates.get(channelAddress)?.commitment);
   }

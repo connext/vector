@@ -557,6 +557,26 @@ export class PrismaStore implements IServerNodeStore {
     return convertTransferEntityToFullTransferState(transfer);
   }
 
+  async getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
+    const transfers = await this.prisma.transfer.findMany({
+      where: { routingId },
+      include: {
+        channel: true,
+        createUpdate: true,
+        resolveUpdate: true,
+      },
+    });
+
+    for (const transfer of transfers) {
+      if (!transfer.channel) {
+        const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+        transfer.channel = channel;
+      }
+    }
+
+    return transfers.map(convertTransferEntityToFullTransferState);
+  }
+
   async clear(): Promise<void> {
     await this.prisma.channel.deleteMany({});
     await this.prisma.balance.deleteMany({});

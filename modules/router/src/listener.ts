@@ -46,7 +46,14 @@ export async function setupListeners(node: IServerNodeService, store: IRouterSto
   await node.on(
     EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
     async data => {
-      await forwardTransferResolution(data, node, store, logger);
+      const res = await forwardTransferResolution(data, node, store, logger);
+      if (res.isError) {
+        return logger.error(
+          { method: "forwardTransferResolution", error: res.getError()?.message, context: res.getError()?.context },
+          "Error forwarding resolution",
+        );
+      }
+      logger.info({ method: "forwardTransferResolution", result: res.getValue() }, "Successfully forwarded resolution");
     },
     data => {
       // Only forward transfers with valid routing metas

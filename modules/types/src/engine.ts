@@ -112,6 +112,8 @@ export interface IEngineStore extends IVectorStore {
   // method for higher level modules
   getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined>;
 
+  getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]>;
+
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
 }

@@ -418,7 +418,7 @@ async function generateResolveUpdate(
     .map(state => {
       return hashCoreTransferState(state);
     });
-  const merkle = new MerkleTree(hashes, hashCoreTransferState);
+  const merkle = new MerkleTree(hashes, utils.keccak256);
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(

@@ -123,6 +123,18 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(transfer);
   }
 
+  private async getTransferStatesByRoutingId(
+    params: EngineParams.GetTransferStatesByRoutingId,
+  ): Promise<Result<FullTransferState[], Error>> {
+    const validate = ajv.compile(EngineParams.GetTransferStatesByRoutingIdSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const transfers = await this.store.getTransfersByRoutingId(params.routingId);
+    return Result.ok(transfers);
+  }
+
   private async getChannelStateByParticipants(
     params: EngineParams.GetChannelStateByParticipants,
   ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {

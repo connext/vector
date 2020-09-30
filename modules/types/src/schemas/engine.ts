@@ -28,6 +28,10 @@ const GetTransferStateByRoutingIdParamsSchema = Type.Object({
   routingId: TBytes32,
 });
 
+const GetTransferStatesByRoutingIdParamsSchema = Type.Object({
+  routingId: TBytes32,
+});
+
 // Get channel state params
 const GetChannelStateParamsSchema = Type.Object({ channelAddress: TAddress });
 
@@ -132,6 +136,9 @@ export namespace EngineParams {
 
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
+
+  export const GetTransferStatesByRoutingIdSchema = GetTransferStatesByRoutingIdParamsSchema;
+  export type GetTransferStatesByRoutingId = Static<typeof GetTransferStatesByRoutingIdParamsSchema>;
 
   export const GetChannelStatesSchema = GetChannelStatesParamsSchema;
   export type GetChannelStates = Static<typeof GetChannelStatesSchema>;

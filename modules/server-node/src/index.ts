@@ -73,6 +73,14 @@ server.addHook("onReady", async () => {
       await Axios.post(url, data);
     }
   });
+
+  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, async data => {
+    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
+    if (url) {
+      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED }, "Relaying event");
+      await Axios.post(url, data);
+    }
+  });
 });
 
 server.get("/ping", async () => {
@@ -129,6 +137,24 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
     try {
       const res = await vectorEngine.request<"chan_getTransferStateByRoutingId">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+  "/transfer/:routingId",
+  { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
+  async (request, reply) => {
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
+    try {
+      const res = await vectorEngine.request<"chan_getTransferStatesByRoutingId">(params);
       if (!res) {
         return reply.status(404).send({ message: "Transfer not found", params: request.params });
       }
