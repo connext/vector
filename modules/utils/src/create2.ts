@@ -9,9 +9,9 @@ export const getCreate2MultisigAddress = async (
   chainId: number,
   channelFactoryAddress: string,
   channelMastercopyAddress: string,
-  onchainTxService: IVectorChainReader,
+  chainReader: IVectorChainReader,
 ): Promise<Result<string, Error>> => {
-  const proxyRes = await onchainTxService.getChannelFactoryBytecode(channelFactoryAddress, chainId);
+  const proxyRes = await chainReader.getChannelFactoryBytecode(channelFactoryAddress, chainId);
   if (proxyRes.isError) {
     return proxyRes;
   }
