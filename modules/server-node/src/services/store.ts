@@ -315,10 +315,6 @@ export class PrismaStore implements IServerNodeStore {
             connectOrCreate: {
               where: {
                 transferId: createTransferEntity!.transferId,
-                routingId_channelAddressId: {
-                  routingId: createTransferEntity!.routingId,
-                  channelAddressId: createTransferEntity!.channelAddressId,
-                },
               },
               create: createTransferEntity!,
             },
