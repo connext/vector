@@ -11,6 +11,7 @@ import {
   TBytes32,
   TFullTransferState,
   TFullChannelState,
+  TChainId,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -120,6 +121,7 @@ const PostSendDepositTxBodySchema = Type.Object({
   channelAddress: TAddress,
   amount: TIntegerString,
   assetId: TAddress,
+  chainId: TChainId,
 });
 
 const PostSendDepositTxResponseSchema = {
@@ -134,9 +136,14 @@ const PostConditionalTransferBodySchema = EngineParams.ConditionalTransferSchema
 const PostConditionalTransferResponseSchema = BasicTransferServerResponseSchema;
 
 // POST RESOLVE CONDITIONAL TRANSFER
-const PostResolveTransfer = EngineParams.ResolveTransferSchema;
+const PostResolveTransferBodySchema = EngineParams.ResolveTransferSchema;
 
 const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
+
+// POST WITHDRAW TRANSFER
+const PostWithdrawTransferBodySchema = EngineParams.WithdrawSchema;
+
+const PostWithdrawTransferResponseSchema = BasicTransferServerResponseSchema;
 
 // ADMIN
 const PostAdminBodySchema = Type.Object({
@@ -173,6 +180,9 @@ export namespace ServerNodeParams {
   export const GetListenerSchema = GetListenerParamsSchema;
   export type GetListener = Static<typeof GetListenerSchema>;
 
+  export const GetConfigSchema = Type.Undefined();
+  export type GetConfig = Static<typeof GetConfigSchema>;
+
   export const SetupSchema = PostSetupBodySchema;
   export type Setup = Static<typeof SetupSchema>;
 
@@ -185,8 +195,11 @@ export namespace ServerNodeParams {
   export const ConditionalTransferSchema = PostConditionalTransferBodySchema;
   export type ConditionalTransfer = Static<typeof ConditionalTransferSchema>;
 
-  export const ResolveTransferSchema = PostResolveTransfer;
+  export const ResolveTransferSchema = PostResolveTransferBodySchema;
   export type ResolveTransfer = Static<typeof ResolveTransferSchema>;
+
+  export const WithdrawSchema = PostWithdrawTransferBodySchema;
+  export type Withdraw = Static<typeof WithdrawSchema>;
 
   export const RegisterListenerSchema = PostRegisterListenerBodySchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema>;
@@ -235,6 +248,9 @@ export namespace ServerNodeResponses {
 
   export const ResolveTransferSchema = PostResolveTransferResponseSchema;
   export type ResolveTransfer = Static<typeof ResolveTransferSchema["200"]>;
+
+  export const WithdrawSchema = PostWithdrawTransferResponseSchema;
+  export type Withdraw = Static<typeof WithdrawSchema["200"]>;
 
   export const RegisterListenerSchema = PostRegisterListenerResponseSchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema["200"]>;

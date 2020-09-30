@@ -12,6 +12,7 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   ResolveUpdateDetails,
+  CreateUpdateDetails,
 } from "@connext/vector-types";
 import { VectorChainService } from "@connext/vector-contracts";
 import Axios from "axios";
@@ -276,6 +277,30 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
       return reply.status(200).send({
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
+      } as ServerNodeResponses.ResolveTransfer);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: ServerNodeParams.Withdraw }>(
+  "/withdraw",
+  {
+    schema: {
+      body: ServerNodeParams.WithdrawSchema,
+      response: ServerNodeResponses.WithdrawSchema,
+    },
+  },
+  async (request, reply) => {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, request.body);
+    try {
+      const { channel, transactionHash } = await vectorEngine.request<typeof ChannelRpcMethods.chan_withdraw>(rpc);
+      return reply.status(200).send({
+        channelAddress: channel.channelAddress,
+        transferId: (channel.latestUpdate.details as ResolveUpdateDetails).transferId,
+        transactionHash,
       } as ServerNodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
