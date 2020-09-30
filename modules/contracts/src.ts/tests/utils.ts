@@ -5,7 +5,7 @@ import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
 
 import { alice, bob, provider } from "./constants";
 
-export const createTestChannel = async (): Promise<Contract> => {
+export const createTestChannelFactory = async (): Promise<Contract> => {
   const channelMastercopy = await new ContractFactory(
     ChannelMastercopy.abi,
     ChannelMastercopy.bytecode,
@@ -16,6 +16,11 @@ export const createTestChannel = async (): Promise<Contract> => {
     channelMastercopy.address,
   );
   await channelFactory.deployed();
+  return new Contract(channelFactory.address, ChannelFactory.abi, alice);
+};
+
+export const createTestChannel = async (): Promise<Contract> => {
+  const channelFactory = await createTestChannelFactory();
   const doneBeingCreated: Promise<string> = new Promise(res => {
     channelFactory.once(channelFactory.filters.ChannelCreation(), res);
   });
@@ -25,5 +30,5 @@ export const createTestChannel = async (): Promise<Contract> => {
   await tx.wait();
   const channelAddress = await doneBeingCreated;
   expect(channelAddress).to.be.a("string");
-  return new Contract(channelAddress, VectorChannel.abi, provider);
+  return new Contract(channelAddress, VectorChannel.abi, alice);
 };
