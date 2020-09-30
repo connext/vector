@@ -1,4 +1,3 @@
-import { VectorChainReader } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import {
   ChainAddresses,
@@ -20,6 +19,7 @@ import {
   EngineEvents,
   ChannelRpcMethod,
   FullTransferState,
+  IVectorChainService,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -44,13 +44,14 @@ export class VectorEngine implements IVectorEngine {
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private constructor(
+    private readonly signer: IChannelSigner,
     private readonly messaging: IMessagingService,
     private readonly store: IEngineStore,
     private readonly vector: IVectorProtocol,
+    private readonly chainService: IVectorChainService,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: pino.BaseLogger,
-    private readonly signer: IChannelSigner,
   ) {}
 
   static async connect(
@@ -58,6 +59,7 @@ export class VectorEngine implements IVectorEngine {
     lock: ILockService,
     store: IEngineStore,
     signer: IChannelSigner,
+    chainService: IVectorChainService,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
@@ -66,7 +68,6 @@ export class VectorEngine implements IVectorEngine {
     Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
       hydratedProviders[chainId] = new JsonRpcProvider(providerUrl);
     });
-    const chainService = new VectorChainReader(hydratedProviders, logger.child({ module: "VectorChainReader" }));
     const vector = await Vector.connect(
       messaging,
       lock,
@@ -75,7 +76,16 @@ export class VectorEngine implements IVectorEngine {
       chainService,
       logger.child({ module: "VectorProtocol" }),
     );
-    const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger, signer);
+    const engine = new VectorEngine(
+      signer,
+      messaging,
+      store,
+      vector,
+      chainService,
+      chainProviders,
+      chainAddresses,
+      logger.child({ module: "VectorEngine" }),
+    );
     await engine.setupListener();
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
@@ -90,6 +100,7 @@ export class VectorEngine implements IVectorEngine {
   private async setupListener(): Promise<void> {
     await setupEngineListeners(
       this.evts,
+      this.chainService,
       this.vector,
       this.messaging,
       this.signer,

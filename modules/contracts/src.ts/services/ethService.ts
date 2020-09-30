@@ -6,7 +6,7 @@ import {
   Result,
   ERC20Abi,
 } from "@connext/vector-types";
-import { BigNumber, constants, Contract, providers, Wallet } from "ethers";
+import { BigNumber, constants, Contract, providers, Signer, Wallet } from "ethers";
 import { BaseLogger } from "pino";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
@@ -14,15 +14,18 @@ import { ChannelFactory, VectorChannel } from "../artifacts";
 import { EthereumChainReader } from "./ethReader";
 
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
-  private signers: Map<number, Wallet> = new Map();
+  private signers: Map<number, Signer> = new Map();
   constructor(
     chainProviders: { [chainId: string]: providers.JsonRpcProvider },
-    private readonly privateKey: string,
+    signer: string | Signer,
     log: BaseLogger,
   ) {
     super(chainProviders, log.child({ module: "EthereumChainReader" }));
     Object.entries(chainProviders).forEach(([chainId, provider]) => {
-      this.signers.set(parseInt(chainId), new Wallet(privateKey, provider));
+      this.signers.set(
+        parseInt(chainId),
+        typeof signer === "string" ? new Wallet(signer, provider) : (signer.connect(provider) as Signer),
+      );
     });
   }
 
@@ -213,10 +216,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return approveRes;
     }
     const approveTx = approveRes.getValue();
-    this.log.info(
-      { txHash: approveTx.hash, method: "approveTokens", assetId, amount },
-      "Approve token tx submitted",
-    );
+    this.log.info({ txHash: approveTx.hash, method: "approveTokens", assetId, amount }, "Approve token tx submitted");
     return approveRes;
   }
 
@@ -287,10 +287,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
   }
 
-  async sendTx(
-    minTx: MinimalTransaction,
-    chainId: number,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  async sendTx(minTx: MinimalTransaction, chainId: number): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
