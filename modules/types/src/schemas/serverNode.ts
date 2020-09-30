@@ -143,7 +143,10 @@ const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
 // POST WITHDRAW TRANSFER
 const PostWithdrawTransferBodySchema = EngineParams.WithdrawSchema;
 
-const PostWithdrawTransferResponseSchema = BasicTransferServerResponseSchema;
+const PostWithdrawTransferResponseSchema = Type.Intersect([
+  BasicTransferServerResponseSchema,
+  Type.Object({ transactionHash: Type.Object(TBytes32) }),
+]);
 
 // ADMIN
 const PostAdminBodySchema = Type.Object({

@@ -116,7 +116,7 @@ export async function forwardTransferCreation(
 
   // TODO validate the above params
 
-  const senderChannelRes = await node.getStateChannel(senderChannelAddress);
+  const senderChannelRes = await node.getStateChannel({ channelAddress: senderChannelAddress });
   if (senderChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
@@ -164,11 +164,11 @@ export async function forwardTransferCreation(
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
-  const recipientChannelRes = await node.getStateChannelByParticipants(
-    node.publicIdentifier,
-    recipientIdentifier,
-    recipientChainId,
-  );
+  const recipientChannelRes = await node.getStateChannelByParticipants({
+    alice: node.publicIdentifier,
+    bob: recipientIdentifier,
+    chainId: recipientChainId,
+  });
   if (recipientChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
@@ -213,16 +213,14 @@ export async function forwardTransferCreation(
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
-    const depositRes = await node.deposit(
-      {
-        channelAddress: recipientChannel.channelAddress,
-        assetId: recipientAssetId,
-        amount: BigNumber.from(recipientAmount)
-          .add(profile.target)
-          .toString(),
-      },
-      recipientChainId,
-    );
+    const depositRes = await node.deposit({
+      chainId: recipientChainId,
+      channelAddress: recipientChannel.channelAddress,
+      assetId: recipientAssetId,
+      amount: BigNumber.from(recipientAmount)
+        .add(profile.target)
+        .toString(),
+    });
     if (depositRes.isError) {
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
@@ -309,7 +307,7 @@ export async function forwardTransferResolution(
   }
 
   // Find the channel with the corresponding transfer to unlock
-  const transfersRes = await node.getTransfersByRoutingId(routingId);
+  const transfersRes = await node.getTransfersByRoutingId({ routingId });
   if (transfersRes.isError) {
     return Result.fail(
       new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {

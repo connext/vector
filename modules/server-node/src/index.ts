@@ -12,7 +12,6 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   ResolveUpdateDetails,
-  CreateUpdateDetails,
 } from "@connext/vector-types";
 import { VectorChainService } from "@connext/vector-contracts";
 import Axios from "axios";
@@ -62,6 +61,7 @@ server.addHook("onReady", async () => {
     lock,
     store,
     signer,
+    vectorTx,
     config.chainProviders,
     config.contractAddresses,
     logger.child({ module: "VectorEngine" }),
@@ -294,14 +294,14 @@ server.post<{ Body: ServerNodeParams.Withdraw }>(
     },
   },
   async (request, reply) => {
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, request.body);
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdraw, request.body);
     try {
       const { channel, transactionHash } = await vectorEngine.request<typeof ChannelRpcMethods.chan_withdraw>(rpc);
       return reply.status(200).send({
         channelAddress: channel.channelAddress,
         transferId: (channel.latestUpdate.details as ResolveUpdateDetails).transferId,
         transactionHash,
-      } as ServerNodeResponses.ResolveTransfer);
+      } as ServerNodeResponses.Withdraw);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

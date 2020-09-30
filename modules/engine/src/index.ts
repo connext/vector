@@ -312,24 +312,19 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
-    this.logger.info(
-      { channelAddress: res.channelAddress, transferId: res.latestUpdate.details.transferId },
-      "Withdraw transfer created",
-    );
+    const transferId = res.latestUpdate.details.transferId;
+    this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
     let transactionHash: string | undefined = undefined;
+    const timeout = 15_000;
     try {
       const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
-        15_000,
-        data =>
-          data.channelAddress === params.channelAddress && data.transferId === res.latestUpdate.details.transferId,
+        timeout,
+        data => data.channelAddress === params.channelAddress && data.transferId === transferId,
       );
       transactionHash = event.transactionHash;
     } catch (e) {
-      this.logger.warn(
-        { channelAddress: res.channelAddress, transferId: res.latestUpdate.details.transferId },
-        "Withdraw tx not submitted",
-      );
+      this.logger.warn({ channelAddress: params.channelAddress, transferId, timeout }, "Withdraw tx not submitted");
     }
 
     return Result.ok({ channel: res, transactionHash });
