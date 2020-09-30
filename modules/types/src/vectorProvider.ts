@@ -39,5 +39,5 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_deposit]: FullChannelState;
   [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
-  [ChannelRpcMethods.chan_withdraw]: FullChannelState;
+  [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
 };

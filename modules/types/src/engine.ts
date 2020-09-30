@@ -61,6 +61,7 @@ export const WITHDRAWAL_RECONCILED_EVENT = "WITHDRAWAL_RECONCILED";
 export type WithdrawalReconciledPayload = {
   channelAddress: string;
   transactionHash: string;
+  transferId: string;
 };
 
 // Grouped event types
