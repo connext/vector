@@ -4,8 +4,8 @@ import { hashCoreChannelState, signChannelMessage, toBN, expect } from "@connext
 import { AddressZero, HashZero, Two } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
-import { bob, alice, provider } from "../../constants";
-import { createTestChannel } from "../../utils";
+import { bob, alice, provider } from "../constants";
+import { createTestChannel } from "../utils";
 
 describe("Channel Disputes", () => {
   let channel: Contract;

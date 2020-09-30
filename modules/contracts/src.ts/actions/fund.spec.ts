@@ -1,7 +1,7 @@
 import { expect } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 
-import { alice, bob } from "../constants";
+import { alice, bob } from "../tests";
 
 import { fund } from "./fund";
 

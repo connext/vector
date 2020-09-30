@@ -4,8 +4,8 @@ import { getRandomBytes32, hashCoreTransferState, toBN, expect } from "@connext/
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
-import { bob, alice, provider } from "../../constants";
-import { createTestChannel } from "../../utils";
+import { bob, alice, provider } from "../constants";
+import { createTestChannel } from "../utils";
 
 describe("Transfer Disputes", () => {
   let channel: Contract;

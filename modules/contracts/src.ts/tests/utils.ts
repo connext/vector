@@ -2,7 +2,8 @@ import { expect } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
 import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
-import { alice, bob, provider } from "../constants";
+
+import { alice, bob, provider } from "./constants";
 
 export const createTestChannel = async (): Promise<Contract> => {
   const channelMastercopy = await new ContractFactory(

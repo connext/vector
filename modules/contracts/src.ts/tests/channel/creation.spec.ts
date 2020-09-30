@@ -1,8 +1,8 @@
 import { expect } from "@connext/vector-utils";
 import { Contract } from "ethers";
 
-import { alice, bob, provider } from "../../constants";
-import { createTestChannel } from "../../utils";
+import { alice, bob, provider } from "../constants";
+import { createTestChannel } from "../utils";
 
 describe("Channel Creation", () => {
   let channel: Contract;

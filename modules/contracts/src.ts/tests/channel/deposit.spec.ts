@@ -3,8 +3,8 @@ import { expect } from "@connext/vector-utils";
 import { AddressZero, One } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
-import { alice, bob } from "../../constants";
-import { createTestChannel } from "../../utils";
+import { alice, bob } from "../constants";
+import { createTestChannel } from "../utils";
 
 describe("Channel Deposits", () => {
   const value = One;

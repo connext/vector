@@ -2,8 +2,7 @@ import { signChannelMessage, expect } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, ContractFactory } from "ethers";
 
 import { TestToken } from "../artifacts";
-import { bob, alice, provider } from "../constants";
-import { createTestChannel } from "../utils";
+import { bob, alice, createTestChannel, provider } from "../tests";
 
 import { WithdrawCommitment } from "./withdraw";
 

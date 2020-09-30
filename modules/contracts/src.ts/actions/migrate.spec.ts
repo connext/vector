@@ -1,6 +1,6 @@
 import { expect } from "@connext/vector-utils";
 
-import { addressBookPath, alice } from "../constants";
+import { addressBookPath, alice } from "../tests";
 
 import { migrate } from "./migrate";
 

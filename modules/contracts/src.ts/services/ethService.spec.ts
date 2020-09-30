@@ -2,8 +2,7 @@ import { expect } from "@connext/vector-utils";
 import { Contract } from "ethers";
 import pino from "pino";
 
-import { alice, provider } from "../constants";
-import { createTestChannel } from "../utils";
+import { alice, createTestChannel, provider } from "../tests";
 
 import { EthereumChainService } from "./ethService";
 

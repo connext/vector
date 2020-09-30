@@ -4,8 +4,9 @@ import { Contract, ContractFactory, BigNumber } from "ethers";
 import pino from "pino";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
-import { alice, bob, provider } from "../constants";
 import { VectorChainReader } from "../services";
+
+import { alice, bob, provider } from "./constants";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);

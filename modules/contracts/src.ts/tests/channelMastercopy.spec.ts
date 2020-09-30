@@ -3,7 +3,8 @@ import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract, ContractFactory } from "ethers";
 
 import { ChannelMastercopy } from "../artifacts";
-import { alice } from "../constants";
+
+import { alice } from "./constants";
 
 describe("ChannelMastercopy", () => {
   let mastercopy: Contract;

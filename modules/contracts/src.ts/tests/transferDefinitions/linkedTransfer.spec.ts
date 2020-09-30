@@ -11,7 +11,7 @@ import { HashZero, Zero } from "@ethersproject/constants";
 import { Contract, ContractFactory, Wallet, utils } from "ethers";
 
 import { LinkedTransfer } from "../../artifacts";
-import { provider } from "../../constants";
+import { provider } from "../constants";
 
 describe("LinkedTransfer", () => {
   let deployer: Wallet;

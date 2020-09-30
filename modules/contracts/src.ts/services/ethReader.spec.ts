@@ -3,8 +3,7 @@ import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "ethers";
 import pino from "pino";
 
-import { provider } from "../constants";
-import { createTestChannel } from "../utils";
+import { createTestChannel, provider } from "../tests";
 
 import { EthereumChainReader } from "./ethReader";
 

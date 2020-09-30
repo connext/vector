@@ -17,7 +17,7 @@ import { Zero } from "@ethersproject/constants";
 import { Contract, ContractFactory, Wallet, utils } from "ethers";
 
 import { Withdraw } from "../../artifacts";
-import { provider } from "../../constants";
+import { provider } from "../constants";
 
 describe("Withdraw", () => {
   let deployer: Wallet;
