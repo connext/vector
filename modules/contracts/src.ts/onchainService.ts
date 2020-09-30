@@ -5,7 +5,7 @@ import {
   FullTransferState,
   IVectorChainReader,
   Result,
-  OnchainError,
+  ChainError,
 } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
@@ -30,10 +30,10 @@ export class VectorChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
     assetId: string,
-  ): Promise<Result<BigNumber, OnchainError>> {
+  ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let onchainBalance: BigNumber;
@@ -58,10 +58,10 @@ export class VectorChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
     assetId: string,
-  ): Promise<Result<BigNumber, OnchainError>> {
+  ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
@@ -80,10 +80,10 @@ export class VectorChainReader implements IVectorChainReader {
     channelAddress: string,
     chainId: number,
     assetId: string,
-  ): Promise<Result<BigNumber, OnchainError>> {
+  ): Promise<Result<BigNumber, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
@@ -101,10 +101,10 @@ export class VectorChainReader implements IVectorChainReader {
   async getChannelFactoryBytecode(
     channelFactoryAddress: string,
     chainId: number,
-  ): Promise<Result<string, OnchainError>> {
+  ): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
     const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
@@ -120,10 +120,10 @@ export class VectorChainReader implements IVectorChainReader {
     transfer: FullTransferState,
     chainId: number,
     bytecode?: string,
-  ): Promise<Result<boolean, OnchainError>> {
+  ): Promise<Result<boolean, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
     const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
     const contract = new Contract(transfer.transferId, TransferDefinition.abi, provider);
@@ -148,11 +148,11 @@ export class VectorChainReader implements IVectorChainReader {
     transfer: FullTransferState,
     chainId: number,
     bytecode?: string,
-  ): Promise<Result<Balance, OnchainError>> {
+  ): Promise<Result<Balance, ChainError>> {
     // Get provider
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
     // Try to encode
@@ -196,11 +196,11 @@ export class VectorChainReader implements IVectorChainReader {
     responder: string,
     channelFactoryAddress: string,
     chainId: number,
-  ): Promise<Result<string, OnchainError>> {
+  ): Promise<Result<string, ChainError>> {
     // Get provider
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
     const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
@@ -212,10 +212,10 @@ export class VectorChainReader implements IVectorChainReader {
     }
   }
 
-  async getCode(address: string, chainId: number): Promise<Result<string, OnchainError>> {
+  async getCode(address: string, chainId: number): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
-      return Result.fail(new OnchainError(OnchainError.reasons.ProviderNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
     try {

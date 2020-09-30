@@ -22,8 +22,8 @@ export const ERC20Abi = [
   "event Approval(address indexed owner, address indexed spender, uint256 value)",
 ];
 
-export class OnchainError extends VectorError {
-  readonly type = VectorError.errors.OnchainError;
+export class ChainError extends VectorError {
+  readonly type = VectorError.errors.ChainError;
   static readonly reasons = {
     ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",
@@ -31,7 +31,7 @@ export class OnchainError extends VectorError {
     NotEnoughFunds: "Not enough funds in wallet",
   };
 
-  constructor(public readonly message: Values<typeof OnchainError.reasons>) {
+  constructor(public readonly message: Values<typeof ChainError.reasons>) {
     super(message);
   }
 }
@@ -56,10 +56,10 @@ export interface IVectorChainReader {
     responder: string,
     channelFactoryAddress: string,
     chainId: number,
-  ): Promise<Result<string, OnchainError>>;
+  ): Promise<Result<string, ChainError>>;
   create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
   resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
-  getCode(address: Address, chainId: number): Promise<Result<string, OnchainError>>;
+  getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {
@@ -68,9 +68,9 @@ export interface IVectorChainService extends IVectorChainReader {
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
 }

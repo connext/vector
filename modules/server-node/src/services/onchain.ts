@@ -2,7 +2,7 @@ import {
   FullChannelState,
   IVectorChainService,
   MinimalTransaction,
-  OnchainError,
+  ChainError,
   Result,
   ERC20Abi,
 } from "@connext/vector-types";
@@ -29,14 +29,14 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
 
   private async sendTxAndParseResponse(
     txFn: Promise<providers.TransactionResponse>,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     try {
       const tx = await txFn;
       return Result.ok(tx);
     } catch (e) {
       let error = e;
       if (e.message.includes("sender doesn't have enough funds")) {
-        error = new OnchainError(OnchainError.reasons.NotEnoughFunds);
+        error = new ChainError(ChainError.reasons.NotEnoughFunds);
       }
       return Result.fail(error);
     }
@@ -47,14 +47,14 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     if (channelState.alice !== sender && channelState.bob !== sender) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SenderNotInChannel));
+      return Result.fail(new ChainError(ChainError.reasons.SenderNotInChannel));
     }
     // first check if multisig is needed to deploy
     const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
@@ -153,7 +153,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
   sendWithdrawTx(
     channelState: FullChannelState<any>,
     minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     throw new Error("Method not implemented.");
   }
 
@@ -163,10 +163,10 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     amount: string,
     assetId: string,
     chainId: number,
-  ): Promise<Result<providers.TransactionResponse | undefined, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse | undefined, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     this.logger.info({ assetId, channelAddress: spender }, "Approving token");
@@ -223,10 +223,10 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     const vectorChannel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
@@ -265,10 +265,10 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     if (assetId === constants.AddressZero) {
@@ -289,10 +289,10 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
   async sendTx(
     minTx: MinimalTransaction,
     chainId: number,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     return this.sendTxAndParseResponse(signer.sendTransaction(minTx));

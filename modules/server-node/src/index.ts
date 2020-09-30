@@ -8,7 +8,7 @@ import {
   ChannelRpcMethods,
   EngineEvent,
   EngineEvents,
-  OnchainError,
+  ChainError,
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
@@ -170,7 +170,7 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
       request.body.assetId,
     );
     if (depositRes.isError) {
-      if (depositRes.getError()!.message === OnchainError.reasons.NotEnoughFunds) {
+      if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
         return reply.status(400).send({ message: depositRes.getError()!.message });
       }
       return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
