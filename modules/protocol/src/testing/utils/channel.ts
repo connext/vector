@@ -273,6 +273,7 @@ export const depositInChannel = async (
 // is setup, it is ready to be updated.
 export const getSetupChannel = async (
   testName = "setup",
+  providedAliceSigner: IChannelSigner = getRandomChannelSigner(provider)
 ): Promise<{
   channel: FullChannelState;
   alice: IVectorProtocol;
@@ -282,7 +283,7 @@ export const getSetupChannel = async (
 }> => {
   // First, get the signers and fund the accounts
   const [aliceSigner, bobSigner] = [
-    getRandomChannelSigner(provider),
+    providedAliceSigner,
     getRandomChannelSigner(provider),
   ];
   // Fund the signer addresses with the sugar daddy account
@@ -314,12 +315,14 @@ export const getFundedChannel = async (
   balances: { assetId: string; amount: [BigNumberish, BigNumberish] }[] = [
     { assetId: constants.AddressZero, amount: [100, 0] },
   ],
+  providedAliceSigner: IChannelSigner = getRandomChannelSigner()
 ): Promise<{
   channel: FullChannelState;
   alice: IVectorProtocol;
   bob: IVectorProtocol;
+  aliceSigner: IChannelSigner;
 }> => {
-  const { alice, bob, channel: setupChannel, aliceSigner, bobSigner } = await getSetupChannel(testName);
+  const { alice, bob, channel: setupChannel, aliceSigner, bobSigner } = await getSetupChannel(testName, providedAliceSigner);
   // Fund the channel for all balances
   for (const requestedDeposit of balances) {
     const { assetId, amount } = requestedDeposit;
@@ -338,5 +341,6 @@ export const getFundedChannel = async (
     channel,
     alice,
     bob,
+    aliceSigner
   };
 };

@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { FullChannelState, IVectorProtocol } from "@connext/vector-types";
+import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
 import { constants } from "ethers";
 
 import { createTransfer, expect, getFundedChannel, getTestLoggers } from "../utils";
+import { getRandomChannelSigner, mkAddress } from "@connext/vector-utils"
+import { tokenAddress } from "../constants";
 
 const testName = "Create Integrations";
 const { log } = getTestLoggers(testName);
@@ -11,6 +13,7 @@ describe(testName, () => {
   let bob: IVectorProtocol;
 
   let preCreateChannel: FullChannelState;
+  let aliceSigner: IChannelSigner;
 
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
@@ -22,6 +25,7 @@ describe(testName, () => {
     alice = setup.alice;
     bob = setup.bob;
     preCreateChannel = setup.channel;
+    aliceSigner = setup.aliceSigner;
 
     log.info({
       alice: alice.publicIdentifier,
@@ -48,10 +52,89 @@ describe(testName, () => {
     expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
   });
 
-  it.skip("should work for alice creating transfer to bob", async () => {});
-  it.skip("should work for alice creating transfer out of channel", async () => {});
-  it.skip("should work for bob creating transfer to alice", async () => {});
+  it.skip("should work for alice creating transfer to bob", async () => {
+    // Set test constants
+    const setup = await getFundedChannel(testName, [
+      {
+        assetId: tokenAddress,
+        amount: ["0", "1"],
+      },
+    ]);
+    alice = setup.alice;
+    bob = setup.bob;
+    preCreateChannel = setup.channel;
+
+    log.info({
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+    });
+    const assetId = tokenAddress;
+    const transferAmount = "7";
+    const { channel, transfer } = await createTransfer(
+      preCreateChannel.channelAddress,
+      alice,
+      bob,
+      assetId,
+      transferAmount,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { transferResolver, ...toCompare } = transfer;
+    expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+    expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+  });
+  it.skip("should work for alice creating transfer out of channel", async () => {
+  });
+  it.skip("should work for bob creating transfer to alice", async () => {
+    // Set test constants
+    const assetId = constants.AddressZero;
+    const transferAmount = "7";
+    const { channel, transfer } = await createTransfer(
+      preCreateChannel.channelAddress,
+      bob,
+      alice,
+      assetId,
+      transferAmount,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { transferResolver, ...toCompare } = transfer;
+    expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+    expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+  });
   it.skip("should work for bob creating transfer out of channel", async () => {});
-  it.skip("should work for many concurrent transfers with multiple parties", async () => {});
+  it("should work for many concurrent transfers with multiple parties", async () => {
+    const setup = await getFundedChannel(testName, [
+      {
+        assetId: constants.AddressZero,
+        amount: ["100", "100"],
+      },
+    ], aliceSigner); 
+    const tony: IVectorProtocol = setup.bob;
+    const preCreateChannelTony: FullChannelState = setup.channel;
+
+    // Set test constants
+    const assetId = constants.AddressZero;
+    const transferAmount = "7";
+    const concurrentResult = await Promise.all([
+      createTransfer(
+        preCreateChannel.channelAddress,
+        alice,
+        bob,
+        assetId,
+        transferAmount,
+      ),
+      createTransfer(
+        preCreateChannelTony.channelAddress,
+        alice,
+        tony,
+        assetId,
+        transferAmount,
+      )
+    ]);
+    log.info(concurrentResult);
+  });
   it.skip("should work if channel is out of sync", async () => {});
 });
