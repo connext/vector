@@ -38,7 +38,7 @@ export class Vector implements IVectorProtocol {
     private readonly lockService: ILockService,
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
-    private readonly onchainService: IVectorChainReader,
+    private readonly chainReader: IVectorChainReader,
     private readonly logger: pino.BaseLogger,
   ) {}
 
@@ -47,7 +47,7 @@ export class Vector implements IVectorProtocol {
     lockService: ILockService,
     storeService: IVectorStore,
     signer: IChannelSigner,
-    onchainService: IVectorChainReader,
+    chainReader: IVectorChainReader,
     logger: pino.BaseLogger,
   ): Promise<Vector> {
     // Handles up asynchronous services and checks to see that
@@ -57,7 +57,7 @@ export class Vector implements IVectorProtocol {
       lockService,
       storeService,
       signer,
-      onchainService,
+      chainReader,
       logger,
     ).setupServices();
 
@@ -81,7 +81,7 @@ export class Vector implements IVectorProtocol {
     const outboundRes = await sync.outbound(
       params,
       this.storeService,
-      this.onchainService,
+      this.chainReader,
       this.messagingService,
       this.signer,
       this.logger,
@@ -156,7 +156,7 @@ export class Vector implements IVectorProtocol {
         received.update,
         received.previousUpdate,
         inbox,
-        this.onchainService,
+        this.chainReader,
         this.storeService,
         this.messagingService,
         this.signer,
@@ -187,7 +187,7 @@ export class Vector implements IVectorProtocol {
           .outbound(
             channel.latestUpdate,
             this.storeService,
-            this.onchainService,
+            this.chainReader,
             this.messagingService,
             this.signer,
             this.logger,
@@ -244,7 +244,7 @@ export class Vector implements IVectorProtocol {
       params.networkContext.chainId,
       params.networkContext.channelFactoryAddress,
       params.networkContext.channelMastercopyAddress,
-      this.onchainService,
+      this.chainReader,
     );
     if (create2Res.isError) {
       return Result.fail(

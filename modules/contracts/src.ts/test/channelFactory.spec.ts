@@ -12,7 +12,7 @@ describe("ChannelFactory", () => {
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
   let channelFactory: Contract;
   let channelMastercopy: Contract;
-  let onchainService: VectorChainReader;
+  let chainReader: VectorChainReader;
   let chainId: number;
 
   beforeEach(async () => {
@@ -28,7 +28,7 @@ describe("ChannelFactory", () => {
 
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
-    onchainService = new VectorChainReader(
+    chainReader = new VectorChainReader(
       chainProviders,
       pino().child({ module: "VectorChainReader" }),
     );
@@ -53,7 +53,7 @@ describe("ChannelFactory", () => {
       chainId,
       channelFactory.address,
       channelMastercopy.address,
-      onchainService,
+      chainReader,
     );
     expect(channelAddress).to.be.a("string");
     expect(channelAddress).to.be.eq(computedAddr.getValue());
@@ -79,7 +79,7 @@ describe("ChannelFactory", () => {
       chainId,
       channelFactory.address,
       channelMastercopy.address,
-      onchainService,
+      chainReader,
     );
     expect(channelAddress).to.be.a("string");
     expect(channelAddress).to.be.eq(computedAddr.getValue());

@@ -28,7 +28,7 @@ type VectorTestOverrides = {
   lockService: ILockService;
   storeService: IVectorStore;
   signer: IChannelSigner;
-  onchainService: IVectorChainReader;
+  chainReader: IVectorChainReader;
   logger: Pino.BaseLogger;
 };
 
@@ -48,7 +48,7 @@ export const createVectorInstances = async (
         const messagingService = shareServices ? sharedMessaging : new MemoryMessagingService();
         const lockService = shareServices ? sharedLock : new MemoryLockService();
         const logger = instanceOverrides.logger ?? Pino();
-        const onchainService = shareServices
+        const chainReader = shareServices
           ? sharedChain
           : new VectorChainReader({ [chainId]: provider }, logger.child({ module: "VectorChainReader" }));
         const opts = {
@@ -56,7 +56,7 @@ export const createVectorInstances = async (
           lockService,
           storeService: new MemoryStoreService(),
           signer: getRandomChannelSigner(provider),
-          onchainService,
+          chainReader,
           logger,
           ...instanceOverrides,
         };

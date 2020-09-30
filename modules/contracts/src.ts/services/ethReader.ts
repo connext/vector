@@ -14,7 +14,7 @@ import Pino from "pino";
 import { ChannelFactory, ChannelMastercopy, TransferDefinition } from "../artifacts";
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
-export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
+const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
   evm.exec(
     Uint8Array.from(Buffer.from(bytecode.replace(/^0x/, ""), "hex")),
     Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),

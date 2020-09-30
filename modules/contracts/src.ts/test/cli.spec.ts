@@ -18,7 +18,7 @@ describe("CLI", () => {
   });
 
   it("has a 'migrate' command that runs without error", async () => {
-    const done = migrate(wallets[0], addressBookPath);
+    const done = migrate(wallets[0], addressBookPath, true);
     return expect(done).to.be.fulfilled;
   });
 
