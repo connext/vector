@@ -2,8 +2,8 @@ import { signChannelMessage, expect } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, ContractFactory } from "ethers";
 
 import { TestToken } from "../artifacts";
-import { createChannel } from "../tests/channel/creation.spec";
 import { bob, alice, provider } from "../constants";
+import { createTestChannel } from "../utils";
 
 import { WithdrawCommitment } from "./withdraw";
 
@@ -13,7 +13,7 @@ describe("withdrawCommitment", () => {
   const amount = "50";
 
   beforeEach(async () => {
-    channel = await createChannel();
+    channel = await createTestChannel();
     const tx = await alice.sendTransaction({
       to: channel.address,
       value: BigNumber.from(amount).mul(2),

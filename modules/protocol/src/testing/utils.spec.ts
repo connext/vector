@@ -250,30 +250,30 @@ describe("utils", () => {
         BigNumber.from(0),
       );
       // Creat the mock with defaults
-      const onchain = Sinon.createStubInstance(VectorChainReader);
+      const chainReader = Sinon.createStubInstance(VectorChainReader);
       // set return values
       const mockedValues = {
-        // Default the value onchain + depositA + multisig deposit
+        // Default the value chainReader + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
         getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add((processedDepositsA as any)!)),
         getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add((processedDepositsB as any)!)),
         ...stubs,
       };
       Object.entries(mockedValues).forEach(([method, stub]) => {
-        onchain[method].resolves(stub);
+        chainReader[method].resolves(stub);
       });
-      // Return the onchain service
-      return onchain;
+      // Return the chainReader service
+      return chainReader;
     };
 
     afterEach(() => {
-      // Restore all mocks from the onchain service
+      // Restore all mocks from the chainReader service
       Sinon.restore();
     });
 
     const tests: (Partial<ReconcileDepositTest> & { name: string })[] = [
       {
-        name: "should work for Alice Eth deposit when onchain deposit was successful",
+        name: "should work for Alice Eth deposit when chainReader deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         processedDepositsA: ["10"],
@@ -330,7 +330,7 @@ describe("utils", () => {
     for (const test of tests) {
       const { name, initialBalance, processedDepositsA, processedDepositsB, assetId, error, expected } = test;
       it(name, async () => {
-        // Create the onchain service
+        // Create the chainReader service
         const chainReader = getChainReader(test);
 
         // Run the test

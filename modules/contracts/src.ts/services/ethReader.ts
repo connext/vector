@@ -9,7 +9,7 @@ import {
 } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
-import Pino from "pino";
+import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition } from "../artifacts";
 
@@ -20,10 +20,10 @@ const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
     Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
   );
 
-export class VectorChainReader implements IVectorChainReader {
+export class EthereumChainReader implements IVectorChainReader {
   constructor(
-    private readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
-    private readonly log: Pino.BaseLogger = Pino(),
+    public readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
+    public readonly log: pino.BaseLogger = pino(),
   ) {}
 
   async getChannelOnchainBalance(
@@ -202,7 +202,6 @@ export class VectorChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-
     const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
       const derivedAddress = await vectorChannel.getChannelAddress(alice, responder, chainId);
@@ -217,7 +216,6 @@ export class VectorChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-
     try {
       const code = await provider.getCode(address);
       return Result.ok(code);
@@ -225,4 +223,5 @@ export class VectorChainReader implements IVectorChainReader {
       return Result.fail(e);
     }
   }
+
 }

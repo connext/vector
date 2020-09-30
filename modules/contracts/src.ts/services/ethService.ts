@@ -11,23 +11,25 @@ import { BaseLogger } from "pino";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
-import { VectorChainReader } from "./ethReader";
+import { EthereumChainReader } from "./ethReader";
 
-export class VectorChainService extends VectorChainReader implements IVectorChainService {
+export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Wallet> = new Map();
   constructor(
-    private readonly _chainProviders: { [chainId: string]: providers.JsonRpcProvider },
+    chainProviders: { [chainId: string]: providers.JsonRpcProvider },
     private readonly privateKey: string,
-    private readonly logger: BaseLogger,
+    log: BaseLogger,
   ) {
-    super(_chainProviders, logger.child({ module: "VectorChainReader" }));
-    Object.entries(_chainProviders).forEach(([chainId, provider]) => {
+    super(chainProviders, log.child({ module: "EthereumChainReader" }));
+    Object.entries(chainProviders).forEach(([chainId, provider]) => {
       this.signers.set(parseInt(chainId), new Wallet(privateKey, provider));
     });
   }
 
   public async sendWithdrawTx(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     channelState: FullChannelState<any>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
     throw new Error("Method not implemented.");
@@ -57,7 +59,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     const multisigCode = multisigRes.getValue();
     // alice needs to deploy the multisig
     if (multisigCode === `0x`) {
-      this.logger.info(
+      this.log.info(
         { method: "sendDepositTx", channelAddress: channelState.channelAddress, assetId, amount },
         `Deploying channel with deposit`,
       );
@@ -86,7 +88,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
         }
         if (approveRes.getValue()) {
           const receipt = await approveRes.getValue()!.wait();
-          this.logger.info(
+          this.log.info(
             { txHash: receipt.transactionHash, method: "sendDepositATx", assetId },
             "Token approval confirmed",
           );
@@ -108,7 +110,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
       //   ),
       // );
       if (tx.isError) {
-        this.logger.error(
+        this.log.error(
           {
             method: "sendDepositTx",
             error: tx.getError()?.message,
@@ -119,21 +121,21 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
       // return tx;
 
       const createReceipt = await tx.getValue().wait();
-      this.logger.info(
+      this.log.info(
         { txHash: createReceipt.transactionHash, method: "sendDepositATx", assetId },
         "Channel creation confirmed",
       );
     }
 
-    this.logger.info({ method: "sendDepositTx", assetId, amount }, "Channel is deployed, sending deposit");
+    this.log.info({ method: "sendDepositTx", assetId, amount }, "Channel is deployed, sending deposit");
     if (sender === channelState.alice) {
-      this.logger.info(
+      this.log.info(
         { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant A",
       );
       return this.sendDepositATx(channelState, amount, assetId);
     } else {
-      this.logger.info(
+      this.log.info(
         { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant B",
       );
@@ -168,11 +170,11 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
-    this.logger.info({ assetId, channelAddress: spender }, "Approving token");
+    this.log.info({ assetId, channelAddress: spender }, "Approving token");
     const erc20 = new Contract(assetId, ERC20Abi, signer);
     const checkApprovalRes = await this.sendTxAndParseResponse(erc20.allowance(owner, spender));
     if (checkApprovalRes.isError) {
-      this.logger.error(
+      this.log.error(
         {
           method: "approveTokens",
           spender,
@@ -186,7 +188,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     }
 
     if (BigNumber.from(checkApprovalRes.getValue()).gte(amount)) {
-      this.logger.info(
+      this.log.info(
         {
           method: "approveTokens",
           assetId,
@@ -200,7 +202,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     }
     const approveRes = await this.sendTxAndParseResponse(erc20.approve(spender, amount));
     if (approveRes.isError) {
-      this.logger.error(
+      this.log.error(
         {
           method: "approveTokens",
           spender,
@@ -211,7 +213,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
       return approveRes;
     }
     const approveTx = approveRes.getValue();
-    this.logger.info(
+    this.log.info(
       { txHash: approveTx.hash, method: "approveTokens", assetId, amount },
       "Approve token tx submitted",
     );
@@ -231,7 +233,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     const vectorChannel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
     if (assetId !== constants.AddressZero) {
       // need to approve
-      this.logger.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
+      this.log.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
       const approveRes = await this.approveTokens(
         channelState.channelAddress,
         channelState.alice,
@@ -240,7 +242,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
         channelState.networkContext.chainId,
       );
       if (approveRes.isError) {
-        this.logger.error(
+        this.log.error(
           {
             method: "sendDepositATx",
             channelAddress: channelState.channelAddress,
@@ -254,7 +256,7 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
       if (approveTx) {
         await approveTx.wait();
       }
-      this.logger.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
+      this.log.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
       return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount));
     }
     return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount, { value: amount }));

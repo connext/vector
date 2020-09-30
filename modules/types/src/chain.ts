@@ -47,19 +47,52 @@ export type MultisigTransaction = MinimalTransaction & {
 };
 
 export interface IVectorChainReader {
-  getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
-  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
-  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
-  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+  getChannelOnchainBalance(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, Error>>;
+
+  getTotalDepositedA(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, Error>>;
+
+  getTotalDepositedB(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, Error>>;
+
+  getChannelFactoryBytecode(
+    channelFactoryAddress: string,
+    chainId: number,
+  ): Promise<Result<string, Error>>;
+
   getChannelAddress(
     initiator: string,
     responder: string,
     channelFactoryAddress: string,
     chainId: number,
   ): Promise<Result<string, ChainError>>;
-  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
-  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
-  getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
+
+  create(
+    transfer: FullTransferState,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<boolean, Error>>;
+
+  resolve(
+    transfer: FullTransferState,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<Balance, Error>>;
+
+  getCode(
+    address: Address,
+    chainId: number,
+  ): Promise<Result<string, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

@@ -5,8 +5,7 @@ import { AddressZero, HashZero, Two } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
 import { bob, alice, provider } from "../../constants";
-
-import { createChannel } from "./creation.spec";
+import { createTestChannel } from "../../utils";
 
 describe("Channel Disputes", () => {
   let channel: Contract;
@@ -15,7 +14,7 @@ describe("Channel Disputes", () => {
   let signatures: string[];
 
   beforeEach(async () => {
-    channel = (await createChannel()).connect(alice);
+    channel = (await createTestChannel()).connect(alice);
     channelState = {
       assetIds: [AddressZero],
       balances: [{ amount: ["0", "1"], to: [alice.address, bob.address] }],

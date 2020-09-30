@@ -9,7 +9,7 @@ export * from "./event";
 export * from "./lock";
 export * from "./messaging";
 export * from "./network";
-export * from "./onchain";
+export * from "./chain";
 export * from "./protocol";
 export * from "./rpc";
 export * from "./schemas";

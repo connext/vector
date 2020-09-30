@@ -4,15 +4,14 @@ import { AddressZero, One } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
 import { alice, bob } from "../../constants";
-
-import { createChannel } from "./creation.spec";
+import { createTestChannel } from "../../utils";
 
 describe("Channel Deposits", () => {
   const value = One;
   let channel: Contract;
 
   beforeEach(async () => {
-    channel = await createChannel();
+    channel = await createTestChannel();
   });
 
   it("should only increase totalDepositedA after receiving a direct deposit", async () => {
