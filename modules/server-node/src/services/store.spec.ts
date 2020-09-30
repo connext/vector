@@ -1,4 +1,4 @@
-import { Balance } from "@connext/vector-types";
+import { Balance, EngineEvent, EngineEvents } from "@connext/vector-types";
 import {
   createTestFullLinkedTransferState,
   createTestChannelState,
@@ -195,5 +195,24 @@ describe("store", () => {
     const t2 = transfers.find(t => t.transferId === transfer2.transferId);
     expect(t1).to.deep.eq(transfer1);
     expect(t2).to.deep.eq(transfer2);
+  });
+
+  it("should create an event subscription", async () => {
+    const subs = {
+      [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: "sub1",
+      [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: "sub2",
+      [EngineEvents.DEPOSIT_RECONCILED]: "sub3",
+    };
+    await store.registerSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED, "othersub");
+
+    const other = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+    expect(other).to.eq("othersub");
+
+    for (const [event, url] of Object.entries(subs)) {
+      await store.registerSubscription(event as EngineEvent, url);
+    }
+
+    const all = await store.getSubscriptions();
+    expect(all).to.deep.eq(subs);
   });
 });

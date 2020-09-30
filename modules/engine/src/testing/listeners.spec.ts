@@ -136,7 +136,6 @@ describe(testName, () => {
             transferDefinition: withdrawDefinition,
             transferInitialState: { ...state },
             transferEncodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
-            responder: commitment.responder,
           },
         },
         assetIds: [commitment.assetId],

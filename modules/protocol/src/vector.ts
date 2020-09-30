@@ -107,7 +107,18 @@ export class Vector implements IVectorProtocol {
   private async executeUpdate(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
-    this.logger.info({ method: "executeUpdate", step: "start", params });
+    this.logger.debug({
+      method: "executeUpdate",
+      step: "start",
+      params,
+    });
+    this.logger.info({
+      method: "executeUpdate",
+      step: "start",
+      type: params.type,
+      channelAddress: params.channelAddress,
+      updateSender: this.signer.publicIdentifier,
+    });
     const key = await this.lockService.acquireLock(params.channelAddress);
     const outboundRes = await this.lockedOperation(params);
     await this.lockService.releaseLock(params.channelAddress, key);

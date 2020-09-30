@@ -586,7 +586,6 @@ describe("generateUpdate", () => {
           encodings: emptyLinkedTransfer.transferEncodings,
           timeout: emptyLinkedTransfer.transferTimeout,
           meta: emptyLinkedTransfer.meta,
-          responder: emptyLinkedTransfer.responder,
         },
       },
       stateOverrides: {
@@ -610,7 +609,6 @@ describe("generateUpdate", () => {
           merkleProofData,
           merkleRoot,
           meta: emptyLinkedTransfer.meta,
-          responder: emptyLinkedTransfer.responder,
         },
       },
       expectedTransfer: {
@@ -622,8 +620,8 @@ describe("generateUpdate", () => {
           ...emptyLinkedTransfer.transferState,
           balance: { to: participants, amount: ["7", "0"] },
         },
-        initiator: emptyLinkedTransfer.initiator,
-        responder: emptyLinkedTransfer.responder,
+        initiator: participants[0],
+        responder: participants[1],
         initialStateHash: hashTransferState(
           {
             ...emptyLinkedTransfer.transferState,
@@ -663,8 +661,8 @@ describe("generateUpdate", () => {
       },
       expectedTransfer: {
         transferId: emptyLinkedTransfer.transferId,
-        initiator: emptyLinkedTransfer.initiator,
-        responder: emptyLinkedTransfer.responder,
+        initiator: participants[0],
+        responder: participants[1],
         transferState: {
           ...emptyLinkedTransfer.transferState,
           balance: { to: participants, amount: ["0", "7"] },

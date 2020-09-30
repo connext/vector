@@ -99,7 +99,6 @@ describe("ParamConverter", () => {
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-        responder: signerB.address,
         meta: {
           routingId: params.routingId,
           path: [
@@ -144,7 +143,6 @@ describe("ParamConverter", () => {
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
-        responder: signerA.address,
         meta: {
           routingId: params.routingId,
           path: [
@@ -290,7 +288,6 @@ describe("ParamConverter", () => {
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
-        responder: signerB.address,
         meta: {
           withdrawNonce: channelState.nonce.toString(),
         },
@@ -338,7 +335,6 @@ describe("ParamConverter", () => {
           fee: params.fee ? params.fee : "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        responder: signerA.address,
         encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
         meta: {
           withdrawNonce: channelState.nonce.toString(),

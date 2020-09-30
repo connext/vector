@@ -33,11 +33,11 @@ export function convertConditionalTransferParams(
 
   const recipientChainId = params.recipientChainId ? params.recipientChainId : channel.networkContext.chainId;
   const recipientAssetId = params.recipientAssetId ? params.recipientAssetId : params.assetId;
-  const responder = recipient
-    ? getSignerAddressFromPublicIdentifier(recipient)
-    : signer.address === channel.alice
-    ? channel.bob
-    : channel.alice;
+  const channelCounterparty = signer.address === channel.alice ? channel.bob : channel.alice;
+  // TODO: transfers should be allowed to go to participants outside of the
+  // channel (i.e. some dispute recovery address). This should be passed in
+  // via the transfer params as a `recoveryAddress` variable
+  // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
 
   let transferDefinition: string | undefined;
   let transferInitialState: LinkedTransferState;
@@ -48,7 +48,7 @@ export function convertConditionalTransferParams(
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
-        to: [signer.address, responder],
+        to: [signer.address, channelCounterparty],
       },
       linkedHash: details.linkedHash,
     };
@@ -70,7 +70,6 @@ export function convertConditionalTransferParams(
     assetId,
     transferDefinition: transferDefinition!,
     transferInitialState,
-    responder,
     timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings,
     meta,
@@ -129,16 +128,16 @@ export async function convertWithdrawParams(
 
   const initiatorSignature = await signer.signMessage(commitment.hashToSign());
 
-  const responder = channel.alice == signer.address ? channel.bob : channel.alice;
+  const channelCounterparty = channel.alice == signer.address ? channel.bob : channel.alice;
 
   const transferInitialState: WithdrawState = {
     balance: {
       amount: [amount, "0"],
-      to: [recipient, responder],
+      to: [recipient, channelCounterparty],
     },
     initiatorSignature,
     initiator: signer.address,
-    responder: responder,
+    responder: channelCounterparty,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
     fee: fee ? fee : "0",
@@ -152,7 +151,6 @@ export async function convertWithdrawParams(
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
-    responder,
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       withdrawNonce: channel.nonce.toString(),

@@ -154,10 +154,13 @@ const convertTransferEntityToFullTransferState = (
       to: [transfer.initialToA, transfer.initialToB],
     },
     initiator:
-      transfer.createUpdate!.responder === transfer.channel!.participantA
-        ? transfer.channel!.participantB
+      transfer.createUpdate!.fromIdentifier === transfer.channel?.publicIdentifierA
+        ? transfer.channel!.participantA
         : transfer.channel!.participantB,
-    responder: transfer.createUpdate!.responder!,
+    responder:
+      transfer.createUpdate!.toIdentifier === transfer.channel?.publicIdentifierA
+        ? transfer.channel!.participantA
+        : transfer.channel!.participantB,
     initialStateHash: transfer.initialStateHash,
     transferDefinition: transfer.createUpdate!.transferDefinition!,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
@@ -173,7 +176,6 @@ const convertTransferEntityToFullTransferState = (
 };
 
 export class PrismaStore implements IServerNodeStore {
-  private eventSubscriptions: { [event: string]: string } = {};
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
@@ -189,15 +191,31 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
-    this.eventSubscriptions[event] = url;
+    await this.prisma.eventSubscription.upsert({
+      where: {
+        event,
+      },
+      create: {
+        event,
+        url,
+      },
+      update: {
+        url,
+      },
+    });
   }
 
   async getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined> {
-    return this.eventSubscriptions[event];
+    const sub = await this.prisma.eventSubscription.findOne({ where: { event } });
+    return sub ? sub.url : undefined;
   }
 
   async getSubscriptions(): Promise<{ [event: string]: string }> {
-    return this.eventSubscriptions;
+    const subs = await this.prisma.eventSubscription.findMany();
+    return subs.reduce((s, sub) => {
+      s[sub.event] = sub.url;
+      return s;
+    }, {} as { [event: string]: string });
   }
 
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
@@ -327,7 +345,6 @@ export class PrismaStore implements IServerNodeStore {
           ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
           : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
-        responder: (channelState.latestUpdate!.details as CreateUpdateDetails).responder,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
         meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
@@ -353,10 +370,10 @@ export class PrismaStore implements IServerNodeStore {
 
         // if resolve, add resolvedTransfer by routingId
         resolvedTransfer:
-          transfer?.meta?.routingId && channelState.latestUpdate.type === UpdateType.resolve
+          channelState.latestUpdate.type === UpdateType.resolve
             ? {
                 connect: {
-                  routingId: transfer?.meta?.routingId,
+                  transferId: (channelState.latestUpdate!.details as ResolveUpdateDetails).transferId,
                 },
               }
             : undefined,

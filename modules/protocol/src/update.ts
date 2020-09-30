@@ -182,7 +182,23 @@ export async function generateUpdate<T extends UpdateType>(
       );
     }
   }
-  logger.info({ method: "generateUpdate", unsigned, updatedTransfer }, "Generated unsigned update");
+  logger.debug(
+    {
+      method: "generateUpdate",
+      unsigned,
+      updatedTransfer,
+    },
+    "Generated unsigned update",
+  );
+  logger.info(
+    {
+      method: "generateUpdate",
+      channelAddress: unsigned.channelAddress,
+      unsigned: unsigned.nonce,
+      updatedTransfer: updatedTransfer?.transferId,
+    },
+    "Generated unsigned update",
+  );
 
   // Create a signed commitment for the new state
   const result = await applyUpdate(unsigned, state!, updatedTransfer);
@@ -192,7 +208,21 @@ export async function generateUpdate<T extends UpdateType>(
     return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, state));
   }
   const commitment = await generateSignedChannelCommitment(result.getValue(), signer);
-  logger.info({ method: "generateUpdate", commitment }, "Applied and signed update");
+  logger.debug(
+    {
+      method: "generateUpdate",
+      commitment,
+    },
+    "Applied and signed update",
+  );
+  logger.info(
+    {
+      method: "generateUpdate",
+      aliceSignature: commitment.aliceSignature,
+      bobSignature: commitment.bobSignature,
+    },
+    "Applied and signed update",
+  );
 
   // Return the validated update to send to counterparty
   return Result.ok({
@@ -301,7 +331,7 @@ function generateCreateUpdate(
   transfers: CoreTransferState[],
 ): { unsigned: ChannelUpdate<"create">; transfer: FullTransferState } {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta, responder },
+    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -326,7 +356,7 @@ function generateCreateUpdate(
     chainId: state.networkContext.chainId,
     transferResolver: undefined,
     initiator: signer.address,
-    responder,
+    responder: signer.address === state.alice ? state.bob : state.alice,
     meta,
   };
   const transferHash = hashCoreTransferState(transferState);
@@ -351,7 +381,6 @@ function generateCreateUpdate(
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
-      responder,
     },
   };
   return { transfer: transferState, unsigned };

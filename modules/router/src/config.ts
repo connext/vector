@@ -1,5 +1,3 @@
-import { ChainAddresses } from "@connext/vector-types";
-
 let chainProviders;
 try {
   chainProviders = JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS!);

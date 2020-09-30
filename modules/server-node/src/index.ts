@@ -68,6 +68,7 @@ server.addHook("onReady", async () => {
   vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
     const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
     if (url) {
+      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_CREATED }, "Relaying event");
       await Axios.post(url, data);
     }
   });
@@ -188,7 +189,6 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
     });
     try {
       const res = await vectorEngine.request<"chan_deposit">(rpc);
-      console.log("deposit res", res);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
@@ -257,6 +257,7 @@ server.post<{ Body: ServerNodeParams.RegisterListener }>(
           store.registerSubscription(eventName as EngineEvent, url as string),
         ),
       );
+      logger.info({ endpoint: "/event/subscribe", body: request.body }, "Successfully set up subscriptions");
       return reply.status(200).send({ message: "success" });
     } catch (e) {
       return reply.status(500).send({ message: e.message });

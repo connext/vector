@@ -82,14 +82,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
-      vector = await Vector.connect(
-        messagingService,
-        lockService,
-        storeService,
-        signer,
-        chainService,
-        pino(),
-      );
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
     });
 
     it("should work", async () => {
@@ -289,21 +282,10 @@ describe("Vector", () => {
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestLinkedTransferState(),
         timeout: "133215",
-        responder: mkAddress("0x222"),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [
-        {
-          name: "should fail if responder is undefined",
-          params: { ...validParams, responder: undefined },
-          error: "should have required property 'responder'",
-        },
-        {
-          name: "should fail if responder is invalid",
-          params: { ...validParams, responder: "fail" },
-          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
-        },
         {
           name: "should fail if channelAddress is undefined",
           params: { ...validParams, channelAddress: undefined },

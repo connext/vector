@@ -84,7 +84,6 @@ const CreateProtocolParamsSchema = Type.Object({
   transferInitialState: TransferStateSchema,
   timeout: TIntegerString,
   encodings: TransferEncodingSchema,
-  responder: TAddress,
   meta: Type.Optional(Type.Any()),
 });
 
