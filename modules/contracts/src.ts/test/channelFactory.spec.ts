@@ -1,11 +1,11 @@
 import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
 import { Contract, ContractFactory, BigNumber } from "ethers";
+import pino from "pino";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
-import { VectorChainReader } from "../onchainService";
+import { VectorChainReader } from "../services";
 
 import { addressZero, alice, bob, provider } from "./constants";
-import { getOnchainTxService } from "./utils";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
@@ -25,7 +25,14 @@ describe("ChannelFactory", () => {
       channelMastercopy.address,
     );
     await channelFactory.deployed();
-    onchainService = await getOnchainTxService(provider);
+
+    const network = await provider.getNetwork();
+    const chainProviders = { [network.chainId]: provider };
+    onchainService = new VectorChainReader(
+      chainProviders,
+      pino().child({ module: "VectorChainReader" }),
+    );
+
   });
 
   it("should deploy", async () => {

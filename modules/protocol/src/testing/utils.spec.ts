@@ -243,7 +243,7 @@ describe("utils", () => {
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];
 
-    const getOnchainService = (testParams: Partial<ReconcileDepositTest>) => {
+    const getChainReader = (testParams: Partial<ReconcileDepositTest>) => {
       const { initialBalance, stubs, aliceDeposit, bobDeposit, processedDepositsA, processedDepositsB } = testParams;
       const initialChainBalance = (initialBalance?.amount ?? []).reduce(
         (prev, curr) => prev.add(curr),
@@ -331,7 +331,7 @@ describe("utils", () => {
       const { name, initialBalance, processedDepositsA, processedDepositsB, assetId, error, expected } = test;
       it(name, async () => {
         // Create the onchain service
-        const chainService = getOnchainService(test);
+        const chainReader = getChainReader(test);
 
         // Run the test
         const result = await reconcileDeposit(
@@ -341,7 +341,7 @@ describe("utils", () => {
           processedDepositsA ? processedDepositsA[0] || "0" : "0",
           processedDepositsB ? processedDepositsB[0] || "0" : "0",
           assetId ?? constants.AddressZero,
-          chainService,
+          chainReader,
         );
 
         if (error) {
