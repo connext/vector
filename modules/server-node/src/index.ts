@@ -18,7 +18,7 @@ import { getBearerTokenFunction, NatsMessagingService } from "./services/messagi
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { VectorTransactionService } from "./services/onchain";
+import { VectorChainService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
 
 const server = fastify();
@@ -42,7 +42,7 @@ Object.entries(config.chainProviders).forEach(([chainId, url]: any) => {
   _providers[chainId] = new providers.JsonRpcProvider(url);
 });
 
-const vectorTx = new VectorTransactionService(_providers, pk, logger.child({ module: "VectorTransactionService" }));
+const vectorTx = new VectorChainService(_providers, pk, logger.child({ module: "VectorChainService" }));
 const store = new PrismaStore();
 server.addHook("onReady", async () => {
   const messaging = new NatsMessagingService(

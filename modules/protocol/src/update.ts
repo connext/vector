@@ -277,6 +277,7 @@ async function generateDepositUpdate(
   onchainService: IVectorChainReader,
   logger: pino.BaseLogger,
 ): Promise<ChannelUpdate<"deposit">> {
+  logger.debug(params, "Generating deposit update from params");
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
   // - balances

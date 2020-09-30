@@ -13,7 +13,6 @@ import Pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition } from "./artifacts";
 
-// We might need to convert this file to JS...
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
   evm.exec(

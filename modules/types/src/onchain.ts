@@ -62,7 +62,7 @@ export interface IVectorChainReader {
   getCode(address: Address, chainId: number): Promise<Result<string, OnchainError>>;
 }
 
-export interface IVectorTransactionService extends IVectorChainReader {
+export interface IVectorChainService extends IVectorChainReader {
   sendDepositTx(
     channelState: FullChannelState,
     sender: string,

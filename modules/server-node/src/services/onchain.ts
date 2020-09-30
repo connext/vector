@@ -1,6 +1,6 @@
 import {
   FullChannelState,
-  IVectorTransactionService,
+  IVectorChainService,
   MinimalTransaction,
   OnchainError,
   Result,
@@ -14,7 +14,7 @@ export type ChainSigners = {
   [chainId: number]: providers.JsonRpcSigner;
 };
 
-export class VectorTransactionService extends VectorChainReader implements IVectorTransactionService {
+export class VectorChainService extends VectorChainReader implements IVectorChainService {
   private signers: Map<number, Wallet> = new Map();
   constructor(
     private readonly _chainProviders: { [chainId: string]: providers.JsonRpcProvider },
