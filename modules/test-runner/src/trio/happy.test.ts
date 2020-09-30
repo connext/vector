@@ -1,4 +1,4 @@
-import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
+import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect, delay } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
@@ -157,6 +157,10 @@ describe(testName, () => {
     const carolBalanceAfterTransfer =
       carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[0];
     expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
+
+    // need to delay until dave gets his transfer forwarded
+    // TODO: change to use events
+    await delay(10_000);
 
     // Get daves transfer
     const daveTransfer = (await dave.getTransferByRoutingId(daveChannel.channelAddress, routingId)).getValue()!;

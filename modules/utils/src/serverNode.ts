@@ -144,7 +144,7 @@ export class RestServerNodeService implements IServerNodeService {
   ): Promise<Result<FullTransferState | undefined, Error>> {
     try {
       const res = await Axios.get<ServerNodeResponses.GetChannelState>(
-        `${this.serverNodeUrl}/channel/${channelAddress}/transfer/routing/${routingId}`,
+        `${this.serverNodeUrl}/channel/${channelAddress}/transfer/${routingId}`,
       );
       return Result.ok(res.data);
     } catch (e) {
