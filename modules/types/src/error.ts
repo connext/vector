@@ -47,7 +47,7 @@ export abstract class VectorError extends Error {
   static readonly errors = {
     OutboundChannelUpdateError: "OutboundChannelUpdateError",
     InboundChannelUpdateError: "InboundChannelUpdateError",
-    OnchainError: "OnchainError",
+    ChainError: "ChainError",
     ValidationError: "ValidationError",
     RouterError: "RouterError",
     ServerNodeError: "ServerNodeError",

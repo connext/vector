@@ -1,4 +1,4 @@
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   getRandomChannelSigner,
   mkAddress,
@@ -16,7 +16,7 @@ import {
   LinkedTransferResolverEncoding,
   LinkedTransferStateEncoding,
   OutboundChannelUpdateError,
-  IVectorOnchainService,
+  IVectorChainReader,
   ILockService,
   IMessagingService,
   IVectorStore,
@@ -33,14 +33,14 @@ import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 
 describe("Vector", () => {
-  let chainService: Sinon.SinonStubbedInstance<IVectorOnchainService>;
+  let chainReader: Sinon.SinonStubbedInstance<IVectorChainReader>;
   let lockService: Sinon.SinonStubbedInstance<ILockService>;
   let messagingService: Sinon.SinonStubbedInstance<IMessagingService>;
   let storeService: Sinon.SinonStubbedInstance<IVectorStore>;
 
   beforeEach(async () => {
-    chainService = Sinon.createStubInstance(VectorOnchainService);
-    chainService.getChannelFactoryBytecode.resolves(Result.ok(mkHash()));
+    chainReader = Sinon.createStubInstance(VectorChainReader);
+    chainReader.getChannelFactoryBytecode.resolves(Result.ok(mkHash()));
     lockService = Sinon.createStubInstance(MemoryLockService);
     messagingService = Sinon.createStubInstance(MemoryMessagingService);
     storeService = Sinon.createStubInstance(MemoryStoreService);
@@ -56,7 +56,7 @@ describe("Vector", () => {
   describe("Vector.connect", () => {
     it("should work", async () => {
       const signer = getRandomChannelSigner();
-      const node = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
+      const node = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
       expect(node).to.be.instanceOf(Vector);
       expect(node.publicIdentifier).to.be.eq(signer.publicIdentifier);
       expect(node.signerAddress).to.be.eq(signer.address);
@@ -82,7 +82,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
 
     it("should work", async () => {
@@ -98,8 +98,8 @@ describe("Vector", () => {
     it("should fail if it fails to generate the create2 address", async () => {
       // Sinon has issues mocking out modules, we could use `proxyquire` but that
       // seems a bad choice since we use the utils within the tests
-      // Instead, force a create2 failure by forcing a chainService failure
-      chainService.getChannelFactoryBytecode.resolves(Result.fail(new Error("fail")));
+      // Instead, force a create2 failure by forcing a chainReader failure
+      chainReader.getChannelFactoryBytecode.resolves(Result.fail(new Error("fail")));
       const { details } = createTestUpdateParams(UpdateType.setup);
       const result = await vector.setup(details);
       console.log(result.getError());
@@ -204,7 +204,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
 
     it("should work", async () => {
@@ -263,7 +263,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
 
     it("should work", async () => {
@@ -377,7 +377,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainService, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
 
     it("should work", async () => {

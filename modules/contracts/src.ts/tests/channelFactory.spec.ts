@@ -1,18 +1,19 @@
 import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractFactory, BigNumber } from "ethers";
+import pino from "pino";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
-import { VectorOnchainService } from "../onchainService";
+import { VectorChainReader } from "../services";
 
-import { addressZero, alice, bob, provider } from "./constants";
-import { getOnchainTxService } from "./utils";
+import { alice, bob, provider } from "./constants";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
   let channelFactory: Contract;
   let channelMastercopy: Contract;
-  let onchainService: VectorOnchainService;
+  let chainReader: VectorChainReader;
   let chainId: number;
 
   beforeEach(async () => {
@@ -25,7 +26,14 @@ describe("ChannelFactory", () => {
       channelMastercopy.address,
     );
     await channelFactory.deployed();
-    onchainService = await getOnchainTxService(provider);
+
+    const network = await provider.getNetwork();
+    const chainProviders = { [network.chainId]: provider };
+    chainReader = new VectorChainReader(
+      chainProviders,
+      pino().child({ module: "VectorChainReader" }),
+    );
+
   });
 
   it("should deploy", async () => {
@@ -46,7 +54,7 @@ describe("ChannelFactory", () => {
       chainId,
       channelFactory.address,
       channelMastercopy.address,
-      onchainService,
+      chainReader,
     );
     expect(channelAddress).to.be.a("string");
     expect(channelAddress).to.be.eq(computedAddr.getValue());
@@ -62,7 +70,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDepositA(alice.address, bob.address, chainId, addressZero, value, { value });
+      .createChannelAndDepositA(alice.address, bob.address, chainId, AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -72,7 +80,7 @@ describe("ChannelFactory", () => {
       chainId,
       channelFactory.address,
       channelMastercopy.address,
-      onchainService,
+      chainReader,
     );
     expect(channelAddress).to.be.a("string");
     expect(channelAddress).to.be.eq(computedAddr.getValue());
@@ -84,7 +92,7 @@ describe("ChannelFactory", () => {
     expect(code).to.not.be.eq("0x");
 
     const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).totalDepositedA(
-      addressZero,
+      AddressZero,
     );
     expect(totalDepositedA).to.be.eq(value);
   });

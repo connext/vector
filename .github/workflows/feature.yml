@@ -58,6 +58,20 @@ jobs:
         if: failure()
         run: docker service logs --tail 200 global_auth
 
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make node
+      - run: make start-node
+      - run: make test-node
+      - name: Print logs
+        if: failure()
+        run: |
+          docker service logs --tail 200 node_proxy
+          docker service logs --tail 200 node_node
+
   duet:
     runs-on: ubuntu-latest
     steps:
@@ -69,8 +83,8 @@ jobs:
       - name: Print logs
         if: failure()
         run: |
-          docker service logs --tail 200 trio_alice
-          docker service logs --tail 200 trio_bob
+          docker service logs --tail 200 duet_alice
+          docker service logs --tail 200 duet_bob
 
   trio:
     runs-on: ubuntu-latest
@@ -88,17 +102,16 @@ jobs:
           docker service logs --tail 200 trio_carol
           docker service logs --tail 200 trio_dave
 
-  # temporary test just to debug a similar test on master branch
-  prod-node:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v1
-      - run: make node && make test-runner
-      - run: VECTOR_ENV=prod make start-node
-      - run: VECTOR_ENV=prod make test-node
-      - name: Print logs
-        if: failure()
-        run: |
-          docker service logs --tail 200 node_proxy
-          docker service logs --tail 200 node_node
+# prod-node:
+#   runs-on: ubuntu-latest
+#   needs: [build]
+#   steps:
+#     - uses: actions/checkout@v1
+#     - run: make node && make test-runner
+#     - run: VECTOR_ENV=prod make start-node
+#     - run: VECTOR_ENV=prod make test-node
+#     - name: Print logs
+#       if: failure()
+#       run: |
+#         docker service logs --tail 200 node_proxy
+#         docker service logs --tail 200 node_node

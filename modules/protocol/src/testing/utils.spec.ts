@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, constants, BigNumberish } from "ethers";
-import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
+import { Balance, Result, IVectorChainReader } from "@connext/vector-types";
 import {
   mkAddress,
   expect,
@@ -10,14 +10,14 @@ import {
   mkSig,
 } from "@connext/vector-utils";
 import Sinon from "sinon";
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 
 import { generateSignedChannelCommitment, reconcileDeposit, validateChannelUpdateSignatures } from "../utils";
 
 import { env } from "./env";
 
 type MockOnchainStubType = {
-  [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
+  [K in keyof IVectorChainReader]: IVectorChainReader[K];
 };
 
 type ReconcileDepositTest = {
@@ -243,37 +243,37 @@ describe("utils", () => {
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];
 
-    const getOnchainService = (testParams: Partial<ReconcileDepositTest>) => {
+    const getChainReader = (testParams: Partial<ReconcileDepositTest>) => {
       const { initialBalance, stubs, aliceDeposit, bobDeposit, processedDepositsA, processedDepositsB } = testParams;
       const initialChainBalance = (initialBalance?.amount ?? []).reduce(
         (prev, curr) => prev.add(curr),
         BigNumber.from(0),
       );
       // Creat the mock with defaults
-      const onchain = Sinon.createStubInstance(VectorOnchainService);
+      const chainReader = Sinon.createStubInstance(VectorChainReader);
       // set return values
       const mockedValues = {
-        // Default the value onchain + depositA + multisig deposit
+        // Default the value chainReader + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
         getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add((processedDepositsA as any)!)),
         getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add((processedDepositsB as any)!)),
         ...stubs,
       };
       Object.entries(mockedValues).forEach(([method, stub]) => {
-        onchain[method].resolves(stub);
+        chainReader[method].resolves(stub);
       });
-      // Return the onchain service
-      return onchain;
+      // Return the chainReader service
+      return chainReader;
     };
 
     afterEach(() => {
-      // Restore all mocks from the onchain service
+      // Restore all mocks from the chainReader service
       Sinon.restore();
     });
 
     const tests: (Partial<ReconcileDepositTest> & { name: string })[] = [
       {
-        name: "should work for Alice Eth deposit when onchain deposit was successful",
+        name: "should work for Alice Eth deposit when chainReader deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         processedDepositsA: ["10"],
@@ -330,8 +330,8 @@ describe("utils", () => {
     for (const test of tests) {
       const { name, initialBalance, processedDepositsA, processedDepositsB, assetId, error, expected } = test;
       it(name, async () => {
-        // Create the onchain service
-        const chainService = getOnchainService(test);
+        // Create the chainReader service
+        const chainReader = getChainReader(test);
 
         // Run the test
         const result = await reconcileDeposit(
@@ -341,7 +341,7 @@ describe("utils", () => {
           processedDepositsA ? processedDepositsA[0] || "0" : "0",
           processedDepositsB ? processedDepositsB[0] || "0" : "0",
           assetId ?? constants.AddressZero,
-          chainService,
+          chainReader,
         );
 
         if (error) {

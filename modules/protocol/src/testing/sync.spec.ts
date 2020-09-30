@@ -21,7 +21,7 @@ import {
 import { BigNumber, constants } from "ethers";
 import pino from "pino";
 import Sinon from "sinon";
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 
 // Import as full module for easy sinon function mocking
 import * as vectorUpdate from "../update";
@@ -70,7 +70,7 @@ describe("inbound", () => {
   let signers: ChannelSigner[];
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
   let messaging: Sinon.SinonStubbedInstance<MemoryMessagingService>;
-  let chainService: Sinon.SinonStubbedInstance<VectorOnchainService>;
+  let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   let validationStub: Sinon.SinonStub;
 
@@ -80,7 +80,7 @@ describe("inbound", () => {
       .map(() => getRandomChannelSigner(providerUrl));
     store = Sinon.createStubInstance(MemoryStoreService);
     messaging = Sinon.createStubInstance(MemoryMessagingService);
-    chainService = Sinon.createStubInstance(VectorOnchainService);
+    chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Set the validation stub
     validationStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
@@ -199,7 +199,7 @@ describe("outbound", () => {
   let signers: ChannelSigner[];
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
   let messaging: Sinon.SinonStubbedInstance<MemoryMessagingService>;
-  let chainService: Sinon.SinonStubbedInstance<VectorOnchainService>;
+  let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   let outboundValidationStub: Sinon.SinonStub;
   let inboundValidationStub: Sinon.SinonStub;
@@ -213,7 +213,7 @@ describe("outbound", () => {
     // Create all the services stubs
     store = Sinon.createStubInstance(MemoryStoreService);
     messaging = Sinon.createStubInstance(MemoryMessagingService);
-    chainService = Sinon.createStubInstance(VectorOnchainService);
+    chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Set the validation + generation mock
     outboundValidationStub = Sinon.stub(vectorValidation, "validateOutbound");

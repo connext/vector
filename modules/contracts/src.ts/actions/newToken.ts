@@ -2,9 +2,8 @@ import { getEthProvider } from "@connext/vector-utils";
 import { Wallet, utils } from "ethers";
 import { Argv } from "yargs";
 
-import { getAddressBook } from "../address-book";
 import { cliOpts } from "../constants";
-import { isContractDeployed, deployContract } from "../deploy";
+import { getAddressBook, isContractDeployed, deployContract } from "../utils";
 
 const initialSupply = utils.parseEther("100000000");
 

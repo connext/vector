@@ -1,4 +1,3 @@
-import { Contract, ContractFactory, Wallet, utils, constants } from "ethers";
 import {
   WithdrawState,
   WithdrawStateEncoding,
@@ -14,11 +13,11 @@ import {
   keyify,
   expect,
 } from "@connext/vector-utils";
+import { Zero } from "@ethersproject/constants";
+import { Contract, ContractFactory, Wallet, utils } from "ethers";
 
 import { Withdraw } from "../../artifacts";
 import { provider } from "../constants";
-
-const { Zero } = constants;
 
 describe("Withdraw", () => {
   let deployer: Wallet;

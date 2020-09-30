@@ -22,8 +22,8 @@ export const ERC20Abi = [
   "event Approval(address indexed owner, address indexed spender, uint256 value)",
 ];
 
-export class OnchainError extends VectorError {
-  readonly type = VectorError.errors.OnchainError;
+export class ChainError extends VectorError {
+  readonly type = VectorError.errors.ChainError;
   static readonly reasons = {
     ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",
@@ -31,7 +31,7 @@ export class OnchainError extends VectorError {
     NotEnoughFunds: "Not enough funds in wallet",
   };
 
-  constructor(public readonly message: Values<typeof OnchainError.reasons>) {
+  constructor(public readonly message: Values<typeof ChainError.reasons>) {
     super(message);
   }
 }
@@ -46,31 +46,64 @@ export type MultisigTransaction = MinimalTransaction & {
   nonce: BigNumberish;
 };
 
-export interface IVectorOnchainService {
-  getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
-  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
-  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
-  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+export interface IVectorChainReader {
+  getChannelOnchainBalance(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, Error>>;
+
+  getTotalDepositedA(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, Error>>;
+
+  getTotalDepositedB(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, Error>>;
+
+  getChannelFactoryBytecode(
+    channelFactoryAddress: string,
+    chainId: number,
+  ): Promise<Result<string, Error>>;
+
   getChannelAddress(
     initiator: string,
     responder: string,
     channelFactoryAddress: string,
     chainId: number,
-  ): Promise<Result<string, OnchainError>>;
-  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
-  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
-  getCode(address: Address, chainId: number): Promise<Result<string, OnchainError>>;
+  ): Promise<Result<string, ChainError>>;
+
+  create(
+    transfer: FullTransferState,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<boolean, Error>>;
+
+  resolve(
+    transfer: FullTransferState,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<Balance, Error>>;
+
+  getCode(
+    address: Address,
+    chainId: number,
+  ): Promise<Result<string, ChainError>>;
 }
 
-export interface IVectorTransactionService extends IVectorOnchainService {
+export interface IVectorChainService extends IVectorChainReader {
   sendDepositTx(
     channelState: FullChannelState,
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>>;
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
 }

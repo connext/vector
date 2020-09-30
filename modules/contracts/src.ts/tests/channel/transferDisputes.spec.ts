@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { CoreTransferState } from "@connext/vector-types";
 import { getRandomBytes32, hashCoreTransferState, toBN, expect } from "@connext/vector-utils";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
-import { addressZero, bob, hashZero, alice, provider } from "../constants";
-
-import { createChannel } from "./creation.spec";
+import { bob, alice, provider } from "../constants";
+import { createTestChannel } from "../utils";
 
 describe("Transfer Disputes", () => {
   let channel: Contract;
@@ -14,19 +14,19 @@ describe("Transfer Disputes", () => {
   let merkleProof: string[];
 
   beforeEach(async () => {
-    channel = (await createChannel()).connect(alice);
+    channel = (await createTestChannel()).connect(alice);
     transferState = {
       initialBalance: { amount: ["0", "1"], to: [alice.address, bob.address] },
-      assetId: addressZero,
+      assetId: AddressZero,
       channelAddress: channel.address,
       transferId: getRandomBytes32(),
-      transferDefinition: addressZero,
+      transferDefinition: AddressZero,
       transferTimeout: "1",
-      initialStateHash: hashZero,
+      initialStateHash: HashZero,
       initiator: alice.address,
       responder: bob.address,
     };
-    merkleProof = [hashZero];
+    merkleProof = [HashZero];
     hashedState = hashCoreTransferState(transferState);
   });
 
