@@ -12,7 +12,7 @@ export async function setupListeners(node: IServerNodeService, store: IRouterSto
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
   await node.on(
-    EngineEvents.CONDITIONAL_TRANSFER_CREATED, // TODO types
+    EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async data => {
       const res = await forwardTransferCreation(data, node, store, logger);
       if (res.isError) {
@@ -44,7 +44,7 @@ export async function setupListeners(node: IServerNodeService, store: IRouterSto
 
   // Set up listener to handle transfer resolution
   await node.on(
-    EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, // TODO types
+    EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
     async data => {
       await forwardTransferResolution(data, node, store, logger);
     },

@@ -305,8 +305,7 @@ export class VectorEngine implements IVectorEngine {
   public on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): void {
     this.evts[event].pipe(filter).attach(callback);
   }
@@ -314,8 +313,7 @@ export class VectorEngine implements IVectorEngine {
   public once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): void {
     this.evts[event].pipe(filter).attachOnce(callback);
   }
@@ -323,8 +321,7 @@ export class VectorEngine implements IVectorEngine {
   public waitFor<T extends EngineEvent>(
     event: T,
     timeout: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<EngineEventMap[T]> {
     return this.evts[event].pipe(filter).waitFor(timeout);
   }

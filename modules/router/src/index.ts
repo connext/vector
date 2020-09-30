@@ -3,12 +3,20 @@ import fastifyOas from "fastify-oas";
 import pino from "pino";
 import { Evt } from "evt";
 import { RestServerNodeService } from "@connext/vector-utils";
+import {
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferResolvedPayload,
+  EngineEvents,
+} from "@connext/vector-types";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { RouterStore } from "./services/store";
 
-const conditionalTransferEvt = Evt.create<any>();
+const evts = {
+  [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: Evt.create<ConditionalTransferCreatedPayload>(),
+  [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt.create<ConditionalTransferResolvedPayload>(),
+};
 
 const server = fastify();
 server.register(fastifyOas, {
@@ -29,7 +37,7 @@ server.addHook("onReady", async () => {
     config.serverNodeUrl,
     `http://router:${config.port}`,
     config.chainProviders,
-    conditionalTransferEvt,
+    evts,
     logger.child({ module: "RestServerNodeService" }),
   );
   router = await Router.connect(node, store, logger);
@@ -40,7 +48,12 @@ server.get("/ping", async () => {
 });
 
 server.post("/conditional-transfer-created", async (request, response) => {
-  conditionalTransferEvt.post(request.body);
+  evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(request.body as ConditionalTransferCreatedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post("/conditional-transfer-resolved", async (request, response) => {
+  evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(request.body as ConditionalTransferResolvedPayload);
   return response.status(200).send({ message: "success" });
 });
 

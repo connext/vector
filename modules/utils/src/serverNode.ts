@@ -1,5 +1,7 @@
 import {
   ChainProviders,
+  ConditionalTransferCreatedPayload,
+  ConditionalTransferResolvedPayload,
   EngineEvent,
   EngineEventMap,
   EngineEvents,
@@ -70,6 +72,11 @@ export class ServerNodeError extends VectorError {
   }
 }
 
+type EventEvts = {
+  [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: Evt<ConditionalTransferCreatedPayload>;
+  [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt<ConditionalTransferResolvedPayload>;
+};
+
 export class RestServerNodeService implements IServerNodeService {
   public publicIdentifier = "";
   public signerAddress = "";
@@ -79,7 +86,7 @@ export class RestServerNodeService implements IServerNodeService {
     private readonly serverNodeUrl: string,
     private readonly callbackUrlBase: string,
     private readonly providerUrls: ChainProviders,
-    private readonly conditionalTransferEvt: Evt<any>,
+    private readonly evts: EventEvts,
     private readonly logger: BaseLogger,
   ) {
     Object.entries(providerUrls).forEach(([chainId, url]) => {
@@ -91,16 +98,10 @@ export class RestServerNodeService implements IServerNodeService {
     serverNodeUrl: string,
     callbackUrlBase: string,
     providerUrls: ChainProviders,
-    conditionalTransferEvt: Evt<any>,
+    evts: EventEvts,
     logger: BaseLogger,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(
-      serverNodeUrl,
-      callbackUrlBase,
-      providerUrls,
-      conditionalTransferEvt,
-      logger,
-    );
+    const service = new RestServerNodeService(serverNodeUrl, callbackUrlBase, providerUrls, evts, logger);
     const configRes = await service.getConfig();
     if (configRes.isError) {
       throw configRes.getError();
@@ -234,7 +235,7 @@ export class RestServerNodeService implements IServerNodeService {
   async once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventMap[T]) => boolean,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -242,13 +243,13 @@ export class RestServerNodeService implements IServerNodeService {
   async on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventMap[T]) => boolean,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
     let url: string | undefined;
     switch (event) {
       case EngineEvents.CONDITIONAL_TRANSFER_CREATED: {
         url = `${this.callbackUrlBase}/conditional-transfer-created`;
-        this.conditionalTransferEvt.pipe(filter!).attach(callback);
+        this.evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].pipe(filter!).attach(callback);
         await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
           [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: url,
         });
@@ -256,7 +257,7 @@ export class RestServerNodeService implements IServerNodeService {
       }
       case EngineEvents.CONDITIONAL_TRANSFER_RESOLVED: {
         url = `${this.callbackUrlBase}/conditional-transfer-resolved`;
-        this.conditionalTransferEvt.pipe(filter!).attach(callback);
+        this.evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].pipe(filter!).attach(callback);
         await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
           [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: url,
         });
