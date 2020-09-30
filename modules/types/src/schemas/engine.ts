@@ -112,31 +112,17 @@ const WithdrawParamsSchema = Type.Object({
   meta: TBasicMeta,
 });
 
-// Rpc method names schema
-const RpcRequestEngineMethodNamesSchema = Type.Union(
-  Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<ChannelRpcMethod>],
-);
-type RpcRequestEngineMethodNames = Static<typeof RpcRequestEngineMethodNamesSchema>;
-
-const RpcRequestEngineMethodParamsSchemaMap = Type.Object({
-  [ChannelRpcMethods.chan_setup]: SetupEngineParamsSchema,
-  [ChannelRpcMethods.chan_deposit]: DepositEngineParamsSchema,
-  [ChannelRpcMethods.chan_createTransfer]: CreateLinkedTransferParamsSchema,
-  [ChannelRpcMethods.chan_resolveTransfer]: ResolveLinkedTransferParamsSchema,
-  [ChannelRpcMethods.chan_withdraw]: WithdrawParamsSchema,
-  [ChannelRpcMethods.chan_getChannelState]: GetChannelStateParamsSchema,
-  [ChannelRpcMethods.chan_getChannelStates]: GetChannelStatesParamsSchema,
-  [ChannelRpcMethods.chan_getChannelStateByParticipants]: GetChannelStateByParticipantsParamsSchema,
-  // [ChannelRpcMethods.chan_getTransferState]: ,
+// Rpc request schema
+const RpcRequestEngineParamsSchema = Type.Object({
+  id: Type.Number({ minimum: 1 }),
+  jsonrpc: Type.Literal("2.0"),
+  method: Type.Union(
+    Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<ChannelRpcMethod>],
+  ),
+  params: Type.Any(),
+  // NOTE: Safe to make params an object here, in engine the
+  // params will be validated after the method is dispatched
 });
-
-const RpcRequestEngineParamsSchema = <G extends RpcRequestEngineMethodNames>(T: G) =>
-  Type.Object({
-    id: Type.Number({ minimum: 1 }),
-    jsonrpc: Type.Literal("2.0"),
-    method: Type.Literal(T),
-    params: RpcRequestEngineMethodParamsSchemaMap[T],
-  });
 
 // Namespace export
 // eslint-disable-next-line @typescript-eslint/no-namespace

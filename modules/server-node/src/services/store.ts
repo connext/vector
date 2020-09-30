@@ -12,6 +12,7 @@ import {
   IEngineStore,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
+import { getRandomBytes32 } from "@connext/vector-utils";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
@@ -299,7 +300,7 @@ export class PrismaStore implements IServerNodeStore {
         ? {
             channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
-            routingId: transfer!.meta.routingId,
+            routingId: transfer!.meta.routingId ?? getRandomBytes32(),
             initialAmountA: transfer!.initialBalance.amount[0],
             initialToA: transfer!.initialBalance.to[0],
             initialAmountB: transfer!.initialBalance.amount[1],
@@ -313,7 +314,11 @@ export class PrismaStore implements IServerNodeStore {
         ? {
             connectOrCreate: {
               where: {
-                transferId: transfer!.transferId,
+                transferId: createTransferEntity!.transferId,
+                routingId_channelAddressId: {
+                  routingId: createTransferEntity!.routingId,
+                  channelAddressId: createTransferEntity!.channelAddressId,
+                },
               },
               create: createTransferEntity!,
             },
@@ -381,7 +386,7 @@ export class PrismaStore implements IServerNodeStore {
               }
             : undefined,
 
-        // if resolve, add resolvedTransfer by routingId
+        // if resolve, add resolvedTransfer by transferId
         resolvedTransfer:
           channelState.latestUpdate.type === UpdateType.resolve
             ? {

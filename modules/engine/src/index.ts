@@ -103,7 +103,7 @@ export class VectorEngine implements IVectorEngine {
     params: EngineParams.GetChannelState,
   ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
     const validate = ajv.compile(EngineParams.GetChannelStateSchema);
-    const valid = validate(params.channelAddress);
+    const valid = validate(params);
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
@@ -276,7 +276,7 @@ export class VectorEngine implements IVectorEngine {
     payload: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     this.logger.debug({ payload, method: "request" }, "Method called");
-    const validate = ajv.compile(EngineParams.RpcRequestSchema(payload.method));
+    const validate = ajv.compile(EngineParams.RpcRequestSchema);
     const valid = validate(payload);
     if (!valid) {
       // dont use result type since this could go over the wire

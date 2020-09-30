@@ -235,10 +235,11 @@ async function handleConditionalTransferResolution(
       conditionType = ConditionalTransferType.LinkedTransfer;
       break;
   }
+  const transfer = await vector.getTransferState(transferId);
   const payload: ConditionalTransferResolvedPayload = {
     channelAddress,
     channelBalance: balances[assetIds.findIndex(a => a === assetId)],
-    transfer: (await vector.getTransferState(transferId))!,
+    transfer: transfer!,
     conditionType: conditionType!,
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
