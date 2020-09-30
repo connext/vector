@@ -3,7 +3,15 @@ import { Static, TStringLiteral, Type } from "@sinclair/typebox";
 import { EngineEvent, EngineEvents } from "../engine";
 
 import { EngineParams } from "./engine";
-import { TUrl, TAddress, TPublicIdentifier, TIntegerString, TBytes32 } from "./basic";
+import {
+  TUrl,
+  TAddress,
+  TPublicIdentifier,
+  TIntegerString,
+  TBytes32,
+  TFullTransferState,
+  TFullChannelState,
+} from "./basic";
 
 ////////////////////////////////////////
 // Server Node API Parameter schemas
@@ -33,17 +41,15 @@ const GetTransferStateByRoutingIdParamsSchema = Type.Object({
   routingId: TBytes32,
 });
 
-// TODO: Could be improved by creating a transfer state schema
 const GetTransferStateByRoutingIdResponseSchema = {
-  200: Type.Union([Type.Undefined, Type.Any()]),
+  200: Type.Union([Type.Undefined, TFullTransferState]),
 };
 
 // GET CHANNEL STATE
 const GetChannelStateParamsSchema = EngineParams.GetChannelStateSchema;
 
-// TODO: Could be improved by creating a channel state schema
 const GetChannelStateResponseSchema = {
-  200: Type.Union([Type.Undefined, Type.Any()]),
+  200: Type.Union([Type.Undefined, TFullChannelState]),
 };
 
 // GET CHANNEL STATES

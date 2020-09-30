@@ -2,10 +2,10 @@
 
 import { Static, Type } from "@sinclair/typebox";
 
-import { TPublicIdentifier, TIntegerString, TAddress, TChainId } from "..";
+import { TPublicIdentifier, TIntegerString, TAddress } from "..";
 import { TBytes32, TransferEncodingSchema, TransferResolverSchema, TransferStateSchema } from "../schemas";
 
-import { TBasicMeta, TUrl } from "./basic";
+import { TBasicMeta, TSetupUpdateDetails } from "./basic";
 
 ////////////////////////////////////////
 // Protocol API Parameter schemas
@@ -14,17 +14,10 @@ import { TBasicMeta, TUrl } from "./basic";
 // the given update. It is fed these parameters by the Engine.
 
 // Setup
-const SetupProtocolParamsSchema = Type.Object({
-  counterpartyIdentifier: TPublicIdentifier,
-  timeout: TIntegerString,
-  networkContext: Type.Object({
-    channelFactoryAddress: TAddress,
-    channelMastercopyAddress: TAddress,
-    chainId: TChainId,
-    providerUrl: TUrl,
-  }),
-  meta: TBasicMeta,
-});
+const SetupProtocolParamsSchema = Type.Intersect([
+  TSetupUpdateDetails,
+  Type.Object({ counterpartyIdentifier: TPublicIdentifier, meta: TBasicMeta }),
+]);
 
 // Deposit
 const DepositProtocolParamsSchema = Type.Object({
