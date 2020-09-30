@@ -26,21 +26,23 @@ Contents:
 
 ## Quick Start
 
-To quickly get a working, entirely local dev environemnt, first spin up a `routing-node`.
+To quickly get a working, entirely local dev environemnt, first spin up a `routing-node`. Note, you will need `docker`, `make`, and `jq` installed.
 
 ```
 git clone git@github.com:connext/vector.git
 cd vector
-make start-node
+make start-router
 ```
 
 Once this is complete, you can spin up one or many non-routing `server-node`s by doing
 
 ```
-make start
+make start-node
 ```
 
-//TODO
+Once you have a `server-node` set up, you can interact with your channel via http. For basic tasks, check out our [example requests](https://github.com/connext/vector/tree/master/modules/server-node/examples) -- note, if you're developing with VSCode, there are several plugins available in the marketplace that you can use to make these queries *directly from the examples*.
+
+Full http interface reference is coming soon!
 
 ## Architecture and Module Breakdown
 
