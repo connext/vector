@@ -1,60 +1,53 @@
 import {
   FullChannelState,
-  IVectorTransactionService,
+  IVectorChainService,
   MinimalTransaction,
-  OnchainError,
+  ChainError,
   Result,
   ERC20Abi,
 } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers, Wallet } from "ethers";
-import { ChannelFactory, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
 import { BaseLogger } from "pino";
 
-export type ChainSigners = {
-  [chainId: number]: providers.JsonRpcSigner;
-};
+import { ChannelFactory, VectorChannel } from "../artifacts";
 
-export class VectorTransactionService extends VectorOnchainService implements IVectorTransactionService {
+import { EthereumChainReader } from "./ethReader";
+
+export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Wallet> = new Map();
   constructor(
-    private readonly _chainProviders: { [chainId: string]: providers.JsonRpcProvider },
+    chainProviders: { [chainId: string]: providers.JsonRpcProvider },
     private readonly privateKey: string,
-    private readonly logger: BaseLogger,
+    log: BaseLogger,
   ) {
-    super(_chainProviders, logger.child({ module: "VectorOnchainService" }));
-    Object.entries(_chainProviders).forEach(([chainId, provider]) => {
+    super(chainProviders, log.child({ module: "EthereumChainReader" }));
+    Object.entries(chainProviders).forEach(([chainId, provider]) => {
       this.signers.set(parseInt(chainId), new Wallet(privateKey, provider));
     });
   }
 
-  private async sendTxAndParseResponse(
-    txFn: Promise<providers.TransactionResponse>,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
-    try {
-      const tx = await txFn;
-      return Result.ok(tx);
-    } catch (e) {
-      let error = e;
-      if (e.message.includes("sender doesn't have enough funds")) {
-        error = new OnchainError(OnchainError.reasons.NotEnoughFunds);
-      }
-      return Result.fail(error);
-    }
+  public async sendWithdrawTx(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    channelState: FullChannelState<any>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    minTx: MinimalTransaction,
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    throw new Error("Method not implemented.");
   }
 
-  async sendDepositTx(
+  public async sendDepositTx(
     channelState: FullChannelState<any>,
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     if (channelState.alice !== sender && channelState.bob !== sender) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SenderNotInChannel));
+      return Result.fail(new ChainError(ChainError.reasons.SenderNotInChannel));
     }
     // first check if multisig is needed to deploy
     const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
@@ -66,7 +59,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     const multisigCode = multisigRes.getValue();
     // alice needs to deploy the multisig
     if (multisigCode === `0x`) {
-      this.logger.info(
+      this.log.info(
         { method: "sendDepositTx", channelAddress: channelState.channelAddress, assetId, amount },
         `Deploying channel with deposit`,
       );
@@ -95,7 +88,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
         }
         if (approveRes.getValue()) {
           const receipt = await approveRes.getValue()!.wait();
-          this.logger.info(
+          this.log.info(
             { txHash: receipt.transactionHash, method: "sendDepositATx", assetId },
             "Token approval confirmed",
           );
@@ -117,7 +110,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       //   ),
       // );
       if (tx.isError) {
-        this.logger.error(
+        this.log.error(
           {
             method: "sendDepositTx",
             error: tx.getError()?.message,
@@ -128,21 +121,21 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       // return tx;
 
       const createReceipt = await tx.getValue().wait();
-      this.logger.info(
+      this.log.info(
         { txHash: createReceipt.transactionHash, method: "sendDepositATx", assetId },
         "Channel creation confirmed",
       );
     }
 
-    this.logger.info({ method: "sendDepositTx", assetId, amount }, "Channel is deployed, sending deposit");
+    this.log.info({ method: "sendDepositTx", assetId, amount }, "Channel is deployed, sending deposit");
     if (sender === channelState.alice) {
-      this.logger.info(
+      this.log.info(
         { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant A",
       );
       return this.sendDepositATx(channelState, amount, assetId);
     } else {
-      this.logger.info(
+      this.log.info(
         { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
         "Detected participant B",
       );
@@ -150,11 +143,19 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     }
   }
 
-  sendWithdrawTx(
-    channelState: FullChannelState<any>,
-    minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
-    throw new Error("Method not implemented.");
+  private async sendTxAndParseResponse(
+    txFn: Promise<providers.TransactionResponse>,
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    try {
+      const tx = await txFn;
+      return Result.ok(tx);
+    } catch (e) {
+      let error = e;
+      if (e.message.includes("sender doesn't have enough funds")) {
+        error = new ChainError(ChainError.reasons.NotEnoughFunds);
+      }
+      return Result.fail(error);
+    }
   }
 
   private async approveTokens(
@@ -163,17 +164,17 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     amount: string,
     assetId: string,
     chainId: number,
-  ): Promise<Result<providers.TransactionResponse | undefined, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse | undefined, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
-    this.logger.info({ assetId, channelAddress: spender }, "Approving token");
+    this.log.info({ assetId, channelAddress: spender }, "Approving token");
     const erc20 = new Contract(assetId, ERC20Abi, signer);
     const checkApprovalRes = await this.sendTxAndParseResponse(erc20.allowance(owner, spender));
     if (checkApprovalRes.isError) {
-      this.logger.error(
+      this.log.error(
         {
           method: "approveTokens",
           spender,
@@ -187,7 +188,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     }
 
     if (BigNumber.from(checkApprovalRes.getValue()).gte(amount)) {
-      this.logger.info(
+      this.log.info(
         {
           method: "approveTokens",
           assetId,
@@ -201,7 +202,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     }
     const approveRes = await this.sendTxAndParseResponse(erc20.approve(spender, amount));
     if (approveRes.isError) {
-      this.logger.error(
+      this.log.error(
         {
           method: "approveTokens",
           spender,
@@ -212,7 +213,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       return approveRes;
     }
     const approveTx = approveRes.getValue();
-    this.logger.info(
+    this.log.info(
       { txHash: approveTx.hash, method: "approveTokens", assetId, amount },
       "Approve token tx submitted",
     );
@@ -223,16 +224,16 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     const vectorChannel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
     if (assetId !== constants.AddressZero) {
       // need to approve
-      this.logger.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
+      this.log.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
       const approveRes = await this.approveTokens(
         channelState.channelAddress,
         channelState.alice,
@@ -241,7 +242,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
         channelState.networkContext.chainId,
       );
       if (approveRes.isError) {
-        this.logger.error(
+        this.log.error(
           {
             method: "sendDepositATx",
             channelAddress: channelState.channelAddress,
@@ -255,7 +256,7 @@ export class VectorTransactionService extends VectorOnchainService implements IV
       if (approveTx) {
         await approveTx.wait();
       }
-      this.logger.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
+      this.log.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
       return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount));
     }
     return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount, { value: amount }));
@@ -265,10 +266,10 @@ export class VectorTransactionService extends VectorOnchainService implements IV
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     if (assetId === constants.AddressZero) {
@@ -289,10 +290,10 @@ export class VectorTransactionService extends VectorOnchainService implements IV
   async sendTx(
     minTx: MinimalTransaction,
     chainId: number,
-  ): Promise<Result<providers.TransactionResponse, OnchainError>> {
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
-      return Result.fail(new OnchainError(OnchainError.reasons.SignerNotFound));
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     return this.sendTxAndParseResponse(signer.sendTransaction(minTx));

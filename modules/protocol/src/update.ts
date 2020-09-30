@@ -15,7 +15,7 @@ import {
   CoreTransferState,
   Result,
   FullTransferState,
-  IVectorOnchainService,
+  IVectorChainReader,
   InboundChannelUpdateError,
   OutboundChannelUpdateError,
 } from "@connext/vector-types";
@@ -131,7 +131,7 @@ export async function generateUpdate<T extends UpdateType>(
   state: FullChannelState | undefined, // passed in to avoid store call
   activeTransfers: FullTransferState[],
   transfer: FullTransferState | undefined, // Defined only in resolve, asserted in validation
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<
@@ -149,7 +149,7 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer, onchainService, logger);
+      unsigned = await generateDepositUpdate(state!, params as UpdateParams<"deposit">, signer, chainReader, logger);
       break;
     }
     case UpdateType.create: {
@@ -169,7 +169,7 @@ export async function generateUpdate<T extends UpdateType>(
         params as UpdateParams<"resolve">,
         signer,
         activeTransfers,
-        onchainService,
+        chainReader,
         logger,
       );
       unsigned = result.unsigned;
@@ -274,9 +274,10 @@ async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
   signer: IChannelSigner,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   logger: pino.BaseLogger,
 ): Promise<ChannelUpdate<"deposit">> {
+  logger.debug(params, "Generating deposit update from params");
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
   // - balances
@@ -308,7 +309,7 @@ async function generateDepositUpdate(
       processedDepositsAOfAssetId,
       processedDepositsBOfAssetId,
       assetId,
-      onchainService,
+      chainReader,
     )
   ).getValue();
 
@@ -392,7 +393,7 @@ async function generateResolveUpdate(
   params: UpdateParams<"resolve">,
   signer: IChannelSigner,
   transfers: FullTransferState[],
-  chainService: IVectorOnchainService,
+  chainService: IVectorChainReader,
   logger: pino.BaseLogger,
 ): Promise<{ unsigned: ChannelUpdate<"resolve">; transfer: FullTransferState }> {
   // A transfer resolution update can effect the following

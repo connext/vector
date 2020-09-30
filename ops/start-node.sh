@@ -65,6 +65,8 @@ common="networks:
       options:
           max-size: '100m'"
 
+admin_token="${VECTOR_ADMIN_TOKEN:-cxt1234}"
+
 ####################
 # Proxy config
 
@@ -96,15 +98,16 @@ mkdir -p $snapshots_dir
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
-  database_image="image: '$database_image'"
-  db_volume="database"
+  database_image="image: '$database_image'
+    volumes:
+      - 'database:/var/lib/postgresql/data'
+      - '$snapshots_dir:/root/snapshots'"
   db_secret="${project}_database"
   bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`" > /dev/null
 else
   database_image="image: '$database_image'
     ports:
       - '5432:5432'"
-  db_volume="database_dev"
   db_secret="${project}_database_dev"
   bash $root/ops/save-secret.sh "$db_secret" "$project" > /dev/null
 fi
@@ -119,11 +122,11 @@ pg_user="$project"
 ########################################
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
-# If no chain providers provided, spin up local testnets & use those
+
+echo "\$VECTOR_AUTH_URL=$VECTOR_AUTH_URL | \$VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS"
 
 if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
 then
-  echo "\$VECTOR_AUTH_URL or \$VECTOR_CHAIN_PROVIDERS is missing, starting global services"
   bash $root/ops/start-global.sh
   auth_url="http://auth:5040"
   mnemonic_secret_name="${project}_mnemonic_dev"
@@ -136,10 +139,16 @@ else
   echo "Connecting to external global servies: $VECTOR_AUTH_URL & $VECTOR_CHAIN_PROVIDERS"
   auth_url="$VECTOR_AUTH_URL"
   mnemonic_secret_name="${project}_mnemonic"
-  # Prefer top-level address-book otherwise default to one in contracts
-  if [[ -f address-book.json ]]
-  then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
-  else VECTOR_CONTRACT_ADDRESSES="`cat modules/contracts/address-book.json | tr -d ' \n\r'`"
+  if [[ -z "$VECTOR_CONTRACT_ADDRESSES" ]]
+  then
+    if [[ -f "address-book.json" ]]
+    then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
+    elif [[ -f ".chaindata/address-book.json" ]]
+    then VECTOR_CONTRACT_ADDRESSES="`cat .chaindata/address-book.json | tr -d ' \n\r'`"
+    else
+      echo "No \$VECTOR_CONTRACT_ADDRESSES provided & can't find an address-book, aborting"
+      exit 1
+    fi
   fi
 fi
 
@@ -167,7 +176,7 @@ else
 fi
 
 ####################
-# Launch Indra stack
+# Launch stack
 
 rm -rf $root/docker-compose.yml $root/$stack.docker-compose.yml
 cat - > $root/$stack.docker-compose.yml <<EOF
@@ -185,7 +194,7 @@ secrets:
 
 volumes:
   certs:
-  $db_volume:
+  database:
 
 services:
 
@@ -206,7 +215,7 @@ services:
     ports:
       - '$node_port:$node_port'
     environment:
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
@@ -231,16 +240,13 @@ services:
     environment:
       AWS_ACCESS_KEY_ID: '$VECTOR_AWS_ACCESS_KEY_ID'
       AWS_SECRET_ACCESS_KEY: '$VECTOR_AWS_SECRET_ACCESS_KEY'
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_ENV: '$VECTOR_ENV'
       POSTGRES_DB: '$project'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$project'
     secrets:
       - '$db_secret'
-    volumes:
-      - '$db_volume:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
 
 EOF
 

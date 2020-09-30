@@ -1,13 +1,12 @@
 import { getEthProvider } from "@connext/vector-utils";
-import { constants, Contract, providers, utils, Wallet } from "ethers";
+import { EtherSymbol, Zero } from "@ethersproject/constants";
+import { Contract, providers, utils, Wallet } from "ethers";
 import { Argv } from "yargs";
 
-import { getAddressBook } from "../address-book";
 import { artifacts } from "../artifacts";
 import { cliOpts, ConstructorArgs } from "../constants";
-import { isContractDeployed, deployContract } from "../deploy";
+import { getAddressBook, isContractDeployed, deployContract } from "../utils";
 
-const { EtherSymbol, Zero } = constants;
 const { formatEther } = utils;
 
 export const migrate = async (

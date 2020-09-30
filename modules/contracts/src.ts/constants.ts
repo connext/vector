@@ -8,8 +8,6 @@ export const defaults = {
   addressBookPath: "./address-book.json",
 };
 
-export const ganacheId = 1337;
-
 export const cliOpts = {
   addressBook: {
     alias: "address-book",
@@ -69,3 +67,4 @@ export const cliOpts = {
     type: "string",
   },
 } as { [key: string]: Options };
+

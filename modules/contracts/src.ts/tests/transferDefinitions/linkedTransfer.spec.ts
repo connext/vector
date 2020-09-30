@@ -1,4 +1,3 @@
-import { Contract, ContractFactory, Wallet, utils, constants } from "ethers";
 import { LinkedTransferState, LinkedTransferResolver, Balance } from "@connext/vector-types";
 import {
   encodeLinkedTransferResolver,
@@ -8,11 +7,11 @@ import {
   keyify,
   expect,
 } from "@connext/vector-utils";
+import { HashZero, Zero } from "@ethersproject/constants";
+import { Contract, ContractFactory, Wallet, utils } from "ethers";
 
 import { LinkedTransfer } from "../../artifacts";
 import { provider } from "../constants";
-
-const { HashZero, Zero } = constants;
 
 describe("LinkedTransfer", () => {
   let deployer: Wallet;

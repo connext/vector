@@ -8,18 +8,18 @@ import {
   ChannelRpcMethods,
   EngineEvent,
   EngineEvents,
-  OnchainError,
-  ResolveUpdateDetails,
+  ChainError,
   ServerNodeParams,
   ServerNodeResponses,
+  ResolveUpdateDetails,
 } from "@connext/vector-types";
+import { VectorChainService } from "@connext/vector-contracts";
 import Axios from "axios";
 
 import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { VectorTransactionService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
 
 const server = fastify();
@@ -43,7 +43,7 @@ Object.entries(config.chainProviders).forEach(([chainId, url]: any) => {
   _providers[chainId] = new providers.JsonRpcProvider(url);
 });
 
-const vectorTx = new VectorTransactionService(_providers, pk, logger.child({ module: "VectorTransactionService" }));
+const vectorTx = new VectorChainService(_providers, pk, logger.child({ module: "VectorChainService" }));
 const store = new PrismaStore();
 server.addHook("onReady", async () => {
   const messaging = new NatsMessagingService(
@@ -185,7 +185,7 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
       request.body.assetId,
     );
     if (depositRes.isError) {
-      if (depositRes.getError()!.message === OnchainError.reasons.NotEnoughFunds) {
+      if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
         return reply.status(400).send({ message: depositRes.getError()!.message });
       }
       return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });

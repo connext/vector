@@ -11,7 +11,7 @@ import {
   InboundChannelUpdateError,
   OutboundChannelUpdateError,
   Values,
-  IVectorOnchainService,
+  IVectorChainReader,
   FullTransferState,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
@@ -29,7 +29,7 @@ import { validateAndApplyInboundUpdate, validateOutbound } from "./validate";
 export async function outbound(
   params: UpdateParams<any>,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   messagingService: IMessagingService,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
@@ -67,7 +67,7 @@ export async function outbound(
     previousState,
     activeTransfers,
     validTransfer,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );
@@ -107,7 +107,7 @@ export async function outbound(
       params,
       previousState,
       storeService,
-      onchainService,
+      chainReader,
       signer,
       logger,
     );
@@ -200,7 +200,7 @@ export async function inbound(
   update: ChannelUpdate<any>,
   previousUpdate: ChannelUpdate<any>,
   inbox: string,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
@@ -331,7 +331,7 @@ export async function inbound(
       previousUpdate,
       previousState,
       storeService,
-      onchainService,
+      chainReader,
       signer,
       logger,
     );
@@ -354,7 +354,7 @@ export async function inbound(
     update,
     previousState,
     storeService,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );
@@ -396,7 +396,7 @@ const syncStateAndRecreateUpdate = async (
   attemptedParams: UpdateParams<any>,
   previousState: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<Result<OutboundSync, OutboundChannelUpdateError>> => {
@@ -441,7 +441,7 @@ const syncStateAndRecreateUpdate = async (
     counterpartyUpdate,
     previousState,
     storeService,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );
@@ -469,7 +469,7 @@ const syncStateAndRecreateUpdate = async (
     syncedChannel,
     activeTransfers,
     transfer,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );

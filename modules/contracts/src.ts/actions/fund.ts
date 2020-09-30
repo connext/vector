@@ -1,12 +1,12 @@
 import { Address, DecString } from "@connext/types";
 import { getEthProvider } from "@connext/vector-utils";
+import { AddressZero, EtherSymbol } from "@ethersproject/constants";
 import * as tokenArtifacts from "@openzeppelin/contracts/build/contracts/ERC20Mintable.json";
-import { Contract, Wallet, constants, utils } from "ethers";
+import { Contract, Wallet, utils } from "ethers";
 import { Argv } from "yargs";
 
 import { cliOpts } from "../constants";
 
-const { AddressZero, EtherSymbol } = constants;
 const { formatEther, parseEther } = utils;
 
 export const fund = async (

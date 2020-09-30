@@ -8,7 +8,7 @@ import {
   UpdateParams,
   OutboundChannelUpdateError,
   InboundChannelUpdateError,
-  IVectorOnchainService,
+  IVectorChainReader,
   Values,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
@@ -249,12 +249,12 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<InboundValidationResult> {
   // Validate + apply the update
-  const res = await validateAndApplyChannelUpdate(update, state, storeService, onchainService);
+  const res = await validateAndApplyChannelUpdate(update, state, storeService, chainReader);
   if (res.isError) {
     return Result.fail(res.getError()!);
   }
@@ -304,7 +304,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   previousState: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
 ): Promise<
   Result<
     {
@@ -436,7 +436,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       const storedTransfer = (await storeService.getTransferState(transferId))!;
 
       // Get the final transfer balance from contract
-      const transferBalanceResult = await onchainService.resolve(
+      const transferBalanceResult = await chainReader.resolve(
         { ...storedTransfer, transferResolver },
         previousState.networkContext.chainId,
       );

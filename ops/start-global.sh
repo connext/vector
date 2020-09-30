@@ -70,6 +70,7 @@ common="networks:
 # Auth config
 
 auth_port="5040"
+admin_token="${VECTOR_ADMIN_TOKEN:-cxt1234}"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -177,7 +178,7 @@ services:
       VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
       VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
       VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
       VECTOR_ENV: '$VECTOR_ENV'
     ports:
@@ -227,7 +228,7 @@ echo "The $stack stack has been deployed."
 public_auth_url="http://127.0.0.1:5040"
 
 function abort {
-  echo
+  echo "====="
   docker service ls
   echo "====="
   docker container ls -a
@@ -235,16 +236,10 @@ function abort {
   docker service ps global_auth || true
   docker service logs --tail 50 --raw global_auth || true
   echo "====="
-  docker service ps global_evm_1337 || true
-  docker service logs --tail 50 --raw global_evm_1337 || true
-  echo "====="
-  docker service ps global_evm_1338 || true
-  docker service logs --tail 50 --raw global_evm_1338 || true
-  echo "====="
   curl $public_auth_url || true
   echo "====="
   echo "Timed out waiting for $stack stack to wake up, see above for diagnostic info."
-  exit
+  exit 1
 }
 
 timeout=$(expr `date +%s` + 60)

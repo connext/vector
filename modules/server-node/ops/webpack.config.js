@@ -7,11 +7,13 @@ module.exports = {
 
   context: path.join(__dirname, ".."),
 
-  entry: path.join(__dirname, "../src/main.ts"),
+  entry: path.join(__dirname, "../src/index.ts"),
 
   externals: {
+    ".prisma/client": "commonjs2 .prisma/client",
+    "@prisma/client": "commonjs2 @prisma/client",
     "pg-native": "commonjs2 pg-native",
-    sqlite3: "commonjs2 sqlite3",
+    "sqlite3": "commonjs2 sqlite3",
   },
 
   node: {
@@ -70,6 +72,14 @@ module.exports = {
         {
           from: path.join(__dirname, "../schema.prisma"),
           to: path.join(__dirname, "../dist/schema.prisma"),
+        },
+        {
+          from: path.join(__dirname, "../../../node_modules/@prisma/client"),
+          to: path.join(__dirname, "../dist/@prisma/client"),
+        },
+        {
+          from: path.join(__dirname, "../../../node_modules/.prisma/client"),
+          to: path.join(__dirname, "../dist/.prisma/client"),
         },
       ],
     }),

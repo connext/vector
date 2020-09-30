@@ -1,4 +1,4 @@
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   UpdateType,
   InboundChannelUpdateError,
@@ -469,11 +469,11 @@ describe("generateUpdate", () => {
 
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
-  let chainService: Sinon.SinonStubbedInstance<VectorOnchainService>;
+  let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   beforeEach(async () => {
     store = Sinon.createStubInstance(MemoryStoreService);
-    chainService = Sinon.createStubInstance(VectorOnchainService);
+    chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Mock `applyUpdate` (tested above) so it always returns
     // an empty object

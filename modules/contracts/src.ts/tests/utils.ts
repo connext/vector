@@ -1,10 +1,11 @@
 import { expect } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
-import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../../artifacts";
-import { alice, bob, provider } from "../constants";
+import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
 
-export const createChannel = async (): Promise<Contract> => {
+import { alice, bob, provider } from "./constants";
+
+export const createTestChannelFactory = async (): Promise<Contract> => {
   const channelMastercopy = await new ContractFactory(
     ChannelMastercopy.abi,
     ChannelMastercopy.bytecode,
@@ -15,6 +16,11 @@ export const createChannel = async (): Promise<Contract> => {
     channelMastercopy.address,
   );
   await channelFactory.deployed();
+  return new Contract(channelFactory.address, ChannelFactory.abi, alice);
+};
+
+export const createTestChannel = async (): Promise<Contract> => {
+  const channelFactory = await createTestChannelFactory();
   const doneBeingCreated: Promise<string> = new Promise(res => {
     channelFactory.once(channelFactory.filters.ChannelCreation(), res);
   });
@@ -24,25 +30,5 @@ export const createChannel = async (): Promise<Contract> => {
   await tx.wait();
   const channelAddress = await doneBeingCreated;
   expect(channelAddress).to.be.a("string");
-  return new Contract(channelAddress, VectorChannel.abi, provider);
+  return new Contract(channelAddress, VectorChannel.abi, alice);
 };
-
-describe("Channel Creation", () => {
-  let channel: Contract;
-
-  beforeEach(async () => {
-    channel = await createChannel();
-  });
-
-  it("should be created without error", async () => {
-    expect(channel.address).to.be.a("string");
-    const runtimeCode = await provider.getCode(channel.address);
-    expect(runtimeCode.length).to.be.gt(4);
-  });
-
-  it("should return correct participants from getParticipants()", async () => {
-    const participants = await channel.getParticipants();
-    expect(participants[0]).to.equal(alice.address);
-    expect(participants[1]).to.equal(bob.address);
-  });
-});

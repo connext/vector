@@ -96,15 +96,16 @@ mkdir -p $snapshots_dir
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
-  database_image="image: '$database_image'"
-  db_volume="database"
+  database_image="image: '$database_image'
+    volumes:
+      - 'database:/var/lib/postgresql/data'
+      - '$snapshots_dir:/root/snapshots'"
   db_secret="${project}_database"
   bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`" > /dev/null
 else
   database_image="image: '$database_image'
     ports:
       - '5432:5432'"
-  db_volume="database_dev"
   db_secret="${project}_database_dev"
   bash $root/ops/save-secret.sh "$db_secret" "$project" > /dev/null
 fi
@@ -204,7 +205,7 @@ secrets:
 
 volumes:
   certs:
-  $db_volume:
+  database:
 
 services:
 
@@ -277,9 +278,6 @@ services:
       POSTGRES_USER: '$project'
     secrets:
       - '$db_secret'
-    volumes:
-      - '$db_volume:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
 
 EOF
 
