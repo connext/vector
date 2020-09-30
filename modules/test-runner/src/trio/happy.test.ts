@@ -46,11 +46,11 @@ describe(testName, () => {
     expect(roger.signerAddress).to.be.a("string");
     expect(roger.publicIdentifier).to.be.a("string");
 
-    let tx = await wallet.sendTransaction({ to: carol.signerAddress, value: utils.parseEther("0.1") });
+    let tx = await wallet.sendTransaction({ to: carol.signerAddress, value: utils.parseEther("0.5") });
     await tx.wait();
-    tx = await wallet.sendTransaction({ to: dave.signerAddress, value: utils.parseEther("0.1") });
+    tx = await wallet.sendTransaction({ to: dave.signerAddress, value: utils.parseEther("0.5") });
     await tx.wait();
-    tx = await wallet.sendTransaction({ to: roger.signerAddress, value: utils.parseEther("0.1") });
+    tx = await wallet.sendTransaction({ to: roger.signerAddress, value: utils.parseEther("0.5") });
     await tx.wait();
   });
 
@@ -132,7 +132,7 @@ describe(testName, () => {
 
     const carolAssetIdx = carolChannel.assetIds.findIndex(_assetId => _assetId === assetId);
     const carolBefore = carolAssetIdx === -1 ? "0" : carolChannel.balances[carolAssetIdx].amount[1];
-    const daveAssetIdx = daveChannel.assetIds.findIndex(_assetId => _assetId === assetId);
+    let daveAssetIdx = daveChannel.assetIds.findIndex(_assetId => _assetId === assetId);
     const daveBefore = daveAssetIdx === -1 ? "0" : daveChannel.balances[daveAssetIdx].amount[1];
 
     const preImage = getRandomBytes32();
@@ -175,7 +175,8 @@ describe(testName, () => {
     expect(resolveRes.getError()).to.not.be.ok;
 
     const channelAfterResolve = (await dave.getStateChannel(daveChannel.channelAddress)).getValue()!;
-    const daveAfterResolve = daveAssetIdx === -1 ? "0" : channelAfterResolve.balances[daveAssetIdx].amount[1];
+    daveAssetIdx = channelAfterResolve.assetIds.findIndex(_assetId => _assetId === assetId);
+    const daveAfterResolve = channelAfterResolve.balances[daveAssetIdx].amount[1];
     expect(daveAfterResolve).to.be.eq(BigNumber.from(daveBefore).add(transferAmt));
   });
 });

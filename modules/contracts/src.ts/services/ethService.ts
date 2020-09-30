@@ -134,15 +134,27 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     if (sender === channelState.alice) {
       this.log.info(
         { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
-        "Detected participant A",
+        "Detected participant A, sending tx",
       );
-      return this.sendDepositATx(channelState, amount, assetId);
+      const txRes = await this.sendDepositATx(channelState, amount, assetId);
+      if (txRes.isError) {
+        this.log.error({ method: "sendDepositTx", error: txRes.getError()?.message }, "Error sending tx");
+      } else {
+        this.log.info({ method: "sendDepositTx", txHash: txRes.getValue().hash }, "Submitted tx");
+      }
+      return txRes;
     } else {
       this.log.info(
         { method: "sendDepositTx", sender, alice: channelState.alice, bob: channelState.bob },
-        "Detected participant B",
+        "Detected participant B, sendng tx",
       );
-      return this.sendDepositBTx(channelState, amount, assetId);
+      const txRes = await this.sendDepositBTx(channelState, amount, assetId);
+      if (txRes.isError) {
+        this.log.error({ method: "sendDepositTx", error: txRes.getError()?.message }, "Error sending tx");
+      } else {
+        this.log.info({ method: "sendDepositTx", txHash: txRes.getValue().hash }, "Submitted tx");
+      }
+      return txRes;
     }
   }
 
