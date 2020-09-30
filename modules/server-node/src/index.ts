@@ -1,6 +1,7 @@
 import fastify from "fastify";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
+import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { providers, Wallet } from "ethers";
@@ -18,7 +19,6 @@ import { getBearerTokenFunction, NatsMessagingService } from "./services/messagi
 import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { VectorChainService } from "./services/onchain";
 import { constructRpcRequest } from "./helpers/rpc";
 
 const server = fastify();
