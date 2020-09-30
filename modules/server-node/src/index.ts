@@ -87,8 +87,6 @@ server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema 
 
 server.get<{ Params: ServerNodeParams.GetChannelState }>(
   "/channel/:channelAddress",
-  // TODO: add response schema, if you set it as `Any` it doesn't work properly
-  //  might want to add the full channel state as a schema
   { schema: { params: ServerNodeParams.GetChannelStateSchema } },
   async (request, reply) => {
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
@@ -107,8 +105,6 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
 
 server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
   "/channel/:alice/:bob/:chainId",
-  // TODO: add response schema, if you set it as `Any` it doesn't work properly
-  //  might want to add the full channel state as a schema
   { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
   async (request, reply) => {
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
@@ -116,6 +112,24 @@ server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
       const res = await vectorEngine.request<"chan_getChannelStateByParticipants">(params);
       if (!res) {
         return reply.status(404).send({ message: "Channel not found", alice: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+  "/channel/:channelAddress/transfer/:routingId",
+  { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
+  async (request, reply) => {
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
+    try {
+      const res = await vectorEngine.request<"chan_getTransferStateByRoutingId">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
       }
       return reply.status(200).send(res);
     } catch (e) {

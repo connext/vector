@@ -190,6 +190,18 @@ export class PrismaStore implements IServerNodeStore {
     throw new Error("Method not implemented.");
   }
 
+  async getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
+    const transfer = await this.prisma.transfer.findOne({
+      where: { routingId_channelAddressId: { routingId, channelAddressId: channelAddress } },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
+    });
+    if (!transfer) {
+      return undefined;
+    }
+
+    return convertTransferEntityToFullTransferState(transfer);
+  }
+
   async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
     await this.prisma.eventSubscription.upsert({
       where: {
@@ -285,6 +297,7 @@ export class PrismaStore implements IServerNodeStore {
     const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
+            channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
             routingId: transfer!.meta.routingId,
             initialAmountA: transfer!.initialBalance.amount[0],

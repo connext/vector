@@ -1,7 +1,6 @@
 import { VectorOnchainService } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import {
-  Address,
   ChainAddresses,
   ChainProviders,
   FullChannelState,
@@ -13,7 +12,6 @@ import {
   JsonRpcProvider,
   EngineParams,
   OutboundChannelUpdateError,
-  TAddress,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
   EngineEventMap,
@@ -21,6 +19,7 @@ import {
   EngineEvent,
   EngineEvents,
   ChannelRpcMethod,
+  FullTransferState,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -101,15 +100,27 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async getChannelState(
-    channelAddress: Address,
+    params: EngineParams.GetChannelState,
   ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
-    const validate = ajv.compile(TAddress);
-    const valid = validate(channelAddress);
+    const validate = ajv.compile(EngineParams.GetChannelStateSchema);
+    const valid = validate(params.channelAddress);
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
-    const channel = await this.vector.getChannelState(channelAddress);
+    const channel = await this.vector.getChannelState(params.channelAddress);
     return Result.ok(channel);
+  }
+
+  private async getTransferStateByRoutingId(
+    params: EngineParams.GetTransferStateByRoutingId,
+  ): Promise<Result<FullTransferState | undefined, Error>> {
+    const validate = ajv.compile(EngineParams.GetTransferStateByRoutingIdSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const transfer = await this.store.getTransferByRoutingId(params.channelAddress, params.routingId);
+    return Result.ok(transfer);
   }
 
   private async getChannelStateByParticipants(

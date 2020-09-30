@@ -22,6 +22,12 @@ import {
 // from the rpc, converts them to proper protocol parameters,
 // and returns the protocol response.
 
+// Get transfer state by resolver id params
+const GetTransferStateByRoutingIdParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  routingId: TBytes32,
+});
+
 // Get channel state params
 const GetChannelStateParamsSchema = Type.Object({ channelAddress: TAddress });
 
@@ -137,6 +143,9 @@ const RpcRequestEngineParamsSchema = <G extends RpcRequestEngineMethodNames>(T: 
 export namespace EngineParams {
   export const RpcRequestSchema = RpcRequestEngineParamsSchema;
   export type RpcRequest = Static<typeof RpcRequestEngineParamsSchema>;
+
+  export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
+  export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
 
   export const GetChannelStatesSchema = GetChannelStatesParamsSchema;
   export type GetChannelStates = Static<typeof GetChannelStatesSchema>;

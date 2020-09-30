@@ -105,6 +105,13 @@ export interface IEngineStore extends IVectorStore {
   // Getters
   getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined>;
 
+  // NOTE: The engine does *not* care about the routingId (it is stored
+  // in the meta of transfer objects), only the router module does.
+  // However, because the engine fills in basic routing metas using sane
+  // defaults, it should also be responsible for providing an easy-access
+  // method for higher level modules
+  getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined>;
+
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
 }

@@ -159,14 +159,14 @@ describe(testName, () => {
     expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
 
     // Get daves transfer
-    const daveChannelAfterTransfer = (await dave.getStateChannel(daveChannel.channelAddress)).getValue()!;
+    const daveTransfer = (await dave.getTransferByRoutingId(daveChannel.channelAddress, routingId)).getValue()!;
     const resolveRes = await dave.resolveTransfer({
       channelAddress: daveChannel.channelAddress,
       conditionType: "LinkedTransfer",
       details: {
         preImage,
       },
-      transferId: daveChannelAfterTransfer.latestUpdate.details.transferId,
+      transferId: daveTransfer.transferId,
     });
     expect(resolveRes.getError()).to.not.be.ok;
 

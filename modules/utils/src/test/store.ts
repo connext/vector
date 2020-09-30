@@ -120,4 +120,7 @@ export class MemoryStoreService implements IEngineStore {
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
     return Promise.resolve();
   }
+  getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
+    return Promise.resolve(undefined);
+  }
 }

@@ -27,6 +27,17 @@ const BasicTransferServerResponseSchema = {
   }),
 };
 
+// GET TRANSFER BY ROUTINGID
+const GetTransferStateByRoutingIdParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  routingId: TBytes32,
+});
+
+// TODO: Could be improved by creating a transfer state schema
+const GetTransferStateByRoutingIdResponseSchema = {
+  200: Type.Union([Type.Undefined, Type.Any()]),
+};
+
 // GET CHANNEL STATE
 const GetChannelStateParamsSchema = EngineParams.GetChannelStateSchema;
 
@@ -128,6 +139,9 @@ const PostAdminResponseSchema = {
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ServerNodeParams {
+  export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
+  export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
+
   export const GetChannelStateSchema = GetChannelStateParamsSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema>;
 
@@ -164,6 +178,9 @@ export namespace ServerNodeParams {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ServerNodeResponses {
+  export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdResponseSchema;
+  export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdResponseSchema["200"]>;
+
   export const GetChannelStateSchema = GetChannelStateResponseSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;
 

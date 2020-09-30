@@ -4,6 +4,7 @@ import {
   EngineEventMap,
   EngineEvents,
   FullChannelState,
+  FullTransferState,
   Result,
   ServerNodeParams,
   ServerNodeResponses,
@@ -24,6 +25,10 @@ export interface IServerNodeService {
     chainId: number,
   ): Promise<Result<FullChannelState | undefined, Error>>;
   getStateChannel(channelAddress: string): Promise<Result<FullChannelState | undefined, Error>>;
+  getTransferByRoutingId(
+    channelAddress: string,
+    routingId: string,
+  ): Promise<Result<FullTransferState | undefined, Error>>;
   setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>>;
   deposit(
     params: ServerNodeParams.SendDepositTx,
@@ -126,6 +131,20 @@ export class RestServerNodeService implements IServerNodeService {
     try {
       const res = await Axios.get<ServerNodeResponses.GetChannelState>(
         `${this.serverNodeUrl}/channel/${channelAddress}`,
+      );
+      return Result.ok(res.data);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransferByRoutingId(
+    channelAddress: string,
+    routingId: string,
+  ): Promise<Result<FullTransferState | undefined, Error>> {
+    try {
+      const res = await Axios.get<ServerNodeResponses.GetChannelState>(
+        `${this.serverNodeUrl}/channel/${channelAddress}/transfer/routing/${routingId}`,
       );
       return Result.ok(res.data);
     } catch (e) {
