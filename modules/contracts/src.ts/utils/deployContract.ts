@@ -1,8 +1,9 @@
 import { constants, Contract, ContractFactory, Wallet, providers, utils, BigNumber } from "ethers";
 
-import { AddressBook } from "./address-book";
-import { artifacts } from "./artifacts";
-import { ConstructorArgs } from "./constants";
+import { artifacts } from "../artifacts";
+import { ConstructorArgs } from "../constants";
+
+import { AddressBook } from "./addressBook";
 
 const { EtherSymbol } = constants;
 const { formatEther, keccak256 } = utils;

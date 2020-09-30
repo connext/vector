@@ -26,22 +26,14 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     });
   }
 
-  private async sendTxAndParseResponse(
-    txFn: Promise<providers.TransactionResponse>,
+  public async sendWithdrawTx(
+    channelState: FullChannelState<any>,
+    minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
-    try {
-      const tx = await txFn;
-      return Result.ok(tx);
-    } catch (e) {
-      let error = e;
-      if (e.message.includes("sender doesn't have enough funds")) {
-        error = new ChainError(ChainError.reasons.NotEnoughFunds);
-      }
-      return Result.fail(error);
-    }
+    throw new Error("Method not implemented.");
   }
 
-  async sendDepositTx(
+  public async sendDepositTx(
     channelState: FullChannelState<any>,
     sender: string,
     amount: string,
@@ -149,11 +141,19 @@ export class VectorChainService extends VectorChainReader implements IVectorChai
     }
   }
 
-  sendWithdrawTx(
-    channelState: FullChannelState<any>,
-    minTx: MinimalTransaction,
+  private async sendTxAndParseResponse(
+    txFn: Promise<providers.TransactionResponse>,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
-    throw new Error("Method not implemented.");
+    try {
+      const tx = await txFn;
+      return Result.ok(tx);
+    } catch (e) {
+      let error = e;
+      if (e.message.includes("sender doesn't have enough funds")) {
+        error = new ChainError(ChainError.reasons.NotEnoughFunds);
+      }
+      return Result.fail(error);
+    }
   }
 
   private async approveTokens(

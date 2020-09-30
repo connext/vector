@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { CoreChannelState } from "@connext/vector-types";
 import { hashCoreChannelState, signChannelMessage, toBN, expect } from "@connext/vector-utils";
+import { AddressZero, HashZero, Two } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
-import { addressZero, bob, hashZero, alice, provider, two } from "../constants";
+import { bob, alice, provider } from "../../constants";
 
 import { createChannel } from "./creation.spec";
 
@@ -16,10 +17,10 @@ describe("Channel Disputes", () => {
   beforeEach(async () => {
     channel = (await createChannel()).connect(alice);
     channelState = {
-      assetIds: [addressZero],
+      assetIds: [AddressZero],
       balances: [{ amount: ["0", "1"], to: [alice.address, bob.address] }],
       channelAddress: channel.address,
-      merkleRoot: hashZero,
+      merkleRoot: HashZero,
       nonce: 1,
       alice: alice.address,
       bob: bob.address,
@@ -44,7 +45,7 @@ describe("Channel Disputes", () => {
     expect(channelDispute.nonce).to.equal(channelState.nonce);
     expect(channelDispute.merkleRoot).to.equal(channelState.merkleRoot);
     expect(channelDispute.consensusExpiry).to.equal(start.add(toBN(channelState.timeout)));
-    expect(channelDispute.defundExpiry).to.equal(start.add(toBN(channelState.timeout).mul(two)));
+    expect(channelDispute.defundExpiry).to.equal(start.add(toBN(channelState.timeout).mul(Two)));
     expect(channelDispute.isDefunded).to.be.false;
   });
 

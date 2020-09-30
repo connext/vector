@@ -1,4 +1,13 @@
+import { waffle } from "@nomiclabs/buidler";
 import { Options } from "yargs";
+
+// Test constants
+export const provider = waffle.provider;
+export const wallets = provider.getWallets();
+export const alice = wallets[0];
+export const bob = wallets[1];
+export const rando = wallets[2];
+export const addressBookPath = "/tmp/address-book.json";
 
 export type ConstructorArgs = { name: string; value: string; }[];
 
@@ -7,8 +16,6 @@ export const defaults = {
   providerUrl: "http://localhost:8545",
   addressBookPath: "./address-book.json",
 };
-
-export const ganacheId = 1337;
 
 export const cliOpts = {
   addressBook: {
@@ -69,3 +76,4 @@ export const cliOpts = {
     type: "string",
   },
 } as { [key: string]: Options };
+

@@ -1,10 +1,11 @@
 import { signChannelMessage, expect } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, ContractFactory } from "ethers";
 
-import { TestToken } from "../../artifacts";
-import { WithdrawCommitment } from "../../commitments/withdraw";
-import { createChannel } from "../channel/creation.spec";
+import { TestToken } from "../artifacts";
+import { createChannel } from "../tests/channel/creation.spec";
 import { bob, alice, provider } from "../constants";
+
+import { WithdrawCommitment } from "./withdraw";
 
 describe("withdrawCommitment", () => {
   let channel: Contract;

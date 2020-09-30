@@ -1,11 +1,11 @@
 import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
+import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractFactory, BigNumber } from "ethers";
 import pino from "pino";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
+import { alice, bob, provider } from "../constants";
 import { VectorChainReader } from "../services";
-
-import { addressZero, alice, bob, provider } from "./constants";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
@@ -69,7 +69,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDepositA(alice.address, bob.address, chainId, addressZero, value, { value });
+      .createChannelAndDepositA(alice.address, bob.address, chainId, AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -91,7 +91,7 @@ describe("ChannelFactory", () => {
     expect(code).to.not.be.eq("0x");
 
     const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).totalDepositedA(
-      addressZero,
+      AddressZero,
     );
     expect(totalDepositedA).to.be.eq(value);
   });

@@ -1,11 +1,9 @@
 import { getRandomAddress, expect } from "@connext/vector-utils";
-import { constants, Contract, ContractFactory } from "ethers";
+import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
+import { Contract, ContractFactory } from "ethers";
 
 import { ChannelMastercopy } from "../artifacts";
-
-import { alice } from "./constants";
-
-const { AddressZero, HashZero, Zero } = constants;
+import { alice } from "../constants";
 
 describe("ChannelMastercopy", () => {
   let mastercopy: Contract;
