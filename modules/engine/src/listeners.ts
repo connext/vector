@@ -21,6 +21,7 @@ import {
   UpdateType,
   WithdrawalCreatedPayload,
   WithdrawalResolvedPayload,
+  WITHDRAWAL_RECONCILED_EVENT,
   WithdrawState,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
@@ -227,7 +228,7 @@ async function handleConditionalTransferResolution(
     networkContext: { chainId },
     latestUpdate: {
       assetId,
-      details: { transferId, meta, transferDefinition },
+      details: { transferId, transferDefinition },
     },
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
   // Emit the properly structured event
@@ -342,6 +343,12 @@ async function handleWithdrawalTransferCreation(
     if (!withdrawalResponse.isError) {
       transactionHash = withdrawalResponse.getValue()!.hash;
       logger.info({ method, transactionHash }, "Submitted tx");
+      // Post to reconciliation evt on submission
+      evts[WITHDRAWAL_RECONCILED_EVENT].post({
+        channelAddress,
+        transferId,
+        transactionHash,
+      });
     } else {
       // log the transaction error, try to resolve with an undefined hash
       logger.warn({ error: withdrawalResponse.getError()!.message, method }, "Failed to submit tx");
@@ -386,7 +393,7 @@ async function handleWithdrawalTransferResolution(
     assetIds,
     alice,
     latestUpdate: {
-      details: { transferId },
+      details: { transferId, meta },
       assetId,
       fromIdentifier,
     },
@@ -454,6 +461,13 @@ async function handleWithdrawalTransferResolution(
 
   // Try to submit the transaction to chain IFF you are alice
   if (signer.address !== alice) {
+    // Withdrawal resolution meta will include the transaction hash,
+    // post to EVT here
+    evts[WITHDRAWAL_RECONCILED_EVENT].post({
+      channelAddress,
+      transferId,
+      transactionHash: meta.transactionHash,
+    });
     logger.info({ method, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;
   }
@@ -473,6 +487,12 @@ async function handleWithdrawalTransferResolution(
   }
 
   const tx = withdrawalResponse.getValue()!;
+  // alice submitted her own withdrawal, post to evt
+  evts[WITHDRAWAL_RECONCILED_EVENT].post({
+    channelAddress,
+    transferId,
+    transactionHash: tx.hash,
+  });
   logger.info({ transactionHash: tx.hash }, "Submitted withdraw tx");
   const receipt = await tx.wait();
   logger.info({ method, transactionHash: receipt.transactionHash }, "Withdraw tx mined, completed");
