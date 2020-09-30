@@ -918,6 +918,13 @@
     {
       "tag": "CreateField",
       "model": "Transfer",
+      "field": "channelAddressId",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Transfer",
       "field": "createUpdateChannelAddressId",
       "type": "String",
       "arity": "Optional"
@@ -965,6 +972,22 @@
       },
       "argument": "name",
       "value": "\"transfer\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Transfer",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[routingId, channelAddressId]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
     },
     {
       "tag": "CreateModel",

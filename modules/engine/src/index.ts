@@ -1,7 +1,6 @@
 import { VectorChainReader } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import {
-  Address,
   ChainAddresses,
   ChainProviders,
   FullChannelState,
@@ -13,14 +12,14 @@ import {
   JsonRpcProvider,
   EngineParams,
   OutboundChannelUpdateError,
-  TAddress,
-  ChannelRpcMethods,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
   EngineEventMap,
   IEngineStore,
   EngineEvent,
   EngineEvents,
+  ChannelRpcMethod,
+  FullTransferState,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -101,15 +100,39 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async getChannelState(
-    channelAddress: Address,
+    params: EngineParams.GetChannelState,
   ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
-    const validate = ajv.compile(TAddress);
-    const valid = validate(channelAddress);
+    const validate = ajv.compile(EngineParams.GetChannelStateSchema);
+    const valid = validate(params);
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
-    const channel = await this.vector.getChannelState(channelAddress);
+    const channel = await this.vector.getChannelState(params.channelAddress);
     return Result.ok(channel);
+  }
+
+  private async getTransferStateByRoutingId(
+    params: EngineParams.GetTransferStateByRoutingId,
+  ): Promise<Result<FullTransferState | undefined, Error>> {
+    const validate = ajv.compile(EngineParams.GetTransferStateByRoutingIdSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const transfer = await this.store.getTransferByRoutingId(params.channelAddress, params.routingId);
+    return Result.ok(transfer);
+  }
+
+  private async getTransferStatesByRoutingId(
+    params: EngineParams.GetTransferStatesByRoutingId,
+  ): Promise<Result<FullTransferState[], Error>> {
+    const validate = ajv.compile(EngineParams.GetTransferStatesByRoutingIdSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const transfers = await this.store.getTransfersByRoutingId(params.routingId);
+    return Result.ok(transfers);
   }
 
   private async getChannelStateByParticipants(
@@ -203,8 +226,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // TODO: consider a store method to find active transfer by routingId
-    const transfers = await this.store.getActiveTransfers(params.channelAddress);
-    const transfer = transfers.find(instance => instance.meta.routingId === params.routingId);
+    const transfer = await this.store.getTransferState(params.transferId);
     if (!transfer) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
@@ -213,7 +235,7 @@ export class VectorEngine implements IVectorEngine {
     // TODO validate that transfer hasn't already been resolved?
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const resolveResult = convertResolveConditionParams(params, transfer!);
+    const resolveResult = convertResolveConditionParams(params, transfer);
     if (resolveResult.isError) {
       return Result.fail(resolveResult.getError()!);
     }
@@ -258,10 +280,11 @@ export class VectorEngine implements IVectorEngine {
   }
 
   // JSON RPC interface -- this will accept:
-  // - "vector_deposit"
-  // - "vector_createTransfer"
-  // - "vector_resolveTransfer"
-  public async request<T extends ChannelRpcMethods>(
+  // - "chan_deposit"
+  // - "chan_createTransfer"
+  // - "chan_resolveTransfer"
+  // - etc.
+  public async request<T extends ChannelRpcMethod>(
     payload: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     this.logger.debug({ payload, method: "request" }, "Method called");
@@ -271,7 +294,7 @@ export class VectorEngine implements IVectorEngine {
       // dont use result type since this could go over the wire
       // TODO: how to represent errors over the wire?
       this.logger.error({ method: "request", payload, ...(validate.errors ?? {}) });
-      throw new Error(validate.errors?.join());
+      throw new Error(validate.errors?.map(err => err.message).join(","));
     }
 
     const methodName = payload.method.replace("chan_", "");
@@ -294,8 +317,7 @@ export class VectorEngine implements IVectorEngine {
   public on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): void {
     this.evts[event].pipe(filter).attach(callback);
   }
@@ -303,8 +325,7 @@ export class VectorEngine implements IVectorEngine {
   public once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): void {
     this.evts[event].pipe(filter).attachOnce(callback);
   }
@@ -312,8 +333,7 @@ export class VectorEngine implements IVectorEngine {
   public waitFor<T extends EngineEvent>(
     event: T,
     timeout: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean = (_payload: EngineEventMap[T]) => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<EngineEventMap[T]> {
     return this.evts[event].pipe(filter).waitFor(timeout);
   }

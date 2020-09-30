@@ -134,7 +134,7 @@ async function handleDepositReconciliation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught deposit reconciliation event");
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling deposit reconciliation event");
   // Emit the properly structured event
   const {
     channelAddress,
@@ -159,34 +159,50 @@ async function handleConditionalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught conditional transfer create event");
+  const {
+    assetIds,
+    balances,
+    channelAddress,
+    networkContext: { chainId },
+    latestUpdate: {
+      assetId,
+      details: {
+        transferId,
+        transferDefinition,
+        meta: { routingId },
+      },
+    },
+  } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
+  logger.info({ channelAddress }, "Handling conditional transfer create event");
   // Emit the properly structured event
   // TODO: consider a store method to find active transfer by routingId
-  const transfers = await store.getActiveTransfers(event.updatedChannelState.channelAddress);
-  const transfer = transfers.find(
-    instance =>
-      instance.meta.routingId ===
-      (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
-  );
+  const transfer = await store.getTransferState(transferId);
+  if (!transfer) {
+    logger.warn({ transferId }, "Transfer not found after creation");
+    return;
+  }
 
   let conditionType: ConditionalTransferType | undefined;
-  switch (transfer?.transferDefinition) {
-    case chainAddresses[event.updatedChannelState.networkContext.chainId].linkedTransferDefinition:
+  switch (transferDefinition) {
+    case chainAddresses[chainId].linkedTransferDefinition:
       conditionType = ConditionalTransferType.LinkedTransfer;
       break;
   }
 
-  const assetIdx = event.updatedChannelState.assetIds.findIndex(
-    a => a === event.updatedChannelState.latestUpdate.assetId,
-  );
+  const assetIdx = assetIds.findIndex(a => a === assetId);
   const payload: ConditionalTransferCreatedPayload = {
-    channelAddress: event.updatedChannelState.channelAddress,
-    channelBalance: event.updatedChannelState.balances[assetIdx],
-    routingId: (event.updatedChannelState.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
-    transfer: transfer!,
+    channelAddress,
+    channelBalance: balances[assetIdx],
+    transfer,
     conditionType: conditionType!,
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
+
+  // If we should not route the transfer, do nothing
+  if (!routingId || transfer.meta.routingId !== routingId) {
+    logger.warn({ transferId, routingId, meta: transfer.meta }, "Cannot route transfer");
+    return;
+  }
 
   // TODO: add automatic resolution for given transfer types
 }
@@ -200,7 +216,7 @@ async function handleConditionalTransferResolution(
 ): Promise<void> {
   logger.info(
     { channelAddress: event.updatedChannelState.channelAddress },
-    "Caught conditional transfer resolve event",
+    "Handling conditional transfer resolve event",
   );
   const {
     channelAddress,
@@ -219,11 +235,11 @@ async function handleConditionalTransferResolution(
       conditionType = ConditionalTransferType.LinkedTransfer;
       break;
   }
+  const transfer = await vector.getTransferState(transferId);
   const payload: ConditionalTransferResolvedPayload = {
     channelAddress,
     channelBalance: balances[assetIds.findIndex(a => a === assetId)],
-    routingId: meta?.routingId,
-    transfer: (await vector.getTransferState(transferId))!,
+    transfer: transfer!,
     conditionType: conditionType!,
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
@@ -237,7 +253,7 @@ async function handleWithdrawalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal create event");
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling withdrawal create event");
   // If you receive a withdrawal creation, you should
   // resolve the withdrawal with your signature
   const {
@@ -346,7 +362,7 @@ async function handleWithdrawalTransferResolution(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal resolve event");
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling withdrawal resolve event");
 
   const {
     channelAddress,

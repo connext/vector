@@ -1,7 +1,6 @@
 import fastify from "fastify";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
-import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import { ChannelSigner } from "@connext/vector-utils";
 import { providers, Wallet } from "ethers";
@@ -12,7 +11,9 @@ import {
   ChainError,
   ServerNodeParams,
   ServerNodeResponses,
+  ResolveUpdateDetails,
 } from "@connext/vector-types";
+import { VectorChainService } from "@connext/vector-contracts";
 import Axios from "axios";
 
 import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
@@ -72,6 +73,14 @@ server.addHook("onReady", async () => {
       await Axios.post(url, data);
     }
   });
+
+  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, async data => {
+    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
+    if (url) {
+      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED }, "Relaying event");
+      await Axios.post(url, data);
+    }
+  });
 });
 
 server.get("/ping", async () => {
@@ -87,11 +96,9 @@ server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema 
 
 server.get<{ Params: ServerNodeParams.GetChannelState }>(
   "/channel/:channelAddress",
-  // TODO: add response schema, if you set it as `Any` it doesn't work properly
-  //  might want to add the full channel state as a schema
   { schema: { params: ServerNodeParams.GetChannelStateSchema } },
   async (request, reply) => {
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params.channelAddress);
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
     try {
       const res = await vectorEngine.request<"chan_getChannelState">(params);
       if (!res) {
@@ -107,8 +114,6 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
 
 server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
   "/channel/:alice/:bob/:chainId",
-  // TODO: add response schema, if you set it as `Any` it doesn't work properly
-  //  might want to add the full channel state as a schema
   { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
   async (request, reply) => {
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
@@ -116,6 +121,42 @@ server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
       const res = await vectorEngine.request<"chan_getChannelStateByParticipants">(params);
       if (!res) {
         return reply.status(404).send({ message: "Channel not found", alice: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+  "/channel/:channelAddress/transfer/:routingId",
+  { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
+  async (request, reply) => {
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
+    try {
+      const res = await vectorEngine.request<"chan_getTransferStateByRoutingId">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+  "/transfer/:routingId",
+  { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
+  async (request, reply) => {
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
+    try {
+      const res = await vectorEngine.request<"chan_getTransferStatesByRoutingId">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
       }
       return reply.status(200).send(res);
     } catch (e) {
@@ -211,7 +252,7 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
       const res = await vectorEngine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
-        routingId: request.body.routingId,
+        transferId: res.latestUpdate.details.transferId,
       } as ServerNodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
@@ -234,6 +275,7 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
       const res = await vectorEngine.request<"chan_resolveTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
+        transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
       } as ServerNodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });

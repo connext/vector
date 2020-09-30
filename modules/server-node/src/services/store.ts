@@ -12,6 +12,7 @@ import {
   IEngineStore,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
+import { getRandomBytes32 } from "@connext/vector-utils";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
@@ -285,8 +286,9 @@ export class PrismaStore implements IServerNodeStore {
     const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
+            channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
-            routingId: transfer!.meta.routingId,
+            routingId: transfer!.meta.routingId ?? getRandomBytes32(),
             initialAmountA: transfer!.initialBalance.amount[0],
             initialToA: transfer!.initialBalance.to[0],
             initialAmountB: transfer!.initialBalance.amount[1],
@@ -300,7 +302,7 @@ export class PrismaStore implements IServerNodeStore {
         ? {
             connectOrCreate: {
               where: {
-                transferId: transfer!.transferId,
+                transferId: createTransferEntity!.transferId,
               },
               create: createTransferEntity!,
             },
@@ -368,7 +370,7 @@ export class PrismaStore implements IServerNodeStore {
               }
             : undefined,
 
-        // if resolve, add resolvedTransfer by routingId
+        // if resolve, add resolvedTransfer by transferId
         resolvedTransfer:
           channelState.latestUpdate.type === UpdateType.resolve
             ? {
@@ -527,7 +529,52 @@ export class PrismaStore implements IServerNodeStore {
       return undefined;
     }
 
+    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
+    if (!transfer.channel) {
+      const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+      transfer.channel = channel;
+    }
+
     return convertTransferEntityToFullTransferState(transfer);
+  }
+
+  async getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
+    const transfer = await this.prisma.transfer.findOne({
+      where: { routingId_channelAddressId: { routingId, channelAddressId: channelAddress } },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
+    });
+
+    if (!transfer) {
+      return undefined;
+    }
+
+    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
+    if (!transfer.channel) {
+      const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+      transfer.channel = channel;
+    }
+
+    return convertTransferEntityToFullTransferState(transfer);
+  }
+
+  async getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
+    const transfers = await this.prisma.transfer.findMany({
+      where: { routingId },
+      include: {
+        channel: true,
+        createUpdate: true,
+        resolveUpdate: true,
+      },
+    });
+
+    for (const transfer of transfers) {
+      if (!transfer.channel) {
+        const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+        transfer.channel = channel;
+      }
+    }
+
+    return transfers.map(convertTransferEntityToFullTransferState);
   }
 
   async clear(): Promise<void> {

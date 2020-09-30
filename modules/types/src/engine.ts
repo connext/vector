@@ -3,7 +3,7 @@ import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
 import { IVectorStore } from "./store";
 import { WithdrawCommitmentJson } from "./transferDefinitions";
-import { ChannelRpcMethods, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
+import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
 
 ///////////////////////////////////
 ////// Engine transfer types
@@ -23,7 +23,6 @@ export type ConditionalTransferResponse = {
 export const CONDITIONAL_TRANSFER_CREATED_EVENT = "CONDITIONAL_TRANSFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
   channelAddress: string;
-  routingId: Bytes32;
   transfer: FullTransferState;
   channelBalance: Balance;
   conditionType: ConditionalTransferType;
@@ -86,7 +85,7 @@ export interface EngineEventMap {
 ///////////////////////////////////
 ////// Core engine interfaces
 export interface IVectorEngine {
-  request<T extends ChannelRpcMethods>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
+  request<T extends ChannelRpcMethod>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
   on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
@@ -105,6 +104,15 @@ export interface IVectorEngine {
 export interface IEngineStore extends IVectorStore {
   // Getters
   getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined>;
+
+  // NOTE: The engine does *not* care about the routingId (it is stored
+  // in the meta of transfer objects), only the router module does.
+  // However, because the engine fills in basic routing metas using sane
+  // defaults, it should also be responsible for providing an easy-access
+  // method for higher level modules
+  getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined>;
+
+  getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]>;
 
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
