@@ -51,12 +51,8 @@ wait_for "auth" "$VECTOR_AUTH_URL"
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
 
-  if [[ ! -d "node_modules/.prisma" && -d "./dist/.prisma" ]]
-  then
-    mkdir -p node_modules/.prisma node_modules/@prisma
-    cp -r ./dist/.prisma/client node_modules/.prisma/client
-    cp -r ./dist/@prisma/client node_modules/@prisma/client
-  fi
+  echo "Running database migrations"
+  ./node_modules/.bin/prisma migrate up --experimental &
 
   echo "Starting node in prod-mode"
   exec node --no-deprecation dist/bundle.js
