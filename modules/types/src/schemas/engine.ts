@@ -119,7 +119,7 @@ const RpcRequestEngineParamsSchema = Type.Object({
   method: Type.Union(
     Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<ChannelRpcMethod>],
   ),
-  params: Type.Any(),
+  params: Type.Optional(Type.Any()),
   // NOTE: Safe to make params an object here, in engine the
   // params will be validated after the method is dispatched
 });

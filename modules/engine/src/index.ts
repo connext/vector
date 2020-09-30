@@ -282,7 +282,7 @@ export class VectorEngine implements IVectorEngine {
       // dont use result type since this could go over the wire
       // TODO: how to represent errors over the wire?
       this.logger.error({ method: "request", payload, ...(validate.errors ?? {}) });
-      throw new Error(validate.errors?.join());
+      throw new Error(validate.errors?.map(err => err.message).join(","));
     }
 
     const methodName = payload.method.replace("chan_", "");

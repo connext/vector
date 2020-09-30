@@ -134,7 +134,7 @@ async function handleDepositReconciliation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught deposit reconciliation event");
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling deposit reconciliation event");
   // Emit the properly structured event
   const {
     channelAddress,
@@ -173,7 +173,7 @@ async function handleConditionalTransferCreation(
       },
     },
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
-  logger.info({ channelAddress }, "Caught conditional transfer create event");
+  logger.info({ channelAddress }, "Handling conditional transfer create event");
   // Emit the properly structured event
   // TODO: consider a store method to find active transfer by routingId
   const transfer = await store.getTransferState(transferId);
@@ -216,7 +216,7 @@ async function handleConditionalTransferResolution(
 ): Promise<void> {
   logger.info(
     { channelAddress: event.updatedChannelState.channelAddress },
-    "Caught conditional transfer resolve event",
+    "Handling conditional transfer resolve event",
   );
   const {
     channelAddress,
@@ -253,7 +253,7 @@ async function handleWithdrawalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal create event");
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling withdrawal create event");
   // If you receive a withdrawal creation, you should
   // resolve the withdrawal with your signature
   const {
@@ -362,7 +362,7 @@ async function handleWithdrawalTransferResolution(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<void> {
-  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Caught withdrawal resolve event");
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling withdrawal resolve event");
 
   const {
     channelAddress,

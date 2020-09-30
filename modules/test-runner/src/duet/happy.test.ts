@@ -137,7 +137,7 @@ describe(testName, () => {
         linkedHash,
       },
     });
-    expect(transferRes.isError).to.not.be.ok;
+    expect(transferRes.getError()).to.not.be.ok;
     const { transferId } = transferRes.getValue()!;
 
     const channelAfterTransfer = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
@@ -152,7 +152,7 @@ describe(testName, () => {
       },
       transferId,
     });
-    expect(resolveRes.isError).to.not.be.ok;
+    expect(resolveRes.getError()).to.not.be.ok;
 
     const channelAfterResolve = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
     const bobAfterResolve = assetIdx === -1 ? "0" : channelAfterResolve.balances[assetIdx].amount[1];

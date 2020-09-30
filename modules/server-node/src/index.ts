@@ -9,6 +9,7 @@ import {
   EngineEvent,
   EngineEvents,
   OnchainError,
+  ResolveUpdateDetails,
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
@@ -248,6 +249,7 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
       const res = await vectorEngine.request<"chan_resolveTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
+        transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
       } as ServerNodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
