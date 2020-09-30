@@ -91,6 +91,7 @@ stop-global:
 	@bash ops/stop.sh global
 
 stop-all:
+	@bash ops/stop.sh trio
 	@bash ops/stop.sh duet
 	@bash ops/stop.sh node
 	@bash ops/stop.sh global
@@ -116,7 +117,7 @@ reset: stop-all
 	rm -rf .chaindata/*
 
 reset-images:
-	rm -f .flags/auth .flags/database .flags/ethprovider .flags/node .flags/*proxy
+	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node
 
 purge: clean reset
 
@@ -143,8 +144,8 @@ lint:
 ########################################
 # Test Commands
 
-test-units: test-utils test-contracts test-protocol test-engine
-test-integrations: test-utils test-contracts test-protocol test-engine
+test-units: test-utils test-contracts test-protocol test-engine test-router
+test-integrations: test-global test-duet test-trio test-node
 test-all: test-units test-integrations
 
 # Unit Tests
@@ -186,11 +187,6 @@ test-global: test-runner global
 watch-global: test-runner global
 	bash ops/test-integration.sh global watch
 
-test-node: test-runner node
-	bash ops/test-integration.sh node test
-watch-node: test-runner node
-	bash ops/test-integration.sh node watch
-
 test-duet: test-runner duet
 	bash ops/test-integration.sh duet test
 watch-duet: test-runner duet
@@ -200,6 +196,11 @@ test-trio: test-runner trio
 	bash ops/test-integration.sh trio test
 watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
+
+test-node: test-runner node
+	bash ops/test-integration.sh node test
+watch-node: test-runner node
+	bash ops/test-integration.sh node watch
 
 ########################################
 # Begin Real Build Rules
@@ -268,8 +269,8 @@ server-node-bundle: engine $(shell find modules/server-node $(find_options))
 
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
-	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
-	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/server-node
+	docker tag $(project)_node $(project)_node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 router-bundle: engine $(shell find modules/router $(find_options))

@@ -97,9 +97,11 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v1
-      - run: make pull
-      - run: VECTOR_ENV=prod make restart-node
+      - run: make pull && touch .flags/node .flags/test-runner
+      - run: VECTOR_ENV=prod make start-node
       - run: VECTOR_ENV=prod make test-node
       - name: Print logs
         if: failure()
-        run: docker service logs --tail 200 node_node
+        run: |
+          docker service logs --tail 200 node_proxy
+          docker service logs --tail 200 node_node

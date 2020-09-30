@@ -26,6 +26,7 @@ then
 
 else
   echo "Starting node in prod-mode"
+  export NODE_ENV=production
   exec node --no-deprecation dist/bundle.js
 fi
 

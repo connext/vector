@@ -17,42 +17,19 @@ else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Load env vars
+# Misc Config
 
-VECTOR_ENV="${VECTOR_ENV:-dev}"
-
-# Load the default env
-if [[ -f "${VECTOR_ENV}.env" ]]
-then source "${VECTOR_ENV}.env"
+if [[ "$VECTOR_ENV" == "prod" ]]
+then
+  echo "The $stack stack should only be used for testing. Aborting because \$VECTOR_ENV=prod"
+  exit 1
 fi
+VECTOR_ENV=dev
 
-# Load instance-specific env vars & overrides
-if [[ -f ".env" ]]
-then source .env
-fi
+version="latest"
 
 # log level alias can override default for easy `LOG_LEVEL=5 make start`
 VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
-
-########################################
-## Docker registry & image version config
-
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_ENV" == "prod" ]]
-then
-  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
-  if [[ -n "$git_tag" ]]
-  then version="`echo $git_tag | sed 's/vector-//'`"
-  else version="`git rev-parse HEAD | head -c 8`"
-  fi
-else version="latest"
-fi
-
-####################
-# Misc Config
-
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -89,7 +66,6 @@ bash $root/ops/start-global.sh
 
 VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
 VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
-VECTOR_MNEMONIC_FILE="/run/secrets/${project}_mnemonic_dev"
 
 ########################################
 ## Node config
@@ -110,6 +86,11 @@ public_url="http://localhost:$alice_port"
 
 VECTOR_ADMIN_TOKEN="${VECTOR_ADMIN_TOKEN:-cxt1234}";
 
+node_image="image: '${project}_builder'
+    entrypoint: 'bash modules/server-node/ops/entry.sh'
+    volumes:
+      - '$root:/root'"
+
 node_env="environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_AUTH_URL: '$auth_url'
@@ -125,18 +106,6 @@ node_env="environment:
       VECTOR_PORT: '$node_port'
       VECTOR_REDIS_URL: '$redis_url'
       VECTOR_SUGAR_DADDY: '$sugardaddy_mnemonic'"
-
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  node_image_name="${project}_node"
-  bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
-  node_image="image: '$node_image_name:$version'"
-else
-  node_image="image: '${project}_builder'
-    entrypoint: 'bash modules/server-node/ops/entry.sh'
-    volumes:
-      - '$root:/root'"
-fi
 
 ####################
 # Launch stack
