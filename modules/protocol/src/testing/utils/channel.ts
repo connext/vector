@@ -1,4 +1,4 @@
-import { ChannelFactory, TestToken, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelFactory, TestToken, VectorChannel, VectorChainReader } from "@connext/vector-contracts";
 import {
   Contract,
   FullChannelState,
@@ -8,7 +8,7 @@ import {
   IVectorProtocol,
   IVectorStore,
   DEFAULT_TRANSFER_TIMEOUT,
-  IVectorOnchainService,
+  IVectorChainReader,
   NetworkContext,
 } from "@connext/vector-types";
 import { getRandomChannelSigner, getTestLoggers, expect, MemoryStoreService } from "@connext/vector-utils";
@@ -28,7 +28,7 @@ type VectorTestOverrides = {
   lockService: ILockService;
   storeService: IVectorStore;
   signer: IChannelSigner;
-  onchainService: IVectorOnchainService;
+  onchainService: IVectorChainReader;
   logger: Pino.BaseLogger;
 };
 
@@ -39,7 +39,7 @@ export const createVectorInstances = async (
 ): Promise<IVectorProtocol[]> => {
   const sharedMessaging = new MemoryMessagingService();
   const sharedLock = new MemoryLockService();
-  const sharedChain = new VectorOnchainService({ [chainId]: provider }, Pino());
+  const sharedChain = new VectorChainReader({ [chainId]: provider }, Pino());
   return Promise.all(
     Array(numberOfEngines)
       .fill(0)
@@ -50,7 +50,7 @@ export const createVectorInstances = async (
         const logger = instanceOverrides.logger ?? Pino();
         const onchainService = shareServices
           ? sharedChain
-          : new VectorOnchainService({ [chainId]: provider }, logger.child({ module: "VectorOnchainService" }));
+          : new VectorChainReader({ [chainId]: provider }, logger.child({ module: "VectorChainReader" }));
         const opts = {
           messagingService,
           lockService,

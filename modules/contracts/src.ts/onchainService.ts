@@ -3,7 +3,7 @@ import {
   Balance,
   ERC20Abi,
   FullTransferState,
-  IVectorOnchainService,
+  IVectorChainReader,
   Result,
   OnchainError,
 } from "@connext/vector-types";
@@ -21,7 +21,7 @@ export const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =
     Uint8Array.from(Buffer.from(payload.replace(/^0x/, ""), "hex")),
   );
 
-export class VectorOnchainService implements IVectorOnchainService {
+export class VectorChainReader implements IVectorChainReader {
   constructor(
     private readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
     private readonly log: Pino.BaseLogger = Pino(),

@@ -15,7 +15,7 @@ import {
   CoreTransferState,
   Result,
   FullTransferState,
-  IVectorOnchainService,
+  IVectorChainReader,
   InboundChannelUpdateError,
   OutboundChannelUpdateError,
 } from "@connext/vector-types";
@@ -131,7 +131,7 @@ export async function generateUpdate<T extends UpdateType>(
   state: FullChannelState | undefined, // passed in to avoid store call
   activeTransfers: FullTransferState[],
   transfer: FullTransferState | undefined, // Defined only in resolve, asserted in validation
-  onchainService: IVectorOnchainService,
+  onchainService: IVectorChainReader,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<
@@ -274,7 +274,7 @@ async function generateDepositUpdate(
   state: FullChannelState,
   params: UpdateParams<"deposit">,
   signer: IChannelSigner,
-  onchainService: IVectorOnchainService,
+  onchainService: IVectorChainReader,
   logger: pino.BaseLogger,
 ): Promise<ChannelUpdate<"deposit">> {
   // The deposit update has the ability to change the values in
@@ -392,7 +392,7 @@ async function generateResolveUpdate(
   params: UpdateParams<"resolve">,
   signer: IChannelSigner,
   transfers: FullTransferState[],
-  chainService: IVectorOnchainService,
+  chainService: IVectorChainReader,
   logger: pino.BaseLogger,
 ): Promise<{ unsigned: ChannelUpdate<"resolve">; transfer: FullTransferState }> {
   // A transfer resolution update can effect the following

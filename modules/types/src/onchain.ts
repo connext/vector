@@ -46,7 +46,7 @@ export type MultisigTransaction = MinimalTransaction & {
   nonce: BigNumberish;
 };
 
-export interface IVectorOnchainService {
+export interface IVectorChainReader {
   getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
   getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
   getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
@@ -62,7 +62,7 @@ export interface IVectorOnchainService {
   getCode(address: Address, chainId: number): Promise<Result<string, OnchainError>>;
 }
 
-export interface IVectorTransactionService extends IVectorOnchainService {
+export interface IVectorTransactionService extends IVectorChainReader {
   sendDepositTx(
     channelState: FullChannelState,
     sender: string,

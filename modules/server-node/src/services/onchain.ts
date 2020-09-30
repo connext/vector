@@ -7,21 +7,21 @@ import {
   ERC20Abi,
 } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers, Wallet } from "ethers";
-import { ChannelFactory, VectorChannel, VectorOnchainService } from "@connext/vector-contracts";
+import { ChannelFactory, VectorChannel, VectorChainReader } from "@connext/vector-contracts";
 import { BaseLogger } from "pino";
 
 export type ChainSigners = {
   [chainId: number]: providers.JsonRpcSigner;
 };
 
-export class VectorTransactionService extends VectorOnchainService implements IVectorTransactionService {
+export class VectorTransactionService extends VectorChainReader implements IVectorTransactionService {
   private signers: Map<number, Wallet> = new Map();
   constructor(
     private readonly _chainProviders: { [chainId: string]: providers.JsonRpcProvider },
     private readonly privateKey: string,
     private readonly logger: BaseLogger,
   ) {
-    super(_chainProviders, logger.child({ module: "VectorOnchainService" }));
+    super(_chainProviders, logger.child({ module: "VectorChainReader" }));
     Object.entries(_chainProviders).forEach(([chainId, provider]) => {
       this.signers.set(parseInt(chainId), new Wallet(privateKey, provider));
     });

@@ -3,7 +3,7 @@ import {
   ChannelCommitmentData,
   FullChannelState,
   IChannelSigner,
-  IVectorOnchainService,
+  IVectorChainReader,
   Result,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
@@ -136,7 +136,7 @@ export const reconcileDeposit = async (
   processedDepositA: string,
   processedDepositB: string,
   assetId: string,
-  onchainService: IVectorOnchainService,
+  onchainService: IVectorChainReader,
 ): Promise<Result<{ balance: Balance; totalDepositedA: string; totalDepositedB: string }, Error>> => {
   // First get totalDepositedA and totalDepositedB
   const totalDepositedARes = await onchainService.getTotalDepositedA(channelAddress, chainId, assetId);

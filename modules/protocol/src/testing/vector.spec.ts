@@ -1,4 +1,4 @@
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   getRandomChannelSigner,
   mkAddress,
@@ -16,7 +16,7 @@ import {
   LinkedTransferResolverEncoding,
   LinkedTransferStateEncoding,
   OutboundChannelUpdateError,
-  IVectorOnchainService,
+  IVectorChainReader,
   ILockService,
   IMessagingService,
   IVectorStore,
@@ -33,13 +33,13 @@ import { MemoryMessagingService } from "./services/messaging";
 import { MemoryLockService } from "./services/lock";
 
 describe("Vector", () => {
-  let chainService: Sinon.SinonStubbedInstance<IVectorOnchainService>;
+  let chainService: Sinon.SinonStubbedInstance<IVectorChainReader>;
   let lockService: Sinon.SinonStubbedInstance<ILockService>;
   let messagingService: Sinon.SinonStubbedInstance<IMessagingService>;
   let storeService: Sinon.SinonStubbedInstance<IVectorStore>;
 
   beforeEach(async () => {
-    chainService = Sinon.createStubInstance(VectorOnchainService);
+    chainService = Sinon.createStubInstance(VectorChainReader);
     chainService.getChannelFactoryBytecode.resolves(Result.ok(mkHash()));
     lockService = Sinon.createStubInstance(MemoryLockService);
     messagingService = Sinon.createStubInstance(MemoryMessagingService);

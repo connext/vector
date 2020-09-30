@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, constants, BigNumberish } from "ethers";
-import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
+import { Balance, Result, IVectorChainReader } from "@connext/vector-types";
 import {
   mkAddress,
   expect,
@@ -10,14 +10,14 @@ import {
   mkSig,
 } from "@connext/vector-utils";
 import Sinon from "sinon";
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 
 import { generateSignedChannelCommitment, reconcileDeposit, validateChannelUpdateSignatures } from "../utils";
 
 import { env } from "./env";
 
 type MockOnchainStubType = {
-  [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
+  [K in keyof IVectorChainReader]: IVectorChainReader[K];
 };
 
 type ReconcileDepositTest = {
@@ -250,7 +250,7 @@ describe("utils", () => {
         BigNumber.from(0),
       );
       // Creat the mock with defaults
-      const onchain = Sinon.createStubInstance(VectorOnchainService);
+      const onchain = Sinon.createStubInstance(VectorChainReader);
       // set return values
       const mockedValues = {
         // Default the value onchain + depositA + multisig deposit

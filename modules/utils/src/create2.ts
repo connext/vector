@@ -1,4 +1,4 @@
-import { PublicIdentifier, IVectorOnchainService, Result } from "@connext/vector-types";
+import { PublicIdentifier, IVectorChainReader, Result } from "@connext/vector-types";
 import { utils } from "ethers";
 
 import { getSignerAddressFromPublicIdentifier } from "./identifiers";
@@ -9,7 +9,7 @@ export const getCreate2MultisigAddress = async (
   chainId: number,
   channelFactoryAddress: string,
   channelMastercopyAddress: string,
-  onchainTxService: IVectorOnchainService,
+  onchainTxService: IVectorChainReader,
 ): Promise<Result<string, Error>> => {
   const proxyRes = await onchainTxService.getChannelFactoryBytecode(channelFactoryAddress, chainId);
   if (proxyRes.isError) {

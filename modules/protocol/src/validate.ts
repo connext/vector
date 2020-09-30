@@ -8,7 +8,7 @@ import {
   UpdateParams,
   OutboundChannelUpdateError,
   InboundChannelUpdateError,
-  IVectorOnchainService,
+  IVectorChainReader,
   Values,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
@@ -249,7 +249,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  onchainService: IVectorChainReader,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<InboundValidationResult> {
@@ -304,7 +304,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   previousState: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  onchainService: IVectorChainReader,
 ): Promise<
   Result<
     {

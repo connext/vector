@@ -12,7 +12,7 @@ import {
   IVectorProtocol,
   Result,
   FullTransferState,
-  IVectorOnchainService,
+  IVectorChainReader,
   OutboundChannelUpdateError,
   ProtocolParams,
 } from "@connext/vector-types";
@@ -38,7 +38,7 @@ export class Vector implements IVectorProtocol {
     private readonly lockService: ILockService,
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
-    private readonly onchainService: IVectorOnchainService,
+    private readonly onchainService: IVectorChainReader,
     private readonly logger: pino.BaseLogger,
   ) {}
 
@@ -47,7 +47,7 @@ export class Vector implements IVectorProtocol {
     lockService: ILockService,
     storeService: IVectorStore,
     signer: IChannelSigner,
-    onchainService: IVectorOnchainService,
+    onchainService: IVectorChainReader,
     logger: pino.BaseLogger,
   ): Promise<Vector> {
     // Handles up asynchronous services and checks to see that

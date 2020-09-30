@@ -2,7 +2,7 @@ import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } f
 import { Contract, ContractFactory, BigNumber } from "ethers";
 
 import { ChannelMastercopy, ChannelFactory } from "../artifacts";
-import { VectorOnchainService } from "../onchainService";
+import { VectorChainReader } from "../onchainService";
 
 import { addressZero, alice, bob, provider } from "./constants";
 import { getOnchainTxService } from "./utils";
@@ -12,7 +12,7 @@ describe("ChannelFactory", () => {
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
   let channelFactory: Contract;
   let channelMastercopy: Contract;
-  let onchainService: VectorOnchainService;
+  let onchainService: VectorChainReader;
   let chainId: number;
 
   beforeEach(async () => {
