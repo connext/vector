@@ -51,10 +51,12 @@ wait_for "auth" "$VECTOR_AUTH_URL"
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
 
+  # TODO: do we really want to do this in prod?
   echo "Running database migrations"
   ./node_modules/.bin/prisma migrate up --experimental &
 
   echo "Starting node in prod-mode"
+  export NODE_ENV=production
   exec node --no-deprecation dist/bundle.js
 
 else

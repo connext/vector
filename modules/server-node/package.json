@@ -6,7 +6,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "prisma generate && rm -rf dist && tsc -p tsconfig.json && webpack --config ops/webpack.config.js",
+    "build": "prisma generate && rm -rf dist && tsc && webpack --config ops/webpack.config.js",
     "start": "prisma migrate up --experimental && node dist/index.js",
     "test": "prisma generate && prisma migrate up --experimental && ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
     "migration:generate": "prisma migrate save --experimental"

@@ -45,7 +45,7 @@ wait_for "server-node" "$VECTOR_NODE_URL"
 if [[ "$VECTOR_ENV" == "dev" ]]
 then
 
-  echo "Starting node in dev-mode"
+  echo "Starting router in dev-mode"
   exec  ./node_modules/.bin/nodemon \
     --delay 1 \
     --exitcrash \
@@ -60,7 +60,8 @@ then
     | ./node_modules/.bin/pino-pretty
 
 else
-  echo "Starting node in prod-mode"
+  echo "Starting router in prod-mode"
+  export NODE_ENV=production
   exec node --no-deprecation dist/bundle.js
 fi
 

@@ -95,10 +95,8 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make node && make test-runner
-      - run: make start-global
-      - run: bash ops/save-secret.sh "vector_mnemonic" "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-      - run: source test.env && make start-node
-      - run: source test.env && make test-node
+      - run: VECTOR_ENV=prod make start-node
+      - run: VECTOR_ENV=prod make test-node
       - name: Print logs
         if: failure()
         run: |

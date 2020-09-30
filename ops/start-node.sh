@@ -122,26 +122,18 @@ pg_user="$project"
 ########################################
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
-# If no chain providers provided, spin up local testnets & use those
+
+echo "\$VECTOR_AUTH_URL=$VECTOR_AUTH_URL | \$VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS"
 
 if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
 then
-  echo "\$VECTOR_AUTH_URL ($VECTOR_AUTH_URL) or \$VECTOR_CHAIN_PROVIDERS ($VECTOR_CHAIN_PROVIDERS) is missing"
-
-  if [[ "$VECTOR_ENV" == "prod" ]]
-  then
-    echo "In prod mode, \$VECTOR_AUTH_URL and \$VECTOR_CHAIN_PROVIDERS must be provided."
-    exit 1
-  else
-    echo "Starting global services"
-    bash $root/ops/start-global.sh
-    auth_url="http://auth:5040"
-    mnemonic_secret_name="${project}_mnemonic_dev"
-    eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-    bash $root/ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic" > /dev/null
-    VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
-    VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
-  fi
+  bash $root/ops/start-global.sh
+  auth_url="http://auth:5040"
+  mnemonic_secret_name="${project}_mnemonic_dev"
+  eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+  bash $root/ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic" > /dev/null
+  VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
+  VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
 
 else
   echo "Connecting to external global servies: $VECTOR_AUTH_URL & $VECTOR_CHAIN_PROVIDERS"
@@ -153,7 +145,9 @@ else
     then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
     elif [[ -f ".chaindata/address-book.json" ]]
     then VECTOR_CONTRACT_ADDRESSES="`cat .chaindata/address-book.json | tr -d ' \n\r'`"
-    else echo "No \$VECTOR_CONTRACT_ADDRESSES provided & can't find an address-book, aborting"
+    else
+      echo "No \$VECTOR_CONTRACT_ADDRESSES provided & can't find an address-book, aborting"
+      exit 1
     fi
   fi
 fi
