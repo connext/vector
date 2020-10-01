@@ -50,12 +50,12 @@ Prerequisites:
 - `docker`: sadly, Docker is kinda annoying to install. See [website](https://www.docker.com/) for instructions.
 
 First, clone the repo:
-```
+```bash
 git clone git@github.com:connext/vector.git
 cd vector
 ```
 Then, run:
-```
+```bash
 make start-trio
 ```
 
