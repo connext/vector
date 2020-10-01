@@ -29,9 +29,9 @@ Contents:
 This quick start will guide you through getting to a simple e2e transfer flow between two peers running [server-nodes](https://github.com/connext/vector/tree/master/modules/server-node) (Alice, Bob) that is routed through one intermediary routing node (Roger).
 
 Prerequisites:
-- make: Probably already installed, otherwise install w brew install make or apt install make or similar.
-- jq: Probably not installed yet, install w brew install jq or apt install jq or similar.
-- docker: sadly, Docker is kinda annoying to install. See website for instructions.
+- `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
+- `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
+- `docker`: sadly, Docker is kinda annoying to install. See [website](https://www.docker.com/) for instructions.
 
 First, clone the repo:
 ```
