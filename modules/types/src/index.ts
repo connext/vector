@@ -1,5 +1,7 @@
 export * from "./basic";
+export * from "./chain";
 export * from "./channel";
+export * from "./config";
 export * from "./constants";
 export * from "./contracts";
 export * from "./crypto";
@@ -9,7 +11,6 @@ export * from "./event";
 export * from "./lock";
 export * from "./messaging";
 export * from "./network";
-export * from "./chain";
 export * from "./protocol";
 export * from "./rpc";
 export * from "./schemas";

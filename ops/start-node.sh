@@ -165,6 +165,8 @@ VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
 node_port="8001"
 prisma_port="5556"
 
+vector_config="`cat $root/vector-config.json | tr -d '\n\r'`"
+
 if [[ $VECTOR_ENV == "prod" ]]
 then
   node_image_name="${project}_node"
@@ -178,7 +180,7 @@ else
     ports:
       - '$node_port:$node_port'
       - '$prisma_port:$prisma_port'"
-    echo "$stack.node will be exposed on *:$node_port (prisma on *:$prisma_port)"
+  echo "$stack.node will be exposed on *:$node_port (prisma on *:$prisma_port)"
 fi
 
 ####################
@@ -222,6 +224,7 @@ services:
     ports:
       - '$node_port:$node_port'
     environment:
+      VECTOR_CONFIG: '$vector_config'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'

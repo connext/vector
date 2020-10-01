@@ -1,74 +1,40 @@
-import { ChainAddresses } from "@connext/vector-types";
+// TODO: fancy schema typebox runtime checks?
+for (const requiredEnv of [
+  "MNEMONIC",
+  "DATABASE_URL",
+  "CONFIG",
+]) {
+  if (!process.env[requiredEnv]) {
+    throw new Error(`VECTOR_${requiredEnv} is a required env var`);
+  }
+}
 
 const mnemonic = process.env.VECTOR_MNEMONIC;
-if (!mnemonic) {
-  throw new Error("VECTOR_MNEMONIC is a required config item");
-}
-
-let chainProviders;
-try {
-  chainProviders = JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS!);
-} catch (e) {
-  throw new Error("VECTOR_CHAIN_PROVIDERS is a required config item");
-}
-if (!chainProviders) {
-  throw new Error("VECTOR_CHAIN_PROVIDERS is a required config item");
-}
-
-const redisUrl = process.env.VECTOR_REDIS_URL;
-if (!redisUrl) {
-  throw new Error("VECTOR_REDIS_URL is a required config item");
-}
-
-const natsUrl = process.env.VECTOR_NATS_SERVERS;
-if (!natsUrl) {
-  throw new Error("VECTOR_NATS_SERVERS is a required config item");
-}
-
-const authUrl = process.env.VECTOR_AUTH_URL;
-if (!authUrl) {
-  throw new Error("VECTOR_AUTH_URL is a required config item");
-}
-
-const adminToken = process.env.VECTOR_ADMIN_TOKEN;
-if (!adminToken) {
-  throw new Error("VECTOR_ADMIN_TOKEN is a required config item");
-}
-
-let contractAddressesEnv;
-const contractAddresses: ChainAddresses = {};
-try {
-  contractAddressesEnv = JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES!);
-  Object.entries(contractAddressesEnv).forEach(([chainId, contractDetails]: [string, any]) => {
-    contractAddresses[parseInt(chainId)] = {
-      channelFactoryAddress: contractDetails.ChannelFactory.address,
-      channelMastercopyAddress: contractDetails.ChannelMastercopy.address,
-      linkedTransferDefinition: contractDetails.LinkedTransfer.address,
-      withdrawDefinition: contractDetails.Withdraw.address,
-    };
-  });
-} catch (e) {
-  console.log("VECTOR_CONTRACT_ADDRESSES=", process.env.VECTOR_CONTRACT_ADDRESSES);
-  throw new Error(`VECTOR_CONTRACT_ADDRESSES is a required config item: ${e.message}`);
-}
-
-if (!chainProviders) {
-  throw new Error("VECTOR_CONTRACT_ADDRESSES is a required config item");
-}
-
 const dbUrl = process.env.VECTOR_DATABASE_URL;
-if (!dbUrl) {
-  throw new Error("VECTOR_DATABASE_URL is a required config item");
+let vectorConfig;
+try {
+  vectorConfig = JSON.parse(process.env.VECTOR_CONFIG);
+} catch (e) {
+  throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
+}
+
+// TODO: fancy schema typebox runtime checks?
+for (const requiredConfig of [
+  "adminToken",
+  "authUrl",
+  "chainAddresses",
+  "chainProviders",
+  "databaseUrl",
+  "natsUrl",
+  "redisUrl",
+]) {
+  if (!vectorConfig[requiredConfig]) {
+    throw new Error(`VECTOR_CONFIG.${requiredConfig} is a required config item`);
+  }
 }
 
 export const config = {
-  authUrl,
-  chainProviders,
-  contractAddresses,
+  ...vectorConfig,
   mnemonic,
-  natsUrl,
-  port: parseInt(process.env.VECTOR_PORT ?? "5040"),
-  redisUrl,
   dbUrl,
-  adminToken,
 };
