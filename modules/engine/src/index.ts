@@ -7,7 +7,6 @@ import {
   IMessagingService,
   IVectorProtocol,
   Result,
-  JsonRpcProvider,
   EngineParams,
   OutboundChannelUpdateError,
   ChannelRpcMethodsResponsesMap,
