@@ -23,6 +23,7 @@ import {
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
+import { keccak256 } from "ethers/lib/utils";
 
 export function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
@@ -128,8 +129,8 @@ export async function convertWithdrawParams(
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
-    signer.address,
-    signer.address === channel.alice ? channel.bob : channel.alice,
+    channel.alice,
+    channel.bob,
     params.recipient,
     assetId,
     // Important: Use params.amount here which doesn't include fee!!
@@ -140,7 +141,7 @@ export async function convertWithdrawParams(
 
   const initiatorSignature = await signer.signMessage(commitment.hashToSign());
 
-  const channelCounterparty = channel.alice == signer.address ? channel.bob : channel.alice;
+  const channelCounterparty = channel.alice === signer.address ? channel.bob : channel.alice;
 
   const transferInitialState: WithdrawState = {
     balance: {

@@ -433,7 +433,7 @@ type GenerateUpdateTestParams = {
   resolveBalance?: Balance;
 };
 
-describe("generateUpdate", () => {
+describe.only("generateUpdate", () => {
   // FIXME: THESE ARE BLOCKING TESTS!
   it.skip("should fail if it fails parameter validation", () => {});
   it.skip("should fail if it is unable to reconcile the deposit", () => {});
@@ -639,6 +639,7 @@ describe("generateUpdate", () => {
         details: {
           transferId: emptyLinkedTransfer.transferId,
           transferResolver: emptyLinkedTransfer.transferResolver,
+          meta: { resolve: "test" },
         },
       },
       stateOverrides: {
@@ -657,9 +658,11 @@ describe("generateUpdate", () => {
           transferResolver: emptyLinkedTransfer.transferResolver,
           transferEncodings: emptyLinkedTransfer.transferEncodings,
           merkleRoot: mkHash(),
+          meta: { resolve: "test" },
         },
       },
       expectedTransfer: {
+        meta: { resolve: "test" },
         transferId: emptyLinkedTransfer.transferId,
         initiator: participants[0],
         responder: participants[1],

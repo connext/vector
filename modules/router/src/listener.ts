@@ -38,6 +38,19 @@ export async function setupListeners(node: IServerNodeService, store: IRouterSto
         );
         return false;
       }
+
+      if (data.transfer.initiator === node.signerAddress) {
+        logger.info(
+          { initiator: data.transfer.initiator },
+          "Not forwarding transfer which was initiated by our node, doing nothing",
+        );
+        return false;
+      }
+
+      if (!data.transfer.meta.path[0].recipient || data.transfer.meta.path.recipient === node.publicIdentifier) {
+        logger.warn({ path: data.transfer.meta.path[0] }, "Not forwarding transfer with no path to follow");
+        return false;
+      }
       return true;
     },
   );
@@ -70,6 +83,26 @@ export async function setupListeners(node: IServerNodeService, store: IRouterSto
         );
         return false;
       }
+
+      // If there is no resolver, do nothing
+      if (!data.transfer.transferResolver) {
+        logger.warn(
+          {
+            transferId: data.transfer,
+            routingId: data.transfer.meta.routingId,
+            channelAddress: data.transfer.channelAddress,
+          },
+          "No resolver found in transfer",
+        );
+        false;
+      }
+
+      // If we are the receiver of this transfer, do nothing
+      if (data.transfer.responder === node.signerAddress) {
+        logger.info({ routingId: data.transfer.meta.routingId }, "Nothing to reclaim");
+        return false;
+      }
+
       return true;
     },
   );

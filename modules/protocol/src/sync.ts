@@ -34,6 +34,7 @@ export async function outbound(
   signer: IChannelSigner,
   logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+  const method = "outboud";
   // Before doing anything, run the validation
   // If this passes, it is safe to force-unwrap various things that may
   // be undefined. While we may still handle the error here, it should be
@@ -42,16 +43,16 @@ export async function outbound(
   const validationRes = await validateOutbound(params, storeService, signer);
   if (validationRes.isError) {
     logger.error({
-      method: "outbound",
+      method,
       variable: "validationRes",
       error: validationRes.getError()?.message,
       context: validationRes.getError()?.context,
     });
     return Result.fail(validationRes.getError()!);
   }
-  logger.error(
+  logger.info(
     {
-      method: "outbound",
+      method,
     },
     "Validated outbound",
   );
@@ -73,7 +74,7 @@ export async function outbound(
   );
   if (updateRes.isError) {
     logger.error({
-      method: "outbound",
+      method,
       variable: "updateRes",
       error: updateRes.getError()?.message,
       context: updateRes.getError()?.context,
@@ -86,7 +87,7 @@ export async function outbound(
   let transfer = updateValue.transfer;
 
   // send and wait for response
-  logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Sending protocol message");
+  logger.info({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
   let result = await messagingService.sendProtocolMessage(update, previousState.latestUpdate ?? undefined);
 
   // iff the result failed because the update is stale, our channel is behind
@@ -95,6 +96,7 @@ export async function outbound(
   if (error && error.message === InboundChannelUpdateError.reasons.StaleUpdate) {
     logger.warn(
       {
+        method,
         update: update.nonce,
         counterparty: error.update.nonce,
       },
@@ -113,7 +115,7 @@ export async function outbound(
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
-      logger.error({ method: "outbound", error: syncedResult.getError() }, "Error syncing channel");
+      logger.error({ method, error: syncedResult.getError() }, "Error syncing channel");
       return Result.fail(syncedResult.getError()!);
     }
 
@@ -138,7 +140,7 @@ export async function outbound(
   // original error. Either way, we do not want to handle it
   if (error) {
     // Error is for some other reason, do not retry update.
-    logger.error({ method: "outbound", error }, "Error receiving response, will not save state!");
+    logger.error({ method, error }, "Error receiving response, will not save state!");
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.CounterpartyFailure, params, previousState, {
         counterpartyError: error.message,
@@ -146,7 +148,7 @@ export async function outbound(
     );
   }
 
-  logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Received protocol response");
+  logger.info({ method, to: update.toIdentifier, type: update.type }, "Received protocol response");
 
   const { update: counterpartyUpdate } = result.getValue();
 
@@ -164,7 +166,7 @@ export async function outbound(
       previousState,
       { error: sigRes },
     );
-    logger.error({ method: "outbound", error: error.message }, "Error receiving response, will not save state!");
+    logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
   }
 

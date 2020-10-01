@@ -104,19 +104,8 @@ export async function forwardTransferCreation(
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;
-  if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
-    logger.warn({ path, method }, "No path to follow");
-    return Result.ok(undefined);
-  }
 
-  if (initiator === node.signerAddress) {
-    logger.warn({ initiator, method }, "Initiated by our node, doing nothing");
-    return Result.ok(undefined);
-  }
-
-  // TODO validate the above params
-
-  const senderChannelRes = await node.getStateChannel(senderChannelAddress);
+  const senderChannelRes = await node.getStateChannel({ channelAddress: senderChannelAddress });
   if (senderChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
@@ -164,11 +153,11 @@ export async function forwardTransferCreation(
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
-  const recipientChannelRes = await node.getStateChannelByParticipants(
-    node.publicIdentifier,
-    recipientIdentifier,
-    recipientChainId,
-  );
+  const recipientChannelRes = await node.getStateChannelByParticipants({
+    alice: node.publicIdentifier,
+    bob: recipientIdentifier,
+    chainId: recipientChainId,
+  });
   if (recipientChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
@@ -213,16 +202,14 @@ export async function forwardTransferCreation(
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
-    const depositRes = await node.deposit(
-      {
-        channelAddress: recipientChannel.channelAddress,
-        assetId: recipientAssetId,
-        amount: BigNumber.from(recipientAmount)
-          .add(profile.target)
-          .toString(),
-      },
-      recipientChainId,
-    );
+    const depositRes = await node.deposit({
+      chainId: recipientChainId,
+      channelAddress: recipientChannel.channelAddress,
+      assetId: recipientAssetId,
+      amount: BigNumber.from(recipientAmount)
+        .add(profile.target)
+        .toString(),
+    });
     if (depositRes.isError) {
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
@@ -291,25 +278,13 @@ export async function forwardTransferResolution(
   );
   const {
     channelAddress,
-    transfer: { transferId, responder, transferResolver, meta },
+    transfer: { transferId, transferResolver, meta },
     conditionType,
   } = data;
   const { routingId } = meta as RouterSchemas.RouterMeta;
 
-  // If there is no resolver, do nothing
-  if (!transferResolver) {
-    logger.warn({ transferId, routingId, channelAddress }, "No resolver found in transfer");
-    return Result.ok(undefined);
-  }
-
-  // If we are the receiver of this transfer, do nothing
-  if (responder === node.signerAddress) {
-    logger.info({ method, routingId }, "Nothing to reclaim");
-    return Result.ok(undefined);
-  }
-
   // Find the channel with the corresponding transfer to unlock
-  const transfersRes = await node.getTransfersByRoutingId(routingId);
+  const transfersRes = await node.getTransfersByRoutingId({ routingId });
   if (transfersRes.isError) {
     return Result.fail(
       new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {

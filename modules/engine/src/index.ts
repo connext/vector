@@ -1,15 +1,12 @@
-import { VectorChainReader } from "@connext/vector-contracts";
 import { Vector } from "@connext/vector-protocol";
 import {
   ChainAddresses,
   ChainProviders,
-  FullChannelState,
   IChannelSigner,
   ILockService,
   IMessagingService,
   IVectorProtocol,
   Result,
-  JsonRpcProvider,
   EngineParams,
   OutboundChannelUpdateError,
   ChannelRpcMethodsResponsesMap,
@@ -19,7 +16,9 @@ import {
   EngineEvent,
   EngineEvents,
   ChannelRpcMethod,
-  FullTransferState,
+  IVectorChainService,
+  WITHDRAWAL_RECONCILED_EVENT,
+  ChannelRpcMethods,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -44,13 +43,14 @@ export class VectorEngine implements IVectorEngine {
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private constructor(
+    private readonly signer: IChannelSigner,
     private readonly messaging: IMessagingService,
     private readonly store: IEngineStore,
     private readonly vector: IVectorProtocol,
+    private readonly chainService: IVectorChainService,
     private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: pino.BaseLogger,
-    private readonly signer: IChannelSigner,
   ) {}
 
   static async connect(
@@ -58,15 +58,11 @@ export class VectorEngine implements IVectorEngine {
     lock: ILockService,
     store: IEngineStore,
     signer: IChannelSigner,
+    chainService: IVectorChainService,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
   ): Promise<VectorEngine> {
-    const hydratedProviders = {};
-    Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
-      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl);
-    });
-    const chainService = new VectorChainReader(hydratedProviders, logger.child({ module: "VectorChainReader" }));
     const vector = await Vector.connect(
       messaging,
       lock,
@@ -75,7 +71,16 @@ export class VectorEngine implements IVectorEngine {
       chainService,
       logger.child({ module: "VectorProtocol" }),
     );
-    const engine = new VectorEngine(messaging, store, vector, chainProviders, chainAddresses, logger, signer);
+    const engine = new VectorEngine(
+      signer,
+      messaging,
+      store,
+      vector,
+      chainService,
+      chainProviders,
+      chainAddresses,
+      logger.child({ module: "VectorEngine" }),
+    );
     await engine.setupListener();
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
@@ -90,6 +95,7 @@ export class VectorEngine implements IVectorEngine {
   private async setupListener(): Promise<void> {
     await setupEngineListeners(
       this.evts,
+      this.chainService,
       this.vector,
       this.messaging,
       this.signer,
@@ -101,7 +107,12 @@ export class VectorEngine implements IVectorEngine {
 
   private async getChannelState(
     params: EngineParams.GetChannelState,
-  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
+  ): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelState],
+      Error | OutboundChannelUpdateError
+    >
+  > {
     const validate = ajv.compile(EngineParams.GetChannelStateSchema);
     const valid = validate(params);
     if (!valid) {
@@ -113,7 +124,7 @@ export class VectorEngine implements IVectorEngine {
 
   private async getTransferStateByRoutingId(
     params: EngineParams.GetTransferStateByRoutingId,
-  ): Promise<Result<FullTransferState | undefined, Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferStateByRoutingId], Error>> {
     const validate = ajv.compile(EngineParams.GetTransferStateByRoutingIdSchema);
     const valid = validate(params);
     if (!valid) {
@@ -125,7 +136,7 @@ export class VectorEngine implements IVectorEngine {
 
   private async getTransferStatesByRoutingId(
     params: EngineParams.GetTransferStatesByRoutingId,
-  ): Promise<Result<FullTransferState[], Error>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferStatesByRoutingId], Error>> {
     const validate = ajv.compile(EngineParams.GetTransferStatesByRoutingIdSchema);
     const valid = validate(params);
     if (!valid) {
@@ -137,7 +148,12 @@ export class VectorEngine implements IVectorEngine {
 
   private async getChannelStateByParticipants(
     params: EngineParams.GetChannelStateByParticipants,
-  ): Promise<Result<FullChannelState | undefined, Error | OutboundChannelUpdateError>> {
+  ): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelStateByParticipants],
+      Error | OutboundChannelUpdateError
+    >
+  > {
     const validate = ajv.compile(EngineParams.GetChannelStateByParticipantsSchema);
     const valid = validate(params);
     if (!valid) {
@@ -147,14 +163,21 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(channel);
   }
 
-  private async getChannelStates(): Promise<Result<FullChannelState[], Error | OutboundChannelUpdateError>> {
+  private async getChannelStates(): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getChannelStates],
+      Error | OutboundChannelUpdateError
+    >
+  > {
     const channel = await this.vector.getChannelStates();
     return Result.ok(channel);
   }
 
   private async setup(
     params: EngineParams.Setup,
-  ): Promise<Result<FullChannelState, OutboundChannelUpdateError | Error>> {
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
+  > {
     this.logger.info({ params, method: "setup" }, "Method called");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
@@ -178,7 +201,9 @@ export class VectorEngine implements IVectorEngine {
 
   private async deposit(
     params: EngineParams.Deposit,
-  ): Promise<Result<FullChannelState, OutboundChannelUpdateError | Error>> {
+  ): Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_deposit], OutboundChannelUpdateError | Error>
+  > {
     const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
@@ -190,7 +215,12 @@ export class VectorEngine implements IVectorEngine {
 
   private async createTransfer(
     params: EngineParams.ConditionalTransfer,
-  ): Promise<Result<FullChannelState, InvalidTransferType | OutboundChannelUpdateError>> {
+  ): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_createTransfer],
+      InvalidTransferType | OutboundChannelUpdateError
+    >
+  > {
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -218,7 +248,9 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(res);
   }
 
-  private async resolveTransfer(params: EngineParams.ResolveTransfer): Promise<Result<FullChannelState, Error>> {
+  private async resolveTransfer(
+    params: EngineParams.ResolveTransfer,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_resolveTransfer], Error>> {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -248,7 +280,9 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(res);
   }
 
-  private async withdraw(params: EngineParams.Withdraw): Promise<Result<FullChannelState, Error>> {
+  private async withdraw(
+    params: EngineParams.Withdraw,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_withdraw], Error>> {
     const validate = ajv.compile(EngineParams.WithdrawSchema);
     const valid = validate(params);
     if (!valid) {
@@ -263,7 +297,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params from withdraw
-    const createResult = await convertWithdrawParams(params, this.signer, channel!, this.chainAddresses);
+    const createResult = await convertWithdrawParams(params, this.signer, channel, this.chainAddresses);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -273,10 +307,22 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
+    const transferId = res.latestUpdate.details.transferId;
+    this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
-    // TODO should we wait for the resolve here?
+    let transactionHash: string | undefined = undefined;
+    const timeout = 15_000;
+    try {
+      const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
+        timeout,
+        data => data.channelAddress === params.channelAddress && data.transferId === transferId,
+      );
+      transactionHash = event.transactionHash;
+    } catch (e) {
+      this.logger.warn({ channelAddress: params.channelAddress, transferId, timeout }, "Withdraw tx not submitted");
+    }
 
-    return Result.ok(res); // TODO what do we return here?
+    return Result.ok({ channel: res, transactionHash });
   }
 
   // JSON RPC interface -- this will accept:

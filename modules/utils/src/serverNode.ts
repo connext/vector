@@ -5,50 +5,59 @@ import {
   EngineEvent,
   EngineEventMap,
   EngineEvents,
-  FullChannelState,
-  FullTransferState,
   Result,
   ServerNodeParams,
   ServerNodeResponses,
   Values,
   VectorError,
 } from "@connext/vector-types";
+import Ajv from "ajv";
 import Axios from "axios";
 import { providers } from "ethers";
 import { Evt } from "evt";
 import { BaseLogger } from "pino";
 
+const ajv = new Ajv();
+
 export interface IServerNodeService {
   publicIdentifier: string;
   signerAddress: string;
   getStateChannelByParticipants(
-    alice: string,
-    bob: string,
-    chainId: number,
-  ): Promise<Result<FullChannelState | undefined, Error>>;
-  getStateChannel(channelAddress: string): Promise<Result<FullChannelState | undefined, Error>>;
+    params: ServerNodeParams.GetChannelStateByParticipants,
+  ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, ServerNodeError>>;
+
+  getStateChannel(
+    params: ServerNodeParams.GetChannelState,
+  ): Promise<Result<ServerNodeResponses.GetChannelState, ServerNodeError>>;
+
   getTransferByRoutingId(
-    channelAddress: string,
-    routingId: string,
-  ): Promise<Result<FullTransferState | undefined, Error>>;
-  getTransfersByRoutingId(routingId: string): Promise<Result<FullTransferState[], Error>>;
+    params: ServerNodeParams.GetTransferStateByRoutingId,
+  ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, ServerNodeError>>;
+
+  getTransfersByRoutingId(
+    params: ServerNodeParams.GetTransferStatesByRoutingId,
+  ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, ServerNodeError>>;
+
   setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>>;
-  deposit(
-    params: ServerNodeParams.SendDepositTx,
-    chainId: number,
-  ): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>>;
+
+  deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>>;
+
   conditionalTransfer(
     params: ServerNodeParams.ConditionalTransfer,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>>;
+
   resolveTransfer(
     params: ServerNodeParams.ResolveTransfer,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>>;
+
+  withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, ServerNodeError>>;
 
   once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void>;
+
   on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
@@ -60,8 +69,11 @@ export class ServerNodeError extends VectorError {
   readonly type = VectorError.errors.ServerNodeError;
 
   static readonly reasons = {
+    InternalServerError: "Failed to send request",
+    InvalidParams: "Request has invalid parameters",
     ProviderNotFound: "Provider not available for chain",
     Timeout: "Timeout",
+    TransactionNotMined: "Failed to wait for transaction to be mined",
   } as const;
 
   constructor(
@@ -120,134 +132,119 @@ export class RestServerNodeService implements IServerNodeService {
     return this.chainProviders[chainId];
   }
 
-  async getConfig(): Promise<Result<ServerNodeResponses.GetConfig, Error>> {
-    try {
-      const res = await Axios.get<ServerNodeResponses.GetConfig>(`${this.serverNodeUrl}/config`);
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+  async getConfig(): Promise<Result<ServerNodeResponses.GetConfig, ServerNodeError>> {
+    return this.executeHttpRequest("config", "get", {}, ServerNodeParams.GetConfigSchema);
   }
 
-  async getStateChannel(channelAddress: string): Promise<Result<FullChannelState | undefined, Error>> {
-    try {
-      const res = await Axios.get<ServerNodeResponses.GetChannelState>(
-        `${this.serverNodeUrl}/channel/${channelAddress}`,
-      );
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+  async getStateChannel(
+    params: ServerNodeParams.GetChannelState,
+  ): Promise<Result<ServerNodeResponses.GetChannelState, ServerNodeError>> {
+    return this.executeHttpRequest(
+      `channel/${params.channelAddress}`,
+      "get",
+      params,
+      ServerNodeParams.GetChannelStateSchema,
+    );
   }
 
-  async getTransfersByRoutingId(routingId: string): Promise<Result<FullTransferState[], Error>> {
-    try {
-      const res = await Axios.get<ServerNodeResponses.GetTransferStatesByRoutingId>(
-        `${this.serverNodeUrl}/transfer/${routingId}`,
-      );
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+  async getTransfersByRoutingId(
+    params: ServerNodeParams.GetTransferStatesByRoutingId,
+  ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, ServerNodeError>> {
+    return this.executeHttpRequest(
+      `transfer/${params.routingId}`,
+      "get",
+      params,
+      ServerNodeParams.GetTransferStatesByRoutingIdSchema,
+    );
   }
 
   async getTransferByRoutingId(
-    channelAddress: string,
-    routingId: string,
-  ): Promise<Result<FullTransferState | undefined, Error>> {
-    try {
-      const res = await Axios.get<ServerNodeResponses.GetTransferStateByRoutingId>(
-        `${this.serverNodeUrl}/channel/${channelAddress}/transfer/${routingId}`,
-      );
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    params: ServerNodeParams.GetTransferStateByRoutingId,
+  ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, ServerNodeError>> {
+    return this.executeHttpRequest(
+      `channel/${params.channelAddress}/transfer/${params.routingId}`,
+      "get",
+      params,
+      ServerNodeParams.GetTransferStateByRoutingIdSchema,
+    );
   }
 
   async getStateChannelByParticipants(
-    alice: string,
-    bob: string,
-    chainId: number,
-  ): Promise<Result<FullChannelState | undefined, Error>> {
-    try {
-      const res = await Axios.get<ServerNodeResponses.GetChannelStateByParticipants>(
-        `${this.serverNodeUrl}/channel/${alice}/${bob}/${chainId}`,
-      );
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    params: ServerNodeParams.GetChannelStateByParticipants,
+  ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, ServerNodeError>> {
+    return this.executeHttpRequest(
+      `channel/${params.alice}/${params.bob}/${params.chainId}`,
+      "get",
+      params,
+      ServerNodeParams.GetChannelStateByParticipantsSchema,
+    );
   }
 
   async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>> {
-    try {
-      const res = await Axios.post<ServerNodeResponses.Setup>(`${this.serverNodeUrl}/setup`, {
-        counterpartyIdentifier: params.counterpartyIdentifier,
-        chainId: params.chainId,
-        timeout: params.timeout,
-      });
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return this.executeHttpRequest("setup", "post", params, ServerNodeParams.SetupSchema);
   }
 
-  async deposit(
-    params: ServerNodeParams.SendDepositTx,
-    chainId: number,
-  ): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>> {
+  async deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>> {
+    let provider;
     try {
-      const provider = this.assertProvider(chainId);
-      const sendDepositTxRes = await Axios.post<ServerNodeResponses.SendDepositTx>(
-        `${this.serverNodeUrl}/send-deposit-tx`,
-        params,
-      );
-      this.logger.info({ txHash: sendDepositTxRes.data.txHash }, "Waiting for tx to be mined");
-      const receipt = await provider.waitForTransaction(sendDepositTxRes.data.txHash);
-      this.logger.info({ txHash: receipt.transactionHash }, "Tx has been mined");
-      const res = await Axios.post<ServerNodeResponses.Deposit>(`${this.serverNodeUrl}/deposit`, {
-        channelAddress: params.channelAddress,
-        assetId: params.assetId,
-      });
-      return Result.ok(res.data);
+      provider = this.assertProvider(params.chainId);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(new ServerNodeError(ServerNodeError.reasons.ProviderNotFound));
     }
+
+    const sendDepositTxRes = await this.executeHttpRequest(
+      "send-deposit-tx",
+      "post",
+      params,
+      ServerNodeParams.SendDepositTxSchema,
+    );
+
+    if (sendDepositTxRes.isError) {
+      return Result.fail(sendDepositTxRes.getError());
+    }
+
+    const { txHash } = sendDepositTxRes.getValue()!;
+
+    try {
+      this.logger.info({ txHash }, "Waiting for tx to be mined");
+      const receipt = await provider.waitForTransaction(txHash);
+      this.logger.info({ txHash: receipt.transactionHash }, "Tx has been mined");
+    } catch (e) {
+      return Result.fail(new ServerNodeError(ServerNodeError.reasons.TransactionNotMined, { txHash, params }));
+    }
+    return this.executeHttpRequest(
+      "deposit",
+      "post",
+      { channelAddress: params.channelAddress, assetId: params.assetId },
+      ServerNodeParams.DepositSchema,
+    );
   }
 
   async conditionalTransfer(
     params: ServerNodeParams.ConditionalTransfer,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>> {
-    try {
-      const res = await Axios.post<ServerNodeResponses.ConditionalTransfer>(
-        `${this.serverNodeUrl}/linked-transfer/create`,
-        params,
-      );
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return this.executeHttpRequest(
+      `linked-transfer/create`,
+      "post",
+      params,
+      ServerNodeParams.ConditionalTransferSchema,
+    );
   }
 
   async resolveTransfer(
     params: ServerNodeParams.ResolveTransfer,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
-    try {
-      const res = await Axios.post<ServerNodeResponses.ResolveTransfer>(
-        `${this.serverNodeUrl}/linked-transfer/resolve`,
-        params,
-      );
-      return Result.ok(res.data);
-    } catch (e) {
-      return Result.fail(e);
-    }
+    return this.executeHttpRequest(`linked-transfer/resolve`, "post", params, ServerNodeParams.ResolveTransferSchema);
+  }
+
+  async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, ServerNodeError>> {
+    return this.executeHttpRequest(`withdraw`, "post", params, ServerNodeParams.WithdrawSchema);
   }
 
   async once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    filter: (payload: EngineEventMap[T]) => boolean = () => true,
+    filter: (payload: EngineEventMap[T]) => boolean = payload => true,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -284,5 +281,34 @@ export class RestServerNodeService implements IServerNodeService {
       { eventName: EngineEvents.CONDITIONAL_TRANSFER_CREATED, url },
       "Engine event subscription created",
     );
+  }
+
+  // Helper methods
+  private async executeHttpRequest(
+    urlPath: string,
+    method: "get" | "post",
+    params: any,
+    paramSchema: any,
+  ): Promise<Result<any, ServerNodeError>> {
+    const url = `${this.serverNodeUrl}/${urlPath}`;
+    // Validate parameters are in line with schema
+    const validate = ajv.compile(paramSchema);
+    if (!validate(params)) {
+      return Result.fail(
+        new ServerNodeError(ServerNodeError.reasons.InvalidParams, {
+          errors: validate.errors?.map(err => err.message).join(","),
+        }),
+      );
+    }
+
+    // Attempt request
+    try {
+      const res = method === "get" ? await Axios.get(url) : await Axios.post(url, params);
+      return Result.ok(res.data);
+    } catch (e) {
+      return Result.fail(
+        new ServerNodeError(ServerNodeError.reasons.InternalServerError, { error: e.message, params, url }),
+      );
+    }
   }
 }

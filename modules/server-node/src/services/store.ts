@@ -12,7 +12,7 @@ import {
   IEngineStore,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
@@ -25,6 +25,7 @@ import {
   TransferUpdateManyWithoutChannelInput,
   TransferCreateWithoutChannelInput,
 } from "@prisma/client";
+import { BigNumber } from "ethers";
 
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
@@ -183,12 +184,42 @@ export class PrismaStore implements IServerNodeStore {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
   }
 
-  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
-    throw new Error("Method not implemented.");
+  async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
+    const entity = await this.prisma.transfer.findOne({
+      where: { transferId },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
+    });
+    if (!entity) {
+      return undefined;
+    }
+
+    const initialState = JSON.parse(entity.createUpdate?.transferInitialState ?? "{}");
+    const resolver = JSON.parse(entity.resolveUpdate?.transferResolver ?? "{}");
+
+    // TODO: will this return invalid jsons if the transfer is resolved
+    const aliceIsInitiator =
+      entity.channel!.participantA === getSignerAddressFromPublicIdentifier(entity.createUpdate!.fromIdentifier);
+
+    return {
+      aliceSignature: aliceIsInitiator ? initialState.initiatorSignature : resolver.responderSignature,
+      bobSignature: aliceIsInitiator ? resolver.responderSignature : initialState.initiatorSignature,
+      channelAddress: entity.channelAddressId,
+      alice: entity.channel!.participantA,
+      bob: entity.channel!.participantB,
+      recipient: initialState.balance.to[0],
+      assetId: entity.createUpdate!.assetId,
+      amount: BigNumber.from(initialState.balance.amount[0])
+        .sub(initialState.fee)
+        .toString(),
+      nonce: initialState.nonce,
+    };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
-    throw new Error("Method not implemented.");
+    // All information is stored in the transfer entity already (see getter)
+    // So no need to save commitment explicitly
+    return Promise.resolve();
   }
 
   async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {

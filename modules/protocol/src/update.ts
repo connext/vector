@@ -343,6 +343,7 @@ function generateCreateUpdate(
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
+  const initialStateHash = hashTransferState(transferInitialState, encodings[0]);
   const transferState: FullTransferState = {
     initialBalance: transferInitialState.balance,
     assetId,
@@ -351,7 +352,7 @@ function generateCreateUpdate(
     transferDefinition,
     transferEncodings: encodings,
     transferTimeout: timeout,
-    initialStateHash: hashTransferState(transferInitialState, encodings[0]),
+    initialStateHash,
     transferState: transferInitialState,
     channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
@@ -367,7 +368,14 @@ function generateCreateUpdate(
   const merkle = new MerkleTree(hashes, utils.keccak256);
 
   // Create the update from the user provided params
-  const balance = getUpdatedChannelBalance(UpdateType.create, assetId, transferInitialState.balance, state);
+  const balance = getUpdatedChannelBalance(
+    UpdateType.create,
+    assetId,
+    transferInitialState.balance,
+    state,
+    transferState.initiator,
+    transferState.responder,
+  );
   const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
@@ -402,7 +410,7 @@ async function generateResolveUpdate(
   // - nonce
   // - merkle root
 
-  const { transferId, transferResolver } = params.details;
+  const { transferId, transferResolver, meta } = params.details;
 
   // First generate latest merkle tree data
   const transferToResolve = transfers.find(x => x.transferId === transferId);
@@ -441,7 +449,14 @@ async function generateResolveUpdate(
   );
 
   // Convert transfer balance to channel update balance
-  const balance = getUpdatedChannelBalance(UpdateType.resolve, transferToResolve.assetId, transferBalance, state);
+  const balance = getUpdatedChannelBalance(
+    UpdateType.resolve,
+    transferToResolve.assetId,
+    transferBalance,
+    state,
+    transferToResolve.initiator,
+    transferToResolve.responder,
+  );
 
   // Generate the unsigned update from the params
   const root = merkle.getHexRoot();
@@ -463,6 +478,7 @@ async function generateResolveUpdate(
       transferResolver,
       transferEncodings: transferToResolve.transferEncodings,
       merkleRoot: root === "0x" ? constants.HashZero : root,
+      meta,
     },
   };
 
@@ -471,6 +487,10 @@ async function generateResolveUpdate(
       ...transferToResolve,
       transferState: { ...transferToResolve.transferState, balance: { ...transferBalance } },
       transferResolver: { ...transferResolver },
+      meta: {
+        ...(transferToResolve.meta ?? {}),
+        ...(meta ?? {}),
+      },
     },
     unsigned,
   };
@@ -499,6 +519,8 @@ function getUpdatedChannelBalance(
   assetId: string,
   balanceToReconcile: Balance,
   state: FullChannelState,
+  initiator: string,
+  responder: string,
 ): Balance {
   // Get the existing balances to update
   const assetIdx = state.assetIds.findIndex(a => a === assetId);
@@ -509,46 +531,37 @@ function getUpdatedChannelBalance(
 
   // Create a helper to update some existing balance amount
   // based on the transfer amount using the update type
-  const updateExistingAmount = (existing: string, update: string): string => {
+  const updateExistingAmount = (existingBalance: string, transferBalance: string): string => {
     return type === UpdateType.create
-      ? BigNumber.from(existing)
-          .sub(update)
+      ? BigNumber.from(existingBalance)
+          .sub(transferBalance)
           .toString()
-      : BigNumber.from(existing)
-          .add(update)
+      : BigNumber.from(existingBalance)
+          .add(transferBalance)
           .toString();
   };
 
   // NOTE: in the transfer.balance, there is no guarantee that the
   // `transfer.to` corresponds to the `channel.balances[assetIdx].to`
-  // (i.e. an external withdrawal recipient)
+  // (i.e. an external withdrawal recipient). However, the transfer
+  // will always have an initiator and responder that will correspond
+  // to the values of `channel.balances[assetIdx].to`
 
-  // Create an array holding the appropriate index in the transfer
-  // balance.to for the existing balance.to
-  const existingToIndexes = balanceToReconcile.to.map(addr => existing.to.findIndex(a => a === addr));
+  // Get the transfer amounts that correspond to channel participants
+  const aliceTransferAmount = initiator === state.alice ? balanceToReconcile.amount[0] : balanceToReconcile.amount[1];
+  const bobTransferAmount = initiator === state.bob ? balanceToReconcile.amount[0] : balanceToReconcile.amount[1];
 
-  // Create an updated amount
-  const updatedAmount = existingToIndexes
-    .map(existingIdx => {
-      if (existingIdx == -1) {
-        // the balance.to value is not in the existing.to value,
-        // so there is no corresponding channel balance update
-        return undefined;
-      }
-      // balance.to is a channel participant, so update the
-      // corresponding amount
-      const balanceIdx = balanceToReconcile.to.findIndex(a => a === existing.to[existingIdx]);
-      return updateExistingAmount(existing.amount[existingIdx], balanceToReconcile.amount[balanceIdx]);
-    })
-    .filter(x => !!x) as string[];
-
+  // Return the updated channel balance object
   // NOTE: you should *always* use the existing balance because you are
   // reconciling a transfer balance with a channel balance. The reconciled
   // balance `to` ordering should correspond to the existing state ordering
   // not the transfer.to ordering
   return {
     to: [...existing.to],
-    amount: updatedAmount,
+    amount: [
+      updateExistingAmount(existing.amount[0], aliceTransferAmount),
+      updateExistingAmount(existing.amount[1], bobTransferAmount),
+    ],
   };
 }
 

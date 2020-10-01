@@ -454,6 +454,10 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
           ...storedTransfer.transferState,
           balance: transferBalance,
         },
+        meta: {
+          ...(storedTransfer.meta ?? {}),
+          ...(meta ?? {}),
+        },
       };
 
       // Ensure the transfer exists within the active transfers
