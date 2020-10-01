@@ -40,7 +40,7 @@ contract HashlockTransfer is ITransferDefinition {
 
     // If you pass in bytes32(0), payment is canceled
     // If timelock is nonzero and has expired, payment is canceled
-    if (resolver.preImage != bytes32(0) && (state.expiry == 0 || state.expiry > block.number)) {
+    if (resolver.preImage != bytes32(0) && (state.expiry > block.number || state.expiry == 0)) {
       // Check hash for normal payment unlock
       bytes32 generatedHash = sha256(abi.encode(resolver.preImage));
       require(state.lockHash == generatedHash, "Hash generated from preimage does not match hash in state");
