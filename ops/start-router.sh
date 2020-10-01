@@ -9,7 +9,7 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-stack="node"
+stack="router"
 
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit 0;
