@@ -57,7 +57,7 @@ contract ChannelFactory is IChannelFactory {
         address bob,
         uint256 chainId
     )
-        external
+        public
         override
         returns (IVectorChannel channel)
     {
