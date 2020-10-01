@@ -155,7 +155,7 @@ describe(testName, () => {
       await carol.getStateChannel({ channelAddress: carolChannel.channelAddress })
     ).getValue()!;
     const carolBalanceAfterTransfer =
-      carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[0];
+      carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[1];
     expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
 
     // need to delay until dave gets his transfer forwarded

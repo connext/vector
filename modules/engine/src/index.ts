@@ -64,10 +64,6 @@ export class VectorEngine implements IVectorEngine {
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
   ): Promise<VectorEngine> {
-    const hydratedProviders = {};
-    Object.entries(chainProviders).forEach(([chainId, providerUrl]) => {
-      hydratedProviders[chainId] = new JsonRpcProvider(providerUrl);
-    });
     const vector = await Vector.connect(
       messaging,
       lock,

@@ -104,17 +104,6 @@ export async function forwardTransferCreation(
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;
-  if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
-    logger.warn({ path, method }, "No path to follow");
-    return Result.ok(undefined);
-  }
-
-  if (initiator === node.signerAddress) {
-    logger.warn({ initiator, method }, "Initiated by our node, doing nothing");
-    return Result.ok(undefined);
-  }
-
-  // TODO validate the above params
 
   const senderChannelRes = await node.getStateChannel({ channelAddress: senderChannelAddress });
   if (senderChannelRes.isError) {
@@ -289,22 +278,10 @@ export async function forwardTransferResolution(
   );
   const {
     channelAddress,
-    transfer: { transferId, responder, transferResolver, meta },
+    transfer: { transferId, transferResolver, meta },
     conditionType,
   } = data;
   const { routingId } = meta as RouterSchemas.RouterMeta;
-
-  // If there is no resolver, do nothing
-  if (!transferResolver) {
-    logger.warn({ transferId, routingId, channelAddress }, "No resolver found in transfer");
-    return Result.ok(undefined);
-  }
-
-  // If we are the receiver of this transfer, do nothing
-  if (responder === node.signerAddress) {
-    logger.info({ method, routingId }, "Nothing to reclaim");
-    return Result.ok(undefined);
-  }
 
   // Find the channel with the corresponding transfer to unlock
   const transfersRes = await node.getTransfersByRoutingId({ routingId });
