@@ -184,8 +184,9 @@ fi
 ####################
 # Launch stack
 
-rm -rf $root/docker-compose.yml $root/$stack.docker-compose.yml
-cat - > $root/$stack.docker-compose.yml <<EOF
+docker_compose=$root/.$stack.docker-compose.yml
+rm -f $docker_compose
+cat - > $docker_compose <<EOF
 version: '3.4'
 
 networks:
@@ -256,7 +257,7 @@ services:
 
 EOF
 
-docker stack deploy -c $root/$stack.docker-compose.yml $stack
+docker stack deploy -c $docker_compose $stack
 
 echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
 timeout=$(expr `date +%s` + 60)

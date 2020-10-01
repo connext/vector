@@ -116,6 +116,7 @@ reset: stop-all
 	docker volume rm $(project)_database_dev  2> /dev/null || true
 	docker volume rm `docker volume ls -q -f name=$(project)_database_test_*` 2> /dev/null || true
 	rm -rf .chaindata/*
+	rm -rf *.docker-compose.yml
 
 reset-images:
 	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node
