@@ -379,7 +379,7 @@ server.post<{ Body: ServerNodeParams.Admin }>(
   },
 );
 
-server.listen(config.port, "0.0.0.0", (err, address) => {
+server.listen(parseInt(config.port), "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

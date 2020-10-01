@@ -18,6 +18,7 @@
     "@connext/vector-utils": "0.0.1",
     "@prisma/client": "2.7.1",
     "@sinclair/typebox": "0.10.1",
+    "ajv": "6.12.5",
     "axios": "0.20.0",
     "ethers": "5.0.14",
     "fastify": "3.4.1",

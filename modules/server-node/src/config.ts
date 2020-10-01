@@ -1,53 +1,55 @@
-import { ChainProviders, ChainAddresses } from "@connext/vector-types";
+import { TAddress, TIntegerString } from "@connext/vector-types";
+import { Static, Type } from "@sinclair/typebox";
+import Ajv from "ajv";
 
-type VectorNodeConfig = {
-  adminToken: string;
-  allowedSwaps: string[2][]; // [[fromAddress, toAddress], ...]
-  allowedTokens: string[];
-  authUrl: string;
-  chainAddresses: ChainAddresses;
-  chainProviders: ChainProviders;
-  dbUrl: string;
-  logLevel: string;
-  mnemonic: string;
-  natsUrl: string;
-  port: number;
-  redisUrl: string;
-}
+const ajv = new Ajv();
 
-// TODO: fancy schema typebox runtime checks?
-for (const requiredEnv of [
-  "MNEMONIC",
-  "DATABASE_URL",
-  "CONFIG",
-]) {
-  const key = `VECTOR_${requiredEnv}`;
-  if (!process.env[key]) {
-    throw new Error(`${key} is a required env var`);
-  }
-}
+const VectorNodeConfigSchema = Type.Object({
+  adminToken: Type.String(),
+  authUrl: Type.String({ format: "uri" }),
+  chainAddresses: Type.Map(
+    Type.Object({
+      channelMastercopyAddress: TAddress,
+      channelFactoryAddress: TAddress,
+      linkedTransferDefinition: TAddress,
+      withdrawDefinition: TAddress,
+      TestToken: TAddress,
+    }),
+  ),
+  chainProviders: Type.Map(Type.String({ format: "uri" })),
+  dbUrl: Type.Optional(Type.String({ format: "uri" })),
+  logLevel: Type.Optional(
+    Type.Union([
+      Type.Literal("fatal"),
+      Type.Literal("error"),
+      Type.Literal("warn"),
+      Type.Literal("info"),
+      Type.Literal("debug"),
+      Type.Literal("trace"),
+      Type.Literal("silent"),
+    ]),
+  ),
+  mnemonic: Type.Optional(Type.String()),
+  natsUrl: Type.String({ format: "uri" }),
+  port: TIntegerString,
+  redisUrl: Type.String({ format: "uri" }),
+});
 
+type VectorNodeConfig = Static<typeof VectorNodeConfigSchema>;
 const mnemonic = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
-let vectorConfig;
+let vectorConfig: VectorNodeConfig;
 try {
   vectorConfig = JSON.parse(process.env.VECTOR_CONFIG!);
 } catch (e) {
   throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
 }
 
-// TODO: fancy schema typebox runtime checks?
-for (const requiredConfig of [
-  "adminToken",
-  "authUrl",
-  "chainAddresses",
-  "chainProviders",
-  "natsUrl",
-  "redisUrl",
-]) {
-  if (!vectorConfig[requiredConfig]) {
-    throw new Error(`VECTOR_CONFIG.${requiredConfig} is a required config item`);
-  }
+const validate = ajv.compile(VectorNodeConfigSchema);
+const valid = validate(vectorConfig);
+
+if (!valid) {
+  throw new Error(validate.errors?.map(err => err.message).join(","));
 }
 
 export const config = {
