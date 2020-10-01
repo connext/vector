@@ -265,6 +265,7 @@ async function handleWithdrawalTransferCreation(
     balances,
     assetIds,
     alice,
+    bob,
     latestUpdate: {
       details: { transferId, transferInitialState },
       assetId,
@@ -303,8 +304,8 @@ async function handleWithdrawalTransferCreation(
   // is properly signed before its been merged into your channel
   const commitment = new WithdrawCommitment(
     channelAddress,
-    initiator,
-    responder,
+    alice,
+    bob,
     balance.to[0],
     assetId,
     withdrawalAmount.toString(),
@@ -361,7 +362,7 @@ async function handleWithdrawalTransferCreation(
     transferResolver: { responderSignature },
     transferId,
     channelAddress,
-    meta: { ...(transfer.meta ?? {}), transactionHash },
+    meta: { transactionHash },
   });
 
   // Handle the error
@@ -392,6 +393,7 @@ async function handleWithdrawalTransferResolution(
     balances,
     assetIds,
     alice,
+    bob,
     latestUpdate: {
       details: { transferId, meta },
       assetId,
@@ -444,8 +446,8 @@ async function handleWithdrawalTransferResolution(
   // Generate our own commitment, and save the double signed version
   const commitment = new WithdrawCommitment(
     channelAddress,
-    transfer.initiator,
-    transfer.responder,
+    alice,
+    bob,
     transfer.initialBalance.to[0],
     assetId,
     withdrawalAmount.toString(),
@@ -460,13 +462,14 @@ async function handleWithdrawalTransferResolution(
   await store.saveWithdrawalCommitment(transferId, commitment.toJson());
 
   // Try to submit the transaction to chain IFF you are alice
+  // Otherwise, alice should have submitted the tx (hash is in meta)
   if (signer.address !== alice) {
     // Withdrawal resolution meta will include the transaction hash,
     // post to EVT here
     evts[WITHDRAWAL_RECONCILED_EVENT].post({
       channelAddress,
       transferId,
-      transactionHash: meta.transactionHash,
+      transactionHash: meta?.transactionHash,
     });
     logger.info({ method, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;

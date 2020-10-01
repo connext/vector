@@ -11,7 +11,7 @@ const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 const logger = pino({ level: env.logLevel });
 const testName = "Duet Happy";
 
-describe(testName, () => {
+describe.only(testName, () => {
   let alice: IServerNodeService;
   let bob: IServerNodeService;
   before(async () => {
@@ -49,34 +49,37 @@ describe(testName, () => {
     expect(channelRes.getError()).to.be.undefined;
     const channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
-    const aliceChannel = await alice.getStateChannel(channel.channelAddress);
-    const bobChannel = await bob.getStateChannel(channel.channelAddress);
+    const aliceChannel = await alice.getStateChannel({ channelAddress: channel.channelAddress });
+    const bobChannel = await bob.getStateChannel({ channelAddress: channel.channelAddress });
     expect(aliceChannel.getValue()).to.deep.eq(bobChannel.getValue());
   });
 
   it("alice can deposit ETH into channel", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
-    const channelRes = await alice.getStateChannelByParticipants(alice.publicIdentifier, bob.publicIdentifier, chainId);
+    const channelRes = await alice.getStateChannelByParticipants({
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
     const channel = channelRes.getValue()!;
 
     let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
     const aliceBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[0];
 
-    const depositRes = await alice.deposit(
-      {
-        amount: depositAmt.toString(),
-        assetId,
-        channelAddress: channel.channelAddress,
-      },
-      channel.networkContext.chainId,
-    );
+    const depositRes = await alice.deposit({
+      chainId: channel.networkContext.chainId,
+      amount: depositAmt.toString(),
+      assetId,
+      channelAddress: channel.channelAddress,
+    });
+    expect(depositRes.getError()).to.be.undefined;
     const deposit = depositRes.getValue();
 
     expect(deposit.channelAddress).to.be.a("string");
 
-    const aliceChannel = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
-    const bobChannel = (await bob.getStateChannel(channel.channelAddress)).getValue()!;
+    const aliceChannel = (await alice.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
+    const bobChannel = (await bob.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
 
     assetIdx = aliceChannel.assetIds.findIndex(_assetId => _assetId === assetId);
     const aliceAfter = aliceChannel.balances[assetIdx].amount[0];
@@ -88,26 +91,28 @@ describe(testName, () => {
   it("bob can deposit ETH into channel", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
-    const channelRes = await bob.getStateChannelByParticipants(alice.publicIdentifier, bob.publicIdentifier, chainId);
+    const channelRes = await bob.getStateChannelByParticipants({
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
     const channel = channelRes.getValue()!;
 
     let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
     const bobBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
 
-    const depositRes = await bob.deposit(
-      {
-        amount: depositAmt.toString(),
-        assetId,
-        channelAddress: channel.channelAddress,
-      },
-      channel.networkContext.chainId,
-    );
+    const depositRes = await bob.deposit({
+      chainId: channel.networkContext.chainId,
+      amount: depositAmt.toString(),
+      assetId,
+      channelAddress: channel.channelAddress,
+    });
     const deposit = depositRes.getValue();
 
     expect(deposit.channelAddress).to.be.a("string");
 
-    const aliceChannel = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
-    const bobChannel = (await bob.getStateChannel(channel.channelAddress)).getValue()!;
+    const aliceChannel = (await alice.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
+    const bobChannel = (await bob.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
 
     assetIdx = bobChannel.assetIds.findIndex(_assetId => _assetId === assetId);
     const bobAfter = bobChannel.balances[assetIdx].amount[1];
@@ -116,10 +121,14 @@ describe(testName, () => {
     expect(BigNumber.from(bobBefore).add(depositAmt)).to.eq(bobAfter);
   });
 
-  it("alice can transfer to bob and resolve the transfer", async () => {
+  it.skip("alice can transfer to bob and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
-    const channelRes = await alice.getStateChannelByParticipants(alice.publicIdentifier, bob.publicIdentifier, chainId);
+    const channelRes = await alice.getStateChannelByParticipants({
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
     const channel = channelRes.getValue()!;
 
     const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
@@ -140,7 +149,7 @@ describe(testName, () => {
     expect(transferRes.getError()).to.not.be.ok;
     const { transferId } = transferRes.getValue()!;
 
-    const channelAfterTransfer = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
+    const channelAfterTransfer = (await alice.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
     const aliceAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
     expect(aliceAfterTransfer).to.be.eq(BigNumber.from(aliceBefore).sub(transferAmt));
 
@@ -154,15 +163,19 @@ describe(testName, () => {
     });
     expect(resolveRes.getError()).to.not.be.ok;
 
-    const channelAfterResolve = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
+    const channelAfterResolve = (await alice.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
     const bobAfterResolve = assetIdx === -1 ? "0" : channelAfterResolve.balances[assetIdx].amount[1];
     expect(bobAfterResolve).to.be.eq(BigNumber.from(bobBefore).add(transferAmt));
   });
 
-  it("bob can transfer to alice", async () => {
+  it.skip("bob can transfer to alice", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
-    const channelRes = await alice.getStateChannelByParticipants(alice.publicIdentifier, bob.publicIdentifier, chainId);
+    const channelRes = await alice.getStateChannelByParticipants({
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
     const channel = channelRes.getValue()!;
 
     const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
@@ -180,9 +193,93 @@ describe(testName, () => {
     });
     expect(transferRes.isError).to.not.be.ok;
 
-    const channelAfterTransfer = (await alice.getStateChannel(channel.channelAddress)).getValue()!;
-    console.log("channelAfterTransfer: ", channelAfterTransfer);
+    const channelAfterTransfer = (await alice.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
     const aliceAfterTransfer = assetIdx === -1 ? "0" : channelAfterTransfer.balances[assetIdx].amount[0];
-    console.log("aliceAfterTransfer: ", aliceAfterTransfer);
+  });
+
+  it("alice can withdraw eth successfully to signer address", async () => {
+    // Get test constants
+    const assetId = constants.AddressZero;
+    const withdrawalAmount = utils.parseEther("0.005");
+    const channelRes = await alice.getStateChannelByParticipants({
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
+    const channel = channelRes.getValue()!;
+    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const [preWithdrawAlice, preWithdrawBob] = channel.balances[assetIdx].amount;
+    const preWithdrawMultisig = await provider.getBalance(channel.channelAddress);
+    const preWithdrawWallet = await provider.getBalance(alice.signerAddress);
+
+    // Try alice withdrawal
+    const withdrawalRes = await alice.withdraw({
+      channelAddress: channel.channelAddress,
+      amount: withdrawalAmount.toString(),
+      assetId,
+      recipient: alice.signerAddress,
+      fee: "0",
+      meta: { reason: "Alice reclaiming" },
+    });
+    expect(withdrawalRes.getError()).to.be.undefined;
+    const { transactionHash } = withdrawalRes.getValue()!;
+    expect(transactionHash).to.be.ok;
+
+    // Assert in-channel changes
+    const postWithdrawChannel = (await alice.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
+    const [postWithdrawAlice, postWithdrawBob] = postWithdrawChannel.balances[assetIdx].amount;
+    expect(postWithdrawAlice).to.be.eq(BigNumber.from(preWithdrawAlice).sub(withdrawalAmount));
+    expect(postWithdrawBob).to.be.eq(preWithdrawBob);
+
+    // Assert onchain changes
+    const postWithdrawMultisig = await provider.getBalance(channel.channelAddress);
+    const postWithdrawWallet = await provider.getBalance(alice.signerAddress);
+    expect(postWithdrawMultisig).to.be.eq(preWithdrawMultisig.sub(withdrawalAmount));
+    // Alice submits txs herself, so you cannot check equalities
+    // Instead, check that the wallet balance increased by no
+    // more than the withdrawal amount
+    const diff = postWithdrawWallet.sub(preWithdrawWallet);
+    expect(diff.lte(withdrawalAmount)).to.be.true;
+  });
+
+  it("bob can successfully withdraw from channel to external recipient", async () => {
+    // Get test constants
+    const assetId = constants.AddressZero;
+    const withdrawalAmount = utils.parseEther("0.005");
+    const recipient = Wallet.createRandom().address;
+    const channelRes = await bob.getStateChannelByParticipants({
+      alice: alice.publicIdentifier,
+      bob: bob.publicIdentifier,
+      chainId,
+    });
+    const channel = channelRes.getValue()!;
+    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const [preWithdrawAlice, preWithdrawBob] = channel.balances[assetIdx].amount;
+    const preWithdrawMultisig = await provider.getBalance(channel.channelAddress);
+
+    // Try bob withdrawal
+    const withdrawalRes = await bob.withdraw({
+      channelAddress: channel.channelAddress,
+      amount: withdrawalAmount.toString(),
+      assetId,
+      recipient,
+      fee: "0",
+      meta: { reason: "Bob withdrawing" },
+    });
+    expect(withdrawalRes.getError()).to.be.undefined;
+    const { transactionHash } = withdrawalRes.getValue()!;
+    expect(transactionHash).to.be.ok;
+
+    // Assert in-channel changes
+    const postWithdrawChannel = (await bob.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
+    const [postWithdrawAlice, postWithdrawBob] = postWithdrawChannel.balances[assetIdx].amount;
+    expect(postWithdrawBob).to.be.eq(BigNumber.from(preWithdrawBob).sub(withdrawalAmount));
+    expect(postWithdrawAlice).to.be.eq(preWithdrawAlice);
+
+    // Assert onchain changes
+    const postWithdrawMultisig = await provider.getBalance(channel.channelAddress);
+    const postWithdrawRecipient = await provider.getBalance(recipient);
+    expect(postWithdrawMultisig).to.be.eq(preWithdrawMultisig.sub(withdrawalAmount));
+    expect(postWithdrawRecipient).to.be.eq(withdrawalAmount);
   });
 });

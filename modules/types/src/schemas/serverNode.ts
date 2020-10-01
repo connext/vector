@@ -51,9 +51,8 @@ const GetTransferStatesByRoutingIdParamsSchema = Type.Object({
   routingId: TBytes32,
 });
 
-// TODO: Could be improved by creating a transfer state schema
 const GetTransferStatesByRoutingIdResponseSchema = {
-  200: Type.Array(GetTransferStateByRoutingIdResponseSchema[200]),
+  200: Type.Array(TFullTransferState),
 };
 
 // GET CHANNEL STATE
@@ -143,10 +142,13 @@ const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
 // POST WITHDRAW TRANSFER
 const PostWithdrawTransferBodySchema = EngineParams.WithdrawSchema;
 
-const PostWithdrawTransferResponseSchema = Type.Intersect([
-  BasicTransferServerResponseSchema,
-  Type.Object({ transactionHash: Type.Object(TBytes32) }),
-]);
+const PostWithdrawTransferResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
+    transferId: TBytes32,
+    transactionHash: Type.Optional(TBytes32),
+  }),
+};
 
 // ADMIN
 const PostAdminBodySchema = Type.Object({
@@ -183,7 +185,7 @@ export namespace ServerNodeParams {
   export const GetListenerSchema = GetListenerParamsSchema;
   export type GetListener = Static<typeof GetListenerSchema>;
 
-  export const GetConfigSchema = Type.Undefined();
+  export const GetConfigSchema = Type.Object({});
   export type GetConfig = Static<typeof GetConfigSchema>;
 
   export const SetupSchema = PostSetupBodySchema;

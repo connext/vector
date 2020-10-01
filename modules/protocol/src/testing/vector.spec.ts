@@ -102,7 +102,6 @@ describe("Vector", () => {
       chainReader.getChannelFactoryBytecode.resolves(Result.fail(new Error("fail")));
       const { details } = createTestUpdateParams(UpdateType.setup);
       const result = await vector.setup(details);
-      console.log(result.getError());
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.Create2Failed);
     });
 

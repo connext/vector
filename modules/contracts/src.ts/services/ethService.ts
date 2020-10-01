@@ -6,6 +6,7 @@ import {
   Result,
   ERC20Abi,
 } from "@connext/vector-types";
+import { delay } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Signer, Wallet } from "ethers";
 import { BaseLogger } from "pino";
 
@@ -30,12 +31,20 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   public async sendWithdrawTx(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     channelState: FullChannelState<any>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
-    throw new Error("Method not implemented.");
+    const signer = this.signers.get(channelState.networkContext.chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+    const sender = await signer.getAddress();
+
+    if (channelState.alice !== sender && channelState.bob !== sender) {
+      return Result.fail(new ChainError(ChainError.reasons.SenderNotInChannel));
+    }
+
+    return this.sendTxAndParseResponse(signer.sendTransaction(minTx));
   }
 
   public async sendDepositTx(
@@ -73,8 +82,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         signer,
       );
 
-      channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
-        console.log(`Channel created: ${JSON.stringify(data)}`);
+      const creationEvent = new Promise(resolve => {
+        channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
+          this.log.info({ method: "sendDepositTx" }, `Channel created event`);
+          resolve(data);
+        });
+        delay(30_000).then(resolve);
       });
 
       if (assetId !== constants.AddressZero) {
@@ -98,9 +111,12 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }
       }
 
-      const tx = await this.sendTxAndParseResponse(
-        channelFactory.createChannel(channelState.alice, channelState.bob, channelState.networkContext.chainId),
-      );
+      const [tx] = await Promise.all([
+        this.sendTxAndParseResponse(
+          channelFactory.createChannel(channelState.alice, channelState.bob, channelState.networkContext.chainId),
+        ),
+        creationEvent,
+      ]);
 
       // TODO: fix this
       // const tx = await this.sendTxAndParseResponse(

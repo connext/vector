@@ -196,12 +196,16 @@ export class PrismaStore implements IServerNodeStore {
     const initialState = JSON.parse(entity.createUpdate?.transferInitialState ?? "{}");
     const resolver = JSON.parse(entity.resolveUpdate?.transferResolver ?? "{}");
 
+    // TODO: will this return invalid jsons if the transfer is resolved
+    const aliceIsInitiator =
+      entity.channel!.participantA === getSignerAddressFromPublicIdentifier(entity.createUpdate!.fromIdentifier);
+
     return {
-      initiatorSignature: initialState.initiatorSignature,
-      responderSignature: resolver.responderSignature,
+      aliceSignature: aliceIsInitiator ? initialState.initiatorSignature : resolver.responderSignature,
+      bobSignature: aliceIsInitiator ? resolver.responderSignature : initialState.initiatorSignature,
       channelAddress: entity.channelAddressId,
-      initiator: initialState.initiator,
-      responder: initialState.responder,
+      alice: entity.channel!.participantA,
+      bob: entity.channel!.participantB,
       recipient: initialState.balance.to[0],
       assetId: entity.createUpdate!.assetId,
       amount: BigNumber.from(initialState.balance.amount[0])

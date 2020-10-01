@@ -125,8 +125,8 @@ describe(testName, () => {
       const withdrawalAmount = BigNumber.from(4);
       const commitment = await WithdrawCommitment.fromJson({
         channelAddress: mkAddress("0xccc"),
-        initiator: initiator.address,
-        responder: responder.address,
+        alice: alice.address,
+        bob: bob.address,
         recipient: alice.address,
         assetId: mkAddress(),
         amount: withdrawalAmount.toString(),
@@ -141,12 +141,12 @@ describe(testName, () => {
       // Generate state
       const initialState: WithdrawState = {
         balance: {
-          to: [commitment.recipient, commitment.responder],
+          to: [commitment.recipient, commitment.bob],
           amount: [fee.add(commitment.amount).toString(), "0"],
         },
         initiatorSignature,
-        initiator: commitment.initiator,
-        responder: commitment.responder,
+        initiator: initiator.address,
+        responder: responder.address,
         data: hexlify(randomBytes(32)),
         nonce: commitment.nonce,
         fee: fee.toString(),
@@ -266,8 +266,8 @@ describe(testName, () => {
       if (store.saveWithdrawalCommitment.callCount) {
         const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
         expect(storeTransferId).to.be.eq(transfer.transferId);
-        expect(withdrawCommitment.initiatorSignature).to.be.ok;
-        expect(withdrawCommitment.responderSignature).to.be.ok;
+        expect(withdrawCommitment.aliceSignature).to.be.ok;
+        expect(withdrawCommitment.bobSignature).to.be.ok;
       }
 
       // Verify the transaction submission was correctly executed
@@ -371,8 +371,8 @@ describe(testName, () => {
       if (store.saveWithdrawalCommitment.callCount) {
         const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
         expect(storeTransferId).to.be.eq(transfer.transferId);
-        expect(withdrawCommitment.initiatorSignature).to.be.ok;
-        expect(withdrawCommitment.responderSignature).to.be.ok;
+        expect(withdrawCommitment.aliceSignature).to.be.ok;
+        expect(withdrawCommitment.bobSignature).to.be.ok;
       }
 
       // Verify the transaction submission was correctly executed

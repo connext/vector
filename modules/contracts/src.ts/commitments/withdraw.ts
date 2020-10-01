@@ -7,13 +7,13 @@ import { ChannelMastercopy } from "../artifacts";
 const { Interface, keccak256, solidityPack } = utils;
 
 export class WithdrawCommitment {
-  private initiatorSignature?: string;
-  private responderSignature?: string;
+  private aliceSignature?: string;
+  private bobSignature?: string;
 
   public constructor(
     public readonly channelAddress: string,
-    public readonly initiator: string,
-    public readonly responder: string,
+    public readonly alice: string,
+    public readonly bob: string,
     public readonly recipient: string,
     public readonly assetId: string,
     public readonly amount: string,
@@ -22,22 +22,22 @@ export class WithdrawCommitment {
 
   get signatures(): string[] {
     const sigs: string[] = [];
-    if (this.initiatorSignature) {
-      sigs.push(this.initiatorSignature);
+    if (this.aliceSignature) {
+      sigs.push(this.aliceSignature);
     }
-    if (this.responderSignature) {
-      sigs.push(this.responderSignature);
+    if (this.bobSignature) {
+      sigs.push(this.bobSignature);
     }
     return sigs;
   }
 
   public toJson(): WithdrawCommitmentJson {
     return {
-      initiatorSignature: this.initiatorSignature,
-      responderSignature: this.responderSignature,
+      aliceSignature: this.aliceSignature,
+      bobSignature: this.bobSignature,
       channelAddress: this.channelAddress,
-      initiator: this.initiator,
-      responder: this.responder,
+      alice: this.alice,
+      bob: this.bob,
       recipient: this.recipient,
       assetId: this.assetId,
       amount: this.amount,
@@ -48,15 +48,15 @@ export class WithdrawCommitment {
   public static async fromJson(json: WithdrawCommitmentJson): Promise<WithdrawCommitment> {
     const commitment = new WithdrawCommitment(
       json.channelAddress,
-      json.initiator,
-      json.responder,
+      json.alice,
+      json.bob,
       json.recipient,
       json.assetId,
       json.amount,
       json.nonce,
     );
-    if (json.initiatorSignature || json.responderSignature) {
-      await commitment.addSignatures(json.initiatorSignature, json.responderSignature);
+    if (json.aliceSignature || json.bobSignature) {
+      await commitment.addSignatures(json.aliceSignature, json.bobSignature);
     }
     return commitment;
   }
@@ -79,8 +79,8 @@ export class WithdrawCommitment {
       this.assetId,
       this.amount,
       this.nonce,
-      this.initiatorSignature,
-      this.responderSignature,
+      this.aliceSignature,
+      this.bobSignature,
     ]);
     return { to: this.channelAddress, value: 0, data: txData };
   }
@@ -96,15 +96,11 @@ export class WithdrawCommitment {
       } catch (e) {
         recovered = e.message;
       }
-      if (recovered === this.initiator) {
-        this.initiatorSignature = sig;
-      } else if (recovered === this.responder) {
-        this.responderSignature = sig;
-      } else {
-        throw new Error(
-          `Invalid signer detected. Got ${recovered}, expected one of: ${this.initiator} / ${this.responder}`,
-        );
+      if (recovered !== this.alice && recovered !== this.bob) {
+        throw new Error(`Invalid signer detected. Got ${recovered}, expected one of: ${this.alice} / ${this.bob}`);
       }
+      this.aliceSignature = recovered === this.alice ? sig : this.aliceSignature;
+      this.bobSignature = recovered === this.bob ? sig : this.bobSignature;
     }
   }
 }
