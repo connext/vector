@@ -22,7 +22,7 @@ const { keccak256, solidityPack } = utils;
 export type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
 
 export const createTestHashlockTransferState = (
-  overrides: PartialTransferOverrides & { lockHash?: string } = {},
+  overrides: PartialTransferOverrides & { lockHash?: string; expiry?: string } = {},
 ): HashlockTransferState => {
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
@@ -32,6 +32,7 @@ export const createTestHashlockTransferState = (
       ...(balanceOverrides ?? {}),
     },
     lockHash: mkHash("0xeee"),
+    expiry: "0",
     ...defaultOverrides,
   };
 };
@@ -66,6 +67,7 @@ type TestHashlockTransferOptions = {
   balance: Balance;
   assetId: string;
   preImage: string;
+  expiry: string;
   meta: any;
   channelFactoryAddress: string;
   chainId: number;
@@ -74,12 +76,13 @@ export function createTestFullHashlockTransferState(
   overrides: Partial<TestHashlockTransferOptions> = {},
 ): FullTransferState<typeof TransferName.HashlockTransfer> {
   // get overrides/defaults values
-  const { balance, assetId, preImage, meta, ...core } = overrides;
+  const { balance, assetId, preImage, expiry, meta, ...core } = overrides;
 
   const transferEncodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   const transferResolver = { preImage: preImage ?? getRandomBytes32() };
   const transferState = createTestHashlockTransferState({
     lockHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
+    expiry: expiry ?? "0",
     assetId: assetId ?? mkAddress(),
     balance: balance ?? { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["4", "0"] },
   });

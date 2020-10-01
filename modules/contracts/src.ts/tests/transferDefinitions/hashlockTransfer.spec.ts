@@ -32,12 +32,14 @@ describe("HashlockTransfer", () => {
     const receiverAddr = getRandomAddress();
     const transferAmount = "10000";
     const lockHash = createlockHash(preImage);
+    const expiry = "0";
     return {
       balance: {
         amount: [transferAmount, Zero.toString()],
         to: [senderAddr, receiverAddr],
       },
       lockHash,
+      expiry,
     };
   };
 
