@@ -40,6 +40,7 @@ export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventM
 export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
   // FIXME: Is this JSON RPC compatible?
+  // RS: it's not, we will have to change the .on methods to use a JSON RPC compatible subscription
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private constructor(
