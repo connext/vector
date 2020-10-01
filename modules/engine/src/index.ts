@@ -18,7 +18,8 @@ import {
   ChannelRpcMethod,
   IVectorChainService,
   WITHDRAWAL_RECONCILED_EVENT,
-  ChannelRpcMethods,, IExternalValidation
+  ChannelRpcMethods,
+  IExternalValidation,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
