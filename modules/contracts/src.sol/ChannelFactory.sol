@@ -32,7 +32,7 @@ contract ChannelFactory is IChannelFactory {
         address bob,
         uint256 chainId
     )
-        public
+        external
         override
         view
         returns (address)
@@ -57,7 +57,7 @@ contract ChannelFactory is IChannelFactory {
         address bob,
         uint256 chainId
     )
-        public
+        external
         override
         returns (IVectorChannel channel)
     {
@@ -75,7 +75,7 @@ contract ChannelFactory is IChannelFactory {
         address assetId,
         uint256 amount
     )
-        public
+        external
         payable
         override
         returns (IVectorChannel channel)
