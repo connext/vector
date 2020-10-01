@@ -97,10 +97,10 @@ export class RestServerNodeService implements IServerNodeService {
 
   private constructor(
     private readonly serverNodeUrl: string,
-    private readonly callbackUrlBase: string,
     private readonly providerUrls: ChainProviders,
-    private readonly evts: EventEvts,
     private readonly logger: BaseLogger,
+    private readonly callbackUrlBase?: string,
+    private readonly evts?: EventEvts,
   ) {
     Object.entries(providerUrls).forEach(([chainId, url]) => {
       this.chainProviders[chainId] = new providers.JsonRpcProvider(url);
@@ -109,12 +109,12 @@ export class RestServerNodeService implements IServerNodeService {
 
   static async connect(
     serverNodeUrl: string,
-    callbackUrlBase: string,
     providerUrls: ChainProviders,
-    evts: EventEvts,
     logger: BaseLogger,
+    callbackUrlBase?: string,
+    evts?: EventEvts,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, callbackUrlBase, providerUrls, evts, logger);
+    const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, callbackUrlBase, evts);
     const configRes = await service.getConfig();
     if (configRes.isError) {
       throw configRes.getError();
@@ -246,6 +246,10 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = payload => true,
   ): Promise<void> {
+    if (!this.evts || !this.callbackUrlBase) {
+      this.logger.warn("No evts provided, subscriptions will not work");
+      return;
+    }
     throw new Error("Method not implemented.");
   }
 
@@ -254,6 +258,10 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
+    if (!this.evts || !this.callbackUrlBase) {
+      this.logger.warn("No evts provided, subscriptions will not work");
+      return;
+    }
     let url: string | undefined;
     switch (event) {
       case EngineEvents.CONDITIONAL_TRANSFER_CREATED: {

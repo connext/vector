@@ -18,9 +18,7 @@ describe(testName, () => {
   before(async () => {
     carol = await RestServerNodeService.connect(
       env.carolUrl,
-      "",
       env.chainProviders,
-      {} as any,
       logger.child({ testName, name: "Alice" }),
     );
     expect(carol.signerAddress).to.be.a("string");
@@ -28,9 +26,7 @@ describe(testName, () => {
 
     dave = await RestServerNodeService.connect(
       env.daveUrl,
-      "",
       env.chainProviders,
-      {} as any,
       logger.child({ testName, name: "Bob" }),
     );
     expect(dave.signerAddress).to.be.a("string");
@@ -38,9 +34,7 @@ describe(testName, () => {
 
     roger = await RestServerNodeService.connect(
       env.rogerUrl,
-      "",
       env.chainProviders,
-      {} as any,
       logger.child({ testName, name: "Node" }),
     );
     expect(roger.signerAddress).to.be.a("string");
