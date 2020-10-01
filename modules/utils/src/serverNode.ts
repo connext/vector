@@ -256,7 +256,7 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
-    if (!this.evts) {
+    if (!this.evts || !this.evts[event as string]) {
       this.logger.warn("No evts provided, subscriptions will not work");
       return;
     }

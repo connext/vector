@@ -6,6 +6,7 @@ import { RestServerNodeService } from "@connext/vector-utils";
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
+  DepositReconciledPayload,
   EngineEvents,
 } from "@connext/vector-types";
 
@@ -16,6 +17,7 @@ import { RouterStore } from "./services/store";
 const routerBase = `http://router:${config.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
+const depositReconciledPath = "/deposit-reconciled";
 const evts = {
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -24,6 +26,10 @@ const evts = {
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
     url: `${routerBase}${conditionalTransferResolvedPath}`,
+  },
+  [EngineEvents.DEPOSIT_RECONCILED]: {
+    evt: Evt.create<DepositReconciledPayload>(),
+    url: `${routerBase}${depositReconciledPath}`,
   },
 };
 
@@ -62,6 +68,11 @@ server.post(conditionalTransferCreatedPath, async (request, response) => {
 
 server.post(conditionalTransferResolvedPath, async (request, response) => {
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(depositReconciledPath, async (request, response) => {
+  evts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
   return response.status(200).send({ message: "success" });
 });
 

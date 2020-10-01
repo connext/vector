@@ -40,7 +40,7 @@ common="$interactive $stack_env \
   --env=VECTOR_NATS_URL=nats://nats:4222 \
   --env=VECTOR_NODE_URL=http://node:8000 \
   --env=VECTOR_ROGER_URL=http://roger:8000 \
-  --env=VECTOR_ROUTER_URL=http://router:8008 \
+  --env=VECTOR_ROUTER_URL=http://router:8009 \
   --name=${project}_test_runner \
   --network=$project \
   --rm \
