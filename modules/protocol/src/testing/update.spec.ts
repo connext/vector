@@ -1,4 +1,4 @@
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   UpdateType,
   InboundChannelUpdateError,
@@ -433,7 +433,7 @@ type GenerateUpdateTestParams = {
   resolveBalance?: Balance;
 };
 
-describe("generateUpdate", () => {
+describe.only("generateUpdate", () => {
   // FIXME: THESE ARE BLOCKING TESTS!
   it.skip("should fail if it fails parameter validation", () => {});
   it.skip("should fail if it is unable to reconcile the deposit", () => {});
@@ -469,11 +469,11 @@ describe("generateUpdate", () => {
 
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
-  let chainService: Sinon.SinonStubbedInstance<VectorOnchainService>;
+  let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   beforeEach(async () => {
     store = Sinon.createStubInstance(MemoryStoreService);
-    chainService = Sinon.createStubInstance(VectorOnchainService);
+    chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Mock `applyUpdate` (tested above) so it always returns
     // an empty object
@@ -586,7 +586,6 @@ describe("generateUpdate", () => {
           encodings: emptyLinkedTransfer.transferEncodings,
           timeout: emptyLinkedTransfer.transferTimeout,
           meta: emptyLinkedTransfer.meta,
-          responder: emptyLinkedTransfer.responder,
         },
       },
       stateOverrides: {
@@ -610,7 +609,6 @@ describe("generateUpdate", () => {
           merkleProofData,
           merkleRoot,
           meta: emptyLinkedTransfer.meta,
-          responder: emptyLinkedTransfer.responder,
         },
       },
       expectedTransfer: {
@@ -622,8 +620,8 @@ describe("generateUpdate", () => {
           ...emptyLinkedTransfer.transferState,
           balance: { to: participants, amount: ["7", "0"] },
         },
-        initiator: emptyLinkedTransfer.initiator,
-        responder: emptyLinkedTransfer.responder,
+        initiator: participants[0],
+        responder: participants[1],
         initialStateHash: hashTransferState(
           {
             ...emptyLinkedTransfer.transferState,
@@ -641,6 +639,7 @@ describe("generateUpdate", () => {
         details: {
           transferId: emptyLinkedTransfer.transferId,
           transferResolver: emptyLinkedTransfer.transferResolver,
+          meta: { resolve: "test" },
         },
       },
       stateOverrides: {
@@ -659,12 +658,14 @@ describe("generateUpdate", () => {
           transferResolver: emptyLinkedTransfer.transferResolver,
           transferEncodings: emptyLinkedTransfer.transferEncodings,
           merkleRoot: mkHash(),
+          meta: { resolve: "test" },
         },
       },
       expectedTransfer: {
+        meta: { resolve: "test" },
         transferId: emptyLinkedTransfer.transferId,
-        initiator: emptyLinkedTransfer.initiator,
-        responder: emptyLinkedTransfer.responder,
+        initiator: participants[0],
+        responder: participants[1],
         transferState: {
           ...emptyLinkedTransfer.transferState,
           balance: { to: participants, amount: ["0", "7"] },

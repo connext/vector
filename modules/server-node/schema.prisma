@@ -112,6 +112,7 @@ model Transfer {
 
   channel        Channel? @relation(fields: [channelAddress], references: [channelAddress])
   channelAddress String?
+  channelAddressId String // required for ID so that relation can be removed
 
   // created will always exist
   createUpdateChannelAddressId String?
@@ -120,6 +121,8 @@ model Transfer {
   // resolved will not always exist
   resolveUpdateChannelAddressId String?
   resolveUpdateNonce            Int?
+
+  @@unique([routingId, channelAddressId])
 }
 
 model EventSubscription {

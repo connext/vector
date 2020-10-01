@@ -1,29 +1,31 @@
-@aliceUrl = http://localhost:8001
+@aliceUrl = http://localhost:8002
+@bobUrl = http://localhost:8003
+@rogerUrl = http://localhost:8000
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
-@aliceNodeChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
+@aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
+@chainId = 1337
 
 # 0.1 ETH
 @ethAmount = 10000000000000000
 
 ##############
 ### Send Deposit Tx
-# Alice deposit ETH
 POST {{aliceUrl}}/send-deposit-tx
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceNodeChannel}}",
+  "channelAddress": "{{aliceBobChannel}}",
   "amount": "{{ethAmount}}",
-  "assetId": "0x0000000000000000000000000000000000000000"
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "chainId": "{{chainId}}"
 }
 
 ##############
 ### Reconcile Deposit
-# Alice deposit ETH
 POST {{aliceUrl}}/deposit
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceNodeChannel}}",
+  "channelAddress": "{{aliceBobChannel}}",
   "assetId": "0x0000000000000000000000000000000000000000"
 }

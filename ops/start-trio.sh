@@ -17,42 +17,19 @@ else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Load env vars
+# Misc Config
 
-VECTOR_ENV="${VECTOR_ENV:-dev}"
-
-# Load the default env
-if [[ -f "${VECTOR_ENV}.env" ]]
-then source "${VECTOR_ENV}.env"
+if [[ "$VECTOR_ENV" == "prod" ]]
+then
+  echo "The $stack stack should only be used for testing. Aborting because \$VECTOR_ENV=prod"
+  exit 1
 fi
+VECTOR_ENV=dev
 
-# Load instance-specific env vars & overrides
-if [[ -f ".env" ]]
-then source .env
-fi
+version="latest"
 
 # log level alias can override default for easy `LOG_LEVEL=5 make start`
 VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
-
-########################################
-## Docker registry & image version config
-
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_ENV" == "prod" ]]
-then
-  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
-  if [[ -n "$git_tag" ]]
-  then version="`echo $git_tag | sed 's/vector-//'`"
-  else version="`git rev-parse HEAD | head -c 8`"
-  fi
-else version="latest"
-fi
-
-####################
-# Misc Config
-
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -95,24 +72,32 @@ internal_node_port="8000"
 internal_prisma_port="5555"
 nats_port="4222"
 
-carol_node_port="8001"
-carol_prisma_port="5556"
+carol_node_port="8004"
+carol_prisma_port="5559"
 carol_database="database_c"
 carol_mnemonic="owner warrior discover outer physical intact secret goose all photo napkin fall"
+echo "$stack.carol will be exposed on *:$carol_node_port (prisma on *:$carol_prisma_port)"
 
-dave_node_port="8002"
-dave_prisma_port="5557"
+dave_node_port="8005"
+dave_prisma_port="5560"
 dave_database="database_d"
 dave_mnemonic="woman benefit lawn ignore glove marriage crumble roast tool area cool payment"
+echo "$stack.dave will be exposed on *:$dave_node_port (prisma on *:$dave_prisma_port)"
 
-roger_node_port="8003"
-roger_prisma_port="5558"
+roger_node_port="8006"
+roger_prisma_port="5561"
 roger_database="database_r"
 roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
+echo "$stack.roger will be exposed on *:$roger_node_port (prisma on *:$roger_prisma_port)"
 
 public_url="http://localhost:$roger_node_port"
 
 VECTOR_ADMIN_TOKEN="${VECTOR_ADMIN_TOKEN:-cxt1234}";
+
+node_image="image: '${project}_builder'
+    entrypoint: 'bash modules/server-node/ops/entry.sh'
+    volumes:
+      - '$root:/root'"
 
 node_env="environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
@@ -130,36 +115,18 @@ node_env="environment:
       VECTOR_REDIS_URL: '$redis_url'
       VECTOR_SUGAR_DADDY: '$sugardaddy_mnemonic'"
 
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  node_image_name="${project}_node"
-  bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
-  node_image="image: '$node_image_name:$version'"
-else
-  node_image="image: '${project}_builder'
-    entrypoint: 'bash modules/server-node/ops/entry.sh'
-    volumes:
-      - '$root:/root'"
-fi
-
 ########################################
 ## Router config
 
-router_port="8008"
+router_port="8009"
 
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  router_image_name="${project}_router"
-  bash $root/ops/pull-images.sh $version $router_image_name > /dev/null
-  router_image="image: '$router_image_name:$version'"
-else
-  router_image="image: '${project}_builder'
+router_image="image: '${project}_builder'
     entrypoint: 'bash modules/router/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
       - '$router_port:$router_port'"
-fi
+echo "$stack.router will be exposed on *:$router_port"
 
 ####################
 # Launch stack
@@ -207,8 +174,6 @@ services:
   router:
     $common
     $router_image
-    ports:
-      - '$router_port:$router_port'
     environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'

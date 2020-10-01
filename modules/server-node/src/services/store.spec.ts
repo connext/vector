@@ -5,6 +5,9 @@ import {
   mkBytes32,
   mkHash,
   expect,
+  getRandomBytes32,
+  getRandomIdentifier,
+  getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
 
 import { config } from "../config";
@@ -136,7 +139,6 @@ describe("store", () => {
     });
 
     transfer1.transferResolver = undefined;
-    createState.latestUpdate.details.merkleProofData;
 
     await store.saveChannelState(
       createState,
@@ -214,5 +216,85 @@ describe("store", () => {
 
     const all = await store.getSubscriptions();
     expect(all).to.deep.eq(subs);
+  });
+
+  it.only("should get multiple transfers by routingId", async () => {
+    const transfer1 = createTestFullLinkedTransferState({
+      transferId: mkHash("0x111"),
+      meta: { routingId: mkBytes32("0xddd") },
+    });
+    const createState = createTestChannelState("create", {
+      channelAddress: transfer1.channelAddress,
+      networkContext: { channelFactoryAddress: transfer1.channelFactoryAddress, chainId: transfer1.chainId },
+      latestUpdate: {
+        details: {
+          transferInitialState: transfer1.transferState,
+          transferId: transfer1.transferId,
+          meta: transfer1.meta,
+          transferDefinition: transfer1.transferDefinition,
+          transferEncodings: transfer1.transferEncodings,
+          transferTimeout: transfer1.transferTimeout,
+        },
+      },
+    });
+
+    transfer1.transferResolver = undefined;
+
+    await store.saveChannelState(
+      createState,
+      {
+        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
+        chainId: createState.networkContext.chainId,
+        aliceSignature: createState.latestUpdate.aliceSignature,
+        bobSignature: createState.latestUpdate.bobSignature,
+        state: createState,
+      },
+      transfer1,
+    );
+
+    const newBob = getRandomIdentifier();
+    const transfer2 = createTestFullLinkedTransferState({
+      transferId: mkHash("0x122"),
+      meta: { routingId: mkBytes32("0xddd") },
+      channelAddress: getRandomBytes32(),
+      responder: getSignerAddressFromPublicIdentifier(newBob),
+    });
+    transfer2.transferResolver = undefined;
+    const createState2 = createTestChannelState("create", {
+      channelAddress: transfer2.channelAddress,
+      bob: getSignerAddressFromPublicIdentifier(newBob),
+      bobIdentifier: newBob,
+      networkContext: { channelFactoryAddress: transfer2.channelFactoryAddress, chainId: transfer2.chainId },
+      latestUpdate: {
+        details: {
+          transferInitialState: transfer2.transferState,
+          transferId: transfer2.transferId,
+          meta: transfer2.meta,
+          transferDefinition: transfer2.transferDefinition,
+          transferEncodings: transfer2.transferEncodings,
+          transferTimeout: transfer2.transferTimeout,
+        },
+      },
+    });
+
+    await store.saveChannelState(
+      createState2,
+      {
+        channelFactoryAddress: createState2.networkContext.channelFactoryAddress,
+        chainId: createState2.networkContext.chainId,
+        aliceSignature: createState2.latestUpdate.aliceSignature,
+        bobSignature: createState2.latestUpdate.bobSignature,
+        state: createState2,
+      },
+      transfer2,
+    );
+
+    const transfers = await store.getTransfersByRoutingId(transfer2.meta.routingId);
+    expect(transfers.length).to.eq(2);
+
+    const t1 = transfers.find(t => t.transferId === transfer1.transferId);
+    const t2 = transfers.find(t => t.transferId === transfer2.transferId);
+    expect(t1).to.deep.eq(transfer1);
+    expect(t2).to.deep.eq(transfer2);
   });
 });

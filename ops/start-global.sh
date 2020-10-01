@@ -70,6 +70,9 @@ common="networks:
 # Auth config
 
 auth_port="5040"
+echo "$stack.auth configured to be exposed on *:$auth_port"
+
+admin_token="${VECTOR_ADMIN_TOKEN:-cxt1234}"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -85,8 +88,6 @@ else
       - '$root:/root'"
 fi
 
-echo "Auth configured to be exposed on *:$auth_port"
-
 ####################
 # Nats config
 
@@ -94,7 +95,6 @@ nats_image="provide/nats-server:indra";
 bash $root/ops/pull-images.sh "$nats_image" > /dev/null
 
 nats_port="4222"
-nats_ws_port="4221"
 
 # Generate custom, secure JWT signing keys if we don't have any yet
 if [[ -z "$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY" ]]
@@ -132,6 +132,7 @@ chain_id_2="1338"
 
 evm_port_1="8545"
 evm_port_2="8546"
+echo "$stack.evms are configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
 
 chain_data="$root/.chaindata"
 chain_data_1="$chain_data/$chain_id_1"
@@ -150,9 +151,6 @@ evm_image_name="${project}_ethprovider:$version";
 evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
 bash $root/ops/pull-images.sh "$evm_image_name" > /dev/null
-
-echo "EVMs configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
-
 
 ####################
 # Launch stack
@@ -177,7 +175,7 @@ services:
       VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
       VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
       VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
       VECTOR_ENV: '$VECTOR_ENV'
     ports:
@@ -227,7 +225,7 @@ echo "The $stack stack has been deployed."
 public_auth_url="http://127.0.0.1:5040"
 
 function abort {
-  echo
+  echo "====="
   docker service ls
   echo "====="
   docker container ls -a
@@ -235,16 +233,10 @@ function abort {
   docker service ps global_auth || true
   docker service logs --tail 50 --raw global_auth || true
   echo "====="
-  docker service ps global_evm_1337 || true
-  docker service logs --tail 50 --raw global_evm_1337 || true
-  echo "====="
-  docker service ps global_evm_1338 || true
-  docker service logs --tail 50 --raw global_evm_1338 || true
-  echo "====="
   curl $public_auth_url || true
   echo "====="
   echo "Timed out waiting for $stack stack to wake up, see above for diagnostic info."
-  exit
+  exit 1
 }
 
 timeout=$(expr `date +%s` + 60)

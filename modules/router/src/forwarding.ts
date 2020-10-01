@@ -2,8 +2,11 @@ import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   Result,
+  ServerNodeResponses,
   Values,
   VectorError,
+  RouterSchemas,
+  ServerNodeParams,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
@@ -27,6 +30,23 @@ export class ForwardTransferError extends VectorError {
 
   constructor(
     public readonly message: Values<typeof ForwardTransferError.reasons>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context?: any,
+  ) {
+    super(message, context);
+  }
+}
+
+export class ForwardResolutionError extends VectorError {
+  readonly type = VectorError.errors.RouterError;
+
+  static readonly reasons = {
+    IncomingChannelNotFound: "Incoming channel for transfer not found",
+    ErrorResolvingTransfer: "Error resolving tranfer",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof ForwardResolutionError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
@@ -72,34 +92,20 @@ export async function forwardTransferCreation(
         amount: [senderAmount],
       },
       assetId: senderAssetId,
-      meta,
+      meta: untypedMeta,
       transferState: conditionData,
       channelAddress: senderChannelAddress,
       initiator,
     },
-    routingId,
     conditionType,
   } = data;
-  let { requireOnline } = meta;
-  if (!meta.path) {
-    throw new Error(`No "path" field in the meta data, got [${Object.keys(meta)}]`);
-  }
+  const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
+  const { routingId } = meta;
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;
-  if (!recipientIdentifier || recipientIdentifier === node.publicIdentifier) {
-    logger.warn({ path, method }, "No path to follow");
-    return Result.ok(undefined);
-  }
 
-  if (initiator === node.signerAddress) {
-    logger.warn({ initiator, method }, "Initiated by our node, doing nothing");
-    return Result.ok(undefined);
-  }
-
-  // TODO validate the above params
-
-  const senderChannelRes = await node.getStateChannel(senderChannelAddress);
+  const senderChannelRes = await node.getStateChannel({ channelAddress: senderChannelAddress });
   if (senderChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
@@ -120,7 +126,7 @@ export async function forwardTransferCreation(
 
   // Defaults
   const recipientAssetId = path.recipientAssetId ? path.recipientAssetId : senderAssetId;
-  requireOnline = requireOnline ? requireOnline : false;
+  const requireOnline = meta.requireOnline ?? false;
   const recipientChainId = path.recipientChainId ? path.recipientChainId : senderChainId;
 
   // Below, we figure out the correct params needed for the receiver's channel. This includes
@@ -147,11 +153,11 @@ export async function forwardTransferCreation(
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
-  const recipientChannelRes = await node.getStateChannelByParticipants(
-    node.publicIdentifier,
-    recipientIdentifier,
-    recipientChainId,
-  );
+  const recipientChannelRes = await node.getStateChannelByParticipants({
+    alice: node.publicIdentifier,
+    bob: recipientIdentifier,
+    chainId: recipientChainId,
+  });
   if (recipientChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
@@ -196,16 +202,14 @@ export async function forwardTransferCreation(
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
-    const depositRes = await node.deposit(
-      {
-        channelAddress: recipientChannel.channelAddress,
-        assetId: recipientAssetId,
-        amount: BigNumber.from(recipientAmount)
-          .add(profile.target)
-          .toString(),
-      },
-      recipientChainId,
-    );
+    const depositRes = await node.deposit({
+      chainId: recipientChainId,
+      channelAddress: recipientChannel.channelAddress,
+      assetId: recipientAssetId,
+      amount: BigNumber.from(recipientAmount)
+        .add(profile.target)
+        .toString(),
+    });
     if (depositRes.isError) {
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
@@ -228,11 +232,15 @@ export async function forwardTransferCreation(
   // If the above is not the case, we can make the transfer!
   const transfer = await node.conditionalTransfer({
     amount: recipientAmount,
-    meta,
     assetId: recipientAssetId,
     channelAddress: recipientChannel.channelAddress,
     details: conditionData,
-    routingId,
+    meta: {
+      // Node is never the initiator, that is always payment sender
+      senderIdentifier:
+        initiator === senderChannel.bobIdentifier ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
+      ...meta,
+    },
     conditionType,
   });
   if (transfer.isError) {
@@ -253,7 +261,7 @@ export async function forwardTransferCreation(
       }),
     );
   }
-  // either a successful transfer or an error
+
   return Result.ok(transfer.getValue());
 }
 
@@ -262,22 +270,68 @@ export async function forwardTransferResolution(
   node: IServerNodeService,
   store: IRouterStore,
   logger: BaseLogger,
-) {
-  // let { recipientChannelAddress, paymentId, resolverData } = data;
-  // const senderChannelAddress = await getSenderChannelAddressFromPaymentId(paymentId, recipientChannelAddress);
-  // try {
-  //   await node.resolveCondtion(senderChannelAddress, paymentId, resolverData);
-  //   // TODO attempt a reclaim in here (Ideally not in the same try block)
-  //   return;
-  // } catch (e) {
-  //   // Always store and retry this later
-  // }
-  // const type = "TransferResolution";
-  // await store.queueUpdate(type, {
-  //   channelAddress: senderChannelAddress,
-  //   paymentId,
-  //   resolverData,
-  // });
+): Promise<Result<undefined | ServerNodeResponses.ResolveTransfer, ForwardResolutionError>> {
+  const method = "forwardTransferResolution";
+  logger.info(
+    { data, method, node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier } },
+    "Received transfer resolution, starting forwarding",
+  );
+  const {
+    channelAddress,
+    transfer: { transferId, transferResolver, meta },
+    conditionType,
+  } = data;
+  const { routingId } = meta as RouterSchemas.RouterMeta;
+
+  // Find the channel with the corresponding transfer to unlock
+  const transfersRes = await node.getTransfersByRoutingId({ routingId });
+  if (transfersRes.isError) {
+    return Result.fail(
+      new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
+        routingId,
+        error: transfersRes.getError()?.message,
+      }),
+    );
+  }
+
+  // find transfer where node is responder
+  const incomingTransfer = transfersRes.getValue().find(transfer => transfer.responder === node.signerAddress);
+
+  if (!incomingTransfer) {
+    return Result.fail(
+      new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
+        routingId,
+      }),
+    );
+  }
+
+  // Resolve the sender transfer
+  const resolveParams: ServerNodeParams.ResolveTransfer = {
+    channelAddress: incomingTransfer.channelAddress,
+    transferId: incomingTransfer.transferId,
+    meta: {},
+    conditionType,
+    details: { ...transferResolver },
+  };
+  const resolution = await node.resolveTransfer(resolveParams);
+  if (resolution.isError) {
+    // Store the transfer, retry later
+    // TODO: add logic to periodically retry resolving transfers
+    const type = "TransferResolution";
+    await store.queueUpdate(type, resolveParams);
+    return Result.fail(
+      new ForwardResolutionError(ForwardResolutionError.reasons.ErrorResolvingTransfer, {
+        message: resolution.getError()?.message,
+        routingId,
+        transferResolver,
+        incomingTransferChannel: incomingTransfer.channelAddress,
+        recipientTransferId: transferId,
+        recipientChannelAddress: channelAddress,
+      }),
+    );
+  }
+
+  return Result.ok(resolution.getValue());
 }
 
 export async function handleIsAlive(data: any, node: IServerNodeService, store: IRouterStore) {

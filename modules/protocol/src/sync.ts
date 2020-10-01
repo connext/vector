@@ -11,7 +11,7 @@ import {
   InboundChannelUpdateError,
   OutboundChannelUpdateError,
   Values,
-  IVectorOnchainService,
+  IVectorChainReader,
   FullTransferState,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
@@ -29,11 +29,12 @@ import { validateAndApplyInboundUpdate, validateOutbound } from "./validate";
 export async function outbound(
   params: UpdateParams<any>,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   messagingService: IMessagingService,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+  const method = "outboud";
   // Before doing anything, run the validation
   // If this passes, it is safe to force-unwrap various things that may
   // be undefined. While we may still handle the error here, it should be
@@ -42,16 +43,16 @@ export async function outbound(
   const validationRes = await validateOutbound(params, storeService, signer);
   if (validationRes.isError) {
     logger.error({
-      method: "outbound",
+      method,
       variable: "validationRes",
       error: validationRes.getError()?.message,
       context: validationRes.getError()?.context,
     });
     return Result.fail(validationRes.getError()!);
   }
-  logger.error(
+  logger.info(
     {
-      method: "outbound",
+      method,
     },
     "Validated outbound",
   );
@@ -67,13 +68,13 @@ export async function outbound(
     previousState,
     activeTransfers,
     validTransfer,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );
   if (updateRes.isError) {
     logger.error({
-      method: "outbound",
+      method,
       variable: "updateRes",
       error: updateRes.getError()?.message,
       context: updateRes.getError()?.context,
@@ -86,7 +87,7 @@ export async function outbound(
   let transfer = updateValue.transfer;
 
   // send and wait for response
-  logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Sending protocol message");
+  logger.info({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
   let result = await messagingService.sendProtocolMessage(update, previousState.latestUpdate ?? undefined);
 
   // iff the result failed because the update is stale, our channel is behind
@@ -95,6 +96,7 @@ export async function outbound(
   if (error && error.message === InboundChannelUpdateError.reasons.StaleUpdate) {
     logger.warn(
       {
+        method,
         update: update.nonce,
         counterparty: error.update.nonce,
       },
@@ -107,13 +109,13 @@ export async function outbound(
       params,
       previousState,
       storeService,
-      onchainService,
+      chainReader,
       signer,
       logger,
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
-      logger.error({ method: "outbound", error: syncedResult.getError() }, "Error syncing channel");
+      logger.error({ method, error: syncedResult.getError() }, "Error syncing channel");
       return Result.fail(syncedResult.getError()!);
     }
 
@@ -138,7 +140,7 @@ export async function outbound(
   // original error. Either way, we do not want to handle it
   if (error) {
     // Error is for some other reason, do not retry update.
-    logger.error({ method: "outbound", error }, "Error receiving response, will not save state!");
+    logger.error({ method, error }, "Error receiving response, will not save state!");
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.CounterpartyFailure, params, previousState, {
         counterpartyError: error.message,
@@ -146,7 +148,7 @@ export async function outbound(
     );
   }
 
-  logger.info({ method: "outbound", to: update.toIdentifier, type: update.type }, "Received protocol response");
+  logger.info({ method, to: update.toIdentifier, type: update.type }, "Received protocol response");
 
   const { update: counterpartyUpdate } = result.getValue();
 
@@ -164,7 +166,7 @@ export async function outbound(
       previousState,
       { error: sigRes },
     );
-    logger.error({ method: "outbound", error: error.message }, "Error receiving response, will not save state!");
+    logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
   }
 
@@ -200,7 +202,7 @@ export async function inbound(
   update: ChannelUpdate<any>,
   previousUpdate: ChannelUpdate<any>,
   inbox: string,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   storeService: IVectorStore,
   messagingService: IMessagingService,
   signer: IChannelSigner,
@@ -240,10 +242,6 @@ export async function inbound(
     if (update.type !== UpdateType.setup && previousUpdate.type !== UpdateType.setup) {
       return returnError(InboundChannelUpdateError.reasons.ChannelNotFound);
     }
-    const publicIdentifiers =
-      update.type === UpdateType.setup
-        ? [update.fromIdentifier, update.toIdentifier]
-        : [previousUpdate.fromIdentifier, previousUpdate.toIdentifier];
     const networkContext =
       update.type === UpdateType.setup
         ? (update.details as SetupUpdateDetails).networkContext
@@ -335,7 +333,7 @@ export async function inbound(
       previousUpdate,
       previousState,
       storeService,
-      onchainService,
+      chainReader,
       signer,
       logger,
     );
@@ -358,7 +356,7 @@ export async function inbound(
     update,
     previousState,
     storeService,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );
@@ -400,7 +398,7 @@ const syncStateAndRecreateUpdate = async (
   attemptedParams: UpdateParams<any>,
   previousState: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<Result<OutboundSync, OutboundChannelUpdateError>> => {
@@ -445,7 +443,7 @@ const syncStateAndRecreateUpdate = async (
     counterpartyUpdate,
     previousState,
     storeService,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );
@@ -466,12 +464,14 @@ const syncStateAndRecreateUpdate = async (
   // Update successfully validated and applied to channel, now
   // regenerate the update to send to the counterparty from the
   // given parameters
+  // FIXME: generateBaseUpdate will fail when you are creating updates as
+  // an update responder
   const generateRes = await generateUpdate(
     attemptedParams,
     syncedChannel,
     activeTransfers,
     transfer,
-    onchainService,
+    chainReader,
     signer,
     logger,
   );

@@ -76,7 +76,6 @@ export function createTestUpdateParams<T extends UpdateType>(
         timeout: "1",
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: { test: "meta" },
-        responder: mkAddress("0x2"),
       };
       break;
     case UpdateType.resolve:
@@ -160,7 +159,6 @@ export function createTestChannelUpdate<T extends UpdateType>(
           linkedHash: mkBytes32("0xlinkedhash"),
         } as LinkedTransferState,
         transferTimeout: "0",
-        responder: mkAddress("0xbbb"),
       } as CreateUpdateDetails;
       break;
     case UpdateType.resolve:

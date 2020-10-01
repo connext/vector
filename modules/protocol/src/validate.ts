@@ -8,7 +8,7 @@ import {
   UpdateParams,
   OutboundChannelUpdateError,
   InboundChannelUpdateError,
-  IVectorOnchainService,
+  IVectorChainReader,
   Values,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
@@ -249,12 +249,12 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   state: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<InboundValidationResult> {
   // Validate + apply the update
-  const res = await validateAndApplyChannelUpdate(update, state, storeService, onchainService);
+  const res = await validateAndApplyChannelUpdate(update, state, storeService, chainReader);
   if (res.isError) {
     return Result.fail(res.getError()!);
   }
@@ -304,7 +304,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   previousState: FullChannelState,
   storeService: IVectorStore,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
 ): Promise<
   Result<
     {
@@ -372,7 +372,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         transferTimeout,
         transferInitialState,
         transferEncodings,
-        responder,
         meta,
       } = details as CreateUpdateDetails;
       // Ensure the transferId is properly formatted
@@ -400,6 +399,11 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // Ensure the same merkleRoot is generated
 
       // Create the valid transfer object
+      // The update can be sent from either [aliceIdentifier, bobIdentifier].
+      // The `transfer.initiator` is either alice/bob, depending on who is
+      // creating the transfer (i.e. initiating this update). The responder
+      // is the channel counterparty (i.e. bob/alice respectively), and can
+      // be determined by the update initiators/responders
       transfer = {
         initialBalance: { ...transferInitialState.balance },
         assetId,
@@ -412,8 +416,8 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         chainId: previousState.networkContext.chainId,
         transferEncodings,
         transferState: { ...transferInitialState },
-        initiator: previousState.alice === responder ? previousState.bob : previousState.alice,
-        responder,
+        initiator: fromIdentifier === previousState.aliceIdentifier ? previousState.alice : previousState.bob,
+        responder: toIdentifier === previousState.aliceIdentifier ? previousState.alice : previousState.bob,
         meta,
       };
       break;
@@ -432,7 +436,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       const storedTransfer = (await storeService.getTransferState(transferId))!;
 
       // Get the final transfer balance from contract
-      const transferBalanceResult = await onchainService.resolve(
+      const transferBalanceResult = await chainReader.resolve(
         { ...storedTransfer, transferResolver },
         previousState.networkContext.chainId,
       );
@@ -449,6 +453,10 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         transferState: {
           ...storedTransfer.transferState,
           balance: transferBalance,
+        },
+        meta: {
+          ...(storedTransfer.meta ?? {}),
+          ...(meta ?? {}),
         },
       };
 

@@ -9,7 +9,7 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-stack="node"
+stack="router"
 
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit 0;
@@ -77,11 +77,13 @@ then
   public_url="http://localhost:3000"
   proxy_ports="ports:
       - '3000:80'"
+  echo "$stack.proxy will be exposed on *:3000"
 else
   public_url="https://localhost:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
+  echo "$stack.proxy will be exposed on *:80 and *:443"
 fi
 
 ########################################
@@ -96,15 +98,17 @@ mkdir -p $snapshots_dir
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
-  database_image="image: '$database_image'"
-  db_volume="database"
+  database_image="image: '$database_image'
+    volumes:
+      - 'database:/var/lib/postgresql/data'
+      - '$snapshots_dir:/root/snapshots'"
   db_secret="${project}_database"
   bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`" > /dev/null
 else
   database_image="image: '$database_image'
     ports:
       - '5432:5432'"
-  db_volume="database_dev"
+  echo "$stack.database will be exposed on *:5432"
   db_secret="${project}_database_dev"
   bash $root/ops/save-secret.sh "$db_secret" "$project" > /dev/null
 fi
@@ -121,10 +125,12 @@ pg_user="$project"
 # If no global service urls provided, spin up local ones & use those
 # If no chain providers provided, spin up local testnets & use those
 
+echo "\$VECTOR_AUTH_URL=$VECTOR_AUTH_URL | \$VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS"
+
 if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
 then
-  echo "\$VECTOR_AUTH_URL or \$VECTOR_CHAIN_PROVIDERS is missing, starting global services"
   bash $root/ops/start-global.sh
+  echo "global services have started up, resuming $stack startup"
   auth_url="http://auth:5040"
   mnemonic_secret_name="${project}_mnemonic_dev"
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
@@ -133,13 +139,20 @@ then
   VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
 
 else
-  echo "Connecting to external global servies: $VECTOR_AUTH_URL & $VECTOR_CHAIN_PROVIDERS"
+  echo "Connecting to external global services"
   auth_url="$VECTOR_AUTH_URL"
   mnemonic_secret_name="${project}_mnemonic"
-  # Prefer top-level address-book otherwise default to one in contracts
-  if [[ -f address-book.json ]]
-  then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
-  else VECTOR_CONTRACT_ADDRESSES="`cat modules/contracts/address-book.json | tr -d ' \n\r'`"
+  if [[ -z "$VECTOR_CONTRACT_ADDRESSES" ]]
+  then
+    # Prefer top-level address-book otherwise default to one in contracts
+    if [[ -f address-book.json ]]
+    then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
+    elif [[ -f ".chaindata/address-book.json" ]]
+    then VECTOR_CONTRACT_ADDRESSES="`cat .chaindata/address-book.json | tr -d ' \n\r'`"
+    else
+      echo "No \$VECTOR_CONTRACT_ADDRESSES provided & can't find an address-book, aborting"
+      exit 1
+    fi
   fi
 fi
 
@@ -156,6 +169,7 @@ then
   node_image_name="${project}_node"
   bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
   node_image="image: '$node_image_name:$version'"
+  echo "$stack.node configured to be exposed on *:$node_port"
 else
   node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
@@ -164,12 +178,15 @@ else
     ports:
       - '$node_port:$node_port'
       - '$prisma_port:$prisma_port'"
+  echo "$stack.node configured to be exposed on *:$node_port (prisma on *:$prisma_port)"
 fi
+
 
 ########################################
 ## Router config
 
 router_port="8008"
+echo "$stack.router configured to be exposed on *:$router_port"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -184,6 +201,7 @@ else
     ports:
       - '$router_port:$router_port'"
 fi
+
 
 ####################
 # Launch Indra stack
@@ -204,7 +222,7 @@ secrets:
 
 volumes:
   certs:
-  $db_volume:
+  database:
 
 services:
 
@@ -277,9 +295,6 @@ services:
       POSTGRES_USER: '$project'
     secrets:
       - '$db_secret'
-    volumes:
-      - '$db_volume:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
 
 EOF
 

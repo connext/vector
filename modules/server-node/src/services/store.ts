@@ -12,6 +12,7 @@ import {
   IEngineStore,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
@@ -24,6 +25,7 @@ import {
   TransferUpdateManyWithoutChannelInput,
   TransferCreateWithoutChannelInput,
 } from "@prisma/client";
+import { BigNumber } from "ethers";
 
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
@@ -154,10 +156,13 @@ const convertTransferEntityToFullTransferState = (
       to: [transfer.initialToA, transfer.initialToB],
     },
     initiator:
-      transfer.createUpdate!.responder === transfer.channel!.participantA
-        ? transfer.channel!.participantB
+      transfer.createUpdate!.fromIdentifier === transfer.channel?.publicIdentifierA
+        ? transfer.channel!.participantA
         : transfer.channel!.participantB,
-    responder: transfer.createUpdate!.responder!,
+    responder:
+      transfer.createUpdate!.toIdentifier === transfer.channel?.publicIdentifierA
+        ? transfer.channel!.participantA
+        : transfer.channel!.participantB,
     initialStateHash: transfer.initialStateHash,
     transferDefinition: transfer.createUpdate!.transferDefinition!,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
@@ -179,12 +184,42 @@ export class PrismaStore implements IServerNodeStore {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
   }
 
-  getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
-    throw new Error("Method not implemented.");
+  async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
+    const entity = await this.prisma.transfer.findOne({
+      where: { transferId },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
+    });
+    if (!entity) {
+      return undefined;
+    }
+
+    const initialState = JSON.parse(entity.createUpdate?.transferInitialState ?? "{}");
+    const resolver = JSON.parse(entity.resolveUpdate?.transferResolver ?? "{}");
+
+    // TODO: will this return invalid jsons if the transfer is resolved
+    const aliceIsInitiator =
+      entity.channel!.participantA === getSignerAddressFromPublicIdentifier(entity.createUpdate!.fromIdentifier);
+
+    return {
+      aliceSignature: aliceIsInitiator ? initialState.initiatorSignature : resolver.responderSignature,
+      bobSignature: aliceIsInitiator ? resolver.responderSignature : initialState.initiatorSignature,
+      channelAddress: entity.channelAddressId,
+      alice: entity.channel!.participantA,
+      bob: entity.channel!.participantB,
+      recipient: initialState.balance.to[0],
+      assetId: entity.createUpdate!.assetId,
+      amount: BigNumber.from(initialState.balance.amount[0])
+        .sub(initialState.fee)
+        .toString(),
+      nonce: initialState.nonce,
+    };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
-    throw new Error("Method not implemented.");
+    // All information is stored in the transfer entity already (see getter)
+    // So no need to save commitment explicitly
+    return Promise.resolve();
   }
 
   async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
@@ -252,13 +287,20 @@ export class PrismaStore implements IServerNodeStore {
     participantB: string,
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
-    const channelEntity = await this.prisma.channel.findOne({
+    const [channelEntity] = await this.prisma.channel.findMany({
       where: {
-        participantA_participantB_chainId: {
-          chainId,
-          participantA,
-          participantB,
-        },
+        OR: [
+          {
+            participantA,
+            participantB,
+            chainId,
+          },
+          {
+            participantA: participantB,
+            participantB: participantA,
+            chainId,
+          },
+        ],
       },
       include: { balances: true, latestUpdate: true },
     });
@@ -282,8 +324,9 @@ export class PrismaStore implements IServerNodeStore {
     const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
+            channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
-            routingId: transfer!.meta.routingId,
+            routingId: transfer!.meta.routingId ?? getRandomBytes32(),
             initialAmountA: transfer!.initialBalance.amount[0],
             initialToA: transfer!.initialBalance.to[0],
             initialAmountB: transfer!.initialBalance.amount[1],
@@ -297,7 +340,7 @@ export class PrismaStore implements IServerNodeStore {
         ? {
             connectOrCreate: {
               where: {
-                transferId: transfer!.transferId,
+                transferId: createTransferEntity!.transferId,
               },
               create: createTransferEntity!,
             },
@@ -342,7 +385,6 @@ export class PrismaStore implements IServerNodeStore {
           ? (channelState.latestUpdate!.details as CreateUpdateDetails).transferEncodings.join("$") // comma separation doesnt work
           : undefined,
         transferId: (channelState.latestUpdate!.details as CreateUpdateDetails).transferId,
-        responder: (channelState.latestUpdate!.details as CreateUpdateDetails).responder,
         transferTimeout: (channelState.latestUpdate!.details as CreateUpdateDetails).transferTimeout,
         meta: (channelState.latestUpdate!.details as CreateUpdateDetails).meta
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).meta)
@@ -366,7 +408,7 @@ export class PrismaStore implements IServerNodeStore {
               }
             : undefined,
 
-        // if resolve, add resolvedTransfer by routingId
+        // if resolve, add resolvedTransfer by transferId
         resolvedTransfer:
           channelState.latestUpdate.type === UpdateType.resolve
             ? {
@@ -525,7 +567,52 @@ export class PrismaStore implements IServerNodeStore {
       return undefined;
     }
 
+    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
+    if (!transfer.channel) {
+      const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+      transfer.channel = channel;
+    }
+
     return convertTransferEntityToFullTransferState(transfer);
+  }
+
+  async getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
+    const transfer = await this.prisma.transfer.findOne({
+      where: { routingId_channelAddressId: { routingId, channelAddressId: channelAddress } },
+      include: { channel: true, createUpdate: true, resolveUpdate: true },
+    });
+
+    if (!transfer) {
+      return undefined;
+    }
+
+    // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
+    if (!transfer.channel) {
+      const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+      transfer.channel = channel;
+    }
+
+    return convertTransferEntityToFullTransferState(transfer);
+  }
+
+  async getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
+    const transfers = await this.prisma.transfer.findMany({
+      where: { routingId },
+      include: {
+        channel: true,
+        createUpdate: true,
+        resolveUpdate: true,
+      },
+    });
+
+    for (const transfer of transfers) {
+      if (!transfer.channel) {
+        const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+        transfer.channel = channel;
+      }
+    }
+
+    return transfers.map(convertTransferEntityToFullTransferState);
   }
 
   async clear(): Promise<void> {
