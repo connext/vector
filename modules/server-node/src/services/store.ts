@@ -287,13 +287,20 @@ export class PrismaStore implements IServerNodeStore {
     participantB: string,
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
-    const channelEntity = await this.prisma.channel.findOne({
+    const [channelEntity] = await this.prisma.channel.findMany({
       where: {
-        participantA_participantB_chainId: {
-          chainId,
-          participantA,
-          participantB,
-        },
+        OR: [
+          {
+            participantA,
+            participantB,
+            chainId,
+          },
+          {
+            participantA: participantB,
+            participantB: participantA,
+            chainId,
+          },
+        ],
       },
       include: { balances: true, latestUpdate: true },
     });

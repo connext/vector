@@ -7,7 +7,6 @@ on:
       - staging
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
@@ -40,6 +39,12 @@ jobs:
       - uses: actions/checkout@v1
       - run: make test-engine
 
+  server-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-server-node
+
   router:
     runs-on: ubuntu-latest
     steps:
@@ -57,20 +62,6 @@ jobs:
       - name: Print logs
         if: failure()
         run: docker service logs --tail 200 global_auth
-
-  node:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - run: make pull-latest
-      - run: make node
-      - run: make start-node
-      - run: make test-node
-      - name: Print logs
-        if: failure()
-        run: |
-          docker service logs --tail 200 node_proxy
-          docker service logs --tail 200 node_node
 
   duet:
     runs-on: ubuntu-latest

@@ -11,26 +11,14 @@ const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 const logger = pino({ level: env.logLevel });
 const testName = "Duet Happy";
 
-describe.only(testName, () => {
+describe(testName, () => {
   let alice: IServerNodeService;
   let bob: IServerNodeService;
   before(async () => {
-    alice = await RestServerNodeService.connect(
-      env.aliceUrl,
-      "",
-      env.chainProviders,
-      {} as any,
-      logger.child({ testName }),
-    );
+    alice = await RestServerNodeService.connect(env.aliceUrl, env.chainProviders, logger.child({ testName }));
     expect(alice.signerAddress).to.be.a("string");
     expect(alice.publicIdentifier).to.be.a("string");
-    bob = await RestServerNodeService.connect(
-      env.bobUrl,
-      "",
-      env.chainProviders,
-      {} as any,
-      logger.child({ testName }),
-    );
+    bob = await RestServerNodeService.connect(env.bobUrl, env.chainProviders, logger.child({ testName }));
     expect(bob.signerAddress).to.be.a("string");
     expect(bob.publicIdentifier).to.be.a("string");
 
@@ -121,7 +109,7 @@ describe.only(testName, () => {
     expect(BigNumber.from(bobBefore).add(depositAmt)).to.eq(bobAfter);
   });
 
-  it.skip("alice can transfer to bob and resolve the transfer", async () => {
+  it("alice can transfer to bob and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await alice.getStateChannelByParticipants({
@@ -168,7 +156,7 @@ describe.only(testName, () => {
     expect(bobAfterResolve).to.be.eq(BigNumber.from(bobBefore).add(transferAmt));
   });
 
-  it.skip("bob can transfer to alice", async () => {
+  it("bob can transfer to alice", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await alice.getStateChannelByParticipants({

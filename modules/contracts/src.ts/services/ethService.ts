@@ -70,7 +70,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     const multisigCode = multisigRes.getValue();
     // alice needs to deploy the multisig
-    if (multisigCode === `0x`) {
+    if (multisigCode === `0x` && sender === channelState.alice) {
       this.log.info(
         { method: "sendDepositTx", channelAddress: channelState.channelAddress, assetId, amount },
         `Deploying channel with deposit`,
@@ -82,12 +82,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         signer,
       );
 
-      const creationEvent = new Promise(resolve => {
-        channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
-          this.log.info({ method: "sendDepositTx" }, `Channel created event`);
-          resolve(data);
-        });
-        delay(30_000).then(resolve);
+      channelFactory.once(channelFactory.filters.ChannelCreation(), () => {
+        this.log.info({ method: "sendDepositTx" }, `Channel created event`);
       });
 
       if (assetId !== constants.AddressZero) {
@@ -111,23 +107,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }
       }
 
-      const [tx] = await Promise.all([
-        this.sendTxAndParseResponse(
-          channelFactory.createChannel(channelState.alice, channelState.bob, channelState.networkContext.chainId),
-        ),
-        creationEvent,
-      ]);
-
       // TODO: fix this
-      // const tx = await this.sendTxAndParseResponse(
-      //   channelFactory.createChannelAndDepositA(
-      //     channelState.participants[0],
-      //     channelState.participants[1],
-      //     channelState.networkContext.chainId,
-      //     assetId,
-      //     amount,
-      //   ),
-      // );
+      const tx = await this.sendTxAndParseResponse(
+        channelFactory.createChannelAndDepositA(
+          channelState.alice,
+          channelState.bob,
+          channelState.networkContext.chainId,
+          assetId,
+          amount,
+          { value: amount },
+        ),
+      );
       if (tx.isError) {
         this.log.error(
           {
@@ -137,13 +127,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           "Error creating channel",
         );
       }
-      // return tx;
 
       const createReceipt = await tx.getValue().wait();
       this.log.info(
         { txHash: createReceipt.transactionHash, method: "sendDepositATx", assetId },
         "Channel creation confirmed",
       );
+      return tx;
     }
 
     this.log.info({ method: "sendDepositTx", assetId, amount }, "Channel is deployed, sending deposit");

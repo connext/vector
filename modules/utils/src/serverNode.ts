@@ -85,9 +85,9 @@ export class ServerNodeError extends VectorError {
   }
 }
 
-type EventEvts = {
-  [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: Evt<ConditionalTransferCreatedPayload>;
-  [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: Evt<ConditionalTransferResolvedPayload>;
+export type EventCallbackConfig = {
+  [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: { evt: Evt<ConditionalTransferCreatedPayload>; url: string };
+  [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: { evt: Evt<ConditionalTransferResolvedPayload>; url: string };
 };
 
 export class RestServerNodeService implements IServerNodeService {
@@ -97,24 +97,22 @@ export class RestServerNodeService implements IServerNodeService {
 
   private constructor(
     private readonly serverNodeUrl: string,
-    private readonly callbackUrlBase: string,
     private readonly providerUrls: ChainProviders,
-    private readonly evts: EventEvts,
     private readonly logger: BaseLogger,
+    private readonly evts?: EventCallbackConfig,
   ) {
-    Object.entries(providerUrls).forEach(([chainId, url]) => {
-      this.chainProviders[chainId] = new providers.JsonRpcProvider(url);
-    });
+    this.chainProviders = Object.fromEntries(
+      Object.entries(providerUrls).map(([chainId, url]) => [chainId, new providers.JsonRpcProvider(url)]),
+    );
   }
 
   static async connect(
     serverNodeUrl: string,
-    callbackUrlBase: string,
     providerUrls: ChainProviders,
-    evts: EventEvts,
     logger: BaseLogger,
+    evts?: EventCallbackConfig,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, callbackUrlBase, providerUrls, evts, logger);
+    const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, evts);
     const configRes = await service.getConfig();
     if (configRes.isError) {
       throw configRes.getError();
@@ -185,7 +183,7 @@ export class RestServerNodeService implements IServerNodeService {
   }
 
   async deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>> {
-    let provider;
+    let provider: providers.JsonRpcProvider;
     try {
       provider = this.assertProvider(params.chainId);
     } catch (e) {
@@ -246,6 +244,10 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = payload => true,
   ): Promise<void> {
+    if (!this.evts) {
+      this.logger.warn("No evts provided, subscriptions will not work");
+      return;
+    }
     throw new Error("Method not implemented.");
   }
 
@@ -254,33 +256,20 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
-    let url: string | undefined;
-    switch (event) {
-      case EngineEvents.CONDITIONAL_TRANSFER_CREATED: {
-        url = `${this.callbackUrlBase}/conditional-transfer-created`;
-        this.evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].pipe(filter!).attach(callback);
-        await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
-          [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: url,
-        });
-        break;
-      }
-      case EngineEvents.CONDITIONAL_TRANSFER_RESOLVED: {
-        url = `${this.callbackUrlBase}/conditional-transfer-resolved`;
-        this.evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].pipe(filter!).attach(callback);
-        await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
-          [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: url,
-        });
-        this.logger.info(
-          { eventName: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, url },
-          "Engine event subscription created",
-        );
-        break;
-      }
+    if (!this.evts || !this.evts[event as string]) {
+      this.logger.warn("No evts provided, subscriptions will not work");
+      return;
     }
-    this.logger.info(
-      { eventName: EngineEvents.CONDITIONAL_TRANSFER_CREATED, url },
-      "Engine event subscription created",
-    );
+    const url = `${this.evts[event as string].url}`;
+    this.evts[event as string].evt.pipe(filter!).attach(callback);
+    try {
+      await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
+        [event]: url,
+      });
+      this.logger.info({ event, url }, "Engine event subscription created");
+    } catch (e) {
+      this.logger.error({ error: e.response?.data, event, method: "on" }, "Error creating subscription");
+    }
   }
 
   // Helper methods
