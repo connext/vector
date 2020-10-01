@@ -75,7 +75,9 @@ export class ValidationError extends VectorError {
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
+    TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
+    ExternalValidationFailed: "Failed external validation",
   } as const;
 
   constructor(
