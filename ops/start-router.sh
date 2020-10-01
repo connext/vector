@@ -134,7 +134,7 @@ then
   VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
 
 else
-  echo "Connecting to external global servies: $VECTOR_AUTH_URL & $VECTOR_CHAIN_PROVIDERS"
+  echo "Connecting to external global services: $VECTOR_AUTH_URL & $VECTOR_CHAIN_PROVIDERS"
   auth_url="$VECTOR_AUTH_URL"
   mnemonic_secret_name="${project}_mnemonic"
   # Prefer top-level address-book otherwise default to one in contracts
