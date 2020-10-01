@@ -1,6 +1,6 @@
 import { Balance, EngineEvent, EngineEvents } from "@connext/vector-types";
 import {
-  createTestFullLinkedTransferState,
+  createTestFullHashlockTransferState,
   createTestChannelState,
   mkBytes32,
   mkHash,
@@ -61,7 +61,7 @@ describe("store", () => {
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(depositState);
 
-    const transfer = createTestFullLinkedTransferState({
+    const transfer = createTestFullHashlockTransferState({
       transferId: mkHash("0x111"),
       meta: { routingId: mkBytes32("0xddd") },
       chainId: depositState.networkContext.chainId,
@@ -119,7 +119,7 @@ describe("store", () => {
   });
 
   it("should create multiple active transfers", async () => {
-    const transfer1 = createTestFullLinkedTransferState({
+    const transfer1 = createTestFullHashlockTransferState({
       transferId: mkHash("0x111"),
       meta: { routingId: mkBytes32("0xddd") },
     });
@@ -152,7 +152,7 @@ describe("store", () => {
       transfer1,
     );
 
-    const transfer2 = createTestFullLinkedTransferState({
+    const transfer2 = createTestFullHashlockTransferState({
       channelAddress: createState.channelAddress,
       meta: { routingId: mkBytes32("0xeee") },
     });
@@ -219,7 +219,7 @@ describe("store", () => {
   });
 
   it("should get multiple transfers by routingId", async () => {
-    const transfer1 = createTestFullLinkedTransferState({
+    const transfer1 = createTestFullHashlockTransferState({
       transferId: mkHash("0x111"),
       meta: { routingId: mkBytes32("0xddd") },
     });
@@ -253,7 +253,7 @@ describe("store", () => {
     );
 
     const newBob = getRandomIdentifier();
-    const transfer2 = createTestFullLinkedTransferState({
+    const transfer2 = createTestFullHashlockTransferState({
       transferId: mkHash("0x122"),
       meta: { routingId: mkBytes32("0xddd") },
       channelAddress: getRandomBytes32(),

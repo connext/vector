@@ -150,7 +150,7 @@ export type ContractAddresses = {
   channelFactoryAddress: Address;
   channelMastercopyAddress: Address;
   withdrawDefinition?: Address;
-  linkedTransferDefinition?: Address;
+  HashlockTransferDefinition?: Address;
 };
 
 export type NetworkContext = ContractAddresses & {

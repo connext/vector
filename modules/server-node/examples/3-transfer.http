@@ -8,22 +8,22 @@
 @ethAmount = 1000000000000000
 
 @preImage = 0x95e02c8389826c723217d30761cfac3e7bd76e6e4c2aa523213a6ddc67029e95
-@linkedHash = 0x7783846bebe64b2dbf16ca981d27a73ada4bc6976e5be3ef92f0057af8368ce1
+@lockHash = 0x7783846bebe64b2dbf16ca981d27a73ada4bc6976e5be3ef92f0057af8368ce1
 
 @routingId = 0x5e7af61c2bd7243ea005c3f350dbee1eeac55fef120e47db2cfa6e5394bd6942
 
 ##############
 ### Create Transfer ETH
-POST {{aliceUrl}}/linked-transfer/create
+POST {{aliceUrl}}/hashlock-transfer/create
 Content-Type: application/json
 
 {
-  "conditionType": "LinkedTransfer",
+  "conditionType": "HashlockTransfer",
   "channelAddress": "{{aliceBobChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
   "details": {
-    "linkedHash": "{{linkedHash}}"
+    "lockHash": "{{lockHash}}"
   },
   "routingId": "{{routingId}}",
   "recipient": "{{bobPublicIdentifier}}",
@@ -34,7 +34,7 @@ Content-Type: application/json
 
 ##############
 ### Resolve Transfer ETH
-POST {{bobUrl}}/linked-transfer/resolve
+POST {{bobUrl}}/hashlock-transfer/resolve
 Content-Type: application/json
 
 {

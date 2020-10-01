@@ -9,7 +9,7 @@ import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvide
 ////// Engine transfer types
 // Conditional transfers
 export const ConditionalTransferType = {
-  LinkedTransfer: "LinkedTransfer",
+  HashlockTransfer: "HashlockTransfer",
 } as const;
 export type ConditionalTransferType = typeof ConditionalTransferType[keyof typeof ConditionalTransferType];
 

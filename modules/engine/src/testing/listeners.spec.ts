@@ -57,7 +57,7 @@ describe(testName, () => {
       withdrawDefinition,
       channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
       channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
-      linkedTransferDefinition: env.contractAddresses[chainId].LinkedTransfer.address,
+      HashlockTransferDefinition: env.contractAddresses[chainId].HashlockTransfer.address,
     },
   };
 

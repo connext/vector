@@ -5,13 +5,13 @@ import {
   ConditionalTransferType,
   ResolveTransferParams,
   FullChannelState,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
-  LinkedTransferState,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
+  HashlockTransferState,
   Result,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
-  LinkedTransferResolver,
+  HashlockTransferResolver,
   WithdrawState,
   WithdrawStateEncoding,
   WithdrawResolverEncoding,
@@ -57,19 +57,19 @@ export function convertConditionalTransferParams(
   // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
 
   let transferDefinition: string | undefined;
-  let transferInitialState: LinkedTransferState;
+  let transferInitialState: HashlockTransferState;
   let encodings: string[];
 
-  if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
-    transferDefinition = chainAddresses[channel.networkContext.chainId].linkedTransferDefinition;
+  if (params.conditionType === ConditionalTransferType.HashlockTransfer) {
+    transferDefinition = chainAddresses[channel.networkContext.chainId].HashlockTransferDefinition;
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
         to: [signer.address, channelCounterparty],
       },
-      linkedHash: details.linkedHash,
+      lockHash: details.lockHash,
     };
-    encodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
+    encodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   } else {
     return Result.fail(new InvalidTransferType(params.conditionType));
   }
@@ -94,9 +94,9 @@ export function convertResolveConditionParams(
   transfer: FullTransferState,
 ): Result<ResolveTransferParams, InvalidTransferType> {
   const { channelAddress, details, meta } = params;
-  let transferResolver: LinkedTransferResolver;
+  let transferResolver: HashlockTransferResolver;
 
-  if (params.conditionType == ConditionalTransferType.LinkedTransfer) {
+  if (params.conditionType == ConditionalTransferType.HashlockTransfer) {
     transferResolver = {
       preImage: details.preImage,
     };

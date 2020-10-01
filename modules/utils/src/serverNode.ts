@@ -222,7 +222,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.ConditionalTransfer,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>> {
     return this.executeHttpRequest(
-      `linked-transfer/create`,
+      `hashlock-transfer/create`,
       "post",
       params,
       ServerNodeParams.ConditionalTransferSchema,
@@ -232,7 +232,7 @@ export class RestServerNodeService implements IServerNodeService {
   async resolveTransfer(
     params: ServerNodeParams.ResolveTransfer,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
-    return this.executeHttpRequest(`linked-transfer/resolve`, "post", params, ServerNodeParams.ResolveTransferSchema);
+    return this.executeHttpRequest(`hashlock-transfer/resolve`, "post", params, ServerNodeParams.ResolveTransferSchema);
   }
 
   async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, ServerNodeError>> {

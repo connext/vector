@@ -1,7 +1,7 @@
-import { LinkedTransferState, LinkedTransferResolver, Balance } from "@connext/vector-types";
+import { HashlockTransferState, HashlockTransferResolver, Balance } from "@connext/vector-types";
 import {
-  encodeLinkedTransferResolver,
-  encodeLinkedTransferState,
+  encodeHashlockTransferResolver,
+  encodeHashlockTransferState,
   getRandomAddress,
   getRandomBytes32,
   keyify,
@@ -10,58 +10,58 @@ import {
 import { HashZero, Zero } from "@ethersproject/constants";
 import { Contract, ContractFactory, Wallet, utils } from "ethers";
 
-import { LinkedTransfer } from "../../artifacts";
+import { HashlockTransfer } from "../../artifacts";
 import { provider } from "../constants";
 
-describe("LinkedTransfer", () => {
+describe("HashlockTransfer", () => {
   let deployer: Wallet;
   let definition: Contract;
 
-  const createLinkedHash = (preImage: string): string => {
+  const createlockHash = (preImage: string): string => {
     return utils.soliditySha256(["bytes32"], [preImage]);
   };
 
   beforeEach(async () => {
     deployer = provider.getWallets()[0];
-    definition = await new ContractFactory(LinkedTransfer.abi, LinkedTransfer.bytecode, deployer).deploy();
+    definition = await new ContractFactory(HashlockTransfer.abi, HashlockTransfer.bytecode, deployer).deploy();
     await definition.deployed();
   });
 
-  const createInitialState = async (preImage: string): Promise<LinkedTransferState> => {
+  const createInitialState = async (preImage: string): Promise<HashlockTransferState> => {
     const senderAddr = getRandomAddress();
     const receiverAddr = getRandomAddress();
     const transferAmount = "10000";
-    const linkedHash = createLinkedHash(preImage);
+    const lockHash = createlockHash(preImage);
     return {
       balance: {
         amount: [transferAmount, Zero.toString()],
         to: [senderAddr, receiverAddr],
       },
-      linkedHash,
+      lockHash,
     };
   };
 
-  const createTransfer = async (initialState: LinkedTransferState): Promise<boolean> => {
-    const encodedState = encodeLinkedTransferState(initialState);
+  const createTransfer = async (initialState: HashlockTransferState): Promise<boolean> => {
+    const encodedState = encodeHashlockTransferState(initialState);
     return definition.functions.create(encodedState);
   };
 
   const resolveTransfer = async (
-    initialState: LinkedTransferState,
-    resolver: LinkedTransferResolver,
+    initialState: HashlockTransferState,
+    resolver: HashlockTransferResolver,
   ): Promise<Balance> => {
-    const encodedState = encodeLinkedTransferState(initialState);
-    const encodedResolver = encodeLinkedTransferResolver(resolver);
+    const encodedState = encodeHashlockTransferState(initialState);
+    const encodedResolver = encodeHashlockTransferResolver(resolver);
     const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };
 
   const validateResult = async (
-    initialState: LinkedTransferState,
-    resolver: LinkedTransferResolver,
+    initialState: HashlockTransferState,
+    resolver: HashlockTransferResolver,
     result: Balance,
   ): Promise<void> => {
-    if (createLinkedHash(resolver.preImage) === initialState.linkedHash) {
+    if (createlockHash(resolver.preImage) === initialState.lockHash) {
       // Payment completed
       expect(result.to).to.deep.equal(initialState.balance.to);
       expect(result.amount[0].toString()).to.eq("0");
@@ -93,15 +93,15 @@ describe("LinkedTransfer", () => {
       const initialState = await createInitialState(preImage);
       initialState.balance.amount[1] = initialState.balance.amount[0];
       await expect(createTransfer(initialState)).revertedWith(
-        "Cannot create linked transfer with nonzero recipient balance",
+        "Cannot create hashlock transfer with nonzero recipient balance",
       );
     });
 
-    it("should fail create if linkedHash is empty", async () => {
+    it("should fail create if lockHash is empty", async () => {
       const preImage = getRandomBytes32();
       const initialState = await createInitialState(preImage);
-      initialState.linkedHash = HashZero;
-      await expect(createTransfer(initialState)).revertedWith("Cannot create linked transfer with empty linkedHash");
+      initialState.lockHash = HashZero;
+      await expect(createTransfer(initialState)).revertedWith("Cannot create hashlock transfer with empty lockHash");
     });
   });
 

@@ -515,7 +515,7 @@ async function generateResolveUpdate(
   const transferBalanceResult = await chainService.resolve(
     { ...transferToResolve, transferResolver },
     state.networkContext.chainId,
-    //LinkedTransfer.bytecode, // TODO: include bytecode
+    //HashlockTransfer.bytecode, // TODO: include bytecode
   );
 
   if (transferBalanceResult.isError) {

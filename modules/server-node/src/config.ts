@@ -43,7 +43,7 @@ try {
     contractAddresses[parseInt(chainId)] = {
       channelFactoryAddress: contractDetails.ChannelFactory.address,
       channelMastercopyAddress: contractDetails.ChannelMastercopy.address,
-      linkedTransferDefinition: contractDetails.LinkedTransfer.address,
+      HashlockTransferDefinition: contractDetails.HashlockTransfer.address,
       withdrawDefinition: contractDetails.Withdraw.address,
     };
   });

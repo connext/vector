@@ -1,3 +1,3 @@
-export * from "./linkedTransfer";
+export * from "./hashlockTransfer";
 export * from "./shared";
 export * from "./withdraw";

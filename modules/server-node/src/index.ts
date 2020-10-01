@@ -240,7 +240,7 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
 );
 
 server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
-  "/linked-transfer/create",
+  "/hashlock-transfer/create",
   {
     schema: {
       body: ServerNodeParams.ConditionalTransferSchema,
@@ -263,7 +263,7 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
 );
 
 server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
-  "/linked-transfer/resolve",
+  "/hashlock-transfer/resolve",
   {
     schema: {
       body: ServerNodeParams.ResolveTransferSchema,

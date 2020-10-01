@@ -4,7 +4,7 @@ import {
   mkAddress,
   mkBytes32,
   mkPublicIdentifier,
-  createTestLinkedTransferState,
+  createTestHashlockTransferState,
   createTestChannelState,
   createTestUpdateParams,
   mkHash,
@@ -15,8 +15,8 @@ import {
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
-  LinkedTransferResolverEncoding,
-  LinkedTransferStateEncoding,
+  HashlockTransferResolverEncoding,
+  HashlockTransferStateEncoding,
   OutboundChannelUpdateError,
   IVectorChainReader,
   ILockService,
@@ -278,9 +278,9 @@ describe("Vector", () => {
         amount: "123214",
         assetId: mkAddress("0xaaa"),
         transferDefinition: mkAddress("0xdef"),
-        transferInitialState: createTestLinkedTransferState(),
+        transferInitialState: createTestHashlockTransferState(),
         timeout: "133215",
-        encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [
