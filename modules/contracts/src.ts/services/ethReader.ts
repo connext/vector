@@ -1,12 +1,5 @@
 import * as evm from "@connext/pure-evm-wasm";
-import {
-  Balance,
-  ERC20Abi,
-  FullTransferState,
-  IVectorChainReader,
-  Result,
-  ChainError,
-} from "@connext/vector-types";
+import { Balance, ERC20Abi, FullTransferState, IVectorChainReader, Result, ChainError } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import pino from "pino";
@@ -92,16 +85,17 @@ export class EthereumChainReader implements IVectorChainReader {
       totalDepositedB = await channelContract.totalDepositedB(assetId);
     } catch (e) {
       // TODO: check for reason?
-      // Channel contract was not deployed, use 0 value
-      totalDepositedB = BigNumber.from(0);
+      // Channel contract was not deployed, use onchain value
+      const deposited = await this.getChannelOnchainBalance(channelAddress, chainId, assetId);
+      if (deposited.isError) {
+        return deposited;
+      }
+      totalDepositedB = deposited.getValue();
     }
     return Result.ok(totalDepositedB);
   }
 
-  async getChannelFactoryBytecode(
-    channelFactoryAddress: string,
-    chainId: number,
-  ): Promise<Result<string, ChainError>> {
+  async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
@@ -116,11 +110,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
-  async create(
-    transfer: FullTransferState,
-    chainId: number,
-    bytecode?: string,
-  ): Promise<Result<boolean, ChainError>> {
+  async create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
@@ -144,11 +134,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
-  async resolve(
-    transfer: FullTransferState,
-    chainId: number,
-    bytecode?: string,
-  ): Promise<Result<Balance, ChainError>> {
+  async resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, ChainError>> {
     // Get provider
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -223,5 +209,4 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(e);
     }
   }
-
 }

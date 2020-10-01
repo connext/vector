@@ -198,11 +198,6 @@ test-trio: test-runner trio
 watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
 
-test-node: test-runner node
-	bash ops/test-integration.sh node test
-watch-node: test-runner node
-	bash ops/test-integration.sh node watch
-
 ########################################
 # Begin Real Build Rules
 
