@@ -1,4 +1,19 @@
-import { VectorNodeConfig } from "@connext/vector-types";
+import { ChainProviders, ChainAddresses } from "@connext/vector-types";
+
+type VectorNodeConfig = {
+  adminToken: string;
+  allowedSwaps: string[2][]; // [[fromAddress, toAddress], ...]
+  allowedTokens: string[];
+  authUrl: string;
+  chainAddresses: ChainAddresses;
+  chainProviders: ChainProviders;
+  dbUrl: string;
+  logLevel: string;
+  mnemonic: string;
+  natsUrl: string;
+  port: number;
+  redisUrl: string;
+}
 
 // TODO: fancy schema typebox runtime checks?
 for (const requiredEnv of [
