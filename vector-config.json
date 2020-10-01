@@ -26,5 +26,5 @@
   },
   "natsUrl": "nats://nats:4222",
   "port": "8000",
-  "redisUrl": "http://redis:6379"
+  "redisUrl": "redis://redis:6379"
 }

@@ -6,9 +6,11 @@ export type VectorNodeConfig = {
   allowedSwaps: string[2][]; // [[fromAddress, toAddress], ...]
   allowedTokens: string[];
   authUrl: string;
-  logLevel: string;
   chainAddresses: ChainAddresses;
   chainProviders: ChainProviders;
+  dbUrl: string;
+  logLevel: string;
+  mnemonic: string;
   natsUrl: string;
   port: number;
   redisUrl: string;
