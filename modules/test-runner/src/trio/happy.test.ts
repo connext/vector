@@ -101,8 +101,8 @@ describe(testName, () => {
 
     expect(deposit.channelAddress).to.be.a("string");
 
-    const carolChannel = (await carol.getStateChannel(channel.channelAddress)).getValue()!;
-    const rogerChannel = (await roger.getStateChannel(channel.channelAddress)).getValue()!;
+    const carolChannel = (await carol.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
+    const rogerChannel = (await roger.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
 
     assetIdx = carolChannel.assetIds.findIndex(_assetId => _assetId === assetId);
     const carolAfter = carolChannel.balances[assetIdx].amount[1];
@@ -151,7 +151,9 @@ describe(testName, () => {
     });
     expect(transferRes.getError()).to.not.be.ok;
 
-    const carolChannelAfterTransfer = (await carol.getStateChannel(carolChannel.channelAddress)).getValue()!;
+    const carolChannelAfterTransfer = (
+      await carol.getStateChannel({ channelAddress: carolChannel.channelAddress })
+    ).getValue()!;
     const carolBalanceAfterTransfer =
       carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[0];
     expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
@@ -174,7 +176,9 @@ describe(testName, () => {
     });
     expect(resolveRes.getError()).to.not.be.ok;
 
-    const channelAfterResolve = (await dave.getStateChannel(daveChannel.channelAddress)).getValue()!;
+    const channelAfterResolve = (
+      await dave.getStateChannel({ channelAddress: daveChannel.channelAddress })
+    ).getValue()!;
     daveAssetIdx = channelAfterResolve.assetIds.findIndex(_assetId => _assetId === assetId);
     const daveAfterResolve = channelAfterResolve.balances[daveAssetIdx].amount[1];
     expect(daveAfterResolve).to.be.eq(BigNumber.from(daveBefore).add(transferAmt));
