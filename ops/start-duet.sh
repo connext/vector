@@ -63,6 +63,7 @@ sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crum
 
 auth_url="http://auth:5040"
 bash $root/ops/start-global.sh
+echo "global services have started up, resuming $stack startup"
 
 VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
 VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
@@ -74,13 +75,15 @@ node_port="8000"
 prisma_studio_port="5555"
 nats_port="4222"
 
-alice_port="8001"
-alice_prisma_port="5555"
+alice_port="8002"
+alice_prisma_port="5557"
 alice_database="database_a"
+echo "$stack.alice will be exposed on *:$alice_port (prisma on *:$alice_prisma_port)"
 
-bob_port="8002"
-bob_prisma_port="5556"
+bob_port="8003"
+bob_prisma_port="5558"
 bob_database="database_b"
+echo "$stack.bob will be exposed on *:$bob_port (prisma on *:$bob_prisma_port)"
 
 public_url="http://localhost:$alice_port"
 

@@ -72,20 +72,23 @@ internal_node_port="8000"
 internal_prisma_port="5555"
 nats_port="4222"
 
-carol_node_port="8001"
-carol_prisma_port="5556"
+carol_node_port="8004"
+carol_prisma_port="5559"
 carol_database="database_c"
 carol_mnemonic="owner warrior discover outer physical intact secret goose all photo napkin fall"
+echo "$stack.carol will be exposed on *:$carol_node_port (prisma on *:$carol_prisma_port)"
 
-dave_node_port="8002"
-dave_prisma_port="5557"
+dave_node_port="8005"
+dave_prisma_port="5560"
 dave_database="database_d"
 dave_mnemonic="woman benefit lawn ignore glove marriage crumble roast tool area cool payment"
+echo "$stack.dave will be exposed on *:$dave_node_port (prisma on *:$dave_prisma_port)"
 
-roger_node_port="8003"
-roger_prisma_port="5558"
+roger_node_port="8006"
+roger_prisma_port="5561"
 roger_database="database_r"
 roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
+echo "$stack.roger will be exposed on *:$roger_node_port (prisma on *:$roger_prisma_port)"
 
 public_url="http://localhost:$roger_node_port"
 
@@ -115,7 +118,7 @@ node_env="environment:
 ########################################
 ## Router config
 
-router_port="8008"
+router_port="8009"
 
 router_image="image: '${project}_builder'
     entrypoint: 'bash modules/router/ops/entry.sh'
@@ -123,6 +126,7 @@ router_image="image: '${project}_builder'
       - '$root:/root'
     ports:
       - '$router_port:$router_port'"
+echo "$stack.router will be exposed on *:$router_port"
 
 ####################
 # Launch stack
@@ -170,8 +174,6 @@ services:
   router:
     $common
     $router_image
-    ports:
-      - '$router_port:$router_port'
     environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'

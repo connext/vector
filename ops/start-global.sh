@@ -70,6 +70,8 @@ common="networks:
 # Auth config
 
 auth_port="5040"
+echo "$stack.auth configured to be exposed on *:$auth_port"
+
 admin_token="${VECTOR_ADMIN_TOKEN:-cxt1234}"
 
 if [[ $VECTOR_ENV == "prod" ]]
@@ -86,8 +88,6 @@ else
       - '$root:/root'"
 fi
 
-echo "Auth configured to be exposed on *:$auth_port"
-
 ####################
 # Nats config
 
@@ -95,7 +95,6 @@ nats_image="provide/nats-server:indra";
 bash $root/ops/pull-images.sh "$nats_image" > /dev/null
 
 nats_port="4222"
-nats_ws_port="4221"
 
 # Generate custom, secure JWT signing keys if we don't have any yet
 if [[ -z "$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY" ]]
@@ -133,6 +132,7 @@ chain_id_2="1338"
 
 evm_port_1="8545"
 evm_port_2="8546"
+echo "$stack.evms are configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
 
 chain_data="$root/.chaindata"
 chain_data_1="$chain_data/$chain_id_1"
@@ -151,9 +151,6 @@ evm_image_name="${project}_ethprovider:$version";
 evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
 bash $root/ops/pull-images.sh "$evm_image_name" > /dev/null
-
-echo "EVMs configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
-
 
 ####################
 # Launch stack
