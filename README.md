@@ -35,7 +35,7 @@ You can find documentation on each layer in its respective readme:
 - [Contracts](https://github.com/connext/vector/blob/master/modules/contracts/) - holds user funds and disburses them during a dispute based on commitments provided by channel parties.
 - [Protocol](https://github.com/connext/vector/tree/master/modules/protocol/) - creates channels, generates channel updates/commitments, validates them, and then synchronizes channel state with a peer.
 - [Engine](https://github.com/connext/vector/blob/master/modules/engine/) - implements default business logic for channel updates and wraps the protocol in a JSON RPC interface.
-- [Server-Node]((https://github.com/connext/vector/blob/master/modules/server-node/) - sets up services to be consumed by the engine, spins up the engine, and wraps everything in REST and gRPC interfaces.
+- [Server-Node](https://github.com/connext/vector/blob/master/modules/server-node/) - sets up services to be consumed by the engine, spins up the engine, and wraps everything in REST and gRPC interfaces.
 - [Router](https://github.com/connext/vector/blob/master/modules/router/) - consumes the server-node interface to route transfers across multiple channels (incl across chains/assets)
 
 Note that the engine and protocol are isomorphic. Immediately after the core implementation is done, we plan to build a `browser-node` implementation which sets up services in a browser-compatible way and exposes a direct JS interface to be consumed by a dApp developer.
