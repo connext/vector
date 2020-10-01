@@ -109,7 +109,7 @@ describe.only(testName, () => {
     expect(BigNumber.from(bobBefore).add(depositAmt)).to.eq(bobAfter);
   });
 
-  it.skip("alice can transfer to bob and resolve the transfer", async () => {
+  it("alice can transfer to bob and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await alice.getStateChannelByParticipants({
@@ -156,7 +156,7 @@ describe.only(testName, () => {
     expect(bobAfterResolve).to.be.eq(BigNumber.from(bobBefore).add(transferAmt));
   });
 
-  it.skip("bob can transfer to alice", async () => {
+  it("bob can transfer to alice", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await alice.getStateChannelByParticipants({
