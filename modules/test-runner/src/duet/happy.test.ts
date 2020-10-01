@@ -11,7 +11,7 @@ const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 const logger = pino({ level: env.logLevel });
 const testName = "Duet Happy";
 
-describe.only(testName, () => {
+describe(testName, () => {
   let alice: IServerNodeService;
   let bob: IServerNodeService;
   before(async () => {
