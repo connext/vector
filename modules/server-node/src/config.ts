@@ -1,4 +1,4 @@
-import { TAddress, TIntegerString } from "@connext/vector-types";
+import { TAddress } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
 
@@ -31,7 +31,7 @@ const VectorNodeConfigSchema = Type.Object({
   ),
   mnemonic: Type.Optional(Type.String()),
   natsUrl: Type.String({ format: "uri" }),
-  port: TIntegerString,
+  port: Type.Integer(),
   redisUrl: Type.String({ format: "uri" }),
 });
 

@@ -1,31 +1,69 @@
-let chainProviders;
-try {
-  chainProviders = JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS!);
-} catch (e) {
-  throw new Error("VECTOR_CHAIN_PROVIDERS is a required config item");
-}
-if (!chainProviders) {
-  throw new Error("VECTOR_CHAIN_PROVIDERS is a required config item");
-}
-const adminToken = process.env.VECTOR_ADMIN_TOKEN;
-if (!adminToken) {
-  throw new Error("VECTOR_ADMIN_TOKEN is a required config item");
-}
+import { TAddress, TChainId, TIntegerString } from "@connext/vector-types";
+import { Static, Type } from "@sinclair/typebox";
+import Ajv from "ajv";
 
+const ajv = new Ajv();
+
+const RebalanceProfileSchema = Type.Object({
+  chainId: TChainId,
+  assetId: TAddress,
+  reclaimThreshold: TIntegerString,
+  target: TIntegerString,
+  collateralizeThreshold: TIntegerString,
+});
+export type RebalanceProfile = Static<typeof RebalanceProfileSchema>;
+
+const AllowedSwapSchema = Type.Object({
+  fromChainId: TChainId,
+  toChainId: TChainId,
+  fromAssetId: TAddress,
+  toAssetId: TAddress,
+  priceType: Type.Union([Type.Literal("hardcoded")]),
+  hardcodedRate: Type.Number(),
+});
+export type AllowedSwap = Static<typeof AllowedSwapSchema>;
+
+const VectorRouterConfigSchema = Type.Object({
+  adminToken: Type.String(),
+  allowedSwaps: Type.Array(AllowedSwapSchema),
+  chainProviders: Type.Map(Type.String({ format: "uri" })),
+  dbUrl: Type.Optional(Type.String({ format: "uri" })),
+  nodeUrl: Type.String({ format: "uri" }),
+  logLevel: Type.Optional(
+    Type.Union([
+      Type.Literal("fatal"),
+      Type.Literal("error"),
+      Type.Literal("warn"),
+      Type.Literal("info"),
+      Type.Literal("debug"),
+      Type.Literal("trace"),
+      Type.Literal("silent"),
+    ]),
+  ),
+  mnemonic: Type.Optional(Type.String()),
+  port: Type.Integer(),
+  rebalanceProfiles: Type.Array(RebalanceProfileSchema),
+});
+
+type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;
+const mnemonic = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
-if (!dbUrl) {
-  throw new Error("VECTOR_DATABASE_URL is a required config item");
+let vectorConfig: VectorRouterConfig;
+try {
+  vectorConfig = JSON.parse(process.env.VECTOR_CONFIG!);
+} catch (e) {
+  throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
 }
 
-const serverNodeUrl = process.env.VECTOR_NODE_URL;
-if (!serverNodeUrl) {
-  throw new Error("VECTOR_NODE_URL is a required config item");
+const validate = ajv.compile(VectorRouterConfigSchema);
+const valid = validate(vectorConfig);
+
+if (!valid) {
+  throw new Error(validate.errors?.map(err => err.message).join(","));
 }
 
 export const config = {
-  chainProviders,
-  port: parseInt(process.env.VECTOR_PORT ?? "5040"),
+  mnemonic,
   dbUrl,
-  adminToken,
-  serverNodeUrl,
-};
+  ...vectorConfig,
+} as VectorRouterConfig;
