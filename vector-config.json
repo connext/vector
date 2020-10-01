@@ -7,7 +7,7 @@
       "fromAssetId": "0x0000000000000000000000000000000000000000",
       "toAssetId": "0x0000000000000000000000000000000000000000",
       "priceType": "hardcoded",
-      "hardcodedRate": 1
+      "hardcodedRate": "1"
     },
     {
       "fromChainId": 1337,
@@ -15,7 +15,7 @@
       "fromAssetId": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",
       "toAssetId": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",
       "priceType": "hardcoded",
-      "hardcodedRate": 1
+      "hardcodedRate": "1"
     }
   ],
   "authUrl": "http://auth:5040",

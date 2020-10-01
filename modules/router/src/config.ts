@@ -1,4 +1,4 @@
-import { TAddress, TChainId, TIntegerString } from "@connext/vector-types";
+import { TAddress, TChainId, TIntegerString, TDecimalString } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
 
@@ -19,7 +19,7 @@ const AllowedSwapSchema = Type.Object({
   fromAssetId: TAddress,
   toAssetId: TAddress,
   priceType: Type.Union([Type.Literal("hardcoded")]),
-  hardcodedRate: Type.Number(),
+  hardcodedRate: TDecimalString,
 });
 export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 
