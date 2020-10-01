@@ -117,7 +117,7 @@ Resolves an existing conditional transfer using logic that finalizes/unlocks it.
 
 1. `Object` - EngineParams.ResolveTransfer object
    - `channelAddress`: `String` - Address of channel which contains the transfer to be resolved.
-   - `routingId`: `String` - Unique Id associated with this transfer. Can get this by listening for the `CONDITIONAL_TRANSFER_CREATED` event.
+   - `transferId`: `String` - Unique Id associated with this transfer. Can get this by listening for the `CONDITIONAL_TRANSFER_CREATED` event.
    - `conditionType`: `String` - Condition type of this transfer // TODO do we need this?
    - `details`: `Object` - TransferType-specific params needed to resolve the conditions for the transfer. For instance, `preImage` for `LinkedTransfer`. See the [schema](https://github.com/connext/vector/blob/master/modules/types/src/schemas/engine.ts#L96) to learn more.
 
@@ -158,12 +158,12 @@ Gets channel state for a given `channelAddress`.
 
 ### chan_getTransferStateByRoutingId
 
-Gets a transfer state for a given `routingId`.
+Gets a transfer state for a given `routingId`. This method is largely only used by the [router](https://github.com/connext/vector/tree/master/modules/router).
 
 #### Params
 
 1. `Object` - EngineParams.GetTransferStateByRoutingId object.
-   - `routingId`: `String` - Unique Id of transfer.
+   - `routingId`: `String` - Unique Id of transfer routed over multiple channels.
 
 #### Returns
 
