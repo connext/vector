@@ -13,6 +13,7 @@ import {
   Values,
   IVectorChainReader,
   FullTransferState,
+  IExternalValidation,
 } from "@connext/vector-types";
 import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { constants } from "ethers";
@@ -31,6 +32,7 @@ export async function outbound(
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
   messagingService: IMessagingService,
+  externalValidationService: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
@@ -40,7 +42,7 @@ export async function outbound(
   // be undefined. While we may still handle the error here, it should be
   // never actually reach that code (since the validation should catch any
   // errors first)
-  const validationRes = await validateOutbound(params, storeService, signer);
+  const validationRes = await validateOutbound(params, storeService, externalValidationService, signer);
   if (validationRes.isError) {
     logger.error({
       method,
@@ -59,19 +61,11 @@ export async function outbound(
 
   // Get the valid previous state and the valid parameters from the
   // validation result
-  const { validParams, validState, activeTransfers, transfer: validTransfer } = validationRes.getValue()!;
-  let previousState = validState;
+  const { validParams, validState, activeTransfers } = validationRes.getValue()!;
+  let previousState = { ...validState };
 
   // Generate the signed update
-  const updateRes = await generateUpdate(
-    validParams,
-    previousState,
-    activeTransfers,
-    validTransfer,
-    chainReader,
-    signer,
-    logger,
-  );
+  const updateRes = await generateUpdate(validParams, previousState, activeTransfers, chainReader, signer, logger);
   if (updateRes.isError) {
     logger.error({
       method,
@@ -81,16 +75,17 @@ export async function outbound(
     });
     return Result.fail(updateRes.getError()!);
   }
+  // Get all the properly updated values
   const updateValue = updateRes.getValue();
   let update = updateValue.update;
-  let updatedChannel = updateValue.channelState;
+  let nextState = updateValue.channelState;
   let transfer = updateValue.transfer;
 
-  // send and wait for response
+  // Send and wait for response
   logger.info({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
   let result = await messagingService.sendProtocolMessage(update, previousState.latestUpdate ?? undefined);
 
-  // iff the result failed because the update is stale, our channel is behind
+  // IFF the result failed because the update is stale, our channel is behind
   // so we should try to sync the channel and resend the update
   let error = result.getError();
   if (error && error.message === InboundChannelUpdateError.reasons.StaleUpdate) {
@@ -100,7 +95,7 @@ export async function outbound(
         update: update.nonce,
         counterparty: error.update.nonce,
       },
-      `Out of sync, syncing and retrying`,
+      `Behind, syncing and retrying`,
     );
 
     // Get the synced state and new update
@@ -110,6 +105,7 @@ export async function outbound(
       previousState,
       storeService,
       chainReader,
+      externalValidationService,
       signer,
       logger,
     );
@@ -132,7 +128,7 @@ export async function outbound(
     error = result.getError();
     previousState = syncedChannel;
     update = regeneratedUpdate;
-    updatedChannel = proposedChannel;
+    nextState = proposedChannel;
     transfer = regeneratedTransfer;
   }
 
@@ -154,7 +150,7 @@ export async function outbound(
 
   // verify sigs on update
   const sigRes = await validateChannelUpdateSignatures(
-    updatedChannel,
+    nextState,
     counterpartyUpdate.aliceSignature,
     counterpartyUpdate.bobSignature,
     "both",
@@ -172,24 +168,24 @@ export async function outbound(
 
   try {
     await storeService.saveChannelState(
-      { ...updatedChannel, latestUpdate: counterpartyUpdate },
+      { ...nextState, latestUpdate: counterpartyUpdate },
       {
-        channelFactoryAddress: updatedChannel.networkContext.channelFactoryAddress,
-        state: updatedChannel,
-        chainId: updatedChannel.networkContext.chainId,
+        channelFactoryAddress: nextState.networkContext.channelFactoryAddress,
+        state: nextState,
+        chainId: nextState.networkContext.chainId,
         aliceSignature: counterpartyUpdate.aliceSignature,
         bobSignature: counterpartyUpdate.bobSignature,
       },
       transfer,
     );
-    return Result.ok({ ...updatedChannel, latestUpdate: counterpartyUpdate });
+    return Result.ok({ ...nextState, latestUpdate: counterpartyUpdate });
   } catch (e) {
     logger.error("e", e.message);
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SaveChannelFailed,
         params,
-        { ...updatedChannel, latestUpdate: counterpartyUpdate },
+        { ...nextState, latestUpdate: counterpartyUpdate },
         {
           error: e.message,
         },
@@ -205,6 +201,7 @@ export async function inbound(
   chainReader: IVectorChainReader,
   storeService: IVectorStore,
   messagingService: IMessagingService,
+  externalValidation: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
 ): Promise<Result<FullChannelState, InboundChannelUpdateError>> {
@@ -334,6 +331,7 @@ export async function inbound(
       previousState,
       storeService,
       chainReader,
+      externalValidation,
       signer,
       logger,
     );
@@ -357,6 +355,7 @@ export async function inbound(
     previousState,
     storeService,
     chainReader,
+    externalValidation,
     signer,
     logger,
   );
@@ -399,6 +398,7 @@ const syncStateAndRecreateUpdate = async (
   previousState: FullChannelState,
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
+  externalValidation: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<Result<OutboundSync, OutboundChannelUpdateError>> => {
@@ -444,6 +444,7 @@ const syncStateAndRecreateUpdate = async (
     previousState,
     storeService,
     chainReader,
+    externalValidation,
     signer,
     logger,
   );
@@ -470,7 +471,6 @@ const syncStateAndRecreateUpdate = async (
     attemptedParams,
     syncedChannel,
     activeTransfers,
-    transfer,
     chainReader,
     signer,
     logger,

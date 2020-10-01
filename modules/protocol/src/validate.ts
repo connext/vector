@@ -16,8 +16,10 @@ import {
   ValidationError,
   CreateUpdateDetails,
   ResolveUpdateDetails,
+  IExternalValidation,
+  Balance,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier, hashTransferState } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber, constants } from "ethers";
 import pino from "pino";
 
@@ -28,15 +30,12 @@ import { generateSignedChannelCommitment, validateChannelUpdateSignatures } from
 // and is called from within the `sync.outbound` function.
 // It will return the valid previous state, as well as the valid parameters.
 // NOTE: the presence and validity of the values within the parameters should
-// be asserted before the operation is put under lock via the schemas +
-// `Vector.validateParams`, so this validation should only perform the
-// necessary contextual validation
+// be asserted before the operation is put under lock via schema definitions.
 type OutboundValidationResult<T extends UpdateType = any> = Result<
   {
     validParams: UpdateParams<T>;
     validState: FullChannelState;
     activeTransfers: FullTransferState[];
-    transfer?: FullTransferState;
   },
   OutboundChannelUpdateError
 >;
@@ -44,6 +43,7 @@ type OutboundValidationResult<T extends UpdateType = any> = Result<
 export async function validateOutbound<T extends UpdateType = any>(
   params: UpdateParams<T>,
   storeService: IVectorStore,
+  externalValidation: IExternalValidation,
   signer: IChannelSigner,
 ): Promise<OutboundValidationResult<T>> {
   // Create a helper to handle errors
@@ -99,9 +99,11 @@ export async function validateOutbound<T extends UpdateType = any>(
     return returnError(ValidationError.reasons.ChannelNotFound);
   }
 
-  // Only on create and resolve do you need to assign a transfer to
-  // work with
-  let transfer: FullTransferState | undefined = undefined;
+  // Get the active transfers for applying the update
+  const activeTransfers = await storeService.getActiveTransfers(params.channelAddress);
+
+  // When resolving, you will need the stored transfer for external validation
+  let storedTransfer: FullTransferState | undefined = undefined;
   switch (params.type) {
     case UpdateType.setup: {
       // Setup param details include:
@@ -193,9 +195,16 @@ export async function validateOutbound<T extends UpdateType = any>(
       } = params as UpdateParams<typeof UpdateType.resolve>;
 
       // Transfer should exist in store
-      transfer = await storeService.getTransferState(transferId);
-      if (!transfer) {
+      storedTransfer = await storeService.getTransferState(transferId);
+      if (!storedTransfer) {
         return returnError(ValidationError.reasons.TransferNotFound, state);
+      }
+
+      // Transfer should exist in active transfers
+      if (!activeTransfers.find(t => t.transferId === transferId)) {
+        return returnError(ValidationError.reasons.TransferNotActive, state, {
+          activeTransfers: activeTransfers.map(t => t.transferId).join(","),
+        });
       }
 
       // Transfer resolver should match stored resolver encoding
@@ -215,20 +224,26 @@ export async function validateOutbound<T extends UpdateType = any>(
     }
   }
 
+  // All default validation is performed, make call to external
+  // validation service
+  const externalRes = await externalValidation.validateOutbound(params, state, storedTransfer);
+  if (externalRes.isError) {
+    return returnError(ValidationError.reasons.ExternalValidationFailed, state, {
+      validationError: externalRes.getError()!.message,
+    });
+  }
+
   return Result.ok({
     validParams: params,
     validState: state,
-    activeTransfers: await storeService.getActiveTransfers(params.channelAddress),
-    transfer,
+    activeTransfers,
   });
 }
 
 // This function performs all update validation when you are receiving
-// a proposed update for the counterparty -- in `sync.inbound` as well
-// as `sync.outbound` when you are out of sync but proposed an update.
-// It will validate the update, apply the update, validate that there
-// is at least one signature, and that all signatures present are
-// invalid. (Must apply update to validate signatures)
+// a proposed update in `sync.inbound` and `sync.outbound` when you
+// are behind and have proposed an update. It will validate + apply the
+// update, returning the signed commitment and next state
 
 // NOTE: NONE of the parameters here should be assumed valid, since
 // this information is passed over the wire and is not validated
@@ -250,11 +265,12 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   state: FullChannelState,
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
+  externalValidation: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger = pino(),
 ): Promise<InboundValidationResult> {
   // Validate + apply the update
-  const res = await validateAndApplyChannelUpdate(update, state, storeService, chainReader);
+  const res = await validateAndApplyChannelUpdate(update, state, storeService, chainReader, externalValidation);
   if (res.isError) {
     return Result.fail(res.getError()!);
   }
@@ -300,11 +316,15 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   return Result.ok({ validUpdate, nextState: signedNextState, commitment: signed, activeTransfers, transfer });
 }
 
+// This function will take in a requested update from the counterparty,
+// validate it, and apply it.
+// NOTE:
 async function validateAndApplyChannelUpdate<T extends UpdateType>(
-  update: ChannelUpdate<T>,
+  counterpartyUpdate: ChannelUpdate<T>,
   previousState: FullChannelState,
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
+  externalValidation: IExternalValidation,
 ): Promise<
   Result<
     {
@@ -323,16 +343,21 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     context: any = {},
   ): InboundValidationResult => {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InboundValidationFailed, update, state, {
-        error: validationError,
-        ...context,
-      }),
+      new InboundChannelUpdateError(
+        InboundChannelUpdateError.reasons.InboundValidationFailed,
+        counterpartyUpdate,
+        state,
+        {
+          error: validationError,
+          ...context,
+        },
+      ),
     );
   };
 
-  const { channelAddress, fromIdentifier, toIdentifier, type, nonce, balance, assetId, details } = update;
+  const { channelAddress, fromIdentifier, toIdentifier, type, nonce, balance, assetId, details } = counterpartyUpdate;
   // Get the active transfers for the channel
-  const previousActiveTransfers = await storeService.getActiveTransfers(channelAddress);
+  const activeTransfers = await storeService.getActiveTransfers(channelAddress);
 
   // Perform all common update validation -- see note above
   // calling function
@@ -344,10 +369,14 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
 
   // Ensure the assetId is valid
 
-  // Perform update-type specific validation, and get transfer values
-  // to manipulate (if needed)
-  let transfer: FullTransferState | undefined = undefined;
-  let activeTransfers = [...previousActiveTransfers];
+  // Perform update-type specific validation
+
+  // You will need the final transfer balance when applying the
+  // resolve update. See note in `applyUpdate`.
+  let finalTransferBalance: Balance | undefined = undefined;
+  // You will also need access to the stored transfer for any
+  // external validation when resolving
+  let storedTransfer: FullTransferState | undefined = undefined;
   switch (type) {
     case UpdateType.setup: {
       // Ensure the channelAddress is correctly generated
@@ -397,43 +426,23 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // Ensure the merkleProofData is correct
 
       // Ensure the same merkleRoot is generated
-
-      // Create the valid transfer object
-      // The update can be sent from either [aliceIdentifier, bobIdentifier].
-      // The `transfer.initiator` is either alice/bob, depending on who is
-      // creating the transfer (i.e. initiating this update). The responder
-      // is the channel counterparty (i.e. bob/alice respectively), and can
-      // be determined by the update initiators/responders
-      transfer = {
-        initialBalance: { ...transferInitialState.balance },
-        assetId,
-        channelAddress,
-        transferId,
-        transferDefinition,
-        transferTimeout,
-        initialStateHash: hashTransferState(transferInitialState, transferEncodings[0]),
-        channelFactoryAddress: previousState.networkContext.channelFactoryAddress,
-        chainId: previousState.networkContext.chainId,
-        transferEncodings,
-        transferState: { ...transferInitialState },
-        initiator: fromIdentifier === previousState.aliceIdentifier ? previousState.alice : previousState.bob,
-        responder: toIdentifier === previousState.aliceIdentifier ? previousState.alice : previousState.bob,
-        meta,
-      };
       break;
     }
     case UpdateType.resolve: {
-      const {
-        transferId,
-        transferDefinition,
-        transferResolver,
-        transferEncodings,
-        merkleRoot,
-        meta,
-      } = details as ResolveUpdateDetails;
+      const { transferId, transferResolver } = details as ResolveUpdateDetails;
 
-      // Ensure transfer exists in store
-      const storedTransfer = (await storeService.getTransferState(transferId))!;
+      // Ensure transfer exists in store / retrieve for validation
+      storedTransfer = await storeService.getTransferState(transferId);
+      if (!storedTransfer) {
+        return returnError(ValidationError.reasons.TransferNotFound);
+      }
+
+      // Ensure the transfer is active
+      if (!activeTransfers.find(t => t.transferId === transferId)) {
+        return returnError(ValidationError.reasons.TransferNotActive, previousState, {
+          activeTransfers: activeTransfers.map(t => t.transferId).join(","),
+        });
+      }
 
       // Get the final transfer balance from contract
       const transferBalanceResult = await chainReader.resolve(
@@ -444,21 +453,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       if (transferBalanceResult.isError) {
         throw transferBalanceResult.getError()!;
       }
-      const transferBalance = transferBalanceResult.getValue()!;
-
-      // Update the transfer
-      transfer = {
-        ...storedTransfer,
-        transferResolver,
-        transferState: {
-          ...storedTransfer.transferState,
-          balance: transferBalance,
-        },
-        meta: {
-          ...(storedTransfer.meta ?? {}),
-          ...(meta ?? {}),
-        },
-      };
+      finalTransferBalance = transferBalanceResult.getValue()!;
 
       // Ensure the transfer exists within the active transfers
 
@@ -468,9 +463,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
 
       // Verify the balance is the same from update initiator
       // and chain service
-
-      // Update the active transfers
-      activeTransfers = previousActiveTransfers.filter(t => t.transferId === transferId);
 
       // Regenerate the merkle tree
 
@@ -484,13 +476,28 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     }
   }
 
+  // All default validation is performed, now perform external validation
+  const externalRes = await externalValidation.validateInbound(counterpartyUpdate, previousState, storedTransfer);
+  if (externalRes.isError) {
+    return returnError(ValidationError.reasons.ExternalValidationFailed, previousState, {
+      validationError: externalRes.getError()!.message,
+    });
+  }
+
   // Apply the update
-  const applyRes = await applyUpdate(update, previousState, transfer);
+  const applyRes = await applyUpdate(counterpartyUpdate, previousState, activeTransfers, finalTransferBalance);
   if (applyRes.isError) {
     // Returns an inbound channel error, so don't use helper to preserve
     // apply error
     return Result.fail(applyRes.getError()!);
   }
 
-  return Result.ok({ nextState: applyRes.getValue()!, transfer, activeTransfers, validUpdate: update });
+  const { channel, transfer, activeTransfers: updatedActiveTransfers } = applyRes.getValue();
+
+  return Result.ok({
+    nextState: channel,
+    transfer,
+    activeTransfers: updatedActiveTransfers,
+    validUpdate: counterpartyUpdate,
+  });
 }
