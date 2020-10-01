@@ -1,0 +1,46 @@
+@aliceUrl = http://localhost:8001
+@bobUrl = http://localhost:8002
+
+@aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+
+@aliceAddress = 0x119a11d0D1686C7330cA0650E26Fd6889Fbeb832
+
+@bobAddress = 0x95B7e93A3aF19AcAE95aD120d4D8307bF1a6Be63
+
+# 0.01 ETH
+@ethAmount = 1000000000000000
+
+# 0.0001 ETH
+@feeAmount = 10000000000000
+
+##############
+### Alice Withdraw
+POST {{aliceUrl}}/withdraw
+Content-Type: application/json
+
+{
+  "channelAddress": "{{aliceBobChannel}}",
+  "amount": "{{ethAmount}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "recipient": "{{aliceAddress}}",
+  "fee": "{{feeAmount}}",
+  "meta": {
+    "hello": "world"
+  }
+}
+
+##############
+### Bob Withdraw
+POST {{bobUrl}}/withdraw
+Content-Type: application/json
+
+{
+  "channelAddress": "{{aliceBobChannel}}",
+  "amount": "{{ethAmount}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "recipient": "{{bobAddress}}",
+  "fee": "{{feeAmount}}",
+  "meta": {
+    "hello": "world"
+  }
+}
