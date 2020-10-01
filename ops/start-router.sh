@@ -246,21 +246,15 @@ services:
     ports:
       - '$node_port:$node_port'
     environment:
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_CONFIG: '$vector_config'
-      VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
-      VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
       VECTOR_MNEMONIC_FILE: '$VECTOR_MNEMONIC_FILE'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: '$pg_host'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '$pg_port'
       VECTOR_PG_USERNAME: '$pg_user'
-      VECTOR_PORT: '$node_port'
-      VECTOR_REDIS_URL: '$redis_url'
       VECTOR_ENV: '$VECTOR_ENV'
     secrets:
       - '$db_secret'
@@ -272,10 +266,8 @@ services:
     ports:
       - '$router_port:$router_port'
     environment:
+      VECTOR_CONFIG: '$vector_config'
       VECTOR_NODE_URL: 'http://node:$node_port'
-      VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
-      VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: '$pg_host'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
