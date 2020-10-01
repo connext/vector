@@ -9,8 +9,8 @@ contract CMCCore is ICMCCore {
   // in order to ensure storage alignment with the proxy
   address public masterCopy;
 
-  address internal alice;
-  address internal bob;
+  address public alice;
+  address public bob;
 
   mapping(address => uint256) internal _totalDepositedA;
   mapping(address => uint256) internal _totalWithdrawn;
