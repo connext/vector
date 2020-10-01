@@ -15,10 +15,10 @@ describe.only(testName, () => {
   let alice: IServerNodeService;
   let bob: IServerNodeService;
   before(async () => {
-    alice = await RestServerNodeService.connect(env.aliceUrl, "", env.chainProviders, logger.child({ testName }));
+    alice = await RestServerNodeService.connect(env.aliceUrl, env.chainProviders, logger.child({ testName }));
     expect(alice.signerAddress).to.be.a("string");
     expect(alice.publicIdentifier).to.be.a("string");
-    bob = await RestServerNodeService.connect(env.bobUrl, "", env.chainProviders, logger.child({ testName }));
+    bob = await RestServerNodeService.connect(env.bobUrl, env.chainProviders, logger.child({ testName }));
     expect(bob.signerAddress).to.be.a("string");
     expect(bob.publicIdentifier).to.be.a("string");
 
