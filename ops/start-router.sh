@@ -161,6 +161,8 @@ VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
 ########################################
 ## Node config
 
+vector_config="`cat $root/vector-config.json | tr -d '\n\r'`"
+
 node_port="8000"
 prisma_port="5555"
 
@@ -247,6 +249,7 @@ services:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
+      VECTOR_CONFIG: '$vector_config'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
       VECTOR_MNEMONIC_FILE: '$VECTOR_MNEMONIC_FILE'

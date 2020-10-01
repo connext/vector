@@ -68,6 +68,8 @@ database_env="environment:
 ########################################
 ## Node config
 
+vector_config="`cat $root/vector-config.json | tr -d '\n\r'`"
+
 internal_node_port="8000"
 internal_prisma_port="5555"
 nats_port="4222"
@@ -103,6 +105,7 @@ node_env="environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
       VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
+      VECTOR_CONFIG: '$vector_config'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
       VECTOR_ENV: '$VECTOR_ENV'
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
