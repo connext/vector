@@ -15,6 +15,8 @@ import {
   IVectorChainReader,
   OutboundChannelUpdateError,
   ProtocolParams,
+  IExternalValidation,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -39,6 +41,7 @@ export class Vector implements IVectorProtocol {
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
     private readonly chainReader: IVectorChainReader,
+    private readonly externalValidationService: IExternalValidation,
     private readonly logger: pino.BaseLogger,
   ) {}
 
@@ -49,7 +52,20 @@ export class Vector implements IVectorProtocol {
     signer: IChannelSigner,
     chainReader: IVectorChainReader,
     logger: pino.BaseLogger,
+    validationService?: IExternalValidation,
   ): Promise<Vector> {
+    // Set the external validation service. If none is provided,
+    // create an object with a matching interface to perform no
+    // additional validation
+    const externalValidation = validationService ?? {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+        Promise.resolve(Result.ok(undefined)),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+        Promise.resolve(Result.ok(undefined)),
+    };
+
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
     const node = await new Vector(
@@ -58,6 +74,7 @@ export class Vector implements IVectorProtocol {
       storeService,
       signer,
       chainReader,
+      externalValidation,
       logger,
     ).setupServices();
 
@@ -83,6 +100,7 @@ export class Vector implements IVectorProtocol {
       this.storeService,
       this.chainReader,
       this.messagingService,
+      this.externalValidationService,
       this.signer,
       this.logger,
     );
@@ -159,6 +177,7 @@ export class Vector implements IVectorProtocol {
         this.chainReader,
         this.storeService,
         this.messagingService,
+        this.externalValidationService,
         this.signer,
         this.logger,
       );
@@ -189,6 +208,7 @@ export class Vector implements IVectorProtocol {
             this.storeService,
             this.chainReader,
             this.messagingService,
+            this.externalValidationService,
             this.signer,
             this.logger,
           )

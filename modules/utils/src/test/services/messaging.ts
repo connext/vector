@@ -5,8 +5,9 @@ import {
   OutboundChannelUpdateError,
   Result,
 } from "@connext/vector-types";
-import { getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
+
+import { getRandomBytes32 } from "../../hexStrings";
 
 export class MemoryMessagingService implements IMessagingService {
   private readonly evt: Evt<{

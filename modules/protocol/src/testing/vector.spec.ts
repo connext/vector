@@ -10,6 +10,8 @@ import {
   mkHash,
   MemoryStoreService,
   expect,
+  MemoryMessagingService,
+  MemoryLockService,
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
@@ -28,9 +30,6 @@ import Sinon from "sinon";
 
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
-
-import { MemoryMessagingService } from "./services/messaging";
-import { MemoryLockService } from "./services/lock";
 
 describe("Vector", () => {
   let chainReader: Sinon.SinonStubbedInstance<IVectorChainReader>;

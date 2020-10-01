@@ -9,6 +9,7 @@ import {
   mkSig,
   expect,
   MemoryStoreService,
+  MemoryMessagingService,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -17,6 +18,8 @@ import {
   OutboundChannelUpdateError,
   Result,
   UpdateParams,
+  FullChannelState,
+  FullTransferState,
 } from "@connext/vector-types";
 import { BigNumber, constants } from "ethers";
 import pino from "pino";
@@ -29,7 +32,6 @@ import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
 
-import { MemoryMessagingService } from "./services/messaging";
 import { env } from "./env";
 
 describe("inbound", () => {
@@ -66,6 +68,12 @@ describe("inbound", () => {
   const logger = pino().child({
     testName: "inbound",
   });
+  const externalValidation = {
+    validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      Promise.resolve(Result.ok(undefined)),
+    validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      Promise.resolve(Result.ok(undefined)),
+  };
 
   let signers: ChannelSigner[];
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
@@ -101,7 +109,17 @@ describe("inbound", () => {
     );
     // Set the validation stub
     validationStub.resolves(Result.ok({ commitment: {} as any, nextState: {} as any }));
-    const result = await inbound(update, update, inbox, chainService, store, messaging, signers[1], logger);
+    const result = await inbound(
+      update,
+      update,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
     expect(result.getError()).to.be.undefined;
 
     // Make sure the calls were correctly performed
@@ -117,7 +135,17 @@ describe("inbound", () => {
     // Generate an update at nonce = 1
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.setup, { nonce: 1 });
 
-    const result = await inbound(update, {} as any, inbox, chainService, store, messaging, signers[1], logger);
+    const result = await inbound(
+      update,
+      {} as any,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
     expect(result.isError).to.be.true;
     const error = result.getError()!;
     expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.StaleUpdate);
@@ -145,7 +173,17 @@ describe("inbound", () => {
     // Create the update to propose
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
 
-    const result = await inbound(update, toSync, inbox, chainService, store, messaging, signers[1], logger);
+    const result = await inbound(
+      update,
+      toSync,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
     expect(result.getError()).to.be.undefined;
 
     // Verify callstack
@@ -170,7 +208,17 @@ describe("inbound", () => {
     });
 
     // Call `inbound`
-    const result = await inbound(update, update, inbox, chainService, store, messaging, signers[1], logger);
+    const result = await inbound(
+      update,
+      update,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
     expect(result.getError()).to.be.undefined;
 
     // Verify callstack
@@ -195,6 +243,12 @@ describe("outbound", () => {
     testName: "inbound",
   });
   const channelAddress = mkAddress("0xccc");
+  const externalValidation = {
+    validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      Promise.resolve(Result.ok(undefined)),
+    validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      Promise.resolve(Result.ok(undefined)),
+  };
 
   let signers: ChannelSigner[];
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
@@ -236,7 +290,7 @@ describe("outbound", () => {
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
     outboundValidationStub.resolves(Result.fail(error));
 
-    const res = await outbound(params, store, chainService, messaging, signers[0], logger);
+    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
     expect(res.getError()).to.be.deep.eq(error);
   });
 
@@ -250,7 +304,7 @@ describe("outbound", () => {
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
     generationStub.resolves(Result.fail(error));
 
-    const res = await outbound(params, store, chainService, messaging, signers[0], logger);
+    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
     expect(res.isError).to.be.true;
     expect(res.getError()).to.be.deep.eq(error);
   });
@@ -270,7 +324,7 @@ describe("outbound", () => {
     generationStub.resolves(Result.ok({ update: {}, channelState: {} }));
 
     // Call the outbound function
-    const res = await outbound(params, store, chainService, messaging, signers[0], logger);
+    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
 
     // Verify the error is returned as an outbound error
     const error = res.getError();
@@ -315,7 +369,7 @@ describe("outbound", () => {
       .resolves(Result.ok({ update: {}, previousUpdate: {} } as any));
 
     // Call the outbound function
-    const res = await outbound(params, store, chainService, messaging, signers[0], logger);
+    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
 
     // Verify return values
     expect(res.getError()).to.be.undefined;
@@ -434,7 +488,7 @@ describe("outbound", () => {
         store.getChannelState.resolves(staleChannel);
 
         // Call the outbound function
-        const res = await outbound(params, store, chainService, messaging, signers[0], logger);
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
 
         // Verify the update was successfully sent + retried
         expect(res.getError()).to.be.undefined;
