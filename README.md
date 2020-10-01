@@ -47,9 +47,9 @@ The above command will spin up three server-nodes, one with an attached router i
 
 Once you have the above trio set up, you can interact with your nodes via a REST interface. We've documented [example requests](https://github.com/connext/vector/tree/master/modules/server-node/examples) in the server-node module. If you're developing with VSCode, there are several REST client plugins available in the marketplace that you can use to make these queries *directly from the examples*.
 
-First, set up your channels from Alice -> Roger and Roger -> Bob:
+First, set up your channels from Alice -> Roger and Roger -> Bob (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)):
 
-```http
+```
 ### Node -> Alice
 POST {{nodeUrl}}/setup
 Content-Type: application/json
@@ -71,11 +71,8 @@ Content-Type: application/json
 }
 ```
 
-Then, send an Eth deposit to Alice's channel onchain:
-```http
-##############
-### Send Deposit Tx
-# Alice deposit ETH
+Then, send an Eth deposit to Alice's channel onchain (in [2_deposit](https://github.com/connext/vector/blob/master/modules/server-node/examples/2-deposit.http)):
+```
 POST {{aliceUrl}}/send-deposit-tx
 Content-Type: application/json
 
@@ -87,10 +84,7 @@ Content-Type: application/json
 ```
 
 To add this to Alice's offchain balance, you need to wait for the tx to be mined and then call:
-```http
-##############
-### Reconcile Deposit
-# Alice deposit ETH
+```
 POST {{aliceUrl}}/deposit
 Content-Type: application/json
 
@@ -100,11 +94,8 @@ Content-Type: application/json
 }
 ```
 
-Then, create a transfer between Alice and Bob through Roger:
-```http
-##############
-### Create Transfer ETH
-### Alice
+Then, create a transfer between Alice and Bob through Roger (in [3_transfer](https://github.com/connext/vector/blob/master/modules/server-node/examples/3-transfer.http)):
+```
 POST {{aliceUrl}}/linked-transfer/create
 Content-Type: application/json
 
@@ -125,10 +116,7 @@ Content-Type: application/json
 ```
 
 Lastly, unlock the transfer for Bob to get his funds:
-```http
-##############
-### Resolve Transfer ETH
-### Alice
+```
 POST {{bobUrl}}/linked-transfer/resolve
 Content-Type: application/json
 
