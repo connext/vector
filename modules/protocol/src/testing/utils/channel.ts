@@ -11,15 +11,20 @@ import {
   IVectorChainReader,
   NetworkContext,
 } from "@connext/vector-types";
-import { getRandomChannelSigner, getTestLoggers, expect, MemoryStoreService } from "@connext/vector-utils";
+import {
+  getRandomChannelSigner,
+  getTestLoggers,
+  expect,
+  MemoryStoreService,
+  MemoryLockService,
+  MemoryMessagingService,
+} from "@connext/vector-utils";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
 import { env } from "../env";
 import { chainId, provider } from "../constants";
 import { Vector } from "../../vector";
-import { MemoryLockService } from "../services/lock";
-import { MemoryMessagingService } from "../services/messaging";
 
 import { fundAddress } from "./funding";
 

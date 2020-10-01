@@ -9,6 +9,7 @@ import {
   mkSig,
   expect,
   MemoryStoreService,
+  MemoryMessagingService,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -31,7 +32,6 @@ import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
 
-import { MemoryMessagingService } from "./services/messaging";
 import { env } from "./env";
 
 describe("inbound", () => {
