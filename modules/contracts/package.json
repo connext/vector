@@ -42,6 +42,7 @@
     "@ethersproject/constants": "5.0.4",
     "ethers": "5.0.14",
     "keccak": "3.0.1",
+    "p-queue": "6.6.1",
     "yargs": "16.0.3"
   },
   "devDependencies": {

@@ -5,9 +5,28 @@ import {
   ChannelCommitmentData,
   IEngineStore,
   WithdrawCommitmentJson,
+  StoredTransaction,
+  TransactionReason,
 } from "@connext/vector-types";
+import { providers } from "ethers";
 
 export class MemoryStoreService implements IEngineStore {
+  getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  saveTransactionFailure(error: string, transactionHash: string): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  saveTransactionReceipt(transactionReceipt: providers.TransactionReceipt): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  saveTransactionResponse(
+    channelAddress: string,
+    transactionReason: TransactionReason,
+    response: providers.TransactionResponse,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
   // Map<channelAddress, transferId[]>
   private transfersInChannel: Map<string, string[]> = new Map();
 

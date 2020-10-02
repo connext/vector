@@ -5,10 +5,12 @@ import {
   ChainError,
   Result,
   ERC20Abi,
+  IChainServiceStore,
+  TransactionReason,
 } from "@connext/vector-types";
-import { delay } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Signer, Wallet } from "ethers";
 import { BaseLogger } from "pino";
+import PriorityQueue from "p-queue";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
@@ -16,7 +18,9 @@ import { EthereumChainReader } from "./ethReader";
 
 export class EthereumChainService extends EthereumChainReader implements IVectorChainService {
   private signers: Map<number, Signer> = new Map();
+  private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
   constructor(
+    private readonly store: IChainServiceStore,
     chainProviders: { [chainId: string]: providers.JsonRpcProvider },
     signer: string | Signer,
     log: BaseLogger,
@@ -44,7 +48,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(new ChainError(ChainError.reasons.SenderNotInChannel));
     }
 
-    return this.sendTxAndParseResponse(signer.sendTransaction(minTx));
+    return this.sendTxAndParseResponse(channelState.channelAddress, TransactionReason.withdraw, () =>
+      signer.sendTransaction(minTx),
+    );
   }
 
   public async sendDepositTx(
@@ -89,6 +95,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       if (assetId !== constants.AddressZero) {
         // approve tokens
         const approveRes = await this.approveTokens(
+          channelState.channelAddress,
           channelState.networkContext.channelFactoryAddress,
           sender,
           amount,
@@ -109,14 +116,17 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
       // TODO: fix this
       const tx = await this.sendTxAndParseResponse(
-        channelFactory.createChannelAndDepositA(
-          channelState.alice,
-          channelState.bob,
-          channelState.networkContext.chainId,
-          assetId,
-          amount,
-          { value: amount },
-        ),
+        channelState.channelAddress,
+        TransactionReason.deployWithDepositA,
+        () =>
+          channelFactory.createChannelAndDepositA(
+            channelState.alice,
+            channelState.bob,
+            channelState.networkContext.chainId,
+            assetId,
+            amount,
+            { value: amount },
+          ),
       );
       if (tx.isError) {
         this.log.error(
@@ -165,10 +175,19 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async sendTxAndParseResponse(
-    txFn: Promise<providers.TransactionResponse>,
+    channelAddress: string,
+    reason: TransactionReason,
+    txFn: () => Promise<providers.TransactionResponse>,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    // Perform transaction sending within queue
+    // Try to send transaction
+
+    // Save response
+
+    // Add listener to save receipt / failure
+
     try {
-      const tx = await txFn;
+      const tx = await txFn();
       return Result.ok(tx);
     } catch (e) {
       let error = e;
@@ -180,6 +199,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async approveTokens(
+    channelAddress: string,
     spender: string,
     owner: string,
     amount: string,
@@ -193,7 +213,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     this.log.info({ assetId, channelAddress: spender }, "Approving token");
     const erc20 = new Contract(assetId, ERC20Abi, signer);
-    const checkApprovalRes = await this.sendTxAndParseResponse(erc20.allowance(owner, spender));
+    const checkApprovalRes = await this.sendTxAndParseResponse(channelAddress, TransactionReason.approveTokens, () =>
+      erc20.allowance(owner, spender),
+    );
     if (checkApprovalRes.isError) {
       this.log.error(
         {
@@ -221,7 +243,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       );
       return Result.ok(undefined);
     }
-    const approveRes = await this.sendTxAndParseResponse(erc20.approve(spender, amount));
+    const approveRes = await this.sendTxAndParseResponse(channelAddress, TransactionReason.approveTokens, () =>
+      erc20.approve(spender, amount),
+    );
     if (approveRes.isError) {
       this.log.error(
         {
@@ -254,6 +278,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       this.log.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
       const approveRes = await this.approveTokens(
         channelState.channelAddress,
+        channelState.channelAddress,
         channelState.alice,
         amount,
         assetId,
@@ -275,9 +300,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         await approveTx.wait();
       }
       this.log.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
-      return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount));
+      return this.sendTxAndParseResponse(channelState.channelAddress, TransactionReason.depositA, () =>
+        vectorChannel.depositA(assetId, amount),
+      );
     }
-    return this.sendTxAndParseResponse(vectorChannel.depositA(assetId, amount, { value: amount }));
+    return this.sendTxAndParseResponse(channelState.channelAddress, TransactionReason.depositA, () =>
+      vectorChannel.depositA(assetId, amount, { value: amount }),
+    );
   }
 
   private async sendDepositBTx(
@@ -291,26 +320,19 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     if (assetId === constants.AddressZero) {
-      return this.sendTx(
-        {
+      return this.sendTxAndParseResponse(channelState.channelAddress, TransactionReason.depositB, () =>
+        signer.sendTransaction({
           data: "0x",
           to: channelState.channelAddress,
           value: BigNumber.from(amount),
-        },
-        channelState.networkContext.chainId,
+          chainId: channelState.networkContext.chainId,
+        }),
       );
     } else {
       const erc20 = new Contract(channelState.networkContext.channelFactoryAddress, ERC20Abi, signer);
-      return this.sendTxAndParseResponse(erc20.transfer(channelState.channelAddress, amount));
+      return this.sendTxAndParseResponse(channelState.channelAddress, TransactionReason.depositB, () =>
+        erc20.transfer(channelState.channelAddress, amount),
+      );
     }
-  }
-
-  async sendTx(minTx: MinimalTransaction, chainId: number): Promise<Result<providers.TransactionResponse, ChainError>> {
-    const signer = this.signers.get(chainId);
-    if (!signer?._isSigner) {
-      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
-    }
-
-    return this.sendTxAndParseResponse(signer.sendTransaction(minTx));
   }
 }
