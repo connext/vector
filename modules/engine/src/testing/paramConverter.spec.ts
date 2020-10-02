@@ -10,6 +10,7 @@ import {
   HashlockTransferResolverEncoding,
   HashlockTransferStateEncoding,
   ResolveTransferParams,
+  Result,
   WithdrawResolverEncoding,
   WithdrawStateEncoding,
 } from "@connext/vector-types";
@@ -23,8 +24,9 @@ import {
   mkAddress,
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import { WithdrawCommitment } from "@connext/vector-contracts";
-import { BigNumber } from "ethers";
+import Sinon from "sinon";
+import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts";
+import { BigNumber, providers } from "ethers";
 
 import { InvalidTransferType } from "../errors";
 import {
@@ -48,6 +50,8 @@ describe("ParamConverter", () => {
       HashlockTransferDefinition: env.contractAddresses[chainId].HashlockTransfer.address,
     },
   };
+  const chainReader = Sinon.createStubInstance(VectorChainReader);
+  chainReader["getBlockNumber"].resolves(Result.ok<number>(110));
 
   describe("convertConditionalTransferParams", () => {
     const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
@@ -70,6 +74,7 @@ describe("ParamConverter", () => {
     };
 
     it("should work for A", async () => {
+      console.log(`Block number: ${await chainReader.getBlockNumber(chainId)}`);
       const params = generateParams();
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
@@ -79,11 +84,8 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret: CreateTransferParams = convertConditionalTransferParams(
-        params,
-        signerA,
-        channelState,
-        chainAddresses,
+      const ret: CreateTransferParams = (
+        await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
@@ -96,6 +98,7 @@ describe("ParamConverter", () => {
             to: [signerA.address, signerB.address],
           },
           lockHash: params.details.lockHash,
+          expiry: "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
@@ -116,6 +119,7 @@ describe("ParamConverter", () => {
 
     it("should work for B", async () => {
       const params = generateParams();
+      params.details.timelock = "100";
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
@@ -124,11 +128,8 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret: CreateTransferParams = convertConditionalTransferParams(
-        params,
-        signerB,
-        channelState,
-        chainAddresses,
+      const ret: CreateTransferParams = (
+        await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
@@ -141,6 +142,9 @@ describe("ParamConverter", () => {
             to: [signerB.address, signerA.address],
           },
           lockHash: params.details.lockHash,
+          expiry: BigNumber.from(await chainReader.getBlockNumber(chainId))
+            .add(params.details.timelock)
+            .toString(),
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
@@ -171,7 +175,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = convertConditionalTransferParams(params, signerA, channelState, chainAddresses);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses);
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
     });

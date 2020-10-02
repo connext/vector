@@ -19,18 +19,20 @@ import {
   IChannelSigner,
   ChainAddresses,
   RouterSchemas,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
 import { keccak256 } from "ethers/lib/utils";
 
-export function convertConditionalTransferParams(
+export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
   signer: IChannelSigner,
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
-): Result<CreateTransferParams, InvalidTransferType> {
+  chainReader?: IVectorChainReader,
+): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const { channelAddress, amount, assetId, recipient, details, timeout, meta: providedMeta } = params;
 
   const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
@@ -61,6 +63,11 @@ export function convertConditionalTransferParams(
   let encodings: string[];
 
   if (params.conditionType === ConditionalTransferType.HashlockTransfer) {
+    const blockNumberRes = await chainReader!.getBlockNumber(channel.networkContext.chainId);
+    if (blockNumberRes.isError) {
+      return Result.fail(new InvalidTransferType(blockNumberRes.getError()!.message));
+    }
+    const blockNumber = blockNumberRes.getValue();
     transferDefinition = chainAddresses[channel.networkContext.chainId].HashlockTransferDefinition;
     transferInitialState = {
       balance: {
@@ -68,6 +75,11 @@ export function convertConditionalTransferParams(
         to: [signer.address, channelCounterparty],
       },
       lockHash: details.lockHash,
+      expiry: details.timelock
+        ? BigNumber.from(blockNumber)
+            .add(details.timelock)
+            .toString()
+        : "0",
     };
     encodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   } else {
