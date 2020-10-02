@@ -76,6 +76,7 @@ const HashlockTransferCreateDetailsSchema = Type.Object({
   conditionType: Type.Literal(TransferName.HashlockTransfer),
   details: Type.Object({
     lockHash: TBytes32,
+    timelock: Type.Optional(TIntegerString),
   }),
 });
 

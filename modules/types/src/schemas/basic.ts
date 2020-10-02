@@ -47,6 +47,7 @@ export const TNetworkContext = Type.Object({
 export const HashlockTransferStateSchema = Type.Object({
   balance: TBalance,
   lockHash: TBytes32,
+  expiry: TIntegerString,
 });
 export const HashlockTransferResolverSchema = Type.Object({
   preImage: TBytes32,
