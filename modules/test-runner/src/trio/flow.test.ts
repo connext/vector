@@ -54,7 +54,7 @@ describe.only(testName, () => {
     await tx.wait();
   });
 
-  it.skip("roger should setup channels with carol and dave", async () => {
+  it("roger should setup channels with carol and dave", async () => {
     let channelRes = await roger.setup({
       chainId,
       counterpartyIdentifier: carol.publicIdentifier,
@@ -127,7 +127,7 @@ describe.only(testName, () => {
         EngineEvents.CONDITIONAL_TRANSFER_CREATED,
         async data => {
           paymentsReceived += 1;
-          console.log(`Carol received transfer: ${data.transfer.meta?.routingId} NUM_PAYMENTS: ${paymentsReceived}`);
+          logger.info(`Carol received transfer: ${data.transfer.meta?.routingId} NUM_PAYMENTS: ${paymentsReceived}`);
           if (paymentsReceived > NUM_PAYMENTS) {
             resolve();
           }
@@ -146,7 +146,7 @@ describe.only(testName, () => {
 
           // send transfer back
           const newPreImage = getRandomBytes32();
-          const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
+          const linkedHash = utils.soliditySha256(["bytes32"], [newPreImage]);
           const newRoutingId = getRandomBytes32();
           preImages[newRoutingId] = newPreImage;
 
@@ -164,7 +164,7 @@ describe.only(testName, () => {
             recipient: dave.publicIdentifier,
           });
           expect(transferRes.getError()).to.not.be.ok;
-          console.log(`Carol sent transfer to Dave: ${newRoutingId}`);
+          logger.info(`Carol sent transfer to Dave: ${newRoutingId}`);
         },
         data => data.transfer.initiator !== carol.signerAddress,
       );
@@ -172,7 +172,7 @@ describe.only(testName, () => {
       await dave.on(
         EngineEvents.CONDITIONAL_TRANSFER_CREATED,
         async data => {
-          console.log(`Dave received transfer: ${data.transfer.meta?.routingId}`);
+          logger.info(`Dave received transfer: ${data.transfer.meta?.routingId}`);
           // resolve transfer
           const routingId = (data.transfer.meta as RouterSchemas.RouterMeta).routingId;
           const preImage = preImages[routingId];
@@ -184,12 +184,11 @@ describe.only(testName, () => {
             },
             transferId: data.transfer.transferId,
           });
-          await dave.getStateChannel({ channelAddress: daveChannel.channelAddress });
           await delay(5000);
 
           // send transfer back
           const newPreImage = getRandomBytes32();
-          const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
+          const linkedHash = utils.soliditySha256(["bytes32"], [newPreImage]);
           const newRoutingId = getRandomBytes32();
           preImages[newRoutingId] = newPreImage;
 
@@ -207,7 +206,7 @@ describe.only(testName, () => {
             recipient: carol.publicIdentifier,
           });
           expect(transferRes.getError()).to.not.be.ok;
-          console.log(`Dave sent transfer to Carol: ${newRoutingId}`);
+          logger.info(`Dave sent transfer to Carol: ${newRoutingId}`);
         },
         data => data.transfer.initiator !== dave.signerAddress,
       );
