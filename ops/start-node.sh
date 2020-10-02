@@ -23,14 +23,15 @@ fi
 function echoJson { jq '.'; }
 function mergeJson { jq -s '.[0] + .[1]'; }
 function fromAddressBook {
-  jq '[
-    map_values(map_values(.address)) | map_values(
+  jq '
+    map_values(
+      map_values(.address) |
       to_entries |
       map(.key = "\(.key)Address") |
       map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
       from_entries
     )
-  ]';
+  ';
 }
 
 default_config="`cat $root/default-config.json`" # | tr -d '\n\r'`"
