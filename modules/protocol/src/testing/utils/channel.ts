@@ -87,6 +87,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
     } as NetworkContext,
   });
+  console.log("setup error", ret.getError());
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;
   // Verify stored channel
@@ -116,6 +117,7 @@ export const depositInChannel = async (
       assetId,
       channelAddress,
     });
+    console.log("deposit error", ret.getError());
     expect(ret.getError()).to.be.undefined;
     return ret.getValue();
   }
@@ -225,6 +227,7 @@ export const depositInChannel = async (
     assetId,
     channelAddress,
   });
+  console.log("deposit error", ret.getError());
   expect(ret.getError()).to.be.undefined;
   const postDeposit = ret.getValue()!;
 

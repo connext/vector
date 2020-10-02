@@ -149,7 +149,7 @@ describe("utils", () => {
     }
   });
 
-  describe("validateChannelUpdateSignatures", () => {
+  describe.only("validateChannelUpdateSignatures", () => {
     const aliceSigner = getRandomChannelSigner();
     const bobSigner = getRandomChannelSigner();
     const wrongSigner = getRandomChannelSigner();
@@ -179,19 +179,13 @@ describe("utils", () => {
         name: "should fail if there are not at the number of required sigs included",
         updateSignatures: [undefined, "bobSig"],
         requiredSigners: "both",
-        expected: "Missing alice or bobs signature, both required",
+        expected: "Expected alice + bob",
       },
       {
         name: "should fail if any of the signatures are invalid",
         updateSignatures: [undefined, "wrongSig"],
         requiredSigners: "alice",
-        expected: "Missing alices signature",
-      },
-      {
-        name: "should fail if the signatures are not sorted correctly",
-        updateSignatures: ["bobSig", "aliceSig"],
-        requiredSigners: "both",
-        expected: "expected",
+        expected: "Expected alice",
       },
     ];
 
@@ -221,9 +215,11 @@ describe("utils", () => {
         );
 
         if (expected) {
-          expect(ret).includes(expected);
+          expect(ret.isError).to.be.true;
+          expect(ret.getError().message).includes(expected);
         } else {
-          expect(ret).to.be.undefined;
+          expect(ret.isError).to.be.false;
+          expect(ret.getValue()).to.be.undefined;
         }
       });
     }
@@ -231,8 +227,6 @@ describe("utils", () => {
 
   describe("reconcileDeposit", () => {
     // FIXME: THESE ARE BLOCKING TESTS!
-    // TODO: do we have to test eth v. tokens? seems more relevant in the
-    // chain service than in the reconcileDeposit
     it.skip("should fail if it cannot get the onchain balance", () => {});
     it.skip("should fail if it cannot get the latest deposit a", () => {});
     it.skip("should work if the offchain latest nonce is less than the onchain latest nonce", () => {});

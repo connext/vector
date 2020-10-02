@@ -155,12 +155,12 @@ export async function outbound(
     counterpartyUpdate.bobSignature,
     "both",
   );
-  if (sigRes) {
+  if (sigRes.isError) {
     const error = new OutboundChannelUpdateError(
       OutboundChannelUpdateError.reasons.BadSignatures,
       params,
       previousState,
-      { error: sigRes },
+      { error: sigRes.getError().message },
     );
     logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
@@ -465,8 +465,6 @@ const syncStateAndRecreateUpdate = async (
   // Update successfully validated and applied to channel, now
   // regenerate the update to send to the counterparty from the
   // given parameters
-  // FIXME: generateBaseUpdate will fail when you are creating updates as
-  // an update responder
   const generateRes = await generateUpdate(
     attemptedParams,
     syncedChannel,

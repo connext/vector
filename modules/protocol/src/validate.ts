@@ -143,7 +143,7 @@ export async function validateOutbound<T extends UpdateType = any>(
         });
       }
 
-      // TODO: Is there anything to validate on the network context here?
+      // TODO: https://github.com/connext/vector/issues/51
       break;
     }
     case UpdateType.deposit: {
@@ -173,14 +173,12 @@ export async function validateOutbound<T extends UpdateType = any>(
       // to create the transfer
 
       // Ensure the encodings will work properly for the state
-      // TODO: can we assert the resolver encodings in a similar way?
+      // TODO: https://github.com/connext/vector/issues/51
 
       // Ensure the timeout is above the minimum
 
       // Ensure the `balance` in the transfer initial state is okay
       // (valid addresses, valid amounts)
-      // TODO: any other common properties that can be verified about
-      // the transfer state at this level
       break;
     }
     case UpdateType.resolve: {
@@ -208,8 +206,7 @@ export async function validateOutbound<T extends UpdateType = any>(
       }
 
       // Transfer resolver should match stored resolver encoding
-      // TODO: no way to assert the correctness of the resolver
-      // encoding before this!
+      // NOTE: resolver encoding must be validated on create
 
       // Everything else is generated from chain, or pulled from
       // already validated items within the store
@@ -285,10 +282,10 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     validUpdate.bobSignature,
     signer.address === state.bob ? "alice" : "bob",
   );
-  if (sigRes) {
+  if (sigRes.isError) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, validUpdate, nextState, {
-        error: sigRes,
+        error: sigRes.getError().message,
       }),
     );
   }
@@ -383,9 +380,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
 
       // Ensure the timeout is reasonable
 
-      // TODO: There is no way to validate the network context,
-      // this should either be implemented in the protocol consumer
-      // or within the chain service
+      // TODO: https://github.com/connext/vector/issues/51
       break;
     }
 
@@ -417,7 +412,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       // proposed transfer for the appropriate asset
 
       // Ensure the transferEncoding is correct for the state
-      // TODO: no way to verify resolver encodings!
+      // TODO: https://github.com/connext/vector/issues/51
 
       // Update the active transfers
 
