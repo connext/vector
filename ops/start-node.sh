@@ -19,11 +19,6 @@ then echo "A $stack stack is already running" && exit;
 else echo; echo "Preparing to launch $stack stack"
 fi
 
-if [[ -f .env ]]
-then source .env
-fi
-VECTOR_ENV="${VECTOR_ENV:-dev}"
-
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
 function echoJson { jq '.'; }
 function mergeJson { jq -s '.[0] + .[1]'; }
@@ -37,16 +32,21 @@ config="`echo $default_config $override_config | mergeJson`"
 function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
 
 admin_token="`getConfig adminToken`"
-domain_name="`getConfig domainName`"
 auth_url="`getConfig authUrl`"
-public_port="`getConfig port`"
 chain_providers="`getConfig chainProviders`"
+domain_name="`getConfig domainName`"
+production="`getConfig production`"
+public_port="`getConfig port`"
+
+if [[ "$production" == "true" ]]
+then VECTOR_ENV="prod"
+fi
 
 ####################
 # Misc Config
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$production" == "prod" ]]
 then
   if [[ -n "`git tag --points-at HEAD | grep "vector-" | head -n 1`" ]]
   then version="`cat package.json | grep '"version":' | head -n 1 | cut -d '"' -f 4`"
@@ -83,10 +83,12 @@ then
 
 else
   echo "Connecting to external global services: auth=$auth_url | "
+  secrets_header="secrets:"
   mnemonic_secret="${project}_mnemonic"
   eth_mnemonic_file="/run/secrets/$mnemonic_secret"
-  mnemonic_secret_entry="$db_secret:
-    external: true"
+  mnemonic_secret_entry="  $db_secret:
+    external: true
+"
   if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
   then bash $root/ops/save-secret.sh $db_secret
   fi
@@ -107,14 +109,19 @@ mkdir -p $snapshots_dir
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
+  secrets_header="secrets:"
+  db_secret="${project}_database"
+  pg_password_file="/run/secrets/$db_secret"
+  db_secret_entry="  $db_secret:
+    external: true
+"
   database_image="image: '$database_image'
     volumes:
       - 'database:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'"
-  db_secret="${project}_database"
-  pg_password_file="/run/secrets/$db_secret"
-  db_secret_entry="$db_secret:
-    external: true"
+      - '$snapshots_dir:/root/snapshots'
+    secrets:
+      - '$db_secret'"
+  
   if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
   then
     bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
@@ -146,6 +153,20 @@ else
     ports:
       - '$node_port:$node_port'"
   echo "$stack.node will be exposed on *:$node_port"
+fi
+
+if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
+then
+  node_image="$node_image
+    secrets:"
+  if [[ -n "$db_secret" ]]
+  then node_image="$node_image
+      - '$db_secret'"
+  fi
+  if [[ -n "$mnemonic_secret" ]]
+  then node_image="$node_image
+      - '$mnemonic_secret'"
+  fi
 fi
 
 ####################
@@ -186,9 +207,8 @@ networks:
   $project:
     external: true
 
-secrets:
-  $db_secret_entry
-  $mnemonic_secret_entry
+$secrets_header
+$db_secret_entry$mnemonic_secret_entry
 
 volumes:
   certs:
@@ -209,10 +229,8 @@ services:
   node:
     $common
     $node_image
-    ports:
-      - '$node_port:$node_port'
     environment:
-      VECTOR_CONFIG: '$config'
+      VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -223,9 +241,6 @@ services:
       VECTOR_PG_USERNAME: '$pg_user'
       VECTOR_PORT: '$node_port'
       VECTOR_ENV: '$VECTOR_ENV'
-    secrets:
-      - '$db_secret'
-      - '$mnemonic_secret'
 
   database:
     $common
@@ -239,14 +254,12 @@ services:
       POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$pg_user'
-    secrets:
-      - '$db_secret'
 
 EOF
 
 docker stack deploy -c $docker_compose $stack
 
-echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
+echo "The $stack stack has been deployed, waiting for the $public_url to start responding.."
 timeout=$(expr `date +%s` + 60)
 while true
 do
@@ -254,10 +267,9 @@ do
   if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
   then
     if [[ "`date +%s`" -gt "$timeout" ]]
-    then echo "Timed out waiting for proxy to respond.." && exit
+    then echo "Timed out waiting for $public_url to respond.." && exit
     else sleep 2
     fi
   else echo "Good Morning!" && exit;
   fi
 done
-

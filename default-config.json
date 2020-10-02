@@ -19,6 +19,7 @@
     }
   ],
   "authUrl": "http://auth:5040",
+  "production": false,
   "logLevel": "info",
   "chainAddresses": {
     "1337": {

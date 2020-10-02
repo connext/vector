@@ -1,4 +1,5 @@
 {
   "adminToken": "unspanktheunbanked",
-  "domainName": ""
+  "domainName": "",
+  "production": true
 }
