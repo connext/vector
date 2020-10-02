@@ -11,15 +11,15 @@ const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
-  let tony: IVectorProtocol;
+  let carol: IVectorProtocol;
 
   beforeEach(async () => {
-    [alice, bob, tony] = await createVectorInstances(true, 3);
+    [alice, bob, carol] = await createVectorInstances(true, 3);
 
     log.info({
       alice: alice.publicIdentifier,
       bob: bob.publicIdentifier,
-      tony: tony.publicIdentifier,
+      tony: carol.publicIdentifier,
     });
   });
 
@@ -27,8 +27,8 @@ describe(testName, () => {
     await setupChannel(alice, bob);
   });
 
-  it("should work concurrently", async () => {
-    const concurrentResult = await Promise.all([setupChannel(alice, bob), setupChannel(alice, tony)]);
+  it("should work concurrently for Alice + Bob and Alice + Carol channel", async () => {
+    const concurrentResult = await Promise.all([setupChannel(alice, bob), setupChannel(alice, carol)]);
     log.info(concurrentResult);
   });
 });

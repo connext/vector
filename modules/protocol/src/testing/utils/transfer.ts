@@ -55,7 +55,6 @@ export const createTransfer = async (
   };
 
   const ret = await payor.create(params);
-  console.log(ret.getError());
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
   expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);

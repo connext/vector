@@ -20,8 +20,8 @@ describe(testName, () => {
         amount: ["14", 0],
       },
     ]);
-    alice = setup.alice;
-    bob = setup.bob;
+    alice = setup.alice.protocol;
+    bob = setup.bob.protocol;
     channelAddress = setup.channel.channelAddress;
 
     log.info({

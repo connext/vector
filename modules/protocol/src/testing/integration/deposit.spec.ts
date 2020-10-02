@@ -19,11 +19,11 @@ describe(testName, () => {
 
   beforeEach(async () => {
     const setup = await getSetupChannel(testName);
-    alice = setup.alice;
-    bob = setup.bob;
+    alice = setup.alice.protocol;
+    bob = setup.bob.protocol;
     preDepositChannel = setup.channel;
-    aliceSigner = setup.aliceSigner;
-    bobSigner = setup.bobSigner;
+    aliceSigner = setup.alice.signer;
+    bobSigner = setup.bob.signer;
 
     log.info({
       alice: alice.publicIdentifier,
