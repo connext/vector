@@ -22,13 +22,22 @@ fi
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
 function echoJson { jq '.'; }
 function mergeJson { jq -s '.[0] + .[1]'; }
-function fromAddressBook { jq 'map_values(map_values(.address))'; }
+function fromAddressBook {
+  jq '[
+    map_values(map_values(.address)) | map_values(
+      to_entries |
+      map(.key = "\(.key)Address") |
+      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
+      from_entries
+    )
+  ]';
+}
 
 default_config="`cat $root/default-config.json`" # | tr -d '\n\r'`"
-function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
-
 override_config="`cat $root/config.json`" # | tr -d '\n\r'`"
 config="`echo $default_config $override_config | mergeJson`"
+
+function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
 function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
 
 admin_token="`getConfig adminToken`"
@@ -40,6 +49,7 @@ public_port="`getConfig port`"
 
 if [[ "$production" == "true" ]]
 then VECTOR_ENV="prod"
+else VECTOR_ENV="dev"
 fi
 
 ####################
