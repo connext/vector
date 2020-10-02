@@ -19,7 +19,6 @@
     "@connext/vector-utils": "0.0.1",
     "@sinclair/typebox": "0.10.1",
     "ajv": "6.12.5",
-    "async-mutex": "0.2.4",
     "ethers": "5.0.14",
     "evt": "1.8.10",
     "merkletreejs": "0.2.9",

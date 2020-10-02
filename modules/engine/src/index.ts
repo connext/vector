@@ -19,6 +19,7 @@ import {
   IVectorChainService,
   WITHDRAWAL_RECONCILED_EVENT,
   ChannelRpcMethods,
+  IExternalValidation,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -63,6 +64,7 @@ export class VectorEngine implements IVectorEngine {
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
+    validationService?: IExternalValidation,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
       messaging,
@@ -71,6 +73,7 @@ export class VectorEngine implements IVectorEngine {
       signer,
       chainService,
       logger.child({ module: "VectorProtocol" }),
+      validationService,
     );
     const engine = new VectorEngine(
       signer,

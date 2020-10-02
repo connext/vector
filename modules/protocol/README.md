@@ -8,7 +8,6 @@ Contents:
 - [Core Principles](https://github.com/connext/vector/tree/master/modules/protocol#core-principles)
 - [Sync Protocol](https://github.com/connext/vector/tree/master/modules/protocol#sync)
 - [Update Types](https://github.com/connext/vector/tree/master/modules/protocol#update-types)
-- [RPC Interface Reference] // TODO
 
 ## Developing and Running Tests
 

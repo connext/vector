@@ -218,7 +218,7 @@ describe("store", () => {
     expect(all).to.deep.eq(subs);
   });
 
-  it.only("should get multiple transfers by routingId", async () => {
+  it("should get multiple transfers by routingId", async () => {
     const transfer1 = createTestFullLinkedTransferState({
       transferId: mkHash("0x111"),
       meta: { routingId: mkBytes32("0xddd") },

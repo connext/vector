@@ -11,15 +11,20 @@ import {
   IVectorChainReader,
   NetworkContext,
 } from "@connext/vector-types";
-import { getRandomChannelSigner, getTestLoggers, expect, MemoryStoreService } from "@connext/vector-utils";
+import {
+  getRandomChannelSigner,
+  getTestLoggers,
+  expect,
+  MemoryStoreService,
+  MemoryLockService,
+  MemoryMessagingService,
+} from "@connext/vector-utils";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
 import { env } from "../env";
 import { chainId, provider } from "../constants";
 import { Vector } from "../../vector";
-import { MemoryLockService } from "../services/lock";
-import { MemoryMessagingService } from "../services/messaging";
 
 import { fundAddress } from "./funding";
 
@@ -82,6 +87,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
     } as NetworkContext,
   });
+  console.log("setup error", ret.getError());
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue()!;
   // Verify stored channel
@@ -111,6 +117,7 @@ export const depositInChannel = async (
       assetId,
       channelAddress,
     });
+    console.log("deposit error", ret.getError());
     expect(ret.getError()).to.be.undefined;
     return ret.getValue();
   }
@@ -220,6 +227,7 @@ export const depositInChannel = async (
     assetId,
     channelAddress,
   });
+  console.log("deposit error", ret.getError());
   expect(ret.getError()).to.be.undefined;
   const postDeposit = ret.getValue()!;
 
@@ -234,17 +242,6 @@ export const depositInChannel = async (
       BigNumber.from(postDeposit.processedDepositsB[assetIdx]),
     );
   }
-  // Make sure the onchain balance of the channel is equal to the
-  // sum of the locked balance + channel balance
-  // TODO does this even make sense to do anymore?
-  // const totalDeposited = BigNumber.from(channel!.processedDepositsA[assetIdx]).add(
-  //   channel!.processedDepositsB[assetIdx],
-  // );
-  // const onchainTotal =
-  //   assetId === constants.AddressZero
-  //     ? await depositorSigner.provider!.getBalance(channelAddress)
-  //     : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-  // expect(onchainTotal).to.be.eq(channelTotal);
   return postDeposit;
 };
 

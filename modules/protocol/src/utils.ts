@@ -59,23 +59,30 @@ export async function generateSignedChannelCommitment(
   return signed;
 }
 
-// TODO: make a result type?
 export async function validateChannelUpdateSignatures(
   state: FullChannelState,
   aliceSignature?: string,
   bobSignature?: string,
   requiredSigners: "alice" | "bob" | "both" = "both",
-): Promise<string | undefined> {
+): Promise<Result<void | Error>> {
   // Generate the commitment
   const { networkContext, ...core } = state;
-  const hash = hashChannelCommitment({
-    chainId: networkContext.chainId,
-    state: core,
-    channelFactoryAddress: networkContext.channelFactoryAddress,
-  });
+  let hash;
+  try {
+    hash = hashChannelCommitment({
+      chainId: networkContext.chainId,
+      state: core,
+      channelFactoryAddress: networkContext.channelFactoryAddress,
+    });
+  } catch (e) {
+    return Result.fail(new Error("Failed to generate channel commitment hash"));
+  }
 
   // Create a recovery helper to catch errors
-  const tryRecovery = async (sig: string): Promise<string> => {
+  const tryRecovery = async (sig?: string): Promise<string> => {
+    if (!sig) {
+      return "No signature provided";
+    }
     let recovered: string;
     try {
       recovered = await recoverAddressFromChannelMessage(hash, sig);
@@ -85,48 +92,42 @@ export async function validateChannelUpdateSignatures(
     return recovered;
   };
 
-  // Switch on the required signers to return the most descriptive
-  // messages from utility function
-  switch (requiredSigners) {
-    case "both": {
-      if (!aliceSignature || !bobSignature) {
-        return `Missing alice or bobs signature, both required`;
-      }
-      const ralice = await tryRecovery(aliceSignature);
-      const rbob = await tryRecovery(bobSignature);
-      const msgs: string[] = [];
-      if (ralice !== state.alice) {
-        msgs.push(`Recovered ${ralice}, expected Alice: ${state.alice}`);
-      }
-      if (rbob !== state.bob) {
-        msgs.push(`Recovered ${rbob}, expected Bob: ${state.bob}`);
-      }
-      return msgs.length === 0 ? undefined : msgs.toString();
-    }
-    case "alice": {
-      if (!aliceSignature) {
-        return `Missing alices signature`;
-      }
-      const recovered = await tryRecovery(aliceSignature);
-      if (recovered !== state.alice) {
-        return `Recovered ${recovered}, expected Alice: ${state.alice}`;
-      }
-      return undefined;
-    }
-    case "bob": {
-      if (!bobSignature) {
-        return `Missing bobs signature`;
-      }
-      const recovered = await tryRecovery(bobSignature);
-      if (recovered !== state.bob) {
-        return `Recovered ${recovered}, expected Bob: ${state.bob}`;
-      }
-      return undefined;
-    }
-    default: {
-      return `Unrecognized requirement: ${requiredSigners}`;
-    }
+  const [rAlice, rBob] = await Promise.all([tryRecovery(aliceSignature), tryRecovery(bobSignature)]);
+
+  const aliceSigned = rAlice === state.alice;
+  const bobSigned = rBob === state.bob;
+
+  const bobNeeded = requiredSigners === "bob" || requiredSigners === "both";
+  const aliceNeeded = requiredSigners === "alice" || requiredSigners === "both";
+
+  // Check if signers are required and valid
+  if (aliceNeeded && bobNeeded && aliceSigned && bobSigned) {
+    return Result.ok(undefined);
   }
+
+  // Only one signer is required, but if there are two signatures both
+  // should be valid
+  if (aliceNeeded && aliceSigned && !bobSignature && !bobNeeded) {
+    return Result.ok(undefined);
+  }
+
+  if (bobNeeded && bobSigned && !aliceSignature && !aliceNeeded) {
+    return Result.ok(undefined);
+  }
+
+  // Only one is required, but both are provided (and should be valid)
+  if (aliceSignature && aliceSigned && bobSignature && bobSigned) {
+    return Result.ok(undefined);
+  }
+
+  // Construct an explicit error message
+  const prefix = `Expected ${requiredSigners === "both" ? "alice + bob" : requiredSigners} ${
+    aliceNeeded ? state.alice : ""
+  }${bobNeeded ? " + " + state.bob : ""}. Got: `;
+
+  const details = `${aliceNeeded ? "(alice) " + rAlice : ""}${bobNeeded ? "+ (bob) " + rBob : ""}`;
+
+  return Result.fail(new Error(prefix + details));
 }
 
 export const reconcileDeposit = async (
