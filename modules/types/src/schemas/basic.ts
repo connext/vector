@@ -35,8 +35,8 @@ export const TBasicMeta = Type.Optional(Type.Any());
 export const TNetworkContext = Type.Object({
   channelFactoryAddress: TAddress,
   channelMastercopyAddress: TAddress,
-  withdrawDefinition: Type.Optional(TAddress),
-  linkedTransferDefinition: Type.Optional(TAddress),
+  withdrawAddress: Type.Optional(TAddress),
+  linkedTransferAddress: Type.Optional(TAddress),
   chainId: TChainId,
   providerUrl: TUrl,
 });

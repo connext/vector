@@ -110,7 +110,7 @@ describe("Vector", () => {
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
         channelMastercopyAddress: mkAddress("0xeee"),
-        withdrawDefinition: mkAddress("0xdef"),
+        withdrawAddress: mkAddress("0xdef"),
       };
       const validParams = {
         counterpartyIdentifier: mkPublicIdentifier(),

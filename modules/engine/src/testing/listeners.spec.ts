@@ -51,13 +51,13 @@ const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   // Get env constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-  const withdrawDefinition = env.contractAddresses[chainId].Withdraw.address;
+  const withdrawAddress = env.contractAddresses[chainId].Withdraw.address;
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawDefinition,
+      withdrawAddress,
       channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
       channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
-      linkedTransferDefinition: env.contractAddresses[chainId].LinkedTransfer.address,
+      linkedTransferAddress: env.contractAddresses[chainId].LinkedTransfer.address,
     },
   };
 
@@ -166,7 +166,7 @@ describe(testName, () => {
           initialBalance: initialState.balance,
           assetId: commitment.assetId,
           channelAddress: commitment.channelAddress,
-          transferDefinition: withdrawDefinition,
+          transferDefinition: withdrawAddress,
           initialStateHash,
           initiator: initiator.address,
           responder: responder.address,
@@ -204,7 +204,7 @@ describe(testName, () => {
         },
         assetIds: [commitment.assetId],
         networkContext: {
-          withdrawDefinition,
+          withdrawAddress,
           chainId,
         },
       });
@@ -325,7 +325,7 @@ describe(testName, () => {
         },
         assetIds: [commitment.assetId],
         networkContext: {
-          withdrawDefinition,
+          withdrawAddress,
           chainId,
         },
       });

@@ -84,7 +84,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       providerUrl: Object.values(env.chainProviders)[0],
       channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
       channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
-      withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
+      withdrawAddress: env.chainAddresses[chainId].Withdraw.address,
     } as NetworkContext,
   });
   console.log("setup error", ret.getError());

@@ -42,10 +42,10 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawDefinition: env.contractAddresses[chainId].Withdraw.address,
+      withdrawAddress: env.contractAddresses[chainId].Withdraw.address,
       channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
       channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
-      linkedTransferDefinition: env.contractAddresses[chainId].LinkedTransfer.address,
+      linkedTransferAddress: env.contractAddresses[chainId].LinkedTransfer.address,
     },
   };
 
@@ -89,7 +89,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].linkedTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -134,7 +134,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].linkedTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -269,7 +269,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [
@@ -317,7 +317,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [
