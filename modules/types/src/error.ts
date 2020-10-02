@@ -114,6 +114,7 @@ export class OutboundChannelUpdateError extends VectorError {
     SyncFailure: "Failed to sync channel from counterparty update",
     SyncValidationFailed: "Failed to validate update for sync",
     TransferNotFound: "No transfer found in storage",
+    TransferNotActive: "Transfer not found in activeTransfers",
   } as const;
 
   constructor(

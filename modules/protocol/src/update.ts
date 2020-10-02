@@ -232,13 +232,17 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.deposit: {
-      proposedUpdate = await generateDepositUpdate(
+      const depositRes = await generateDepositUpdate(
         state!,
         params as UpdateParams<"deposit">,
         signer,
         chainReader,
         logger,
       );
+      if (depositRes.isError) {
+        return Result.fail(new OutboundChannelUpdateError(depositRes.getError().message as any, params, state));
+      }
+      proposedUpdate = depositRes.getValue();
       break;
     }
     case UpdateType.create: {
@@ -248,7 +252,7 @@ export async function generateUpdate<T extends UpdateType>(
     case UpdateType.resolve: {
       // See note re: resolve in `applyUpdate` for why this has a
       // different return signature
-      const generated = await generateResolveUpdate(
+      const generatedResult = await generateResolveUpdate(
         state!,
         params as UpdateParams<"resolve">,
         signer,
@@ -256,8 +260,12 @@ export async function generateUpdate<T extends UpdateType>(
         chainReader,
         logger,
       );
-      proposedUpdate = generated.update;
-      finalTransferBalance = generated.transferBalance;
+      if (generatedResult.isError) {
+        return Result.fail(new OutboundChannelUpdateError(generatedResult.getError().message as any, params, state));
+      }
+      const { update, transferBalance } = generatedResult.getValue();
+      proposedUpdate = update;
+      finalTransferBalance = transferBalance;
       break;
     }
     default: {
@@ -329,10 +337,6 @@ function generateSetupUpdate(
   const publicIdentifiers = [signer.publicIdentifier, params.details.counterpartyIdentifier];
   const participants: string[] = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
 
-  // TODO: There may have to be a setup signature for the channel
-  // when deploying the multisig. will need to generate that here
-  // (check with heiko)
-
   // Create the channel update from the params
   // Don't use `generateBaseUpdate` for initial update
   const unsigned: ChannelUpdate<"setup"> = {
@@ -360,7 +364,7 @@ async function generateDepositUpdate(
   signer: IChannelSigner,
   chainReader: IVectorChainReader,
   logger: pino.BaseLogger,
-): Promise<ChannelUpdate<"deposit">> {
+): Promise<Result<ChannelUpdate<"deposit">, Error>> {
   logger.debug(params, "Generating deposit update from params");
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
@@ -384,18 +388,20 @@ async function generateDepositUpdate(
   const processedDepositsAOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsA[assetIdx];
   const processedDepositsBOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsB[assetIdx];
 
-  // TODO: dont unwrap, check for error first
-  const { balance, totalDepositedA, totalDepositedB } = (
-    await reconcileDeposit(
-      state.channelAddress,
-      state.networkContext.chainId,
-      existingChannelBalance,
-      processedDepositsAOfAssetId,
-      processedDepositsBOfAssetId,
-      assetId,
-      chainReader,
-    )
-  ).getValue();
+  const reconcileRes = await reconcileDeposit(
+    state.channelAddress,
+    state.networkContext.chainId,
+    existingChannelBalance,
+    processedDepositsAOfAssetId,
+    processedDepositsBOfAssetId,
+    assetId,
+    chainReader,
+  );
+  if (reconcileRes.isError) {
+    return Result.fail(reconcileRes.getEror()!);
+  }
+
+  const { balance, totalDepositedA, totalDepositedB } = reconcileRes.getValue();
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
@@ -405,7 +411,7 @@ async function generateDepositUpdate(
     assetId,
     details: { totalDepositedA, totalDepositedB },
   };
-  return unsigned;
+  return Result.ok(unsigned);
 }
 
 // Generates the transfer creation update based on user input
@@ -486,7 +492,7 @@ async function generateResolveUpdate(
   transfers: FullTransferState[],
   chainService: IVectorChainReader,
   logger: pino.BaseLogger,
-): Promise<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }> {
+): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, Error>> {
   // A transfer resolution update can effect the following
   // channel fields:
   // - balances
@@ -502,7 +508,7 @@ async function generateResolveUpdate(
     "Generating resolve update",
   );
   if (!transferToResolve) {
-    throw new Error(`Could not find transfer for id ${transferId}`);
+    return Result.fail(new Error(OutboundChannelUpdateError.reasons.TransferNotActive));
   }
   const hashes = transfers
     .filter(x => x.transferId !== transferId)
@@ -515,13 +521,12 @@ async function generateResolveUpdate(
   const transferBalanceResult = await chainService.resolve(
     { ...transferToResolve, transferResolver },
     state.networkContext.chainId,
-    //LinkedTransfer.bytecode, // TODO: include bytecode
   );
 
   if (transferBalanceResult.isError) {
-    throw transferBalanceResult.getError()!;
+    return Result.fail(transferBalanceResult.getError());
   }
-  const transferBalance = transferBalanceResult.getValue()!;
+  const transferBalance = transferBalanceResult.getValue();
   logger.info(
     {
       method: "generateResolveUpdate",

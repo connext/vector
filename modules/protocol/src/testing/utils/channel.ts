@@ -242,17 +242,6 @@ export const depositInChannel = async (
       BigNumber.from(postDeposit.processedDepositsB[assetIdx]),
     );
   }
-  // Make sure the onchain balance of the channel is equal to the
-  // sum of the locked balance + channel balance
-  // TODO does this even make sense to do anymore?
-  // const totalDeposited = BigNumber.from(channel!.processedDepositsA[assetIdx]).add(
-  //   channel!.processedDepositsB[assetIdx],
-  // );
-  // const onchainTotal =
-  //   assetId === constants.AddressZero
-  //     ? await depositorSigner.provider!.getBalance(channelAddress)
-  //     : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-  // expect(onchainTotal).to.be.eq(channelTotal);
   return postDeposit;
 };
 
