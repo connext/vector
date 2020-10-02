@@ -18,11 +18,64 @@ This monorepo contains a number of packages hoisted using lerna. Documentation f
 
 Contents:
 
+- [Configuring and Running Vector](#configuring-and-running-vector)
 - [Architecture and Module Breakdown](#architecture-and-module-breakdown)
 - [Quick Start](#quick-start)
 - [Development and Running Tests](#development-and-running-tests)
-- Configuring Vector // TODO
 - Deploying Vector to Production // TODO
+
+## Configuring and Running Vector
+
+**Prerequisites:**
+
+- `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
+- `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
+- `docker`: See the [Docker website](https://www.docker.com/) for installation instructions.
+
+To start, clone & enter the Vector repo:
+
+```bash
+git clone https://github.com/connext/vector.git
+cd vector
+```
+
+To build everything and deploy a Vector node in dev-mode, run the following:
+
+```bash
+make start
+
+# view the node's logs
+bash ops/logs.sh node
+```
+
+That's all! But beware: the first time `make start` is run, it will take a very long time (maybe 10 minutes, depends on your internet speed) but have no fear: downloads will be cached & most build steps won't ever need to be repeated again so subsequent `make start` runs will go much more quickly. Get this started asap & browse the rest of the README while the first `make start` runs.
+
+By default, Vector will launch using two local chains (ganache with chain id `1337` and `1338`) but you can also run a local Vector stack against a public chain (or multiple chains!) such as Rinkeby. To do so, edit the `chainProviders` and `chainAddresses` fields of `config.json` according to the chain you want to support.
+
+Note: this will start a local Connext node pointed at a remote chain, so make sure the mnemonic used to start your node is funded in the appropriate native currencies and supported chain assets. By default, the node starts with the account:
+
+```node
+mnemonic: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
+privateKey: "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3";
+address: "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
+```
+
+To apply updates to `config.json`, you'll need to restart your vector node with `make restart`.
+
+(`make start`/`make restart` are aliases for `make start-node`/`make restart-node`)
+
+Four different Vector stacks are supported:
+ - `global`: standalone messaging service (+ EVMs in dev-mode)
+ - `node`: vector node + database
+ - `router`: vector node + router + database
+ - `duet`: 2x node/db pairs, used to test one-on-one node interactions
+ - `trio`: 2x node/db pairs + 1x node/router/db , used to test node interactions via a routing node.
+
+For any of these stacks, you can manage them with:
+ - `make start-${stack}` eg `make start-router` will start up the router stack.
+ - `make stop-${stack}` stops the stack
+ - `make restart-${stack}` stops the stack if it's running & starts it again
+ - `make test-${stack}` runs unit tests against some stack. It will build & start the stack if that hasn't been done already.
 
 ## Architecture and Module Breakdown
 
