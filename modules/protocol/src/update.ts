@@ -240,7 +240,7 @@ export async function generateUpdate<T extends UpdateType>(
         logger,
       );
       if (depositRes.isError) {
-        return Result.fail(new OutboundChannelUpdateError(depositRes.getError().message as any, params, state));
+        return Result.fail(new OutboundChannelUpdateError(depositRes.getError()!.message as any, params, state));
       }
       proposedUpdate = depositRes.getValue();
       break;
@@ -261,7 +261,7 @@ export async function generateUpdate<T extends UpdateType>(
         logger,
       );
       if (generatedResult.isError) {
-        return Result.fail(new OutboundChannelUpdateError(generatedResult.getError().message as any, params, state));
+        return Result.fail(new OutboundChannelUpdateError(generatedResult.getError()!.message as any, params, state));
       }
       const { update, transferBalance } = generatedResult.getValue();
       proposedUpdate = update;
@@ -398,7 +398,7 @@ async function generateDepositUpdate(
     chainReader,
   );
   if (reconcileRes.isError) {
-    return Result.fail(reconcileRes.getEror()!);
+    return Result.fail(reconcileRes.getError()!);
   }
 
   const { balance, totalDepositedA, totalDepositedB } = reconcileRes.getValue();
@@ -524,7 +524,7 @@ async function generateResolveUpdate(
   );
 
   if (transferBalanceResult.isError) {
-    return Result.fail(transferBalanceResult.getError());
+    return Result.fail(transferBalanceResult.getError()!);
   }
   const transferBalance = transferBalanceResult.getValue();
   logger.info(
@@ -569,7 +569,7 @@ async function generateResolveUpdate(
     },
   };
 
-  return { update: unsigned, transferBalance };
+  return Result.ok({ update: unsigned, transferBalance });
 }
 
 // Holds the logic that is the same between all update types:
