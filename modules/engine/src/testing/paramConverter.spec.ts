@@ -19,8 +19,8 @@ import {
   createTestFullLinkedTransferState,
   getRandomBytes32,
   getRandomChannelSigner,
+  getRandomIdentifier,
   mkAddress,
-  mkHash,
 } from "@connext/vector-utils";
 import { expect } from "chai";
 import { WithdrawCommitment } from "@connext/vector-contracts";
@@ -38,33 +38,33 @@ import { env } from "./env";
 describe("ParamConverter", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
-  const chainAddresses = env.chainAddresses[chainId];
   const signerA = getRandomChannelSigner(providerUrl);
   const signerB = getRandomChannelSigner(providerUrl);
-  const contractAddresses: ChainAddresses = {
+  const chainAddresses: ChainAddresses = {
     [chainId]: {
-      channelFactoryAddress: chainAddresses.ChannelFactory.address,
-      channelMastercopyAddress: chainAddresses.ChannelMastercopy.address,
-      linkedTransferDefinition: chainAddresses.LinkedTransfer.address,
-      withdrawDefinition: chainAddresses.Withdraw.address,
+      withdrawDefinition: env.contractAddresses[chainId].Withdraw.address,
+      channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
+      channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
+      linkedTransferDefinition: env.contractAddresses[chainId].LinkedTransfer.address,
     },
   };
+
   describe("convertConditionalTransferParams", () => {
-    const generateParams = (): EngineParams.ConditionalTransfer => {
+    const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
         amount: "8",
         assetId: mkAddress("0x0"),
-        recipient: mkAddress("0xb"),
+        recipient: bIsRecipient ? signerB.publicIdentifier : getRandomIdentifier(),
         recipientChainId: 1,
         recipientAssetId: mkAddress("0x1"),
         conditionType: ConditionalTransferType.LinkedTransfer,
-        routingId: mkHash("0xtest"),
         details: {
           linkedHash: getRandomBytes32(),
         },
         meta: {
           message: "test",
+          routingId: getRandomBytes32(),
         },
       };
     };
@@ -74,17 +74,22 @@ describe("ParamConverter", () => {
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
-          ...contractAddresses[chainId],
+          ...chainAddresses[chainId],
           chainId,
           providerUrl,
         },
       });
-      const ret: CreateTransferParams = convertConditionalTransferParams(params, signerA, channelState).getValue();
+      const ret: CreateTransferParams = convertConditionalTransferParams(
+        params,
+        signerA,
+        channelState,
+        chainAddresses,
+      ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -95,7 +100,8 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: {
-          routingId: params.routingId,
+          requireOnline: false,
+          routingId: params.meta.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -113,17 +119,22 @@ describe("ParamConverter", () => {
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
-          ...contractAddresses[chainId],
+          ...chainAddresses[chainId],
           chainId,
           providerUrl,
         },
       });
-      const ret: CreateTransferParams = convertConditionalTransferParams(params, signerB, channelState).getValue();
+      const ret: CreateTransferParams = convertConditionalTransferParams(
+        params,
+        signerB,
+        channelState,
+        chainAddresses,
+      ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -134,7 +145,8 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
         meta: {
-          routingId: params.routingId,
+          requireOnline: false,
+          routingId: params.meta.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -154,12 +166,12 @@ describe("ParamConverter", () => {
       const channelState: FullChannelState = createTestChannelState("setup", {
         channelAddress: params.channelAddress,
         networkContext: {
-          ...contractAddresses[chainId],
+          ...chainAddresses[chainId],
           chainId,
           providerUrl,
         },
       });
-      const ret = convertConditionalTransferParams(params, signerA, channelState);
+      const ret = convertConditionalTransferParams(params, signerA, channelState, chainAddresses);
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
     });
@@ -170,7 +182,7 @@ describe("ParamConverter", () => {
       return {
         channelAddress: mkAddress("0xa"),
         conditionType: ConditionalTransferType.LinkedTransfer,
-        routingId: mkHash("0xtest"),
+        transferId: getRandomBytes32(),
         details: {
           preImage: getRandomBytes32(),
         } as LinkedTransferResolver,
@@ -193,8 +205,7 @@ describe("ParamConverter", () => {
           preImage: params.details.preImage,
         },
         meta: {
-          routingId: params.routingId,
-          meta: params.meta,
+          details: params.meta,
         },
       });
     });
@@ -226,7 +237,8 @@ describe("ParamConverter", () => {
     const generateChainData = (params, channel) => {
       const commitment = new WithdrawCommitment(
         channel.channelAddress,
-        channel.participants,
+        channel.alice,
+        channel.bob,
         params.recipient,
         params.assetId,
         params.amount,
@@ -240,7 +252,7 @@ describe("ParamConverter", () => {
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
-          ...contractAddresses[chainId],
+          ...chainAddresses[chainId],
           chainId,
           providerUrl,
         },
@@ -248,14 +260,16 @@ describe("ParamConverter", () => {
       const withdrawHash = generateChainData(params, channelState);
       const signature = await signerA.signMessage(withdrawHash);
 
-      const ret: CreateTransferParams = (await convertWithdrawParams(params, signerA, channelState)).getValue();
+      const ret: CreateTransferParams = (
+        await convertWithdrawParams(params, signerA, channelState, chainAddresses)
+      ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: BigNumber.from(params.amount)
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawDefinition,
         transferInitialState: {
           balance: {
             amount: [
@@ -264,10 +278,11 @@ describe("ParamConverter", () => {
                 .toString(),
               "0",
             ],
-            to: [params.recipient, channelState.participants[1]],
+            to: [params.recipient, channelState.bob],
           },
           initiatorSignature: signature,
-          signers: [signerA.address, signerB.address],
+          initiator: signerA.address,
+          responder: signerB.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
           fee: params.fee ? params.fee : "0",
@@ -285,7 +300,7 @@ describe("ParamConverter", () => {
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
-          ...contractAddresses[chainId],
+          ...chainAddresses[chainId],
           chainId,
           providerUrl,
         },
@@ -293,14 +308,16 @@ describe("ParamConverter", () => {
       const withdrawHash = generateChainData(params, channelState);
       const signature = await signerB.signMessage(withdrawHash);
 
-      const ret: CreateTransferParams = (await convertWithdrawParams(params, signerB, channelState)).getValue();
+      const ret: CreateTransferParams = (
+        await convertWithdrawParams(params, signerB, channelState, chainAddresses)
+      ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: BigNumber.from(params.amount)
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: channelState.networkContext.withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawDefinition,
         transferInitialState: {
           balance: {
             amount: [
@@ -309,10 +326,11 @@ describe("ParamConverter", () => {
                 .toString(),
               "0",
             ],
-            to: [params.recipient, channelState.participants[0]],
+            to: [params.recipient, channelState.alice],
           },
           initiatorSignature: signature,
-          signers: [signerB.address, signerA.address],
+          responder: signerA.address,
+          initiator: signerB.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
           fee: params.fee ? params.fee : "0",

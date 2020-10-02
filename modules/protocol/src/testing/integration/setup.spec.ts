@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
+import { getTestLoggers } from "@connext/vector-utils";
 import { IVectorProtocol } from "@connext/vector-types";
 
-import { createVectorInstances, setupChannel, getTestLoggers, expect } from "../utils";
+import { createVectorInstances, setupChannel } from "../utils";
+import { env } from "../env";
 
 const testName = "Setup Integrations";
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel);
 
 describe(testName, () => {
   let alice: IVectorProtocol;
@@ -26,10 +28,7 @@ describe(testName, () => {
   });
 
   it("should work concurrently", async () => {
-    const concurrentResult = await Promise.all([
-      setupChannel(alice, bob),
-      setupChannel(alice, tony)
-    ]);
-    log.info(concurrentResult)
+    const concurrentResult = await Promise.all([setupChannel(alice, bob), setupChannel(alice, tony)]);
+    log.info(concurrentResult);
   });
 });

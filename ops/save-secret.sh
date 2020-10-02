@@ -4,6 +4,8 @@ set -e
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 
+docker swarm init 2> /dev/null || true
+
 secret_name="${1:-${project}_mnemonic}";
 secret_value="$2"
 

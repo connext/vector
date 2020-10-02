@@ -1,45 +1,80 @@
+import { WithdrawCommitment, VectorChainService } from "@connext/vector-contracts";
 import {
+  Address,
+  ChainAddresses,
   ChannelUpdateEvent,
+  FullTransferState,
   IChannelSigner,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
   Result,
+  TransferName,
   UpdateType,
+  WithdrawalCreatedPayload,
+  WITHDRAWAL_CREATED_EVENT,
+  WithdrawCommitmentJson,
+  WithdrawResolver,
   WithdrawResolverEncoding,
   WithdrawState,
   WithdrawStateEncoding,
+  WITHDRAWAL_RESOLVED_EVENT,
 } from "@connext/vector-types";
-import { createTestChannelState, delay, getRandomChannelSigner, mkAddress, mkSig } from "@connext/vector-utils";
+import {
+  getTestLoggers,
+  getRandomChannelSigner,
+  mkAddress,
+  expect,
+  delay,
+  MemoryStoreService,
+  createTestChannelStateWithSigners,
+  getRandomBytes32,
+  createCoreTransferState,
+  hashTransferState,
+  createTestChannelState,
+  mkHash,
+} from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
+import { BigNumber, utils } from "ethers";
 import { Evt } from "evt";
 import Sinon from "sinon";
-import { expect } from "chai";
 
 import { setupEngineListeners } from "../listeners";
+import { getEngineEvtContainer } from "../utils";
 
-// Adds a handler to an evt instance and returns the result
-// based on the input arguments
-export function addEvtHandler<T = any>(
-  evt: Evt<T>,
-  callback: (event: T) => void | Promise<void>,
-  filter?: (event: T) => boolean,
-  timeout?: number,
-): Evt<T> | Promise<T> {
-  // NOTE: If this type is not an array with a length, then using
-  // the spread operator will cause errors on the evt package
-  const attachArgs = [filter, timeout, callback].filter(x => !!x) as [any, any, any];
-  return evt.attach(...attachArgs);
-}
+import { env } from "./env";
 
-describe("listeners", () => {
-  // Create an EVT to post to, that can be aliased as a
-  // vector instance
+const { hexlify, randomBytes } = utils;
 
-  const evt = Evt.create<ChannelUpdateEvent>();
+const testName = "Engine listeners unit";
+const { log } = getTestLoggers(testName, env.logLevel);
+
+describe(testName, () => {
+  // Get env constants
+  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+  const withdrawDefinition = env.contractAddresses[chainId].Withdraw.address;
+  const chainAddresses: ChainAddresses = {
+    [chainId]: {
+      withdrawDefinition,
+      channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
+      channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
+      linkedTransferDefinition: env.contractAddresses[chainId].LinkedTransfer.address,
+    },
+  };
+
+  // Get test constants
   const alice: IChannelSigner = getRandomChannelSigner();
   const bob: IChannelSigner = getRandomChannelSigner();
   const messaging = {} as any;
+  const container = getEngineEvtContainer();
+  const withdrawTransactionHash = getRandomBytes32();
 
+  // Declare mocks
+  let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
+  let chainService: Sinon.SinonStubbedInstance<VectorChainService>;
+
+  // Create an EVT to post to, that can be aliased as a
+  // vector instance
+  const evt = Evt.create<ChannelUpdateEvent>();
   // Set vector stub to interact with this EVT instance
   const on = (
     event: ProtocolEventName,
@@ -50,62 +85,320 @@ describe("listeners", () => {
   let vector: Sinon.SinonStubbedInstance<Vector>;
 
   beforeEach(() => {
+    // Create the mocked instances
+    store = Sinon.createStubInstance(MemoryStoreService);
+    // By default withdraw submission succeeds
+    chainService = Sinon.createStubInstance(VectorChainService, {
+      sendWithdrawTx: Promise.resolve(
+        Result.ok({
+          hash: withdrawTransactionHash,
+          wait: () => Promise.resolve({ transactionHash: withdrawTransactionHash }),
+        }),
+      ) as any,
+    });
+
     vector = Sinon.createStubInstance(Vector);
-    // TODO: good way to work with events and sinon?
     vector.on = on as any;
   });
 
-  afterEach(() => Sinon.restore());
+  afterEach(() => {
+    // Restore all mocks
+    Sinon.restore();
 
-  describe("withdraw", () => {
-    it("should work", async () => {
-      await setupEngineListeners(vector, messaging, bob);
+    // Remove all evt listeners
+    evt.detach();
+  });
 
-      const withdrawInitialState: WithdrawState = {
-        balance: { to: [alice.address, bob.address], amount: ["5", "0"] },
-        nonce: "1",
-        initiatorSignature: mkSig(),
-        signers: [alice.address, bob.address],
-        data: "0x",
-        fee: "1",
+  describe("withdrawals", () => {
+    // Create a helper to generate withdrawal test constants
+    const getWithdrawalCommitment = async (
+      initiator: IChannelSigner,
+      responder: IChannelSigner,
+      overrides: Partial<WithdrawCommitmentJson> = {},
+    ): Promise<{
+      transfer: FullTransferState<typeof TransferName.Withdraw>;
+      resolver: WithdrawResolver;
+      commitment: WithdrawCommitmentJson;
+    }> => {
+      // Generate commitment
+      const fee = BigNumber.from(3);
+      const withdrawalAmount = BigNumber.from(4);
+      const commitment = await WithdrawCommitment.fromJson({
+        channelAddress: mkAddress("0xccc"),
+        alice: alice.address,
+        bob: bob.address,
+        recipient: alice.address,
+        assetId: mkAddress(),
+        amount: withdrawalAmount.toString(),
+        nonce: getRandomBytes32(),
+        ...overrides,
+      });
+
+      // Generate signatures
+      const initiatorSignature = await initiator.signMessage(commitment.hashToSign());
+      const responderSignature = await responder.signMessage(commitment.hashToSign());
+
+      // Generate state
+      const initialState: WithdrawState = {
+        balance: {
+          to: [commitment.recipient, commitment.bob],
+          amount: [fee.add(commitment.amount).toString(), "0"],
+        },
+        initiatorSignature,
+        initiator: initiator.address,
+        responder: responder.address,
+        data: hexlify(randomBytes(32)),
+        nonce: commitment.nonce,
+        fee: fee.toString(),
+      };
+      const initialStateHash = hashTransferState(initialState, WithdrawStateEncoding);
+
+      // Generate transfer
+      const json: WithdrawCommitmentJson = commitment.toJson();
+      const transfer = {
+        channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
+        chainId,
+        transferEncodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+        transferState: initialState,
+        transferResolver: undefined,
+        meta: { test: "meta" },
+        ...createCoreTransferState({
+          initialBalance: initialState.balance,
+          assetId: commitment.assetId,
+          channelAddress: commitment.channelAddress,
+          transferDefinition: withdrawDefinition,
+          initialStateHash,
+          initiator: initiator.address,
+          responder: responder.address,
+        }),
       };
 
-      const updatedChannelState = createTestChannelState(UpdateType.create, {
+      return { resolver: { responderSignature }, transfer, commitment: json };
+    };
+
+    // Create a helper to run the withdrawal create listener tests
+    const runWithdrawalCreationTest = async (
+      signer: IChannelSigner = bob,
+      withdrawer: IChannelSigner = alice,
+      withdrawalRecipient: Address = alice.address,
+    ) => {
+      // Create the withdrawal data
+      // Responder is always the withdrawer's counterparty
+      const responder = withdrawer.address === bob.address ? alice : bob;
+      const { transfer, resolver, commitment } = await getWithdrawalCommitment(withdrawer, responder, {
+        recipient: withdrawalRecipient,
+      });
+
+      const updatedChannelState = createTestChannelStateWithSigners([alice, bob], UpdateType.create, {
+        channelAddress: commitment.channelAddress,
         latestUpdate: {
-          toIdentifier: bob.publicIdentifier,
+          assetId: commitment.assetId,
+          fromIdentifier: withdrawer.publicIdentifier,
+          toIdentifier: responder.publicIdentifier,
           details: {
-            transferDefinition: mkAddress("0xdef"),
-            transferInitialState: withdrawInitialState,
-            transferEncodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+            transferDefinition: transfer.transferDefinition,
+            transferInitialState: transfer.transferState,
+            transferEncodings: transfer.transferEncodings,
+            transferId: transfer.transferId,
           },
         },
+        assetIds: [commitment.assetId],
         networkContext: {
-          withdrawDefinition: mkAddress("0xdef"),
+          withdrawDefinition,
+          chainId,
         },
       });
 
       // Set the resolve mock to return a result
+      // NOTE: this result isn't really used, but should be correctly
+      // structured
       vector.resolve.resolves(
         Result.ok(
           createTestChannelState(UpdateType.resolve, {
             latestUpdate: {
-              fromIdentifier: bob.publicIdentifier,
+              fromIdentifier: responder.publicIdentifier,
+              toIdentifier: withdrawer.publicIdentifier,
             },
           }),
         ),
       );
 
+      // Set the store mock to return a result
+      store.getTransferState.resolves(transfer);
+
+      // Begin the test
+      // Setup the listeners
+      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log);
+
+      // Create a promise that will resolve once the event is emitted
+      // + some time for the handler to complete
+      const createdEvent = new Promise<WithdrawalCreatedPayload>(resolve =>
+        container[WITHDRAWAL_CREATED_EVENT].attachOnce(5000, data => delay(500).then(() => resolve(data))),
+      );
+
       // Post to the evt
       evt.post({ updatedChannelState });
-      // Wait a bit to give handler time to react
-      await delay(1500);
 
-      // Verify that resolve was called correctly
-      expect(vector.resolve.callCount).to.be.eq(1);
-      const { transferResolver, channelAddress, transferId } = vector.resolve.args[0][0];
-      expect(transferResolver).to.be.ok;
-      expect(channelAddress).to.be.eq(updatedChannelState.channelAddress);
-      expect(transferId).to.be.eq(updatedChannelState.latestUpdate.details.transferId);
+      // Get the emitted event
+      const emitted = await createdEvent;
+
+      // Verify the emitted event
+      expect(emitted).to.containSubset({
+        assetId: commitment.assetId,
+        amount: commitment.amount,
+        recipient: alice.address,
+        fee: transfer.transferState.fee,
+        transfer,
+        channelBalance:
+          updatedChannelState.balances[updatedChannelState.assetIds.findIndex(a => a === commitment.assetId)],
+        channelAddress: updatedChannelState.channelAddress,
+      });
+
+      // If the signer is the initiator, they would not be able to do
+      // anything until they have received the responders signature on
+      // the withdrawal commitment.
+      const isWithdrawalInitiator = signer.address === transfer.initiator;
+      const isAlice = signer.address === updatedChannelState.alice;
+
+      // Verify the store calls were correctly executed
+      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isWithdrawalInitiator ? 0 : 1);
+      // If the call was executed, verify arguments
+      if (store.saveWithdrawalCommitment.callCount) {
+        const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
+        expect(storeTransferId).to.be.eq(transfer.transferId);
+        expect(withdrawCommitment.aliceSignature).to.be.ok;
+        expect(withdrawCommitment.bobSignature).to.be.ok;
+      }
+
+      // Verify the transaction submission was correctly executed
+      expect(chainService.sendWithdrawTx.callCount).to.be.eq(!isWithdrawalInitiator && isAlice ? 1 : 0);
+      // If the call was executed, verify arguments
+      if (chainService.sendWithdrawTx.callCount) {
+        // Withdraw responder is alice, and she tried to submit tx
+        const [channelState, minTx] = chainService.sendWithdrawTx.args[0];
+        expect(channelState).to.be.deep.eq(updatedChannelState);
+        // TODO: stronger transaction assertions?
+        expect(minTx).to.be.ok;
+      }
+
+      // Verify the resolve call was correctly executed
+      expect(vector.resolve.callCount).to.be.eq(isWithdrawalInitiator ? 0 : 1);
+      // If the call was executed, verify arguments
+      if (vector.resolve.callCount) {
+        const { transferResolver, channelAddress, transferId, meta } = vector.resolve.args[0][0];
+        expect(transferResolver).to.be.deep.eq(resolver);
+        expect(channelAddress).to.be.eq(updatedChannelState.channelAddress);
+        expect(transferId).to.be.eq(transfer.transferId);
+        // Verify transaction hash in meta if withdraw attempted
+        chainService.sendWithdrawTx.callCount &&
+          expect(meta).to.be.deep.eq({ transactionHash: withdrawTransactionHash });
+      }
+    };
+
+    // Create a helper to run the withdrawal resolve listener tests
+    const runWithdrawalResolveTest = async (
+      signer: IChannelSigner = bob,
+      withdrawer: IChannelSigner = alice,
+      withdrawalRecipient: Address = alice.address,
+    ) => {
+      // Create the withdrawal data
+      // Responder is always the withdrawer's counterparty
+      const responder = withdrawer.address === bob.address ? alice : bob;
+      const { transfer, resolver, commitment } = await getWithdrawalCommitment(withdrawer, responder, {
+        recipient: withdrawalRecipient,
+      });
+
+      // Create the event data
+      const updatedChannelState = createTestChannelStateWithSigners([alice, bob], UpdateType.resolve, {
+        channelAddress: commitment.channelAddress,
+        latestUpdate: {
+          assetId: commitment.assetId,
+          fromIdentifier: responder.publicIdentifier,
+          toIdentifier: withdrawer.publicIdentifier,
+          details: {
+            transferDefinition: transfer.transferDefinition,
+            transferResolver: resolver,
+            transferEncodings: transfer.transferEncodings,
+            transferId: transfer.transferId,
+            merkleRoot: mkHash(),
+          },
+        },
+        assetIds: [commitment.assetId],
+        networkContext: {
+          withdrawDefinition,
+          chainId,
+        },
+      });
+
+      // Set the store to return the resolved transfer
+      store.getTransferState.resolves({ ...transfer, transferResolver: resolver });
+
+      // Begin the test
+      // Setup the listeners
+      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log);
+
+      // Create a promise that will resolve once the event is emitted
+      // + some time for the handler to complete
+      const resolvedEvent = new Promise<WithdrawalCreatedPayload>(resolve =>
+        container[WITHDRAWAL_RESOLVED_EVENT].attachOnce(5000, data => delay(500).then(() => resolve(data))),
+      );
+
+      // Post to the evt
+      evt.post({ updatedChannelState });
+
+      // Get the emitted event
+      const emitted = await resolvedEvent;
+
+      // Verify the emitted event
+      expect(emitted).to.containSubset({
+        assetId: commitment.assetId,
+        amount: commitment.amount,
+        recipient: alice.address,
+        fee: transfer.transferState.fee,
+        transfer: { ...transfer, transferResolver: resolver },
+        channelBalance:
+          updatedChannelState.balances[updatedChannelState.assetIds.findIndex(a => a === commitment.assetId)],
+        channelAddress: updatedChannelState.channelAddress,
+      });
+
+      // When getting resolve events, withdrawers will always save the
+      // double signed commitment to their store. If the withdrawer is
+      // alice, she will try to submit the transaction to chain
+      const isWithdrawer = signer.address === withdrawer.address;
+
+      // Verify the store call was correctly executed
+      expect(store.saveWithdrawalCommitment.callCount).to.be.eq(isWithdrawer ? 1 : 0);
+      if (store.saveWithdrawalCommitment.callCount) {
+        const [storeTransferId, withdrawCommitment] = store.saveWithdrawalCommitment.args[0];
+        expect(storeTransferId).to.be.eq(transfer.transferId);
+        expect(withdrawCommitment.aliceSignature).to.be.ok;
+        expect(withdrawCommitment.bobSignature).to.be.ok;
+      }
+
+      // Verify the transaction submission was correctly executed
+      expect(chainService.sendWithdrawTx.callCount).to.be.eq(isWithdrawer && signer.address === alice.address ? 1 : 0);
+      if (chainService.sendWithdrawTx.callCount) {
+        const [channelState, minTx] = chainService.sendWithdrawTx.args[0];
+        expect(channelState).to.be.deep.eq(updatedChannelState);
+        // TODO: stronger transaction assertions?
+        expect(minTx).to.be.ok;
+      }
+    };
+
+    it("should properly respond to create event with bob withdrawing eth (alice resolves + submits)", async () => {
+      await runWithdrawalCreationTest(alice, bob);
+    });
+
+    it("should properly respond to create event with alice withdrawing eth (bob resolves)", async () => {
+      await runWithdrawalCreationTest();
+    });
+
+    it("should properly respond to resolve event with bob withdrawing eth (alice resolves with hash, bob stores)", async () => {
+      await runWithdrawalResolveTest(alice, bob);
+    });
+
+    it("should properly respond to resolve event with alice withdrawing eth (bob, alice stores + submits)", async () => {
+      await runWithdrawalResolveTest();
     });
   });
 });

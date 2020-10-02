@@ -1,8 +1,10 @@
 import yargs from "yargs";
 
-import { fundCommand } from "./commands/fund";
-import { migrateCommand } from "./commands/migrate";
-import { newTokenCommand } from "./commands/new-token";
+import {
+  fundCommand,
+  migrateCommand,
+  newTokenCommand,
+} from "./actions";
 
 yargs
   .command(fundCommand)

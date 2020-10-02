@@ -4,17 +4,12 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IERC20.sol";
-import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/IVectorChannel.sol";
-import "./lib/LibChannelCrypto.sol";
-import "./lib/MerkleProof.sol";
-import "./lib/SafeMath.sol";
 import "./Proxy.sol";
+
 
 /// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
-    using LibChannelCrypto for bytes32;
-    using SafeMath for uint256;
 
     IVectorChannel public immutable masterCopy;
 
@@ -67,7 +62,7 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel channel)
     {
         channel = deployChannelProxy(alice, bob, chainId);
-        channel.setup([alice, bob]);
+        channel.setup(alice, bob);
         emit ChannelCreation(channel);
     }
 

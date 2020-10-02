@@ -13,6 +13,7 @@ import {
   LinkedTransferStateEncoding,
   LinkedTransferResolverEncoding,
   NetworkContext,
+  IChannelSigner,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -57,7 +58,7 @@ export function createTestUpdateParams<T extends UpdateType>(
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           channelMastercopyAddress: mkAddress("0xcccaaa"),
         },
-      };
+      } as SetupUpdateDetails;
       break;
     case UpdateType.deposit:
       details = {
@@ -114,7 +115,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
     channelAddress: mkAddress("0xccc"),
     fromIdentifier: mkPublicIdentifier("indraA"),
     nonce: 1,
-    signatures: [mkBytes32("0xsig1"), mkBytes32("0xsig2")],
+    aliceSignature: mkBytes32("0xsig1"),
+    bobSignature: mkBytes32("0xsig2"),
     toIdentifier: mkPublicIdentifier("indraB"),
     type,
   };
@@ -185,8 +187,11 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
 ): FullChannelState<T> {
   // Get some default values that should be consistent between
   // the channel state and the channel update
-  const publicIdentifiers = overrides.publicIdentifiers ?? [mkPublicIdentifier("indraA"), mkPublicIdentifier("indraB")];
-  const participants = overrides.participants ?? [mkAddress("0xaaa"), mkAddress("0xbbb")];
+  const publicIdentifiers = [
+    overrides.aliceIdentifier ?? mkPublicIdentifier("indraA"),
+    overrides.bobIdentifier ?? mkPublicIdentifier("indraB"),
+  ];
+  const participants = [overrides.alice ?? mkAddress("0xaaa"), overrides.bob ?? mkAddress("0xbbb")];
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
   const nonce = overrides.nonce ?? 1;
@@ -229,23 +234,25 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       ...(networkContext ?? {}),
     },
     nonce,
-    participants,
-    publicIdentifiers,
+    alice: participants[0],
+    bob: participants[1],
+    aliceIdentifier: publicIdentifiers[0],
+    bobIdentifier: publicIdentifiers[1],
     timeout: "1",
     ...rest,
   };
 }
 
 export function createTestChannelStateWithSigners<T extends UpdateType = typeof UpdateType.setup>(
-  signers: ChannelSigner[],
+  signers: IChannelSigner[],
   type: T,
   overrides: PartialFullChannelState<T> = {},
 ): FullChannelState<T> {
-  const publicIdentifiers = signers.map(s => s.publicIdentifier);
-  const participants = signers.map(s => s.address);
   const signerOverrides = {
-    publicIdentifiers,
-    participants,
+    aliceIdentifier: signers[0].publicIdentifier,
+    bobIdentifier: signers[1].publicIdentifier,
+    alice: signers[0].address,
+    bob: signers[1].address,
     ...(overrides ?? {}),
   };
   return createTestChannelState(type, signerOverrides) as FullChannelState<T>;

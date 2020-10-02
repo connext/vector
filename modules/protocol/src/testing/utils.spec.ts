@@ -1,17 +1,23 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber, constants, BigNumberish } from "ethers";
-import { Balance, Result, IVectorOnchainService } from "@connext/vector-types";
-import { mkAddress } from "@connext/vector-utils";
-import { expect } from "chai";
+import { Balance, Result, IVectorChainReader } from "@connext/vector-types";
+import {
+  mkAddress,
+  expect,
+  getRandomChannelSigner,
+  createTestChannelState,
+  hashChannelCommitment,
+  mkSig,
+} from "@connext/vector-utils";
 import Sinon from "sinon";
-import { VectorOnchainService } from "@connext/vector-contracts";
+import { VectorChainReader } from "@connext/vector-contracts";
 
-import { reconcileDeposit } from "../utils";
+import { generateSignedChannelCommitment, reconcileDeposit, validateChannelUpdateSignatures } from "../utils";
 
 import { env } from "./env";
 
 type MockOnchainStubType = {
-  [K in keyof IVectorOnchainService]: IVectorOnchainService[K];
+  [K in keyof IVectorChainReader]: IVectorChainReader[K];
 };
 
 type ReconcileDepositTest = {
@@ -34,29 +40,193 @@ describe("utils", () => {
     it("should attach with callback + filter + timeout", async () => {});
   });
 
-  // FIXME: THESE ARE BLOCKING TESTS!
-  describe.skip("generateSignedChannelCommitment", () => {
-    it("should not sign anything if there are two signatures", () => {});
-    it("should work for participants[0] if there is not a counterparty signature included", () => {});
-    it("should work for participants[1] if there is not a counterparty signature included", () => {});
-    it("should work for participants[0] if there is a counterparty signature included", () => {});
-    it("should work for participants[1] if there is a counterparty signature included", () => {});
+  describe("generateSignedChannelCommitment", () => {
+    const signer = getRandomChannelSigner();
+    const counterpartyAddress = mkAddress();
+    const aliceState = createTestChannelState("create", { alice: signer.address, bob: counterpartyAddress });
+    const bobState = createTestChannelState("create", { alice: counterpartyAddress, bob: signer.address });
+
+    const tests: any = [
+      {
+        name: "should not sign anything if there are two signatures",
+        state: aliceState,
+        update: {
+          aliceSignature: mkSig("0xaaa"),
+          bobSignature: mkSig("0xbbb"),
+        },
+        expected: {
+          aliceSignature: mkSig("0xaaa"),
+          bobSignature: mkSig("0xbbb"),
+        },
+      },
+      {
+        name: "should work for participants[0] if there is not a counterparty signature included",
+        state: aliceState,
+        update: {
+          aliceSignature: undefined,
+          bobSignature: undefined,
+        },
+        expected: {
+          aliceSignature: "sig",
+          bobSignature: undefined,
+        },
+      },
+      {
+        name: "should work for participants[1] if there is not a counterparty signature included",
+        state: bobState,
+        update: {
+          aliceSignature: undefined,
+          bobSignature: undefined,
+        },
+        expected: {
+          aliceSignature: undefined,
+          bobSignature: "sig",
+        },
+      },
+      {
+        name: "should work for bob if there is an alice signature included",
+        state: bobState,
+        update: {
+          aliceSignature: "test1",
+          bobSignature: undefined,
+        },
+        expected: {
+          aliceSignature: "test1",
+          bobSignature: "sig",
+        },
+      },
+      {
+        name: "should work for alice if there is a bob signature included",
+        state: aliceState,
+        update: {
+          aliceSignature: undefined,
+          bobSignature: "test2",
+        },
+        expected: {
+          aliceSignature: "sig",
+          bobSignature: "test2",
+        },
+      },
+    ];
+
+    for (const test of tests) {
+      const { name, update, expected, state } = test;
+
+      it(name, async () => {
+        const { networkContext, ...core } = state;
+        const unsigned = {
+          chainId: networkContext.chainId,
+          state: core,
+          channelFactoryAddress: networkContext.channelFactoryAddress,
+        };
+        // Run the test
+        const result = await generateSignedChannelCommitment(state, signer, update.aliceSignature, update.bobSignature);
+
+        const aliceSignature =
+          expected.aliceSignature === "sig"
+            ? await signer.signMessage(hashChannelCommitment(unsigned))
+            : expected.aliceSignature;
+        const bobSignature =
+          expected.bobSignature === "sig"
+            ? await signer.signMessage(hashChannelCommitment(unsigned))
+            : expected.bobSignature;
+
+        const expectedSigs: string[] = [];
+        for (let i = 0; i < 2; i++) {
+          if (expected[i] == "sig") {
+            expectedSigs[i] = await signer.signMessage(hashChannelCommitment(unsigned));
+          } else {
+            expectedSigs[i] = expected[i];
+          }
+        }
+
+        expect(result).to.deep.eq({
+          ...unsigned,
+          aliceSignature,
+          bobSignature,
+        });
+      });
+    }
   });
 
-  // FIXME: THESE ARE BLOCKING TESTS!
-  describe.skip("validateChannelUpdateSignatures", () => {
-    it("should work for a valid single signed update", () => {});
-    it("should work for a valid double signed update", () => {});
-    it("should fail if there are not at the number of required sigs included", () => {});
-    it("should fail if number of valid sigs !== number of required sigs", () => {});
-    it("should fail if any of the signatures are invalid", () => {});
-    it("should fail if the signatures are not sorted correctly", () => {});
+  describe.only("validateChannelUpdateSignatures", () => {
+    const aliceSigner = getRandomChannelSigner();
+    const bobSigner = getRandomChannelSigner();
+    const wrongSigner = getRandomChannelSigner();
+    const state = createTestChannelState("create", { alice: aliceSigner.address, bob: bobSigner.address });
+    const { networkContext, ...core } = state;
+    const unsigned = {
+      chainId: networkContext.chainId,
+      state: core,
+      channelFactoryAddress: networkContext.channelFactoryAddress,
+      signatures: [],
+    };
+
+    const tests = [
+      {
+        name: "should work for a valid single signed update",
+        updateSignatures: [undefined, "bobSig"],
+        requiredSigners: "bob",
+        expected: undefined,
+      },
+      {
+        name: "should work for a valid double signed update",
+        updateSignatures: ["aliceSig", "bobSig"],
+        requiredSigners: "both",
+        expected: undefined,
+      },
+      {
+        name: "should fail if there are not at the number of required sigs included",
+        updateSignatures: [undefined, "bobSig"],
+        requiredSigners: "both",
+        expected: "Expected alice + bob",
+      },
+      {
+        name: "should fail if any of the signatures are invalid",
+        updateSignatures: [undefined, "wrongSig"],
+        requiredSigners: "alice",
+        expected: "Expected alice",
+      },
+    ];
+
+    for (const test of tests) {
+      const { name, updateSignatures, requiredSigners, expected } = test;
+      it(name, async () => {
+        const signatures: (string | undefined)[] = [];
+
+        // Have to do this because of weird race conditions around looping
+        for (let i = 0; i < 2; i++) {
+          if (updateSignatures[i] == "bobSig") {
+            signatures[i] = await bobSigner.signMessage(hashChannelCommitment(unsigned));
+          } else if (updateSignatures[i] == "aliceSig") {
+            signatures[i] = await aliceSigner.signMessage(hashChannelCommitment(unsigned));
+          } else if (updateSignatures[i] == "wrongSig") {
+            signatures[i] = await wrongSigner.signMessage(hashChannelCommitment(unsigned));
+          } else {
+            signatures[i] = updateSignatures[i];
+          }
+        }
+
+        const ret = await validateChannelUpdateSignatures(
+          state,
+          signatures[0],
+          signatures[1],
+          requiredSigners as "alice" | "bob" | "both",
+        );
+
+        if (expected) {
+          expect(ret.isError).to.be.true;
+          expect(ret.getError().message).includes(expected);
+        } else {
+          expect(ret.isError).to.be.false;
+          expect(ret.getValue()).to.be.undefined;
+        }
+      });
+    }
   });
 
   describe("reconcileDeposit", () => {
     // FIXME: THESE ARE BLOCKING TESTS!
-    // TODO: do we have to test eth v. tokens? seems more relevant in the
-    // chain service than in the reconcileDeposit
     it.skip("should fail if it cannot get the onchain balance", () => {});
     it.skip("should fail if it cannot get the latest deposit a", () => {});
     it.skip("should work if the offchain latest nonce is less than the onchain latest nonce", () => {});
@@ -67,37 +237,37 @@ describe("utils", () => {
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];
 
-    const getOnchainService = (testParams: Partial<ReconcileDepositTest>) => {
+    const getChainReader = (testParams: Partial<ReconcileDepositTest>) => {
       const { initialBalance, stubs, aliceDeposit, bobDeposit, processedDepositsA, processedDepositsB } = testParams;
       const initialChainBalance = (initialBalance?.amount ?? []).reduce(
         (prev, curr) => prev.add(curr),
         BigNumber.from(0),
       );
       // Creat the mock with defaults
-      const onchain = Sinon.createStubInstance(VectorOnchainService);
+      const chainReader = Sinon.createStubInstance(VectorChainReader);
       // set return values
       const mockedValues = {
-        // Default the value onchain + depositA + multisig deposit
+        // Default the value chainReader + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
         getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add((processedDepositsA as any)!)),
         getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add((processedDepositsB as any)!)),
         ...stubs,
       };
       Object.entries(mockedValues).forEach(([method, stub]) => {
-        onchain[method].resolves(stub);
+        chainReader[method].resolves(stub);
       });
-      // Return the onchain service
-      return onchain;
+      // Return the chainReader service
+      return chainReader;
     };
 
     afterEach(() => {
-      // Restore all mocks from the onchain service
+      // Restore all mocks from the chainReader service
       Sinon.restore();
     });
 
     const tests: (Partial<ReconcileDepositTest> & { name: string })[] = [
       {
-        name: "should work for Alice Eth deposit when onchain deposit was successful",
+        name: "should work for Alice Eth deposit when chainReader deposit was successful",
         aliceDeposit: 15,
         initialBalance: { amount: ["3", "9"] },
         processedDepositsA: ["10"],
@@ -154,18 +324,18 @@ describe("utils", () => {
     for (const test of tests) {
       const { name, initialBalance, processedDepositsA, processedDepositsB, assetId, error, expected } = test;
       it(name, async () => {
-        // Create the onchain service
-        const chainService = getOnchainService(test);
+        // Create the chainReader service
+        const chainReader = getChainReader(test);
 
         // Run the test
         const result = await reconcileDeposit(
           channelAddress,
           chainId,
           { ...(initialBalance ?? { amount: ["0", "0"] }), to },
-          processedDepositsA ? (processedDepositsA[0] || "0") : "0",
-          processedDepositsB ? (processedDepositsB[0] || "0") : "0",
+          processedDepositsA ? processedDepositsA[0] || "0" : "0",
+          processedDepositsB ? processedDepositsB[0] || "0" : "0",
           assetId ?? constants.AddressZero,
-          chainService,
+          chainReader,
         );
 
         if (error) {

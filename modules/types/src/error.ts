@@ -1,4 +1,5 @@
 import { ChannelUpdate, FullChannelState, UpdateParams } from "./channel";
+
 export class Result<T, Y = any> {
   private value?: T;
   private error?: Y;
@@ -17,7 +18,7 @@ export class Result<T, Y = any> {
 
   public getValue(): T {
     if (this.isError) {
-      throw new Error("Can't get the value of an error result. Use 'errorValue' instead.");
+      throw new Error(`Can't getValue() of error result: ${this.error}`);
     }
     return this.value as T;
   }
@@ -46,8 +47,10 @@ export abstract class VectorError extends Error {
   static readonly errors = {
     OutboundChannelUpdateError: "OutboundChannelUpdateError",
     InboundChannelUpdateError: "InboundChannelUpdateError",
-    OnchainError: "OnchainError",
+    ChainError: "ChainError",
     ValidationError: "ValidationError",
+    RouterError: "RouterError",
+    ServerNodeError: "ServerNodeError",
     // etc.
   } as const;
 
@@ -72,7 +75,9 @@ export class ValidationError extends VectorError {
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
+    TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
+    ExternalValidationFailed: "Failed external validation",
   } as const;
 
   constructor(
@@ -109,8 +114,9 @@ export class OutboundChannelUpdateError extends VectorError {
     SyncFailure: "Failed to sync channel from counterparty update",
     SyncValidationFailed: "Failed to validate update for sync",
     TransferNotFound: "No transfer found in storage",
+    TransferNotActive: "Transfer not found in activeTransfers",
   } as const;
-  
+
   constructor(
     public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
     public readonly params: UpdateParams<any>,

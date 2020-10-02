@@ -53,12 +53,10 @@ export class ChannelSigner extends Signer implements IChannelSigner {
 
   public async connectProvider(provider?: UrlString | providers.Provider): Promise<void> {
     this.provider =
-      typeof provider === "string"
-        ? new providers.JsonRpcProvider(provider, await getChainId(provider))
-        : provider;
+      typeof provider === "string" ? new providers.JsonRpcProvider(provider, await getChainId(provider)) : provider;
   }
 
-  public connect(provider: providers.Provider): Signer {
+  public connect(provider: providers.Provider): ChannelSigner {
     this.provider = provider;
     return this;
   }
@@ -73,21 +71,15 @@ export class ChannelSigner extends Signer implements IChannelSigner {
 
   public async signTransaction(transaction: providers.TransactionRequest): Promise<string> {
     if (!this.provider) {
-      throw new Error(
-        `ChannelSigner can't send transactions without being connected to a provider`,
-      );
+      throw new Error(`ChannelSigner can't send transactions without being connected to a provider`);
     }
     const wallet = new Wallet(this.privateKey, this.provider);
     return wallet.signTransaction(transaction);
   }
 
-  public async sendTransaction(
-    transaction: providers.TransactionRequest,
-  ): Promise<providers.TransactionResponse> {
+  public async sendTransaction(transaction: providers.TransactionRequest): Promise<providers.TransactionResponse> {
     if (!this.provider) {
-      throw new Error(
-        `ChannelSigner can't send transactions without being connected to a provider`,
-      );
+      throw new Error(`ChannelSigner can't send transactions without being connected to a provider`);
     }
     const wallet = new Wallet(this.privateKey, this.provider);
     return wallet.sendTransaction(transaction);

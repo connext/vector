@@ -17,42 +17,19 @@ else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Load env vars
+# Misc Config
 
-VECTOR_ENV="${VECTOR_ENV:-dev}"
-
-# Load the default env
-if [[ -f "${VECTOR_ENV}.env" ]]
-then source "${VECTOR_ENV}.env"
+if [[ "$VECTOR_ENV" == "prod" ]]
+then
+  echo "The $stack stack should only be used for testing. Aborting because \$VECTOR_ENV=prod"
+  exit 1
 fi
+VECTOR_ENV=dev
 
-# Load instance-specific env vars & overrides
-if [[ -f ".env" ]]
-then source .env
-fi
+version="latest"
 
 # log level alias can override default for easy `LOG_LEVEL=5 make start`
 VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
-
-########################################
-## Docker registry & image version config
-
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_ENV" == "prod" ]]
-then
-  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
-  if [[ -n "$git_tag" ]]
-  then version="`echo $git_tag | sed 's/vector-//'`"
-  else version="`git rev-parse HEAD | head -c 8`"
-  fi
-else version="latest"
-fi
-
-####################
-# Misc Config
-
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
 
 # to access from other containers
 redis_url="redis://redis:6379"
@@ -86,10 +63,10 @@ sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crum
 
 auth_url="http://auth:5040"
 bash $root/ops/start-global.sh
+echo "global services have started up, resuming $stack startup"
 
 VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
 VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
-VECTOR_MNEMONIC_FILE="/run/secrets/${project}_mnemonic_dev"
 
 ########################################
 ## Node config
@@ -98,17 +75,24 @@ node_port="8000"
 prisma_studio_port="5555"
 nats_port="4222"
 
-alice_port="8001"
-alice_prisma_port="5555"
+alice_port="8002"
+alice_prisma_port="5557"
 alice_database="database_a"
+echo "$stack.alice will be exposed on *:$alice_port (prisma on *:$alice_prisma_port)"
 
-bob_port="8002"
-bob_prisma_port="5556"
+bob_port="8003"
+bob_prisma_port="5558"
 bob_database="database_b"
+echo "$stack.bob will be exposed on *:$bob_port (prisma on *:$bob_prisma_port)"
 
 public_url="http://localhost:$alice_port"
 
 VECTOR_ADMIN_TOKEN="${VECTOR_ADMIN_TOKEN:-cxt1234}";
+
+node_image="image: '${project}_builder'
+    entrypoint: 'bash modules/server-node/ops/entry.sh'
+    volumes:
+      - '$root:/root'"
 
 node_env="environment:
       VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
@@ -125,18 +109,6 @@ node_env="environment:
       VECTOR_PORT: '$node_port'
       VECTOR_REDIS_URL: '$redis_url'
       VECTOR_SUGAR_DADDY: '$sugardaddy_mnemonic'"
-
-if [[ $VECTOR_ENV == "prod" ]]
-then
-  node_image_name="${project}_node"
-  bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
-  node_image="image: '$node_image_name:$version'"
-else
-  node_image="image: '${project}_builder'
-    entrypoint: 'bash modules/server-node/ops/entry.sh'
-    volumes:
-      - '$root:/root'"
-fi
 
 ####################
 # Launch stack

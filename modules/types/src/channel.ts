@@ -76,7 +76,8 @@ export const CoreChannelStateEncoding = tidy(`tuple(
   ${BalanceEncoding}[] balances,
   address[] assetIds,
   address channelAddress,
-  address[2] participants,
+  address alice,
+  address bob,
   uint256[] processedDepositsA,
   uint256[] processedDepositsB,
   uint256 timeout,
@@ -84,16 +85,14 @@ export const CoreChannelStateEncoding = tidy(`tuple(
   bytes32 merkleRoot
 )`);
 
-// Array ordering should always correspond to the channel
-// participants array ordering (but value in `to` field may
-// not always be the participants addresses)
 export interface CoreChannelState {
   assetIds: Address[];
   balances: Balance[]; // Indexed by assetId
   channelAddress: Address;
   merkleRoot: string;
   nonce: number;
-  participants: Address[]; // Signer keys
+  alice: Address;
+  bob: Address;
   processedDepositsA: string[]; // Indexed by assetId
   processedDepositsB: string[]; // Indexed by assetId
   timeout: string;
@@ -101,14 +100,16 @@ export interface CoreChannelState {
 
 // Includes any additional info that doesn't need to be sent to chain
 export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
-  publicIdentifiers: string[];
+  aliceIdentifier: string;
+  bobIdentifier: string;
   latestUpdate: ChannelUpdate<T>;
   networkContext: NetworkContext;
 };
 
 export interface ChannelCommitmentData {
   state: CoreChannelState;
-  signatures: string[];
+  aliceSignature?: string;
+  bobSignature?: string;
   channelFactoryAddress: Address;
   chainId: number;
 }
@@ -121,6 +122,8 @@ export interface CoreTransferState {
   transferDefinition: Address;
   transferTimeout: string;
   initialStateHash: string;
+  initiator: Address; // either alice or bob
+  responder: Address; // either alice or bob
 }
 
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
@@ -146,8 +149,8 @@ export type ChainAddresses = {
 export type ContractAddresses = {
   channelFactoryAddress: Address;
   channelMastercopyAddress: Address;
-  linkedTransferDefinition?: Address;
   withdrawDefinition?: Address;
+  linkedTransferDefinition?: Address;
 };
 
 export type NetworkContext = ContractAddresses & {
@@ -164,7 +167,8 @@ export type ChannelUpdate<T extends UpdateType> = {
   balance: Balance;
   assetId: Address;
   details: ChannelUpdateDetailsMap[T];
-  signatures: string[]; // same participants ordering
+  aliceSignature?: string;
+  bobSignature?: string;
 };
 
 export interface ChannelUpdateDetailsMap {

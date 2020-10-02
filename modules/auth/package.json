@@ -7,9 +7,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rm -rf ./dist/* && npm run transpile",
-    "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
-    "transpile": "tsc --project tsconfig.json"
+    "build": "rm -rf ./dist/* && tsc && webpack --config ops/webpack.config.js",
+    "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/vector-types": "0.0.1",
@@ -25,14 +24,19 @@
     "@types/chai-as-promised": "7.1.3",
     "@types/chai-subset": "1.3.3",
     "@types/mocha": "8.0.3",
-    "@types/pino": "6.3.0",
+    "@types/pino": "6.3.2",
+    "babel-loader": "8.1.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
+    "copy-webpack-plugin": "6.1.1",
     "mocha": "8.1.3",
     "nodemon": "2.0.4",
     "pino-pretty": "4.2.1",
+    "ts-loader": "8.0.4",
     "ts-mocha": "7.0.0",
     "ts-node": "9.0.0",
-    "typescript": "4.0.3"
+    "typescript": "4.0.3",
+    "webpack": "4.44.2",
+    "webpack-cli": "3.3.12"
   }
 }

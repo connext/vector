@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_proxy:latest"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_proxy:latest"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -33,14 +33,15 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: node
+default: node router
 
 global: auth ethprovider
 node: global database proxy server-node
 duet: global database server-node
+trio: global database server-node router
 extras: test-runner
 
-all: node global duet extras
+all: global node duet trio extras
 
 ########################################
 # Command & Control Shortcuts
@@ -57,6 +58,14 @@ restart-node:
 stop-node:
 	@bash ops/stop.sh node
 
+start-router: router
+	@bash ops/start-router.sh
+restart-router:
+	@bash ops/stop.sh router
+	@bash ops/start-router.sh
+stop-router:
+	@bash ops/stop.sh router
+
 start-duet: duet
 	@bash ops/start-duet.sh
 restart-duet:
@@ -64,6 +73,14 @@ restart-duet:
 	@bash ops/start-duet.sh
 stop-duet:
 	@bash ops/stop.sh duet
+
+start-trio: trio
+	@bash ops/start-trio.sh
+restart-trio:
+	@bash ops/stop.sh trio
+	@bash ops/start-trio.sh
+stop-trio:
+	@bash ops/stop.sh trio
 
 start-global: global
 	@bash ops/start-global.sh
@@ -74,6 +91,8 @@ stop-global:
 	@bash ops/stop.sh global
 
 stop-all:
+	@bash ops/stop.sh trio
+	@bash ops/stop.sh router
 	@bash ops/stop.sh duet
 	@bash ops/stop.sh node
 	@bash ops/stop.sh global
@@ -99,7 +118,7 @@ reset: stop-all
 	rm -rf .chaindata/*
 
 reset-images:
-	rm -f .flags/auth .flags/database .flags/ethprovider .flags/node .flags/*proxy
+	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node
 
 purge: clean reset
 
@@ -126,8 +145,8 @@ lint:
 ########################################
 # Test Commands
 
-test-units: test-utils test-contracts test-protocol test-engine
-test-integrations: test-utils test-contracts test-protocol test-engine
+test-units: test-utils test-contracts test-protocol test-engine test-router
+test-integrations: test-global test-duet test-trio test-node
 test-all: test-units test-integrations
 
 # Unit Tests
@@ -157,6 +176,11 @@ test-server-node: node
 watch-server-node: engine
 	bash ops/test-server-node.sh watch
 
+test-router: router
+	bash ops/test-unit.sh router test
+watch-router: engine
+	bash ops/test-unit.sh router watch
+
 # Integration Tests
 
 test-global: test-runner global
@@ -164,15 +188,15 @@ test-global: test-runner global
 watch-global: test-runner global
 	bash ops/test-integration.sh global watch
 
-test-node: test-runner node
-	bash ops/test-integration.sh node test
-watch-node: test-runner node
-	bash ops/test-integration.sh node watch
-
 test-duet: test-runner duet
 	bash ops/test-integration.sh duet test
 watch-duet: test-runner duet
 	bash ops/test-integration.sh duet watch
+
+test-trio: test-runner trio
+	bash ops/test-integration.sh trio test
+watch-trio: test-runner trio
+	bash ops/test-integration.sh trio watch
 
 ########################################
 # Begin Real Build Rules
@@ -241,8 +265,19 @@ server-node-bundle: engine $(shell find modules/server-node $(find_options))
 
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
-	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_server-node modules/server-node
-	docker tag $(project)_server-node $(project)_server-node:$(commit)
+	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/server-node
+	docker tag $(project)_node $(project)_node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+router-bundle: engine $(shell find modules/router $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/router && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+router: router-bundle $(shell find modules/router/ops $(find_options))
+	$(log_start)
+	docker build --file modules/router/ops/Dockerfile $(image_cache) --tag $(project)_router modules/router
+	docker tag $(project)_router $(project)_router:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 test-runner-bundle: engine $(shell find modules/test-runner/src $(find_options))

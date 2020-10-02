@@ -1,16 +1,11 @@
+import { getTestLoggers, expect } from "@connext/vector-utils";
 import { constants } from "ethers";
 
-import {
-  createTransfer,
-  depositInChannel,
-  expect,
-  getSetupChannel,
-  getTestLoggers,
-  resolveTransfer,
-} from "../utils";
+import { env } from "../env";
+import { createTransfer, depositInChannel, getSetupChannel, resolveTransfer } from "../utils";
 
 const testName = "Happy Integration";
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel);
 
 describe(testName, () => {
   it("should work for a simple ETH setup -> deposit -> create -> resolve flow", async () => {
@@ -34,7 +29,9 @@ describe(testName, () => {
     // Validate final balance
     log.error("Verifying deposits");
     expect(postDeposit.assetIds).to.be.deep.eq([assetId]);
-    expect(postDeposit.balances).to.be.deep.eq([{ to: channel.participants, amount: [depositAmount, depositAmount] }]);
+    expect(postDeposit.balances).to.be.deep.eq([
+      { to: [channel.alice, channel.bob], amount: [depositAmount, depositAmount] },
+    ]);
 
     // Create Alice -> Bob transfer
     log.error("Creating transfer", { amount: transferAmount });

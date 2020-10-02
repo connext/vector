@@ -1,4 +1,5 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
   CreateTransferParams,
   ConditionalTransferType,
@@ -17,10 +18,12 @@ import {
   EngineParams,
   IChannelSigner,
   ChainAddresses,
+  RouterSchemas,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
+import { keccak256 } from "ethers/lib/utils";
 
 export function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
@@ -28,14 +31,30 @@ export function convertConditionalTransferParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
 ): Result<CreateTransferParams, InvalidTransferType> {
-  const { channelAddress, amount, assetId, recipient, routingId, details, timeout } = params;
+  const { channelAddress, amount, assetId, recipient, details, timeout, meta: providedMeta } = params;
 
-  const participants =
-    channel.participants[0] == signer.address
-      ? channel.participants
-      : [channel.participants[1], channel.participants[0]];
-  const recipientChainId = params.recipientChainId ? params.recipientChainId : channel.networkContext.chainId;
-  const recipientAssetId = params.recipientAssetId ? params.recipientAssetId : params.assetId;
+  const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
+  const recipientAssetId = params.recipientAssetId ?? params.assetId;
+  const channelCounterparty = signer.address === channel.alice ? channel.bob : channel.alice;
+
+  // If the recipient is the channel counterparty, no default routing
+  // meta needs to be created, otherwise create the default routing meta.
+  // NOTE: While the engine and protocol do not care about the structure
+  // of the meta, this is where several relevant default values are
+  // set for the higher level modules to parse
+  let baseRoutingMeta: RouterSchemas.RouterMeta | undefined = undefined;
+  if (recipient && getSignerAddressFromPublicIdentifier(recipient) !== channelCounterparty) {
+    baseRoutingMeta = {
+      requireOnline: false, // TODO: change with more transfer types?
+      routingId: providedMeta.routingId ?? getRandomBytes32(),
+      path: [{ recipient, recipientChainId, recipientAssetId }],
+    };
+  }
+
+  // TODO: transfers should be allowed to go to participants outside of the
+  // channel (i.e. some dispute recovery address). This should be passed in
+  // via the transfer params as a `recoveryAddress` variable
+  // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
 
   let transferDefinition: string | undefined;
   let transferInitialState: LinkedTransferState;
@@ -46,7 +65,7 @@ export function convertConditionalTransferParams(
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
-        to: participants,
+        to: [signer.address, channelCounterparty],
       },
       linkedHash: details.linkedHash,
     };
@@ -54,13 +73,6 @@ export function convertConditionalTransferParams(
   } else {
     return Result.fail(new InvalidTransferType(params.conditionType));
   }
-
-  // TODO: enforce that passed in meta is an object
-  const meta = {
-    routingId,
-    path: [{ recipient, recipientChainId, recipientAssetId }],
-    ...params.meta,
-  };
 
   return Result.ok({
     channelAddress,
@@ -70,7 +82,10 @@ export function convertConditionalTransferParams(
     transferInitialState,
     timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings,
-    meta,
+    meta: {
+      ...(baseRoutingMeta ?? {}),
+      ...(providedMeta ?? {}),
+    },
   });
 }
 
@@ -78,7 +93,7 @@ export function convertResolveConditionParams(
   params: EngineParams.ResolveTransfer,
   transfer: FullTransferState,
 ): Result<ResolveTransferParams, InvalidTransferType> {
-  const { channelAddress, routingId, details } = params;
+  const { channelAddress, details, meta } = params;
   let transferResolver: LinkedTransferResolver;
 
   if (params.conditionType == ConditionalTransferType.LinkedTransfer) {
@@ -93,7 +108,7 @@ export function convertResolveConditionParams(
     channelAddress,
     transferId: transfer.transferId,
     transferResolver,
-    routingId,
+    meta: { details: meta ?? {} },
   });
 }
 
@@ -101,6 +116,7 @@ export async function convertWithdrawParams(
   params: EngineParams.Withdraw,
   signer: IChannelSigner,
   channel: FullChannelState,
+  chainAddresses: ChainAddresses,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const { channelAddress, assetId, recipient, fee } = params;
 
@@ -113,7 +129,8 @@ export async function convertWithdrawParams(
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
-    channel.participants,
+    channel.alice,
+    channel.bob,
     params.recipient,
     assetId,
     // Important: Use params.amount here which doesn't include fee!!
@@ -124,16 +141,16 @@ export async function convertWithdrawParams(
 
   const initiatorSignature = await signer.signMessage(commitment.hashToSign());
 
-  const counterpartySigner =
-    channel.participants[0] == signer.address ? channel.participants[1] : channel.participants[0];
+  const channelCounterparty = channel.alice === signer.address ? channel.bob : channel.alice;
 
   const transferInitialState: WithdrawState = {
     balance: {
       amount: [amount, "0"],
-      to: [recipient, counterpartySigner],
+      to: [recipient, channelCounterparty],
     },
     initiatorSignature,
-    signers: [signer.address, counterpartySigner],
+    initiator: signer.address,
+    responder: channelCounterparty,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
     fee: fee ? fee : "0",
@@ -143,7 +160,7 @@ export async function convertWithdrawParams(
     channelAddress,
     amount,
     assetId,
-    transferDefinition: channel.networkContext.withdrawDefinition!,
+    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawDefinition!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],

@@ -12,9 +12,11 @@ import {
   IVectorProtocol,
   Result,
   FullTransferState,
-  IVectorOnchainService,
+  IVectorChainReader,
   OutboundChannelUpdateError,
   ProtocolParams,
+  IExternalValidation,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -38,7 +40,8 @@ export class Vector implements IVectorProtocol {
     private readonly lockService: ILockService,
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
-    private readonly onchainService: IVectorOnchainService,
+    private readonly chainReader: IVectorChainReader,
+    private readonly externalValidationService: IExternalValidation,
     private readonly logger: pino.BaseLogger,
   ) {}
 
@@ -47,9 +50,22 @@ export class Vector implements IVectorProtocol {
     lockService: ILockService,
     storeService: IVectorStore,
     signer: IChannelSigner,
-    onchainService: IVectorOnchainService,
+    chainReader: IVectorChainReader,
     logger: pino.BaseLogger,
+    validationService?: IExternalValidation,
   ): Promise<Vector> {
+    // Set the external validation service. If none is provided,
+    // create an object with a matching interface to perform no
+    // additional validation
+    const externalValidation = validationService ?? {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+        Promise.resolve(Result.ok(undefined)),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+        Promise.resolve(Result.ok(undefined)),
+    };
+
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
     const node = await new Vector(
@@ -57,7 +73,8 @@ export class Vector implements IVectorProtocol {
       lockService,
       storeService,
       signer,
-      onchainService,
+      chainReader,
+      externalValidation,
       logger,
     ).setupServices();
 
@@ -81,8 +98,9 @@ export class Vector implements IVectorProtocol {
     const outboundRes = await sync.outbound(
       params,
       this.storeService,
-      this.onchainService,
+      this.chainReader,
       this.messagingService,
+      this.externalValidationService,
       this.signer,
       this.logger,
     );
@@ -107,7 +125,18 @@ export class Vector implements IVectorProtocol {
   private async executeUpdate(
     params: UpdateParams<any>,
   ): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
-    this.logger.info({ method: "executeUpdate", step: "start", params });
+    this.logger.debug({
+      method: "executeUpdate",
+      step: "start",
+      params,
+    });
+    this.logger.info({
+      method: "executeUpdate",
+      step: "start",
+      type: params.type,
+      channelAddress: params.channelAddress,
+      updateSender: this.signer.publicIdentifier,
+    });
     const key = await this.lockService.acquireLock(params.channelAddress);
     const outboundRes = await this.lockedOperation(params);
     await this.lockService.releaseLock(params.channelAddress, key);
@@ -145,9 +174,10 @@ export class Vector implements IVectorProtocol {
         received.update,
         received.previousUpdate,
         inbox,
-        this.onchainService,
+        this.chainReader,
         this.storeService,
         this.messagingService,
+        this.externalValidationService,
         this.signer,
         this.logger,
       );
@@ -160,7 +190,11 @@ export class Vector implements IVectorProtocol {
       });
     });
 
-    // TODO validate that the channel is not currently in dispute/checkpoint state
+    // TODO: https://github.com/connext/vector/issues/54
+
+    // TODO: https://github.com/connext/vector/issues/52
+
+    // TODO: https://github.com/connext/vector/issues/53
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
@@ -170,8 +204,9 @@ export class Vector implements IVectorProtocol {
           .outbound(
             channel.latestUpdate,
             this.storeService,
-            this.onchainService,
+            this.chainReader,
             this.messagingService,
+            this.externalValidationService,
             this.signer,
             this.logger,
           )
@@ -207,6 +242,13 @@ export class Vector implements IVectorProtocol {
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
 
+  // TODO: https://github.com/connext/vector/issues/53
+  public async isAlive(channelAddress: string) {
+    // isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
+    //         it should return an error (and emit it!) if the ack is not received.
+    //         on the sync inbound side, we should properly ack this message and also emit an event when you hear it (on both sides)
+  }
+
   public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all parameters
     const error = this.validateParams(params, ProtocolParams.SetupSchema);
@@ -221,7 +263,7 @@ export class Vector implements IVectorProtocol {
       params.networkContext.chainId,
       params.networkContext.channelFactoryAddress,
       params.networkContext.channelMastercopyAddress,
-      this.onchainService,
+      this.chainReader,
     );
     if (create2Res.isError) {
       return Result.fail(

@@ -3,7 +3,7 @@ import {
   ChannelCommitmentData,
   FullChannelState,
   IChannelSigner,
-  IVectorOnchainService,
+  IVectorChainReader,
   Result,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
@@ -29,72 +29,105 @@ export function addEvtHandler<T = any>(
 export async function generateSignedChannelCommitment(
   newState: FullChannelState,
   signer: IChannelSigner,
-  updateSignatures: string[],
+  aliceSignature?: string,
+  bobSignature?: string,
 ): Promise<ChannelCommitmentData> {
   const { networkContext, ...core } = newState;
 
-  const unsigned: ChannelCommitmentData = {
+  const unsigned = {
     chainId: networkContext.chainId,
     state: core,
     channelFactoryAddress: networkContext.channelFactoryAddress,
-    signatures: [],
   };
-  const filteredSigs = updateSignatures.filter(x => !!x);
-  if (filteredSigs.length === 2) {
+  if (aliceSignature && bobSignature) {
     // No need to sign, we have already signed
     return {
       ...unsigned,
-      signatures: updateSignatures,
+      aliceSignature,
+      bobSignature,
     };
   }
 
   // Only counterparty has signed
-  const [counterpartySignature] = filteredSigs;
   const sig = await signer.signMessage(hashChannelCommitment(unsigned));
-  const idx = newState.participants.findIndex(p => p === signer.address);
+  const isAlice = signer.address === newState.alice;
   const signed = {
     ...unsigned,
-    signatures: idx === 0 ? [sig, counterpartySignature] : [counterpartySignature, sig],
+    aliceSignature: isAlice ? sig : aliceSignature,
+    bobSignature: isAlice ? bobSignature : sig,
   };
   return signed;
 }
 
-// TODO: make a result type?
 export async function validateChannelUpdateSignatures(
   state: FullChannelState,
-  updateSignatures: string[],
-  requiredSigners: 1 | 2 = 1,
-): Promise<string | undefined> {
-  const present = updateSignatures.filter(x => !!x).length;
-  if (present < requiredSigners) {
-    return `Only ${present}/${requiredSigners} signatures present`;
-  }
-  // generate the commitment
+  aliceSignature?: string,
+  bobSignature?: string,
+  requiredSigners: "alice" | "bob" | "both" = "both",
+): Promise<Result<void | Error>> {
+  // Generate the commitment
   const { networkContext, ...core } = state;
-  const hash = hashChannelCommitment({
-    chainId: networkContext.chainId,
-    state: core,
-    channelFactoryAddress: networkContext.channelFactoryAddress,
-    signatures: [],
-  });
+  let hash;
+  try {
+    hash = hashChannelCommitment({
+      chainId: networkContext.chainId,
+      state: core,
+      channelFactoryAddress: networkContext.channelFactoryAddress,
+    });
+  } catch (e) {
+    return Result.fail(new Error("Failed to generate channel commitment hash"));
+  }
 
-  const results = (
-    await Promise.all(
-      updateSignatures.map(async (sigToVerify, idx) => {
-        if (!sigToVerify) {
-          return undefined;
-        }
-        const recovered = await recoverAddressFromChannelMessage(hash, sigToVerify);
-        if (!state.participants.includes(recovered)) {
-          return `Recovered ${recovered}, expected one of ${state.participants.toString()}`;
-        }
-        return recovered === state.participants[idx]
-          ? undefined
-          : `Recovered ${recovered}, expected ${state.participants[idx]}`;
-      }),
-    )
-  ).filter(x => !!x);
-  return results.length === 0 ? undefined : results.toString();
+  // Create a recovery helper to catch errors
+  const tryRecovery = async (sig?: string): Promise<string> => {
+    if (!sig) {
+      return "No signature provided";
+    }
+    let recovered: string;
+    try {
+      recovered = await recoverAddressFromChannelMessage(hash, sig);
+    } catch (e) {
+      recovered = e.message;
+    }
+    return recovered;
+  };
+
+  const [rAlice, rBob] = await Promise.all([tryRecovery(aliceSignature), tryRecovery(bobSignature)]);
+
+  const aliceSigned = rAlice === state.alice;
+  const bobSigned = rBob === state.bob;
+
+  const bobNeeded = requiredSigners === "bob" || requiredSigners === "both";
+  const aliceNeeded = requiredSigners === "alice" || requiredSigners === "both";
+
+  // Check if signers are required and valid
+  if (aliceNeeded && bobNeeded && aliceSigned && bobSigned) {
+    return Result.ok(undefined);
+  }
+
+  // Only one signer is required, but if there are two signatures both
+  // should be valid
+  if (aliceNeeded && aliceSigned && !bobSignature && !bobNeeded) {
+    return Result.ok(undefined);
+  }
+
+  if (bobNeeded && bobSigned && !aliceSignature && !aliceNeeded) {
+    return Result.ok(undefined);
+  }
+
+  // Only one is required, but both are provided (and should be valid)
+  if (aliceSignature && aliceSigned && bobSignature && bobSigned) {
+    return Result.ok(undefined);
+  }
+
+  // Construct an explicit error message
+  const prefix = `Expected ${requiredSigners === "both" ? "alice + bob" : requiredSigners} ${
+    aliceNeeded ? state.alice : ""
+  }${bobNeeded ? " + " + state.bob : ""}. Got: `;
+
+  const details = `${aliceNeeded ? "(alice) " + rAlice : ""}${bobNeeded ? "+ (bob) " + rBob : ""}`;
+
+  return Result.fail(new Error(prefix + details));
 }
 
 export const reconcileDeposit = async (
@@ -104,24 +137,16 @@ export const reconcileDeposit = async (
   processedDepositA: string,
   processedDepositB: string,
   assetId: string,
-  onchainService: IVectorOnchainService,
+  chainReader: IVectorChainReader,
 ): Promise<Result<{ balance: Balance; totalDepositedA: string; totalDepositedB: string }, Error>> => {
   // First get totalDepositedA and totalDepositedB
-  const totalDepositedARes = await onchainService.getTotalDepositedA(
-    channelAddress,
-    chainId,
-    assetId,
-  );
+  const totalDepositedARes = await chainReader.getTotalDepositedA(channelAddress, chainId, assetId);
   if (totalDepositedARes.isError) {
     return Result.fail(totalDepositedARes.getError()!);
   }
   const totalDepositedA = totalDepositedARes.getValue();
 
-  const totalDepositedBRes = await onchainService.getTotalDepositedB(
-    channelAddress,
-    chainId,
-    assetId,
-  );
+  const totalDepositedBRes = await chainReader.getTotalDepositedB(channelAddress, chainId, assetId);
   if (totalDepositedBRes.isError) {
     return Result.fail(totalDepositedBRes.getError()!);
   }

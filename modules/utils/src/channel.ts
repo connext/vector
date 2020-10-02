@@ -1,9 +1,4 @@
-import {
-  Balance,
-  ChannelCommitmentData,
-  CoreChannelState,
-  CoreChannelStateEncoding,
-} from "@connext/vector-types";
+import { Balance, ChannelCommitmentData, CoreChannelState, CoreChannelStateEncoding } from "@connext/vector-types";
 import { utils } from "ethers";
 
 const { keccak256, solidityPack, defaultAbiCoder } = utils;
@@ -22,10 +17,7 @@ export const hashBalances = (balances: Balance[]): string => {
 };
 
 export const encodeCoreChannelState = (state: CoreChannelState): string => {
-  return defaultAbiCoder.encode(
-    [CoreChannelStateEncoding],
-    [state],
-  );
+  return defaultAbiCoder.encode([CoreChannelStateEncoding], [state]);
 };
 
 export const hashCoreChannelState = (state: CoreChannelState): string => {
@@ -33,11 +25,10 @@ export const hashCoreChannelState = (state: CoreChannelState): string => {
 };
 
 export const hashChannelCommitment = (commitment: ChannelCommitmentData): string => {
-  const channelStateHash = hashCoreChannelState(commitment.state);
   return keccak256(
     solidityPack(
-      ["bytes32", "bytes[]", "address", "uint256"],
-      [channelStateHash, commitment.signatures, commitment.channelFactoryAddress, commitment.chainId.toString()],
+      ["bytes32", "address", "uint256"],
+      [hashCoreChannelState(commitment.state), commitment.channelFactoryAddress, commitment.chainId.toString()],
     ),
   );
 };

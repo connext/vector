@@ -1,0 +1,18 @@
+@nodeUrl = http://localhost:8003
+@eventName = CONDITIONAL_TRANSFER_CREATED
+
+###############
+### Create Event Subscription
+POST {{nodeUrl}}/event/subscribe
+Content-Type: application/json
+
+{
+  "{{eventName}}": "http://localhost:1234"
+}
+
+###############
+### Get Event Subscription
+GET {{nodeUrl}}/event/{{eventName}}
+
+### Get Event Subscriptions
+GET {{nodeUrl}}/event
