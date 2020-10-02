@@ -12,15 +12,13 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   ResolveUpdateDetails,
+  ILockService,
 } from "@connext/vector-types";
-import { VectorChainService } from "@connext/vector-contracts";
-import Axios from "axios";
 
-import { getBearerTokenFunction, NatsMessagingService } from "./services/messaging";
-import { LockService } from "./services/lock";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { constructRpcRequest } from "./helpers/rpc";
+import { createNode } from "./helpers/nodes";
 
 const server = fastify();
 server.register(fastifyOas, {
@@ -33,62 +31,25 @@ server.register(fastifyOas, {
   exposeRoute: true,
 });
 
-const logger = pino();
-let vectorEngine: VectorEngine;
-const pk = Wallet.fromMnemonic(config.mnemonic!).privateKey;
-const signer = new ChannelSigner(pk);
+export const logger = pino();
+export let lock: ILockService;
+export const store = new PrismaStore();
 
-const _providers: { [chainId: string]: providers.JsonRpcProvider } = {};
-Object.entries(config.chainProviders).forEach(([chainId, url]: any) => {
-  _providers[chainId] = new providers.JsonRpcProvider(url);
-});
+export const _providers = Object.fromEntries(
+  Object.entries(config.chainProviders).map(([chainId, url]: any) => [chainId, new providers.JsonRpcProvider(url)]),
+);
 
-const vectorTx = new VectorChainService(_providers, pk, logger.child({ module: "VectorChainService" }));
-const store = new PrismaStore();
 server.addHook("onReady", async () => {
-  const messaging = new NatsMessagingService(
-    {
-      messagingUrl: config.natsUrl,
-    },
-    logger.child({ module: "NatsMessagingService" }),
-    getBearerTokenFunction(signer),
-  );
-  await messaging.connect();
-
-  const lock = await LockService.connect(config.redisUrl);
-  vectorEngine = await VectorEngine.connect(
-    messaging,
-    lock,
-    store,
-    signer,
-    vectorTx,
-    config.chainProviders,
-    config.contractAddresses,
-    logger.child({ module: "VectorEngine" }),
-  );
-
-  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
-    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
-    if (url) {
-      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_CREATED }, "Relaying event");
-      await Axios.post(url, data);
-    }
-  });
-
-  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, async data => {
-    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
-    if (url) {
-      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED }, "Relaying event");
-      await Axios.post(url, data);
-    }
-  });
+  await createNode("0");
 });
 
 server.get("/ping", async () => {
   return "pong\n";
 });
 
-server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema } }, async (request, reply) => {
+server.get("/config/:index", { schema: { response: ServerNodeResponses.GetConfigSchema } }, async (request, reply) => {
+  if (!request.params.index) {
+  }
   return reply.status(200).send({
     publicIdentifier: signer.publicIdentifier,
     signerAddress: signer.address,
@@ -377,6 +338,8 @@ server.post<{ Body: ServerNodeParams.Admin }>(
     }
   },
 );
+
+server.post("/node/:index", {}, async (request, reply) => {});
 
 server.listen(config.port, "0.0.0.0", (err, address) => {
   if (err) {
