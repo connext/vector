@@ -68,7 +68,7 @@ common="networks:
 ####################
 # Proxy config
 
-proxy_image_name="${project}_proxy";
+proxy_image_name="${project}_router_proxy";
 proxy_image="$proxy_image_name:$version";
 bash $root/ops/pull-images.sh $version $proxy_image_name > /dev/null
 

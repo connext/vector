@@ -70,7 +70,7 @@ admin_token="${VECTOR_ADMIN_TOKEN:-cxt1234}"
 ####################
 # Proxy config
 
-proxy_image_name="${project}_proxy";
+proxy_image_name="${project}_node_proxy";
 proxy_image="$proxy_image_name:$version";
 bash $root/ops/pull-images.sh $version $proxy_image_name > /dev/null
 
@@ -209,8 +209,8 @@ services:
 
   proxy:
     $common
-    $proxy_ports
     image: '$proxy_image'
+    $proxy_ports
     environment:
       VECTOR_DOMAINNAME: '$VECTOR_DOMAINNAME'
       VECTOR_EMAIL: '$VECTOR_EMAIL'
