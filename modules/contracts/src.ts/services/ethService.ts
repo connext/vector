@@ -82,8 +82,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         signer,
       );
 
-      channelFactory.once(channelFactory.filters.ChannelCreation(), () => {
-        this.log.info({ method: "sendDepositTx" }, `Channel created event`);
+      channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
+        this.log.info({ method: "sendDepositTx" }, `Channel created event: ${JSON.stringify(data)}`);
       });
 
       if (assetId !== constants.AddressZero) {
