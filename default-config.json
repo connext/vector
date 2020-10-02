@@ -40,8 +40,8 @@
     "1337": "http://evm_1337:8545",
     "1338": "http://evm_1338:8545"
   },
+  "domainName": "",
   "natsUrl": "nats://nats:4222",
-  "nodeUrl": "http://node:8000",
   "port": 8000,
   "redisUrl": "redis://redis:6379",
   "rebalanceProfiles": [

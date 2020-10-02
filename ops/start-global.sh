@@ -175,7 +175,7 @@ services:
     environment:
       VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
       VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
+      VECTOR_NATS_URL: 'nats://nats:$nats_port'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
       VECTOR_ENV: '$VECTOR_ENV'

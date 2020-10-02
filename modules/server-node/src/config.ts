@@ -40,6 +40,9 @@ const mnemonic = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
 let vectorConfig: VectorNodeConfig;
 try {
+  if (!process.env.VECTOR_CONFIG) {
+    throw new Error(`"${process.env.VECTOR_CONFIG}"`);
+  }
   vectorConfig = JSON.parse(process.env.VECTOR_CONFIG!);
 } catch (e) {
   throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);

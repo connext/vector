@@ -161,7 +161,7 @@ VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
 ########################################
 ## Node config
 
-vector_config="`cat $root/vector-config.json | tr -d '\n\r'`"
+vector_config="`cat $root/config.json | tr -d '\n\r'`"
 
 node_port="8000"
 prisma_port="5555"

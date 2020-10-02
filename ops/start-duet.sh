@@ -71,7 +71,7 @@ VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
 ########################################
 ## Node config
 
-vector_config="`cat $root/vector-config.json | tr -d '\n\r'`"
+vector_config="`cat $root/config.json | tr -d '\n\r'`"
 
 node_port="8000"
 prisma_studio_port="5555"
@@ -104,7 +104,7 @@ node_env="environment:
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
       VECTOR_ENV: '$VECTOR_ENV'
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
+      VECTOR_NATS_URL: 'nats://nats:$nats_port'
       VECTOR_PG_DATABASE: '$project'
       VECTOR_PG_PASSWORD: '$project'
       VECTOR_PG_PORT: '$pg_port'

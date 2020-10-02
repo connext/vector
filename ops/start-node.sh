@@ -17,22 +17,20 @@ else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Load env vars
+# Load config
 
 VECTOR_ENV="${VECTOR_ENV:-dev}"
+VECTOR_LOG_LEVEL="${LOG_LEVEL:-${VECTOR_LOG_LEVEL}}";
 
-# Load the default env
-if [[ -f "${VECTOR_ENV}.env" ]]
-then source "${VECTOR_ENV}.env"
-fi
+default_config="`cat $root/default-config.json`" # | tr -d '\n\r'`"
+override_config="`cat $root/config.json`" # | tr -d '\n\r'`"
+config="`echo $default_config $override_config | jq -s '.[0] + .[1]'`"
 
-# Load private env vars & instance-specific overrides
-if [[ -f ".env" ]]
-then source .env
-fi
+admin_token="`echo $vector_config | jq '.adminToken' | tr -d '"'`"
 
-# log level alias can override default for easy `LOG_LEVEL=5 make start`
-VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
+echo $config
+
+domain_name="`echo $vector_config | jq '.domainName' | tr -d '"'`"
 
 ####################
 # Misc Config
@@ -65,7 +63,6 @@ common="networks:
       options:
           max-size: '100m'"
 
-admin_token="${VECTOR_ADMIN_TOKEN:-cxt1234}"
 
 ####################
 # Proxy config
@@ -165,8 +162,6 @@ VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
 node_port="8001"
 prisma_port="5556"
 
-vector_config="`cat $root/vector-config.json | tr -d '\n\r'`"
-
 if [[ $VECTOR_ENV == "prod" ]]
 then
   node_image_name="${project}_node"
@@ -212,8 +207,7 @@ services:
     image: '$proxy_image'
     $proxy_ports
     environment:
-      VECTOR_DOMAINNAME: '$VECTOR_DOMAINNAME'
-      VECTOR_EMAIL: '$VECTOR_EMAIL'
+      VECTOR_DOMAINNAME: '$domain_name'
       VECTOR_NODE_URL: 'node:$node_port'
     volumes:
       - 'certs:/etc/letsencrypt'
@@ -224,14 +218,13 @@ services:
     ports:
       - '$node_port:$node_port'
     environment:
-      VECTOR_CONFIG: '$vector_config'
-      VECTOR_ADMIN_TOKEN: '$admin_token'
+      VECTOR_CONFIG: '$config'
       VECTOR_AUTH_URL: '$auth_url'
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
       VECTOR_MNEMONIC_FILE: '$VECTOR_MNEMONIC_FILE'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
+      VECTOR_NATS_URL: 'nats://nats:$nats_port'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: '$pg_host'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'

@@ -111,7 +111,7 @@ docker run \
   --env="VECTOR_CONTRACT_ADDRESSES=$VECTOR_CONTRACT_ADDRESSES" \
   --env="VECTOR_ENV=$VECTOR_ENV" \
   --env="VECTOR_LOG_LEVEL=$VECTOR_LOG_LEVEL" \
-  --env="VECTOR_NATS_SERVERS=nats://nats:$nats_port" \
+  --env="VECTOR_NATS_URL=nats://nats:$nats_port" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@${project}_database:$pg_port/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \
   --env="VECTOR_PORT=$node_port" \

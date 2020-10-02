@@ -72,6 +72,7 @@ Four different Vector stacks are supported:
  - `trio`: 2x node/db pairs + 1x node/router/db , used to test node interactions via a routing node.
 
 For any of these stacks, you can manage them with:
+ - `make ${stack}` eg `make duet` builds everything required by the given stack
  - `make start-${stack}` eg `make start-router` will start up the router stack.
  - `make stop-${stack}` stops the stack
  - `make restart-${stack}` stops the stack if it's running & starts it again
