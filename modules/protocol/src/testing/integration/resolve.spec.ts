@@ -37,11 +37,10 @@ describe(testName, () => {
 
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
-    await resolveTransfer(channelAddress, transfer, alice, bob);
+    await resolveTransfer(channelAddress, transfer, bob, alice);
   });
 
-  // We neeed this to test whether resolve still works if the funds in the transfer are burned
-  it.skip("should work for withdraw", async () => {});
+  // We need this to test whether resolve still works if the funds in the transfer are burned
   it.skip("should work for alice resolving an eth transfer", async () => {});
   it.skip("should work for alice resolving an eth transfer out of channel", async () => {});
   it.skip("should work for alice resolving a token transfer", async () => {});
@@ -50,6 +49,23 @@ describe(testName, () => {
   it.skip("should work for bob resolving an eth transfer out of channel", async () => {});
   it.skip("should work for bob resolving a token transfer", async () => {});
   it.skip("should work for bob resolving a token transfer out of channel", async () => {});
-  it.skip("should work concurrently", async () => {});
-  it.skip("should work if channel is out of sync", async () => {});
+
+  it("should work concurrently", async () => {
+    // Set test constants
+    const assetId = constants.AddressZero;
+    const transferAmount = "7";
+
+    // Create two transfers from alice -> bob
+    const { transfer: transfer1 } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
+    const { transfer: transfer2 } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
+
+    // Resolve both
+    await Promise.all([
+      resolveTransfer(channelAddress, transfer1, bob, alice),
+      resolveTransfer(channelAddress, transfer2, bob, alice),
+    ]);
+  });
+
+  it.skip("should work if initiator channel is out of sync", async () => {});
+  it.skip("should work if responder channel is out of sync", async () => {});
 });
