@@ -114,7 +114,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }
       }
 
-      // TODO: fix this
       const tx = await this.sendTxAndParseResponse(
         channelState.channelAddress,
         TransactionReason.deployWithDepositA,
@@ -179,17 +178,21 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     reason: TransactionReason,
     txFn: () => Promise<providers.TransactionResponse>,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
-    // Perform transaction sending within queue
-    // Try to send transaction
-
-    // Save response
-
-    // Add listener to save receipt / failure
-
+    // TODO: add retries on specific errors
     try {
-      const tx = await txFn();
-      return Result.ok(tx);
+      const response = await this.queue.add(async () => {
+        const response = await txFn();
+        await this.store.saveTransactionResponse(channelAddress, reason, response);
+        // Register callbacks for saving tx, then return
+        response
+          .wait() // TODO: confirmation blocks?
+          .then(receipt => this.store.saveTransactionReceipt(receipt))
+          .catch(e => this.store.saveTransactionFailure(e.message, response.hash));
+        return response;
+      });
+      return Result.ok(response);
     } catch (e) {
+      // Don't save tx if it failed to submit, only if it fails to mine
       let error = e;
       if (e.message.includes("sender doesn't have enough funds")) {
         error = new ChainError(ChainError.reasons.NotEnoughFunds);
