@@ -131,3 +131,40 @@ model EventSubscription {
   event String @unique
   url   String
 }
+
+model OnchainTransaction {
+  @@map(name: "onchain-transaction")
+
+  // Response fields
+  transactionHash   String @id
+  to                String
+  from              String
+  data              String
+  value             String
+  chainId           Int
+  nonce             Int
+  gasLimit          String
+  gasPrice          String
+
+  // Receipt fields
+  timestamp         Int?
+  raw               String?
+  blockHash         String?
+  blockNumber       Int?
+  contractAddress   String?
+  transactionIndex  Int?
+  root              String?
+  gasUsed           String?
+  logsBloom         String?
+  cumulativeGasUsed String?
+  byzantium         Boolean?
+
+  // Channel fields
+  status            String @default("submitted") // no enums
+  reason            String // no enums
+  channelAddress    String
+  channel           Channel @relation(fields: [channelAddress], references: [channelAddress])
+
+  @@unique(transactionHash)
+  @@unique([from, nonce])
+}

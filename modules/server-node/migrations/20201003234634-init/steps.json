@@ -1083,6 +1083,308 @@
       },
       "argument": "name",
       "value": "\"event-subscription\""
+    },
+    {
+      "tag": "CreateModel",
+      "model": "OnchainTransaction"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "transactionHash",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "OnchainTransaction",
+          "field": "transactionHash"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "to",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "from",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "data",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "value",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "chainId",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "nonce",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "gasLimit",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "gasPrice",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "timestamp",
+      "type": "Int",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "raw",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "blockHash",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "blockNumber",
+      "type": "Int",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "contractAddress",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "transactionIndex",
+      "type": "Int",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "root",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "gasUsed",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "logsBloom",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "cumulativeGasUsed",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "byzantium",
+      "type": "Boolean",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "status",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "OnchainTransaction",
+          "field": "status"
+        },
+        "directive": "default"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "OnchainTransaction",
+          "field": "status"
+        },
+        "directive": "default"
+      },
+      "argument": "",
+      "value": "\"submitted\""
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "reason",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "channelAddress",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "channel",
+      "type": "Channel",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "OnchainTransaction",
+          "field": "channel"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "OnchainTransaction",
+          "field": "channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "OnchainTransaction",
+          "field": "channel"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[channelAddress]"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "OnchainTransaction"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "OnchainTransaction"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"onchain-transaction\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "OnchainTransaction",
+          "arguments": [
+            {
+              "name": "",
+              "value": "transactionHash"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "OnchainTransaction",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[from, nonce]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
     }
   ]
 }

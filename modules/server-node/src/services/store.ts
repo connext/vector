@@ -11,6 +11,8 @@ import {
   EngineEvent,
   IEngineStore,
   WithdrawCommitmentJson,
+  StoredTransaction,
+  TransactionReason,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
@@ -25,7 +27,7 @@ import {
   TransferUpdateManyWithoutChannelInput,
   TransferCreateWithoutChannelInput,
 } from "@prisma/client";
-import { BigNumber } from "ethers";
+import { BigNumber, providers } from "ethers";
 
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
@@ -182,6 +184,25 @@ export class PrismaStore implements IServerNodeStore {
 
   constructor(private readonly dbUrl?: string) {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+  }
+  getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
+    throw new Error("Method not implemented.");
+  }
+
+  saveTransactionResponse(
+    channelAddress: string,
+    reason: TransactionReason,
+    response: providers.TransactionResponse,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  saveTransactionReceipt(transaction: providers.TransactionReceipt): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  saveTransactionFailure(error: string, transactionHash: string): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {

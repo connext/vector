@@ -1,6 +1,7 @@
+import { providers } from "ethers";
+
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
 import { FullChannelState, ChannelCommitmentData, FullTransferState } from "./channel";
-import { providers } from "ethers";
 import { Address } from "./basic";
 
 export interface IVectorStore {
@@ -41,8 +42,8 @@ export const StoredTransactionStatus = {
 export type StoredTransactionStatus = keyof typeof StoredTransactionStatus;
 
 export const TransactionReason = {
-  approveTokens: "approveTokens",
   allowance: "allowance",
+  approveTokens: "approveTokens",
   depositA: "depositA",
   depositB: "depositB",
   deployWithDepositA: "deployWithDepositA",
@@ -62,15 +63,15 @@ export type StoredTransaction = {
   from: Address;
   data: string;
   value: string;
-  chainId: string;
+  chainId: number;
 
   // TransactionRequest fields (defined when tx populated)
-  nonce?: string;
-  gasLimit?: string;
-  gasPrice?: string;
+  nonce: number;
+  gasLimit: string;
+  gasPrice: string;
 
   // TransactionResponse fields (defined when submitted)
-  transactionHash?: string; // may be edited on mining
+  transactionHash: string; // may be edited on mining
   timestamp?: number;
   raw?: string;
   blockHash?: string; // may be edited on mining
@@ -92,7 +93,7 @@ export interface IChainServiceStore {
   disconnect(): Promise<void>;
   clear(): Promise<void>;
 
-  // Getters --> see note above StoredTransaction
+  // Getters
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined>;
 
   // Setters
