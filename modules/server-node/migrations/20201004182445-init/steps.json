@@ -1228,6 +1228,13 @@
     {
       "tag": "CreateField",
       "model": "OnchainTransaction",
+      "field": "logs",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
       "field": "cumulativeGasUsed",
       "type": "String",
       "arity": "Optional"
@@ -1277,6 +1284,13 @@
       "field": "reason",
       "type": "String",
       "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "OnchainTransaction",
+      "field": "error",
+      "type": "String",
+      "arity": "Optional"
     },
     {
       "tag": "CreateField",

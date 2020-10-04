@@ -156,12 +156,14 @@ model OnchainTransaction {
   root              String?
   gasUsed           String?
   logsBloom         String?
+  logs              String?
   cumulativeGasUsed String?
   byzantium         Boolean?
 
   // Channel fields
   status            String @default("submitted") // no enums
   reason            String // no enums
+  error             String?
   channelAddress    String
   channel           Channel @relation(fields: [channelAddress], references: [channelAddress])
 
