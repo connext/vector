@@ -147,7 +147,7 @@ model OnchainTransaction {
   gasPrice          String
 
   // Receipt fields
-  timestamp         Int?
+  timestamp         String?
   raw               String?
   blockHash         String?
   blockNumber       Int?

@@ -1166,7 +1166,7 @@
       "tag": "CreateField",
       "model": "OnchainTransaction",
       "field": "timestamp",
-      "type": "Int",
+      "type": "String",
       "arity": "Optional"
     },
     {
