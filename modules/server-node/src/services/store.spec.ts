@@ -24,10 +24,10 @@ describe("store", () => {
 
   beforeEach(async () => {
     await store.prisma.balance.deleteMany({});
+    await store.prisma.onchainTransaction.deleteMany({});
     await store.prisma.channel.deleteMany({});
     await store.prisma.update.deleteMany({});
     await store.prisma.transfer.deleteMany({});
-    await store.prisma.onchainTransaction.deleteMany({});
   });
 
   after(async () => {
