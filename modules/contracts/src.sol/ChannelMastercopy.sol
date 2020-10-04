@@ -4,8 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IVectorChannel.sol";
 import "./CMCCore.sol";
-import "./CMCWithdraw.sol";
-import "./CMCDeposit.sol";
+import "./CMCAccountant.sol";
 import "./CMCAdjudicator.sol";
 
 /// @title Vector Channel
@@ -17,8 +16,7 @@ import "./CMCAdjudicator.sol";
 
 contract ChannelMastercopy is
     CMCCore,
-    CMCWithdraw,
-    CMCDeposit,
+    CMCAccountant,
     CMCAdjudicator,
     IVectorChannel
     {}
