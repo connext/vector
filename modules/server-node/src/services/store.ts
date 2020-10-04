@@ -45,6 +45,8 @@ const convertOnchainTransactionEntityToTransaction = (
   return {
     status: onchainEntity.status as StoredTransactionStatus,
     reason: onchainEntity.reason as TransactionReason,
+    error: onchainEntity.error ?? undefined,
+    channelAddress: onchainEntity.channelAddress,
     to: onchainEntity.to,
     from: onchainEntity.from,
     data: onchainEntity.data,
@@ -54,7 +56,7 @@ const convertOnchainTransactionEntityToTransaction = (
     gasLimit: onchainEntity.gasLimit,
     gasPrice: onchainEntity.gasPrice,
     transactionHash: onchainEntity.transactionHash,
-    timestamp: onchainEntity.timestamp ?? undefined,
+    timestamp: onchainEntity.timestamp ? BigNumber.from(onchainEntity.timestamp).toNumber() : undefined,
     raw: onchainEntity.raw ?? undefined,
     blockHash: onchainEntity.blockHash ?? undefined,
     blockNumber: onchainEntity.blockNumber ?? undefined,
@@ -65,6 +67,7 @@ const convertOnchainTransactionEntityToTransaction = (
     logsBloom: onchainEntity.logsBloom ?? undefined,
     cumulativeGasUsed: onchainEntity.cumulativeGasUsed ?? undefined,
     byzantium: onchainEntity.byzantium ?? undefined,
+    logs: onchainEntity.logs ? JSON.parse(onchainEntity.logs) : undefined,
   };
 };
 
@@ -248,7 +251,7 @@ export class PrismaStore implements IServerNodeStore {
         nonce: response.nonce,
         gasLimit: response.gasLimit.toString(),
         gasPrice: response.gasPrice.toString(),
-        timestamp: response.timestamp,
+        timestamp: response.timestamp?.toString(),
         raw: response.raw,
         blockHash: response.blockHash,
         blockNumber: response.blockNumber,
@@ -270,7 +273,7 @@ export class PrismaStore implements IServerNodeStore {
         nonce: response.nonce,
         gasLimit: response.gasLimit.toString(),
         gasPrice: response.gasPrice.toString(),
-        timestamp: response.timestamp,
+        timestamp: response.timestamp?.toString(),
         raw: response.raw,
         blockHash: response.blockHash,
         blockNumber: response.blockNumber,

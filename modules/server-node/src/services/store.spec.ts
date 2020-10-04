@@ -1,4 +1,4 @@
-import { Balance, EngineEvent, EngineEvents } from "@connext/vector-types";
+import { Balance, EngineEvent, EngineEvents, StoredTransactionStatus, TransactionReason } from "@connext/vector-types";
 import {
   createTestFullLinkedTransferState,
   createTestChannelState,
@@ -8,6 +8,7 @@ import {
   getRandomBytes32,
   getRandomIdentifier,
   getSignerAddressFromPublicIdentifier,
+  createTestTxResponse,
 } from "@connext/vector-utils";
 
 import { config } from "../config";
@@ -26,10 +27,81 @@ describe("store", () => {
     await store.prisma.channel.deleteMany({});
     await store.prisma.update.deleteMany({});
     await store.prisma.transfer.deleteMany({});
+    await store.prisma.onchainTransaction.deleteMany({});
   });
 
   after(async () => {
     await store.disconnect();
+  });
+
+  it("should save transaction responses and receipts", async () => {
+    // Load store with channel
+    const setupState = createTestChannelState("setup");
+    await store.saveChannelState(setupState, {
+      channelFactoryAddress: setupState.networkContext.channelFactoryAddress,
+      chainId: setupState.networkContext.chainId,
+      aliceSignature: setupState.latestUpdate.aliceSignature,
+      bobSignature: setupState.latestUpdate.bobSignature,
+      state: setupState,
+    });
+
+    const response = createTestTxResponse();
+
+    // save response
+    await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositA, response);
+
+    // verify response
+    const storedResponse = await store.getTransactionByHash(response.hash);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { wait, confirmations, hash, ...sanitizedResponse } = response;
+    expect(storedResponse).to.containSubset({
+      ...sanitizedResponse,
+      status: StoredTransactionStatus.submitted,
+      channelAddress: setupState.channelAddress,
+      transactionHash: hash,
+      gasLimit: response.gasLimit.toString(),
+      gasPrice: response.gasPrice.toString(),
+      value: response.value.toString(),
+    });
+
+    // save receipt
+    const receipt = await response.wait();
+    await store.saveTransactionReceipt(setupState.channelAddress, receipt);
+
+    // verify receipt
+    const storedReceipt = await store.getTransactionByHash(response.hash);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { confirmations: receiptConfs, ...sanitizedReceipt } = receipt;
+    expect(storedReceipt).to.containSubset({
+      ...sanitizedResponse,
+      ...sanitizedReceipt,
+      channelAddress: setupState.channelAddress,
+      transactionHash: hash,
+      gasLimit: response.gasLimit.toString(),
+      gasPrice: response.gasPrice.toString(),
+      value: response.value.toString(),
+      cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
+      gasUsed: receipt.gasUsed.toString(),
+      status: StoredTransactionStatus.mined,
+    });
+
+    // save failing response
+    const failed = createTestTxResponse({ hash: mkHash("0x13754"), nonce: 65 });
+    await store.saveTransactionResponse(setupState.channelAddress, TransactionReason.depositB, failed);
+    // save error
+    await store.saveTransactionFailure(setupState.channelAddress, failed.hash, "failed to send");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { wait: fWait, confirmations: fConf, hash: fHash, ...sanitizedFailure } = failed;
+    const storedFailure = await store.getTransactionByHash(fHash);
+    expect(storedFailure).to.containSubset({
+      ...sanitizedFailure,
+      transactionHash: fHash,
+      gasLimit: failed.gasLimit.toString(),
+      gasPrice: failed.gasPrice.toString(),
+      value: failed.value.toString(),
+      status: StoredTransactionStatus.failed,
+      error: "failed to send",
+    });
   });
 
   it("should save and retrieve all update types and keep updating the channel", async () => {

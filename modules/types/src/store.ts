@@ -54,6 +54,7 @@ export type TransactionReason = keyof typeof TransactionReason;
 
 export type StoredTransaction = {
   //// Helper fields
+  channelAddress: string;
   status: StoredTransactionStatus;
   reason: TransactionReason;
   error?: string;
