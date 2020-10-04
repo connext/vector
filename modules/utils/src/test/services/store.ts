@@ -14,10 +14,10 @@ export class MemoryStoreService implements IEngineStore {
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
     throw new Error("Method not implemented.");
   }
-  saveTransactionFailure(error: string, transactionHash: string): Promise<void> {
+  saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  saveTransactionReceipt(transactionReceipt: providers.TransactionReceipt): Promise<void> {
+  saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void> {
     throw new Error("Method not implemented.");
   }
   saveTransactionResponse(

@@ -56,6 +56,7 @@ export type StoredTransaction = {
   //// Helper fields
   status: StoredTransactionStatus;
   reason: TransactionReason;
+  error?: string;
 
   //// Provider fields
   // Minimum fields (should always be defined)
@@ -78,6 +79,7 @@ export type StoredTransaction = {
   blockNumber?: number; // may be edited on mining
 
   // TransactionReceipt fields (defined when mined)
+  logs?: string;
   contractAddress?: string;
   transactionIndex?: number;
   root?: string;
@@ -102,8 +104,8 @@ export interface IChainServiceStore {
     reason: TransactionReason,
     transaction: providers.TransactionResponse,
   ): Promise<void>;
-  saveTransactionReceipt(transaction: providers.TransactionReceipt): Promise<void>;
-  saveTransactionFailure(error: string, transactionHash: string): Promise<void>;
+  saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void>;
+  saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void>;
 }
 
 export interface IEngineStore extends IVectorStore, IChainServiceStore {

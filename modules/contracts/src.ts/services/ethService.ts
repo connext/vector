@@ -186,8 +186,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         // Register callbacks for saving tx, then return
         response
           .wait() // TODO: confirmation blocks?
-          .then(receipt => this.store.saveTransactionReceipt(receipt))
-          .catch(e => this.store.saveTransactionFailure(e.message, response.hash));
+          .then(receipt => this.store.saveTransactionReceipt(channelAddress, receipt))
+          .catch(e => this.store.saveTransactionFailure(channelAddress, response.hash, e.message));
         return response;
       });
       return Result.ok(response);
