@@ -190,7 +190,12 @@ export class RestServerNodeService implements IServerNodeService {
   }
 
   async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>> {
-    return this.executeHttpRequest("setup", "post", params, ServerNodeParams.SetupSchema);
+    return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
+      "setup",
+      "post",
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      ServerNodeParams.SetupSchema,
+    );
   }
 
   async deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>> {
@@ -201,10 +206,13 @@ export class RestServerNodeService implements IServerNodeService {
       return Result.fail(new ServerNodeError(ServerNodeError.reasons.ProviderNotFound));
     }
 
-    const sendDepositTxRes = await this.executeHttpRequest(
+    const sendDepositTxRes = await this.executeHttpRequest<
+      ServerNodeParams.SendDepositTx,
+      ServerNodeResponses.SendDepositTx
+    >(
       "send-deposit-tx",
       "post",
-      params,
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
       ServerNodeParams.SendDepositTxSchema,
     );
 
@@ -221,10 +229,14 @@ export class RestServerNodeService implements IServerNodeService {
     } catch (e) {
       return Result.fail(new ServerNodeError(ServerNodeError.reasons.TransactionNotMined, { txHash, params }));
     }
-    return this.executeHttpRequest(
+    return this.executeHttpRequest<ServerNodeParams.Deposit, ServerNodeResponses.Deposit>(
       "deposit",
       "post",
-      { channelAddress: params.channelAddress, assetId: params.assetId },
+      {
+        channelAddress: params.channelAddress,
+        assetId: params.assetId,
+        publicIdentifier: params.publicIdentifier ?? this.publicIdentifier,
+      },
       ServerNodeParams.DepositSchema,
     );
   }
@@ -232,10 +244,10 @@ export class RestServerNodeService implements IServerNodeService {
   async conditionalTransfer(
     params: ServerNodeParams.ConditionalTransfer,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>> {
-    return this.executeHttpRequest(
+    return this.executeHttpRequest<ServerNodeParams.ConditionalTransfer, ServerNodeResponses.ConditionalTransfer>(
       `linked-transfer/create`,
       "post",
-      params,
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
       ServerNodeParams.ConditionalTransferSchema,
     );
   }
@@ -243,11 +255,21 @@ export class RestServerNodeService implements IServerNodeService {
   async resolveTransfer(
     params: ServerNodeParams.ResolveTransfer,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
-    return this.executeHttpRequest(`linked-transfer/resolve`, "post", params, ServerNodeParams.ResolveTransferSchema);
+    return this.executeHttpRequest<ServerNodeParams.ResolveTransfer, ServerNodeResponses.ResolveTransfer>(
+      `linked-transfer/resolve`,
+      "post",
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      ServerNodeParams.ResolveTransferSchema,
+    );
   }
 
   async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, ServerNodeError>> {
-    return this.executeHttpRequest(`withdraw`, "post", params, ServerNodeParams.WithdrawSchema);
+    return this.executeHttpRequest<ServerNodeParams.Withdraw, ServerNodeResponses.Withdraw>(
+      `withdraw`,
+      "post",
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      ServerNodeParams.WithdrawSchema,
+    );
   }
 
   async once<T extends EngineEvent>(
@@ -296,12 +318,12 @@ export class RestServerNodeService implements IServerNodeService {
   }
 
   // Helper methods
-  private async executeHttpRequest(
+  private async executeHttpRequest<T, U>(
     urlPath: string,
     method: "get" | "post",
-    params: any,
+    params: T,
     paramSchema: any,
-  ): Promise<Result<any, ServerNodeError>> {
+  ): Promise<Result<U, ServerNodeError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
     // Validate parameters are in line with schema
     const validate = ajv.compile(paramSchema);

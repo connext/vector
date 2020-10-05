@@ -14,6 +14,7 @@ const testName = "Duet Happy";
 describe(testName, () => {
   let alice: IServerNodeService;
   let bob: IServerNodeService;
+
   before(async () => {
     alice = await RestServerNodeService.connect(
       env.aliceUrl,
