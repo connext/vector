@@ -19,6 +19,40 @@ export class EthereumChainReader implements IVectorChainReader {
     public readonly log: pino.BaseLogger = pino(),
   ) {}
 
+  async getChannelFactoryBytecode(
+    channelFactoryAddress: string,
+    chainId: number,
+  ): Promise<Result<string, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+      const proxyBytecode = await factory.proxyCreationCode();
+      return Result.ok(proxyBytecode);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getChannelMastercopyAddress(
+    channelFactoryAddress: string,
+    chainId: number,
+  ): Promise<Result<string, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+      const mastercopy = await factory.getMastercopy();
+      return Result.ok(mastercopy);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getChannelOnchainBalance(
     channelAddress: string,
     chainId: number,
@@ -93,21 +127,6 @@ export class EthereumChainReader implements IVectorChainReader {
       totalDepositedB = deposited.getValue();
     }
     return Result.ok(totalDepositedB);
-  }
-
-  async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-
-    const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-    try {
-      const proxyBytecode = await factory.proxyCreationCode();
-      return Result.ok(proxyBytecode);
-    } catch (e) {
-      return Result.fail(e);
-    }
   }
 
   async create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>> {
@@ -205,6 +224,19 @@ export class EthereumChainReader implements IVectorChainReader {
     try {
       const code = await provider.getCode(address);
       return Result.ok(code);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const blockNumber = await provider.getBlockNumber();
+      return Result.ok(blockNumber);
     } catch (e) {
       return Result.fail(e);
     }

@@ -7,6 +7,7 @@ import {
   VectorError,
   RouterSchemas,
   ServerNodeParams,
+  TRANSFER_DECREMENT,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
@@ -96,6 +97,7 @@ export async function forwardTransferCreation(
       transferState: conditionData,
       channelAddress: senderChannelAddress,
       initiator,
+      transferTimeout,
     },
     conditionType,
   } = data;
@@ -234,6 +236,9 @@ export async function forwardTransferCreation(
     amount: recipientAmount,
     assetId: recipientAssetId,
     channelAddress: recipientChannel.channelAddress,
+    timeout: BigNumber.from(transferTimeout)
+      .sub(TRANSFER_DECREMENT)
+      .toString(),
     details: conditionData,
     meta: {
       // Node is never the initiator, that is always payment sender

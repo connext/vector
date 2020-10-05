@@ -4,6 +4,7 @@
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
 @aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
 @chainId = 1337
+@alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 
 # 0.1 ETH
 @ethAmount = 10000000000000000
@@ -17,7 +18,8 @@ Content-Type: application/json
   "channelAddress": "{{aliceBobChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
-  "chainId": "{{chainId}}"
+  "chainId": "{{chainId}}",
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }
 
 ##############
@@ -27,5 +29,6 @@ Content-Type: application/json
 
 {
   "channelAddress": "{{aliceBobChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000"
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }

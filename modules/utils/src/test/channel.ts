@@ -9,16 +9,16 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  LinkedTransferState,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
+  HashlockTransferState,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
   NetworkContext,
   IChannelSigner,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
 
-import { createTestLinkedTransferState } from "./transfers";
+import { createTestHashlockTransferState } from "./transfers";
 import { mkAddress, mkPublicIdentifier, mkBytes32, mkHash } from "./util";
 
 // Helper partial types for test helpers
@@ -56,7 +56,7 @@ export function createTestUpdateParams<T extends UpdateType>(
           chainId: 2,
           providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
-          channelMastercopyAddress: mkAddress("0xcccaaa"),
+          channelMastercopyAddress: mkAddress("0xcccabbb23132"),
         },
       } as SetupUpdateDetails;
       break;
@@ -72,9 +72,9 @@ export function createTestUpdateParams<T extends UpdateType>(
         amount: "15",
         assetId: mkAddress("0x0"),
         transferDefinition: mkAddress("0xdef"),
-        transferInitialState: createTestLinkedTransferState(),
+        transferInitialState: createTestHashlockTransferState(),
         timeout: "1",
-        encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: { test: "meta" },
       };
       break;
@@ -133,7 +133,6 @@ export function createTestChannelUpdate<T extends UpdateType>(
           chainId: 1337,
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           providerUrl: "http://localhost:8545",
-          channelMastercopyAddress: mkAddress("0xmast"),
         },
         timeout: "1",
       } as SetupUpdateDetails;
@@ -156,8 +155,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
             amount: ["10", "0"],
             to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
           },
-          linkedHash: mkBytes32("0xlinkedhash"),
-        } as LinkedTransferState,
+          lockHash: mkBytes32("0xlockHash"),
+        } as HashlockTransferState,
         transferTimeout: "0",
       } as CreateUpdateDetails;
       break;
@@ -229,8 +228,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     networkContext: {
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
+      channelMastercopyAddress: mkAddress("0xcccabbb23132"),
       providerUrl: "http://localhost:8545",
-      channelMastercopyAddress: mkAddress("0xmast"),
       ...(networkContext ?? {}),
     },
     nonce,
@@ -268,7 +267,7 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
   // function
   const details: any = {};
   if (type === UpdateType.create) {
-    details.transferInitialState = createTestLinkedTransferState({
+    details.transferInitialState = createTestHashlockTransferState({
       balance: {
         to: signers.map(s => s.address),
       },

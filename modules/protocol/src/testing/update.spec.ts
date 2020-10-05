@@ -10,7 +10,7 @@ import {
   Result,
   ChannelUpdate,
   DEFAULT_TRANSFER_TIMEOUT,
-  LinkedTransferStateEncoding,
+  HashlockTransferStateEncoding,
   Balance,
 } from "@connext/vector-types";
 import {
@@ -23,7 +23,7 @@ import {
   PartialUpdateParams,
   PartialFullChannelState,
   PartialChannelUpdate,
-  createTestFullLinkedTransferState,
+  createTestFullHashlockTransferState,
   ChannelSigner,
   hashTransferState,
   expect,
@@ -46,8 +46,8 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
   finalBalanceOverrides?: Balance;
   expected?: Partial<{
     channel: Partial<FullChannelState>;
-    activeTransfers: Partial<FullTransferState<typeof TransferName.LinkedTransfer>>[];
-    transfer?: Partial<FullTransferState<typeof TransferName.LinkedTransfer>>;
+    activeTransfers: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>[];
+    transfer?: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>;
   }>;
   error?: Values<typeof InboundChannelUpdateError.reasons>;
 };
@@ -67,12 +67,12 @@ describe("applyUpdate", () => {
     chainId,
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
-    channelMastercopyAddress: mkAddress("0xbeef"),
+    channelMastercopyAddress: mkAddress("0xcccffff333"),
   };
 
   // Sample transfer (alice creating, bob recieving)
   const transferAmount = "7";
-  const sampleResolvedTransfer = createTestFullLinkedTransferState({
+  const sampleResolvedTransfer = createTestFullHashlockTransferState({
     initiator: participants[0],
     responder: participants[1],
     initialBalance: { to: participants, amount: [transferAmount.toString(), "0"] },
@@ -386,7 +386,7 @@ describe("applyUpdate", () => {
 
       // Generate the active transfer ids
       const activeTransfers = (activeTransfersOverrides ?? []).map(overrides =>
-        createTestFullLinkedTransferState(overrides),
+        createTestFullHashlockTransferState(overrides),
       );
 
       // Generate the final transfer balance
@@ -459,7 +459,7 @@ type GenerateUpdateTestParams = {
   stateOverrides?: PartialFullChannelState<any>;
   paramOverrides?: PartialUpdateParams<any>;
   expectedUpdate?: Partial<ChannelUpdate<any>>;
-  expectedTransfer?: Partial<FullTransferState<typeof TransferName.LinkedTransfer>>;
+  expectedTransfer?: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>;
   error?: Values<typeof InboundChannelUpdateError.reasons>;
   from?: ChannelSigner;
 
@@ -493,11 +493,11 @@ describe("generateUpdate", () => {
     chainId,
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
-    channelMastercopyAddress: mkAddress("0xbeef"),
+    channelMastercopyAddress: mkAddress("0xbbbbccc3334"),
   };
 
   // Get transfer constants
-  const emptyLinkedTransfer = createTestFullLinkedTransferState({
+  const emptyHashlockTransfer = createTestFullHashlockTransferState({
     channelAddress,
     balance: { to: participants, amount: ["0", "0"] },
     transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
@@ -618,12 +618,12 @@ describe("generateUpdate", () => {
         details: {
           amount: "7",
           transferInitialState: {
-            ...emptyLinkedTransfer.transferState,
+            ...emptyHashlockTransfer.transferState,
             balance: { to: participants, amount: ["7", "0"] },
           },
-          encodings: emptyLinkedTransfer.transferEncodings,
-          timeout: emptyLinkedTransfer.transferTimeout,
-          meta: emptyLinkedTransfer.meta,
+          encodings: emptyHashlockTransfer.transferEncodings,
+          timeout: emptyHashlockTransfer.transferTimeout,
+          meta: emptyHashlockTransfer.meta,
         },
       },
       stateOverrides: {
@@ -639,33 +639,33 @@ describe("generateUpdate", () => {
         assetId: mkAddress(),
         details: {
           transferInitialState: {
-            ...emptyLinkedTransfer.transferState,
+            ...emptyHashlockTransfer.transferState,
             balance: { to: participants, amount: ["7", "0"] },
           },
-          transferEncodings: emptyLinkedTransfer.transferEncodings,
-          transferTimeout: emptyLinkedTransfer.transferTimeout,
+          transferEncodings: emptyHashlockTransfer.transferEncodings,
+          transferTimeout: emptyHashlockTransfer.transferTimeout,
           merkleProofData,
           merkleRoot,
-          meta: emptyLinkedTransfer.meta,
+          meta: emptyHashlockTransfer.meta,
         },
       },
       expectedTransfer: {
-        ...emptyLinkedTransfer,
+        ...emptyHashlockTransfer,
         chainId: networkContext.chainId,
         initialBalance: { to: participants, amount: ["7", "0"] },
         channelFactoryAddress: networkContext.channelFactoryAddress,
         transferState: {
-          ...emptyLinkedTransfer.transferState,
+          ...emptyHashlockTransfer.transferState,
           balance: { to: participants, amount: ["7", "0"] },
         },
         initiator: participants[0],
         responder: participants[1],
         initialStateHash: hashTransferState(
           {
-            ...emptyLinkedTransfer.transferState,
+            ...emptyHashlockTransfer.transferState,
             balance: { to: participants, amount: ["7", "0"] },
           },
-          LinkedTransferStateEncoding,
+          HashlockTransferStateEncoding,
         ),
         transferResolver: undefined,
       },
@@ -675,8 +675,8 @@ describe("generateUpdate", () => {
       updateType: UpdateType.resolve,
       paramOverrides: {
         details: {
-          transferId: emptyLinkedTransfer.transferId,
-          transferResolver: emptyLinkedTransfer.transferResolver,
+          transferId: emptyHashlockTransfer.transferId,
+          transferResolver: emptyHashlockTransfer.transferResolver,
           meta: { resolve: "test" },
         },
       },
@@ -692,30 +692,30 @@ describe("generateUpdate", () => {
         balance: { to: participants, amount: ["7", "15"] },
         assetId: mkAddress(),
         details: {
-          transferId: emptyLinkedTransfer.transferId,
-          transferResolver: emptyLinkedTransfer.transferResolver,
-          transferEncodings: emptyLinkedTransfer.transferEncodings,
+          transferId: emptyHashlockTransfer.transferId,
+          transferResolver: emptyHashlockTransfer.transferResolver,
+          transferEncodings: emptyHashlockTransfer.transferEncodings,
           merkleRoot: mkHash(),
           meta: { resolve: "test" },
         },
       },
       expectedTransfer: {
         meta: { resolve: "test" },
-        transferId: emptyLinkedTransfer.transferId,
+        transferId: emptyHashlockTransfer.transferId,
         initiator: participants[0],
         responder: participants[1],
         transferState: {
-          ...emptyLinkedTransfer.transferState,
+          ...emptyHashlockTransfer.transferState,
           balance: { to: participants, amount: ["0", "7"] },
         },
         initialStateHash: hashTransferState(
           {
-            ...emptyLinkedTransfer.transferState,
+            ...emptyHashlockTransfer.transferState,
             balance: { to: participants, amount: ["7", "0"] },
           },
-          LinkedTransferStateEncoding,
+          HashlockTransferStateEncoding,
         ),
-        transferResolver: emptyLinkedTransfer.transferResolver,
+        transferResolver: emptyHashlockTransfer.transferResolver,
       },
       resolveBalance: { to: participants, amount: ["0", "7"] },
     },
@@ -740,12 +740,12 @@ describe("generateUpdate", () => {
 
     it(name, async () => {
       // // Generate the expected transfer
-      // const expectedTransfer = createTestFullLinkedTransferState(expectedTransfer)
+      // const expectedTransfer = createTestFullHashlockTransferState(expectedTransfer)
 
       // Generate the transfer from the params IFF the update type is resolve
       let transfer: FullTransferState | undefined = undefined;
       if (updateType === UpdateType.resolve) {
-        transfer = createTestFullLinkedTransferState({
+        transfer = createTestFullHashlockTransferState({
           ...expectedTransfer,
           initialBalance: { ...resolveBalance!, amount: [resolveBalance!.amount[1], resolveBalance!.amount[0]] },
         });

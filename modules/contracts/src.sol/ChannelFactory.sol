@@ -12,18 +12,23 @@ import "./lib/LibAsset.sol";
 /// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
 
-    IVectorChannel public immutable masterCopy;
+    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
     bytes32 private constant domainSalt = keccak256("vector");
 
-    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
+    address private immutable mastercopy;
 
-    constructor(IVectorChannel _masterCopy) {
-        masterCopy = _masterCopy;
+    constructor(address _mastercopy) {
+        mastercopy = _mastercopy;
     }
 
     ////////////////////////////////////////
     // Public Methods
+
+    /// @dev Allows us to get the mastercopy that this factory will deploy channels against
+    function getMastercopy() public override view returns(address) {
+      return mastercopy;
+    }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
     /// @param alice address of one of the two participants in the channel
@@ -33,13 +38,13 @@ contract ChannelFactory is IChannelFactory {
         address bob,
         uint256 chainId
     )
-        public
+        external
         override
         view
         returns (address)
     {
         bytes32 salt = generateSalt(alice, bob, chainId);
-        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, masterCopy));
+        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, mastercopy));
         return address(uint256(
             keccak256(abi.encodePacked(
                 byte(0xff),
@@ -76,7 +81,7 @@ contract ChannelFactory is IChannelFactory {
         address assetId,
         uint256 amount
     )
-        public
+        external
         payable
         override
         returns (IVectorChannel channel)
@@ -113,7 +118,7 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel)
     {
         bytes32 salt = generateSalt(alice, bob, chainId);
-        Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
+        Proxy proxy = new Proxy{salt: salt}(mastercopy);
         return IVectorChannel(address(proxy));
     }
 

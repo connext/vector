@@ -6,24 +6,26 @@ import {
   EngineParams,
   FullChannelState,
   FullTransferState,
-  LinkedTransferResolver,
-  LinkedTransferResolverEncoding,
-  LinkedTransferStateEncoding,
+  HashlockTransferResolver,
+  HashlockTransferResolverEncoding,
+  HashlockTransferStateEncoding,
   ResolveTransferParams,
+  Result,
   WithdrawResolverEncoding,
   WithdrawStateEncoding,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
   createTestChannelStateWithSigners,
-  createTestFullLinkedTransferState,
+  createTestFullHashlockTransferState,
   getRandomBytes32,
   getRandomChannelSigner,
   getRandomIdentifier,
   mkAddress,
 } from "@connext/vector-utils";
 import { expect } from "chai";
-import { WithdrawCommitment } from "@connext/vector-contracts";
+import Sinon from "sinon";
+import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts";
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "../errors";
@@ -42,12 +44,21 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawDefinition: env.contractAddresses[chainId].Withdraw.address,
-      channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
-      channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
-      linkedTransferDefinition: env.contractAddresses[chainId].LinkedTransfer.address,
+      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
+      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
+      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
+      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
     },
   };
+  let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+
+  beforeEach(() => {
+    chainReader = Sinon.createStubInstance(VectorChainReader);
+
+    chainReader.getBlockNumber.resolves(Result.ok<number>(110));
+  });
+
+  afterEach(() => Sinon.restore());
 
   describe("convertConditionalTransferParams", () => {
     const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
@@ -58,9 +69,9 @@ describe("ParamConverter", () => {
         recipient: bIsRecipient ? signerB.publicIdentifier : getRandomIdentifier(),
         recipientChainId: 1,
         recipientAssetId: mkAddress("0x1"),
-        conditionType: ConditionalTransferType.LinkedTransfer,
+        conditionType: ConditionalTransferType.HashlockTransfer,
         details: {
-          linkedHash: getRandomBytes32(),
+          lockHash: getRandomBytes32(),
         },
         meta: {
           message: "test",
@@ -70,6 +81,7 @@ describe("ParamConverter", () => {
     };
 
     it("should work for A", async () => {
+      console.log(`Block number: ${await chainReader.getBlockNumber(chainId)}`);
       const params = generateParams();
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
@@ -79,26 +91,24 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret: CreateTransferParams = convertConditionalTransferParams(
-        params,
-        signerA,
-        channelState,
-        chainAddresses,
+      const ret: CreateTransferParams = (
+        await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
             to: [signerA.address, signerB.address],
           },
-          linkedHash: params.details.linkedHash,
+          lockHash: params.details.lockHash,
+          expiry: "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: {
           requireOnline: false,
           routingId: params.meta.routingId,
@@ -116,6 +126,7 @@ describe("ParamConverter", () => {
 
     it("should work for B", async () => {
       const params = generateParams();
+      params.details.timelock = "100";
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
@@ -124,26 +135,26 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret: CreateTransferParams = convertConditionalTransferParams(
-        params,
-        signerB,
-        channelState,
-        chainAddresses,
+      const ret: CreateTransferParams = (
+        await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].linkedTransferDefinition,
+        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
             to: [signerB.address, signerA.address],
           },
-          linkedHash: params.details.linkedHash,
+          lockHash: params.details.lockHash,
+          expiry: BigNumber.from((await chainReader.getBlockNumber(chainId)).getValue()!)
+            .add(params.details.timelock)
+            .toString(),
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: {
           requireOnline: false,
           routingId: params.meta.routingId,
@@ -171,7 +182,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = convertConditionalTransferParams(params, signerA, channelState, chainAddresses);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
     });
@@ -181,11 +192,11 @@ describe("ParamConverter", () => {
     const generateParams = (): EngineParams.ResolveTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
-        conditionType: ConditionalTransferType.LinkedTransfer,
+        conditionType: ConditionalTransferType.HashlockTransfer,
         transferId: getRandomBytes32(),
         details: {
           preImage: getRandomBytes32(),
-        } as LinkedTransferResolver,
+        } as HashlockTransferResolver,
         meta: {
           message: "test",
         },
@@ -194,7 +205,7 @@ describe("ParamConverter", () => {
 
     it("should work", async () => {
       const params = generateParams();
-      const transferState: FullTransferState = createTestFullLinkedTransferState({
+      const transferState: FullTransferState = createTestFullHashlockTransferState({
         channelAddress: params.channelAddress,
       });
       const ret: ResolveTransferParams = convertResolveConditionParams(params, transferState).getValue();
@@ -214,7 +225,7 @@ describe("ParamConverter", () => {
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
-      const transferState: FullTransferState = createTestFullLinkedTransferState({
+      const transferState: FullTransferState = createTestFullHashlockTransferState({
         channelAddress: params.channelAddress,
       });
       const ret = convertResolveConditionParams(params, transferState);
@@ -269,7 +280,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [
@@ -317,7 +328,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [

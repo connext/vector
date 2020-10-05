@@ -1,6 +1,7 @@
 import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect, delay } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
+import { TransferName } from "@connext/vector-types";
 
 import { env } from "../utils";
 
@@ -128,15 +129,15 @@ describe(testName, () => {
     const daveBefore = daveAssetIdx === -1 ? "0" : daveChannel.balances[daveAssetIdx].amount[1];
 
     const preImage = getRandomBytes32();
-    const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
+    const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
     const routingId = getRandomBytes32();
     const transferRes = await carol.conditionalTransfer({
       amount: transferAmt.toString(),
       assetId,
       channelAddress: carolChannel.channelAddress,
-      conditionType: "LinkedTransfer",
+      conditionType: TransferName.HashlockTransfer,
       details: {
-        linkedHash,
+        lockHash,
       },
       meta: {
         routingId,
@@ -162,7 +163,7 @@ describe(testName, () => {
     ).getValue()!;
     const resolveRes = await dave.resolveTransfer({
       channelAddress: daveChannel.channelAddress,
-      conditionType: "LinkedTransfer",
+      conditionType: TransferName.HashlockTransfer,
       details: {
         preImage,
       },

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+unit="server_node"
+
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
@@ -12,52 +14,19 @@ docker network create --attachable --driver overlay $project 2> /dev/null || tru
 cmd="${1:-test}"
 
 ####################
-# Load env vars
+# Load Config
 
-VECTOR_ENV="${VECTOR_ENV:-dev}"
+config="`cat $root/config-node.json`"
 
-# Load the default env
-if [[ -f "${VECTOR_ENV}.env" ]]
-then source "${VECTOR_ENV}.env"
+# Override logLevel if env var is provided
+if [[ -n "$LOG_LEVEL" ]]
+then config="`echo "$config" '{"logLevel":'$LOG_LEVEL'}' | jq -s '.[0] + .[1]'`"
 fi
-
-# Load instance-specific env vars & overrides
-if [[ -f ".env" ]]
-then source .env
-fi
-
-# log level alias can override default for easy `LOG_LEVEL=5 make start`
-VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
-
-########################################
-## Docker registry & image version config
-
-version="latest"
 
 ####################
 # Misc Config
 
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
-
-# to access from other containers
-redis_url="redis://redis:6379"
-
-common="networks:
-      - '$project'
-    logging:
-      driver: 'json-file'
-      options:
-          max-size: '100m'"
-
-########################################
-## Database config
-
-database_image="${project}_database:$version"
-bash $root/ops/pull-images.sh $database_image > /dev/null
-
-pg_port="5432"
-nats_port="4222"
+version="latest"
 
 ########################################
 # Global services / chain provider config
@@ -66,29 +35,21 @@ alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neithe
 bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
 sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
-auth_url="http://auth:5040"
 bash $root/ops/start-global.sh
 
-VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
-VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
-VECTOR_MNEMONIC_FILE="/run/secrets/${project}_mnemonic_dev"
+chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
+config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 ########################################
-## Node config
-
-node_port="8000"
-prisma_studio_port="5555"
-
-public_url="http://localhost:$alice_port"
-
-####################
 # Launch stack
+
 function cleanup {
   echo "Tests finished, stopping database.."
   docker container stop $postgres_host 2> /dev/null || true
 }
 trap cleanup EXIT SIGINT SIGTERM
-postgres_host="${project}_database"
+
+postgres_host="${project}_database_test_$unit"
 echo "Starting $postgres_host.."
   docker run \
     --detach \
@@ -101,22 +62,14 @@ echo "Starting $postgres_host.."
     --tmpfs="/var/lib/postgresql/data" \
     postgres:12-alpine
 
-echo "postgresql://$project:$project@${project}_database:$pg_port/$project"
+echo "postgresql://$project:$project@${project}_database:5432/$project"
 docker run \
   $interactive \
   --entrypoint="bash" \
-  --env="VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN" \
-  --env="VECTOR_AUTH_URL=$auth_url" \
-  --env="VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS" \
-  --env="VECTOR_CONTRACT_ADDRESSES=$VECTOR_CONTRACT_ADDRESSES" \
-  --env="VECTOR_ENV=$VECTOR_ENV" \
-  --env="VECTOR_LOG_LEVEL=$VECTOR_LOG_LEVEL" \
-  --env="VECTOR_NATS_SERVERS=nats://nats:$nats_port" \
-  --env="VECTOR_DATABASE_URL=postgresql://$project:$project@${project}_database:$pg_port/$project" \
+  --env="VECTOR_CONFIG=$config" \
+  --env="VECTOR_ENV=dev" \
+  --env="VECTOR_DATABASE_URL=postgresql://$project:$project@$postgres_host:5432/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \
-  --env="VECTOR_PORT=$node_port" \
-  --env="VECTOR_REDIS_URL=$redis_url" \
-  --env="VECTOR_SUGAR_DADDY=$sugardaddy_mnemonic" \
   --name="${project}_test_$unit" \
   --network "$project" \
   --rm \

@@ -5,16 +5,16 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/ICMCCore.sol";
 
 contract CMCCore is ICMCCore {
-  // masterCopy needs to be first declared variable
+  // mastercopy needs to be first declared variable
   // in order to ensure storage alignment with the proxy
-  address public masterCopy;
+  address public mastercopy;
 
-  address internal alice;
-  address internal bob;
+  address public alice;
+  address public bob;
 
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {
-    require(masterCopy != address(0), "This contract is the mastercopy");
+    require(mastercopy != address(0), "This contract is the mastercopy");
     _;
   }
 
@@ -22,7 +22,9 @@ contract CMCCore is ICMCCore {
   /// @param _alice: Address representing user with function deposit
   /// @param _bob: Address representing user with multisig deposit
   function setup(address _alice, address _bob) external override onlyOnProxy {
-    require(alice == address(0) && bob == address(0), "Channel has already been setup");
+    require(alice == address(0), "Channel has already been setup");
+    require(_alice != address(0) && _bob != address(0), "Address zero not allowed as channel participant");
+    require(_alice != _bob, "Channel participants must be different from each other");
     alice = _alice;
     bob = _bob;
   }

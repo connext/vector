@@ -1,4 +1,5 @@
 import crypto from "crypto";
+
 import Redis from "ioredis";
 
 const lockScript = `
@@ -121,7 +122,7 @@ export class MemoLock {
     });
 
     this.pulseTimer = setInterval(() => {
-      this.pulse().catch((e) => {
+      this.pulse().catch(e => {
         // this.log.error(`Error pulsing memolock: ${e.stack}`);
       });
     }, this.pulseInterval);

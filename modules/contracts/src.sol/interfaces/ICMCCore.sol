@@ -2,8 +2,6 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./Types.sol";
-
 interface ICMCCore {
   function setup(address _alice, address _bob) external;
 

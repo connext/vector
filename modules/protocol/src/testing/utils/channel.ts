@@ -88,9 +88,10 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
     networkContext: {
       chainId,
       providerUrl: Object.values(env.chainProviders)[0] as string,
-      channelFactoryAddress: env.chainAddresses[chainId].ChannelFactory.address,
-      channelMastercopyAddress: env.chainAddresses[chainId].ChannelMastercopy.address,
-      withdrawDefinition: env.chainAddresses[chainId].Withdraw.address,
+      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
+      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
+      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
+      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
     },
   };
   const ret = await alice.setup(setupParams);
@@ -169,7 +170,7 @@ export const depositInChannel = async (
           ? await depositorSigner.provider!.getBalance(channelAddress)
           : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
       const factory = new Contract(
-        env.chainAddresses[chainId].ChannelFactory.address,
+        env.chainAddresses[chainId].channelFactoryAddress,
         ChannelFactory.abi,
         depositorSigner,
       );
@@ -219,7 +220,7 @@ export const depositInChannel = async (
           ? await depositorSigner.provider!.getBalance(channelAddress)
           : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
       const factory = new Contract(
-        env.chainAddresses[chainId].ChannelFactory.address,
+        env.chainAddresses[chainId].channelFactoryAddress,
         ChannelFactory.abi,
         depositorSigner,
       );

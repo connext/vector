@@ -90,6 +90,14 @@ export class VectorEngine implements IVectorEngine {
     return engine;
   }
 
+  get publicIdentifier(): string {
+    return this.vector.publicIdentifier;
+  }
+
+  get signerAddress(): string {
+    return this.vector.signerAddress;
+  }
+
   // TODO: create injected validation that handles submitting transactions
   // IFF there was a fee involved. Should:
   // - check if fee > 0
@@ -193,10 +201,10 @@ export class VectorEngine implements IVectorEngine {
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
-        linkedTransferDefinition: this.chainAddresses[params.chainId].linkedTransferDefinition,
-        withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
-        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
+        hashlockTransferAddress: this.chainAddresses[params.chainId].hashlockTransferAddress,
+        withdrawAddress: this.chainAddresses[params.chainId].withdrawAddress,
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
+        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
         chainId: params.chainId,
         providerUrl: this.chainProviders[params.chainId],
       },
@@ -239,7 +247,13 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = convertConditionalTransferParams(params, this.signer, channel!, this.chainAddresses);
+    const createResult = await convertConditionalTransferParams(
+      params,
+      this.signer,
+      channel!,
+      this.chainAddresses,
+      this.chainService,
+    );
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }

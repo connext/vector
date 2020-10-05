@@ -3,12 +3,13 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./IVectorChannel.sol";
-import "./Types.sol";
 
 
 interface IChannelFactory {
 
     event ChannelCreation(IVectorChannel channel);
+
+    function getMastercopy() external view returns (address);
 
     function proxyCreationCode() external pure returns (bytes memory);
 

@@ -5,13 +5,13 @@ import {
   ConditionalTransferType,
   ResolveTransferParams,
   FullChannelState,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
-  LinkedTransferState,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
+  HashlockTransferState,
   Result,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
-  LinkedTransferResolver,
+  HashlockTransferResolver,
   WithdrawState,
   WithdrawStateEncoding,
   WithdrawResolverEncoding,
@@ -19,18 +19,19 @@ import {
   IChannelSigner,
   ChainAddresses,
   RouterSchemas,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
-import { keccak256 } from "ethers/lib/utils";
 
-export function convertConditionalTransferParams(
+export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
   signer: IChannelSigner,
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
-): Result<CreateTransferParams, InvalidTransferType> {
+  chainReader: IVectorChainReader,
+): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const { channelAddress, amount, assetId, recipient, details, timeout, meta: providedMeta } = params;
 
   const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
@@ -57,19 +58,29 @@ export function convertConditionalTransferParams(
   // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
 
   let transferDefinition: string | undefined;
-  let transferInitialState: LinkedTransferState;
+  let transferInitialState: HashlockTransferState;
   let encodings: string[];
 
-  if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
-    transferDefinition = chainAddresses[channel.networkContext.chainId].linkedTransferDefinition;
+  if (params.conditionType === ConditionalTransferType.HashlockTransfer) {
+    const blockNumberRes = await chainReader.getBlockNumber(channel.networkContext.chainId);
+    if (blockNumberRes.isError) {
+      return Result.fail(new InvalidTransferType(blockNumberRes.getError()!.message));
+    }
+    const blockNumber = blockNumberRes.getValue();
+    transferDefinition = chainAddresses[channel.networkContext.chainId].hashlockTransferAddress;
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
         to: [signer.address, channelCounterparty],
       },
-      linkedHash: details.linkedHash,
+      lockHash: details.lockHash,
+      expiry: details.timelock
+        ? BigNumber.from(blockNumber)
+            .add(details.timelock)
+            .toString()
+        : "0",
     };
-    encodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
+    encodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   } else {
     return Result.fail(new InvalidTransferType(params.conditionType));
   }
@@ -94,9 +105,9 @@ export function convertResolveConditionParams(
   transfer: FullTransferState,
 ): Result<ResolveTransferParams, InvalidTransferType> {
   const { channelAddress, details, meta } = params;
-  let transferResolver: LinkedTransferResolver;
+  let transferResolver: HashlockTransferResolver;
 
-  if (params.conditionType == ConditionalTransferType.LinkedTransfer) {
+  if (params.conditionType == ConditionalTransferType.HashlockTransfer) {
     transferResolver = {
       preImage: details.preImage,
     };
@@ -160,7 +171,7 @@ export async function convertWithdrawParams(
     channelAddress,
     amount,
     assetId,
-    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawDefinition!,
+    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawAddress!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],

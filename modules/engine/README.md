@@ -99,7 +99,7 @@ Creates a conditional transfer with the specified counterparty.
    - `amount`: `String` - Amount to be locked in the transfer by sender.
    - `assetId`: `String` - Onchain address of asset (ERC20 or equivalent). Use `ethers.constants.AddressZero` for the chain's base asset (e.g. Eth).
    - `recipient`: `String` - Recipient Connext-specific public identifier
-   - `details`: `Object` - TransferType-specific params needed to set up the conditions for the transfer. For instance, `linkedHash` for `LinkedTransfer`. See the [schemas](https://github.com/connext/vector/blob/master/modules/types/src/schemas/engine.ts#L75) to learn more.
+   - `details`: `Object` - TransferType-specific params needed to set up the conditions for the transfer. For instance, `lockHash` for `HashlockTransfer`. See the [schemas](https://github.com/connext/vector/blob/master/modules/types/src/schemas/engine.ts#L75) to learn more.
    - `recipientChainId`: `Number` - (optional) ChainId of recipient for cross-chain transfers. If none is provided, the engine will assume that the recipient chainId is the same as sender chainId.
    - `recipientAssetId`: `String` - (optional) AssetId of recipient for transfers that include an in-flight swap of assets. If nothing is provided, the engine will assume that the recipient assetId is the same as sender assetId.
    - `timeout`: `String` (optional) Dispute timeout of transfer. Defaults to [DEFAULT_TIMEOUT](https://github.com/connext/vector/blob/master/modules/types/src/constants.ts#L1)
@@ -119,7 +119,7 @@ Resolves an existing conditional transfer using logic that finalizes/unlocks it.
    - `channelAddress`: `String` - Address of channel which contains the transfer to be resolved.
    - `transferId`: `String` - Unique Id associated with this transfer. Can get this by listening for the `CONDITIONAL_TRANSFER_CREATED` event.
    - `conditionType`: `String` - Condition type of this transfer // TODO do we need this?
-   - `details`: `Object` - TransferType-specific params needed to resolve the conditions for the transfer. For instance, `preImage` for `LinkedTransfer`. See the [schema](https://github.com/connext/vector/blob/master/modules/types/src/schemas/engine.ts#L96) to learn more.
+   - `details`: `Object` - TransferType-specific params needed to resolve the conditions for the transfer. For instance, `preImage` for `HashlockTransfer`. See the [schema](https://github.com/connext/vector/blob/master/modules/types/src/schemas/engine.ts#L96) to learn more.
 
 #### Returns
 

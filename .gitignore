@@ -10,6 +10,7 @@
 *.docker-compose.yml
 docker-compose.yml
 modules/*/package-lock.json
+config-prod.json
 
 # Cache
 **/.bot-store

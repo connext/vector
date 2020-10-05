@@ -1,5 +1,5 @@
-@aliceUrl = http://localhost:8002
-@bobUrl = http://localhost:8003
+@aliceUrl = http://localhost:8003
+@bobUrl = http://localhost:8004
 @rogerUrl = http://localhost:8000
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
@@ -14,5 +14,6 @@ Content-Type: application/json
 {
   "counterpartyIdentifier": "{{bobPublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "36000",
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }

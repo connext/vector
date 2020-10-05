@@ -2,8 +2,8 @@ import { TStringLiteral, Type } from "@sinclair/typebox";
 
 import { UpdateType } from "../channel";
 import {
-  LinkedTransferResolverEncoding,
-  LinkedTransferStateEncoding,
+  HashlockTransferResolverEncoding,
+  HashlockTransferStateEncoding,
   WithdrawResolverEncoding,
   WithdrawStateEncoding,
 } from "../transferDefinitions";
@@ -14,6 +14,7 @@ import {
 // String pattern types
 export const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
 export const TIntegerString = Type.Pattern(/^([0-9])*$/);
+export const TDecimalString = Type.Pattern(/^[0-9]*\.?[0-9]*$/);
 export const TPublicIdentifier = Type.Pattern(/^indra([a-zA-Z0-9]{50})$/);
 export const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
 export const TBytes = Type.Pattern(/^0x([a-fA-F0-9])$/);
@@ -31,29 +32,36 @@ export const TBalance = Type.Object({
 
 export const TBasicMeta = Type.Optional(Type.Any());
 
-export const TNetworkContext = Type.Object({
+export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
   channelMastercopyAddress: TAddress,
-  withdrawDefinition: Type.Optional(TAddress),
-  linkedTransferDefinition: Type.Optional(TAddress),
-  chainId: TChainId,
-  providerUrl: TUrl,
+  withdrawAddress: Type.Optional(TAddress),
+  hashlockTransferAddress: Type.Optional(TAddress),
 });
+
+export const TNetworkContext = Type.Intersect([
+  TContractAddresses,
+  Type.Object({
+    chainId: TChainId,
+    providerUrl: TUrl,
+  }),
+]);
 
 ////////////////////////////////////////
 //////// Transfer types
 
-// Linked transfer pattern types
-export const LinkedTransferStateSchema = Type.Object({
+// hashlock transfer pattern types
+export const HashlockTransferStateSchema = Type.Object({
   balance: TBalance,
-  linkedHash: TBytes32,
+  lockHash: TBytes32,
+  expiry: TIntegerString,
 });
-export const LinkedTransferResolverSchema = Type.Object({
+export const HashlockTransferResolverSchema = Type.Object({
   preImage: TBytes32,
 });
-export const LinkedTransferEncodingSchema = Type.Array([
-  Type.Literal(LinkedTransferStateEncoding),
-  Type.Literal(LinkedTransferResolverEncoding),
+export const HashlockTransferEncodingSchema = Type.Array([
+  Type.Literal(HashlockTransferStateEncoding),
+  Type.Literal(HashlockTransferResolverEncoding),
 ]);
 
 // Withdraw transfer pattern types
@@ -75,11 +83,11 @@ export const WithdrawTransferEncodingSchema = Type.Array([
 ]);
 
 // Shared transfer pattern types
-export const TransferStateSchema = Type.Union([LinkedTransferStateSchema, WithdrawTransferStateSchema]);
+export const TransferStateSchema = Type.Union([HashlockTransferStateSchema, WithdrawTransferStateSchema]);
 
-export const TransferResolverSchema = Type.Union([LinkedTransferResolverSchema, WithdrawTransferResolverSchema]);
+export const TransferResolverSchema = Type.Union([HashlockTransferResolverSchema, WithdrawTransferResolverSchema]);
 
-export const TransferEncodingSchema = Type.Union([LinkedTransferEncodingSchema, WithdrawTransferEncodingSchema]);
+export const TransferEncodingSchema = Type.Union([HashlockTransferEncodingSchema, WithdrawTransferEncodingSchema]);
 
 export const TFullTransferState = Type.Object({
   initialBalance: TBalance,

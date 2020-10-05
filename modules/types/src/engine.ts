@@ -9,7 +9,7 @@ import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvide
 ////// Engine transfer types
 // Conditional transfers
 export const ConditionalTransferType = {
-  LinkedTransfer: "LinkedTransfer",
+  HashlockTransfer: "HashlockTransfer",
 } as const;
 export type ConditionalTransferType = typeof ConditionalTransferType[keyof typeof ConditionalTransferType];
 
@@ -86,6 +86,8 @@ export interface EngineEventMap {
 ///////////////////////////////////
 ////// Core engine interfaces
 export interface IVectorEngine {
+  publicIdentifier: string;
+  signerAddress: string;
   request<T extends ChannelRpcMethod>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
   on<T extends EngineEvent>(
     event: T,
