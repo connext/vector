@@ -82,6 +82,8 @@ roger_database="database_r"
 roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
 echo "$stack.roger will be exposed on *:$roger_node_port"
 
+config="`echo "$config" '{"nodeUrl":"http://roger:'$internal_node_port'"}' | jq -s '.[0] + .[1]'`"
+
 public_url="http://localhost:$roger_node_port"
 
 node_image="image: '${project}_builder'

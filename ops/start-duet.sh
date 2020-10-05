@@ -59,7 +59,7 @@ database_env="environment:
 ########################################
 ## Node config
 
-node_port="8000"
+internal_node_port="8000"
 nats_port="4222"
 
 alice_port="8003"
@@ -108,7 +108,7 @@ services:
       VECTOR_PG_HOST: '$alice_database'
       VECTOR_MNEMONIC: '$alice_mnemonic'
     ports:
-      - '$alice_port:$node_port'
+      - '$alice_port:$internal_node_port'
 
   bob:
     $common
@@ -117,7 +117,7 @@ services:
       VECTOR_PG_HOST: '$bob_database'
       VECTOR_MNEMONIC: '$bob_mnemonic'
     ports:
-      - '$bob_port:$node_port'
+      - '$bob_port:$internal_node_port'
 
   $alice_database:
     $common
