@@ -262,7 +262,7 @@ auth: auth-bundle $(shell find modules/auth/ops $(find_options))
 
 server-node-bundle: engine $(shell find modules/server-node $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/server-node && npm run build"
+	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))

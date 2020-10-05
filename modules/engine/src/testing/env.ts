@@ -4,13 +4,13 @@ import pino from "pino";
 
 type EngineTestEnv = {
   chainProviders: ChainProviders;
-  contractAddresses: any;
+  chainAddresses: any;
   sugarDaddy: Wallet;
   logLevel?: pino.Level;
 };
 
 export const env: EngineTestEnv = {
-  contractAddresses: JSON.parse(process.env.CONTRACT_ADDRESSES ?? "{}"),
+  chainAddresses: JSON.parse(process.env.CHAIN_ADDRESSES ?? "{}"),
   chainProviders: JSON.parse(process.env.CHAIN_PROVIDERS ?? '{"1337":"http://localhost:8545"}'),
   logLevel: (process.env.LOG_LEVEL || "silent") as pino.Level,
   sugarDaddy: Wallet.fromMnemonic(

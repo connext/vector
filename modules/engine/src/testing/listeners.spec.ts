@@ -51,12 +51,12 @@ const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   // Get env constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-  const withdrawAddress = env.contractAddresses[chainId].Withdraw.address;
+  const withdrawAddress = env.chainAddresses[chainId].withdrawAddress;
   const chainAddresses: ChainAddresses = {
     [chainId]: {
       withdrawAddress,
-      channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
-      linkedTransferAddress: env.contractAddresses[chainId].LinkedTransfer.address,
+      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
+      linkedTransferAddress: env.chainAddresses[chainId].linkedTransferAddress,
     },
   };
 

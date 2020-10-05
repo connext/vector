@@ -144,6 +144,11 @@ address_book_1="$chain_data_1/address-book.json"
 address_book_2="$chain_data_2/address-book.json"
 rm -rf $address_book $address_book_1 $address_book_2
 
+chain_addresses="$chain_data/chain-addresses.json"
+chain_addresses_1="$chain_data_1/chain-addresses.json"
+chain_addresses_2="$chain_data_2/chain-addresses.json"
+rm -rf $chain_addresses $chain_addresses_1 $chain_addresses_2
+
 mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
 
 evm_image_name="${project}_ethprovider:$version";
@@ -273,22 +278,7 @@ do
 done
 
 cat $address_book_1 $address_book_2 | jq -s '.[0] * .[1]' > $address_book
-
-# jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
-function fromAddressBook {
-  jq '
-    map_values(
-      map_values(.address) |
-      to_entries |
-      map(.key = "\(.key)Address") |
-      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
-      from_entries
-    )
-  ';
-}
-
-cat $address_book | fromAddressBook > $chain_data/chain-addresses.json
-
+cat $chain_addresses_1 $chain_addresses_2 | jq -s '.[0] * .[1]' > $chain_addresses
 echo '{"'$chain_id_1'":"http://evm_'$chain_id_1':8545","'$chain_id_2'":"http://evm_'$chain_id_2':8545"}' > $chain_data/chain-providers.json
 
 echo "Good Morning!"

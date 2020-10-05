@@ -21,7 +21,7 @@ describe("VectorEngine", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const chainAddresses = {
     [chainId]: {
-      ...env.contractAddresses,
+      ...env.chainAddresses,
     },
   };
 

@@ -12,22 +12,23 @@ import "./lib/LibAsset.sol";
 /// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
 
-    address public immutable mastercopy;
+    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
     bytes32 private constant domainSalt = keccak256("vector");
 
-    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
+    address public immutable mastercopy;
 
     constructor(address _mastercopy) {
         mastercopy = _mastercopy;
     }
 
+    ////////////////////////////////////////
+    // Public Methods
+
+    /// @dev Allows us to get the mastercopy that this factory will deploy channels against
     function getMastercopy() public override view returns(address) {
       return mastercopy;
     }
-
-    ////////////////////////////////////////
-    // Public Methods
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
     /// @param alice address of one of the two participants in the channel

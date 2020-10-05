@@ -42,9 +42,9 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawAddress: env.contractAddresses[chainId].Withdraw.address,
-      channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
-      linkedTransferAddress: env.contractAddresses[chainId].LinkedTransfer.address,
+      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
+      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
+      linkedTransferAddress: env.chainAddresses[chainId].linkedTransferAddress,
     },
   };
 
