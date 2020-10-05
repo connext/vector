@@ -16,9 +16,11 @@ if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
 then export VECTOR_MNEMONIC="`cat $VECTOR_MNEMONIC_FILE`"
 fi
 
-# TODO: if no *_PG_* env vars provided, spin up an sqlite instance locally & use that?
+if [[ -z "$VECTOR_DATABASE_URL" ]]
+then export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+fi
 
-export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+# TODO: if no *_PG_* env vars provided, spin up an sqlite instance locally & use that?
 
 # Wait for db to wake up
 wait-for -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT" > /dev/null

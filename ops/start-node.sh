@@ -242,6 +242,7 @@ services:
     $node_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
+      VECTOR_ENV: '$VECTOR_ENV'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -250,7 +251,6 @@ services:
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
-      VECTOR_ENV: '$VECTOR_ENV'
 
   database:
     $common
@@ -258,12 +258,12 @@ services:
     environment:
       AWS_ACCESS_KEY_ID: '$aws_access_id'
       AWS_SECRET_ACCESS_KEY: '$aws_access_key'
-      VECTOR_ADMIN_TOKEN: '$admin_token'
-      VECTOR_ENV: '$VECTOR_ENV'
       POSTGRES_DB: '$pg_db'
       POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$pg_user'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
+      VECTOR_ENV: '$VECTOR_ENV'
 
 EOF
 
