@@ -21,10 +21,6 @@ fi
 
 config="`cat $root/config-node.json`"
 
-function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
-
-auth_url="`getConfig authUrl`"
-
 ####################
 # Misc Config
 
@@ -36,6 +32,16 @@ common="networks:
       driver: 'json-file'
       options:
           max-size: '100m'"
+
+########################################
+# Global services / chain provider config
+
+sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+
+bash $root/ops/start-global.sh
+
+chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
+config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 ########################################
 ## Database config
@@ -51,18 +57,6 @@ database_env="environment:
       POSTGRES_USER: '$project'"
 
 ########################################
-# Global services / chain provider config
-
-alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
-bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
-sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-
-bash $root/ops/start-global.sh
-
-chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
-config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
-
-########################################
 ## Node config
 
 node_port="8000"
@@ -70,10 +64,12 @@ nats_port="4222"
 
 alice_port="8003"
 alice_database="database_a"
+alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
 echo "$stack.alice will be exposed on *:$alice_port"
 
 bob_port="8004"
 bob_database="database_b"
+bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
 echo "$stack.bob will be exposed on *:$bob_port"
 
 public_url="http://localhost:$alice_port"
