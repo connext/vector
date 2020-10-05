@@ -4,7 +4,7 @@ import { utils } from "ethers";
 import * as ChannelFactory from "../artifacts/ChannelFactory.json";
 import * as ChannelMastercopy from "../artifacts/ChannelMastercopy.json";
 import * as ERC20 from "../artifacts/IERC20.json";
-import * as LinkedTransfer from "../artifacts/LinkedTransfer.json";
+import * as HashlockTransfer from "../artifacts/HashlockTransfer.json";
 import * as Proxy from "../artifacts/Proxy.json";
 import * as TestToken from "../artifacts/TestToken.json";
 import * as TransferDefinition from "../artifacts/ITransferDefinition.json";
@@ -26,7 +26,7 @@ export const artifacts: Artifacts = {
   ChannelFactory,
   ChannelMastercopy,
   ERC20,
-  LinkedTransfer,
+  HashlockTransfer,
   Proxy,
   TestToken,
   TransferDefinition,
@@ -38,7 +38,7 @@ export {
   ChannelFactory,
   ChannelMastercopy,
   ERC20,
-  LinkedTransfer,
+  HashlockTransfer,
   Proxy,
   TestToken,
   TransferDefinition,

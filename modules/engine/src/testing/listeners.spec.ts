@@ -55,8 +55,9 @@ describe(testName, () => {
   const chainAddresses: ChainAddresses = {
     [chainId]: {
       withdrawAddress,
+      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      linkedTransferAddress: env.chainAddresses[chainId].linkedTransferAddress,
+      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
     },
   };
 

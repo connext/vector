@@ -1,12 +1,8 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import {
-  ConditionalTransferCreatedPayload,
-  ConditionalTransferType,
-  Result,
-} from "@connext/vector-types";
+import { ConditionalTransferCreatedPayload, ConditionalTransferType, Result } from "@connext/vector-types";
 import {
   createTestChannelState,
-  createTestFullLinkedTransferState,
+  createTestFullHashlockTransferState,
   getRandomBytes32,
   IServerNodeService,
   mkAddress,
@@ -32,7 +28,7 @@ describe("Forwarding", () => {
         amount: ["5", "7"],
         to: [mkAddress("0xa"), mkAddress("0xb")],
       };
-      const transfer = createTestFullLinkedTransferState({
+      const transfer = createTestFullHashlockTransferState({
         channelAddress,
         initialBalance: {
           amount: ["2", "0"],
@@ -41,7 +37,7 @@ describe("Forwarding", () => {
         assetId: mkAddress("0x0"),
         meta: { routingId, path: [channelAddress] },
       });
-      const conditionType = ConditionalTransferType.LinkedTransfer;
+      const conditionType = ConditionalTransferType.HashlockTransfer;
       return {
         channelAddress,
         routingId,

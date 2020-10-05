@@ -187,8 +187,8 @@ async function handleConditionalTransferCreation(
 
   let conditionType: ConditionalTransferType | undefined;
   switch (transferDefinition) {
-    case chainAddresses[chainId].linkedTransferAddress:
-      conditionType = ConditionalTransferType.LinkedTransfer;
+    case chainAddresses[chainId].hashlockTransferAddress:
+      conditionType = ConditionalTransferType.HashlockTransfer;
       break;
   }
 
@@ -234,8 +234,8 @@ async function handleConditionalTransferResolution(
   // Emit the properly structured event
   let conditionType: ConditionalTransferType | undefined;
   switch (transferDefinition) {
-    case chainAddresses[chainId].linkedTransferAddress:
-      conditionType = ConditionalTransferType.LinkedTransfer;
+    case chainAddresses[chainId].hashlockTransferAddress:
+      conditionType = ConditionalTransferType.HashlockTransfer;
       break;
   }
   const transfer = await store.getTransferState(transferId);

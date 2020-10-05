@@ -210,9 +210,14 @@ export class Vector implements IVectorProtocol {
             this.signer,
             this.logger,
           )
-          .catch(e =>
-            this.logger.error({ channel: channel.channelAddress, error: e.message }, `Failed to sync channel`),
-          ),
+          .then(res => {
+            if (res.isError) {
+              this.logger.warn(
+                { channel: channel.channelAddress, error: res.getError()!.message! },
+                "Failed to sync on start",
+              );
+            }
+          }),
       ),
     );
     return this;

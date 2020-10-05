@@ -23,22 +23,23 @@ model Balance {
 
 model Channel {
   @@map(name: "channel")
-  channelAddress           String    @id
-  publicIdentifierA        String
-  publicIdentifierB        String
-  participantA             String
-  participantB             String
-  assetIds                 String
-  timeout                  String
-  nonce                    Int
-  merkleRoot               String
-  balances                 Balance[]
-  channelFactoryAddress    String
-  chainId                  Int
-  providerUrl              String
-  latestUpdate             Update
+  channelAddress              String    @id
+  publicIdentifierA           String
+  publicIdentifierB           String
+  participantA                String
+  participantB                String
+  assetIds                    String
+  timeout                     String
+  nonce                       Int
+  merkleRoot                  String
+  balances                    Balance[]
+  channelFactoryAddress       String
+  channelMastercopyAddress    String
+  chainId                     Int
+  providerUrl                 String
+  latestUpdate                Update
 
-  activeTransfers Transfer[]
+  activeTransfers             Transfer[]
 
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
