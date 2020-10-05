@@ -9,11 +9,7 @@ import { getAddressBook, isContractDeployed, deployContract } from "../utils";
 
 const { formatEther } = utils;
 
-export const migrate = async (
-  wallet: Wallet,
-  addressBookPath: string,
-  silent = false,
-): Promise<void> => {
+export const migrate = async (wallet: Wallet, addressBookPath: string, silent = false): Promise<void> => {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   const log = silent ? () => {} : console.log;
 
@@ -26,14 +22,10 @@ export const migrate = async (
   const providerUrl = (wallet.provider as providers.JsonRpcProvider).connection.url;
 
   log(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
-  log(
-    `Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`,
-  );
+  log(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);
 
   if (balance.eq(Zero)) {
-    throw new Error(
-      `Account ${wallet.address} has zero balance on chain ${chainId}, aborting contract migration`,
-    );
+    throw new Error(`Account ${wallet.address} has zero balance on chain ${chainId}, aborting contract migration`);
   }
 
   const addressBook = getAddressBook(addressBookPath, chainId.toString());
@@ -43,10 +35,7 @@ export const migrate = async (
 
   const deployHelper = async (name: string, args: ConstructorArgs): Promise<Contract> => {
     const savedAddress = addressBook.getEntry(name)["address"];
-    if (
-      savedAddress &&
-      (await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))
-    ) {
+    if (savedAddress && (await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))) {
       log(`${name} is up to date, no action required. Address: ${savedAddress}`);
       return new Contract(savedAddress, artifacts[name].abi, wallet);
     } else {
@@ -55,12 +44,10 @@ export const migrate = async (
   };
 
   const mastercopy = await deployHelper("ChannelMastercopy", []);
-  await deployHelper("ChannelFactory", [
-    { name: "mastercopy", value: mastercopy.address },
-  ]);
+  await deployHelper("ChannelFactory", [{ name: "mastercopy", value: mastercopy.address }]);
 
   // Transfers
-  await deployHelper("LinkedTransfer", []);
+  await deployHelper("HashlockTransfer", []);
   await deployHelper("Withdraw", []);
 
   ////////////////////////////////////////

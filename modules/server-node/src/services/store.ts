@@ -152,6 +152,7 @@ const convertChannelEntityToFullChannelState = (
     networkContext: {
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
+      channelMastercopyAddress: channelEntity.channelMastercopyAddress,
       providerUrl: channelEntity.providerUrl,
     },
     nonce: channelEntity.nonce,
@@ -577,6 +578,7 @@ export class PrismaStore implements IServerNodeStore {
         chainId: channelState.networkContext.chainId,
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
+        channelMastercopyAddress: channelState.networkContext.channelMastercopyAddress,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,
         participantA: channelState.alice,

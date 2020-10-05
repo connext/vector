@@ -4,7 +4,7 @@ import {
   mkAddress,
   mkBytes32,
   mkPublicIdentifier,
-  createTestLinkedTransferState,
+  createTestHashlockTransferState,
   createTestChannelState,
   createTestUpdateParams,
   mkHash,
@@ -15,8 +15,8 @@ import {
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
-  LinkedTransferResolverEncoding,
-  LinkedTransferStateEncoding,
+  HashlockTransferResolverEncoding,
+  HashlockTransferStateEncoding,
   OutboundChannelUpdateError,
   IVectorChainReader,
   ILockService,
@@ -110,6 +110,7 @@ describe("Vector", () => {
         chainId: 2,
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
+        channelMastercopyAddress: mkAddress("0x444"),
         withdrawAddress: mkAddress("0xdef"),
       };
       const validParams = {
@@ -123,10 +124,27 @@ describe("Vector", () => {
           params: { ...validParams, counterpartyIdentifier: undefined },
           error: "should have required property 'counterpartyIdentifier'",
         },
+
         {
           name: "should fail if there is an invalid counterparty",
           params: { ...validParams, counterpartyIdentifier: "fail" },
           error: 'should match pattern "^indra([a-zA-Z0-9]{50})$"',
+        },
+        {
+          name: "should fail if there is no channelMastercopyAddress",
+          params: {
+            ...validParams,
+            networkContext: { ...validParams.networkContext, channelMastercopyAddress: undefined },
+          },
+          error: "should have required property 'channelMastercopyAddress'",
+        },
+        {
+          name: "should fail if there is an invalid channelMastercopyAddress",
+          params: {
+            ...validParams,
+            networkContext: { ...validParams.networkContext, channelMastercopyAddress: "fail" },
+          },
+          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {
           name: "should fail if there is no chainId",
@@ -268,9 +286,9 @@ describe("Vector", () => {
         amount: "123214",
         assetId: mkAddress("0xaaa"),
         transferDefinition: mkAddress("0xdef"),
-        transferInitialState: createTestLinkedTransferState(),
+        transferInitialState: createTestHashlockTransferState(),
         timeout: "133215",
-        encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [

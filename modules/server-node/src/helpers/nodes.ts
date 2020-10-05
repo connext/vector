@@ -1,13 +1,12 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import { EngineEvents, IVectorChainService, IVectorEngine } from "@connext/vector-types";
-import { ChannelSigner } from "@connext/vector-utils";
+import { ChannelSigner, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "ethers";
 
 import { logger, lock, _providers, store } from "..";
 import { config } from "../config";
-import { getBearerTokenFunction, NatsMessagingService } from "../services/messaging";
 
 const ETH_STANDARD_PATH = "m/44'/60'/0'/0";
 
@@ -38,7 +37,7 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
       messagingUrl: config.natsUrl,
     },
     logger.child({ module: "NatsMessagingService" }),
-    getBearerTokenFunction(signer),
+    getBearerTokenFunction(signer, config.authUrl),
   );
   await messaging.connect();
 

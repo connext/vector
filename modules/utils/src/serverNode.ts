@@ -10,6 +10,7 @@ import {
   ServerNodeResponses,
   Values,
   VectorError,
+  DepositReconciledPayload,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -90,6 +91,7 @@ export class ServerNodeError extends VectorError {
 export type EventCallbackConfig = {
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: { evt: Evt<ConditionalTransferCreatedPayload>; url: string };
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: { evt: Evt<ConditionalTransferResolvedPayload>; url: string };
+  [EngineEvents.DEPOSIT_RECONCILED]: { evt: Evt<DepositReconciledPayload>; url: string };
 };
 
 export class RestServerNodeService implements IServerNodeService {
@@ -245,7 +247,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.ConditionalTransfer,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>> {
     return this.executeHttpRequest<ServerNodeParams.ConditionalTransfer, ServerNodeResponses.ConditionalTransfer>(
-      `linked-transfer/create`,
+      `hashlock-transfer/create`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
       ServerNodeParams.ConditionalTransferSchema,
@@ -256,7 +258,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.ResolveTransfer,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
     return this.executeHttpRequest<ServerNodeParams.ResolveTransfer, ServerNodeResponses.ResolveTransfer>(
-      `linked-transfer/resolve`,
+      `hashlock-transfer/resolve`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
       ServerNodeParams.ResolveTransferSchema,

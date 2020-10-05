@@ -11,13 +11,11 @@ import { INatsService, natsServiceFactory } from "ts-natsutil";
 import { BaseLogger } from "pino";
 import axios, { AxiosResponse } from "axios";
 
-import { config } from "../config";
-
-export const getBearerTokenFunction = (signer: IChannelSigner) => async (): Promise<string> => {
-  const nonceResponse = await axios.get(`${config.authUrl}/auth/${signer.publicIdentifier}`);
+export const getBearerTokenFunction = (signer: IChannelSigner, authUrl: string) => async (): Promise<string> => {
+  const nonceResponse = await axios.get(`${authUrl}/auth/${signer.publicIdentifier}`);
   const nonce = nonceResponse.data;
   const sig = await signer.signMessage(nonce);
-  const verifyResponse: AxiosResponse<string> = await axios.post(`${config.authUrl}/auth`, {
+  const verifyResponse: AxiosResponse<string> = await axios.post(`${authUrl}/auth`, {
     sig,
     userIdentifier: signer.publicIdentifier,
   });

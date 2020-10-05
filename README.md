@@ -207,16 +207,16 @@ Content-Type: application/json
 Then, create a transfer between Alice and Bob through Roger (in [3_transfer](https://github.com/connext/vector/blob/master/modules/server-node/examples/3-transfer.http)):
 
 ```
-POST {{aliceUrl}}/linked-transfer/create
+POST {{aliceUrl}}/hashlock-transfer/create
 Content-Type: application/json
 
 {
-  "conditionType": "LinkedTransfer",
+  "conditionType": "HashlockTransfer",
   "channelAddress": "{{aliceNodeChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
   "details": {
-    "linkedHash": "{{linkedHash}}"
+    "lockHash": "{{lockHash}}"
   },
   "routingId": "{{routingId}}",
   "recipient": "{{bobPublicIdentifier}}",
@@ -230,7 +230,7 @@ Content-Type: application/json
 Lastly, unlock the transfer for Bob to get his funds:
 
 ```
-POST {{bobUrl}}/linked-transfer/resolve
+POST {{bobUrl}}/hashlock-transfer/resolve
 Content-Type: application/json
 
 {

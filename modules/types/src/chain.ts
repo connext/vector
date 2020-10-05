@@ -82,6 +82,8 @@ export interface IVectorChainReader {
   resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
 
   getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
+
+  getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

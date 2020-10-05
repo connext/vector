@@ -1,11 +1,15 @@
-import { expect } from "@connext/vector-utils";
+import {
+  expect,
+  createTestChannelUpdate,
+  delay,
+  getRandomChannelSigner,
+  getBearerTokenFunction,
+  NatsMessagingService,
+} from "@connext/vector-utils";
 import { IChannelSigner } from "@connext/vector-types";
-import { createTestChannelUpdate, delay, getRandomChannelSigner } from "@connext/vector-utils";
 import pino from "pino";
 
 import { config } from "../config";
-
-import { getBearerTokenFunction, NatsMessagingService } from "./messaging";
 
 describe("messaging", () => {
   const logger = pino();

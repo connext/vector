@@ -6,7 +6,7 @@ import { ChannelRpcMethod, ChannelRpcMethods } from "../vectorProvider";
 import { TransferName } from "../transferDefinitions";
 
 import {
-  LinkedTransferResolverSchema,
+  HashlockTransferResolverSchema,
   TBasicMeta,
   TAddress,
   TBytes32,
@@ -72,19 +72,20 @@ const BasicConditionalTransferParamsSchema = Type.Object({
   meta: TBasicMeta,
 });
 
-const LinkedTransferCreateDetailsSchema = Type.Object({
-  conditionType: Type.Literal(TransferName.LinkedTransfer),
+const HashlockTransferCreateDetailsSchema = Type.Object({
+  conditionType: Type.Literal(TransferName.HashlockTransfer),
   details: Type.Object({
-    linkedHash: TBytes32,
+    lockHash: TBytes32,
+    timelock: Type.Optional(TIntegerString),
   }),
 });
 
-const CreateLinkedTransferParamsSchema = Type.Intersect([
+const CreateHashlockTransferParamsSchema = Type.Intersect([
   BasicConditionalTransferParamsSchema,
-  LinkedTransferCreateDetailsSchema,
+  HashlockTransferCreateDetailsSchema,
 ]);
 // TODO: resolves to any, revisit when we have more conditional transfers
-// const ConditionalTransferParamsSchema = Type.Union([LinkedTransferParamsSchema]);
+// const ConditionalTransferParamsSchema = Type.Union([HashlockTransferParamsSchema]);
 
 // Resolve conditional transfer engine params
 const BasicResolveTransferParamsSchema = Type.Object({
@@ -93,18 +94,18 @@ const BasicResolveTransferParamsSchema = Type.Object({
   meta: TBasicMeta,
 });
 
-const LinkedTransferResolveDetailsSchema = Type.Object({
-  conditionType: Type.Literal(TransferName.LinkedTransfer),
-  details: LinkedTransferResolverSchema,
+const HashlockTransferResolveDetailsSchema = Type.Object({
+  conditionType: Type.Literal(TransferName.HashlockTransfer),
+  details: HashlockTransferResolverSchema,
 });
 
-const ResolveLinkedTransferParamsSchema = Type.Intersect([
+const ResolveHashlockTransferParamsSchema = Type.Intersect([
   BasicResolveTransferParamsSchema,
-  LinkedTransferResolveDetailsSchema,
+  HashlockTransferResolveDetailsSchema,
 ]);
 
 // // TODO: resolves to any, revisit when we have more conditional transfers
-// const ResolveTransferParamsSchema = Type.Union([ResolveLinkedTransferParamsSchema]);
+// const ResolveTransferParamsSchema = Type.Union([ResolveHashlockTransferParamsSchema]);
 
 // Withdraw engine params
 const WithdrawParamsSchema = Type.Object({
@@ -156,12 +157,12 @@ export namespace EngineParams {
   export type Deposit = Static<typeof DepositEngineParamsSchema>;
 
   // TODO: see note re: grouping transfer typings
-  export const ConditionalTransferSchema = CreateLinkedTransferParamsSchema;
-  export type ConditionalTransfer = Static<typeof CreateLinkedTransferParamsSchema>;
+  export const ConditionalTransferSchema = CreateHashlockTransferParamsSchema;
+  export type ConditionalTransfer = Static<typeof CreateHashlockTransferParamsSchema>;
 
   // TODO: see note re: grouping transfer typings
-  export const ResolveTransferSchema = ResolveLinkedTransferParamsSchema;
-  export type ResolveTransfer = Static<typeof ResolveLinkedTransferParamsSchema>;
+  export const ResolveTransferSchema = ResolveHashlockTransferParamsSchema;
+  export type ResolveTransfer = Static<typeof ResolveHashlockTransferParamsSchema>;
 
   export const WithdrawSchema = WithdrawParamsSchema;
   export type Withdraw = Static<typeof WithdrawSchema>;

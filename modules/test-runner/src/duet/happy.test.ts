@@ -1,3 +1,4 @@
+import { TransferName } from "@connext/vector-types";
 import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
@@ -137,14 +138,14 @@ describe(testName, () => {
     const bobBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
 
     const preImage = getRandomBytes32();
-    const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
+    const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
     const transferRes = await alice.conditionalTransfer({
       amount: transferAmt.toString(),
       assetId,
       channelAddress: channel.channelAddress,
-      conditionType: "LinkedTransfer",
+      conditionType: TransferName.HashlockTransfer,
       details: {
-        linkedHash,
+        lockHash,
       },
     });
     expect(transferRes.getError()).to.not.be.ok;
@@ -156,7 +157,7 @@ describe(testName, () => {
 
     const resolveRes = await bob.resolveTransfer({
       channelAddress: channel.channelAddress,
-      conditionType: "LinkedTransfer",
+      conditionType: TransferName.HashlockTransfer,
       details: {
         preImage,
       },
@@ -182,14 +183,14 @@ describe(testName, () => {
     const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
 
     const preImage = getRandomBytes32();
-    const linkedHash = utils.soliditySha256(["bytes32"], [preImage]);
+    const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
     const transferRes = await bob.conditionalTransfer({
       amount: transferAmt.toString(),
       assetId,
       channelAddress: channel.channelAddress,
-      conditionType: "LinkedTransfer",
+      conditionType: TransferName.HashlockTransfer,
       details: {
-        linkedHash,
+        lockHash,
       },
     });
     expect(transferRes.isError).to.not.be.ok;

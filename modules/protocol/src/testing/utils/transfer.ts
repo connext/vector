@@ -4,16 +4,16 @@ import {
   IVectorProtocol,
   CreateTransferParams,
   DEFAULT_TRANSFER_TIMEOUT,
-  LinkedTransferStateEncoding,
-  LinkedTransferResolverEncoding,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
   ChannelUpdate,
   UpdateType,
   ResolveTransferParams,
   TransferResolver,
 } from "@connext/vector-types";
 import {
-  createLinkedHash,
-  createTestLinkedTransferState,
+  createlockHash,
+  createTestHashlockTransferState,
   getRandomBytes32,
   hashTransferState,
   expect,
@@ -23,7 +23,7 @@ import { BigNumberish, constants } from "ethers";
 import { env } from "../env";
 import { chainId } from "../constants";
 
-// Will create a linked transfer in the channel, and return the full
+// Will create a hashlock transfer in the channel, and return the full
 // transfer state (including the necessary resolver)
 // TODO: Should be improved to create any type of state, though maybe
 // this is out of scope for integration test utils
@@ -36,20 +36,20 @@ export const createTransfer = async (
 ): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
   // Create the transfer information
   const preImage = getRandomBytes32();
-  const linkedHash = createLinkedHash(preImage);
+  const lockHash = createlockHash(preImage);
   const balance = {
     to: [payor.signerAddress, payee.signerAddress],
     amount: [amount.toString(), "0"],
   };
 
-  const transferInitialState = createTestLinkedTransferState({ linkedHash, assetId, balance });
+  const transferInitialState = createTestHashlockTransferState({ lockHash, assetId, balance });
   const params: CreateTransferParams = {
     channelAddress,
     amount: amount.toString(),
-    transferDefinition: env.chainAddresses[chainId].linkedTransferAddress,
+    transferDefinition: env.chainAddresses[chainId].hashlockTransferAddress,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-    encodings: [LinkedTransferStateEncoding, LinkedTransferResolverEncoding],
+    encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
     meta: { test: "field" },
     assetId,
   };

@@ -228,4 +228,17 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(e);
     }
   }
+
+  async getBlockNumber(chainId: number): Promise<Result<number, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    try {
+      const blockNumber = await provider.getBlockNumber();
+      return Result.ok(blockNumber);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
 }

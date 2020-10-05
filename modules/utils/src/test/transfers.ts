@@ -1,13 +1,13 @@
 import { BigNumber } from "@connext/types";
 import {
   Balance,
-  LinkedTransferState,
+  HashlockTransferState,
   TransferState,
   CoreTransferState,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
-  LinkedTransferResolverEncoding,
-  LinkedTransferStateEncoding,
+  HashlockTransferResolverEncoding,
+  HashlockTransferStateEncoding,
   TransferName,
 } from "@connext/vector-types";
 import { utils } from "ethers";
@@ -21,9 +21,9 @@ const { keccak256, solidityPack } = utils;
 
 export type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
 
-export const createTestLinkedTransferState = (
-  overrides: PartialTransferOverrides & { linkedHash?: string } = {},
-): LinkedTransferState => {
+export const createTestHashlockTransferState = (
+  overrides: PartialTransferOverrides & { lockHash?: string; expiry?: string } = {},
+): HashlockTransferState => {
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {
@@ -31,19 +31,20 @@ export const createTestLinkedTransferState = (
       amount: ["1", "0"],
       ...(balanceOverrides ?? {}),
     },
-    linkedHash: mkHash("0xeee"),
+    lockHash: mkHash("0xeee"),
+    expiry: "0",
     ...defaultOverrides,
   };
 };
 
-export const createTestLinkedTransferStates = (
+export const createTestHashlockTransferStates = (
   count = 2,
   overrides: PartialTransferOverrides[] = [],
 ): TransferState[] => {
   return Array(count)
     .fill(0)
     .map((val, idx) => {
-      return createTestLinkedTransferState({ ...(overrides[idx] ?? {}) });
+      return createTestHashlockTransferState({ ...(overrides[idx] ?? {}) });
     });
 };
 
@@ -62,24 +63,26 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
   };
 };
 
-type TestLinkedTransferOptions = {
+type TestHashlockTransferOptions = {
   balance: Balance;
   assetId: string;
   preImage: string;
+  expiry: string;
   meta: any;
   channelFactoryAddress: string;
   chainId: number;
 } & CoreTransferState;
-export function createTestFullLinkedTransferState(
-  overrides: Partial<TestLinkedTransferOptions> = {},
-): FullTransferState<typeof TransferName.LinkedTransfer> {
+export function createTestFullHashlockTransferState(
+  overrides: Partial<TestHashlockTransferOptions> = {},
+): FullTransferState<typeof TransferName.HashlockTransfer> {
   // get overrides/defaults values
-  const { balance, assetId, preImage, meta, ...core } = overrides;
+  const { balance, assetId, preImage, expiry, meta, ...core } = overrides;
 
-  const transferEncodings = [LinkedTransferStateEncoding, LinkedTransferResolverEncoding];
+  const transferEncodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   const transferResolver = { preImage: preImage ?? getRandomBytes32() };
-  const transferState = createTestLinkedTransferState({
-    linkedHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
+  const transferState = createTestHashlockTransferState({
+    lockHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
+    expiry: expiry ?? "0",
     assetId: assetId ?? mkAddress(),
     balance: balance ?? { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["4", "0"] },
   });

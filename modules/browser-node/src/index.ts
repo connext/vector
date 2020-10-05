@@ -1,21 +1,65 @@
-import { IServerNodeService, ServerNodeError } from "@connext/vector-utils";
+import {
+  IServerNodeService,
+  ServerNodeError,
+  NatsMessagingService,
+  getBearerTokenFunction,
+} from "@connext/vector-utils";
 import {
   ServerNodeParams,
   ServerNodeResponses,
   EngineEvent,
   EngineEventMap,
   Result,
-  IEngineStore,
+  IChannelSigner,
+  IVectorEngine,
+  ChainProviders,
+  ChainAddresses,
 } from "@connext/vector-types";
+import { VectorEngine } from "@connext/vector-engine";
+import { BaseLogger } from "pino";
+import { VectorChainService } from "@connext/vector-contracts";
+import { providers } from "ethers";
+
+import { BrowserStore } from "./services/store";
+import { BrowserLockService } from "./services/lock";
 
 // TODO: rename IServerNodeService to INodeService
 export class BrowserNode implements IServerNodeService {
   publicIdentifier = "";
   signerAddress = "";
 
-  private constructor(private readonly store: IEngineStore) {}
+  private constructor(private readonly engine: IVectorEngine) {}
 
-  static async connect(store: IEngineStore): Promise<BrowserNode> {}
+  static async connect(
+    messagingUrl: string,
+    log: BaseLogger,
+    signer: IChannelSigner,
+    authUrl: string,
+    chainProviders: ChainProviders,
+    chainAddresses: ChainAddresses,
+  ): Promise<BrowserNode> {
+    const chainJsonProviders = Object.fromEntries(
+      Object.entries(chainProviders).map(([chainId, url]) => {
+        return [chainId, new providers.JsonRpcProvider(url)];
+      }),
+    );
+    const messaging = new NatsMessagingService({ messagingUrl }, log, getBearerTokenFunction(signer, authUrl));
+    const store = new BrowserStore();
+    const lock = new BrowserLockService();
+    const chainService = new VectorChainService(store, chainJsonProviders, signer, log);
+    const engine = await VectorEngine.connect(
+      messaging,
+      lock,
+      store,
+      signer,
+      chainService,
+      chainProviders,
+      chainAddresses,
+      log.child({ module: "VectorEngine" }),
+    );
+    const node = new BrowserNode(engine);
+    return node;
+  }
 
   async getStateChannelByParticipants(
     params: ServerNodeParams.GetChannelStateByParticipants,
