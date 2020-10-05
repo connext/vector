@@ -26,7 +26,7 @@ import {
 import { expect } from "chai";
 import Sinon from "sinon";
 import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts";
-import { BigNumber, providers } from "ethers";
+import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "../errors";
 import {
@@ -50,8 +50,15 @@ describe("ParamConverter", () => {
       HashlockTransferDefinition: env.contractAddresses[chainId].HashlockTransfer.address,
     },
   };
-  const chainReader = Sinon.createStubInstance(VectorChainReader);
-  chainReader["getBlockNumber"].resolves(Result.ok<number>(110));
+  let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+
+  beforeEach(() => {
+    chainReader = Sinon.createStubInstance(VectorChainReader);
+
+    chainReader.getBlockNumber.resolves(Result.ok<number>(110));
+  });
+
+  afterEach(() => Sinon.restore());
 
   describe("convertConditionalTransferParams", () => {
     const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
@@ -142,7 +149,7 @@ describe("ParamConverter", () => {
             to: [signerB.address, signerA.address],
           },
           lockHash: params.details.lockHash,
-          expiry: BigNumber.from(await chainReader.getBlockNumber(chainId))
+          expiry: BigNumber.from((await chainReader.getBlockNumber(chainId)).getValue()!)
             .add(params.details.timelock)
             .toString(),
         },
