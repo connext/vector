@@ -13,7 +13,7 @@ import { Contract, ContractFactory, Wallet, utils, BigNumber } from "ethers";
 import { HashlockTransfer } from "../../artifacts";
 import { provider } from "../constants";
 
-describe.only("HashlockTransfer", () => {
+describe("HashlockTransfer", () => {
   let deployer: Wallet;
   let definition: Contract;
 

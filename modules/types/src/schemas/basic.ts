@@ -32,14 +32,20 @@ export const TBalance = Type.Object({
 
 export const TBasicMeta = Type.Optional(Type.Any());
 
-export const TNetworkContext = Type.Object({
+export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
   channelMastercopyAddress: TAddress,
   withdrawDefinition: Type.Optional(TAddress),
-  HashlockTransferDefinition: Type.Optional(TAddress),
-  chainId: TChainId,
-  providerUrl: TUrl,
+  hashlockTransferDefinition: Type.Optional(TAddress),
 });
+
+export const TNetworkContext = Type.Intersect([
+  TContractAddresses,
+  Type.Object({
+    chainId: TChainId,
+    providerUrl: TUrl,
+  }),
+]);
 
 ////////////////////////////////////////
 //////// Transfer types

@@ -1,4 +1,4 @@
-import { TAddress } from "@connext/vector-types";
+import { TContractAddresses, TUrl } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
 
@@ -7,15 +7,9 @@ const ajv = new Ajv();
 const VectorNodeConfigSchema = Type.Object({
   adminToken: Type.String(),
   authUrl: Type.String({ format: "uri" }),
-  chainAddresses: Type.Map(
-    Type.Object({
-      channelFactoryAddress: TAddress,
-      linkedTransferAddress: TAddress,
-      withdrawAddress: TAddress,
-    }),
-  ),
-  chainProviders: Type.Map(Type.String({ format: "uri" })),
-  dbUrl: Type.Optional(Type.String({ format: "uri" })),
+  chainAddresses: Type.Map(TContractAddresses),
+  chainProviders: Type.Map(TUrl),
+  dbUrl: Type.Optional(TUrl),
   logLevel: Type.Optional(
     Type.Union([
       Type.Literal("fatal"),
@@ -28,8 +22,8 @@ const VectorNodeConfigSchema = Type.Object({
     ]),
   ),
   mnemonic: Type.Optional(Type.String()),
-  natsUrl: Type.String({ format: "uri" }),
-  redisUrl: Type.String({ format: "uri" }),
+  natsUrl: TUrl,
+  redisUrl: TUrl,
 });
 
 type VectorNodeConfig = Static<typeof VectorNodeConfigSchema>;

@@ -67,6 +67,7 @@ describe("applyUpdate", () => {
     chainId,
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
+    channelMastercopyAddress: mkAddress("0xcccffff333"),
   };
 
   // Sample transfer (alice creating, bob recieving)
@@ -492,6 +493,7 @@ describe("generateUpdate", () => {
     chainId,
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
+    channelMastercopyAddress: mkAddress("0xbbbbccc3334"),
   };
 
   // Get transfer constants

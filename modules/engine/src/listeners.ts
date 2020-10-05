@@ -66,7 +66,7 @@ export async function setupEngineListeners(
       } = event;
       return (
         type === UpdateType.create &&
-        (details as CreateUpdateDetails).transferDefinition !== chainAddresses[chainId].withdrawAddress
+        (details as CreateUpdateDetails).transferDefinition !== chainAddresses[chainId].withdrawDefinition
       );
     },
   );
@@ -84,7 +84,7 @@ export async function setupEngineListeners(
       } = event;
       return (
         type === UpdateType.resolve &&
-        (details as ResolveUpdateDetails).transferDefinition !== chainAddresses[chainId].withdrawAddress
+        (details as ResolveUpdateDetails).transferDefinition !== chainAddresses[chainId].withdrawDefinition
       );
     },
   );
@@ -102,7 +102,7 @@ export async function setupEngineListeners(
       } = event;
       return (
         type === UpdateType.create &&
-        (details as CreateUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawAddress
+        (details as CreateUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawDefinition
       );
     },
   );
@@ -120,7 +120,7 @@ export async function setupEngineListeners(
       } = event;
       return (
         type === UpdateType.resolve &&
-        (details as ResolveUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawAddress
+        (details as ResolveUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawDefinition
       );
     },
   );
@@ -187,7 +187,7 @@ async function handleConditionalTransferCreation(
 
   let conditionType: ConditionalTransferType | undefined;
   switch (transferDefinition) {
-    case chainAddresses[chainId].hashlockTransferAddress:
+    case chainAddresses[chainId].hashlockTransferDefinition:
       conditionType = ConditionalTransferType.HashlockTransfer;
       break;
   }
@@ -234,7 +234,7 @@ async function handleConditionalTransferResolution(
   // Emit the properly structured event
   let conditionType: ConditionalTransferType | undefined;
   switch (transferDefinition) {
-    case chainAddresses[chainId].hashlockTransferAddress:
+    case chainAddresses[chainId].hashlockTransferDefinition:
       conditionType = ConditionalTransferType.HashlockTransfer;
       break;
   }

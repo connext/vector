@@ -56,6 +56,7 @@ export function createTestUpdateParams<T extends UpdateType>(
           chainId: 2,
           providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
+          channelMastercopyAddress: mkAddress("0xcccabbb23132"),
         },
       } as SetupUpdateDetails;
       break;
@@ -227,6 +228,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     networkContext: {
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
+      channelMastercopyAddress: mkAddress("0xcccabbb23132"),
       providerUrl: "http://localhost:8545",
       ...(networkContext ?? {}),
     },

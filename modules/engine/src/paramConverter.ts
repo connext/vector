@@ -68,7 +68,7 @@ export async function convertConditionalTransferParams(
       return Result.fail(new InvalidTransferType(blockNumberRes.getError()!.message));
     }
     const blockNumber = blockNumberRes.getValue();
-    transferDefinition = chainAddresses[channel.networkContext.chainId].HashlockTransferDefinition;
+    transferDefinition = chainAddresses[channel.networkContext.chainId].hashlockTransferDefinition;
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
@@ -172,7 +172,7 @@ export async function convertWithdrawParams(
     channelAddress,
     amount,
     assetId,
-    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawAddress!,
+    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawDefinition!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],

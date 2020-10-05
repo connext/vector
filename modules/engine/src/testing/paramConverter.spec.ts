@@ -44,9 +44,10 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
+      withdrawDefinition: env.chainAddresses[chainId].withdrawDefinition,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
+      hashlockTransferDefinition: env.chainAddresses[chainId].hashlockTransferDefinition,
+      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
     },
   };
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -97,7 +98,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
+        transferDefinition: chainAddresses[chainId].hashlockTransferDefinition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -141,7 +142,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
+        transferDefinition: chainAddresses[chainId].hashlockTransferDefinition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -279,7 +280,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawAddress,
+        transferDefinition: chainAddresses[chainId].withdrawDefinition,
         transferInitialState: {
           balance: {
             amount: [
@@ -327,7 +328,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawAddress,
+        transferDefinition: chainAddresses[chainId].withdrawDefinition,
         transferInitialState: {
           balance: {
             amount: [
