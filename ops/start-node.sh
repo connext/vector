@@ -34,8 +34,8 @@ function fromAddressBook {
   ';
 }
 
-default_config="`cat $root/default-config.json`" # | tr -d '\n\r'`"
-override_config="`cat $root/config.json`" # | tr -d '\n\r'`"
+default_config="`cat $root/config-node.json`" # | tr -d '\n\r'`"
+override_config="`cat $root/config-prod.json`" # | tr -d '\n\r'`"
 config="`echo $default_config $override_config | mergeJson`"
 
 function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
