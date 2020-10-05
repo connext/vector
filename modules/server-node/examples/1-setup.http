@@ -14,5 +14,6 @@ Content-Type: application/json
 {
   "counterpartyIdentifier": "{{bobPublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "36000",
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }
