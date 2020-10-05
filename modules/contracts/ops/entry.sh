@@ -13,9 +13,12 @@ chain_id="${CHAIN_ID:-1337}"
 mnemonic="${MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
 evm="${EVM:-`if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi`}"
 
+chain_addresses="`dirname $address_book`/chain-addresses.json"
+
 cwd="`pwd`"
 mkdir -p $data_dir /data /tmp
 touch $address_book
+rm -f $chain_addresses
 
 # TODO: the gasLimit shouldn't need to be 1000x higher than mainnet but cf tests fail otherwise..
 
@@ -71,5 +74,20 @@ echo "Deploying contracts.."
 node $cwd/dist/cli.js migrate --address-book "$address_book" --mnemonic "$mnemonic"
 
 node $cwd/dist/cli.js new-token --address-book "$address_book" --mnemonic "$mnemonic"
+
+# jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
+function fromAddressBook {
+  jq '
+    map_values(
+      map_values(.address) |
+      to_entries |
+      map(.key = "\(.key)Address") |
+      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
+      from_entries
+    )
+  ';
+}
+
+cat $address_book | fromAddressBook > $chain_addresses
 
 wait $pid

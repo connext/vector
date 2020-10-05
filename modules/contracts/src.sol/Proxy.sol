@@ -7,17 +7,17 @@ pragma solidity ^0.7.1;
 /// @author Richard Meissner - <richard@gnosis.io>
 contract Proxy {
 
-    // masterCopy always needs to be first declared variable
+    // mastercopy always needs to be first declared variable
     // This ensures that it is at the same location in the contracts to which calls are delegated.
     // To reduce deployment costs this variable is internal and needs to be retrieved via `getStorageAt`
-    address internal masterCopy;
+    address internal mastercopy;
 
     /// @dev Constructor function sets address of master copy contract.
-    /// @param _masterCopy Master copy address.
-    constructor(address _masterCopy)
+    /// @param _mastercopy Master copy address.
+    constructor(address _mastercopy)
     {
-        require(_masterCopy != address(0), "Invalid master copy address provided");
-        masterCopy = _masterCopy;
+        require(_mastercopy != address(0), "Invalid master copy address provided");
+        mastercopy = _mastercopy;
     }
 
     /// @dev Fallback function forwards all transactions and returns all received return data.
@@ -27,9 +27,9 @@ contract Proxy {
     {
         // solium-disable-next-line security/no-inline-assembly
         assembly {
-            let _masterCopy := and(sload(0), 0xffffffffffffffffffffffffffffffffffffffff)
+            let _mastercopy := and(sload(0), 0xffffffffffffffffffffffffffffffffffffffff)
             calldatacopy(0, 0, calldatasize())
-            let success := delegatecall(gas(), _masterCopy, 0, calldatasize(), 0, 0)
+            let success := delegatecall(gas(), _mastercopy, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())
             if eq(success, 0) { revert(0, returndatasize()) }
             return(0, returndatasize())

@@ -8,9 +8,9 @@ if (!privateKey) {
   throw new Error(`VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY is required`);
 }
 
-const natsServers = process.env.VECTOR_NATS_SERVERS;
+const natsServers = process.env.VECTOR_NATS_URL;
 if (!natsServers) {
-  throw new Error(`VECTOR_NATS_SERVERS is required`);
+  throw new Error(`VECTOR_NATS_URL is required`);
 }
 
 const adminToken = process.env.VECTOR_ADMIN_TOKEN;

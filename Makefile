@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_proxy:latest"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_global_proxy:latest,$(project)_node_proxy:latest,$(project)_router_proxy:latest"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -33,15 +33,16 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: node router
+default: router
 
-global: auth ethprovider
-node: global database proxy server-node
-duet: global database server-node
-trio: global database server-node router
+global: auth ethprovider global-proxy
+node: global database node-proxy server-node
+router: node router-img router-proxy
+duet: global node
+trio: global node router
 extras: test-runner
 
-all: global node duet trio extras
+all: global node router duet trio extras
 
 ########################################
 # Command & Control Shortcuts
@@ -116,6 +117,7 @@ reset: stop-all
 	docker volume rm $(project)_database_dev  2> /dev/null || true
 	docker volume rm `docker volume ls -q -f name=$(project)_database_test_*` 2> /dev/null || true
 	rm -rf .chaindata/*
+	rm -rf *.docker-compose.yml
 
 reset-images:
 	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node
@@ -260,7 +262,7 @@ auth: auth-bundle $(shell find modules/auth/ops $(find_options))
 
 server-node-bundle: engine $(shell find modules/server-node $(find_options))
 	$(log_start)
-	$(docker_run) "cd modules/server-node && npm run build"
+	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
@@ -274,7 +276,7 @@ router-bundle: engine $(shell find modules/router $(find_options))
 	$(docker_run) "cd modules/router && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-router: router-bundle $(shell find modules/router/ops $(find_options))
+router-img: router-bundle $(shell find modules/router/ops $(find_options))
 	$(log_start)
 	docker build --file modules/router/ops/Dockerfile $(image_cache) --tag $(project)_router modules/router
 	docker tag $(project)_router $(project)_router:$(commit)
@@ -306,8 +308,20 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-proxy: $(shell find ops/proxy $(find_options))
+global-proxy: $(shell find ops/proxy $(find_options))
 	$(log_start)
-	docker build $(image_cache) --tag $(project)_proxy ops/proxy
-	docker tag $(project)_proxy $(project)_proxy:$(commit)
+	docker build $(image_cache) --tag $(project)_global_proxy ops/proxy/global
+	docker tag $(project)_global_proxy $(project)_global_proxy:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+node-proxy: $(shell find ops/proxy $(find_options))
+	$(log_start)
+	docker build $(image_cache) --tag $(project)_node_proxy ops/proxy/node
+	docker tag $(project)_node_proxy $(project)_node_proxy:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+router-proxy: $(shell find ops/proxy $(find_options))
+	$(log_start)
+	docker build $(image_cache) --tag $(project)_router_proxy ops/proxy/router
+	docker tag $(project)_router_proxy $(project)_router_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@

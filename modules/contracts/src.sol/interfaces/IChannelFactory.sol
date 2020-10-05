@@ -10,6 +10,8 @@ interface IChannelFactory {
 
     event ChannelCreation(IVectorChannel channel);
 
+    function getMastercopy() external view returns (address);
+
     function proxyCreationCode() external pure returns (bytes memory);
 
     function getChannelAddress(

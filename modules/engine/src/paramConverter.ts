@@ -60,7 +60,7 @@ export function convertConditionalTransferParams(
   let encodings: string[];
 
   if (params.conditionType === ConditionalTransferType.LinkedTransfer) {
-    transferDefinition = chainAddresses[channel.networkContext.chainId].linkedTransferDefinition;
+    transferDefinition = chainAddresses[channel.networkContext.chainId].linkedTransferAddress;
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
@@ -159,7 +159,7 @@ export async function convertWithdrawParams(
     channelAddress,
     amount,
     assetId,
-    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawDefinition!,
+    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawAddress!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],

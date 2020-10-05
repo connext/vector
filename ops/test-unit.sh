@@ -18,12 +18,14 @@ then interactive="--interactive --tty"
 else echo "Running in non-interactive mode"
 fi
 
+node_config="`cat $root/config-node.json`"
+router_config="`cat $root/config-router.json`"
+config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
+
 ########################################
 # If we need a chain for these tests, start the evm & stop it when we're done
 
 eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-CHAIN_PROVIDERS="{}"
-CONTRACT_ADDRESSES="{}"
 
 if [[ -n "$chain_id" ]]
 then
@@ -53,7 +55,7 @@ then
     --tmpfs "/tmp" \
     ${project}_builder modules/contracts/ops/entry.sh
 
-  while [[ -z "`cat $chain_data/address-book.json | grep 'TestToken' || true`" ]]
+  while [[ ! -f "$chain_data/chain-addresses.json" ]]
   do
     if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
     then echo "$ethprovider_host was not able to start up successfully" && exit 1
@@ -63,14 +65,22 @@ then
   echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
 
   CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
-  CONTRACT_ADDRESSES="`cat $chain_data/address-book.json`"
+  config="`echo "$config" '{"chainProviders":'$CHAIN_PROVIDERS'}' | jq -s '.[0] + .[1]'`"
+
+  CHAIN_ADDRESSES="`cat $chain_data/chain-addresses.json`"
+  config="`echo "$config" '{"chainAddresses":'$CHAIN_ADDRESSES'}' | jq -s '.[0] + .[1]'`"
+
+else
+  CHAIN_PROVIDERS="{}"
+  CHAIN_ADDRESSES="{}"
 fi
 
 docker run \
   $interactive \
   --entrypoint="bash" \
+  --env="VECTOR_CONFIG=$config" \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
-  --env="CONTRACT_ADDRESSES=$CONTRACT_ADDRESSES" \
+  --env="CHAIN_ADDRESSES=$CHAIN_ADDRESSES" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="VECTOR_ENV=$VECTOR_ENV" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
