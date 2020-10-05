@@ -50,8 +50,8 @@ then
 
 elif [[ "$stack" == "duet" ]]
 then
-  wait_for "bob" "$VECTOR_ALICE_URL"
-  wait_for "alice" "$VECTOR_BOB_URL"
+  wait_for "alice" "$VECTOR_ALICE_URL"
+  wait_for "bob" "$VECTOR_BOB_URL"
 
 elif [[ "$stack" == "trio" ]]
 then

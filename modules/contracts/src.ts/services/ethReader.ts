@@ -116,7 +116,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const mastercopy = await factory.mastercopy();
+      const mastercopy = await factory.getMastercopy();
       return Result.ok(mastercopy);
     } catch (e) {
       return Result.fail(e);

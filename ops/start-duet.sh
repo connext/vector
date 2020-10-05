@@ -30,12 +30,6 @@ auth_url="`getConfig authUrl`"
 
 version="latest"
 
-# log level alias can override default for easy `LOG_LEVEL=5 make start`
-VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
-
-# to access from other containers
-redis_url="redis://redis:6379"
-
 common="networks:
       - '$project'
     logging:
@@ -63,35 +57,26 @@ alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neithe
 bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
 sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
-auth_url="http://auth:5040"
 bash $root/ops/start-global.sh
-echo "global services have started up, resuming $stack startup"
 
-VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
-VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
+chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
+config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 ########################################
 ## Node config
 
-vector_config="`cat $root/config.json | tr -d '\n\r'`"
-
 node_port="8000"
-prisma_studio_port="5555"
 nats_port="4222"
 
-alice_port="8002"
-alice_prisma_port="5557"
+alice_port="8003"
 alice_database="database_a"
-echo "$stack.alice will be exposed on *:$alice_port (prisma on *:$alice_prisma_port)"
+echo "$stack.alice will be exposed on *:$alice_port"
 
-bob_port="8003"
-bob_prisma_port="5558"
+bob_port="8004"
 bob_database="database_b"
-echo "$stack.bob will be exposed on *:$bob_port (prisma on *:$bob_prisma_port)"
+echo "$stack.bob will be exposed on *:$bob_port"
 
 public_url="http://localhost:$alice_port"
-
-VECTOR_ADMIN_TOKEN="${VECTOR_ADMIN_TOKEN:-cxt1234}";
 
 node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
@@ -99,21 +84,12 @@ node_image="image: '${project}_builder'
       - '$root:/root'"
 
 node_env="environment:
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
-      VECTOR_AUTH_URL: '$auth_url'
-      VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
-      VECTOR_CONFIG: '$vector_config'
-      VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
+      VECTOR_CONFIG: '$config'
       VECTOR_ENV: 'dev'
-      VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
-      VECTOR_NATS_URL: 'nats://nats:$nats_port'
       VECTOR_PG_DATABASE: '$project'
       VECTOR_PG_PASSWORD: '$project'
       VECTOR_PG_PORT: '$pg_port'
-      VECTOR_PG_USERNAME: '$project'
-      VECTOR_PORT: '$node_port'
-      VECTOR_REDIS_URL: '$redis_url'
-      VECTOR_SUGAR_DADDY: '$sugardaddy_mnemonic'"
+      VECTOR_PG_USERNAME: '$project'"
 
 ####################
 # Launch stack
@@ -137,7 +113,6 @@ services:
       VECTOR_MNEMONIC: '$alice_mnemonic'
     ports:
       - '$alice_port:$node_port'
-      - '$alice_prisma_port:$prisma_studio_port'
 
   bob:
     $common
@@ -147,7 +122,6 @@ services:
       VECTOR_MNEMONIC: '$bob_mnemonic'
     ports:
       - '$bob_port:$node_port'
-      - '$bob_prisma_port:$prisma_studio_port'
 
   $alice_database:
     $common

@@ -12,14 +12,18 @@ import "./lib/LibAsset.sol";
 /// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
 
-    IVectorChannel public immutable masterCopy;
+    address public immutable mastercopy;
 
     bytes32 private constant domainSalt = keccak256("vector");
 
     bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
-    constructor(IVectorChannel _masterCopy) {
-        masterCopy = _masterCopy;
+    constructor(address _mastercopy) {
+        mastercopy = _mastercopy;
+    }
+
+    function getMastercopy() public override view returns(address) {
+      return mastercopy;
     }
 
     ////////////////////////////////////////
@@ -39,7 +43,7 @@ contract ChannelFactory is IChannelFactory {
         returns (address)
     {
         bytes32 salt = generateSalt(alice, bob, chainId);
-        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, masterCopy));
+        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, mastercopy));
         return address(uint256(
             keccak256(abi.encodePacked(
                 byte(0xff),
@@ -113,7 +117,7 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel)
     {
         bytes32 salt = generateSalt(alice, bob, chainId);
-        Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
+        Proxy proxy = new Proxy{salt: salt}(mastercopy);
         return IVectorChannel(address(proxy));
     }
 

@@ -3,7 +3,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractFactory, BigNumber } from "ethers";
 import pino from "pino";
 
-import { ChannelMastercopy, ChannelFactory } from "../artifacts";
+import { ChannelMastercopy, ChannelFactory, Proxy } from "../artifacts";
 import { VectorChainReader } from "../services";
 
 import { alice, bob, provider } from "./constants";
@@ -38,6 +38,14 @@ describe("ChannelFactory", () => {
 
   it("should deploy", async () => {
     expect(channelFactory.address).to.be.a("string");
+  });
+
+  it("should provide the mastercopy address", async () => {
+    expect(await channelFactory.getMastercopy()).to.equal(channelMastercopy.address);
+  });
+
+  it("should provide the proxy bytecode", async () => {
+    expect(await channelFactory.proxyCreationCode()).to.equal(Proxy.bytecode);
   });
 
   it("should create a channel", async () => {
