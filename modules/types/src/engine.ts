@@ -86,6 +86,8 @@ export interface EngineEventMap {
 ///////////////////////////////////
 ////// Core engine interfaces
 export interface IVectorEngine {
+  publicIdentifier: string;
+  signerAddress: string;
   request<T extends ChannelRpcMethod>(payload: EngineParams.RpcRequest): Promise<ChannelRpcMethodsResponsesMap[T]>;
   on<T extends EngineEvent>(
     event: T,

@@ -40,6 +40,7 @@ const BasicTransferServerResponseSchema = {
 const GetTransferStateByRoutingIdParamsSchema = Type.Object({
   channelAddress: TAddress,
   routingId: TBytes32,
+  publicIdentifier: Type.Optional(TPublicIdentifier),
 });
 
 const GetTransferStateByRoutingIdResponseSchema = {
@@ -49,6 +50,7 @@ const GetTransferStateByRoutingIdResponseSchema = {
 // GET TRANSFERS BY ROUTINGID
 const GetTransferStatesByRoutingIdParamsSchema = Type.Object({
   routingId: TBytes32,
+  publicIdentifier: Type.Optional(TPublicIdentifier),
 });
 
 const GetTransferStatesByRoutingIdResponseSchema = {
@@ -56,30 +58,42 @@ const GetTransferStatesByRoutingIdResponseSchema = {
 };
 
 // GET CHANNEL STATE
-const GetChannelStateParamsSchema = EngineParams.GetChannelStateSchema;
+const GetChannelStateParamsSchema = Type.Intersect([
+  EngineParams.GetChannelStateSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const GetChannelStateResponseSchema = {
   200: Type.Union([Type.Undefined, TFullChannelState]),
 };
 
 // GET CHANNEL STATES
-const GetChannelStatesParamsSchema = EngineParams.GetChannelStatesSchema;
+const GetChannelStatesParamsSchema = Type.Intersect([
+  EngineParams.GetChannelStatesSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const GetChannelStatesResponseSchema = {
   200: Type.Array(TAddress),
 };
 
 // GET CHANNEL STATE BY PARTICIPANTS
-const GetChannelStateByParticipantsParamsSchema = EngineParams.GetChannelStateByParticipantsSchema;
+const GetChannelStateByParticipantsParamsSchema = Type.Intersect([
+  EngineParams.GetChannelStateByParticipantsSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const GetChannelStateByParticipantsResponseSchema = GetChannelStateResponseSchema;
 
 // GET CONFIG
 const GetConfigResponseSchema = {
-  200: Type.Object({
-    publicIdentifier: TPublicIdentifier,
-    signerAddress: TAddress,
-  }),
+  200: Type.Array(
+    Type.Object({
+      publicIdentifier: TPublicIdentifier,
+      signerAddress: TAddress,
+      index: Type.Integer(),
+    }),
+  ),
 };
 
 // GET LISTENER
@@ -106,12 +120,18 @@ const PostRegisterListenerResponseSchema = {
 };
 
 // POST SETUP
-const PostSetupBodySchema = EngineParams.SetupSchema;
+const PostSetupBodySchema = Type.Intersect([
+  EngineParams.SetupSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const PostSetupResponseSchema = BasicChannelServerResponseSchema;
 
 // POST DEPOSIT
-const PostDepositBodySchema = EngineParams.DepositSchema;
+const PostDepositBodySchema = Type.Intersect([
+  EngineParams.DepositSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const PostDepositResponseSchema = BasicChannelServerResponseSchema;
 
@@ -121,6 +141,7 @@ const PostSendDepositTxBodySchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   chainId: TChainId,
+  publicIdentifier: Type.Optional(TPublicIdentifier),
 });
 
 const PostSendDepositTxResponseSchema = {
@@ -130,17 +151,26 @@ const PostSendDepositTxResponseSchema = {
 };
 
 // POST CREATE CONDITIONAL TRANSFER
-const PostConditionalTransferBodySchema = EngineParams.ConditionalTransferSchema;
+const PostConditionalTransferBodySchema = Type.Intersect([
+  EngineParams.ConditionalTransferSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const PostConditionalTransferResponseSchema = BasicTransferServerResponseSchema;
 
 // POST RESOLVE CONDITIONAL TRANSFER
-const PostResolveTransferBodySchema = EngineParams.ResolveTransferSchema;
+const PostResolveTransferBodySchema = Type.Intersect([
+  EngineParams.ResolveTransferSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
 
 // POST WITHDRAW TRANSFER
-const PostWithdrawTransferBodySchema = EngineParams.WithdrawSchema;
+const PostWithdrawTransferBodySchema = Type.Intersect([
+  EngineParams.WithdrawSchema,
+  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+]);
 
 const PostWithdrawTransferResponseSchema = {
   200: Type.Object({

@@ -99,6 +99,7 @@ export class RestServerNodeService implements IServerNodeService {
     private readonly serverNodeUrl: string,
     private readonly providerUrls: ChainProviders,
     private readonly logger: BaseLogger,
+    private readonly index: number,
     private readonly evts?: EventCallbackConfig,
   ) {
     this.chainProviders = Object.fromEntries(
@@ -111,15 +112,18 @@ export class RestServerNodeService implements IServerNodeService {
     providerUrls: ChainProviders,
     logger: BaseLogger,
     evts?: EventCallbackConfig,
+    index = 0,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, evts);
+    const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, index, evts);
     const configRes = await service.getConfig();
     if (configRes.isError) {
       throw configRes.getError();
     }
 
-    service.publicIdentifier = configRes.getValue().publicIdentifier;
-    service.signerAddress = configRes.getValue().signerAddress;
+    const config = configRes.getValue().find(c => c.index === index);
+
+    service.publicIdentifier = config.publicIdentifier;
+    service.signerAddress = config.signerAddress;
     return service;
   }
 
@@ -138,7 +142,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.GetChannelState,
   ): Promise<Result<ServerNodeResponses.GetChannelState, ServerNodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}`,
+      `channel/${params.channelAddress}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateSchema,
@@ -149,7 +153,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.GetTransferStatesByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, ServerNodeError>> {
     return this.executeHttpRequest(
-      `transfer/${params.routingId}`,
+      `transfer/${params.routingId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStatesByRoutingIdSchema,
@@ -160,7 +164,8 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.GetTransferStateByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, ServerNodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/transfer/${params.routingId}`,
+      `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier ??
+        this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStateByRoutingIdSchema,
@@ -171,7 +176,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, ServerNodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.alice}/${params.bob}/${params.chainId}`,
+      `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateByParticipantsSchema,

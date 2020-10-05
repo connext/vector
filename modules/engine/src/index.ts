@@ -90,6 +90,14 @@ export class VectorEngine implements IVectorEngine {
     return engine;
   }
 
+  get publicIdentifier(): string {
+    return this.vector.publicIdentifier;
+  }
+
+  get signerAddress(): string {
+    return this.vector.signerAddress;
+  }
+
   // TODO: create injected validation that handles submitting transactions
   // IFF there was a fee involved. Should:
   // - check if fee > 0
