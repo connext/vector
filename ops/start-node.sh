@@ -20,7 +20,6 @@ else echo; echo "Preparing to launch $stack stack"
 fi
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
-function echoJson { jq '.'; }
 function mergeJson { jq -s '.[0] + .[1]'; }
 function fromAddressBook {
   jq '
@@ -35,8 +34,8 @@ function fromAddressBook {
 }
 
 default_config="`cat $root/config-node.json`" # | tr -d '\n\r'`"
-override_config="`cat $root/config-prod.json`" # | tr -d '\n\r'`"
-config="`echo $default_config $override_config | mergeJson`"
+prod_config="`cat $root/config-prod.json`" # | tr -d '\n\r'`"
+config="`echo $default_config $prod_config | mergeJson`"
 
 function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
 function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
@@ -93,15 +92,14 @@ then
   config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | mergeJson`"
 
 else
-  echo "Connecting to external global services: auth=$auth_url | "
-  secrets_header="secrets:"
-  mnemonic_secret="${project}_mnemonic"
+  echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
+  mnemonic_secret="${project}_${stack}_mnemonic"
   eth_mnemonic_file="/run/secrets/$mnemonic_secret"
-  mnemonic_secret_entry="  $db_secret:
-    external: true
-"
+  mnemonic_secret_entry="$mnemonic_secret:
+    external: true"
+  mnemonic_secret_service_entry="- '$mnemonic_secret'"
   if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
-  then bash $root/ops/save-secret.sh $db_secret
+  then bash $root/ops/save-secret.sh $mnemonic_secret
   fi
 fi
 
@@ -110,6 +108,11 @@ fi
 
 database_image="${project}_database:$version";
 bash $root/ops/pull-images.sh $database_image > /dev/null
+
+db_secret="${project}_${stack}_database"
+if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$db_secret"`" ]]
+then bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
+fi
 
 # database connection settings
 pg_db="$project"
@@ -120,36 +123,22 @@ mkdir -p $snapshots_dir
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
-  secrets_header="secrets:"
-  db_secret="${project}_database"
   pg_password_file="/run/secrets/$db_secret"
-  db_secret_entry="  $db_secret:
-    external: true
-"
   database_image="image: '$database_image'
     volumes:
       - 'database:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
-    secrets:
-      - '$db_secret'"
-  
-  if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
-  then
-    bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
-  fi
+      - '$snapshots_dir:/root/snapshots'"
 
 else
+  pg_password="$project"
   database_image="image: '$database_image'
     ports:
       - '5433:5432'"
-  pg_password="$project"
   echo "$stack.database will be exposed on *:5433"
 fi
 
 ########################################
 ## Node config
-
-node_port="8001"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -160,24 +149,7 @@ else
   node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
-      - '$root:/root'
-    ports:
-      - '$node_port:$node_port'"
-  echo "$stack.node will be exposed on *:$node_port"
-fi
-
-if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
-then
-  node_image="$node_image
-    secrets:"
-  if [[ -n "$db_secret" ]]
-  then node_image="$node_image
-      - '$db_secret'"
-  fi
-  if [[ -n "$mnemonic_secret" ]]
-  then node_image="$node_image
-      - '$mnemonic_secret'"
-  fi
+      - '$root:/root'"
 fi
 
 ####################
@@ -194,7 +166,7 @@ then
   echo "$stack.proxy will be exposed on *:$public_port"
 elif [[ -n "$domain_name" && -z "$public_port" ]]
 then
-  public_url="https://localhost:443"
+  public_url="https://127.0.0.1:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
@@ -218,8 +190,10 @@ networks:
   $project:
     external: true
 
-$secrets_header
-$db_secret_entry$mnemonic_secret_entry
+secrets:
+  $db_secret:
+    external: true
+  $mnemonic_secret_entry
 
 volumes:
   certs:
@@ -233,7 +207,7 @@ services:
     $proxy_ports
     environment:
       VECTOR_DOMAINNAME: '$domain_name'
-      VECTOR_NODE_URL: 'node:$node_port'
+      VECTOR_NODE_URL: 'node:$public_port'
     volumes:
       - 'certs:/etc/letsencrypt'
 
@@ -250,8 +224,10 @@ services:
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
-      VECTOR_PORT: '$node_port'
       VECTOR_ENV: '$VECTOR_ENV'
+    secrets:
+      - '$db_secret'
+      $mnemonic_secret_service_entry
 
   database:
     $common
@@ -265,6 +241,8 @@ services:
       POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$pg_user'
+    secrets:
+      - '$db_secret'
 
 EOF
 

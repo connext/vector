@@ -173,9 +173,9 @@ test-engine: engine
 watch-engine: protocol
 	bash ops/test-unit.sh engine watch 1341
 
-test-node: node
+test-server-node: node
 	bash ops/test-server-node.sh test
-watch-node: engine
+watch-server-node: engine
 	bash ops/test-server-node.sh watch
 
 test-router: router

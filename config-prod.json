@@ -1,4 +1,9 @@
 {
   "domainName": "",
-  "production": false
+  "production": false,
+  "authUrl": "http://172.170.1:5040",
+  "chainProviders": {
+    "1337": "http://172.170.1:8545",
+    "1338": "http://172.170.1:8546"
+  }
 }
