@@ -30,7 +30,7 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     return nodes[signer.publicIdentifier].node;
   }
 
-  const vectorTx = new VectorChainService(_providers, pk, logger.child({ module: "VectorChainService" }));
+  const vectorTx = new VectorChainService(store, _providers, pk, logger.child({ module: "VectorChainService" }));
 
   const messaging = new NatsMessagingService(
     {

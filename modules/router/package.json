@@ -22,7 +22,7 @@
     "ethers": "5.0.14",
     "evt": "1.8.10",
     "fastify": "3.4.1",
-    "fastify-oas": "^3.0.3",
+    "fastify-oas": "3.0.3",
     "pino": "6.6.1"
   },
   "devDependencies": {
