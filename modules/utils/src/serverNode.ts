@@ -138,6 +138,12 @@ export class RestServerNodeService implements IServerNodeService {
     return this.executeHttpRequest("config", "get", {}, ServerNodeParams.GetConfigSchema);
   }
 
+  async createNode(
+    params: ServerNodeParams.CreateNode,
+  ): Promise<Result<ServerNodeResponses.CreateNode, ServerNodeError>> {
+    return this.executeHttpRequest(`node`, "post", params, ServerNodeParams.CreateNodeSchema);
+  }
+
   async getStateChannel(
     params: ServerNodeParams.GetChannelState,
   ): Promise<Result<ServerNodeResponses.GetChannelState, ServerNodeError>> {

@@ -436,7 +436,22 @@ server.post<{ Body: ServerNodeParams.Admin }>(
   },
 );
 
-server.post("/node/:index", {}, async (request, reply) => {});
+server.post<{ Body: ServerNodeParams.CreateNode }>(
+  "/node",
+  { schema: { body: ServerNodeParams.CreateNodeSchema, response: ServerNodeResponses.CreateNodeSchema } },
+  async (request, reply) => {
+    try {
+      const newNode = await createNode(request.body.index);
+      return reply.status(200).send({
+        index: request.body.index,
+        publicIdentifier: newNode.publicIdentifier,
+        signerAddress: newNode.signerAddress,
+      } as ServerNodeResponses.CreateNode);
+    } catch (e) {
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
 
 server.listen(8000, "0.0.0.0", (err, address) => {
   if (err) {

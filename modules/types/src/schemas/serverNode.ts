@@ -180,6 +180,19 @@ const PostWithdrawTransferResponseSchema = {
   }),
 };
 
+// CREATE NODE
+const PostCreateNodeBodySchema = Type.Object({
+  index: Type.Integer({ minimum: 0, maximum: 2147483647 }),
+});
+
+const PostCreateNodeResponseSchema = {
+  200: Type.Object({
+    publicIdentifier: TPublicIdentifier,
+    signerAddress: TAddress,
+    index: Type.Integer(),
+  }),
+};
+
 // ADMIN
 const PostAdminBodySchema = Type.Object({
   adminToken: Type.String({
@@ -241,6 +254,9 @@ export namespace ServerNodeParams {
 
   export const AdminSchema = PostAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
+
+  export const CreateNodeSchema = PostCreateNodeBodySchema;
+  export type CreateNode = Static<typeof CreateNodeSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -292,4 +308,7 @@ export namespace ServerNodeResponses {
 
   export const AdminSchema = PostAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;
+
+  export const CreateNodeSchema = PostCreateNodeResponseSchema;
+  export type CreateNode = Static<typeof CreateNodeSchema["200"]>;
 }
