@@ -260,6 +260,11 @@ auth: auth-bundle $(shell find modules/auth/ops $(find_options))
 	docker tag $(project)_auth $(project)_auth:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
+browser-node-bundle: engine $(shell find modules/browser-node $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 server-node-bundle: engine $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"

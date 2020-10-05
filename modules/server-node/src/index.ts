@@ -89,6 +89,25 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   },
 );
 
+server.get<{ Params: ServerNodeParams.GetChannelState }>(
+  "/channel/:channelAddress",
+  { schema: { params: ServerNodeParams.GetChannelStateSchema } },
+  async (request, reply) => {
+    const engine = defaultEngine;
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
+    try {
+      const res = await engine.request<"chan_getChannelState">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Channel not found", channelAddress: request.params.channelAddress });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
 server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
   "/channel/:alice/:bob/:chainId/:publicIdentifier",
   { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
@@ -100,6 +119,25 @@ server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
         return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
       }
     }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
+    try {
+      const res = await engine.request<"chan_getChannelStateByParticipants">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Channel not found", alice: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
+  "/channel/:alice/:bob/:chainId",
+  { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
+  async (request, reply) => {
+    const engine = defaultEngine;
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
     try {
       const res = await engine.request<"chan_getChannelStateByParticipants">(params);
@@ -140,6 +178,25 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
 );
 
 server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+  "/channel/:channelAddress/transfer/:routingId",
+  { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
+  async (request, reply) => {
+    const engine = defaultEngine;
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
+    try {
+      const res = await engine.request<"chan_getTransferStateByRoutingId">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/transfer/:routingId/:publicIdentifier",
   { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
   async (request, reply) => {
@@ -150,6 +207,25 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
         return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
       }
     }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
+    try {
+      const res = await engine.request<"chan_getTransferStatesByRoutingId">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+  "/transfer/:routingId",
+  { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
+  async (request, reply) => {
+    const engine = defaultEngine;
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
     try {
       const res = await engine.request<"chan_getTransferStatesByRoutingId">(params);
@@ -175,6 +251,22 @@ server.get<{ Params: ServerNodeParams.GetChannelStates }>(
         return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
       }
     }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+    try {
+      const res = await engine.request<"chan_getChannelStates">(params);
+      return reply.status(200).send(res.map(chan => chan.channelAddress));
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.get<{ Params: ServerNodeParams.GetChannelStates }>(
+  "/channel",
+  { schema: { response: ServerNodeResponses.GetChannelStatesSchema, params: ServerNodeParams.GetChannelStatesSchema } },
+  async (request, reply) => {
+    const engine = defaultEngine;
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
     try {
       const res = await engine.request<"chan_getChannelStates">(params);
