@@ -42,9 +42,8 @@ const _providers: { [chainId: string]: providers.JsonRpcProvider } = {};
 Object.entries(config.chainProviders).forEach(([chainId, url]: any) => {
   _providers[chainId] = new providers.JsonRpcProvider(url);
 });
-
-const vectorTx = new VectorChainService(_providers, pk, logger.child({ module: "VectorChainService" }));
 const store = new PrismaStore();
+const vectorTx = new VectorChainService(store, _providers, pk, logger.child({ module: "VectorChainService" }));
 server.addHook("onReady", async () => {
   const messaging = new NatsMessagingService(
     {

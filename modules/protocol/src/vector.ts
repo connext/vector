@@ -190,13 +190,11 @@ export class Vector implements IVectorProtocol {
       });
     });
 
-    // TODO if the store doesn't have anything in it, restore from backup
+    // TODO: https://github.com/connext/vector/issues/54
 
-    // TODO for loop through store and isAlive all channels
+    // TODO: https://github.com/connext/vector/issues/52
 
-    // TODO run setup updates if the channel is not already setup
-
-    // TODO validate that the channel is not currently in dispute/checkpoint state
+    // TODO: https://github.com/connext/vector/issues/53
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
@@ -244,8 +242,9 @@ export class Vector implements IVectorProtocol {
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
 
+  // TODO: https://github.com/connext/vector/issues/53
   public async isAlive(channelAddress: string) {
-    // TODO -- isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
+    // isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
     //         it should return an error (and emit it!) if the ack is not received.
     //         on the sync inbound side, we should properly ack this message and also emit an event when you hear it (on both sides)
   }

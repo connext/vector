@@ -1,4 +1,4 @@
-import { expect } from "@connext/vector-utils";
+import { expect, MemoryStoreService } from "@connext/vector-utils";
 import { Contract } from "ethers";
 import pino from "pino";
 
@@ -15,6 +15,7 @@ describe("EthereumChainService", () => {
     channel = await createTestChannel();
     chainId = (await provider.getNetwork()).chainId;
     chainService = new EthereumChainService(
+      new MemoryStoreService(),
       { [chainId]: provider },
       alice.privateKey,
       pino(),

@@ -29,10 +29,23 @@ export class ChainError extends VectorError {
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
+    FailedToSendTx: "Failed to send transaction to chain",
   };
 
-  constructor(public readonly message: Values<typeof ChainError.reasons>) {
+  // Errors you would see from trying to send a transaction, and
+  // would retry by default
+  static readonly retryableTxErrors = {
+    BadNonce: "the tx doesn't have the correct nonce",
+    InvalidNonce: "Invalid nonce",
+    MissingHash: "no transaction hash found in tx response",
+    UnderpricedReplancement: "replacement transaction underpriced",
+  };
+
+  readonly canRetry: boolean;
+
+  constructor(public readonly message: Values<typeof ChainError.reasons>, public readonly context: any = {}) {
     super(message);
+    this.canRetry = Object.values(ChainError.retryableTxErrors).includes(this.message);
   }
 }
 

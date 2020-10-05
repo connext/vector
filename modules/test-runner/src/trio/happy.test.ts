@@ -19,7 +19,7 @@ describe(testName, () => {
     carol = await RestServerNodeService.connect(
       env.carolUrl,
       env.chainProviders,
-      logger.child({ testName, name: "Alice" }),
+      logger.child({ testName, name: "Carol" }),
     );
     expect(carol.signerAddress).to.be.a("string");
     expect(carol.publicIdentifier).to.be.a("string");
@@ -27,7 +27,7 @@ describe(testName, () => {
     dave = await RestServerNodeService.connect(
       env.daveUrl,
       env.chainProviders,
-      logger.child({ testName, name: "Bob" }),
+      logger.child({ testName, name: "Dave" }),
     );
     expect(dave.signerAddress).to.be.a("string");
     expect(dave.publicIdentifier).to.be.a("string");
@@ -35,7 +35,7 @@ describe(testName, () => {
     roger = await RestServerNodeService.connect(
       env.rogerUrl,
       env.chainProviders,
-      logger.child({ testName, name: "Node" }),
+      logger.child({ testName, name: "Roger" }),
     );
     expect(roger.signerAddress).to.be.a("string");
     expect(roger.publicIdentifier).to.be.a("string");
@@ -82,7 +82,7 @@ describe(testName, () => {
     });
     const channel = channelRes.getValue()!;
 
-    let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    let assetIdx = channel.assetIds.findIndex((_assetId: string) => _assetId === assetId);
     const carolBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
 
     const depositRes = await carol.deposit({
@@ -98,7 +98,7 @@ describe(testName, () => {
     const carolChannel = (await carol.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
     const rogerChannel = (await roger.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
 
-    assetIdx = carolChannel.assetIds.findIndex(_assetId => _assetId === assetId);
+    assetIdx = carolChannel.assetIds.findIndex((_assetId: string) => _assetId === assetId);
     const carolAfter = carolChannel.balances[assetIdx].amount[1];
     expect(carolChannel).to.deep.eq(rogerChannel);
 

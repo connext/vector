@@ -275,7 +275,7 @@ describe("outbound", () => {
     generationStub = Sinon.stub(vectorUpdate, "generateUpdate");
 
     // Stub out all signature validation
-    Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(undefined);
+    Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(Result.ok(undefined));
   });
 
   afterEach(() => {
