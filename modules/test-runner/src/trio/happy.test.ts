@@ -1,6 +1,7 @@
 import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect, delay } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
+import { TransferName } from "@connext/vector-types";
 
 import { env } from "../utils";
 
@@ -134,7 +135,7 @@ describe(testName, () => {
       amount: transferAmt.toString(),
       assetId,
       channelAddress: carolChannel.channelAddress,
-      conditionType: "HashlockTransfer",
+      conditionType: TransferName.HashlockTransfer,
       details: {
         lockHash,
       },
@@ -162,7 +163,7 @@ describe(testName, () => {
     ).getValue()!;
     const resolveRes = await dave.resolveTransfer({
       channelAddress: daveChannel.channelAddress,
-      conditionType: "HashlockTransfer",
+      conditionType: TransferName.HashlockTransfer,
       details: {
         preImage,
       },
