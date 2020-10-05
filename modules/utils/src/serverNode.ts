@@ -16,6 +16,7 @@ import Axios from "axios";
 import { providers } from "ethers";
 import { Evt } from "evt";
 import { BaseLogger } from "pino";
+import { DepositReconciledPayload } from "../../types/dist/src";
 
 const ajv = new Ajv();
 
@@ -88,6 +89,7 @@ export class ServerNodeError extends VectorError {
 export type EventCallbackConfig = {
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: { evt: Evt<ConditionalTransferCreatedPayload>; url: string };
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: { evt: Evt<ConditionalTransferResolvedPayload>; url: string };
+  [EngineEvents.DEPOSIT_RECONCILED]: { evt: Evt<DepositReconciledPayload>; url: string };
 };
 
 export class RestServerNodeService implements IServerNodeService {
