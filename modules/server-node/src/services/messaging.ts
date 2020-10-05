@@ -34,6 +34,16 @@ export class NatsMessagingService implements IMessagingService {
     private readonly getBearerToken: () => Promise<string>,
   ) {}
 
+  onReceiveCheckIn(
+    myPublicIdentifier: string,
+    callback: (nonce: string, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
+    throw new Error("Method not implemented.");
+  }
+
   private isConnected(): boolean {
     return !!this.connection?.isConnected();
   }
