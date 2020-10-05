@@ -193,9 +193,8 @@ export class VectorEngine implements IVectorEngine {
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
-        linkedTransferDefinition: this.chainAddresses[params.chainId].linkedTransferDefinition,
-        withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
-        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
+        linkedTransferAddress: this.chainAddresses[params.chainId].linkedTransferAddress,
+        withdrawAddress: this.chainAddresses[params.chainId].withdrawAddress,
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         chainId: params.chainId,
         providerUrl: this.chainProviders[params.chainId],

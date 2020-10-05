@@ -5,6 +5,7 @@ import * as ChannelFactory from "../artifacts/ChannelFactory.json";
 import * as ChannelMastercopy from "../artifacts/ChannelMastercopy.json";
 import * as ERC20 from "../artifacts/IERC20.json";
 import * as LinkedTransfer from "../artifacts/LinkedTransfer.json";
+import * as Proxy from "../artifacts/Proxy.json";
 import * as TestToken from "../artifacts/TestToken.json";
 import * as TransferDefinition from "../artifacts/ITransferDefinition.json";
 import * as VectorChannel from "../artifacts/IVectorChannel.json";
@@ -26,6 +27,7 @@ export const artifacts: Artifacts = {
   ChannelMastercopy,
   ERC20,
   LinkedTransfer,
+  Proxy,
   TestToken,
   TransferDefinition,
   VectorChannel,
@@ -37,6 +39,7 @@ export {
   ChannelMastercopy,
   ERC20,
   LinkedTransfer,
+  Proxy,
   TestToken,
   TransferDefinition,
   VectorChannel,

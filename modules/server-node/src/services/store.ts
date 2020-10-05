@@ -108,7 +108,6 @@ const convertChannelEntityToFullChannelState = (
             chainId: channelEntity.chainId,
             channelFactoryAddress: channelEntity.channelFactoryAddress,
             providerUrl: channelEntity.providerUrl,
-            channelMastercopyAddress: channelEntity.channelMastercopyAddress,
           },
           timeout: channelEntity.timeout,
         } as SetupUpdateDetails;
@@ -154,7 +153,6 @@ const convertChannelEntityToFullChannelState = (
       chainId: channelEntity.chainId,
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       providerUrl: channelEntity.providerUrl,
-      channelMastercopyAddress: channelEntity.channelMastercopyAddress,
     },
     nonce: channelEntity.nonce,
     alice: channelEntity.participantA,
@@ -587,7 +585,6 @@ export class PrismaStore implements IServerNodeStore {
         publicIdentifierA: channelState.aliceIdentifier,
         publicIdentifierB: channelState.bobIdentifier,
         timeout: channelState.timeout,
-        channelMastercopyAddress: channelState.networkContext.channelMastercopyAddress,
         balances: {
           create: channelState.assetIds.reduce(
             (create: BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {

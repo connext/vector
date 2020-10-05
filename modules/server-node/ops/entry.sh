@@ -16,34 +16,14 @@ if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
 then export VECTOR_MNEMONIC="`cat $VECTOR_MNEMONIC_FILE`"
 fi
 
+if [[ -z "$VECTOR_DATABASE_URL" ]]
+then export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+fi
+
 # TODO: if no *_PG_* env vars provided, spin up an sqlite instance locally & use that?
 
-export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
-
-########################################
-# Wait for dependencies to wake up
-
-function wait_for {
-  name=$1
-  target=$2
-  tmp=${target#*://} # remove protocol
-  host=${tmp%%/*} # remove path if present
-  if [[ ! "$host" =~ .*:[0-9]{1,5} ]] # no port provided
-  then
-    echo "$host has no port, trying to add one.."
-    if [[ "${target%://*}" == "http" ]]
-    then host="$host:80"
-    elif [[ "${target%://*}" == "https" ]]
-    then host="$host:443"
-    else echo "Error: missing port for host $host derived from target $target" && exit 1
-    fi
-  fi
-  echo "Waiting for $name at $target ($host) to wake up..."
-  wait-for -t 60 $host 2> /dev/null
-}
-
-wait_for "database" "$VECTOR_PG_HOST:$VECTOR_PG_PORT"
-wait_for "auth" "$VECTOR_AUTH_URL"
+# Wait for db to wake up
+wait-for -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT" > /dev/null
 
 ########################################
 # Launch Node
