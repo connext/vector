@@ -16,7 +16,7 @@ contract ChannelFactory is IChannelFactory {
 
     bytes32 private constant domainSalt = keccak256("vector");
 
-    address public immutable mastercopy;
+    address private immutable mastercopy;
 
     constructor(address _mastercopy) {
         mastercopy = _mastercopy;
