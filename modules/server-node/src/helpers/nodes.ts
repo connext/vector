@@ -1,7 +1,8 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
-import { IVectorChainService, IVectorEngine } from "@connext/vector-types";
+import { EngineEvents, IVectorChainService, IVectorEngine } from "@connext/vector-types";
 import { ChannelSigner } from "@connext/vector-utils";
+import Axios from "axios";
 import { Wallet } from "ethers";
 
 import { logger, lock, _providers, store } from "..";
@@ -51,6 +52,23 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     config.contractAddresses,
     logger.child({ module: "VectorEngine" }),
   );
+
+  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
+    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+    if (url) {
+      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_CREATED }, "Relaying event");
+      await Axios.post(url, data);
+    }
+  });
+
+  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, async data => {
+    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
+    if (url) {
+      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED }, "Relaying event");
+      await Axios.post(url, data);
+    }
+  });
+
   nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index };
   return vectorEngine;
 };
