@@ -6,6 +6,7 @@ import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./Proxy.sol";
+import "./lib/LibAsset.sol";
 
 
 /// @title Channel Factory - Allows us to create new channel proxy contract
@@ -83,7 +84,7 @@ contract ChannelFactory is IChannelFactory {
         channel = createChannel(alice, bob, chainId);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
-        if (assetId != address(0)) {
+        if (!LibAsset.isEther(assetId)) {
             require(
                 IERC20(assetId).transferFrom(msg.sender, address(this), amount),
                 "ChannelFactory: token transferFrom failed"

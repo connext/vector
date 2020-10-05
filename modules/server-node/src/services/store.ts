@@ -11,6 +11,9 @@ import {
   EngineEvent,
   IEngineStore,
   WithdrawCommitmentJson,
+  StoredTransaction,
+  TransactionReason,
+  StoredTransactionStatus,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
@@ -24,14 +27,49 @@ import {
   Transfer,
   TransferUpdateManyWithoutChannelInput,
   TransferCreateWithoutChannelInput,
+  OnchainTransaction,
 } from "@prisma/client";
-import { BigNumber } from "ethers";
+import { BigNumber, providers } from "ethers";
 
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined>;
   getSubscriptions(): Promise<{ [event: string]: string }>;
 }
+
+const convertOnchainTransactionEntityToTransaction = (
+  onchainEntity: OnchainTransaction & {
+    channel: Channel;
+  },
+): StoredTransaction => {
+  return {
+    status: onchainEntity.status as StoredTransactionStatus,
+    reason: onchainEntity.reason as TransactionReason,
+    error: onchainEntity.error ?? undefined,
+    channelAddress: onchainEntity.channelAddress,
+    to: onchainEntity.to,
+    from: onchainEntity.from,
+    data: onchainEntity.data,
+    value: onchainEntity.value,
+    chainId: onchainEntity.chainId,
+    nonce: onchainEntity.nonce,
+    gasLimit: onchainEntity.gasLimit,
+    gasPrice: onchainEntity.gasPrice,
+    transactionHash: onchainEntity.transactionHash,
+    timestamp: onchainEntity.timestamp ? BigNumber.from(onchainEntity.timestamp).toNumber() : undefined,
+    raw: onchainEntity.raw ?? undefined,
+    blockHash: onchainEntity.blockHash ?? undefined,
+    blockNumber: onchainEntity.blockNumber ?? undefined,
+    contractAddress: onchainEntity.contractAddress ?? undefined,
+    transactionIndex: onchainEntity.transactionIndex ?? undefined,
+    root: onchainEntity.root ?? undefined,
+    gasUsed: onchainEntity.gasUsed ?? undefined,
+    logsBloom: onchainEntity.logsBloom ?? undefined,
+    cumulativeGasUsed: onchainEntity.cumulativeGasUsed ?? undefined,
+    byzantium: onchainEntity.byzantium ?? undefined,
+    logs: onchainEntity.logs ? JSON.parse(onchainEntity.logs) : undefined,
+  };
+};
 
 const convertChannelEntityToFullChannelState = (
   channelEntity: Channel & {
@@ -182,6 +220,111 @@ export class PrismaStore implements IServerNodeStore {
 
   constructor(private readonly dbUrl?: string) {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+  }
+  async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
+    const entity = await this.prisma.onchainTransaction.findOne({
+      where: { transactionHash },
+      include: { channel: true },
+    });
+    if (!entity) {
+      return undefined;
+    }
+    return convertOnchainTransactionEntityToTransaction(entity);
+  }
+
+  async saveTransactionResponse(
+    channelAddress: string,
+    reason: TransactionReason,
+    response: providers.TransactionResponse,
+  ): Promise<void> {
+    await this.prisma.onchainTransaction.upsert({
+      where: { transactionHash: response.hash },
+      create: {
+        status: StoredTransactionStatus.submitted,
+        reason,
+        transactionHash: response.hash,
+        to: response.to!,
+        from: response.from,
+        data: response.data,
+        value: response.value.toString(),
+        chainId: response.chainId,
+        nonce: response.nonce,
+        gasLimit: response.gasLimit.toString(),
+        gasPrice: response.gasPrice.toString(),
+        timestamp: response.timestamp?.toString(),
+        raw: response.raw,
+        blockHash: response.blockHash,
+        blockNumber: response.blockNumber,
+        channel: {
+          connect: {
+            channelAddress,
+          },
+        },
+      },
+      update: {
+        status: StoredTransactionStatus.submitted,
+        reason,
+        transactionHash: response.hash,
+        to: response.to!,
+        from: response.from,
+        data: response.data,
+        value: response.value.toString(),
+        chainId: response.chainId,
+        nonce: response.nonce,
+        gasLimit: response.gasLimit.toString(),
+        gasPrice: response.gasPrice.toString(),
+        timestamp: response.timestamp?.toString(),
+        raw: response.raw,
+        blockHash: response.blockHash,
+        blockNumber: response.blockNumber,
+        channel: {
+          connect: {
+            channelAddress,
+          },
+        },
+      },
+      include: { channel: true },
+    });
+  }
+
+  async saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void> {
+    await this.prisma.onchainTransaction.update({
+      where: { transactionHash: transaction.transactionHash },
+      data: {
+        status: StoredTransactionStatus.mined,
+        to: transaction.to,
+        from: transaction.from,
+        blockHash: transaction.blockHash,
+        blockNumber: transaction.blockNumber,
+        contractAddress: transaction.contractAddress,
+        transactionIndex: transaction.transactionIndex,
+        root: transaction.root,
+        gasUsed: transaction.gasUsed.toString(),
+        logsBloom: transaction.logsBloom,
+        logs: JSON.stringify(transaction.logs),
+        cumulativeGasUsed: transaction.cumulativeGasUsed.toString(),
+        byzantium: transaction.byzantium,
+        channel: {
+          connect: {
+            channelAddress,
+          },
+        },
+      },
+    });
+  }
+
+  async saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
+    await this.prisma.onchainTransaction.update({
+      where: { transactionHash },
+      data: {
+        status: StoredTransactionStatus.failed,
+        error,
+        channel: {
+          connect: { channelAddress },
+        },
+      },
+      include: { channel: true },
+    });
   }
 
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
