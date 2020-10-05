@@ -145,7 +145,6 @@ address_book_2="$chain_data_2/address-book.json"
 rm -rf $address_book $address_book_1 $address_book_2
 
 mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-bash $root/ops/save-secret.sh "${project}_mnemonic_dev" "$mnemonic" > /dev/null
 
 evm_image_name="${project}_ethprovider:$version";
 evm_image="image: '$evm_image_name'
@@ -274,6 +273,21 @@ do
 done
 
 cat $address_book_1 $address_book_2 | jq -s '.[0] * .[1]' > $address_book
+
+# jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
+function fromAddressBook {
+  jq '
+    map_values(
+      map_values(.address) |
+      to_entries |
+      map(.key = "\(.key)Address") |
+      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
+      from_entries
+    )
+  ';
+}
+
+cat $address_book | fromAddressBook > $chain_data/chain-addresses.json
 
 echo '{"'$chain_id_1'":"http://evm_'$chain_id_1':8545","'$chain_id_2'":"http://evm_'$chain_id_2':8545"}' > $chain_data/chain-providers.json
 

@@ -40,13 +40,11 @@ const VectorRouterConfigSchema = Type.Object({
       Type.Literal("silent"),
     ]),
   ),
-  mnemonic: Type.Optional(Type.String()),
   port: Type.Integer(),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
 });
 
 type VectorRouterConfig = Static<typeof VectorRouterConfigSchema>;
-const mnemonic = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
 let vectorConfig: VectorRouterConfig;
 try {
@@ -63,7 +61,6 @@ if (!valid) {
 }
 
 export const config = {
-  mnemonic,
   dbUrl,
   ...vectorConfig,
 } as VectorRouterConfig;

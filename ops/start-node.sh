@@ -19,25 +19,11 @@ then echo "A $stack stack is already running" && exit;
 else echo; echo "Preparing to launch $stack stack"
 fi
 
-# jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
-function mergeJson { jq -s '.[0] + .[1]'; }
-function fromAddressBook {
-  jq '
-    map_values(
-      map_values(.address) |
-      to_entries |
-      map(.key = "\(.key)Address") |
-      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
-      from_entries
-    )
-  ';
-}
+node_config="`cat $root/config-node.json`"
+prod_config="`cat $root/config-prod.json`"
+config="`echo $node_config $prod_config | jq -s '.[0] + .[1]'`"
 
-default_config="`cat $root/config-node.json`" # | tr -d '\n\r'`"
-prod_config="`cat $root/config-prod.json`" # | tr -d '\n\r'`"
-config="`echo $default_config $prod_config | mergeJson`"
-
-function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
+function getDefault { echo "$node_config" | jq ".$1" | tr -d '"'; }
 function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
 
 admin_token="`getConfig adminToken`"
@@ -86,23 +72,18 @@ if [[ \
   "$chain_providers" == "`getDefault chainProviders`" \
   ]]
 then
-  echo "Connecting to local global services"
   bash $root/ops/start-global.sh
+  mnemonic_secret=""
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
   eth_mnemonic_file=""
-  mnemonic_secret_entry=""
-  mnemonic_secret_service_entry=""
-  chain_addresses="`cat $root/.chaindata/address-book.json | fromAddressBook`"
-  config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | mergeJson`"
+  chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
+  config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 else
   echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
   mnemonic_secret="${project}_${stack}_mnemonic"
   eth_mnemonic=""
   eth_mnemonic_file="/run/secrets/$mnemonic_secret"
-  mnemonic_secret_entry="$mnemonic_secret:
-    external: true"
-  mnemonic_secret_service_entry="- '$mnemonic_secret'"
   if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
   then bash $root/ops/save-secret.sh $mnemonic_secret
   fi
@@ -114,39 +95,45 @@ fi
 database_image="${project}_database:$version";
 bash $root/ops/pull-images.sh $database_image > /dev/null
 
-db_secret="${project}_${stack}_database"
-if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$db_secret"`" ]]
-then bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
-fi
-
 # database connection settings
 pg_db="$project"
 pg_user="$project"
-
-snapshots_dir="$root/.db-snapshots"
-mkdir -p $snapshots_dir
+pg_dev_port="5433"
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
+  # Use a secret to store the database password
+  db_secret="${project}_${stack}_database"
+  if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$db_secret"`" ]]
+  then bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
+  fi
   pg_password=""
   pg_password_file="/run/secrets/$db_secret"
+  snapshots_dir="$root/.db-snapshots"
+  mkdir -p $snapshots_dir
   database_image="image: '$database_image'
     volumes:
       - 'database:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'"
+      - '$snapshots_dir:/root/snapshots'
+    secrets:
+      - '$db_secret'"
 
 else
+  # Pass in a dummy password via env vars
+  db_secret=""
   pg_password="$project"
   pg_password_file=""
   database_image="image: '$database_image'
     ports:
-      - '5433:5432'"
-  echo "$stack.database will be exposed on *:5433"
+      - '$pg_dev_port:5432'"
+  echo "$stack.database will be exposed on *:$pg_dev_port"
 fi
 
 ########################################
 ## Node config
 
+node_internal_port="8000"
+node_dev_port="8001"
 if [[ $VECTOR_ENV == "prod" ]]
 then
   node_image_name="${project}_node"
@@ -156,7 +143,25 @@ else
   node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
-      - '$root:/root'"
+      - '$root:/root'
+    ports:
+      - '$node_dev_port:$node_internal_port'"
+  echo "$stack.node configured to be exposed on *:$node_dev_port"
+fi
+
+# Add whichever secrets we're using to the node's service config
+if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
+then
+  node_image="$node_image
+    secrets:"
+  if [[ -n "$db_secret" ]]
+  then node_image="$node_image
+      - '$db_secret'"
+  fi
+  if [[ -n "$mnemonic_secret" ]]
+  then node_image="$node_image
+      - '$mnemonic_secret'"
+  fi
 fi
 
 ####################
@@ -188,6 +193,23 @@ fi
 ####################
 # Launch stack
 
+# Add secrets to the stack config
+stack_secrets=""
+if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
+then
+  stack_secrets="secrets:"
+  if [[ -n "$db_secret" ]]
+  then stack_secrets="$stack_secrets
+  $db_secret:
+    external: true"
+  fi
+  if [[ -n "$mnemonic_secret" ]]
+  then stack_secrets="$stack_secrets
+  $mnemonic_secret:
+    external: true"
+  fi
+fi
+
 docker_compose=$root/.$stack.docker-compose.yml
 rm -f $docker_compose
 cat - > $docker_compose <<EOF
@@ -197,10 +219,7 @@ networks:
   $project:
     external: true
 
-secrets:
-  $db_secret:
-    external: true
-  $mnemonic_secret_entry
+$stack_secrets
 
 volumes:
   certs:
@@ -214,7 +233,7 @@ services:
     $proxy_ports
     environment:
       VECTOR_DOMAINNAME: '$domain_name'
-      VECTOR_NODE_URL: 'node:$public_port'
+      VECTOR_NODE_URL: 'node:$node_internal_port'
     volumes:
       - 'certs:/etc/letsencrypt'
 
@@ -232,9 +251,6 @@ services:
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
       VECTOR_ENV: '$VECTOR_ENV'
-    secrets:
-      - '$db_secret'
-      $mnemonic_secret_service_entry
 
   database:
     $common
@@ -248,8 +264,6 @@ services:
       POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$pg_user'
-    secrets:
-      - '$db_secret'
 
 EOF
 

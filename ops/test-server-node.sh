@@ -74,20 +74,14 @@ VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
 VECTOR_MNEMONIC_FILE="/run/secrets/${project}_mnemonic_dev"
 
 ########################################
-## Node config
-
-node_port="8000"
-prisma_studio_port="5555"
-
-public_url="http://localhost:$alice_port"
-
-####################
 # Launch stack
+
 function cleanup {
   echo "Tests finished, stopping database.."
   docker container stop $postgres_host 2> /dev/null || true
 }
 trap cleanup EXIT SIGINT SIGTERM
+
 postgres_host="${project}_database"
 echo "Starting $postgres_host.."
   docker run \
@@ -114,7 +108,6 @@ docker run \
   --env="VECTOR_NATS_URL=nats://nats:$nats_port" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@${project}_database:$pg_port/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \
-  --env="VECTOR_PORT=$node_port" \
   --env="VECTOR_REDIS_URL=$redis_url" \
   --env="VECTOR_SUGAR_DADDY=$sugardaddy_mnemonic" \
   --name="${project}_test_$unit" \

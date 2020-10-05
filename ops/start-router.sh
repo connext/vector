@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -eu
 
 stack="router"
 
@@ -15,33 +15,23 @@ docker network create --attachable --driver overlay $project 2> /dev/null || tru
 # Load config
 
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
-then echo "A $stack stack is already running" && exit 0;
+then echo "A $stack stack is already running" && exit;
 else echo; echo "Preparing to launch $stack stack"
 fi
 
-# jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
-function mergeJson { jq -s '.[0] + .[1]'; }
-function fromAddressBook {
-  jq '
-    map_values(
-      map_values(.address) |
-      to_entries |
-      map(.key = "\(.key)Address") |
-      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
-      from_entries
-    )
-  ';
-}
-
-default_config="`cat $root/config-router.json`" # | tr -d '\n\r'`"
-prod_config="`cat $root/config-prod.json`" # | tr -d '\n\r'`"
-config="`echo $default_config $prod_config | mergeJson`"
+node_config="`cat $root/config-node.json`"
+router_config="`cat $root/config-router.json`"
+default_config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
+prod_config="`cat $root/config-prod.json`"
+config="`echo $default_config $prod_config | jq -s '.[0] + .[1]'`"
 
 function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
 function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
 
 admin_token="`getConfig adminToken`"
 auth_url="`getConfig authUrl`"
+aws_access_id="`getConfig awsAccessId`"
+aws_access_key="`getConfig awsAccessKey`"
 chain_providers="`getConfig chainProviders`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
@@ -76,122 +66,113 @@ common="networks:
     logging:
       driver: 'json-file'
       options:
-          max-size: '100m'"
+          max-size: '10m'"
 
 ########################################
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
-# If no chain providers provided, spin up local testnets & use those
 
 if [[ \
   "$auth_url" == "`getDefault authUrl`" || \
   "$chain_providers" == "`getDefault chainProviders`" \
   ]]
 then
-  echo "Connecting to local global services"
   bash $root/ops/start-global.sh
+  mnemonic_secret=""
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-  chain_addresses="`cat $root/.chaindata/address-book.json | fromAddressBook`"
-  config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | mergeJson`"
+  eth_mnemonic_file=""
+  chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
+  config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 else
   echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
   mnemonic_secret="${project}_${stack}_mnemonic"
+  eth_mnemonic=""
   eth_mnemonic_file="/run/secrets/$mnemonic_secret"
-  mnemonic_secret_entry="$mnemonic_secret:
-    external: true"
-  mnemonic_secret_service_entry="- '$mnemonic_secret'"
   if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
   then bash $root/ops/save-secret.sh $mnemonic_secret
   fi
 fi
 
-####################
-# Proxy config
-
-proxy_image_name="${project}_router_proxy";
-proxy_image="$proxy_image_name:$version";
-bash $root/ops/pull-images.sh $version $proxy_image_name > /dev/null
-
-if [[ -z "$VECTOR_DOMAINNAME" ]]
-then
-  public_url="http://localhost:3000"
-  proxy_ports="ports:
-      - '3000:80'"
-  echo "$stack.proxy will be exposed on *:3000"
-else
-  public_url="https://localhost:443"
-  proxy_ports="ports:
-      - '80:80'
-      - '443:443'"
-  echo "$stack.proxy will be exposed on *:80 and *:443"
-fi
-
 ########################################
 ## Database config
 
-database_image_name="${project}_database";
-database_image="$database_image_name:$version"
-bash $root/ops/pull-images.sh $version $database_image_name > /dev/null
-
-snapshots_dir="$root/.db-snapshots"
-mkdir -p $snapshots_dir
-
-if [[ "$VECTOR_ENV" == "prod" ]]
-then
-  database_image="image: '$database_image'
-    volumes:
-      - 'database:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'"
-  db_secret="${project}_database"
-  bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`" > /dev/null
-else
-  database_image="image: '$database_image'
-    ports:
-      - '5432:5432'"
-  echo "$stack.database will be exposed on *:5432"
-  db_secret="${project}_database_dev"
-  bash $root/ops/save-secret.sh "$db_secret" "$project" > /dev/null
-fi
+database_image="${project}_database:$version";
+bash $root/ops/pull-images.sh $database_image > /dev/null
 
 # database connection settings
 pg_db="$project"
-pg_host="database"
-pg_password_file="/run/secrets/$db_secret"
-pg_port="5432"
 pg_user="$project"
+pg_dev_port="5434"
+
+if [[ "$VECTOR_ENV" == "prod" ]]
+then
+  # Use a secret to store the database password
+  db_secret="${project}_${stack}_database"
+  if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$db_secret"`" ]]
+  then bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
+  fi
+  pg_password=""
+  pg_password_file="/run/secrets/$db_secret"
+  snapshots_dir="$root/.db-snapshots"
+  mkdir -p $snapshots_dir
+  database_image="image: '$database_image'
+    volumes:
+      - 'database:/var/lib/postgresql/data'
+      - '$snapshots_dir:/root/snapshots'
+    secrets:
+      - '$db_secret'"
+
+else
+  # Pass in a dummy password via env vars
+  db_secret=""
+  pg_password="$project"
+  pg_password_file=""
+  database_image="image: '$database_image'
+    ports:
+      - '$pg_dev_port:5432'"
+  echo "$stack.database will be exposed on *:$pg_dev_port"
+fi
 
 ########################################
 ## Node config
 
-vector_config="`cat $root/config.json | tr -d '\n\r'`"
-
-node_port="8000"
-prisma_port="5555"
-
+node_internal_port="8000"
+node_dev_port="8002"
 if [[ $VECTOR_ENV == "prod" ]]
 then
   node_image_name="${project}_node"
   bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
   node_image="image: '$node_image_name:$version'"
-  echo "$stack.node configured to be exposed on *:$node_port"
 else
   node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
-      - '$node_port:$node_port'
-      - '$prisma_port:$prisma_port'"
-  echo "$stack.node configured to be exposed on *:$node_port (prisma on *:$prisma_port)"
+      - '$node_dev_port:$node_internal_port'"
+  echo "$stack.node configured to be exposed on *:$node_dev_port"
 fi
 
+# Add whichever secrets we're using to the node's service config
+if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
+then
+  node_image="$node_image
+    secrets:"
+  if [[ -n "$db_secret" ]]
+  then node_image="$node_image
+      - '$db_secret'"
+  fi
+  if [[ -n "$mnemonic_secret" ]]
+  then node_image="$node_image
+      - '$mnemonic_secret'"
+  fi
+fi
 
 ########################################
 ## Router config
 
 router_port="8008"
-echo "$stack.router configured to be exposed on *:$router_port"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -205,11 +186,62 @@ else
       - '$root:/root'
     ports:
       - '$router_port:$router_port'"
+  echo "$stack.router configured to be exposed on *:$router_port"
 fi
 
+# Add whichever secrets we're using to the router's service config
+if [[ -n "$db_secret" ]]
+then
+  router_image="$router_image
+    secrets:
+      - '$db_secret'"
+fi
+
+####################
+# Proxy config
+
+proxy_image="${project}_router_proxy:$version";
+bash $root/ops/pull-images.sh $proxy_image > /dev/null
+
+if [[ -z "$domain_name" && -n "$public_port" ]]
+then
+  public_url="http://127.0.0.1:$public_port"
+  proxy_ports="ports:
+      - '$public_port:80'"
+  echo "$stack.proxy will be exposed on *:$public_port"
+elif [[ -n "$domain_name" && -z "$public_port" ]]
+then
+  public_url="https://127.0.0.1:443"
+  proxy_ports="ports:
+      - '80:80'
+      - '443:443'"
+  echo "$stack.proxy will be exposed on *:80 and *:443"
+else
+  echo "Either a domain name or a public port must be provided but not both."
+  echo " - If a public port is provided then the stack will use http on the given port"
+  echo " - If a domain name is provided then https is activated on port *:443"
+  exit 1
+fi
 
 ####################
 # Launch Indra stack
+
+# Add secrets to the stack config
+stack_secrets=""
+if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
+then
+  stack_secrets="secrets:"
+  if [[ -n "$db_secret" ]]
+  then stack_secrets="$stack_secrets
+  $db_secret:
+    external: true"
+  fi
+  if [[ -n "$mnemonic_secret" ]]
+  then stack_secrets="$stack_secrets
+  $mnemonic_secret:
+    external: true"
+  fi
+fi
 
 docker_compose=$root/.$stack.docker-compose.yml
 rm -f $docker_compose
@@ -220,11 +252,7 @@ networks:
   $project:
     external: true
 
-secrets:
-  $db_secret:
-    external: true
-  $mnemonic_secret_name:
-    external: true
+$stack_secrets
 
 volumes:
   certs:
@@ -234,34 +262,28 @@ services:
 
   proxy:
     $common
-    $proxy_ports
     image: '$proxy_image'
+    $proxy_ports
     environment:
-      VECTOR_DOMAINNAME: '$VECTOR_DOMAINNAME'
-      VECTOR_EMAIL: '$VECTOR_EMAIL'
-      VECTOR_NODE_URL: 'node:$node_port'
+      VECTOR_DOMAINNAME: '$domain_name'
+      VECTOR_NODE_URL: 'node:$node_internal_port'
     volumes:
       - 'certs:/etc/letsencrypt'
 
   node:
     $common
     $node_image
-    ports:
-      - '$node_port:$node_port'
     environment:
-      VECTOR_AUTH_URL: '$auth_url'
-      VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
-      VECTOR_CONFIG: '$vector_config'
-      VECTOR_MNEMONIC_FILE: '$VECTOR_MNEMONIC_FILE'
+      VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
+      VECTOR_MNEMONIC: '$eth_mnemonic'
+      VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: '$pg_host'
+      VECTOR_PG_HOST: 'database'
+      VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
-      VECTOR_PG_PORT: '$pg_port'
+      VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
       VECTOR_ENV: '$VECTOR_ENV'
-    secrets:
-      - '$db_secret'
-      - '$mnemonic_secret_name'
 
   router:
     $common
@@ -269,31 +291,29 @@ services:
     ports:
       - '$router_port:$router_port'
     environment:
-      VECTOR_CONFIG: '$vector_config'
-      VECTOR_NODE_URL: 'http://node:$node_port'
+      VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
+      VECTOR_NODE_URL: 'http://node:$node_internal_port'
       VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: '$pg_host'
+      VECTOR_PG_HOST: 'database'
+      VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
-      VECTOR_PG_PORT: '$pg_port'
+      VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
       VECTOR_PORT: '$router_port'
       VECTOR_ENV: '$VECTOR_ENV'
-    secrets:
-      - '$db_secret'
 
   database:
     $common
     $database_image
     environment:
-      AWS_ACCESS_KEY_ID: '$VECTOR_AWS_ACCESS_KEY_ID'
-      AWS_SECRET_ACCESS_KEY: '$VECTOR_AWS_SECRET_ACCESS_KEY'
-      VECTOR_ADMIN_TOKEN: '$VECTOR_ADMIN_TOKEN'
+      AWS_ACCESS_KEY_ID: '$aws_access_id'
+      AWS_SECRET_ACCESS_KEY: '$aws_access_key'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_ENV: '$VECTOR_ENV'
       POSTGRES_DB: '$project'
+      POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$project'
-    secrets:
-      - '$db_secret'
 
 EOF
 

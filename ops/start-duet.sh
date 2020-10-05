@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -e
+set -eu
+
+stack="duet"
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
@@ -9,12 +11,19 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-stack="duet"
+####################
+# Load Config
 
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit 0;
 else echo; echo "Preparing to launch $stack stack"
 fi
+
+config="`cat $root/config-node.json`"
+
+function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
+
+auth_url="`getConfig authUrl`"
 
 ####################
 # Misc Config

@@ -29,7 +29,6 @@ const VectorNodeConfigSchema = Type.Object({
   ),
   mnemonic: Type.Optional(Type.String()),
   natsUrl: Type.String({ format: "uri" }),
-  port: Type.Integer(),
   redisUrl: Type.String({ format: "uri" }),
 });
 
