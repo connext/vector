@@ -117,15 +117,13 @@ export class RestServerNodeService implements IServerNodeService {
     index = 0,
   ): Promise<RestServerNodeService> {
     const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, index, evts);
-    const configRes = await service.getConfig();
-    if (configRes.isError) {
-      throw configRes.getError();
+    const node = await service.createNode({ index });
+    if (node.isError) {
+      throw node.getError();
     }
 
-    const config = configRes.getValue().find(c => c.index === index);
-
-    service.publicIdentifier = config.publicIdentifier;
-    service.signerAddress = config.signerAddress;
+    service.publicIdentifier = node.getValue().publicIdentifier;
+    service.signerAddress = node.getValue().signerAddress;
     return service;
   }
 
