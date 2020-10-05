@@ -241,28 +241,6 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
 );
 
 server.get<{ Params: ServerNodeParams.GetChannelStates }>(
-  "/channel/:publicIdentifier",
-  { schema: { response: ServerNodeResponses.GetChannelStatesSchema, params: ServerNodeParams.GetChannelStatesSchema } },
-  async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.params.publicIdentifier) {
-      engine = getNode(request.params.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-      }
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
-    try {
-      const res = await engine.request<"chan_getChannelStates">(params);
-      return reply.status(200).send(res.map(chan => chan.channelAddress));
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
-    }
-  },
-);
-
-server.get<{ Params: ServerNodeParams.GetChannelStates }>(
   "/channel",
   { schema: { response: ServerNodeResponses.GetChannelStatesSchema, params: ServerNodeParams.GetChannelStatesSchema } },
   async (request, reply) => {
