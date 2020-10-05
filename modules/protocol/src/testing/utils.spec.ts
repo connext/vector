@@ -149,7 +149,7 @@ describe("utils", () => {
     }
   });
 
-  describe.only("validateChannelUpdateSignatures", () => {
+  describe("validateChannelUpdateSignatures", () => {
     const aliceSigner = getRandomChannelSigner();
     const bobSigner = getRandomChannelSigner();
     const wrongSigner = getRandomChannelSigner();

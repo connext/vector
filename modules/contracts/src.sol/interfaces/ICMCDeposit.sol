@@ -7,8 +7,6 @@ import "./Types.sol";
 
 interface ICMCDeposit {
 
-    function getBalance(address assetId) external view returns (uint256);
-
     function totalDepositedA(address assetId) external view returns (uint256);
 
     function totalDepositedB(address assetId) external view returns (uint256);

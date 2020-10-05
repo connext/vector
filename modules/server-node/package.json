@@ -22,7 +22,7 @@
     "axios": "0.20.0",
     "ethers": "5.0.14",
     "fastify": "3.4.1",
-    "fastify-oas": "^3.0.3",
+    "fastify-oas": "3.0.3",
     "ioredis": "4.17.3",
     "pino": "6.6.1",
     "ts-nats": "1.2.15"

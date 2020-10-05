@@ -13,4 +13,5 @@ export const env = {
   rogerUrl: process.env.VECTOR_ROGER_URL || "http://roger:8000",
   routerUrl: process.env.VECTOR_ROUTER_URL || "http://router:8008",
   sugarDaddy: process.env.SUGAR_DADDY || "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
+  port: parseInt(process.env.VECTOR_PORT || "8888"),
 };
