@@ -63,6 +63,8 @@ export interface IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void>;
+
+  off<T extends EngineEvent>(event: T): Promise<void>;
 }
 
 export class ServerNodeError extends VectorError {
@@ -253,7 +255,7 @@ export class RestServerNodeService implements IServerNodeService {
   async once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    filter: (payload: EngineEventMap[T]) => boolean = payload => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
     if (!this.evts) {
       this.logger.warn("No evts provided, subscriptions will not work");
@@ -280,6 +282,18 @@ export class RestServerNodeService implements IServerNodeService {
       this.logger.info({ event, url }, "Engine event subscription created");
     } catch (e) {
       this.logger.error({ error: e.response?.data, event, method: "on" }, "Error creating subscription");
+    }
+  }
+
+  async off<T extends EngineEvent>(event: T): Promise<void> {
+    this.evts[event as string].evt.detach();
+    try {
+      await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
+        [event]: "",
+      });
+      this.logger.info({ event }, "Engine event subscription removed");
+    } catch (e) {
+      this.logger.error({ error: e.response?.data, event, method: "off" }, "Error removed subscription");
     }
   }
 
