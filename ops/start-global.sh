@@ -263,10 +263,7 @@ done
 echo "Waiting for evms to wake up.."
 while true
 do
-  if [[ \
-    -z "`(cat $address_book_1 | grep 'TestToken') 2> /dev/null`" || \
-    -z "`(cat $address_book_2 | grep 'TestToken') 2> /dev/null`" \
-  ]]
+  if [[ ! -f "$chain_addresses_1" || ! -f "$chain_addresses_2" ]]
   then
     if [[ "`date +%s`" -gt "$timeout" ]]
     then abort
