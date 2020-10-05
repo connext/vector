@@ -45,7 +45,6 @@ try {
   throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
 }
 
-console.log(`config: ${typeof vectorConfig} ${JSON.stringify(vectorConfig, null, 2)}`);
 const validate = ajv.compile(VectorNodeConfigSchema);
 const valid = validate(vectorConfig);
 
