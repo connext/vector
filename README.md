@@ -18,13 +18,14 @@ This monorepo contains a number of packages hoisted using lerna. Documentation f
 
 Contents:
 
-- [Configuring and Running Vector](#configuring-and-running-vector)
-- [Architecture and Module Breakdown](#architecture-and-module-breakdown)
 - [Quick Start](#quick-start)
+- [Configuration API](#configuration-api)
+- [Architecture and Module Breakdown](#architecture-and-module-breakdown)
+- [Interacting with a vector node](#interacting-with-a-vector-node)
 - [Development and Running Tests](#development-and-running-tests)
 - Deploying Vector to Production // TODO
 
-## Configuring and Running Vector
+## Quick start
 
 **Prerequisites:**
 
@@ -78,6 +79,42 @@ For any of these stacks, you can manage them with:
  - `make restart-${stack}` stops the stack if it's running & starts it again
  - `make test-${stack}` runs unit tests against some stack. It will build & start the stack if that hasn't been done already.
 
+## Configuration API
+
+The `node` and `router` stacks are configurable via the `config-node.json` and `config-router.json` files respectively. Note that the `duet` and `trio` stacks are designed exclusively for development/testing so these are not configurable.
+
+There is an additional `config-prod.json` file that can apply to either the node or router but not both. The `config-prod.json` file contains your domain name and, because it's *not* tracked by git, it's a good place to put overrides for secret values like API keys. A prod-mode deployment using a domain name w https must be exposed on port 443, therefore only a single prod-mode stack can run on a given machine at a time.
+
+The formats of `config-node.json` and `config-router.json` overlap almost entirely because the router stack also contains a `node` internally. They are separated to allow you to run & separately configure both a node & a router on the same machine.
+
+### Configuration API
+
+`adminToken` (type: `string`): Currently, this is only used during development to protect a few admin endpoints eg to reset the database between tests. If/when we add admin-only features in prod, they will only be accessible to those who provide the correct adminToken.
+
+`allowedSwaps` (type: `object`): Specifies which swaps are allowed & how swap rates are determined.
+
+`authUrl` (type: `string`): The url used to authenticate with the messaging service (TODO: merge this with the nats url?)
+
+`production` (type: `boolean`): Enables prod-mode if true.
+  - Dev-mode ops are designed to automatically build anything that isn't available locally before starting up a given stack.
+  - Prod-mode ops are designed to build nothing. Any required docker images will be pulled from docker-hub. Prod-mode is optimized for keeping your machine's disk clean & free from unnecessary build artifacts.
+
+`logLevel` (type: `string`): one of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.
+
+`chainAddresses` (type: `object`): Specifies the addresses of all relevant contracts, keyed by `chainId`.
+
+`chainProviders` (type: `object`): Specifies the URL to use to connect to each chain's provider, keyed by `chainId`
+
+`domainName` (type: `string`): If provided, https will be auto-configured & the stack will be exposed on port 443.
+
+`natsUrl` (type: `string`): The URL of the messaging service (TODO: merge with auth url?)
+
+`port` (type: `number`): The port number on which the stack should be exposed to the outside world.
+
+`redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
+
+`rebalanceProfiles` (type: `object`): Specifies the thresholds & target while collateralizing some `assetId` on some `chainId`.
+
 ## Architecture and Module Breakdown
 
 Vector uses a layered-approach to compartmentalize risk and delegate tasks throughout protocol usage. In general, lower layers are not context-aware of higher level actions. Information flows downwards through call params and upwards through events. The only exception to this are services, which are set up at the services layer and passed down to the protocol directly.
@@ -94,7 +131,7 @@ You can find documentation on each layer in its respective readme:
 
 Note that the engine and protocol are isomorphic. Immediately after the core implementation is done, we plan to build a `browser-node` implementation which sets up services in a browser-compatible way and exposes a direct JS interface to be consumed by a dApp developer.
 
-## Quick Start
+## Interacting with a vector node
 
 This quick start will guide you through getting to a simple e2e transfer flow between two peers running [server-nodes](https://github.com/connext/vector/tree/master/modules/server-node) (Alice, Bob) that is routed through one intermediary routing node (Roger).
 
