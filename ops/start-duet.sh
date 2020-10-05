@@ -19,13 +19,6 @@ fi
 ####################
 # Misc Config
 
-if [[ "$VECTOR_ENV" == "prod" ]]
-then
-  echo "The $stack stack should only be used for testing. Aborting because \$VECTOR_ENV=prod"
-  exit 1
-fi
-VECTOR_ENV=dev
-
 version="latest"
 
 # log level alias can override default for easy `LOG_LEVEL=5 make start`
@@ -102,7 +95,7 @@ node_env="environment:
       VECTOR_CHAIN_PROVIDERS: '$VECTOR_CHAIN_PROVIDERS'
       VECTOR_CONFIG: '$vector_config'
       VECTOR_CONTRACT_ADDRESSES: '$VECTOR_CONTRACT_ADDRESSES'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_ENV: 'dev'
       VECTOR_LOG_LEVEL: '$VECTOR_LOG_LEVEL'
       VECTOR_NATS_URL: 'nats://nats:$nats_port'
       VECTOR_PG_DATABASE: '$project'

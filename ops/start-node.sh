@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-set -e
-
-# make sure a network for this project has been created
-docker swarm init 2> /dev/null || true
-docker network create --attachable --driver overlay $project 2> /dev/null || true
+set -eu
 
 stack="node"
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
+
+# make sure a network for this project has been created
+docker swarm init 2> /dev/null || true
+docker network create --attachable --driver overlay $project 2> /dev/null || true
 
 ####################
 # Load config
@@ -42,6 +42,8 @@ function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
 
 admin_token="`getConfig adminToken`"
 auth_url="`getConfig authUrl`"
+aws_access_id="`getConfig awsAccessId`"
+aws_access_key="`getConfig awsAccessKey`"
 chain_providers="`getConfig chainProviders`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
@@ -56,7 +58,7 @@ fi
 # Misc Config
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$production" == "prod" ]]
+if [[ "$production" == "true" ]]
 then
   if [[ -n "`git tag --points-at HEAD | grep "vector-" | head -n 1`" ]]
   then version="`cat package.json | grep '"version":' | head -n 1 | cut -d '"' -f 4`"
@@ -79,7 +81,6 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-
 if [[ \
   "$auth_url" == "`getDefault authUrl`" || \
   "$chain_providers" == "`getDefault chainProviders`" \
@@ -88,12 +89,16 @@ then
   echo "Connecting to local global services"
   bash $root/ops/start-global.sh
   eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+  eth_mnemonic_file=""
+  mnemonic_secret_entry=""
+  mnemonic_secret_service_entry=""
   chain_addresses="`cat $root/.chaindata/address-book.json | fromAddressBook`"
   config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | mergeJson`"
 
 else
   echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
   mnemonic_secret="${project}_${stack}_mnemonic"
+  eth_mnemonic=""
   eth_mnemonic_file="/run/secrets/$mnemonic_secret"
   mnemonic_secret_entry="$mnemonic_secret:
     external: true"
@@ -123,6 +128,7 @@ mkdir -p $snapshots_dir
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
+  pg_password=""
   pg_password_file="/run/secrets/$db_secret"
   database_image="image: '$database_image'
     volumes:
@@ -131,6 +137,7 @@ then
 
 else
   pg_password="$project"
+  pg_password_file=""
   database_image="image: '$database_image'
     ports:
       - '5433:5432'"
@@ -233,8 +240,8 @@ services:
     $common
     $database_image
     environment:
-      AWS_ACCESS_KEY_ID: '$VECTOR_AWS_ACCESS_KEY_ID'
-      AWS_SECRET_ACCESS_KEY: '$VECTOR_AWS_SECRET_ACCESS_KEY'
+      AWS_ACCESS_KEY_ID: '$aws_access_id'
+      AWS_SECRET_ACCESS_KEY: '$aws_access_key'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_ENV: '$VECTOR_ENV'
       POSTGRES_DB: '$pg_db'

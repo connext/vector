@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+stack="router"
+
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
@@ -9,54 +11,65 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-stack="router"
+####################
+# Load config
 
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit 0;
 else echo; echo "Preparing to launch $stack stack"
 fi
 
-####################
-# Load env vars
+# jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
+function mergeJson { jq -s '.[0] + .[1]'; }
+function fromAddressBook {
+  jq '
+    map_values(
+      map_values(.address) |
+      to_entries |
+      map(.key = "\(.key)Address") |
+      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
+      from_entries
+    )
+  ';
+}
 
-VECTOR_ENV="${VECTOR_ENV:-dev}"
+default_config="`cat $root/config-router.json`" # | tr -d '\n\r'`"
+prod_config="`cat $root/config-prod.json`" # | tr -d '\n\r'`"
+config="`echo $default_config $prod_config | mergeJson`"
 
-# Load the default env
-if [[ -f "${VECTOR_ENV}.env" ]]
-then source "${VECTOR_ENV}.env"
+function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
+function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
+
+admin_token="`getConfig adminToken`"
+auth_url="`getConfig authUrl`"
+chain_providers="`getConfig chainProviders`"
+domain_name="`getConfig domainName`"
+production="`getConfig production`"
+public_port="`getConfig port`"
+
+if [[ "$production" == "true" ]]
+then VECTOR_ENV="prod"
+else VECTOR_ENV="dev"
 fi
-
-# Load private env vars & instance-specific overrides
-if [[ -f ".env" ]]
-then source .env
-fi
-
-# log level alias can override default for easy `LOG_LEVEL=5 make start`
-VECTOR_LOG_LEVEL="${LOG_LEVEL:-$VECTOR_LOG_LEVEL}";
 
 ####################
 # Misc Config
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$production" == "true" ]]
 then
-  git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
-  if [[ -n "$git_tag" ]]
-  then version="`echo $git_tag | sed 's/vector-//'`"
+  if [[ -n "`git tag --points-at HEAD | grep "vector-" | head -n 1`" ]]
+  then version="`cat package.json | grep '"version":' | head -n 1 | cut -d '"' -f 4`"
   else version="`git rev-parse HEAD | head -c 8`"
   fi
 else version="latest"
 fi
 
-builder_image_name="${project}_builder";
-builder_image="$builder_image_name:$version";
-bash $root/ops/pull-images.sh $version $builder_image_name > /dev/null
+builder_image="${project}_builder:$version";
+bash $root/ops/pull-images.sh $builder_image > /dev/null
 
 redis_image="redis:5-alpine";
 bash $root/ops/pull-images.sh "$redis_image" > /dev/null
-
-# to access from other containers
-redis_url="redis://redis:6379"
 
 common="networks:
       - '$project'
@@ -64,6 +77,34 @@ common="networks:
       driver: 'json-file'
       options:
           max-size: '100m'"
+
+########################################
+# Global services / chain provider config
+# If no global service urls provided, spin up local ones & use those
+# If no chain providers provided, spin up local testnets & use those
+
+if [[ \
+  "$auth_url" == "`getDefault authUrl`" || \
+  "$chain_providers" == "`getDefault chainProviders`" \
+  ]]
+then
+  echo "Connecting to local global services"
+  bash $root/ops/start-global.sh
+  eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+  chain_addresses="`cat $root/.chaindata/address-book.json | fromAddressBook`"
+  config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | mergeJson`"
+
+else
+  echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
+  mnemonic_secret="${project}_${stack}_mnemonic"
+  eth_mnemonic_file="/run/secrets/$mnemonic_secret"
+  mnemonic_secret_entry="$mnemonic_secret:
+    external: true"
+  mnemonic_secret_service_entry="- '$mnemonic_secret'"
+  if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
+  then bash $root/ops/save-secret.sh $mnemonic_secret
+  fi
+fi
 
 ####################
 # Proxy config
@@ -119,44 +160,6 @@ pg_host="database"
 pg_password_file="/run/secrets/$db_secret"
 pg_port="5432"
 pg_user="$project"
-
-########################################
-# Global services / chain provider config
-# If no global service urls provided, spin up local ones & use those
-# If no chain providers provided, spin up local testnets & use those
-
-echo "\$VECTOR_AUTH_URL=$VECTOR_AUTH_URL | \$VECTOR_CHAIN_PROVIDERS=$VECTOR_CHAIN_PROVIDERS"
-
-if [[ -z "$VECTOR_CHAIN_PROVIDERS" || -z "$VECTOR_AUTH_URL" ]]
-then
-  bash $root/ops/start-global.sh
-  echo "global services have started up, resuming $stack startup"
-  auth_url="http://auth:5040"
-  mnemonic_secret_name="${project}_mnemonic_dev"
-  eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-  bash $root/ops/save-secret.sh "$mnemonic_secret_name" "$eth_mnemonic" > /dev/null
-  VECTOR_CHAIN_PROVIDERS="`cat $root/.chaindata/chain-providers.json`"
-  VECTOR_CONTRACT_ADDRESSES="`cat $root/.chaindata/address-book.json`"
-
-else
-  echo "Connecting to external global services"
-  auth_url="$VECTOR_AUTH_URL"
-  mnemonic_secret_name="${project}_mnemonic"
-  if [[ -z "$VECTOR_CONTRACT_ADDRESSES" ]]
-  then
-    # Prefer top-level address-book otherwise default to one in contracts
-    if [[ -f address-book.json ]]
-    then VECTOR_CONTRACT_ADDRESSES="`cat address-book.json | tr -d ' \n\r'`"
-    elif [[ -f ".chaindata/address-book.json" ]]
-    then VECTOR_CONTRACT_ADDRESSES="`cat .chaindata/address-book.json | tr -d ' \n\r'`"
-    else
-      echo "No \$VECTOR_CONTRACT_ADDRESSES provided & can't find an address-book, aborting"
-      exit 1
-    fi
-  fi
-fi
-
-VECTOR_MNEMONIC_FILE="/run/secrets/$mnemonic_secret_name"
 
 ########################################
 ## Node config
