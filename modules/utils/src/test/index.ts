@@ -1,3 +1,4 @@
+export * from "./chain";
 export * from "./channel";
 export * from "./expect";
 export * from "./logger";
