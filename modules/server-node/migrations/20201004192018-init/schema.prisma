@@ -34,7 +34,6 @@ model Channel {
   merkleRoot               String
   balances                 Balance[]
   channelFactoryAddress    String
-  channelMastercopyAddress String
   chainId                  Int
   providerUrl              String
   latestUpdate             Update
@@ -130,4 +129,43 @@ model EventSubscription {
   id    String @id @default(uuid())
   event String @unique
   url   String
+}
+
+model OnchainTransaction {
+  @@map(name: "onchain-transaction")
+
+  // Response fields
+  transactionHash   String @id
+  to                String
+  from              String
+  data              String
+  value             String
+  chainId           Int
+  nonce             Int
+  gasLimit          String
+  gasPrice          String
+
+  // Receipt fields
+  timestamp         String?
+  raw               String?
+  blockHash         String?
+  blockNumber       Int?
+  contractAddress   String?
+  transactionIndex  Int?
+  root              String?
+  gasUsed           String?
+  logsBloom         String?
+  logs              String?
+  cumulativeGasUsed String?
+  byzantium         Boolean?
+
+  // Channel fields
+  status            String @default("submitted") // no enums
+  reason            String // no enums
+  error             String?
+  channelAddress    String
+  channel           Channel @relation(fields: [channelAddress], references: [channelAddress])
+
+  @@unique(transactionHash)
+  @@unique([from, nonce])
 }

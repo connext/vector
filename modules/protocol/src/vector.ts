@@ -15,6 +15,8 @@ import {
   IVectorChainReader,
   OutboundChannelUpdateError,
   ProtocolParams,
+  IExternalValidation,
+  ChannelUpdate,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import Ajv from "ajv";
@@ -39,6 +41,7 @@ export class Vector implements IVectorProtocol {
     private readonly storeService: IVectorStore,
     private readonly signer: IChannelSigner,
     private readonly chainReader: IVectorChainReader,
+    private readonly externalValidationService: IExternalValidation,
     private readonly logger: pino.BaseLogger,
   ) {}
 
@@ -49,7 +52,20 @@ export class Vector implements IVectorProtocol {
     signer: IChannelSigner,
     chainReader: IVectorChainReader,
     logger: pino.BaseLogger,
+    validationService?: IExternalValidation,
   ): Promise<Vector> {
+    // Set the external validation service. If none is provided,
+    // create an object with a matching interface to perform no
+    // additional validation
+    const externalValidation = validationService ?? {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+        Promise.resolve(Result.ok(undefined)),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+        Promise.resolve(Result.ok(undefined)),
+    };
+
     // Handles up asynchronous services and checks to see that
     // channel is `setup` plus is not in dispute
     const node = await new Vector(
@@ -58,6 +74,7 @@ export class Vector implements IVectorProtocol {
       storeService,
       signer,
       chainReader,
+      externalValidation,
       logger,
     ).setupServices();
 
@@ -83,6 +100,7 @@ export class Vector implements IVectorProtocol {
       this.storeService,
       this.chainReader,
       this.messagingService,
+      this.externalValidationService,
       this.signer,
       this.logger,
     );
@@ -159,6 +177,7 @@ export class Vector implements IVectorProtocol {
         this.chainReader,
         this.storeService,
         this.messagingService,
+        this.externalValidationService,
         this.signer,
         this.logger,
       );
@@ -171,13 +190,11 @@ export class Vector implements IVectorProtocol {
       });
     });
 
-    // TODO if the store doesn't have anything in it, restore from backup
+    // TODO: https://github.com/connext/vector/issues/54
 
-    // TODO for loop through store and isAlive all channels
+    // TODO: https://github.com/connext/vector/issues/52
 
-    // TODO run setup updates if the channel is not already setup
-
-    // TODO validate that the channel is not currently in dispute/checkpoint state
+    // TODO: https://github.com/connext/vector/issues/53
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
@@ -189,6 +206,7 @@ export class Vector implements IVectorProtocol {
             this.storeService,
             this.chainReader,
             this.messagingService,
+            this.externalValidationService,
             this.signer,
             this.logger,
           )
@@ -224,8 +242,9 @@ export class Vector implements IVectorProtocol {
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
 
+  // TODO: https://github.com/connext/vector/issues/53
   public async isAlive(channelAddress: string) {
-    // TODO -- isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
+    // isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
     //         it should return an error (and emit it!) if the ack is not received.
     //         on the sync inbound side, we should properly ack this message and also emit an event when you hear it (on both sides)
   }
@@ -243,7 +262,6 @@ export class Vector implements IVectorProtocol {
       params.counterpartyIdentifier,
       params.networkContext.chainId,
       params.networkContext.channelFactoryAddress,
-      params.networkContext.channelMastercopyAddress,
       this.chainReader,
     );
     if (create2Res.isError) {

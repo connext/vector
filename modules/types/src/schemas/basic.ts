@@ -14,6 +14,7 @@ import {
 // String pattern types
 export const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
 export const TIntegerString = Type.Pattern(/^([0-9])*$/);
+export const TDecimalString = Type.Pattern(/^[0-9]*\.?[0-9]*$/);
 export const TPublicIdentifier = Type.Pattern(/^indra([a-zA-Z0-9]{50})$/);
 export const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
 export const TBytes = Type.Pattern(/^0x([a-fA-F0-9])$/);
@@ -33,9 +34,8 @@ export const TBasicMeta = Type.Optional(Type.Any());
 
 export const TNetworkContext = Type.Object({
   channelFactoryAddress: TAddress,
-  channelMastercopyAddress: TAddress,
-  withdrawDefinition: Type.Optional(TAddress),
-  linkedTransferDefinition: Type.Optional(TAddress),
+  withdrawAddress: Type.Optional(TAddress),
+  linkedTransferAddress: Type.Optional(TAddress),
   chainId: TChainId,
   providerUrl: TUrl,
 });

@@ -19,7 +19,7 @@ import { mkAddress, mkHash, mkBytes32 } from "./util";
 
 const { keccak256, solidityPack } = utils;
 
-type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
+export type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
 
 export const createTestLinkedTransferState = (
   overrides: PartialTransferOverrides & { linkedHash?: string } = {},

@@ -144,8 +144,12 @@ address_book_1="$chain_data_1/address-book.json"
 address_book_2="$chain_data_2/address-book.json"
 rm -rf $address_book $address_book_1 $address_book_2
 
+chain_addresses="$chain_data/chain-addresses.json"
+chain_addresses_1="$chain_data_1/chain-addresses.json"
+chain_addresses_2="$chain_data_2/chain-addresses.json"
+rm -rf $chain_addresses $chain_addresses_1 $chain_addresses_2
+
 mnemonic="${VECTOR_MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-bash $root/ops/save-secret.sh "${project}_mnemonic_dev" "$mnemonic" > /dev/null
 
 evm_image_name="${project}_ethprovider:$version";
 evm_image="image: '$evm_image_name'
@@ -155,8 +159,9 @@ bash $root/ops/pull-images.sh "$evm_image_name" > /dev/null
 ####################
 # Launch stack
 
-rm -rf $root/${stack}.docker-compose.yml
-cat - > $root/${stack}.docker-compose.yml <<EOF
+docker_compose=$root/.${stack}.docker-compose.yml
+rm -f $docker_compose
+cat - > $docker_compose <<EOF
 version: '3.4'
 
 networks:
@@ -174,7 +179,7 @@ services:
     environment:
       VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY'
       VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
-      VECTOR_NATS_SERVERS: 'nats://nats:$nats_port'
+      VECTOR_NATS_URL: 'nats://nats:$nats_port'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
       VECTOR_ENV: '$VECTOR_ENV'
@@ -220,7 +225,7 @@ services:
 
 EOF
 
-docker stack deploy -c $root/${stack}.docker-compose.yml $stack
+docker stack deploy -c $docker_compose $stack
 echo "The $stack stack has been deployed."
 public_auth_url="http://127.0.0.1:5040"
 
@@ -258,10 +263,7 @@ done
 echo "Waiting for evms to wake up.."
 while true
 do
-  if [[ \
-    -z "`(cat $address_book_1 | grep 'TestToken') 2> /dev/null`" || \
-    -z "`(cat $address_book_2 | grep 'TestToken') 2> /dev/null`" \
-  ]]
+  if [[ ! -f "$chain_addresses_1" || ! -f "$chain_addresses_2" ]]
   then
     if [[ "`date +%s`" -gt "$timeout" ]]
     then abort
@@ -273,7 +275,7 @@ do
 done
 
 cat $address_book_1 $address_book_2 | jq -s '.[0] * .[1]' > $address_book
-
+cat $chain_addresses_1 $chain_addresses_2 | jq -s '.[0] * .[1]' > $chain_addresses
 echo '{"'$chain_id_1'":"http://evm_'$chain_id_1':8545","'$chain_id_2'":"http://evm_'$chain_id_2':8545"}' > $chain_data/chain-providers.json
 
 echo "Good Morning!"

@@ -29,10 +29,23 @@ export class ChainError extends VectorError {
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
+    FailedToSendTx: "Failed to send transaction to chain",
   };
 
-  constructor(public readonly message: Values<typeof ChainError.reasons>) {
+  // Errors you would see from trying to send a transaction, and
+  // would retry by default
+  static readonly retryableTxErrors = {
+    BadNonce: "the tx doesn't have the correct nonce",
+    InvalidNonce: "Invalid nonce",
+    MissingHash: "no transaction hash found in tx response",
+    UnderpricedReplancement: "replacement transaction underpriced",
+  };
+
+  readonly canRetry: boolean;
+
+  constructor(public readonly message: Values<typeof ChainError.reasons>, public readonly context: any = {}) {
     super(message);
+    this.canRetry = Object.values(ChainError.retryableTxErrors).includes(this.message);
   }
 }
 
@@ -47,28 +60,15 @@ export type MultisigTransaction = MinimalTransaction & {
 };
 
 export interface IVectorChainReader {
-  getChannelOnchainBalance(
-    channelAddress: string,
-    chainId: number,
-    assetId: string,
-  ): Promise<Result<BigNumber, Error>>;
+  getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
 
-  getTotalDepositedA(
-    channelAddress: string,
-    chainId: number,
-    assetId: string,
-  ): Promise<Result<BigNumber, Error>>;
+  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
 
-  getTotalDepositedB(
-    channelAddress: string,
-    chainId: number,
-    assetId: string,
-  ): Promise<Result<BigNumber, Error>>;
+  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
 
-  getChannelFactoryBytecode(
-    channelFactoryAddress: string,
-    chainId: number,
-  ): Promise<Result<string, Error>>;
+  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+
+  getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
 
   getChannelAddress(
     initiator: string,
@@ -77,22 +77,11 @@ export interface IVectorChainReader {
     chainId: number,
   ): Promise<Result<string, ChainError>>;
 
-  create(
-    transfer: FullTransferState,
-    chainId: number,
-    bytecode?: string,
-  ): Promise<Result<boolean, Error>>;
+  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
 
-  resolve(
-    transfer: FullTransferState,
-    chainId: number,
-    bytecode?: string,
-  ): Promise<Result<Balance, Error>>;
+  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
 
-  getCode(
-    address: Address,
-    chainId: number,
-  ): Promise<Result<string, ChainError>>;
+  getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

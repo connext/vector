@@ -6,23 +6,29 @@ import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./Proxy.sol";
+import "./lib/LibAsset.sol";
 
 
 /// @title Channel Factory - Allows us to create new channel proxy contract
 contract ChannelFactory is IChannelFactory {
 
-    IVectorChannel public immutable masterCopy;
+    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
 
     bytes32 private constant domainSalt = keccak256("vector");
 
-    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
+    address public immutable mastercopy;
 
-    constructor(IVectorChannel _masterCopy) {
-        masterCopy = _masterCopy;
+    constructor(address _mastercopy) {
+        mastercopy = _mastercopy;
     }
 
     ////////////////////////////////////////
     // Public Methods
+
+    /// @dev Allows us to get the mastercopy that this factory will deploy channels against
+    function getMastercopy() public override view returns(address) {
+      return mastercopy;
+    }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
     /// @param alice address of one of the two participants in the channel
@@ -38,7 +44,7 @@ contract ChannelFactory is IChannelFactory {
         returns (address)
     {
         bytes32 salt = generateSalt(alice, bob, chainId);
-        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, masterCopy));
+        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, mastercopy));
         return address(uint256(
             keccak256(abi.encodePacked(
                 byte(0xff),
@@ -83,7 +89,7 @@ contract ChannelFactory is IChannelFactory {
         channel = createChannel(alice, bob, chainId);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
-        if (assetId != address(0)) {
+        if (!LibAsset.isEther(assetId)) {
             require(
                 IERC20(assetId).transferFrom(msg.sender, address(this), amount),
                 "ChannelFactory: token transferFrom failed"
@@ -112,7 +118,7 @@ contract ChannelFactory is IChannelFactory {
         returns (IVectorChannel)
     {
         bytes32 salt = generateSalt(alice, bob, chainId);
-        Proxy proxy = new Proxy{salt: salt}(address(masterCopy));
+        Proxy proxy = new Proxy{salt: salt}(mastercopy);
         return IVectorChannel(address(proxy));
     }
 

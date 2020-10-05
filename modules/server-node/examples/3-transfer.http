@@ -2,6 +2,7 @@
 @bobUrl = http://localhost:8003
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
 
+@alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
 
 # 0.01 ETH
@@ -29,7 +30,8 @@ Content-Type: application/json
   "recipient": "{{bobPublicIdentifier}}",
   "meta": {
     "hello": "world"
-  }
+  },
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }
 
 ##############
@@ -40,5 +42,6 @@ Content-Type: application/json
 {
   "channelAddress": "{{aliceBobChannel}}",
   "routingId": "{{routingId}}",
-  "preImage": "{{preImage}}"
+  "preImage": "{{preImage}}",
+  "publicIdentifier": "{{bobPublicIdentifier}}"
 }

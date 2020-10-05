@@ -75,7 +75,9 @@ export class ValidationError extends VectorError {
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
+    TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
+    ExternalValidationFailed: "Failed external validation",
   } as const;
 
   constructor(
@@ -112,6 +114,7 @@ export class OutboundChannelUpdateError extends VectorError {
     SyncFailure: "Failed to sync channel from counterparty update",
     SyncValidationFailed: "Failed to validate update for sync",
     TransferNotFound: "No transfer found in storage",
+    TransferNotActive: "Transfer not found in activeTransfers",
   } as const;
 
   constructor(

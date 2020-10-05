@@ -19,6 +19,7 @@ import {
   IVectorChainService,
   WITHDRAWAL_RECONCILED_EVENT,
   ChannelRpcMethods,
+  IExternalValidation,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -63,6 +64,7 @@ export class VectorEngine implements IVectorEngine {
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
+    validationService?: IExternalValidation,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
       messaging,
@@ -71,6 +73,7 @@ export class VectorEngine implements IVectorEngine {
       signer,
       chainService,
       logger.child({ module: "VectorProtocol" }),
+      validationService,
     );
     const engine = new VectorEngine(
       signer,
@@ -85,6 +88,14 @@ export class VectorEngine implements IVectorEngine {
     await engine.setupListener();
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
+  }
+
+  get publicIdentifier(): string {
+    return this.vector.publicIdentifier;
+  }
+
+  get signerAddress(): string {
+    return this.vector.signerAddress;
   }
 
   // TODO: create injected validation that handles submitting transactions
@@ -190,9 +201,8 @@ export class VectorEngine implements IVectorEngine {
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
-        linkedTransferDefinition: this.chainAddresses[params.chainId].linkedTransferDefinition,
-        withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
-        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
+        linkedTransferAddress: this.chainAddresses[params.chainId].linkedTransferAddress,
+        withdrawAddress: this.chainAddresses[params.chainId].withdrawAddress,
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         chainId: params.chainId,
         providerUrl: this.chainProviders[params.chainId],

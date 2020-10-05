@@ -1,5 +1,5 @@
-@aliceUrl = http://localhost:8002
-@bobUrl = http://localhost:8003
+@aliceUrl = http://localhost:8003
+@bobUrl = http://localhost:8004
 @rogerUrl = http://localhost:8000
 @aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
 @aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
@@ -16,15 +16,15 @@ GET {{aliceUrl}}/config
 
 ##############
 ### GET CHANNELS
-GET {{aliceUrl}}/channel
+GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}
 
 ##############
 ### GET CHANNEL
-GET {{aliceUrl}}/channel/{{aliceBobChannel}}
+GET {{aliceUrl}}/channel/{{aliceBobChannel}}/{{alicePublicIdentifier}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS
-GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
+GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}/{{alicePublicIdentifier}}
 
 ##############
 ### CLEAR STORE
