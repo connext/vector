@@ -172,7 +172,7 @@ export async function convertWithdrawParams(
     channelAddress,
     amount,
     assetId,
-    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawDefinition!,
+    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawAddress!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],

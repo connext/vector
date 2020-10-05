@@ -1,33 +1,18 @@
 import { Result } from "@connext/vector-types";
-import { constants, utils } from "ethers";
 
+import { config, RebalanceProfile } from "../config";
 import { ForwardTransferError } from "../forwarding";
 
-export type RebalanceProfile = {
-  reclaimThreshold: string;
-  target: string;
-  collateralizeThreshold: string;
-};
-
 export const getRebalanceProfile = async (
-  channelAddress: string,
+  chainId: number,
   assetId: string,
 ): Promise<Result<RebalanceProfile, ForwardTransferError>> => {
-  // TODO: build dynamic/stored profiles
-
-  // hardcoded defaults
-  // TODO: make configurable
-  if (assetId === constants.AddressZero) {
-    return Result.ok({
-      reclaimThreshold: utils.parseEther("0.2").toString(),
-      target: utils.parseEther("0.1").toString(),
-      collateralizeThreshold: utils.parseEther("0.05").toString(),
-    });
-  } else {
-    return Result.ok({
-      reclaimThreshold: utils.parseEther("20").toString(),
-      target: utils.parseEther("10").toString(),
-      collateralizeThreshold: utils.parseEther("5").toString(),
-    });
+  const rebalanceProfile = config.rebalanceProfiles.find(profile => profile.assetId && profile.chainId);
+  if (!rebalanceProfile) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToGetRebalanceProfile, { chainId, assetId }),
+    );
   }
+
+  return Result.ok(rebalanceProfile);
 };

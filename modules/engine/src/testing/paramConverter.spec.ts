@@ -44,10 +44,9 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawDefinition: env.contractAddresses[chainId].Withdraw.address,
-      channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
-      channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
-      HashlockTransferDefinition: env.contractAddresses[chainId].HashlockTransfer.address,
+      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
+      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
+      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
     },
   };
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -98,7 +97,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].HashlockTransferDefinition,
+        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -142,7 +141,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].HashlockTransferDefinition,
+        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -280,7 +279,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [
@@ -328,7 +327,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [

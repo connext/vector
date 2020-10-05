@@ -5,16 +5,16 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/ICMCCore.sol";
 
 contract CMCCore is ICMCCore {
-  // masterCopy needs to be first declared variable
+  // mastercopy needs to be first declared variable
   // in order to ensure storage alignment with the proxy
-  address public masterCopy;
+  address public mastercopy;
 
   address internal alice;
   address internal bob;
 
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {
-    require(masterCopy != address(0), "This contract is the mastercopy");
+    require(mastercopy != address(0), "This contract is the mastercopy");
     _;
   }
 

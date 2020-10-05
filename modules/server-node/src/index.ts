@@ -54,6 +54,7 @@ server.addHook("onReady", async () => {
   );
   await messaging.connect();
 
+  console.log(`Connecting to redis ${config.redisUrl}`);
   const lock = await LockService.connect(config.redisUrl);
   vectorEngine = await VectorEngine.connect(
     messaging,
@@ -62,7 +63,7 @@ server.addHook("onReady", async () => {
     signer,
     vectorTx,
     config.chainProviders,
-    config.contractAddresses,
+    config.chainAddresses,
     logger.child({ module: "VectorEngine" }),
   );
 
@@ -377,7 +378,7 @@ server.post<{ Body: ServerNodeParams.Admin }>(
   },
 );
 
-server.listen(config.port, "0.0.0.0", (err, address) => {
+server.listen(8000, "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

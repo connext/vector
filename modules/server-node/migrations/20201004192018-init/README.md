@@ -29,7 +29,6 @@ CREATE TABLE "channel" (
     "nonce" INTEGER NOT NULL,
     "merkleRoot" TEXT NOT NULL,
     "channelFactoryAddress" TEXT NOT NULL,
-    "channelMastercopyAddress" TEXT NOT NULL,
     "chainId" INTEGER NOT NULL,
     "providerUrl" TEXT NOT NULL,
 PRIMARY KEY ("channelAddress")
@@ -188,7 +187,6 @@ migration ..20201004192018-init
 +  merkleRoot               String
 +  balances                 Balance[]
 +  channelFactoryAddress    String
-+  channelMastercopyAddress String
 +  chainId                  Int
 +  providerUrl              String
 +  latestUpdate             Update

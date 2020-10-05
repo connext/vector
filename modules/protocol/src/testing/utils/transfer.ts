@@ -46,7 +46,7 @@ export const createTransfer = async (
   const params: CreateTransferParams = {
     channelAddress,
     amount: amount.toString(),
-    transferDefinition: env.chainAddresses[chainId].HashlockTransfer.address,
+    transferDefinition: env.chainAddresses[chainId].hashlockTransferAddress,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
