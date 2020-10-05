@@ -35,8 +35,8 @@ export const TBasicMeta = Type.Optional(Type.Any());
 export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
   channelMastercopyAddress: TAddress,
-  withdrawDefinition: Type.Optional(TAddress),
-  hashlockTransferDefinition: Type.Optional(TAddress),
+  withdrawAddress: Type.Optional(TAddress),
+  hashlockTransferAddress: Type.Optional(TAddress),
 });
 
 export const TNetworkContext = Type.Intersect([

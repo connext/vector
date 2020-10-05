@@ -30,7 +30,7 @@ export async function convertConditionalTransferParams(
   signer: IChannelSigner,
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
-  chainReader?: IVectorChainReader,
+  chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const { channelAddress, amount, assetId, recipient, details, timeout, meta: providedMeta } = params;
 
@@ -62,12 +62,12 @@ export async function convertConditionalTransferParams(
   let encodings: string[];
 
   if (params.conditionType === ConditionalTransferType.HashlockTransfer) {
-    const blockNumberRes = await chainReader!.getBlockNumber(channel.networkContext.chainId);
+    const blockNumberRes = await chainReader.getBlockNumber(channel.networkContext.chainId);
     if (blockNumberRes.isError) {
       return Result.fail(new InvalidTransferType(blockNumberRes.getError()!.message));
     }
     const blockNumber = blockNumberRes.getValue();
-    transferDefinition = chainAddresses[channel.networkContext.chainId].hashlockTransferDefinition;
+    transferDefinition = chainAddresses[channel.networkContext.chainId].hashlockTransferAddress;
     transferInitialState = {
       balance: {
         amount: [amount, "0"],
@@ -171,7 +171,7 @@ export async function convertWithdrawParams(
     channelAddress,
     amount,
     assetId,
-    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawDefinition!,
+    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawAddress!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],

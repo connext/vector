@@ -44,9 +44,9 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawDefinition: env.chainAddresses[chainId].withdrawDefinition,
+      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      hashlockTransferDefinition: env.chainAddresses[chainId].hashlockTransferDefinition,
+      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
       channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
     },
   };
@@ -98,7 +98,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].hashlockTransferDefinition,
+        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -142,7 +142,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].hashlockTransferDefinition,
+        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -182,7 +182,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
     });
@@ -280,7 +280,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [
@@ -328,7 +328,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawDefinition,
+        transferDefinition: chainAddresses[chainId].withdrawAddress,
         transferInitialState: {
           balance: {
             amount: [

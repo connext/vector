@@ -201,8 +201,8 @@ export class VectorEngine implements IVectorEngine {
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
-        hashlockTransferDefinition: this.chainAddresses[params.chainId].hashlockTransferDefinition,
-        withdrawDefinition: this.chainAddresses[params.chainId].withdrawDefinition,
+        hashlockTransferAddress: this.chainAddresses[params.chainId].hashlockTransferAddress,
+        withdrawAddress: this.chainAddresses[params.chainId].withdrawAddress,
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
         chainId: params.chainId,
@@ -247,7 +247,13 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = await convertConditionalTransferParams(params, this.signer, channel!, this.chainAddresses);
+    const createResult = await convertConditionalTransferParams(
+      params,
+      this.signer,
+      channel!,
+      this.chainAddresses,
+      this.chainService,
+    );
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
