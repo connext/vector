@@ -10,13 +10,13 @@ import {
   ServerNodeResponses,
   Values,
   VectorError,
+  DepositReconciledPayload,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
 import { providers } from "ethers";
 import { Evt } from "evt";
 import { BaseLogger } from "pino";
-import { DepositReconciledPayload } from "../../types/dist/src";
 
 const ajv = new Ajv();
 
@@ -64,6 +64,8 @@ export interface IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void>;
+
+  off<T extends EngineEvent>(event: T): Promise<void>;
 }
 
 export class ServerNodeError extends VectorError {
@@ -101,6 +103,7 @@ export class RestServerNodeService implements IServerNodeService {
     private readonly serverNodeUrl: string,
     private readonly providerUrls: ChainProviders,
     private readonly logger: BaseLogger,
+    private readonly index: number,
     private readonly evts?: EventCallbackConfig,
   ) {
     this.chainProviders = Object.fromEntries(
@@ -113,15 +116,16 @@ export class RestServerNodeService implements IServerNodeService {
     providerUrls: ChainProviders,
     logger: BaseLogger,
     evts?: EventCallbackConfig,
+    index = 0,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, evts);
-    const configRes = await service.getConfig();
-    if (configRes.isError) {
-      throw configRes.getError();
+    const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, index, evts);
+    const node = await service.createNode({ index });
+    if (node.isError) {
+      throw node.getError();
     }
 
-    service.publicIdentifier = configRes.getValue().publicIdentifier;
-    service.signerAddress = configRes.getValue().signerAddress;
+    service.publicIdentifier = node.getValue().publicIdentifier;
+    service.signerAddress = node.getValue().signerAddress;
     return service;
   }
 
@@ -136,11 +140,17 @@ export class RestServerNodeService implements IServerNodeService {
     return this.executeHttpRequest("config", "get", {}, ServerNodeParams.GetConfigSchema);
   }
 
+  async createNode(
+    params: ServerNodeParams.CreateNode,
+  ): Promise<Result<ServerNodeResponses.CreateNode, ServerNodeError>> {
+    return this.executeHttpRequest(`node`, "post", params, ServerNodeParams.CreateNodeSchema);
+  }
+
   async getStateChannel(
     params: ServerNodeParams.GetChannelState,
   ): Promise<Result<ServerNodeResponses.GetChannelState, ServerNodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}`,
+      `channel/${params.channelAddress}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateSchema,
@@ -151,7 +161,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.GetTransferStatesByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, ServerNodeError>> {
     return this.executeHttpRequest(
-      `transfer/${params.routingId}`,
+      `transfer/${params.routingId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStatesByRoutingIdSchema,
@@ -162,7 +172,8 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.GetTransferStateByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, ServerNodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/transfer/${params.routingId}`,
+      `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier ??
+        this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStateByRoutingIdSchema,
@@ -173,7 +184,7 @@ export class RestServerNodeService implements IServerNodeService {
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, ServerNodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.alice}/${params.bob}/${params.chainId}`,
+      `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateByParticipantsSchema,
@@ -181,7 +192,12 @@ export class RestServerNodeService implements IServerNodeService {
   }
 
   async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>> {
-    return this.executeHttpRequest("setup", "post", params, ServerNodeParams.SetupSchema);
+    return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
+      "setup",
+      "post",
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      ServerNodeParams.SetupSchema,
+    );
   }
 
   async deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>> {
@@ -192,10 +208,13 @@ export class RestServerNodeService implements IServerNodeService {
       return Result.fail(new ServerNodeError(ServerNodeError.reasons.ProviderNotFound));
     }
 
-    const sendDepositTxRes = await this.executeHttpRequest(
+    const sendDepositTxRes = await this.executeHttpRequest<
+      ServerNodeParams.SendDepositTx,
+      ServerNodeResponses.SendDepositTx
+    >(
       "send-deposit-tx",
       "post",
-      params,
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
       ServerNodeParams.SendDepositTxSchema,
     );
 
@@ -212,10 +231,14 @@ export class RestServerNodeService implements IServerNodeService {
     } catch (e) {
       return Result.fail(new ServerNodeError(ServerNodeError.reasons.TransactionNotMined, { txHash, params }));
     }
-    return this.executeHttpRequest(
+    return this.executeHttpRequest<ServerNodeParams.Deposit, ServerNodeResponses.Deposit>(
       "deposit",
       "post",
-      { channelAddress: params.channelAddress, assetId: params.assetId },
+      {
+        channelAddress: params.channelAddress,
+        assetId: params.assetId,
+        publicIdentifier: params.publicIdentifier ?? this.publicIdentifier,
+      },
       ServerNodeParams.DepositSchema,
     );
   }
@@ -223,10 +246,10 @@ export class RestServerNodeService implements IServerNodeService {
   async conditionalTransfer(
     params: ServerNodeParams.ConditionalTransfer,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>> {
-    return this.executeHttpRequest(
+    return this.executeHttpRequest<ServerNodeParams.ConditionalTransfer, ServerNodeResponses.ConditionalTransfer>(
       `hashlock-transfer/create`,
       "post",
-      params,
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
       ServerNodeParams.ConditionalTransferSchema,
     );
   }
@@ -234,17 +257,27 @@ export class RestServerNodeService implements IServerNodeService {
   async resolveTransfer(
     params: ServerNodeParams.ResolveTransfer,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
-    return this.executeHttpRequest(`hashlock-transfer/resolve`, "post", params, ServerNodeParams.ResolveTransferSchema);
+    return this.executeHttpRequest<ServerNodeParams.ResolveTransfer, ServerNodeResponses.ResolveTransfer>(
+      `hashlock-transfer/resolve`,
+      "post",
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      ServerNodeParams.ResolveTransferSchema,
+    );
   }
 
   async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, ServerNodeError>> {
-    return this.executeHttpRequest(`withdraw`, "post", params, ServerNodeParams.WithdrawSchema);
+    return this.executeHttpRequest<ServerNodeParams.Withdraw, ServerNodeResponses.Withdraw>(
+      `withdraw`,
+      "post",
+      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      ServerNodeParams.WithdrawSchema,
+    );
   }
 
   async once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    filter: (payload: EngineEventMap[T]) => boolean = payload => true,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
     if (!this.evts) {
       this.logger.warn("No evts provided, subscriptions will not work");
@@ -274,13 +307,25 @@ export class RestServerNodeService implements IServerNodeService {
     }
   }
 
+  async off<T extends EngineEvent>(event: T): Promise<void> {
+    this.evts[event as string].evt.detach();
+    try {
+      await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
+        [event]: "",
+      });
+      this.logger.info({ event }, "Engine event subscription removed");
+    } catch (e) {
+      this.logger.error({ error: e.response?.data, event, method: "off" }, "Error removed subscription");
+    }
+  }
+
   // Helper methods
-  private async executeHttpRequest(
+  private async executeHttpRequest<T, U>(
     urlPath: string,
     method: "get" | "post",
-    params: any,
+    params: T,
     paramSchema: any,
-  ): Promise<Result<any, ServerNodeError>> {
+  ): Promise<Result<U, ServerNodeError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
     // Validate parameters are in line with schema
     const validate = ajv.compile(paramSchema);

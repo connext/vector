@@ -3,6 +3,7 @@ import { InboundChannelUpdateError, OutboundChannelUpdateError, Result } from ".
 
 export interface IMessagingService {
   connect(): Promise<void>;
+
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
@@ -11,6 +12,11 @@ export interface IMessagingService {
       inbox: string,
     ) => void,
   ): Promise<void>;
+  onReceiveCheckIn(
+    myPublicIdentifier: string,
+    callback: (nonce: string, from: string, inbox: string) => void,
+  ): Promise<void>;
+
   sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
@@ -22,12 +28,15 @@ export interface IMessagingService {
       OutboundChannelUpdateError | InboundChannelUpdateError
     >
   >;
+  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>>;
+
   respondToProtocolMessage(
     inbox: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void>;
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
+
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;
   unsubscribe(subject: string): Promise<void>;

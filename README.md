@@ -66,45 +66,47 @@ To apply updates to `config.json`, you'll need to restart your vector node with 
 (`make start`/`make restart` are aliases for `make start-node`/`make restart-node`)
 
 Four different Vector stacks are supported:
- - `global`: standalone messaging service (+ EVMs in dev-mode)
- - `node`: vector node + database
- - `router`: vector node + router + database
- - `duet`: 2x node/db pairs, used to test one-on-one node interactions
- - `trio`: 2x node/db pairs + 1x node/router/db , used to test node interactions via a routing node.
+
+- `global`: standalone messaging service (+ EVMs in dev-mode)
+- `node`: vector node + database
+- `router`: vector node + router + database
+- `duet`: 2x node/db pairs, used to test one-on-one node interactions
+- `trio`: 2x node/db pairs + 1x node/router/db , used to test node interactions via a routing node.
 
 For any of these stacks, you can manage them with:
- - `make ${stack}` eg `make duet` builds everything required by the given stack
- - `make start-${stack}` eg `make start-router` will start up the router stack.
- - `make stop-${stack}` stops the stack
- - `make restart-${stack}` stops the stack if it's running & starts it again
- - `make test-${stack}` runs unit tests against some stack. It will build & start the stack if that hasn't been done already.
+
+- `make ${stack}` eg `make duet` builds everything required by the given stack
+- `make start-${stack}` eg `make start-router` will start up the router stack.
+- `make stop-${stack}` stops the stack
+- `make restart-${stack}` stops the stack if it's running & starts it again
+- `make test-${stack}` runs unit tests against some stack. It will build & start the stack if that hasn't been done already.
 
 ## Configuration API
 
 The `node` and `router` stacks are configurable via the `config-node.json` and `config-router.json` files respectively. Note that the `duet` and `trio` stacks are designed exclusively for development/testing so these are not configurable.
 
-There is an additional `config-prod.json` file that can apply to either the node or router but not both. The `config-prod.json` file contains your domain name and, because it's *not* tracked by git, it's a good place to put overrides for secret values like API keys. A prod-mode deployment using a domain name w https must be exposed on port 443, therefore only a single prod-mode stack can run on a given machine at a time.
+There is an additional `config-prod.json` file that can apply to either the node or router but not both. The `config-prod.json` file contains your domain name and, because it's _not_ tracked by git, it's a good place to put overrides for secret values like API keys. A prod-mode deployment using a domain name w https must be exposed on port 443, therefore only a single prod-mode stack can run on a given machine at a time.
 
 The formats of `config-node.json` and `config-router.json` overlap almost entirely because the router stack also contains a `node` internally. They are separated to allow you to run & separately configure both a node & a router on the same machine.
 
 ### Configuration API
 
- - `adminToken` (type: `string`): Currently, this is only used during development to protect a few admin endpoints eg to reset the database between tests. If/when we add admin-only features in prod, they will only be accessible to those who provide the correct adminToken.
- - `allowedSwaps` (type: `object`): Specifies which swaps are allowed & how swap rates are determined.
- - `authUrl` (type: `string`): The url used to authenticate with the messaging service (TODO: merge this with the nats url?)
- - `awsAccessId` (type: `string`): An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups
- - `awsAccessKey` (type: `string`): An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.
- - `production` (type: `boolean`): Enables prod-mode if true.
-   - Dev-mode ops are designed to automatically build anything that isn't available locally before starting up a given stack.
-   - Prod-mode ops are designed to build nothing. Any required docker images will be pulled from docker-hub. Prod-mode is optimized for keeping your machine's disk clean & free from unnecessary build artifacts.
- - `logLevel` (type: `string`): one of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.
- - `chainAddresses` (type: `object`): Specifies the addresses of all relevant contracts, keyed by `chainId`.
- - `chainProviders` (type: `object`): Specifies the URL to use to connect to each chain's provider, keyed by `chainId`
- - `domainName` (type: `string`): If provided, https will be auto-configured & the stack will be exposed on port 443.
- - `natsUrl` (type: `string`): The URL of the messaging service (TODO: merge with auth url?)
- - `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
- - `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
- - `rebalanceProfiles` (type: `object`): Specifies the thresholds & target while collateralizing some `assetId` on some `chainId`.
+- `adminToken` (type: `string`): Currently, this is only used during development to protect a few admin endpoints eg to reset the database between tests. If/when we add admin-only features in prod, they will only be accessible to those who provide the correct adminToken.
+- `allowedSwaps` (type: `object`): Specifies which swaps are allowed & how swap rates are determined.
+- `authUrl` (type: `string`): The url used to authenticate with the messaging service (TODO: merge this with the nats url?)
+- `awsAccessId` (type: `string`): An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups
+- `awsAccessKey` (type: `string`): An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.
+- `production` (type: `boolean`): Enables prod-mode if true.
+  - Dev-mode ops are designed to automatically build anything that isn't available locally before starting up a given stack.
+  - Prod-mode ops are designed to build nothing. Any required docker images will be pulled from docker-hub. Prod-mode is optimized for keeping your machine's disk clean & free from unnecessary build artifacts.
+- `logLevel` (type: `string`): one of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.
+- `chainAddresses` (type: `object`): Specifies the addresses of all relevant contracts, keyed by `chainId`.
+- `chainProviders` (type: `object`): Specifies the URL to use to connect to each chain's provider, keyed by `chainId`
+- `domainName` (type: `string`): If provided, https will be auto-configured & the stack will be exposed on port 443.
+- `natsUrl` (type: `string`): The URL of the messaging service (TODO: merge with auth url?)
+- `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
+- `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
+- `rebalanceProfiles` (type: `object`): Specifies the thresholds & target while collateralizing some `assetId` on some `chainId`.
 
 ## Architecture and Module Breakdown
 
@@ -159,7 +161,8 @@ Content-Type: application/json
 {
   "counterpartyIdentifier": "{{alicePublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "36000",
+  "publicIdentifier": "{{nodePublicIdentifier}}"
 }
 
 ### Node -> Bob
@@ -169,7 +172,8 @@ Content-Type: application/json
 {
   "counterpartyIdentifier": "{{bobPublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "36000",
+  "publicIdentifier": "{{nodePublicIdentifier}}"
 }
 ```
 
@@ -182,7 +186,8 @@ Content-Type: application/json
 {
   "channelAddress": "{{aliceNodeChannel}}",
   "amount": "{{ethAmount}}",
-  "assetId": "0x0000000000000000000000000000000000000000"
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }
 ```
 
@@ -194,7 +199,8 @@ Content-Type: application/json
 
 {
   "channelAddress": "{{aliceNodeChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000"
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }
 ```
 
@@ -216,7 +222,8 @@ Content-Type: application/json
   "recipient": "{{bobPublicIdentifier}}",
   "meta": {
     "hello": "world"
-  }
+  },
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }
 ```
 
@@ -229,7 +236,8 @@ Content-Type: application/json
 {
   "channelAddress": "{{aliceBobChannel}}",
   "routingId": "{{routingId}}",
-  "preImage": "{{preImage}}"
+  "preImage": "{{preImage}}",
+  "publicIdentifier": "{{bobPublicIdentifier}}"
 }
 ```
 
@@ -313,6 +321,29 @@ await node.on(
   data => data.transfer.initiator === "indraABCD", // can filter on the data here
 );
 ```
+
+#### Indexed Engines
+
+To enable the SDK to work with an indexed engine, you can specify an `index` param in the `connect` method.
+
+### Managing Multiple Private Keys
+
+In most cases, the `server-node` manages a single private key and signs all channel operations with this key. In some cases, users will want the ability to manage multiple private keys and multiple instances of `engine`s`.
+
+This functionality is possible in the `server-node` by deriving private keys from the mnemonic in the `server-node`'s config ([more info](https://medium.com/@wolovim/ethereum-201-hd-wallets-11d0c93c87f7)). By default, the `server-node` creates an engine at the index path "0" for convenience.
+
+Below is an example of creating a new Engine instance. The `index` param is an integer between 0 and 2147483647 (2\*\*32):
+
+```
+POST {{aliceUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 1234
+}
+```
+
+The response to this request contains a `signerAddress` and `publicIdentifier`. Additional calls to the server node must include the `publicIdentifier` to specify which `engine` to use.
 
 ## Development and Running Tests
 

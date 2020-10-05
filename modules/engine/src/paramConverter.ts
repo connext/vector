@@ -24,7 +24,6 @@ import {
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
-import { keccak256 } from "ethers/lib/utils";
 
 export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,

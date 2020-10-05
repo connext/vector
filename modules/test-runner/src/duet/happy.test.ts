@@ -2,7 +2,7 @@ import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } f
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
-import { env } from "../utils";
+import { env, getRandomIndex } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -14,11 +14,24 @@ const testName = "Duet Happy";
 describe(testName, () => {
   let alice: IServerNodeService;
   let bob: IServerNodeService;
+
   before(async () => {
-    alice = await RestServerNodeService.connect(env.aliceUrl, env.chainProviders, logger.child({ testName }));
+    alice = await RestServerNodeService.connect(
+      env.aliceUrl,
+      env.chainProviders,
+      logger.child({ testName }),
+      undefined,
+      getRandomIndex(),
+    );
     expect(alice.signerAddress).to.be.a("string");
     expect(alice.publicIdentifier).to.be.a("string");
-    bob = await RestServerNodeService.connect(env.bobUrl, env.chainProviders, logger.child({ testName }));
+    bob = await RestServerNodeService.connect(
+      env.bobUrl,
+      env.chainProviders,
+      logger.child({ testName }),
+      undefined,
+      getRandomIndex(),
+    );
     expect(bob.signerAddress).to.be.a("string");
     expect(bob.publicIdentifier).to.be.a("string");
 
