@@ -256,13 +256,6 @@
     {
       "tag": "CreateField",
       "model": "Channel",
-      "field": "channelMastercopyAddress",
-      "type": "String",
-      "arity": "Required"
-    },
-    {
-      "tag": "CreateField",
-      "model": "Channel",
       "field": "chainId",
       "type": "Int",
       "arity": "Required"

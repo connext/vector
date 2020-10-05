@@ -195,7 +195,6 @@ export class VectorEngine implements IVectorEngine {
       networkContext: {
         linkedTransferAddress: this.chainAddresses[params.chainId].linkedTransferAddress,
         withdrawAddress: this.chainAddresses[params.chainId].withdrawAddress,
-        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         chainId: params.chainId,
         providerUrl: this.chainProviders[params.chainId],

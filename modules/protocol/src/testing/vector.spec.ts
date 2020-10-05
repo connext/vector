@@ -109,7 +109,6 @@ describe("Vector", () => {
         chainId: 2,
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
-        channelMastercopyAddress: mkAddress("0xeee"),
         withdrawAddress: mkAddress("0xdef"),
       };
       const validParams = {
@@ -161,16 +160,6 @@ describe("Vector", () => {
         {
           name: "should fail if there is an invalid channelFactoryAddress",
           params: { ...validParams, networkContext: { ...network, channelFactoryAddress: "fail" } },
-          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
-        },
-        {
-          name: "should fail if there is no channelMastercopyAddress",
-          params: { ...validParams, networkContext: { ...network, channelMastercopyAddress: undefined } },
-          error: "should have required property 'channelMastercopyAddress'",
-        },
-        {
-          name: "should fail if there is an invalid channelMastercopyAddress",
-          params: { ...validParams, networkContext: { ...network, channelMastercopyAddress: "fail" } },
           error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {

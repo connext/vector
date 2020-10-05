@@ -53,7 +53,6 @@ describe("ChannelFactory", () => {
       bobPubId,
       chainId,
       channelFactory.address,
-      channelMastercopy.address,
       chainReader,
     );
     expect(channelAddress).to.be.a("string");
@@ -79,7 +78,6 @@ describe("ChannelFactory", () => {
       bobPubId,
       chainId,
       channelFactory.address,
-      channelMastercopy.address,
       chainReader,
     );
     expect(channelAddress).to.be.a("string");

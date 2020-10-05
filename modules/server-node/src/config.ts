@@ -9,7 +9,6 @@ const VectorNodeConfigSchema = Type.Object({
   authUrl: Type.String({ format: "uri" }),
   chainAddresses: Type.Map(
     Type.Object({
-      channelMastercopyAddress: TAddress,
       channelFactoryAddress: TAddress,
       linkedTransferAddress: TAddress,
       withdrawAddress: TAddress,

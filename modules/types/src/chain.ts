@@ -68,6 +68,8 @@ export interface IVectorChainReader {
 
   getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
 
+  getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+
   getChannelAddress(
     initiator: string,
     responder: string,

@@ -262,7 +262,6 @@ export class Vector implements IVectorProtocol {
       params.counterpartyIdentifier,
       params.networkContext.chainId,
       params.networkContext.channelFactoryAddress,
-      params.networkContext.channelMastercopyAddress,
       this.chainReader,
     );
     if (create2Res.isError) {

@@ -56,7 +56,6 @@ describe(testName, () => {
     [chainId]: {
       withdrawAddress,
       channelFactoryAddress: env.contractAddresses[chainId].ChannelFactory.address,
-      channelMastercopyAddress: env.contractAddresses[chainId].ChannelMastercopy.address,
       linkedTransferAddress: env.contractAddresses[chainId].LinkedTransfer.address,
     },
   };

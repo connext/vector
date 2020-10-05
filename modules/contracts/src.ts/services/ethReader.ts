@@ -100,11 +100,24 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-
     const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
       const proxyBytecode = await factory.proxyCreationCode();
       return Result.ok(proxyBytecode);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+    try {
+      const mastercopy = await factory.mastercopy();
+      return Result.ok(mastercopy);
     } catch (e) {
       return Result.fail(e);
     }
