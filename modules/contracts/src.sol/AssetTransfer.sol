@@ -5,10 +5,12 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/IERC20.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
-import "./EmergencyWithdrawable.sol";
+import "./lib/SafeMath.sol";
 
 
-contract AssetTransfer is EmergencyWithdrawable {
+contract AssetTransfer {
+
+    using SafeMath for uint256;
 
     // TODO: These are ad hoc values. Confirm or find more suitable ones.
     uint256 private constant ETHER_TRANSFER_GAS_LIMIT = 10000;
@@ -16,6 +18,7 @@ contract AssetTransfer is EmergencyWithdrawable {
     uint256 private constant ERC20_BALANCE_GAS_LIMIT = 5000;
 
     mapping(address => uint256) private _totalTransferred;
+    mapping(address => mapping(address => uint256)) private _emergencyWithdrawableAmount;
 
     modifier onlySelf() {
         require(
@@ -79,12 +82,16 @@ contract AssetTransfer is EmergencyWithdrawable {
         return LibAsset.transferERC20(assetId, recipient, amount);
     }
 
-    function totalTransferred(address assetId) public view returns (uint256) {
-        return _totalTransferred[assetId];
+    function registerTransfer(address assetId, uint256 amount)
+        internal
+    {
+        _totalTransferred[assetId] += amount;
     }
 
-    function registerTransfer(address assetId, uint256 amount) internal {
-        _totalTransferred[assetId] += amount;
+    function addToEmergencyWithdrawableAmount(address assetId, address owner, uint256 amount)
+        internal
+    {
+        _emergencyWithdrawableAmount[assetId][owner] += amount;
     }
 
     function transferAsset(address assetId, address payable recipient, uint256 maxAmount)
@@ -97,10 +104,45 @@ contract AssetTransfer is EmergencyWithdrawable {
             registerTransfer(assetId, amount);
         } else {
             addToEmergencyWithdrawableAmount(assetId, recipient, maxAmount);
-            registerTransfer(assetId, maxAmount);
         }
 
         return success;
+    }
+
+    function totalTransferred(address assetId)
+        public
+        view
+        returns (uint256)
+    {
+        return _totalTransferred[assetId];
+    }
+
+    function emergencyWithdrawableAmount(address assetId, address owner)
+        public
+        view
+        returns (uint256)
+    {
+        return _emergencyWithdrawableAmount[assetId][owner];
+    }
+
+    function emergencyWithdraw(address assetId, address owner, address payable recipient)
+        external
+    {
+        require(
+            msg.sender == owner || owner == recipient,
+            "AssetTransfer: Either msg.sender or recipient of funds must be the owner of an emergency withdraw"
+        );
+
+        uint256 maxAmount = _emergencyWithdrawableAmount[assetId][owner];
+        uint256 balance = LibAsset.getOwnBalance(assetId);
+        uint256 amount = LibUtils.min(maxAmount, balance);
+
+        _emergencyWithdrawableAmount[assetId][owner] = _emergencyWithdrawableAmount[assetId][owner].sub(amount);
+        registerTransfer(assetId, maxAmount);
+        require(
+            LibAsset.transfer(assetId, recipient, amount),
+            "AssetTransfer: Transfer failed"
+        );
     }
 
 }
