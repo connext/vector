@@ -17,7 +17,6 @@ import {
   IVectorProtocol,
   ProtocolEventName,
   ResolveUpdateDetails,
-  TransferName,
   UpdateType,
   WithdrawalCreatedPayload,
   WithdrawalResolvedPayload,

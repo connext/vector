@@ -102,6 +102,7 @@ export class OutboundChannelUpdateError extends VectorError {
     ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     CounterpartyFailure: "Counterparty failed to apply update",
     Create2Failed: "Failed to get create2 address",
+    EncodingRetrievalFailed: "Failed to get encodings for transfer",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
     OutboundValidationFailed: "Requested update is invalid",

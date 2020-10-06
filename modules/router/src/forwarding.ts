@@ -11,7 +11,7 @@ import {
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
-import { IServerNodeService, ServerNodeError } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier, IServerNodeService, ServerNodeError } from "@connext/vector-utils";
 
 import { getSwappedAmount } from "./services/swap";
 import { getRebalanceProfile } from "./services/rebalance";
@@ -94,12 +94,12 @@ export async function forwardTransferCreation(
       },
       assetId: senderAssetId,
       meta: untypedMeta,
-      transferState: conditionData,
+      transferState: createdTransferState,
       channelAddress: senderChannelAddress,
       initiator,
       transferTimeout,
+      transferDefinition,
     },
-    conditionType,
   } = data;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
   const { routingId } = meta;
@@ -232,6 +232,17 @@ export async function forwardTransferCreation(
   }
 
   // If the above is not the case, we can make the transfer!
+
+  // Create the initial  state of the transfer by updating the
+  // `to` in the balance field
+  const transferInitialState = {
+    ...createdTransferState,
+    balance: {
+      ...createdTransferState.balance,
+      // to: [node, paymentRecipient]
+      to: [node.signerAddress, getSignerAddressFromPublicIdentifier(recipientIdentifier)],
+    },
+  };
   const transfer = await node.conditionalTransfer({
     amount: recipientAmount,
     assetId: recipientAssetId,
@@ -239,14 +250,14 @@ export async function forwardTransferCreation(
     timeout: BigNumber.from(transferTimeout)
       .sub(TRANSFER_DECREMENT)
       .toString(),
-    details: conditionData,
+    transferDefinition,
+    transferInitialState,
     meta: {
       // Node is never the initiator, that is always payment sender
       senderIdentifier:
         initiator === senderChannel.bobIdentifier ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
       ...meta,
     },
-    conditionType,
   });
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === ServerNodeError.reasons.Timeout) {
@@ -257,7 +268,8 @@ export async function forwardTransferCreation(
         amount: recipientAmount,
         assetId: recipientAssetId,
         routingId,
-        conditionData,
+        transferDefinition,
+        transferInitialState,
       });
     }
     return Result.fail(
@@ -315,8 +327,7 @@ export async function forwardTransferResolution(
     channelAddress: incomingTransfer.channelAddress,
     transferId: incomingTransfer.transferId,
     meta: {},
-    conditionType,
-    details: { ...transferResolver },
+    transferResolver,
   };
   const resolution = await node.resolveTransfer(resolveParams);
   if (resolution.isError) {

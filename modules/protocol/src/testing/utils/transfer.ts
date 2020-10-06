@@ -1,3 +1,4 @@
+import { TransferDefinition } from "@connext/vector-contracts";
 import {
   FullChannelState,
   FullTransferState,
@@ -16,7 +17,7 @@ import {
   hashTransferState,
   expect,
 } from "@connext/vector-utils";
-import { BigNumberish, constants } from "ethers";
+import { BigNumberish, constants, Contract } from "ethers";
 
 import { env } from "../env";
 import { chainId } from "../constants";
@@ -51,6 +52,14 @@ export const createTransfer = async (
     assetId,
   };
 
+  const definition = new Contract(
+    env.chainAddresses[chainId].hashlockTransferAddress,
+    TransferDefinition.abi,
+    env.chainProviders[chainId],
+  );
+  const stateEncoding = await definition.stateEncoding();
+  const resolverEncoding = await definition.resolverEncoding();
+
   const ret = await payor.create(params);
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
@@ -63,11 +72,11 @@ export const createTransfer = async (
     assetId,
     channelAddress,
     transferId,
-    initialStateHash: hashTransferState(transferInitialState, "fix me"),
+    initialStateHash: hashTransferState(transferInitialState, stateEncoding),
     transferDefinition: params.transferDefinition,
     channelFactoryAddress: channel.networkContext.channelFactoryAddress,
     chainId,
-    transferEncodings: "fix me",
+    transferEncodings: [stateEncoding, resolverEncoding],
     transferState: params.transferInitialState,
     meta: params.meta,
   });

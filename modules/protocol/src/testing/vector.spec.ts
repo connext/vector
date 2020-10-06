@@ -15,8 +15,6 @@ import {
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
-  HashlockTransferResolverEncoding,
-  HashlockTransferStateEncoding,
   OutboundChannelUpdateError,
   IVectorChainReader,
   ILockService,
@@ -25,12 +23,12 @@ import {
   UpdateType,
   Result,
   CreateTransferParams,
+  ChainError,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
-import { ChainError } from "../../../types/dist/src";
 
 describe("Vector", () => {
   let chainReader: Sinon.SinonStubbedInstance<IVectorChainReader>;

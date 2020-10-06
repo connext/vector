@@ -145,6 +145,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
         merkleRoot: mkBytes32("0xroot"),
         transferDefinition: mkAddress("0xdef"),
         transferId: mkBytes32("0xid"),
+        transferEncodings: ["state", "resolver"],
         transferInitialState: {
           balance: {
             amount: ["10", "0"],

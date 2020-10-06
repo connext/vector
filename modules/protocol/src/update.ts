@@ -129,9 +129,9 @@ export async function applyUpdate<T extends UpdateType>(
         transferInitialState,
         transferDefinition,
         transferTimeout,
-        transferEncodings,
         meta,
         transferId,
+        transferEncodings,
       } = details as CreateUpdateDetails;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
@@ -442,13 +442,21 @@ async function generateCreateUpdate(
   // - nonce (all)
   // - merkle root
 
-  const transferEncodingRes = await chainReader.getTransferEncodings(transferDefinition, state.networkContext.chainId);
+  const stateEncodingRes = await chainReader.getTransferStateEncoding(transferDefinition, state.networkContext.chainId);
+  const resolverEncodingRes = await chainReader.getTransferResolverEncoding(
+    transferDefinition,
+    state.networkContext.chainId,
+  );
 
-  if (transferEncodingRes.isError) {
-    return Result.fail(transferEncodingRes.getError() as any);
+  if (stateEncodingRes.isError || resolverEncodingRes.isError) {
+    return Result.fail(
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.EncodingRetrievalFailed, params, state, {
+        chainError: stateEncodingRes.getError()!.message + resolverEncodingRes.getError()!.message,
+      }),
+    );
   }
 
-  const transferEncodings = transferEncodingRes.getValue();
+  const transferEncodings = [stateEncodingRes.getValue(), resolverEncodingRes.getValue()];
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
@@ -582,7 +590,6 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      transferEncodings: transferToResolve.transferEncodings,
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
     },

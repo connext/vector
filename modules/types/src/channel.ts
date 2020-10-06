@@ -164,6 +164,9 @@ export type ChannelUpdate<T extends UpdateType> = {
   bobSignature?: string;
 };
 
+// ChannelUpdateDetails should include everything needed to
+// apply an update to the channel synchronously. It is what is
+// recieved + validated by an update responder
 export interface ChannelUpdateDetailsMap {
   [UpdateType.create]: CreateUpdateDetails;
   [UpdateType.deposit]: DepositUpdateDetails;
@@ -176,6 +179,7 @@ export type CreateUpdateDetails = {
   transferDefinition: Address;
   transferTimeout: string;
   transferInitialState: TransferState;
+  transferEncodings: string[]; // Included for `applyUpdate`
   merkleProofData: string[];
   merkleRoot: string;
   meta?: any;

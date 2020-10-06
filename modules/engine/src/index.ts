@@ -247,13 +247,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = await convertConditionalTransferParams(
-      params,
-      this.signer,
-      channel!,
-      this.chainAddresses,
-      this.chainService,
-    );
+    const createResult = await convertConditionalTransferParams(params, this.signer, channel!);
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }

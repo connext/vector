@@ -1,4 +1,4 @@
-import { WithdrawCommitment, VectorChainService } from "@connext/vector-contracts";
+import { WithdrawCommitment, VectorChainService, TransferDefinition } from "@connext/vector-contracts";
 import {
   Address,
   ChainAddresses,
@@ -8,16 +8,14 @@ import {
   ProtocolEventName,
   ProtocolEventPayloadsMap,
   Result,
-  TransferName,
   UpdateType,
   WithdrawalCreatedPayload,
   WITHDRAWAL_CREATED_EVENT,
   WithdrawCommitmentJson,
   WithdrawResolver,
-  WithdrawResolverEncoding,
   WithdrawState,
-  WithdrawStateEncoding,
   WITHDRAWAL_RESOLVED_EVENT,
+  JsonRpcProvider,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -34,7 +32,7 @@ import {
   mkHash,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
-import { BigNumber, utils } from "ethers";
+import { BigNumber, Contract, utils } from "ethers";
 import { Evt } from "evt";
 import Sinon from "sinon";
 
@@ -151,14 +149,21 @@ describe(testName, () => {
         nonce: commitment.nonce,
         fee: fee.toString(),
       };
-      const initialStateHash = hashTransferState(initialState, WithdrawStateEncoding);
+      const definition = new Contract(
+        chainAddresses[chainId].withdrawAddress!,
+        TransferDefinition.abi,
+        new JsonRpcProvider(env.chainProviders[chainId]),
+      );
+      const stateEncoding = await definition.stateEncoding();
+      const resolverEncoding = await definition.resolverEncoding();
+      const initialStateHash = hashTransferState(initialState, stateEncoding);
 
       // Generate transfer
       const json: WithdrawCommitmentJson = commitment.toJson();
       const transfer = {
         channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
         chainId,
-        transferEncodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+        transferEncodings: [stateEncoding, resolverEncoding],
         transferState: initialState,
         transferResolver: undefined,
         meta: { test: "meta" },
@@ -318,7 +323,6 @@ describe(testName, () => {
           details: {
             transferDefinition: transfer.transferDefinition,
             transferResolver: resolver,
-            transferEncodings: transfer.transferEncodings,
             transferId: transfer.transferId,
             merkleRoot: mkHash(),
           },

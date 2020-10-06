@@ -2,24 +2,16 @@ import { WithdrawCommitment } from "@connext/vector-contracts";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
   CreateTransferParams,
-  ConditionalTransferType,
   ResolveTransferParams,
   FullChannelState,
-  HashlockTransferStateEncoding,
-  HashlockTransferResolverEncoding,
-  HashlockTransferState,
   Result,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
-  HashlockTransferResolver,
   WithdrawState,
-  WithdrawStateEncoding,
-  WithdrawResolverEncoding,
   EngineParams,
   IChannelSigner,
   ChainAddresses,
   RouterSchemas,
-  IVectorChainReader,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
@@ -29,8 +21,6 @@ export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
   signer: IChannelSigner,
   channel: FullChannelState,
-  chainAddresses: ChainAddresses,
-  chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const {
     channelAddress,
@@ -145,7 +135,6 @@ export async function convertWithdrawParams(
     transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawAddress!,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-    encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
       withdrawNonce: channel.nonce.toString(),

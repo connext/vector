@@ -5,13 +5,8 @@ import {
   EngineParams,
   FullChannelState,
   FullTransferState,
-  HashlockTransferResolver,
-  HashlockTransferResolverEncoding,
-  HashlockTransferStateEncoding,
   ResolveTransferParams,
   Result,
-  WithdrawResolverEncoding,
-  WithdrawStateEncoding,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -91,7 +86,7 @@ describe("ParamConverter", () => {
         },
       });
       const ret: CreateTransferParams = (
-        await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader)
+        await convertConditionalTransferParams(params, signerA, channelState)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
@@ -134,7 +129,7 @@ describe("ParamConverter", () => {
         },
       });
       const ret: CreateTransferParams = (
-        await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader)
+        await convertConditionalTransferParams(params, signerB, channelState)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
@@ -152,7 +147,6 @@ describe("ParamConverter", () => {
             .toString(),
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: {
           requireOnline: false,
           routingId: params.meta.routingId,
@@ -180,7 +174,7 @@ describe("ParamConverter", () => {
           providerUrl,
         },
       });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
+      const ret = await convertConditionalTransferParams(params, signerA, channelState);
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
     });
@@ -193,7 +187,7 @@ describe("ParamConverter", () => {
         transferId: getRandomBytes32(),
         transferResolver: {
           preImage: getRandomBytes32(),
-        } as HashlockTransferResolver,
+        },
         meta: {
           message: "test",
         },
@@ -296,7 +290,6 @@ describe("ParamConverter", () => {
           fee: params.fee ? params.fee : "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
         meta: {
           withdrawNonce: channelState.nonce.toString(),
         },
@@ -344,7 +337,6 @@ describe("ParamConverter", () => {
           fee: params.fee ? params.fee : "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
         meta: {
           withdrawNonce: channelState.nonce.toString(),
         },
