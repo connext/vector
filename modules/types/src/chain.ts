@@ -60,15 +60,19 @@ export type MultisigTransaction = MinimalTransaction & {
 };
 
 export interface IVectorChainReader {
-  getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+  getChannelOnchainBalance(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, ChainError>>;
 
-  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;
 
-  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;
 
-  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
 
-  getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+  getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
 
   getChannelAddress(
     initiator: string,
@@ -77,9 +81,15 @@ export interface IVectorChainReader {
     chainId: number,
   ): Promise<Result<string, ChainError>>;
 
-  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
+  getTransferEncodings(
+    transferDefinition: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<string[], ChainError>>;
 
-  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
+  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>>;
+
+  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, ChainError>>;
 
   getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
 

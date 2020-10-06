@@ -19,10 +19,15 @@ export class EthereumChainReader implements IVectorChainReader {
     public readonly log: pino.BaseLogger = pino(),
   ) {}
 
-  async getChannelFactoryBytecode(
-    channelFactoryAddress: string,
+  async getTransferEncodings(
+    transferDefinition: string,
     chainId: number,
-  ): Promise<Result<string, ChainError>> {
+    bytecode?: string,
+  ): Promise<Result<string[], ChainError>> {
+    throw new Error("Method not implemented");
+  }
+
+  async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
