@@ -1,10 +1,4 @@
-import {
-  WithdrawState,
-  WithdrawStateEncoding,
-  WithdrawResolverEncoding,
-  WithdrawResolver,
-  Balance,
-} from "@connext/vector-types";
+import { WithdrawState, WithdrawResolver, Balance } from "@connext/vector-types";
 import {
   getRandomAddress,
   getRandomBytes32,
@@ -12,9 +6,11 @@ import {
   recoverAddressFromChannelMessage,
   keyify,
   expect,
+  encodeTransferState,
+  encodeTransferResolver,
 } from "@connext/vector-utils";
 import { Zero } from "@ethersproject/constants";
-import { Contract, ContractFactory, Wallet, utils } from "ethers";
+import { Contract, ContractFactory, Wallet } from "ethers";
 
 import { Withdraw } from "../../artifacts";
 import { provider } from "../constants";
@@ -24,14 +20,6 @@ describe("Withdraw", () => {
   let definition: Contract;
   let alice: Wallet;
   let bob: Wallet;
-
-  const encodeTransferState = (state: WithdrawState): string => {
-    return utils.defaultAbiCoder.encode([WithdrawStateEncoding], [state]);
-  };
-
-  const encodeTransferResolver = (resolver: WithdrawResolver): string => {
-    return utils.defaultAbiCoder.encode([WithdrawResolverEncoding], [resolver]);
-  };
 
   beforeEach(async () => {
     deployer = provider.getWallets()[0];
@@ -57,14 +45,14 @@ describe("Withdraw", () => {
   };
 
   const createTransfer = async (initialState: WithdrawState): Promise<boolean> => {
-    const encodedState = encodeTransferState(initialState);
+    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
     const ret = (await definition.functions.create(encodedState))[0];
     return ret;
   };
 
   const resolveTransfer = async (initialState: WithdrawState, resolver: WithdrawResolver): Promise<Balance> => {
-    const encodedState = encodeTransferState(initialState);
-    const encodedResolver = encodeTransferResolver(resolver);
+    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
+    const encodedResolver = encodeTransferResolver(resolver, await definition.resolverEncoding());
     const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };

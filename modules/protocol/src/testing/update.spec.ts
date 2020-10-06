@@ -4,7 +4,6 @@ import {
   InboundChannelUpdateError,
   FullChannelState,
   FullTransferState,
-  TransferName,
   Values,
   NetworkContext,
   Result,
@@ -46,8 +45,8 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
   finalBalanceOverrides?: Balance;
   expected?: Partial<{
     channel: Partial<FullChannelState>;
-    activeTransfers: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>[];
-    transfer?: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>;
+    activeTransfers: Partial<FullTransferState>[];
+    transfer?: Partial<FullTransferState>;
   }>;
   error?: Values<typeof InboundChannelUpdateError.reasons>;
 };
@@ -459,7 +458,7 @@ type GenerateUpdateTestParams = {
   stateOverrides?: PartialFullChannelState<any>;
   paramOverrides?: PartialUpdateParams<any>;
   expectedUpdate?: Partial<ChannelUpdate<any>>;
-  expectedTransfer?: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>;
+  expectedTransfer?: Partial<FullTransferState>;
   error?: Values<typeof InboundChannelUpdateError.reasons>;
   from?: ChannelSigner;
 

@@ -1,7 +1,6 @@
 import { TStringLiteral, Type } from "@sinclair/typebox";
 
 import { UpdateType } from "../channel";
-import { WithdrawResolverEncoding, WithdrawStateEncoding } from "../transferDefinitions";
 
 ////////////////////////////////////////
 //////// Shared object/string types
@@ -58,10 +57,6 @@ export const WithdrawTransferStateSchema = Type.Object({
 export const WithdrawTransferResolverSchema = Type.Object({
   responderSignature: TSignature,
 });
-export const WithdrawTransferEncodingSchema = Type.Array([
-  Type.Literal(WithdrawStateEncoding),
-  Type.Literal(WithdrawResolverEncoding),
-]);
 
 // Shared transfer pattern types
 export const TransferStateSchema = Type.Union([Type.Any(), WithdrawTransferStateSchema]);

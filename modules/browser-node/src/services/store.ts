@@ -24,10 +24,10 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
     throw new Error("Method not implemented.");
   }
-  getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState<any> | undefined> {
+  getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
     throw new Error("Method not implemented.");
   }
-  getTransfersByRoutingId(routingId: string): Promise<FullTransferState<any>[]> {
+  getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
     throw new Error("Method not implemented.");
   }
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void> {
@@ -64,16 +64,16 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
     throw new Error("Method not implemented.");
   }
-  getActiveTransfers(channelAddress: string): Promise<FullTransferState<any>[]> {
+  getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
     throw new Error("Method not implemented.");
   }
-  getTransferState(transferId: string): Promise<FullTransferState<any> | undefined> {
+  getTransferState(transferId: string): Promise<FullTransferState | undefined> {
     throw new Error("Method not implemented.");
   }
   saveChannelState(
     channelState: FullChannelState<any>,
     commitment: ChannelCommitmentData,
-    transfer?: FullTransferState<any>,
+    transfer?: FullTransferState,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }

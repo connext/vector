@@ -1,17 +1,28 @@
-import { HashlockTransferState, HashlockTransferResolver, Balance } from "@connext/vector-types";
+import { Balance } from "@connext/vector-types";
 import {
-  encodeHashlockTransferResolver,
-  encodeHashlockTransferState,
   getRandomAddress,
   getRandomBytes32,
   keyify,
   expect,
+  encodeTransferResolver,
+  encodeTransferState,
 } from "@connext/vector-utils";
 import { HashZero, Zero } from "@ethersproject/constants";
 import { Contract, ContractFactory, Wallet, utils, BigNumber } from "ethers";
 
 import { HashlockTransfer } from "../../artifacts";
 import { provider } from "../constants";
+
+// Helper transfer types
+type HashlockTransferState = {
+  balance: Balance;
+  lockHash: string;
+  expiry: string;
+};
+
+type HashlockTransferResolver = {
+  preImage: string;
+};
 
 describe("HashlockTransfer", () => {
   let deployer: Wallet;
@@ -44,7 +55,7 @@ describe("HashlockTransfer", () => {
   };
 
   const createTransfer = async (initialState: HashlockTransferState): Promise<boolean> => {
-    const encodedState = encodeHashlockTransferState(initialState);
+    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
     return definition.functions.create(encodedState);
   };
 
@@ -52,8 +63,8 @@ describe("HashlockTransfer", () => {
     initialState: HashlockTransferState,
     resolver: HashlockTransferResolver,
   ): Promise<Balance> => {
-    const encodedState = encodeHashlockTransferState(initialState);
-    const encodedResolver = encodeHashlockTransferResolver(resolver);
+    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
+    const encodedResolver = encodeTransferResolver(resolver, await definition.resolverEncoding());
     const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };

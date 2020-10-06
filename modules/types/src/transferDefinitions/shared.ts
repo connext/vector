@@ -1,30 +1,11 @@
 import { BalanceEncoding } from "../contracts";
 import { tidy } from "../utils";
 
-import {
-  HashlockTransferName,
-  HashlockTransferResolver,
-  HashlockTransferState,
-  HashlockTransferStateEncoding,
-} from "./hashlockTransfer";
-import { WithdrawName, WithdrawResolver, WithdrawState, WithdrawStateEncoding } from "./withdraw";
+import { WithdrawResolver, WithdrawState } from "./withdraw";
 
-export type TransferState = HashlockTransferState | WithdrawState;
+export type TransferState = any | WithdrawState;
 
-export type TransferResolver = HashlockTransferResolver | WithdrawResolver;
-
-export const TransferName = {
-  [HashlockTransferName]: HashlockTransferName,
-  [WithdrawName]: WithdrawName,
-} as const;
-export type TransferName = keyof typeof TransferName;
-
-export interface TransferNameToStateMap {
-  [HashlockTransferName]: HashlockTransferState;
-  [WithdrawName]: WithdrawState;
-}
-
-export type TransferStateEncodings = typeof HashlockTransferStateEncoding | typeof WithdrawStateEncoding;
+export type TransferResolver = any | WithdrawResolver;
 
 export const CoreTransferStateEncoding = tidy(`tuple(
   ${BalanceEncoding} initialBalance,
@@ -37,13 +18,3 @@ export const CoreTransferStateEncoding = tidy(`tuple(
   address initiator,
   address responder
 )`);
-
-export interface TransferStateMap {
-  [TransferName.HashlockTransfer]: HashlockTransferState;
-  [TransferName.Withdraw]: WithdrawState;
-}
-
-export interface TransferResolverMap {
-  [TransferName.HashlockTransfer]: HashlockTransferResolver;
-  [TransferName.Withdraw]: WithdrawResolver;
-}

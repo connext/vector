@@ -403,7 +403,7 @@ async function handleWithdrawalTransferResolution(
   logger.info({ method, channelAddress, transferId }, "Started");
 
   // Get the withdrawal amount
-  const transfer = (await store.getTransferState(transferId)) as FullTransferState<typeof TransferName.Withdraw>;
+  const transfer = (await store.getTransferState(transferId)) as FullTransferState;
   if (!transfer) {
     logger.warn({ method, transferId, channelAddress }, "Could not find transfer for withdrawal resolution");
     return;

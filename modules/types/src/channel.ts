@@ -1,12 +1,6 @@
 import { Address } from "./basic";
 import { BalanceEncoding } from "./contracts";
-import {
-  TransferName,
-  TransferResolver,
-  TransferResolverMap,
-  TransferState,
-  TransferStateMap,
-} from "./transferDefinitions";
+import { TransferResolver, TransferState } from "./transferDefinitions";
 import { tidy } from "./utils";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
@@ -125,12 +119,12 @@ export interface CoreTransferState {
   responder: Address; // either alice or bob
 }
 
-export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
+export type FullTransferState = CoreTransferState & {
   channelFactoryAddress: string; // networkContext?
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
-  transferState: TransferStateMap[T];
-  transferResolver?: TransferResolverMap[T]; // undefined iff not resolved
+  transferState: TransferState;
+  transferResolver?: TransferResolver; // undefined iff not resolved
   meta?: any;
 };
 
@@ -182,7 +176,6 @@ export type CreateUpdateDetails = {
   transferDefinition: Address;
   transferTimeout: string;
   transferInitialState: TransferState;
-  transferEncodings: string[]; // Initial state, resolver state
   merkleProofData: string[];
   merkleRoot: string;
   meta?: any;
@@ -194,7 +187,6 @@ export type ResolveUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
   transferResolver: TransferResolver;
-  transferEncodings: string[]; // Initial state, resolver state
   merkleRoot: string;
   meta?: any;
 };

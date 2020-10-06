@@ -116,7 +116,7 @@ describe(testName, () => {
       responder: IChannelSigner,
       overrides: Partial<WithdrawCommitmentJson> = {},
     ): Promise<{
-      transfer: FullTransferState<typeof TransferName.Withdraw>;
+      transfer: FullTransferState;
       resolver: WithdrawResolver;
       commitment: WithdrawCommitmentJson;
     }> => {

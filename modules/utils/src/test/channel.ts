@@ -9,9 +9,6 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  HashlockTransferState,
-  HashlockTransferStateEncoding,
-  HashlockTransferResolverEncoding,
   NetworkContext,
   IChannelSigner,
 } from "@connext/vector-types";
@@ -143,11 +140,10 @@ export function createTestChannelUpdate<T extends UpdateType>(
       } as DepositUpdateDetails;
       break;
     case UpdateType.create:
-      details = {
+      const createDeets: CreateUpdateDetails = {
         merkleProofData: [mkBytes32("0xproof")],
         merkleRoot: mkBytes32("0xroot"),
         transferDefinition: mkAddress("0xdef"),
-        transferEncodings: ["create", "resolve"],
         transferId: mkBytes32("0xid"),
         transferInitialState: {
           balance: {
@@ -155,18 +151,19 @@ export function createTestChannelUpdate<T extends UpdateType>(
             to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
           },
           lockHash: mkBytes32("0xlockHash"),
-        } as HashlockTransferState,
+        },
         transferTimeout: "0",
-      } as CreateUpdateDetails;
+      };
+      details = { ...createDeets };
       break;
     case UpdateType.resolve:
-      details = {
+      const resolveDetails: ResolveUpdateDetails = {
         merkleRoot: mkBytes32("0xroot1"),
         transferDefinition: mkAddress("0xdef"),
-        transferEncodings: ["create", "resolve"],
         transferId: mkBytes32("id"),
         transferResolver: { preImage: mkBytes32("0xpre") },
-      } as ResolveUpdateDetails;
+      };
+      details = { ...resolveDetails };
       break;
   }
   return {
