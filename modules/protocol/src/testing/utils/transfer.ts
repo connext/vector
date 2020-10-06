@@ -9,6 +9,7 @@ import {
   UpdateType,
   ResolveTransferParams,
   TransferResolver,
+  JsonRpcProvider,
 } from "@connext/vector-types";
 import {
   createlockHash,
@@ -55,7 +56,7 @@ export const createTransfer = async (
   const definition = new Contract(
     env.chainAddresses[chainId].hashlockTransferAddress,
     TransferDefinition.abi,
-    env.chainProviders[chainId],
+    new JsonRpcProvider(env.chainProviders[chainId]),
   );
   const stateEncoding = await definition.stateEncoding();
   const resolverEncoding = await definition.resolverEncoding();

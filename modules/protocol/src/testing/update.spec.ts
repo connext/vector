@@ -515,6 +515,9 @@ describe("generateUpdate", () => {
     store = Sinon.createStubInstance(MemoryStoreService);
     chainService = Sinon.createStubInstance(VectorChainReader);
 
+    chainService.getTransferStateEncoding.resolves(Result.ok(emptyHashlockTransfer.transferEncodings[0]));
+    chainService.getTransferResolverEncoding.resolves(Result.ok(emptyHashlockTransfer.transferEncodings[1]));
+
     // Mock `applyUpdate` (tested above) so it always returns
     // an empty object
     Sinon.stub(vectorUpdate, "applyUpdate").resolves(Result.ok({} as any));
@@ -696,7 +699,6 @@ describe("generateUpdate", () => {
         details: {
           transferId: emptyHashlockTransfer.transferId,
           transferResolver: emptyHashlockTransfer.transferResolver,
-          transferEncodings: emptyHashlockTransfer.transferEncodings,
           merkleRoot: mkHash(),
           meta: { resolve: "test" },
         },
