@@ -1,8 +1,6 @@
 import { Bytes32 } from "./basic";
 import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
-import { IVectorStore } from "./store";
-import { WithdrawCommitmentJson } from "./transferDefinitions";
 import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
 
 ///////////////////////////////////

@@ -1,12 +1,7 @@
 import { TStringLiteral, Type } from "@sinclair/typebox";
 
 import { UpdateType } from "../channel";
-import {
-  HashlockTransferResolverEncoding,
-  HashlockTransferStateEncoding,
-  WithdrawResolverEncoding,
-  WithdrawStateEncoding,
-} from "../transferDefinitions";
+import { WithdrawResolverEncoding, WithdrawStateEncoding } from "../transferDefinitions";
 
 ////////////////////////////////////////
 //////// Shared object/string types
@@ -50,20 +45,6 @@ export const TNetworkContext = Type.Intersect([
 ////////////////////////////////////////
 //////// Transfer types
 
-// hashlock transfer pattern types
-export const HashlockTransferStateSchema = Type.Object({
-  balance: TBalance,
-  lockHash: TBytes32,
-  expiry: TIntegerString,
-});
-export const HashlockTransferResolverSchema = Type.Object({
-  preImage: TBytes32,
-});
-export const HashlockTransferEncodingSchema = Type.Array([
-  Type.Literal(HashlockTransferStateEncoding),
-  Type.Literal(HashlockTransferResolverEncoding),
-]);
-
 // Withdraw transfer pattern types
 export const WithdrawTransferStateSchema = Type.Object({
   balance: TBalance,
@@ -83,11 +64,9 @@ export const WithdrawTransferEncodingSchema = Type.Array([
 ]);
 
 // Shared transfer pattern types
-export const TransferStateSchema = Type.Union([HashlockTransferStateSchema, WithdrawTransferStateSchema]);
-
-export const TransferResolverSchema = Type.Union([HashlockTransferResolverSchema, WithdrawTransferResolverSchema]);
-
-export const TransferEncodingSchema = Type.Union([HashlockTransferEncodingSchema, WithdrawTransferEncodingSchema]);
+export const TransferStateSchema = Type.Union([Type.Any(), WithdrawTransferStateSchema]);
+export const TransferResolverSchema = Type.Union([Type.Any(), WithdrawTransferResolverSchema]);
+export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
 
 export const TFullTransferState = Type.Object({
   initialBalance: TBalance,
@@ -128,7 +107,6 @@ export const TCreateUpdateDetails = Type.Object({
   transferDefinition: TAddress,
   transferTimeout: TIntegerString,
   transferInitialState: TransferStateSchema,
-  transferEncodings: TransferEncodingSchema, // Initial state, resolver state
   merkleProofData: Type.Array(TBytes),
   merkleRoot: TBytes32,
   meta: TBasicMeta,
@@ -139,7 +117,6 @@ export const TResolveUpdateDetails = Type.Object({
   transferId: TBytes32,
   transferDefinition: TAddress,
   transferResolver: TransferResolverSchema,
-  transferEncodings: TransferEncodingSchema, // Initial state, resolver state
   merkleRoot: TBytes32,
   meta: TBasicMeta,
 });

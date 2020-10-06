@@ -34,7 +34,6 @@ export type CreateTransferParams = {
   transferDefinition: string;
   transferInitialState: TransferState;
   timeout: string;
-  encodings: string[]; // [Initial state, resolve state]
   meta?: any;
 };
 
