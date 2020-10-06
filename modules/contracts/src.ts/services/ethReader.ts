@@ -28,7 +28,7 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const def = new Contract(transferDefinition, ChannelFactory.abi, provider);
+    const def = new Contract(transferDefinition, TransferDefinition.abi, provider);
     if (bytecode) {
       const evm = this.tryEvm(def.interface.encodeFunctionData("stateEncoding"), bytecode);
       if (!evm.isError) {
@@ -53,7 +53,7 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const def = new Contract(transferDefinition, ChannelFactory.abi, provider);
+    const def = new Contract(transferDefinition, TransferDefinition.abi, provider);
     if (bytecode) {
       const evm = this.tryEvm(def.interface.encodeFunctionData("resolverEncoding"), bytecode);
       if (!evm.isError) {

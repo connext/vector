@@ -36,5 +36,5 @@ export const createTestChannel = async (): Promise<Contract> => {
 export const createTestTransferDefinition = async (): Promise<Contract> => {
   const transferDef = await new ContractFactory(HashlockTransfer.abi, HashlockTransfer.bytecode, alice).deploy();
   await transferDef.deployed();
-  return new Contract(transferDef.address, HashlockTransfer.abi, alice);
+  return transferDef;
 };
