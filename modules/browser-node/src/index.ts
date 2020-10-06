@@ -44,7 +44,7 @@ export class BrowserNode implements IServerNodeService {
       }),
     );
     const messaging = new NatsMessagingService({ messagingUrl }, log, getBearerTokenFunction(signer, authUrl));
-    const store = new BrowserStore();
+    const store = new BrowserStore(log.child({ module: "BrowserStore" }));
     const lock = new BrowserLockService();
     const chainService = new VectorChainService(store, chainJsonProviders, signer, log);
     const engine = await VectorEngine.connect(
