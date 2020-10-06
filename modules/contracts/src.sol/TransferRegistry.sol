@@ -37,7 +37,7 @@ contract TransferRegistry is ITransferRegistry {
   }
 
   // Should return all transfer defintions in registry
-  function getTransferDefinitions() external override view returns (RegisteredTransfer[] memory transfers) {
+  function getTransferDefinitions() external override view returns (RegisteredTransfer[] memory) {
     return transfers;
   }
 }
