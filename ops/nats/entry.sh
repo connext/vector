@@ -9,4 +9,4 @@ else
   echo "Using key provided by env var"
 fi
 
-exec /bin/nats-server -D
+exec /bin/nats-server -D -V

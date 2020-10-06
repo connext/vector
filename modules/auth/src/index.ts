@@ -30,6 +30,7 @@ const messagingService = new MessagingAuthService(
   config.adminToken,
 );
 
+// Used during startup to monitor whether this service is awake & responsive
 server.get("/ping", async () => {
   return "pong\n";
 });

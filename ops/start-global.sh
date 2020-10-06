@@ -132,7 +132,6 @@ then
   chain_data_2="$chain_data/$chain_id_2"
   mkdir -p $chain_data_1 $chain_data_2
 
-
   evm_image_name="${project}_ethprovider:$version";
   evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
@@ -261,7 +260,7 @@ EOF
 
 docker stack deploy -c $docker_compose $stack
 echo "The $stack stack has been deployed."
-public_auth_url="http://127.0.0.1:5040"
+public_auth_url="http://127.0.0.1:5040/ping"
 
 function abort {
   echo "====="
