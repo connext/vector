@@ -313,6 +313,12 @@ ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
+nats: $(shell find ops/nats $(find_options))
+	$(log_start)
+	docker build --file ops/nats/Dockerfile $(image_cache) --tag $(project)_nats ops/nats
+	docker tag $(project)_nats $(project)_nats:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 global-proxy: $(shell find ops/proxy $(find_options))
 	$(log_start)
 	docker build $(image_cache) --tag $(project)_global_proxy ops/proxy/global

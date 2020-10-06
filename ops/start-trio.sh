@@ -11,13 +11,13 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-####################
-# Load Config
-
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit 0;
 else echo; echo "Preparing to launch $stack stack"
 fi
+
+####################
+# Load Config
 
 node_config="`cat $root/config-node.json`"
 router_config="`cat $root/config-router.json`"

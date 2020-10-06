@@ -26,6 +26,7 @@ config-prod.json
 **/.pyEnv
 **/.rpt2_cache
 **/.test-store
+**/.tmp
 **/cache/**
 
 # Data Storage
