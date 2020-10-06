@@ -74,7 +74,6 @@ export function createTestUpdateParams<T extends UpdateType>(
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestHashlockTransferState(),
         timeout: "1",
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: { test: "meta" },
       };
       break;

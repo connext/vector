@@ -1,6 +1,5 @@
 import {
   ChainAddresses,
-  ConditionalTransferType,
   CreateTransferParams,
   DEFAULT_TRANSFER_TIMEOUT,
   EngineParams,
@@ -69,8 +68,8 @@ describe("ParamConverter", () => {
         recipient: bIsRecipient ? signerB.publicIdentifier : getRandomIdentifier(),
         recipientChainId: 1,
         recipientAssetId: mkAddress("0x1"),
-        conditionType: ConditionalTransferType.HashlockTransfer,
-        details: {
+        transferDefinition: env.chainAddresses[chainId].hashlockTransferAddress,
+        transferInitialState: {
           lockHash: getRandomBytes32(),
         },
         meta: {
@@ -104,11 +103,10 @@ describe("ParamConverter", () => {
             amount: [params.amount, "0"],
             to: [signerA.address, signerB.address],
           },
-          lockHash: params.details.lockHash,
+          lockHash: params.transferInitialState.lockHash,
           expiry: "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: {
           requireOnline: false,
           routingId: params.meta.routingId,
@@ -126,7 +124,7 @@ describe("ParamConverter", () => {
 
     it("should work for B", async () => {
       const params = generateParams();
-      params.details.timelock = "100";
+      params.transferInitialState.timelock = "100";
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
@@ -148,9 +146,9 @@ describe("ParamConverter", () => {
             amount: [params.amount, "0"],
             to: [signerB.address, signerA.address],
           },
-          lockHash: params.details.lockHash,
+          lockHash: params.transferInitialState.lockHash,
           expiry: BigNumber.from((await chainReader.getBlockNumber(chainId)).getValue()!)
-            .add(params.details.timelock)
+            .add(params.transferInitialState.timelock)
             .toString(),
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
@@ -192,9 +190,8 @@ describe("ParamConverter", () => {
     const generateParams = (): EngineParams.ResolveTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
-        conditionType: ConditionalTransferType.HashlockTransfer,
         transferId: getRandomBytes32(),
-        details: {
+        transferResolver: {
           preImage: getRandomBytes32(),
         } as HashlockTransferResolver,
         meta: {
@@ -213,7 +210,7 @@ describe("ParamConverter", () => {
         channelAddress: params.channelAddress,
         transferId: transferState.transferId,
         transferResolver: {
-          preImage: params.details.preImage,
+          preImage: params.transferResolver.preImage,
         },
         meta: {
           details: params.meta,

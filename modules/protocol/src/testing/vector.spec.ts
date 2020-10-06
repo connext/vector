@@ -30,6 +30,7 @@ import Sinon from "sinon";
 
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
+import { ChainError } from "../../../types/dist/src";
 
 describe("Vector", () => {
   let chainReader: Sinon.SinonStubbedInstance<IVectorChainReader>;
@@ -99,7 +100,7 @@ describe("Vector", () => {
       // Sinon has issues mocking out modules, we could use `proxyquire` but that
       // seems a bad choice since we use the utils within the tests
       // Instead, force a create2 failure by forcing a chainReader failure
-      chainReader.getChannelFactoryBytecode.resolves(Result.fail(new Error("fail")));
+      chainReader.getChannelFactoryBytecode.resolves(Result.fail(new ChainError(ChainError.reasons.ProviderNotFound)));
       const { details } = createTestUpdateParams(UpdateType.setup);
       const result = await vector.setup(details);
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.Create2Failed);
@@ -288,7 +289,6 @@ describe("Vector", () => {
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestHashlockTransferState(),
         timeout: "133215",
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [

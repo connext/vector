@@ -246,7 +246,17 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.create: {
-      proposedUpdate = generateCreateUpdate(state!, params as UpdateParams<"create">, signer, activeTransfers);
+      const proposedRes = await generateCreateUpdate(
+        state!,
+        params as UpdateParams<"create">,
+        signer,
+        activeTransfers,
+        chainReader,
+      );
+      if (proposedRes.isError) {
+        return Result.fail(new OutboundChannelUpdateError(proposedRes.getError()!.message as any, params, state));
+      }
+      proposedUpdate = proposedRes.getValue();
       break;
     }
     case UpdateType.resolve: {
@@ -415,14 +425,15 @@ async function generateDepositUpdate(
 }
 
 // Generates the transfer creation update based on user input
-function generateCreateUpdate(
+async function generateCreateUpdate(
   state: FullChannelState,
   params: UpdateParams<"create">,
   signer: IChannelSigner,
   transfers: CoreTransferState[],
-): ChannelUpdate<"create"> {
+  chainReader: IVectorChainReader,
+): Promise<Result<ChannelUpdate<"create">, OutboundChannelUpdateError>> {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
+    details: { assetId, transferDefinition, timeout, transferInitialState, meta },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -431,16 +442,24 @@ function generateCreateUpdate(
   // - nonce (all)
   // - merkle root
 
+  const transferEncodingRes = await chainReader.getTransferEncodings(transferDefinition, state.networkContext.chainId);
+
+  if (transferEncodingRes.isError) {
+    return Result.fail(transferEncodingRes.getError() as any);
+  }
+
+  const transferEncodings = transferEncodingRes.getValue();
+
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
-  const initialStateHash = hashTransferState(transferInitialState, encodings[0]);
+  const initialStateHash = hashTransferState(transferInitialState, transferEncodings[0]);
   const transferState: FullTransferState = {
     initialBalance: transferInitialState.balance,
     assetId,
     transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
     channelAddress: state.channelAddress,
     transferDefinition,
-    transferEncodings: encodings,
+    transferEncodings,
     transferTimeout: timeout,
     initialStateHash,
     transferState: transferInitialState,
@@ -475,13 +494,13 @@ function generateCreateUpdate(
       transferDefinition,
       transferTimeout: timeout,
       transferInitialState,
-      transferEncodings: encodings,
+      transferEncodings,
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
     },
   };
-  return unsigned;
+  return Result.ok(unsigned);
 }
 
 // Generates resolve update from user input params

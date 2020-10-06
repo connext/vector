@@ -32,7 +32,16 @@ export async function convertConditionalTransferParams(
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
-  const { channelAddress, amount, assetId, recipient, details, timeout, meta: providedMeta } = params;
+  const {
+    channelAddress,
+    amount,
+    assetId,
+    recipient,
+    transferInitialState,
+    transferDefinition,
+    timeout,
+    meta: providedMeta,
+  } = params;
 
   const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
   const recipientAssetId = params.recipientAssetId ?? params.assetId;
@@ -57,34 +66,6 @@ export async function convertConditionalTransferParams(
   // via the transfer params as a `recoveryAddress` variable
   // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
 
-  let transferDefinition: string | undefined;
-  let transferInitialState: HashlockTransferState;
-  let encodings: string[];
-
-  if (params.conditionType === ConditionalTransferType.HashlockTransfer) {
-    const blockNumberRes = await chainReader.getBlockNumber(channel.networkContext.chainId);
-    if (blockNumberRes.isError) {
-      return Result.fail(new InvalidTransferType(blockNumberRes.getError()!.message));
-    }
-    const blockNumber = blockNumberRes.getValue();
-    transferDefinition = chainAddresses[channel.networkContext.chainId].hashlockTransferAddress;
-    transferInitialState = {
-      balance: {
-        amount: [amount, "0"],
-        to: [signer.address, channelCounterparty],
-      },
-      lockHash: details.lockHash,
-      expiry: details.timelock
-        ? BigNumber.from(blockNumber)
-            .add(details.timelock)
-            .toString()
-        : "0",
-    };
-    encodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
-  } else {
-    return Result.fail(new InvalidTransferType(params.conditionType));
-  }
-
   return Result.ok({
     channelAddress,
     amount,
@@ -92,7 +73,6 @@ export async function convertConditionalTransferParams(
     transferDefinition: transferDefinition!,
     transferInitialState,
     timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
-    encodings,
     meta: {
       ...(baseRoutingMeta ?? {}),
       ...(providedMeta ?? {}),
@@ -104,16 +84,7 @@ export function convertResolveConditionParams(
   params: EngineParams.ResolveTransfer,
   transfer: FullTransferState,
 ): Result<ResolveTransferParams, InvalidTransferType> {
-  const { channelAddress, details, meta } = params;
-  let transferResolver: HashlockTransferResolver;
-
-  if (params.conditionType == ConditionalTransferType.HashlockTransfer) {
-    transferResolver = {
-      preImage: details.preImage,
-    };
-  } else {
-    return Result.fail(new InvalidTransferType(params.conditionType));
-  }
+  const { channelAddress, transferResolver, meta } = params;
 
   return Result.ok({
     channelAddress,
