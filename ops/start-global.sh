@@ -300,18 +300,18 @@ then
   chain_addresses_2="$chain_data_2/chain-addresses.json"
 
   echo "Waiting for evms to wake up.."
-  while true
+  while [[ ! -f "$chain_addresses_1" || ! -f "$chain_addresses_2" ]]
   do
-    if [[ ! -f "$chain_addresses_1" || ! -f "$chain_addresses_2" ]]
-    then
-      if [[ "`date +%s`" -gt "$timeout" ]]
-      then abort
-      else sleep 1
-      fi
-    else
-      break
+    if [[ "`date +%s`" -gt "$timeout" ]]
+    then abort
+    else sleep 1
     fi
   done
+
+  echo '{
+    "'$chain_id_1'":"http://evm_'$chain_id_1':8545",
+    "'$chain_id_2'":"http://evm_'$chain_id_2':8545"
+  }' > $chain_data/chain-providers.json
 
   cat $chain_data_1/address-book.json $chain_data_2/address-book.json \
     | jq -s '.[0] * .[1]' \
@@ -320,11 +320,6 @@ then
   cat $chain_addresses_1 $chain_addresses_2 \
     | jq -s '.[0] * .[1]' \
     > $chain_data/chain-addresses.json
-
-  echo '{
-    "'$chain_id_1'":"http://evm_'$chain_id_1':8545",
-    "'$chain_id_2'":"http://evm_'$chain_id_2':8545"
-  }' > $chain_data/chain-providers.json
 fi
 
 echo "Good Morning!"
