@@ -36,6 +36,7 @@ chain_providers="`getConfig chainProviders`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
+mnemonic="`getConfig mnemonic`"
 
 if [[ "$production" == "true" ]]
 then VECTOR_ENV="prod"
@@ -79,18 +80,25 @@ if [[ \
 then
   bash $root/ops/start-global.sh
   mnemonic_secret=""
-  eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+  eth_mnemonic="${mnemonic:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
   eth_mnemonic_file=""
   chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
   config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 else
   echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
-  mnemonic_secret="${project}_${stack}_mnemonic"
-  eth_mnemonic=""
-  eth_mnemonic_file="/run/secrets/$mnemonic_secret"
-  if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
-  then bash $root/ops/save-secret.sh $mnemonic_secret
+  if [[ -n "$mnemonic" ]]
+  then
+    mnemonic_secret=""
+    eth_mnemonic="$mnemonic"
+    eth_mnemonic_file=""
+  else
+    mnemonic_secret="${project}_${stack}_mnemonic"
+    eth_mnemonic=""
+    eth_mnemonic_file="/run/secrets/$mnemonic_secret"
+    if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
+    then bash $root/ops/save-secret.sh $mnemonic_secret
+    fi
   fi
 fi
 

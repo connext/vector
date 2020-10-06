@@ -178,6 +178,11 @@ test-server-node: node
 watch-server-node: engine
 	bash ops/test-server-node.sh watch
 
+test-browser-node: browser-node-bundle
+	bash ops/test-unit.sh browser-node test
+watch-browser-node: browser-node-bundle
+	bash ops/test-unit.sh browser-node watch
+
 test-router: router
 	bash ops/test-unit.sh router test
 watch-router: engine
