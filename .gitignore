@@ -33,6 +33,8 @@ config-prod.json
 **/.bot-store/
 **/.chaindata
 **/.db-snapshots
+modules/server-node/connext-store.db
+modules/server-node/migrations/migrate.lock
 
 # Docs
 modules/client/docs
@@ -66,5 +68,3 @@ cypress/videos
 
 # Local address book
 address-book.json
-modules/server-node/connext-store.db
-modules/server-node/migrations/migrate.lock

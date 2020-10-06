@@ -137,6 +137,30 @@ then
   evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
   bash $root/ops/pull-images.sh "$evm_image_name" > /dev/null
+
+  evm_services="evm_$chain_id_1:
+    $common
+    $evm_image
+    environment:
+      MNEMONIC: '$mnemonic'
+      CHAIN_ID: '$chain_id_1'
+    ports:
+      - '$evm_port_1:8545'
+    volumes:
+      - '$chain_data_1:/data'
+
+  evm_$chain_id_2:
+    $common
+    $evm_image
+    environment:
+      MNEMONIC: '$mnemonic'
+      CHAIN_ID: '$chain_id_2'
+    ports:
+      - '$evm_port_2:8545'
+    volumes:
+      - '$chain_data_2:/data'"
+else
+  evm_services=""
 fi
 
 ####################
@@ -231,27 +255,7 @@ services:
     deploy:
       mode: global
 
-  evm_$chain_id_1:
-    $common
-    $evm_image
-    environment:
-      MNEMONIC: '$mnemonic'
-      CHAIN_ID: '$chain_id_1'
-    ports:
-      - '$evm_port_1:8545'
-    volumes:
-      - '$chain_data_1:/data'
-
-  evm_$chain_id_2:
-    $common
-    $evm_image
-    environment:
-      MNEMONIC: '$mnemonic'
-      CHAIN_ID: '$chain_id_2'
-    ports:
-      - '$evm_port_2:8545'
-    volumes:
-      - '$chain_data_2:/data'
+  $evm_services
 
 EOF
 
@@ -290,34 +294,37 @@ do
   fi
 done
 
-chain_addresses_1="$chain_data_1/chain-addresses.json"
-chain_addresses_2="$chain_data_2/chain-addresses.json"
+if [[ "$production" != "true" ]]
+then
+  chain_addresses_1="$chain_data_1/chain-addresses.json"
+  chain_addresses_2="$chain_data_2/chain-addresses.json"
 
-echo "Waiting for evms to wake up.."
-while true
-do
-  if [[ ! -f "$chain_addresses_1" || ! -f "$chain_addresses_2" ]]
-  then
-    if [[ "`date +%s`" -gt "$timeout" ]]
-    then abort
-    else sleep 1
+  echo "Waiting for evms to wake up.."
+  while true
+  do
+    if [[ ! -f "$chain_addresses_1" || ! -f "$chain_addresses_2" ]]
+    then
+      if [[ "`date +%s`" -gt "$timeout" ]]
+      then abort
+      else sleep 1
+      fi
+    else
+      break
     fi
-  else
-    break
-  fi
-done
+  done
 
-cat $chain_data_1/address-book.json $chain_data_2/address-book.json \
-  | jq -s '.[0] * .[1]' \
-  > $chain_data/address-book.json
+  cat $chain_data_1/address-book.json $chain_data_2/address-book.json \
+    | jq -s '.[0] * .[1]' \
+    > $chain_data/address-book.json
 
-cat $chain_addresses_1 $chain_addresses_2 \
-  | jq -s '.[0] * .[1]' \
-  > $chain_data/chain-addresses.json
+  cat $chain_addresses_1 $chain_addresses_2 \
+    | jq -s '.[0] * .[1]' \
+    > $chain_data/chain-addresses.json
 
-echo '{
-  "'$chain_id_1'":"http://evm_'$chain_id_1':8545",
-  "'$chain_id_2'":"http://evm_'$chain_id_2':8545"
-}' > $chain_data/chain-providers.json
+  echo '{
+    "'$chain_id_1'":"http://evm_'$chain_id_1':8545",
+    "'$chain_id_2'":"http://evm_'$chain_id_2':8545"
+  }' > $chain_data/chain-providers.json
+fi
 
 echo "Good Morning!"

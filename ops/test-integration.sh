@@ -32,7 +32,7 @@ common="$interactive $stack_env \
   --env=VECTOR_BOB_URL=http://bob:8000 \
   --env=VECTOR_CAROL_URL=http://carol:8000 \
   --env=VECTOR_CHAIN_PROVIDERS=`cat $root/.chaindata/chain-providers.json | tr -d ' \n'` \
-  --env=VECTOR_CONTRACT_ADDRESSES=`cat $root/.chaindata/address-book.json | tr -d ' \n'` \
+  --env=VECTOR_CHAIN_ADDRESSES=`cat $root/.chaindata/chain-addresses.json | tr -d ' \n'` \
   --env=VECTOR_DAVE_URL=http://dave:8000 \
   --env=VECTOR_ENV=${ENV:-dev} \
   --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error} \

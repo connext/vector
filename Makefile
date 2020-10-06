@@ -35,7 +35,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 
 default: router
 
-global: auth ethprovider global-proxy
+global: auth ethprovider global-proxy nats
 node: global database node-proxy server-node
 router: node router-img router-proxy
 duet: global node
@@ -120,7 +120,7 @@ reset: stop-all
 	rm -rf *.docker-compose.yml
 
 reset-images:
-	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node
+	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node .flags/nats
 
 purge: clean reset
 
