@@ -19,12 +19,54 @@ export class EthereumChainReader implements IVectorChainReader {
     public readonly log: pino.BaseLogger = pino(),
   ) {}
 
-  async getTransferEncodings(
+  async getTransferStateEncoding(
     transferDefinition: string,
     chainId: number,
     bytecode?: string,
-  ): Promise<Result<string[], ChainError>> {
-    throw new Error("Method not implemented");
+  ): Promise<Result<string, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    const def = new Contract(transferDefinition, ChannelFactory.abi, provider);
+    if (bytecode) {
+      const evm = this.tryEvm(def.interface.encodeFunctionData("stateEncoding"), bytecode);
+      if (!evm.isError) {
+        const decoded = def.interface.decodeFunctionResult("stateEncoding", evm.getValue()!)[0];
+        return Result.ok(decoded);
+      }
+    }
+    try {
+      const encoding = await def.stateEncoding();
+      return Result.ok(encoding);
+    } catch (e) {
+      return Result.fail(new ChainError(e.message));
+    }
+  }
+
+  async getTransferResolverEncoding(
+    transferDefinition: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<string, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    const def = new Contract(transferDefinition, ChannelFactory.abi, provider);
+    if (bytecode) {
+      const evm = this.tryEvm(def.interface.encodeFunctionData("resolverEncoding"), bytecode);
+      if (!evm.isError) {
+        const decoded = def.interface.decodeFunctionResult("resolverEncoding", evm.getValue()!)[0];
+        return Result.ok(decoded);
+      }
+    }
+    try {
+      const encoding = await def.resolverEncoding();
+      return Result.ok(encoding);
+    } catch (e) {
+      return Result.fail(new ChainError(e.message));
+    }
   }
 
   async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
@@ -140,16 +182,18 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
     const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
-    const contract = new Contract(transfer.transferId, TransferDefinition.abi, provider);
+    const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
     if (bytecode) {
-      try {
-        const data = contract.interface.encodeFunctionData("create", [encodedState]);
-        const output = execEvmBytecode(bytecode, data);
-        return Result.ok(contract.interface.decodeFunctionResult("create", output)[0]);
-      } catch (e) {
-        this.log.debug({ error: e.message }, `Failed to create with pure-evm`);
+      const evmRes = this.tryEvm(contract.interface.encodeFunctionData("create", [encodedState]), bytecode);
+      if (!evmRes.isError) {
+        const decoded = contract.interface.decodeFunctionResult("create", evmRes.getValue()!)[0];
+        return Result.ok(decoded);
       }
     }
+    this.log.debug(
+      { transferDefinition: transfer.transferDefinition, transferId: transfer.transferId },
+      "Calling create onchain",
+    );
     try {
       const valid = await contract.create(encodedState);
       return Result.ok(valid);
@@ -178,18 +222,19 @@ export class EthereumChainReader implements IVectorChainReader {
     // Use pure-evm if possible
     const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
     if (bytecode) {
-      try {
-        const data = contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]);
-        const output = execEvmBytecode(bytecode, data);
-        const ret = contract.interface.decodeFunctionResult("resolve", output)[0];
-        return Result.ok({
-          to: ret.to,
-          amount: ret.amount,
-        });
-      } catch (e) {
-        this.log.debug({ error: e.message }, `Failed to resolve with pure-evm`);
+      const evmRes = this.tryEvm(
+        contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]),
+        bytecode,
+      );
+      if (!evmRes.isError) {
+        const decoded = contract.interface.decodeFunctionResult("resolve", evmRes.getValue()!)[0];
+        return Result.ok(decoded);
       }
     }
+    this.log.debug(
+      { transferDefinition: transfer.transferDefinition, transferId: transfer.transferId },
+      "Calling resolve onchain",
+    );
     try {
       const ret = await contract.resolve(encodedState, encodedResolver);
       return Result.ok({
@@ -243,6 +288,16 @@ export class EthereumChainReader implements IVectorChainReader {
       const blockNumber = await provider.getBlockNumber();
       return Result.ok(blockNumber);
     } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {
+    try {
+      const output = execEvmBytecode(bytecode, encodedFunctionData);
+      return Result.ok(output);
+    } catch (e) {
+      this.log.debug({ error: e.message }, `Pure-evm failed`);
       return Result.fail(e);
     }
   }

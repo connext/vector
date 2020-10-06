@@ -81,11 +81,17 @@ export interface IVectorChainReader {
     chainId: number,
   ): Promise<Result<string, ChainError>>;
 
-  getTransferEncodings(
+  getTransferStateEncoding(
     transferDefinition: string,
     chainId: number,
     bytecode?: string,
-  ): Promise<Result<string[], ChainError>>;
+  ): Promise<Result<string, ChainError>>;
+
+  getTransferResolverEncoding(
+    transferDefinition: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<string, ChainError>>;
 
   create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>>;
 

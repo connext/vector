@@ -1,7 +1,7 @@
 import { expect } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
-import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
+import { ChannelMastercopy, ChannelFactory, VectorChannel, HashlockTransfer } from "../artifacts";
 
 import { alice, bob, provider } from "./constants";
 
@@ -31,4 +31,10 @@ export const createTestChannel = async (): Promise<Contract> => {
   const channelAddress = await doneBeingCreated;
   expect(channelAddress).to.be.a("string");
   return new Contract(channelAddress, VectorChannel.abi, alice);
+};
+
+export const createTestTransferDefinition = async (): Promise<Contract> => {
+  const transferDef = await new ContractFactory(HashlockTransfer.abi, HashlockTransfer.bytecode, alice).deploy();
+  await transferDef.deployed();
+  return new Contract(transferDef.address, HashlockTransfer.abi, alice);
 };

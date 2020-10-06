@@ -3,7 +3,14 @@ import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "ethers";
 import pino from "pino";
 
-import { alice, bob, createTestChannel, createTestChannelFactory, provider } from "../tests";
+import {
+  alice,
+  bob,
+  createTestChannel,
+  createTestChannelFactory,
+  createTestTransferDefinition,
+  provider,
+} from "../tests";
 
 import { EthereumChainReader } from "./ethReader";
 
@@ -15,8 +22,10 @@ describe("EthereumChainReader", () => {
   let chainReader: EthereumChainReader;
   let channel: Contract;
   let factory: Contract;
+  let definition: Contract;
 
   beforeEach(async () => {
+    definition = await createTestTransferDefinition();
     factory = await createTestChannelFactory();
     channel = await createTestChannel();
     chainId = (await provider.getNetwork()).chainId;
@@ -24,74 +33,64 @@ describe("EthereumChainReader", () => {
   });
 
   it("getChannelOnchainBalance", async () => {
-    const balance = (await chainReader.getChannelOnchainBalance(
-      channel.address,
-      chainId,
-      assetId,
-    )).getValue();
+    const balance = (await chainReader.getChannelOnchainBalance(channel.address, chainId, assetId)).getValue();
     expect(balance).to.equal(Zero);
   });
 
-
   it("getTotalDepositedA", async () => {
-    const res = (await chainReader.getTotalDepositedA(
-      channel.address,
-      chainId,
-      assetId,
-    )).getValue();
+    const res = (await chainReader.getTotalDepositedA(channel.address, chainId, assetId)).getValue();
     expect(res).to.be.ok;
   });
 
   it("getTotalDepositedB", async () => {
-    const res = (await chainReader.getTotalDepositedB(
-      channel.address,
-      chainId,
-      assetId,
-    )).getValue();
+    const res = (await chainReader.getTotalDepositedB(channel.address, chainId, assetId)).getValue();
     expect(res).to.be.ok;
   });
 
   it("getChannelFactoryBytecode", async () => {
-    const res = (await chainReader.getChannelFactoryBytecode(
-      factory.address,
-      chainId,
-    )).getValue();
+    const res = (await chainReader.getChannelFactoryBytecode(factory.address, chainId)).getValue();
     expect(res).to.be.ok;
   });
 
   it("getChannelAddress", async () => {
-    const res = (await chainReader.getChannelAddress(
-      alice.address,
-      bob.address,
-      factory.address,
-      chainId,
-    )).getValue();
+    const res = (await chainReader.getChannelAddress(alice.address, bob.address, factory.address, chainId)).getValue();
     expect(res).to.be.ok;
   });
 
+  it("getStateEncoding", async () => {
+    const res = (await chainReader.getTransferStateEncoding(definition.address, chainId)).getValue();
+    expect(res).to.be.eq(await definition.stateEncoding());
+  });
+
+  it("getResolverEncoding", async () => {
+    const res = (await chainReader.getTransferResolverEncoding(definition.address, chainId)).getValue();
+    expect(res).to.be.eq(await definition.resolverEncoding());
+  });
+
   it.skip("create", async () => {
-    const res = (await chainReader.create(
-      transfer,
-      chainId,
-      // bytecode?: string,
-    )).getValue();
+    const res = (
+      await chainReader.create(
+        transfer,
+        chainId,
+        // bytecode?: string,
+      )
+    ).getValue();
     expect(res).to.be.ok;
   });
 
   it.skip("resolve", async () => {
-    const res = (await chainReader.resolve(
-      transfer,
-      chainId,
-      // bytecode?: string,
-    )).getValue();
+    const res = (
+      await chainReader.resolve(
+        transfer,
+        chainId,
+        // bytecode?: string,
+      )
+    ).getValue();
     expect(res).to.be.ok;
   });
 
   it("getCode", async () => {
-    const res = (await chainReader.getCode(
-      channel.address,
-      chainId,
-    )).getValue();
+    const res = (await chainReader.getCode(channel.address, chainId)).getValue();
     expect(res).to.be.ok;
   });
 });
