@@ -26,6 +26,15 @@ contract Withdraw is ITransferDefinition {
     bytes responderSignature;
   }
 
+  function stateEncoding() external override pure returns (string memory) {
+    return
+      "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
+  }
+
+  function resolverEncoding() external override pure returns (string memory) {
+    return "tuple(bytes responderSignature)";
+  }
+
   function create(bytes calldata encodedState) external override pure returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
 

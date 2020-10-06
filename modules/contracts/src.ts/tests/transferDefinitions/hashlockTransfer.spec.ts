@@ -83,6 +83,13 @@ describe("HashlockTransfer", () => {
     expect(definition.address).to.be.a("string");
   });
 
+  it("should get encodings", async () => {
+    expect(await definition.stateEncoding()).to.be.eq(
+      "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes32 lockHash, uint256 expiry)",
+    );
+    expect(await definition.resolverEncoding()).to.be.eq("tuple(bytes32 preImage)");
+  });
+
   describe("Create", () => {
     it("should create successfully", async () => {
       const preImage = getRandomBytes32();

@@ -20,6 +20,14 @@ contract HashlockTransfer is ITransferDefinition {
     bytes32 preImage;
   }
 
+  function stateEncoding() external override pure returns (string memory) {
+    return "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes32 lockHash, uint256 expiry)";
+  }
+
+  function resolverEncoding() external override pure returns (string memory) {
+    return "tuple(bytes32 preImage)";
+  }
+
   function create(bytes calldata encodedState) external override view returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
 
