@@ -45,6 +45,7 @@ export const migrate = async (wallet: Wallet, addressBookPath: string, silent = 
 
   const mastercopy = await deployHelper("ChannelMastercopy", []);
   await deployHelper("ChannelFactory", [{ name: "mastercopy", value: mastercopy.address }]);
+  await deployHelper("TransferRegistry", []);
 
   // Transfers
   await deployHelper("HashlockTransfer", []);

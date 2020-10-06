@@ -26,13 +26,19 @@ contract Withdraw is ITransferDefinition {
     bytes responderSignature;
   }
 
-  function stateEncoding() external override pure returns (string memory) {
-    return
-      "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
-  }
+  string StateEncoding = "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
 
-  function resolverEncoding() external override pure returns (string memory) {
-    return "tuple(bytes responderSignature)";
+  string ResolverEncoding = "tuple(bytes responderSignature)";
+
+  string Name = "Withdraw";
+
+  function getRegistryInformation() external override view returns (RegisteredTransfer memory) {
+    RegisteredTransfer memory info;
+    info.name = Name;
+    info.stateEncoding = StateEncoding;
+    info.resolverEncoding = ResolverEncoding;
+    info.definition = address(this);
+    return info;
   }
 
   function create(bytes calldata encodedState) external override pure returns (bool) {

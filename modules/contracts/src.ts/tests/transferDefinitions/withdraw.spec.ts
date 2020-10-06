@@ -77,13 +77,6 @@ describe("Withdraw", () => {
     expect(definition.address).to.be.a("string");
   });
 
-  it("should get encodings", async () => {
-    expect(await definition.stateEncoding()).to.be.eq(
-      "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)",
-    );
-    expect(await definition.resolverEncoding()).to.be.eq("tuple(bytes responderSignature)");
-  });
-
   describe("Create", () => {
     it("should create successfully", async () => {
       const data = getRandomBytes32();
