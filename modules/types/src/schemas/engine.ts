@@ -12,7 +12,7 @@ import {
   TChainId,
   TIntegerString,
   TransferResolverSchema,
-  TransferStateSchema,
+  TransferNameSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -70,8 +70,8 @@ const CreateConditionalTransferParamsSchema = Type.Object({
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
   meta: TBasicMeta,
-  transferDefinition: TAddress, // TODO: name?
-  transferInitialState: TransferStateSchema, // what to do for transfers? state or partial state?
+  type: Type.Union([TransferNameSchema, TAddress]),
+  details: Type.Any(), // initial state w.o balance object
 });
 
 // Resolve conditional transfer engine params

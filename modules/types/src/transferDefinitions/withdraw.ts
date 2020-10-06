@@ -1,5 +1,9 @@
 import { Balance } from "../channel";
 import { SignatureString, Address, Bytes32 } from "../basic";
+import { tidy } from "../utils";
+import { BalanceEncoding } from "../contracts";
+
+export const WithdrawName = "Withdraw";
 
 export type WithdrawState = {
   balance: Balance;
@@ -14,6 +18,20 @@ export type WithdrawState = {
 export type WithdrawResolver = {
   responderSignature: SignatureString;
 };
+
+export const WithdrawStateEncoding = tidy(`tuple(
+    ${BalanceEncoding} balance,
+    bytes initiatorSignature,
+    address initiator,
+    address responder,
+    bytes32 data,
+    uint256 nonce,
+    uint256 fee
+  )`);
+
+export const WithdrawResolverEncoding = tidy(`tuple(
+    bytes responderSignature
+  )`);
 
 export type WithdrawCommitmentJson = {
   aliceSignature?: string;

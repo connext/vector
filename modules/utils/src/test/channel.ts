@@ -152,6 +152,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
             to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
           },
           lockHash: mkBytes32("0xlockHash"),
+          expiry: "0",
         },
         transferTimeout: "0",
       };

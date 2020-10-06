@@ -1,6 +1,7 @@
 import { TStringLiteral, Type } from "@sinclair/typebox";
 
 import { UpdateType } from "../channel";
+import { TransferNames, TransferStateMap } from "../transferDefinitions";
 
 ////////////////////////////////////////
 //////// Shared object/string types
@@ -43,25 +44,16 @@ export const TNetworkContext = Type.Intersect([
 
 ////////////////////////////////////////
 //////// Transfer types
-
-// Withdraw transfer pattern types
-export const WithdrawTransferStateSchema = Type.Object({
-  balance: TBalance,
-  initiatorSignature: TSignature,
-  initiator: TAddress,
-  responder: TAddress,
-  data: TBytes32,
-  nonce: TIntegerString,
-  fee: TIntegerString,
-});
-export const WithdrawTransferResolverSchema = Type.Object({
-  responderSignature: TSignature,
-});
-
-// Shared transfer pattern types
-export const TransferStateSchema = Type.Union([Type.Any(), WithdrawTransferStateSchema]);
-export const TransferResolverSchema = Type.Union([Type.Any(), WithdrawTransferResolverSchema]);
+// NOTE: The schemas of the transfer states could be validated using the
+// schema validation, however, it is validated using the onchain `create`
+// and updated using `resolve` at the protocol layer, so there is no real
+// risk to not validating these using the schema validation. Instead,
+// use relaxed schema validation for all transfer types to make it easier
+// to support generic transfer types (since no schemas have to be updated)
+export const TransferStateSchema = Type.Intersect([Type.Any(), Type.Object({ balance: TBalance })]);
+export const TransferResolverSchema = Type.Any();
 export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
+export const TransferNameSchema = Type.String();
 
 export const TFullTransferState = Type.Object({
   initialBalance: TBalance,
