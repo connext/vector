@@ -37,7 +37,6 @@ describe("messaging", () => {
       getBearerTokenFunction(signerB, config.authUrl),
     );
 
-    console.log("trying to connect messaging service");
     await messagingA.connect();
     await messagingB.connect();
   });

@@ -6,6 +6,7 @@ import { Argv } from "yargs";
 import { artifacts } from "../artifacts";
 import { cliOpts, ConstructorArgs } from "../constants";
 import { getAddressBook, isContractDeployed, deployContract } from "../utils";
+import { registerTransfer } from "./registerTransfer";
 
 const { formatEther } = utils;
 
@@ -45,10 +46,16 @@ export const migrate = async (wallet: Wallet, addressBookPath: string, silent = 
 
   const mastercopy = await deployHelper("ChannelMastercopy", []);
   await deployHelper("ChannelFactory", [{ name: "mastercopy", value: mastercopy.address }]);
+  await deployHelper("TransferRegistry", []);
 
   // Transfers
   await deployHelper("HashlockTransfer", []);
   await deployHelper("Withdraw", []);
+
+  // Register default transfers
+  log("\nRegistering Withdraw and HashlockTransfer");
+  await registerTransfer("Withdraw", wallet, addressBookPath, silent);
+  await registerTransfer("HashlockTransfer", wallet, addressBookPath, silent);
 
   ////////////////////////////////////////
   // Print summary

@@ -1,14 +1,10 @@
 import { BigNumber } from "@connext/types";
 import {
   Balance,
-  HashlockTransferState,
   TransferState,
   CoreTransferState,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
-  HashlockTransferResolverEncoding,
-  HashlockTransferStateEncoding,
-  TransferName,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
@@ -23,7 +19,7 @@ export type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; asse
 
 export const createTestHashlockTransferState = (
   overrides: PartialTransferOverrides & { lockHash?: string; expiry?: string } = {},
-): HashlockTransferState => {
+): TransferState => {
   const { balance: balanceOverrides, ...defaultOverrides } = overrides;
   return {
     balance: {
@@ -74,11 +70,15 @@ type TestHashlockTransferOptions = {
 } & CoreTransferState;
 export function createTestFullHashlockTransferState(
   overrides: Partial<TestHashlockTransferOptions> = {},
-): FullTransferState<typeof TransferName.HashlockTransfer> {
+): FullTransferState {
   // get overrides/defaults values
   const { balance, assetId, preImage, expiry, meta, ...core } = overrides;
 
-  const transferEncodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
+  // Taken from onchain defs
+  const transferEncodings = [
+    "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes32 lockHash, uint256 expiry)",
+    "tuple(bytes32 preImage)",
+  ];
   const transferResolver = { preImage: preImage ?? getRandomBytes32() };
   const transferState = createTestHashlockTransferState({
     lockHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),

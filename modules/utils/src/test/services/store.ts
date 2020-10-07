@@ -120,7 +120,7 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve(this.transfers.get(transferId));
   }
 
-  getTransfersByRoutingId(routingId: string): Promise<FullTransferState<any>[]> {
+  getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
     throw new Error("Method not implemented.");
   }
 

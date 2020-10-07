@@ -64,10 +64,23 @@ then
   done
   echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
 
+  if [[ -f "$chain_data/chain-addresses.json" ]]
+  then
+    echo "Chain addresses valid, see fixme in test-unit.sh"
+    CHAIN_ADDRESSES="`cat "$chain_data/chain-addresses.json"`"
+  else
+    CHAIN_ADDRESSES="{}"
+  fi
+
   CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
   config="`echo "$config" '{"chainProviders":'$CHAIN_PROVIDERS'}' | jq -s '.[0] + .[1]'`"
 
-  CHAIN_ADDRESSES="`cat $chain_data/chain-addresses.json`"
+
+  # FIXME: assigning chain addresses here fails if the addresses have
+  # already been created (meaning repeatedly running unit tests will fail).
+  # Assigning them in the IF statement above will always work. 
+  # That's really weird, and above by bash paygrade
+  # CHAIN_ADDRESSES="`cat "$chain_data/chain-addresses.json"`"
   config="`echo "$config" '{"chainAddresses":'$CHAIN_ADDRESSES'}' | jq -s '.[0] + .[1]'`"
 
 else

@@ -93,7 +93,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   async saveChannelState(
     channelState: FullChannelState<any>,
     commitment: ChannelCommitmentData,
-    transfer?: FullTransferState<any>,
+    transfer?: FullTransferState,
   ): Promise<void> {
     await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
       await this.db.channels.put(channelState);
@@ -145,23 +145,23 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     };
   }
 
-  async getActiveTransfers(channelAddress: string): Promise<FullTransferState<any>[]> {
+  async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
     const collection = this.db.transfers.where("resolveUpdateNonce").equals(0);
     const transfers = await collection.toArray();
     return transfers.map(storedTransferToTransferState);
   }
 
-  async getTransferState(transferId: string): Promise<FullTransferState<any> | undefined> {
+  async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
     const transfer = await this.db.transfers.get(transferId);
     return transfer ? storedTransferToTransferState(transfer) : undefined;
   }
 
-  async getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState<any> | undefined> {
+  async getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
     const transfer = await this.db.transfers.get({ channelAddress, routingId });
     return transfer ? storedTransferToTransferState(transfer) : undefined;
   }
 
-  async getTransfersByRoutingId(routingId: string): Promise<FullTransferState<any>[]> {
+  async getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
     const transfers = this.db.transfers.where({ routingId });
     const ret = await transfers.toArray();
     return ret.map(storedTransferToTransferState);

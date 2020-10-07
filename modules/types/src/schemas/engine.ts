@@ -3,16 +3,16 @@
 import { Static, TStringLiteral, Type } from "@sinclair/typebox";
 
 import { ChannelRpcMethod, ChannelRpcMethods } from "../vectorProvider";
-import { TransferName } from "../transferDefinitions";
 
 import {
-  HashlockTransferResolverSchema,
   TBasicMeta,
   TAddress,
   TBytes32,
   TPublicIdentifier,
   TChainId,
   TIntegerString,
+  TransferResolverSchema,
+  TransferNameSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -61,7 +61,7 @@ const DepositEngineParamsSchema = Type.Object({
 });
 
 // Create conditional transfer engine params
-const BasicConditionalTransferParamsSchema = Type.Object({
+const CreateConditionalTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   amount: TIntegerString,
   assetId: TAddress,
@@ -70,42 +70,17 @@ const BasicConditionalTransferParamsSchema = Type.Object({
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
   meta: TBasicMeta,
+  type: Type.String(), // Type.Union([TransferNameSchema, TAddress]),
+  details: Type.Any(), // initial state w.o balance object
 });
-
-const HashlockTransferCreateDetailsSchema = Type.Object({
-  conditionType: Type.Literal(TransferName.HashlockTransfer),
-  details: Type.Object({
-    lockHash: TBytes32,
-    timelock: Type.Optional(TIntegerString),
-  }),
-});
-
-const CreateHashlockTransferParamsSchema = Type.Intersect([
-  BasicConditionalTransferParamsSchema,
-  HashlockTransferCreateDetailsSchema,
-]);
-// TODO: resolves to any, revisit when we have more conditional transfers
-// const ConditionalTransferParamsSchema = Type.Union([HashlockTransferParamsSchema]);
 
 // Resolve conditional transfer engine params
-const BasicResolveTransferParamsSchema = Type.Object({
+const ResolveTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
   meta: TBasicMeta,
+  transferResolver: TransferResolverSchema,
 });
-
-const HashlockTransferResolveDetailsSchema = Type.Object({
-  conditionType: Type.Literal(TransferName.HashlockTransfer),
-  details: HashlockTransferResolverSchema,
-});
-
-const ResolveHashlockTransferParamsSchema = Type.Intersect([
-  BasicResolveTransferParamsSchema,
-  HashlockTransferResolveDetailsSchema,
-]);
-
-// // TODO: resolves to any, revisit when we have more conditional transfers
-// const ResolveTransferParamsSchema = Type.Union([ResolveHashlockTransferParamsSchema]);
 
 // Withdraw engine params
 const WithdrawParamsSchema = Type.Object({
@@ -156,13 +131,11 @@ export namespace EngineParams {
   export const DepositSchema = DepositEngineParamsSchema;
   export type Deposit = Static<typeof DepositEngineParamsSchema>;
 
-  // TODO: see note re: grouping transfer typings
-  export const ConditionalTransferSchema = CreateHashlockTransferParamsSchema;
-  export type ConditionalTransfer = Static<typeof CreateHashlockTransferParamsSchema>;
+  export const ConditionalTransferSchema = CreateConditionalTransferParamsSchema;
+  export type ConditionalTransfer = Static<typeof CreateConditionalTransferParamsSchema>;
 
-  // TODO: see note re: grouping transfer typings
-  export const ResolveTransferSchema = ResolveHashlockTransferParamsSchema;
-  export type ResolveTransfer = Static<typeof ResolveHashlockTransferParamsSchema>;
+  export const ResolveTransferSchema = ResolveTransferParamsSchema;
+  export type ResolveTransfer = Static<typeof ResolveTransferParamsSchema>;
 
   export const WithdrawSchema = WithdrawParamsSchema;
   export type Withdraw = Static<typeof WithdrawSchema>;

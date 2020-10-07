@@ -51,3 +51,10 @@ struct TransferDispute {
   bytes32 transferStateHash;
   bool isDefunded;
 }
+
+struct RegisteredTransfer {
+  string name;
+  address definition;
+  string stateEncoding;
+  string resolverEncoding;
+}
