@@ -8,17 +8,16 @@ import {
   UpdateType,
   ResolveTransferParams,
   TransferResolver,
-  HashlockTransferStateEncoding,
-  HashlockTransferResolverEncoding,
 } from "@connext/vector-types";
 import {
   createlockHash,
   createTestHashlockTransferState,
   getRandomBytes32,
   hashTransferState,
+  encodeTransferResolver,
   expect,
 } from "@connext/vector-utils";
-import { BigNumberish, constants } from "ethers";
+import { BigNumberish, constants, utils } from "ethers";
 
 import { env } from "../env";
 import { chainId } from "../constants";
@@ -53,9 +52,6 @@ export const createTransfer = async (
     assetId,
   };
 
-  const stateEncoding = HashlockTransferStateEncoding;
-  const resolverEncoding = HashlockTransferResolverEncoding;
-
   const ret = await payor.create(params);
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
@@ -68,14 +64,21 @@ export const createTransfer = async (
     assetId,
     channelAddress,
     transferId,
-    initialStateHash: hashTransferState(transferInitialState, stateEncoding),
     transferDefinition: params.transferDefinition,
     channelFactoryAddress: channel.networkContext.channelFactoryAddress,
     chainId,
-    transferEncodings: [stateEncoding, resolverEncoding],
     transferState: params.transferInitialState,
     meta: params.meta,
   });
+
+  // Ensure the encodings work
+  const hash = hashTransferState(transferInitialState, transfer!.transferEncodings[0]);
+  const encoding = encodeTransferResolver({ preImage }, transfer!.transferEncodings[1]);
+
+  expect(transfer!.initialStateHash).to.be.eq(hash);
+  const decoded = utils.defaultAbiCoder.decode([transfer!.transferEncodings[1]], encoding)[0];
+  expect(decoded.preImage).to.be.deep.eq(preImage);
+  expect(transfer!.transferEncodings.length).to.be.eq(2);
 
   return {
     channel,

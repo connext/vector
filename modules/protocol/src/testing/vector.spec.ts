@@ -110,7 +110,7 @@ describe("Vector", () => {
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
         channelMastercopyAddress: mkAddress("0x444"),
-        withdrawAddress: mkAddress("0xdef"),
+        transferRegistryAddress: mkAddress("0xdef"),
       };
       const validParams = {
         counterpartyIdentifier: mkPublicIdentifier(),
@@ -142,6 +142,22 @@ describe("Vector", () => {
           params: {
             ...validParams,
             networkContext: { ...validParams.networkContext, channelMastercopyAddress: "fail" },
+          },
+          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
+        },
+        {
+          name: "should fail if there is no transferRegistryAddress",
+          params: {
+            ...validParams,
+            networkContext: { ...validParams.networkContext, transferRegistryAddress: undefined },
+          },
+          error: "should have required property 'transferRegistryAddress'",
+        },
+        {
+          name: "should fail if there is an invalid transferRegistryAddress",
+          params: {
+            ...validParams,
+            networkContext: { ...validParams.networkContext, transferRegistryAddress: "fail" },
           },
           error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
@@ -409,7 +425,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferResolver is undefined",
           params: { ...validParams, transferResolver: undefined },
-          error: "should have required property 'transferResolver'",
+          error: "should have required property '.transferResolver'",
         },
       ];
 
