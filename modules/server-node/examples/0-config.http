@@ -1,7 +1,7 @@
 @aliceUrl = http://localhost:8003
 @bobUrl = http://localhost:8004
 @rogerUrl = http://localhost:8000
-@aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+@aliceBobChannel = 0x71804AfF6Ab73CC4507bA0E0F500e52349C0f2de
 @aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
 @bobRogerChannel = 0x927c6026c3b8130251f528ef0CAFfab4fae57402
 @adminToken = cxt1234
@@ -16,15 +16,15 @@ GET {{aliceUrl}}/config
 
 ##############
 ### GET CHANNELS
-GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}
+GET {{aliceUrl}}/channel
 
 ##############
 ### GET CHANNEL
-GET {{aliceUrl}}/channel/{{aliceBobChannel}}/{{alicePublicIdentifier}}
+GET {{aliceUrl}}/channel/{{aliceBobChannel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS
-GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}/{{alicePublicIdentifier}}
+GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
 
 ##############
 ### CLEAR STORE

@@ -26,7 +26,7 @@ describe("messaging", () => {
         messagingUrl: config.natsUrl,
       },
       logger.child({ module: "MessagingA", pubId: signerA.publicIdentifier }),
-      getBearerTokenFunction(signerA),
+      getBearerTokenFunction(signerA, config.authUrl),
     );
 
     messagingB = new NatsMessagingService(
@@ -34,9 +34,10 @@ describe("messaging", () => {
         messagingUrl: config.natsUrl,
       },
       logger.child({ module: "MessagingB", pubId: signerB.publicIdentifier }),
-      getBearerTokenFunction(signerB),
+      getBearerTokenFunction(signerB, config.authUrl),
     );
 
+    console.log("trying to connect messaging service");
     await messagingA.connect();
     await messagingB.connect();
   });

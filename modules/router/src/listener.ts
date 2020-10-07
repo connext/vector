@@ -1,20 +1,29 @@
-import { EngineEvents, RouterSchemas } from "@connext/vector-types";
-import { IServerNodeService } from "@connext/vector-utils";
+import { EngineEvents, RouterSchemas, INodeService } from "@connext/vector-types";
 import Ajv from "ajv";
+import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
+import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
 import { IRouterStore } from "./services/store";
 
 const ajv = new Ajv();
 
-export async function setupListeners(node: IServerNodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
+export type ChainJsonProviders = {
+  [k: string]: providers.JsonRpcProvider;
+};
+const chainProviders: ChainJsonProviders = Object.entries(config.chainProviders).reduce((acc, [chainId, url]) => {
+  acc[chainId] = new providers.JsonRpcProvider(url);
+  return acc;
+}, {} as ChainJsonProviders);
+
+export async function setupListeners(node: INodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
   await node.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async data => {
-      const res = await forwardTransferCreation(data, node, store, logger);
+      const res = await forwardTransferCreation(data, node, store, logger, chainProviders);
       if (res.isError) {
         return logger.error(
           { method: "forwardTransferCreation", error: res.getError()?.message, context: res.getError()?.context },

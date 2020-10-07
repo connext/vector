@@ -8,14 +8,16 @@ import {
   RouterSchemas,
   ServerNodeParams,
   TRANSFER_DECREMENT,
+  INodeService,
+  NodeError,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
-import { IServerNodeService, ServerNodeError } from "@connext/vector-utils";
 
 import { getSwappedAmount } from "./services/swap";
 import { getRebalanceProfile } from "./services/rebalance";
 import { IRouterStore } from "./services/store";
+import { ChainJsonProviders } from "./listener";
 
 export class ForwardTransferError extends VectorError {
   readonly type = VectorError.errors.RouterError;
@@ -57,9 +59,10 @@ export class ForwardResolutionError extends VectorError {
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
-  node: IServerNodeService,
+  node: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
+  chainProviders: ChainJsonProviders,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.info(
@@ -204,7 +207,17 @@ export async function forwardTransferCreation(
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
-    const depositRes = await node.deposit({
+    const provider = chainProviders[recipientChainId];
+    if (!provider) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+          message: "Provider not found",
+          context: { recipientChainId },
+        }),
+      );
+    }
+
+    const depositRes = await node.sendDepositTx({
       chainId: recipientChainId,
       channelAddress: recipientChannel.channelAddress,
       assetId: recipientAssetId,
@@ -220,6 +233,23 @@ export async function forwardTransferCreation(
         }),
       );
     }
+
+    const receipt = await provider.waitForTransaction(depositRes.getValue().txHash);
+    logger.info({ method, txHash: receipt.transactionHash, logs: receipt.logs }, "Deposit transaction mined");
+
+    const reconciled = await node.reconcileDeposit({
+      channelAddress: recipientChannel.channelAddress,
+      assetId: recipientAssetId,
+    });
+    if (reconciled.isError) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+          message: reconciled.getError()?.message,
+          context: reconciled.getError()?.context,
+        }),
+      );
+    }
+
     // TODO we'll need to check for a failed deposit here too.
 
     // TODO what do we do here about concurrent deposits? Do we want to set a lock?
@@ -249,7 +279,7 @@ export async function forwardTransferCreation(
     conditionType,
   });
   if (transfer.isError) {
-    if (!requireOnline && transfer.getError()?.message === ServerNodeError.reasons.Timeout) {
+    if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
       // store transfer
       const type = "TransferCreation";
       await store.queueUpdate(type, {
@@ -272,7 +302,7 @@ export async function forwardTransferCreation(
 
 export async function forwardTransferResolution(
   data: ConditionalTransferResolvedPayload,
-  node: IServerNodeService,
+  node: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<undefined | ServerNodeResponses.ResolveTransfer, ForwardResolutionError>> {
@@ -339,7 +369,7 @@ export async function forwardTransferResolution(
   return Result.ok(resolution.getValue());
 }
 
-export async function handleIsAlive(data: any, node: IServerNodeService, store: IRouterStore) {
+export async function handleIsAlive(data: any, node: INodeService, store: IRouterStore) {
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   // const updates = await store.getQueuedUpdates(data.channelAdress);
   // updates.forEach(async update => {

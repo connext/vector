@@ -178,6 +178,11 @@ test-server-node: node
 watch-server-node: engine
 	bash ops/test-server-node.sh watch
 
+test-browser-node: browser-node-bundle
+	bash ops/test-unit.sh browser-node test
+watch-browser-node: browser-node-bundle
+	bash ops/test-unit.sh browser-node watch
+
 test-router: router
 	bash ops/test-unit.sh router test
 watch-router: engine
@@ -260,9 +265,14 @@ auth: auth-bundle $(shell find modules/auth/ops $(find_options))
 	docker tag $(project)_auth $(project)_auth:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-browser-node-bundle: engine $(shell find modules/browser-node $(find_options))
+browser-node: engine $(shell find modules/browser-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+browser-node-test-ui: engine $(shell find modules/browser-node-test-ui $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/browser-node-test-ui && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 server-node-bundle: engine $(shell find modules/server-node $(find_options))

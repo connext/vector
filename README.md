@@ -81,32 +81,60 @@ For any of these stacks, you can manage them with:
 - `make restart-${stack}` stops the stack if it's running & starts it again
 - `make test-${stack}` runs unit tests against some stack. It will build & start the stack if that hasn't been done already.
 
-## Configuration API
+## Configuration Layout
 
 The `node` and `router` stacks are configurable via the `config-node.json` and `config-router.json` files respectively. Note that the `duet` and `trio` stacks are designed exclusively for development/testing so these are not configurable.
 
 There is an additional `config-prod.json` file that can apply to either the node or router but not both. The `config-prod.json` file contains your domain name and, because it's _not_ tracked by git, it's a good place to put overrides for secret values like API keys. A prod-mode deployment using a domain name w https must be exposed on port 443, therefore only a single prod-mode stack can run on a given machine at a time.
 
-The formats of `config-node.json` and `config-router.json` overlap almost entirely because the router stack also contains a `node` internally. They are separated to allow you to run & separately configure both a node & a router on the same machine.
+### Node Configuration API
 
-### Configuration API
+`config-node.json` contains the default configuration for the `node` stack: `make start-node`.
+
+Any of these values can be overwritten by providing the same key with a new value to `config-prod.json`.
+
+**Node Config Keys:**
 
 - `adminToken` (type: `string`): Currently, this is only used during development to protect a few admin endpoints eg to reset the database between tests. If/when we add admin-only features in prod, they will only be accessible to those who provide the correct adminToken.
-- `allowedSwaps` (type: `object`): Specifies which swaps are allowed & how swap rates are determined.
 - `authUrl` (type: `string`): The url used to authenticate with the messaging service (TODO: merge this with the nats url?)
-- `awsAccessId` (type: `string`): An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups
-- `awsAccessKey` (type: `string`): An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.
-- `production` (type: `boolean`): Enables prod-mode if true.
-  - Dev-mode ops are designed to automatically build anything that isn't available locally before starting up a given stack.
-  - Prod-mode ops are designed to build nothing. Any required docker images will be pulled from docker-hub. Prod-mode is optimized for keeping your machine's disk clean & free from unnecessary build artifacts.
-- `logLevel` (type: `string`): one of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.
 - `chainAddresses` (type: `object`): Specifies the addresses of all relevant contracts, keyed by `chainId`.
 - `chainProviders` (type: `object`): Specifies the URL to use to connect to each chain's provider, keyed by `chainId`
-- `domainName` (type: `string`): If provided, https will be auto-configured & the stack will be exposed on port 443.
+- `logLevel` (type: `string`): one of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.
+- `mnemonic` (type: `string`): Optional. If provided, the node will use this mnemonic. If not provided, the node will use a hard coded mnemonic with testnet funds in dev-mode (production=false). If not provided in prod, docker secrets will be used to manage the mnemonic; this is a much safer place to store a mnemonic that eg holds mainnet funds.
 - `natsUrl` (type: `string`): The URL of the messaging service (TODO: merge with auth url?)
 - `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
 - `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
+
+### Router Configuration API
+
+`config-router.json` contains the default configuration for the `router` stack's router module. The router stack also contains a node and this node's default configuration is also pulled from `config-node.json`.
+
+The router's node can be configured by adding any of the keys in `config-node.json` to `config-router.json` (any values in `config-router.json` will take precedence). This strategy is useful if you want to run tests on a router & node stack running on the same machine.
+
+Any config values for either the router or the node can be overwritten by adding the same key with a new value to `config-prod.json`. This is a good strategy if this machine will only be running a routing node bc these prod config changes will also be applied to a `node` stack thats running on the same machine.
+
+**Router Config Keys:**
+
+- `allowedSwaps` (type: `object`): Specifies which swaps are allowed & how swap rates are determined.
+- `nodeUrl` (type: `string`): The URL of the node instance used to power the router's channels.
+- `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
 - `rebalanceProfiles` (type: `object`): Specifies the thresholds & target while collateralizing some `assetId` on some `chainId`.
+
+### Prod Configuration API
+
+Changes to `config-prod.json` aren't tracked by git so this is a good place to store secret API keys, etc.
+
+Be careful, changes to this file will be applied to both `node` & `router` stacks running on this machine.
+
+**Prod Config Keys:**
+
+- `awsAccessId` (type: `string`): An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups
+- `awsAccessKey` (type: `string`): An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.
+- `domainName` (type: `string`): If provided, https will be auto-configured & the stack will be exposed on port 443.
+- `production` (type: `boolean`): Enables prod-mode if true. Implications of this flag:
+  - if `false`, ops will automatically build anything that isn't available locally before starting up a given stack. If `true`, nothing will be built locally. Instead, all images will be pulled from docker hub.
+  - if `false`, the `global` stack will start up 2 local testnet evm.
+  - Mnemonic handling is affected, see docs for the `mnemonic` key in node config.
 
 ## Architecture and Module Breakdown
 
@@ -151,43 +179,47 @@ The above command will spin up three server-nodes, one with an attached router i
 
 Once you have the above trio set up, you can interact with your nodes via a REST interface. We've documented [example requests](https://github.com/connext/vector/tree/master/modules/server-node/examples) in the server-node module. If you're developing with VSCode, there are several REST client plugins available in the marketplace that you can use to make these queries _directly from the examples_.
 
-First, set up your channels from Alice -> Roger and Roger -> Bob (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)):
+First, set up your channels from Alice -> Roger and Roger -> Bob (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)). Note `aliceUrl` is the internal URL that Carol has access to on the Docker network. In these examples, Carol and Dave are requesting Roger to set up the channel with them so that they can be the "Bob" within the channel, which lets them deposit by transferrring directly into the channel address.:
 
 ```
-### Node -> Alice
-POST {{nodeUrl}}/setup
+### Node -> Carol
+POST {{carolUrl}}/request-setup
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{alicePublicIdentifier}}",
+  "aliceUrl": "http://roger:8000",
   "chainId": "{{chainId}}",
-  "timeout": "36000",
-  "publicIdentifier": "{{nodePublicIdentifier}}"
+  "timeout": "36000"
 }
 
-### Node -> Bob
-POST {{nodeUrl}}/setup
+### Node -> Dave
+POST {{daveUrl}}/request-setup
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{bobPublicIdentifier}}",
+  "aliceUrl": "http://roger:8000",
   "chainId": "{{chainId}}",
-  "timeout": "36000",
-  "publicIdentifier": "{{nodePublicIdentifier}}"
+  "timeout": "36000"
 }
 ```
 
-Then, send an Eth deposit to Alice's channel onchain (in [2_deposit](https://github.com/connext/vector/blob/master/modules/server-node/examples/2-deposit.http)):
+Then, send an Eth deposit to Alice's channel onchain. This can be done by connecting Metamask to your local EVM at `http://localhost:8545` and sending a transfer directly to the `channelAddress`, at any time, regardless of either channel participant's liveness status. A convenient way to do this using HTTP JSON-RPC calls is with a POST request:
 
 ```
-POST {{aliceUrl}}/send-deposit-tx
+# Send a transaction to {{channelAddress}} for 100000000000000000 Wei
+POST http://localhost:8545
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceNodeChannel}}",
-  "amount": "{{ethAmount}}",
-  "assetId": "0x0000000000000000000000000000000000000000",
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  "jsonrpc":"2.0",
+  "method":"eth_sendTransaction",
+  "params":[{
+    "from": "0x627306090abaB3A6e1400e9345bC60c78a8BEf57",
+    "to": "{{channelAddress}}",
+    "value": "0x16345785d8a0000",
+    "data": "0x0"
+  }],
+  "id":1
 }
 ```
 
@@ -199,8 +231,7 @@ Content-Type: application/json
 
 {
   "channelAddress": "{{aliceNodeChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000",
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  "assetId": "0x0000000000000000000000000000000000000000"
 }
 ```
 
@@ -222,8 +253,7 @@ Content-Type: application/json
   "recipient": "{{bobPublicIdentifier}}",
   "meta": {
     "hello": "world"
-  },
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  }
 }
 ```
 
@@ -236,8 +266,7 @@ Content-Type: application/json
 {
   "channelAddress": "{{aliceBobChannel}}",
   "routingId": "{{routingId}}",
-  "preImage": "{{preImage}}",
-  "publicIdentifier": "{{bobPublicIdentifier}}"
+  "preImage": "{{preImage}}"
 }
 ```
 
@@ -287,6 +316,11 @@ const evts = {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
     url: `${routerBase}${conditionalTransferResolvedPath}`,
   },
+  [EngineEvents.SETUP]: {},
+  [EngineEvents.WITHDRAWAL_CREATED]: {},
+  [EngineEvents.WITHDRAWAL_RESOLVED]: {},
+  [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.DEPOSIT_RECONCILED]: {},
 };
 
 const logger = pino();

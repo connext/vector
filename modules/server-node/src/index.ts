@@ -12,11 +12,14 @@ import {
   ILockService,
   IVectorEngine,
   IVectorChainService,
+  EngineEvents,
+  CreateUpdateDetails,
 } from "@connext/vector-types";
+import Axios from "axios";
+import { constructRpcRequest } from "@connext/vector-utils";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { constructRpcRequest } from "./helpers/rpc";
 import { createNode, getChainService, getNode, getNodes } from "./helpers/nodes";
 import { LockService } from "./services/lock";
 
@@ -241,28 +244,6 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
 );
 
 server.get<{ Params: ServerNodeParams.GetChannelStates }>(
-  "/channel/:publicIdentifier",
-  { schema: { response: ServerNodeResponses.GetChannelStatesSchema, params: ServerNodeParams.GetChannelStatesSchema } },
-  async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.params.publicIdentifier) {
-      engine = getNode(request.params.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-      }
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
-    try {
-      const res = await engine.request<"chan_getChannelStates">(params);
-      return reply.status(200).send(res.map(chan => chan.channelAddress));
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
-    }
-  },
-);
-
-server.get<{ Params: ServerNodeParams.GetChannelStates }>(
   "/channel",
   { schema: { response: ServerNodeResponses.GetChannelStatesSchema, params: ServerNodeParams.GetChannelStatesSchema } },
   async (request, reply) => {
@@ -297,6 +278,40 @@ server.post<{ Body: ServerNodeParams.Setup }>(
     try {
       const res = await engine.request<"chan_setup">(rpc);
       return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: ServerNodeParams.RequestSetup }>(
+  "/request-setup",
+  { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
+  async (request, reply) => {
+    let engine = defaultEngine;
+    if (request.body.bobIdentifier) {
+      engine = getNode(request.body.bobIdentifier)!;
+      if (!engine) {
+        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.bobIdentifier });
+      }
+    }
+
+    try {
+      const setupPromise = engine.waitFor(
+        EngineEvents.SETUP,
+        10_000,
+        data => data.bobIdentifier === engine.publicIdentifier && data.chainId === request.body.chainId,
+      );
+      await Axios.post(`${request.body.aliceUrl}/setup`, {
+        chainId: request.body.chainId,
+        counterpartyIdentifier: engine.publicIdentifier,
+        timeout: request.body.timeout,
+        meta: request.body.meta,
+        publicIdentifier: request.body.aliceIdentifier,
+      } as ServerNodeParams.Setup);
+      const setup = await setupPromise;
+      return reply.status(200).send({ channelAddress: setup.channelAddress } as ServerNodeResponses.RequestSetup);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -389,7 +404,8 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
       const res = await engine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
-        transferId: res.latestUpdate.details.transferId,
+        transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
+        routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
       } as ServerNodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
