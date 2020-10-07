@@ -442,32 +442,38 @@ async function generateCreateUpdate(
   // - nonce (all)
   // - merkle root
 
-  const stateEncodingRes = await chainReader.getTransferStateEncoding(transferDefinition, state.networkContext.chainId);
-  const resolverEncodingRes = await chainReader.getTransferResolverEncoding(
+  // FIXME: This will fail if the transfer registry address changes during
+  // the lifetime of the channel. We can fix this by either including the
+  // chain addresses in the protocol, putting those within the chain-
+  // reader itself, or including them in the create update params
+  // FIXME: this limitation also means we can never pass in the bytecode
+  // (which is used to execute pure-evm calls) since that exists within
+  // the chain addresses.
+  const registryRes = await chainReader.getRegisteredTransferByDefinition(
     transferDefinition,
+    state.networkContext.transferRegistryAddress,
     state.networkContext.chainId,
   );
-
-  if (stateEncodingRes.isError || resolverEncodingRes.isError) {
+  if (registryRes.isError) {
     return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.EncodingRetrievalFailed, params, state, {
-        chainError: stateEncodingRes.getError()!.message + resolverEncodingRes.getError()!.message,
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotRegistered, params, state, {
+        chainError: registryRes.getError()!.message,
       }),
     );
   }
 
-  const transferEncodings = [stateEncodingRes.getValue(), resolverEncodingRes.getValue()];
+  const { stateEncoding, resolverEncoding } = registryRes.getValue()!;
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
-  const initialStateHash = hashTransferState(transferInitialState, transferEncodings[0]);
+  const initialStateHash = hashTransferState(transferInitialState, stateEncoding);
   const transferState: FullTransferState = {
     initialBalance: transferInitialState.balance,
     assetId,
     transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
     channelAddress: state.channelAddress,
     transferDefinition,
-    transferEncodings,
+    transferEncodings: [stateEncoding, resolverEncoding],
     transferTimeout: timeout,
     initialStateHash,
     transferState: transferInitialState,
@@ -502,7 +508,7 @@ async function generateCreateUpdate(
       transferDefinition,
       transferTimeout: timeout,
       transferInitialState,
-      transferEncodings,
+      transferEncodings: [stateEncoding, resolverEncoding],
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,

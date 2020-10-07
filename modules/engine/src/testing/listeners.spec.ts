@@ -1,4 +1,4 @@
-import { WithdrawCommitment, VectorChainService, TransferDefinition } from "@connext/vector-contracts";
+import { WithdrawCommitment, VectorChainService } from "@connext/vector-contracts";
 import {
   Address,
   ChainAddresses,
@@ -15,7 +15,8 @@ import {
   WithdrawResolver,
   WithdrawState,
   WITHDRAWAL_RESOLVED_EVENT,
-  JsonRpcProvider,
+  WithdrawStateEncoding,
+  WithdrawResolverEncoding,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -32,7 +33,7 @@ import {
   mkHash,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
-import { BigNumber, Contract, utils } from "ethers";
+import { BigNumber, utils } from "ethers";
 import { Evt } from "evt";
 import Sinon from "sinon";
 
@@ -49,13 +50,12 @@ const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   // Get env constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-  const withdrawAddress = env.chainAddresses[chainId].withdrawAddress;
+  const withdrawAddress = mkAddress("0xdefff");
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawAddress,
       channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
+      transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
   };
 
@@ -149,13 +149,8 @@ describe(testName, () => {
         nonce: commitment.nonce,
         fee: fee.toString(),
       };
-      const definition = new Contract(
-        chainAddresses[chainId].withdrawAddress!,
-        TransferDefinition.abi,
-        new JsonRpcProvider(env.chainProviders[chainId]),
-      );
-      const stateEncoding = await definition.stateEncoding();
-      const resolverEncoding = await definition.resolverEncoding();
+      const stateEncoding = WithdrawStateEncoding;
+      const resolverEncoding = WithdrawResolverEncoding;
       const initialStateHash = hashTransferState(initialState, stateEncoding);
 
       // Generate transfer
@@ -209,7 +204,6 @@ describe(testName, () => {
         },
         assetIds: [commitment.assetId],
         networkContext: {
-          withdrawAddress,
           chainId,
         },
       });
@@ -329,7 +323,6 @@ describe(testName, () => {
         },
         assetIds: [commitment.assetId],
         networkContext: {
-          withdrawAddress,
           chainId,
         },
       });

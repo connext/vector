@@ -57,7 +57,6 @@ then
 
   while [[ ! -f "$chain_data/chain-addresses.json" ]]
   do
-    echo "COULD NOT FIND CHAIN-ADDRESSES";
     if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
     then echo "$ethprovider_host was not able to start up successfully" && exit 1
     else sleep 1

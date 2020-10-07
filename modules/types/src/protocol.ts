@@ -21,7 +21,7 @@ export interface IVectorProtocol {
   on<T extends ProtocolEventName>(
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
-    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
+    filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean | Promise<boolean>,
   ): void;
   once<T extends ProtocolEventName>(
     event: T,

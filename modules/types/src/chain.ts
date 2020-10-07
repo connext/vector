@@ -3,6 +3,8 @@ import { BigNumber, BigNumberish, providers } from "ethers";
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { Result, Values, VectorError } from "./error";
+import { ChainProviders } from "./network";
+import { RegisteredTransfer, TransferName } from "./transferDefinitions";
 
 export const ERC20Abi = [
   // Read-Only Functions
@@ -30,6 +32,7 @@ export class ChainError extends VectorError {
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
     FailedToSendTx: "Failed to send transaction to chain",
+    TransferNotRegistered: "Transfer not in registry",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -81,17 +84,21 @@ export interface IVectorChainReader {
     chainId: number,
   ): Promise<Result<string, ChainError>>;
 
-  getTransferStateEncoding(
-    transferDefinition: string,
+  getRegisteredTransferByName(
+    name: TransferName,
+    transferRegistry: string,
     chainId: number,
     bytecode?: string,
-  ): Promise<Result<string, ChainError>>;
+  ): Promise<Result<RegisteredTransfer, ChainError>>;
 
-  getTransferResolverEncoding(
-    transferDefinition: string,
+  getRegisteredTransferByDefinition(
+    definition: Address,
+    transferRegistry: string,
     chainId: number,
     bytecode?: string,
-  ): Promise<Result<string, ChainError>>;
+  ): Promise<Result<RegisteredTransfer, ChainError>>;
+
+  getChainProviders(): Result<ChainProviders, ChainError>;
 
   create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>>;
 

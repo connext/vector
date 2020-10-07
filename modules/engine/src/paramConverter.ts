@@ -12,26 +12,22 @@ import {
   IChannelSigner,
   ChainAddresses,
   RouterSchemas,
+  TransferNames,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
+import { getTransferNameFromType } from "./utils";
 
 export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
   signer: IChannelSigner,
   channel: FullChannelState,
+  chainAddresses: ChainAddresses,
+  chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
-  const {
-    channelAddress,
-    amount,
-    assetId,
-    recipient,
-    transferInitialState,
-    transferDefinition,
-    timeout,
-    meta: providedMeta,
-  } = params;
+  const { channelAddress, amount, assetId, recipient, details, type, timeout, meta: providedMeta } = params;
 
   const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
   const recipientAssetId = params.recipientAssetId ?? params.assetId;
@@ -56,11 +52,39 @@ export async function convertConditionalTransferParams(
   // via the transfer params as a `recoveryAddress` variable
   // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
 
+  const name = getTransferNameFromType(type, chainAddresses[channel.networkContext.chainId]);
+  if (name.isError) {
+    return Result.fail(name.getError()!);
+  }
+
+  // If the transfer name is withdraw, then it should not be
+  // treated as a conditional transfer
+  if (name.getValue() === TransferNames.Withdraw) {
+    return Result.fail(new InvalidTransferType(name.getValue()));
+  }
+
+  // Get the transfer information from the chain reader
+  const registryRes = await chainReader.getRegisteredTransferByName(
+    name.getValue(),
+    chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
+    channel.networkContext.chainId,
+  );
+  if (registryRes.isError) {
+    return Result.fail(new InvalidTransferType(registryRes.getError()!.message));
+  }
+  const { definition } = registryRes.getValue()!;
+
+  // Construct initial state
+  const transferInitialState = {
+    ...details,
+    balance: { to: [signer.address, channelCounterparty], amount: [amount.toString(), "0"] },
+  };
+
   return Result.ok({
     channelAddress,
     amount,
     assetId,
-    transferDefinition: transferDefinition!,
+    transferDefinition: definition,
     transferInitialState,
     timeout: timeout || DEFAULT_TRANSFER_TIMEOUT.toString(),
     meta: {
@@ -89,6 +113,7 @@ export async function convertWithdrawParams(
   signer: IChannelSigner,
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
+  chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
   const { channelAddress, assetId, recipient, fee } = params;
 
@@ -128,11 +153,22 @@ export async function convertWithdrawParams(
     fee: fee ? fee : "0",
   };
 
+  // Get the transfer information from the chain reader
+  const registryRes = await chainReader.getRegisteredTransferByName(
+    TransferNames.Withdraw,
+    chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
+    channel.networkContext.chainId,
+  );
+  if (registryRes.isError) {
+    return Result.fail(new InvalidTransferType(registryRes.getError()!.message));
+  }
+  const { definition } = registryRes.getValue()!;
+
   return Result.ok({
     channelAddress,
     amount,
     assetId,
-    transferDefinition: chainAddresses[channel.networkContext.chainId].withdrawAddress!,
+    transferDefinition: definition,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.

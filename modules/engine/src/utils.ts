@@ -11,8 +11,13 @@ import {
   WITHDRAWAL_CREATED_EVENT,
   WITHDRAWAL_RESOLVED_EVENT,
   WITHDRAWAL_RECONCILED_EVENT,
+  ContractAddresses,
+  Result,
+  TransferName,
 } from "@connext/vector-types";
 import { Evt } from "evt";
+
+import { InvalidTransferType } from "./errors";
 
 import { EngineEvtContainer } from "./index";
 
@@ -25,4 +30,17 @@ export const getEngineEvtContainer = (): EngineEvtContainer => {
     [WITHDRAWAL_RESOLVED_EVENT]: Evt.create<WithdrawalResolvedPayload>(),
     [WITHDRAWAL_RECONCILED_EVENT]: Evt.create<WithdrawalReconciledPayload>(),
   };
+};
+
+export const getTransferNameFromType = (
+  type: string,
+  context: ContractAddresses,
+): Result<TransferName, InvalidTransferType> => {
+  const entry = Object.entries(context).find(([name, value]) => {
+    return type === name || type === value;
+  });
+  if (!entry) {
+    return Result.fail(new InvalidTransferType(type));
+  }
+  return Result.ok(entry[0] as TransferName);
 };

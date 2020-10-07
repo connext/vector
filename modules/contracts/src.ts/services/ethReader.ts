@@ -1,10 +1,21 @@
 import * as evm from "@connext/pure-evm-wasm";
-import { Balance, ERC20Abi, FullTransferState, IVectorChainReader, Result, ChainError } from "@connext/vector-types";
+import { Address } from "@connext/types";
+import {
+  Balance,
+  ERC20Abi,
+  FullTransferState,
+  IVectorChainReader,
+  Result,
+  ChainError,
+  ChainProviders,
+  RegisteredTransfer,
+  TransferName,
+} from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import pino from "pino";
 
-import { ChannelFactory, ChannelMastercopy, TransferDefinition } from "../artifacts";
+import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry } from "../artifacts";
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -14,59 +25,74 @@ const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
   );
 
 export class EthereumChainReader implements IVectorChainReader {
+  private transferRegistries: Map<string, RegisteredTransfer[]> = new Map();
   constructor(
     public readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
     public readonly log: pino.BaseLogger = pino(),
   ) {}
 
-  async getTransferStateEncoding(
-    transferDefinition: string,
-    chainId: number,
-    bytecode?: string,
-  ): Promise<Result<string, ChainError>> {
-    const provider = this.chainProviders[chainId];
-    if (!provider) {
-      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
-    }
-    const def = new Contract(transferDefinition, TransferDefinition.abi, provider);
-    if (bytecode) {
-      const evm = this.tryEvm(def.interface.encodeFunctionData("stateEncoding"), bytecode);
-      if (!evm.isError) {
-        const decoded = def.interface.decodeFunctionResult("stateEncoding", evm.getValue()!)[0];
-        return Result.ok(decoded);
-      }
-    }
-    try {
-      const encoding = await def.stateEncoding();
-      return Result.ok(encoding);
-    } catch (e) {
-      return Result.fail(new ChainError(e.message));
-    }
+  getChainProviders(): Result<ChainProviders, ChainError> {
+    const ret: ChainProviders = {};
+    Object.entries(this.chainProviders).forEach(([name, value]) => {
+      ret[parseInt(name)] = value.connection.url;
+    });
+    return Result.ok(ret);
   }
 
-  async getTransferResolverEncoding(
-    transferDefinition: string,
+  async getRegisteredTransferByDefinition(
+    definition: Address,
+    transferRegistry: string,
     chainId: number,
     bytecode?: string,
-  ): Promise<Result<string, ChainError>> {
+  ): Promise<Result<RegisteredTransfer, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const def = new Contract(transferDefinition, TransferDefinition.abi, provider);
-    if (bytecode) {
-      const evm = this.tryEvm(def.interface.encodeFunctionData("resolverEncoding"), bytecode);
-      if (!evm.isError) {
-        const decoded = def.interface.decodeFunctionResult("resolverEncoding", evm.getValue()!)[0];
-        return Result.ok(decoded);
+
+    if (!this.transferRegistries.has(chainId.toString())) {
+      // Registry for chain not loaded, load into memory
+      const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+      if (loadRes.isError) {
+        return Result.fail(loadRes.getError()!);
       }
     }
-    try {
-      const encoding = await def.resolverEncoding();
-      return Result.ok(encoding);
-    } catch (e) {
-      return Result.fail(new ChainError(e.message));
+
+    const registry = this.transferRegistries.get(chainId.toString())!;
+    const info = registry.find(r => r.definition === definition);
+    if (!info) {
+      return Result.fail(
+        new ChainError(ChainError.reasons.TransferNotRegistered, { definition, transferRegistry, chainId }),
+      );
     }
+    return Result.ok(info);
+  }
+
+  async getRegisteredTransferByName(
+    name: TransferName,
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+
+    if (!this.transferRegistries.has(chainId.toString())) {
+      // Registry for chain not loaded, load into memory
+      const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+      if (loadRes.isError) {
+        return Result.fail(loadRes.getError()!);
+      }
+    }
+
+    const registry = this.transferRegistries.get(chainId.toString())!;
+    const info = registry.find(r => r.name === name);
+    if (!info) {
+      return Result.fail(new ChainError(ChainError.reasons.TransferNotRegistered, { name, transferRegistry, chainId }));
+    }
+    return Result.ok(info);
   }
 
   async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
@@ -300,5 +326,35 @@ export class EthereumChainReader implements IVectorChainReader {
       this.log.debug({ error: e.message }, `Pure-evm failed`);
       return Result.fail(e);
     }
+  }
+
+  private async loadRegistry(
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer[], ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    // Registry for chain not loaded, load into memory
+    const registry = new Contract(transferRegistry, TransferRegistry.abi, provider);
+    let registered;
+    if (bytecode) {
+      // Try with evm first
+      const evm = this.tryEvm(registry.interface.encodeFunctionData("getTransferDefinitions"), bytecode);
+
+      if (evm.isError) {
+        try {
+          registered = await registry.getTransferDefinitions();
+        } catch (e) {
+          return Result.fail(new ChainError(e.message, { chainId, transferRegistry, name }));
+        }
+      } else {
+        registered = registry.interface.decodeFunctionResult("getTransferDefinitions", evm.getValue()!)[0];
+      }
+    }
+    this.transferRegistries.set(chainId.toString(), registered);
+    return Result.ok(registered);
   }
 }

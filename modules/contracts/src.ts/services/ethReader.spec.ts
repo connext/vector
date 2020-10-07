@@ -3,14 +3,7 @@ import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "ethers";
 import pino from "pino";
 
-import {
-  alice,
-  bob,
-  createTestChannel,
-  createTestChannelFactory,
-  createTestTransferDefinition,
-  provider,
-} from "../tests";
+import { alice, bob, createTestChannel, createTestChannelFactory, provider } from "../tests";
 
 import { EthereumChainReader } from "./ethReader";
 
@@ -22,10 +15,8 @@ describe("EthereumChainReader", () => {
   let chainReader: EthereumChainReader;
   let channel: Contract;
   let factory: Contract;
-  let definition: Contract;
 
   beforeEach(async () => {
-    definition = await createTestTransferDefinition();
     factory = await createTestChannelFactory();
     channel = await createTestChannel();
     chainId = (await provider.getNetwork()).chainId;
@@ -55,16 +46,6 @@ describe("EthereumChainReader", () => {
   it("getChannelAddress", async () => {
     const res = (await chainReader.getChannelAddress(alice.address, bob.address, factory.address, chainId)).getValue();
     expect(res).to.be.ok;
-  });
-
-  it("getStateEncoding", async () => {
-    const res = (await chainReader.getTransferStateEncoding(definition.address, chainId)).getValue();
-    expect(res).to.be.eq(await definition.stateEncoding());
-  });
-
-  it("getResolverEncoding", async () => {
-    const res = (await chainReader.getTransferResolverEncoding(definition.address, chainId)).getValue();
-    expect(res).to.be.eq(await definition.resolverEncoding());
   });
 
   it.skip("create", async () => {

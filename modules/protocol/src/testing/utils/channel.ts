@@ -90,8 +90,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       providerUrl: Object.values(env.chainProviders)[0] as string,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
       channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
-      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
-      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
+      transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
   };
   const ret = await alice.setup(setupParams);

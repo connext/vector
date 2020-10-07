@@ -50,7 +50,6 @@ export class VectorEngine implements IVectorEngine {
     private readonly store: IEngineStore,
     private readonly vector: IVectorProtocol,
     private readonly chainService: IVectorChainService,
-    private readonly chainProviders: ChainProviders,
     private readonly chainAddresses: ChainAddresses,
     private readonly logger: pino.BaseLogger,
   ) {}
@@ -61,7 +60,6 @@ export class VectorEngine implements IVectorEngine {
     store: IEngineStore,
     signer: IChannelSigner,
     chainService: IVectorChainService,
-    chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
     validationService?: IExternalValidation,
@@ -81,7 +79,6 @@ export class VectorEngine implements IVectorEngine {
       store,
       vector,
       chainService,
-      chainProviders,
       chainAddresses,
       logger.child({ module: "VectorEngine" }),
     );
@@ -197,16 +194,20 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
     }
 
+    const chainProviders = this.chainService.getChainProviders();
+    if (chainProviders.isError) {
+      return Result.fail(new Error(chainProviders.getError()!.message));
+    }
+
     return this.vector.setup({
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
-        hashlockTransferAddress: this.chainAddresses[params.chainId].hashlockTransferAddress,
-        withdrawAddress: this.chainAddresses[params.chainId].withdrawAddress,
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
         channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
+        transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
         chainId: params.chainId,
-        providerUrl: this.chainProviders[params.chainId],
+        providerUrl: chainProviders.getValue()[params.chainId],
       },
     });
   }
@@ -247,7 +248,13 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
-    const createResult = await convertConditionalTransferParams(params, this.signer, channel!);
+    const createResult = await convertConditionalTransferParams(
+      params,
+      this.signer,
+      channel!,
+      this.chainAddresses,
+      this.chainService,
+    );
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }
@@ -309,7 +316,13 @@ export class VectorEngine implements IVectorEngine {
     }
 
     // First, get translated `create` params from withdraw
-    const createResult = await convertWithdrawParams(params, this.signer, channel, this.chainAddresses);
+    const createResult = await convertWithdrawParams(
+      params,
+      this.signer,
+      channel,
+      this.chainAddresses,
+      this.chainService,
+    );
     if (createResult.isError) {
       return Result.fail(createResult.getError()!);
     }

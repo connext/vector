@@ -378,9 +378,17 @@ export class Vector implements IVectorProtocol {
     event: T,
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: ProtocolEventPayloadsMap[T]) => boolean = (_payload: ProtocolEventPayloadsMap[T]) => true,
+    filter: (payload: ProtocolEventPayloadsMap[T]) => boolean | Promise<boolean> = (
+      _payload: ProtocolEventPayloadsMap[T],
+    ) => true,
   ): void {
-    this.evts[event].pipe(filter).attach(callback);
+    Evt.asyncPipe<Evt<ProtocolEventPayloadsMap[T]>, ProtocolEventPayloadsMap[T]>(
+      this.evts[event].attach(callback),
+      async payload => {
+        const valid = await filter(payload);
+        return valid ? [payload] : null;
+      },
+    );
   }
 
   public once<T extends ProtocolEventName>(

@@ -29,7 +29,7 @@ export type DepositParams = {
 };
 
 export type CreateTransferParams = {
-  channelAddress: string; // TODO: does this need to be in the details AND params?
+  channelAddress: string;
   amount: string;
   assetId: string;
   transferDefinition: string;
@@ -39,7 +39,7 @@ export type CreateTransferParams = {
 };
 
 export type ResolveTransferParams = {
-  channelAddress: string; // TODO: does this need to be in the details AND params?
+  channelAddress: string;
   transferId: string;
   transferResolver: TransferResolver;
   meta?: any;
@@ -149,8 +149,7 @@ export type ChainAddresses = {
 export type ContractAddresses = {
   channelFactoryAddress: Address;
   channelMastercopyAddress: Address;
-  withdrawAddress?: Address;
-  hashlockTransferAddress?: Address;
+  transferRegistryAddress: Address;
 };
 
 export type NetworkContext = ContractAddresses & {

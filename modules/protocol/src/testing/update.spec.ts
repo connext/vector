@@ -10,6 +10,7 @@ import {
   ChannelUpdate,
   DEFAULT_TRANSFER_TIMEOUT,
   Balance,
+  TransferNames,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -70,6 +71,7 @@ describe("applyUpdate", () => {
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     channelMastercopyAddress: mkAddress("0xcccffff333"),
+    transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };
 
   // Sample transfer (alice creating, bob recieving)
@@ -496,6 +498,7 @@ describe("generateUpdate", () => {
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     channelMastercopyAddress: mkAddress("0xbbbbccc3334"),
+    transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };
 
   // Get transfer constants
@@ -515,8 +518,13 @@ describe("generateUpdate", () => {
     store = Sinon.createStubInstance(MemoryStoreService);
     chainService = Sinon.createStubInstance(VectorChainReader);
 
-    chainService.getTransferStateEncoding.resolves(Result.ok(emptyHashlockTransfer.transferEncodings[0]));
-    chainService.getTransferResolverEncoding.resolves(Result.ok(emptyHashlockTransfer.transferEncodings[1]));
+    const transferInfo = {
+      name: TransferNames.HashlockTransfer,
+      stateEncoding: emptyHashlockTransfer.transferEncodings[0],
+      resolverEncoding: emptyHashlockTransfer.transferEncodings[1],
+      definition: emptyHashlockTransfer.transferDefinition,
+    };
+    chainService.getRegisteredTransferByDefinition.resolves(Result.ok(transferInfo));
 
     // Mock `applyUpdate` (tested above) so it always returns
     // an empty object

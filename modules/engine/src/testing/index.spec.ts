@@ -41,7 +41,6 @@ describe("VectorEngine", () => {
       storeService,
       getRandomChannelSigner(),
       Sinon.createStubInstance(VectorChainService),
-      env.chainProviders,
       chainAddresses,
       log,
     );
@@ -55,7 +54,6 @@ describe("VectorEngine", () => {
       storeService,
       getRandomChannelSigner(),
       Sinon.createStubInstance(VectorChainService),
-      env.chainProviders,
       chainAddresses,
       log,
       {

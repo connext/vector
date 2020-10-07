@@ -32,9 +32,3 @@ export const createTestChannel = async (): Promise<Contract> => {
   expect(channelAddress).to.be.a("string");
   return new Contract(channelAddress, VectorChannel.abi, alice);
 };
-
-export const createTestTransferDefinition = async (): Promise<Contract> => {
-  const transferDef = await new ContractFactory(HashlockTransfer.abi, HashlockTransfer.bytecode, alice).deploy();
-  await transferDef.deployed();
-  return transferDef;
-};
