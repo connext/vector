@@ -54,7 +54,6 @@ const store = new RouterStore();
 server.addHook("onReady", async () => {
   const node = await RestServerNodeService.connect(
     config.nodeUrl,
-    config.chainProviders,
     logger.child({ module: "RestServerNodeService" }),
     evts,
   );

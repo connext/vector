@@ -25,7 +25,9 @@ export interface INodeService {
 
   requestSetup(params: ServerNodeParams.RequestSetup): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>>;
 
-  deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, NodeError>>;
+  sendDepositTx(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.SendDepositTx, NodeError>>;
+
+  reconcileDeposit(params: ServerNodeParams.Deposit): Promise<Result<ServerNodeResponses.Deposit, NodeError>>;
 
   conditionalTransfer(
     params: ServerNodeParams.ConditionalTransfer,

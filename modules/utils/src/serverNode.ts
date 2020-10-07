@@ -10,7 +10,6 @@ import {
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
-import { providers } from "ethers";
 import { Evt } from "evt";
 import { BaseLogger } from "pino";
 
@@ -26,28 +25,20 @@ export type EventCallbackConfig = {
 export class RestServerNodeService implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
-  public chainProviders: { [chainId: string]: providers.JsonRpcProvider } = {};
 
   private constructor(
     private readonly serverNodeUrl: string,
-    private readonly providerUrls: ChainProviders,
     private readonly logger: BaseLogger,
-    private readonly index: number,
     private readonly evts?: EventCallbackConfig,
-  ) {
-    this.chainProviders = Object.fromEntries(
-      Object.entries(providerUrls).map(([chainId, url]) => [chainId, new providers.JsonRpcProvider(url)]),
-    );
-  }
+  ) {}
 
   static async connect(
     serverNodeUrl: string,
-    providerUrls: ChainProviders,
     logger: BaseLogger,
     evts?: EventCallbackConfig,
     index = 0,
   ): Promise<RestServerNodeService> {
-    const service = new RestServerNodeService(serverNodeUrl, providerUrls, logger, index, evts);
+    const service = new RestServerNodeService(serverNodeUrl, logger, evts);
     const node = await service.createNode({ index });
     if (node.isError) {
       throw node.getError();
@@ -70,13 +61,6 @@ export class RestServerNodeService implements INodeService {
       }
     }
     return service;
-  }
-
-  private assertProvider(chainId: number): providers.JsonRpcProvider {
-    if (!this.chainProviders[chainId]) {
-      throw new NodeError(NodeError.reasons.ProviderNotFound, { chainId });
-    }
-    return this.chainProviders[chainId];
   }
 
   async getConfig(): Promise<Result<ServerNodeResponses.GetConfig, NodeError>> {
@@ -152,37 +136,18 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
-    let provider: providers.JsonRpcProvider;
-    try {
-      provider = this.assertProvider(params.chainId);
-    } catch (e) {
-      return Result.fail(new NodeError(NodeError.reasons.ProviderNotFound));
-    }
-
-    const sendDepositTxRes = await this.executeHttpRequest<
-      ServerNodeParams.SendDepositTx,
-      ServerNodeResponses.SendDepositTx
-    >(
+  async sendDepositTx(
+    params: ServerNodeParams.SendDepositTx,
+  ): Promise<Result<ServerNodeResponses.SendDepositTx, NodeError>> {
+    return this.executeHttpRequest<ServerNodeParams.SendDepositTx, ServerNodeResponses.SendDepositTx>(
       "send-deposit-tx",
       "post",
       { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
       ServerNodeParams.SendDepositTxSchema,
     );
+  }
 
-    if (sendDepositTxRes.isError) {
-      return Result.fail(sendDepositTxRes.getError());
-    }
-
-    const { txHash } = sendDepositTxRes.getValue()!;
-
-    try {
-      this.logger.info({ txHash }, "Waiting for tx to be mined");
-      const receipt = await provider.waitForTransaction(txHash);
-      this.logger.info({ txHash: receipt.transactionHash }, "Tx has been mined");
-    } catch (e) {
-      return Result.fail(new NodeError(NodeError.reasons.TransactionNotMined, { txHash, params }));
-    }
+  async reconcileDeposit(params: ServerNodeParams.Deposit): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
     return this.executeHttpRequest<ServerNodeParams.Deposit, ServerNodeResponses.Deposit>(
       "deposit",
       "post",

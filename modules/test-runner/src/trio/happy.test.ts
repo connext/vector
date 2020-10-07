@@ -19,7 +19,6 @@ describe.only(testName, () => {
   before(async () => {
     carol = await RestServerNodeService.connect(
       env.carolUrl,
-      env.chainProviders,
       logger.child({ testName, name: "Carol" }),
       undefined,
       getRandomIndex(),
@@ -29,7 +28,6 @@ describe.only(testName, () => {
 
     dave = await RestServerNodeService.connect(
       env.daveUrl,
-      env.chainProviders,
       logger.child({ testName, name: "Dave" }),
       undefined,
       getRandomIndex(),
@@ -38,11 +36,7 @@ describe.only(testName, () => {
     expect(dave.publicIdentifier).to.be.a("string");
 
     // dont use random index for roger
-    roger = await RestServerNodeService.connect(
-      env.rogerUrl,
-      env.chainProviders,
-      logger.child({ testName, name: "Roger" }),
-    );
+    roger = await RestServerNodeService.connect(env.rogerUrl, logger.child({ testName, name: "Roger" }));
     expect(roger.signerAddress).to.be.a("string");
     expect(roger.publicIdentifier).to.be.a("string");
 
@@ -95,9 +89,10 @@ describe.only(testName, () => {
     let assetIdx = channel.assetIds.findIndex((_assetId: string) => _assetId === assetId);
     const carolBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
 
-    const depositRes = await carol.deposit({
-      chainId: channel.networkContext.chainId,
-      amount: depositAmt.toString(),
+    const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: depositAmt });
+    await tx.wait();
+
+    const depositRes = await carol.reconcileDeposit({
       assetId,
       channelAddress: channel.channelAddress,
     });

@@ -12,11 +12,12 @@ import {
   NodeError,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
-import { BigNumber } from "ethers";
+import { BigNumber, providers } from "ethers";
 
 import { getSwappedAmount } from "./services/swap";
 import { getRebalanceProfile } from "./services/rebalance";
 import { IRouterStore } from "./services/store";
+import { ChainJsonProviders } from "./listener";
 
 export class ForwardTransferError extends VectorError {
   readonly type = VectorError.errors.RouterError;
@@ -61,6 +62,7 @@ export async function forwardTransferCreation(
   node: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
+  chainProviders: ChainJsonProviders,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.info(
@@ -205,7 +207,17 @@ export async function forwardTransferCreation(
     // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
     // the `amount` plus the `profile.target`
 
-    const depositRes = await node.deposit({
+    const provider = chainProviders[recipientChainId];
+    if (!provider) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+          message: "Provider not found",
+          context: { recipientChainId },
+        }),
+      );
+    }
+
+    const depositRes = await node.sendDepositTx({
       chainId: recipientChainId,
       channelAddress: recipientChannel.channelAddress,
       assetId: recipientAssetId,
@@ -221,6 +233,23 @@ export async function forwardTransferCreation(
         }),
       );
     }
+
+    const receipt = await provider.waitForTransaction(depositRes.getValue().txHash);
+    logger.info({ method, txHash: receipt.transactionHash, logs: receipt.logs }, "Deposit transaction mined");
+
+    const reconciled = await node.reconcileDeposit({
+      channelAddress: recipientChannel.channelAddress,
+      assetId: recipientAssetId,
+    });
+    if (reconciled.isError) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+          message: reconciled.getError()?.message,
+          context: reconciled.getError()?.context,
+        }),
+      );
+    }
+
     // TODO we'll need to check for a failed deposit here too.
 
     // TODO what do we do here about concurrent deposits? Do we want to set a lock?

@@ -1,11 +1,22 @@
 import { EngineEvents, RouterSchemas, INodeService } from "@connext/vector-types";
 import Ajv from "ajv";
+import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
+import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
 import { IRouterStore } from "./services/store";
 
 const ajv = new Ajv();
+
+export type ChainJsonProviders = {
+  [k: string]: providers.JsonRpcProvider;
+};
+const chainProviders: ChainJsonProviders = Object.fromEntries(
+  Object.entries(config.chainProviders).map(([chainId, url]) => {
+    return [chainId, new providers.JsonRpcProvider(url)];
+  }),
+);
 
 export async function setupListeners(node: INodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
   // TODO, node should be wrapper around grpc
@@ -13,7 +24,7 @@ export async function setupListeners(node: INodeService, store: IRouterStore, lo
   await node.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async data => {
-      const res = await forwardTransferCreation(data, node, store, logger);
+      const res = await forwardTransferCreation(data, node, store, logger, chainProviders);
       if (res.isError) {
         return logger.error(
           { method: "forwardTransferCreation", error: res.getError()?.message, context: res.getError()?.context },

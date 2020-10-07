@@ -23,7 +23,6 @@ describe.skip(testName, () => {
   before(async () => {
     carol = await RestServerNodeService.connect(
       env.carolUrl,
-      env.chainProviders,
       logger.child({ testName, name: "Carl" }),
       carolEvts,
       getRandomIndex(),
@@ -33,7 +32,6 @@ describe.skip(testName, () => {
 
     dave = await RestServerNodeService.connect(
       env.daveUrl,
-      env.chainProviders,
       logger.child({ testName, name: "Dave" }),
       daveEvts,
       getRandomIndex(),
@@ -41,11 +39,7 @@ describe.skip(testName, () => {
     expect(dave.signerAddress).to.be.a("string");
     expect(dave.publicIdentifier).to.be.a("string");
 
-    roger = await RestServerNodeService.connect(
-      env.rogerUrl,
-      env.chainProviders,
-      logger.child({ testName, name: "Roger" }),
-    );
+    roger = await RestServerNodeService.connect(env.rogerUrl, logger.child({ testName, name: "Roger" }));
     expect(roger.signerAddress).to.be.a("string");
     expect(roger.publicIdentifier).to.be.a("string");
 
@@ -96,9 +90,10 @@ describe.skip(testName, () => {
       });
       const channel = channelRes.getValue()!;
 
-      const depositRes = await carol.deposit({
-        chainId: channel.networkContext.chainId,
-        amount: depositAmt.toString(),
+      const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: depositAmt });
+      await tx.wait();
+
+      const depositRes = await carol.reconcileDeposit({
         assetId,
         channelAddress: channel.channelAddress,
       });
