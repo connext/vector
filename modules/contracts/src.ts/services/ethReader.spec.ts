@@ -1,4 +1,4 @@
-import { TransferNames } from "@connext/vector-types";
+import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "ethers";
@@ -58,13 +58,20 @@ describe("EthereumChainReader", () => {
     expect(res).to.be.ok;
   });
 
-  it.only("getRegisteredTransferByName / getRegisteredTransferByDefinition", async () => {
+  it("getRegisteredTransferByName / getRegisteredTransferByDefinition", async () => {
     const byName = (
       await chainReader.getRegisteredTransferByName(TransferNames.Withdraw, transferRegistry.address, chainId)
     ).getValue();
     const chain = await transferRegistry.getTransferDefinitions();
-    console.log("chain", chain);
-    const info = chain.find((i: any) => i.name === TransferNames.Withdraw);
+    const cleaned = chain.map((r: RegisteredTransfer) => {
+      return {
+        name: r.name,
+        definition: r.definition,
+        stateEncoding: r.stateEncoding,
+        resolverEncoding: r.resolverEncoding,
+      };
+    });
+    const info = cleaned.find((i: any) => i.name === TransferNames.Withdraw);
     expect(byName).to.be.deep.eq(info);
     const byDefinition = (
       await chainReader.getRegisteredTransferByDefinition(byName.definition, transferRegistry.address, chainId)

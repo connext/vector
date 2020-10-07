@@ -1,4 +1,4 @@
-import { Balance } from "@connext/vector-types";
+import { Balance, HashlockTransferResolverEncoding, HashlockTransferStateEncoding } from "@connext/vector-types";
 import {
   getRandomAddress,
   getRandomBytes32,
@@ -55,7 +55,7 @@ describe("HashlockTransfer", () => {
   };
 
   const createTransfer = async (initialState: HashlockTransferState): Promise<boolean> => {
-    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
+    const encodedState = encodeTransferState(initialState, HashlockTransferStateEncoding);
     return definition.functions.create(encodedState);
   };
 
@@ -63,8 +63,8 @@ describe("HashlockTransfer", () => {
     initialState: HashlockTransferState,
     resolver: HashlockTransferResolver,
   ): Promise<Balance> => {
-    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
-    const encodedResolver = encodeTransferResolver(resolver, await definition.resolverEncoding());
+    const encodedState = encodeTransferState(initialState, HashlockTransferStateEncoding);
+    const encodedResolver = encodeTransferResolver(resolver, HashlockTransferResolverEncoding);
     const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };

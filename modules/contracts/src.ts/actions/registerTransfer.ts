@@ -1,3 +1,4 @@
+import { tidy } from "@connext/types";
 import { RegisteredTransfer } from "@connext/vector-types";
 import { getEthProvider } from "@connext/vector-utils";
 import { Contract, Wallet } from "ethers";
@@ -38,18 +39,24 @@ export const registerTransfer = async (
   const registered = await registry.getTransferDefinitions();
   const entry = registered.find((info: RegisteredTransfer) => info.name === transferName);
   if (entry) {
-    log(`Transfer ${transferName} already registered at ${entry.definition}, doing nothing`);
-    log("\nAll done!");
+    log(`Transfer ${transferName} already registered on ${chainId} at ${entry.definition}, doing nothing`);
     return;
   }
 
   log(`Getting registry information for ${transferName} at ${transferEntry.address}`);
   const transfer = await new Contract(transferEntry.address, TransferDefinition.abi, wallet).getRegistryInformation();
-  log(`Adding transfer to registry ${JSON.stringify(transfer)}`);
-  const response = await registry.addTransferDefinition(transfer);
+  // Sanity-check: tidy return value
+  const cleaned = {
+    name: transfer.name,
+    definition: transfer.definition,
+    resolverEncoding: tidy(transfer.resolverEncoding),
+    stateEncoding: tidy(transfer.stateEncoding),
+  };
+  log(`Adding transfer to registry ${JSON.stringify(cleaned)}`);
+  const response = await registry.addTransferDefinition(cleaned);
   log(`Added: ${response.hash}`);
   await response.wait();
-  log("\nAll done!");
+  log(`Tx mined, successfully added ${cleaned.name} on ${chainId} at ${cleaned.definition}`);
 };
 
 export const registerTransferCommand = {

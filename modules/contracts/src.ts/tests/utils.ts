@@ -59,6 +59,5 @@ export const createTestTransferRegistry = async (): Promise<Contract> => {
   const response = await deployed.addTransferDefinition(await withdraw.getRegistryInformation());
   await response.wait();
 
-  console.log("*** post-deploy", await deployed.getTransferDefinitions());
   return deployed;
 };

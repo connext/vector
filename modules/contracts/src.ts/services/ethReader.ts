@@ -1,5 +1,5 @@
 import * as evm from "@connext/pure-evm-wasm";
-import { Address } from "@connext/types";
+import { Address, tidy } from "@connext/types";
 import {
   Balance,
   ERC20Abi,
@@ -354,13 +354,19 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!registered) {
       try {
         registered = await registry.getTransferDefinitions();
-        console.log("registered", registered);
       } catch (e) {
         return Result.fail(new ChainError(e.message, { chainId, transferRegistry, name }));
       }
     }
-    console.log("setting registry on", chainId, "to", registered);
-    this.transferRegistries.set(chainId.toString(), registered);
-    return Result.ok(registered);
+    const cleaned = registered.map((r: RegisteredTransfer) => {
+      return {
+        name: r.name,
+        definition: r.definition,
+        stateEncoding: tidy(r.stateEncoding),
+        resolverEncoding: tidy(r.resolverEncoding),
+      };
+    });
+    this.transferRegistries.set(chainId.toString(), cleaned);
+    return Result.ok(cleaned);
   }
 }

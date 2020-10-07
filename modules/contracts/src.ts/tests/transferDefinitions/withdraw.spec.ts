@@ -1,4 +1,10 @@
-import { WithdrawState, WithdrawResolver, Balance } from "@connext/vector-types";
+import {
+  WithdrawState,
+  WithdrawResolver,
+  Balance,
+  WithdrawStateEncoding,
+  WithdrawResolverEncoding,
+} from "@connext/vector-types";
 import {
   getRandomAddress,
   getRandomBytes32,
@@ -45,14 +51,14 @@ describe("Withdraw", () => {
   };
 
   const createTransfer = async (initialState: WithdrawState): Promise<boolean> => {
-    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
+    const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
     const ret = (await definition.functions.create(encodedState))[0];
     return ret;
   };
 
   const resolveTransfer = async (initialState: WithdrawState, resolver: WithdrawResolver): Promise<Balance> => {
-    const encodedState = encodeTransferState(initialState, await definition.stateEncoding());
-    const encodedResolver = encodeTransferResolver(resolver, await definition.resolverEncoding());
+    const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
+    const encodedResolver = encodeTransferResolver(resolver, WithdrawResolverEncoding);
     const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };
