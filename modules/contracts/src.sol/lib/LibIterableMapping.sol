@@ -56,6 +56,7 @@ library LibIterableMapping {
     for (uint256 i = 0; i < l; i++) {
       transfers[i] = self.transfers[self.names[i]].transfer;
     }
+    return transfers;
   }
 
   function addTransferDefinition(IterableMapping storage self, RegisteredTransfer memory transfer) internal {
