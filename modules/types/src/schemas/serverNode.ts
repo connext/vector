@@ -34,6 +34,7 @@ const BasicTransferServerResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
     transferId: TBytes32,
+    routingId: Type.Optional(TBytes32),
   }),
 };
 

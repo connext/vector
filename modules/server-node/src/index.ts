@@ -13,12 +13,13 @@ import {
   IVectorEngine,
   IVectorChainService,
   EngineEvents,
+  CreateUpdateDetails,
 } from "@connext/vector-types";
 import Axios from "axios";
+import { constructRpcRequest } from "@connext/vector-utils";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { constructRpcRequest } from "./helpers/rpc";
 import { createNode, getChainService, getNode, getNodes } from "./helpers/nodes";
 import { LockService } from "./services/lock";
 
@@ -403,7 +404,8 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
       const res = await engine.request<"chan_createTransfer">(rpc);
       return reply.status(200).send({
         channelAddress: res.channelAddress,
-        transferId: res.latestUpdate.details.transferId,
+        transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
+        routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
       } as ServerNodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
