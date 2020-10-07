@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.1;
-pragma experimental "ABIEncoderV2";
+pragma experimental ABIEncoderV2;
 
 import "./interfaces/ITransferRegistry.sol";
 import "./interfaces/Types.sol";
+import "./lib/LibIterableMapping.sol";
+
 
 contract TransferRegistry is ITransferRegistry {
 
-  address owner;
+  using LibIterableMapping for LibIterableMapping.IterableMapping;
 
-  RegisteredTransfer[] transfers;
+  address immutable owner;
+
+  LibIterableMapping.IterableMapping transfers;
 
   constructor() {
     owner = msg.sender;
@@ -22,22 +26,19 @@ contract TransferRegistry is ITransferRegistry {
 
   // Should add a transfer definition to the registry
   // onlyOwner
-  function addTransferDefinition(RegisteredTransfer memory definition) external override onlyOwner returns (bool) {
-    // TODO: should make sure the definition is not already included
-    transfers.push(definition);
-    return true;
+  function addTransferDefinition(RegisteredTransfer memory definition) external override onlyOwner {
+    transfers.addTransferDefinition(definition);
   }
 
-  // Should remove a transfer definition to the registry
+  // Should remove a transfer definition from the registry
   // onlyOwner
-  function removeTransferDefinition(RegisteredTransfer memory definition) external override onlyOwner returns (bool) {
-    // TODO: should make sure the definition is included
-    // TODO: should remove transfer
-    return false;
+  function removeTransferDefinition(string memory name) external override onlyOwner {
+    transfers.removeTransferDefinition(name);
   }
 
   // Should return all transfer defintions in registry
   function getTransferDefinitions() external override view returns (RegisteredTransfer[] memory) {
-    return transfers;
+    return transfers.getTransferDefinitions();
   }
+
 }
