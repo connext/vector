@@ -1,5 +1,5 @@
-import { TransferName } from "@connext/vector-types";
-import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
+import { TransferName, INodeService } from "@connext/vector-types";
+import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
@@ -13,8 +13,8 @@ const logger = pino({ level: env.logLevel });
 const testName = "Duet Happy";
 
 describe(testName, () => {
-  let alice: IServerNodeService;
-  let bob: IServerNodeService;
+  let alice: INodeService;
+  let bob: INodeService;
 
   before(async () => {
     alice = await RestServerNodeService.connect(
@@ -43,9 +43,11 @@ describe(testName, () => {
   });
 
   it("alice & bob should setup a channel", async () => {
-    const channelRes = await alice.setup({
+    const channelRes = await bob.requestSetup({
       chainId,
-      counterpartyIdentifier: bob.publicIdentifier,
+      bobIdentifier: bob.publicIdentifier,
+      aliceUrl: env.aliceUrl,
+      aliceIdentifier: alice.publicIdentifier,
       timeout: "10000",
     });
     expect(channelRes.getError()).to.be.undefined;

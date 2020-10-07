@@ -1,9 +1,9 @@
-import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect, delay } from "@connext/vector-utils";
+import { getRandomBytes32, RestServerNodeService, expect, delay } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
-import { TransferName } from "@connext/vector-types";
+import { INodeService, TransferName } from "@connext/vector-types";
 
-import { env } from "../utils";
+import { env, getRandomIndex } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -12,15 +12,17 @@ const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 const logger = pino({ level: env.logLevel });
 const testName = "Trio Happy";
 
-describe(testName, () => {
-  let carol: IServerNodeService;
-  let dave: IServerNodeService;
-  let roger: IServerNodeService;
+describe.only(testName, () => {
+  let carol: INodeService;
+  let dave: INodeService;
+  let roger: INodeService;
   before(async () => {
     carol = await RestServerNodeService.connect(
       env.carolUrl,
       env.chainProviders,
       logger.child({ testName, name: "Carol" }),
+      undefined,
+      getRandomIndex(),
     );
     expect(carol.signerAddress).to.be.a("string");
     expect(carol.publicIdentifier).to.be.a("string");
@@ -29,10 +31,13 @@ describe(testName, () => {
       env.daveUrl,
       env.chainProviders,
       logger.child({ testName, name: "Dave" }),
+      undefined,
+      getRandomIndex(),
     );
     expect(dave.signerAddress).to.be.a("string");
     expect(dave.publicIdentifier).to.be.a("string");
 
+    // dont use random index for roger
     roger = await RestServerNodeService.connect(
       env.rogerUrl,
       env.chainProviders,
@@ -50,9 +55,11 @@ describe(testName, () => {
   });
 
   it("roger should setup channels with carol and dave", async () => {
-    let channelRes = await roger.setup({
+    let channelRes = await carol.requestSetup({
+      aliceUrl: env.rogerUrl,
+      aliceIdentifier: roger.publicIdentifier,
+      bobIdentifier: carol.publicIdentifier,
       chainId,
-      counterpartyIdentifier: carol.publicIdentifier,
       timeout: "10000",
     });
     let channel = channelRes.getValue();
@@ -61,9 +68,11 @@ describe(testName, () => {
     let rogerChannel = await roger.getStateChannel({ channelAddress: channel.channelAddress });
     expect(carolChannel.getValue()).to.deep.eq(rogerChannel.getValue());
 
-    channelRes = await roger.setup({
+    channelRes = await dave.requestSetup({
+      aliceUrl: env.rogerUrl,
+      aliceIdentifier: roger.publicIdentifier,
+      bobIdentifier: dave.publicIdentifier,
       chainId,
-      counterpartyIdentifier: dave.publicIdentifier,
       timeout: "10000",
     });
     channel = channelRes.getValue();

@@ -132,6 +132,17 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  async requestSetup(
+    params: ServerNodeParams.RequestSetup,
+  ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
+    return this.executeHttpRequest<ServerNodeParams.RequestSetup, ServerNodeResponses.RequestSetup>(
+      "request-setup",
+      "post",
+      { ...params, bobIdentifier: params.bobIdentifier ?? this.publicIdentifier },
+      ServerNodeParams.RequestSetupSchema,
+    );
+  }
+
   async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
     return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
       "setup",
