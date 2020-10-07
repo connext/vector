@@ -47,7 +47,7 @@ describe("VectorEngine", () => {
     expect(engine).to.be.instanceOf(VectorEngine);
   });
 
-  it("should connect without validation", async () => {
+  it("should connect with validation", async () => {
     const engine = await VectorEngine.connect(
       Sinon.createStubInstance(MemoryMessagingService),
       Sinon.createStubInstance(MemoryLockService),
