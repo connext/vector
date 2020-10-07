@@ -11,49 +11,56 @@ import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 
 
-/// @title Adjudicator - Dispute logic for ONE channel
+/// @title CMCAdjudicator - Dispute logic for ONE channel
 contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
+
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
   ChannelDispute private channelDispute;
-  TransferDispute private transferDispute;
+  mapping(bytes32 => TransferDispute) private transferDisputes;
 
-  function getLatestChannelDispute() public override view returns (ChannelDispute memory) {
+  modifier channelValid(CoreChannelState calldata ccs) {
+    require(
+      ccs.channelAddress == address(this) &&
+      ccs.alice == alice &&
+      ccs.bob == bob,
+      "CMCCMCAdjudicator: Mismatch between given core channel state and channel we are at"
+    );
+    _;
+  }
+
+  modifier transferValid(CoreTransferState calldata cts) {
+    require(
+      cts.channelAddress == address(this),
+      "CMCCMCAdjudicator: Mismatch between given core transfer state and channel we are at"
+    );
+    _;
+  }
+
+  function getChannelDispute() public override view returns (ChannelDispute memory) {
     return channelDispute;
   }
 
-  function getLatestTransferDispute() public override view returns (TransferDispute memory) {
-    return transferDispute;
+  function getTransferDispute(bytes32 transferId) public override view returns (TransferDispute memory) {
+    return transferDisputes[transferId];
   }
 
-  // PSEUDOCODE: Please don't delete yet!
-  // ChannelDispute memory lastDispute = channelDisputes(channelAddress)
-  // validateSignatures(signatures, participants, state);
-  // require(!inDefundPhase(lastDispute))
-  // require(state.nonce >= lastDispute.nonce)
-  // if (state.nonce == lastDispute.nonce) {
-  //     require(!inConsensusPhase(lastDispute))
-  //     channelDispute(channelAddress).consensusExpiry = block.number.add(state.timeout)
-  //     channelDispute(channelAddress).defundExpiry = block.number.add(state.timeout.mul(2))
-  // } else { -- state.nonce > lastDispute.nonce
-  //     ChannelDispute channelDispute = {
-  //         channelStateHash: hash(state),
-  //         nonce: state.nonce,
-  //         merkleRoot: state.merkleRoot,
-  //         consensusExpiry: block.number.add(state.timeout)
-  //         defundExpiry: block.number.add(state.timeout.mul(2))
-  //         assetDefunded: empty mapping
-  //      };
-  // }
-  function disputeChannel(CoreChannelState memory ccs, bytes[2] memory signatures) public override {
-    verifySignatures(ccs.alice, ccs.bob, ccs, signatures);
-    require(!inDefundPhase(), "Adjudicator disputeChannel: Not allowed in defund phase");
-    require(channelDispute.nonce <= ccs.nonce, "Adjudicator disputeChannel: New nonce smaller than stored one");
+  function disputeChannel(
+    CoreChannelState calldata ccs,
+    bytes[2] calldata signatures
+  )
+    external
+    override
+    channelValid(ccs)
+  {
+    verifySignatures(ccs, signatures);
+    require(!inDefundPhase(), "CMCAdjudicator disputeChannel: Not allowed in defund phase");
+    require(channelDispute.nonce <= ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
     if (inConsensusPhase()) {
       require(
         channelDispute.nonce < ccs.nonce,
-        "Adjudicator disputeChannel: Same nonce not allowed in consensus phase"
+        "CMCAdjudicator disputeChannel: Same nonce not allowed in consensus phase"
       );
       channelDispute.channelStateHash = hashChannelState(ccs);
       channelDispute.nonce = ccs.nonce;
@@ -74,148 +81,122 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     }
   }
 
-  // PSEUDOCODE: Please don't delete yet!
-  // require(inDefundPhase(channelDispute))
-  // require(hash(state) == channelDispute.channelStateHash)
-  // for(int i = 0, i < assetIds.length(), i++) {
-  //      require(!channelDispute.assetDefunded[assetIds[i]])
-  //      channelDispute.assetDefunded[assetIds[i]] = true
-  //      ChannelMastercopy channel = ChannelMastercopy(channelAddress)
-  //
-  //      Balance memory aBalance, bBalance; //Bad syntax here, I know
-  //      aBalance.to = state.balA.to
-  //      bBalance.to = state.balB.to
-  //
-  //      channel.transfer([aBalance, bBalance], assetIds[i]);
-  //  }
-  function defundChannel(CoreChannelState memory ccs) public override {
+  function defundChannel(
+    CoreChannelState calldata ccs
+  )
+    external
+    override
+    channelValid(ccs)
+  {
     verifySenderIsParticipant(ccs);
-    require(inDefundPhase(), "Adjudicator defundChannel: Not in defund phase");
-    require(!channelDispute.isDefunded, "Adjudicator defundChannel: channel already defunded");
+    require(inDefundPhase(), "CMCAdjudicator defundChannel: Not in defund phase");
+    require(!channelDispute.isDefunded, "CMCAdjudicator defundChannel: channel already defunded");
     channelDispute.isDefunded = true;
     require(
       hashChannelState(ccs) == channelDispute.channelStateHash,
-      "Adjudicator defundChannel: Hash of core channel state does not match stored hash"
+      "CMCAdjudicator defundChannel: Hash of core channel state does not match stored hash"
     );
     // TODO SECURITY: Beware of reentrancy
-    // TODO: keep this? offchain code has to ensure this
-    // TODO: compare against saved deposit values?
-    // for (uint256 i = 0; i < ccs.balances.length; i++) {
-    //     Balance memory balance = ccs.balances[i];
-    //     address assetId = ccs.assetIds[i];
-    //     Balance memory transfer;
-    //     transfer.to[0] = balance.to[0];
-    //     transfer.to[1] = balance.to[1];
-    //     transfer.amount[0] = balance.amount[0];
-    //     transferBalance(assetId, transfer);
-    // }
+    // TODO: offchain-ensure that all arrays have the same length:
+    // assetIds, balances, processedDepositsA, processedDepositsB
+    for (uint256 i = 0; i < ccs.assetIds.length; i++) {
+      address assetId = ccs.assetIds[i];
+      Balance memory balance = ccs.balances[i];
+      balance.amount[0] += totalDepositedA(assetId) - ccs.processedDepositsA[i];
+      balance.amount[1] += totalDepositedB(assetId) - ccs.processedDepositsB[i];
+      transferBalance(assetId, balance);
+    }
   }
 
-  // PSEUDOCODE: Please don't delete yet!
-  // require(inDefundPhase(channelDispute))
-  // require(doMerkleProof(hash(state), channelDispute.merkleRoot, state.merkleProofData))
-  // require(!inTransferDispute(transferDispute) && !afterTransferDispute(transferDispute))
-  // require(!transferDispute.isDefunded)
-  // TransferDispute transferDispute = {
-  //      transferDisputeExpiry: block.number.add(state.timeout)
-  //      transferStateHash: hash(state)
-  //      isDefunded: false
-  // }
-  function disputeTransfer(CoreTransferState memory cts, bytes32[] memory merkleProofData)
-    public
+  function disputeTransfer(
+    CoreTransferState calldata cts,
+    bytes32[] calldata merkleProofData
+  )
+    external
     override
-  // TODO: Who should be able to call this?
+    transferValid(cts)
   {
-    require(inDefundPhase(), "Adjudicator disputeTransfer: Not in defund phase");
+    verifySenderIsInitiatorOrResponder(cts);
+    require(inDefundPhase(), "CMCAdjudicator disputeTransfer: Not in defund phase");
     bytes32 transferStateHash = hashTransferState(cts);
-    verifyMerkleProof(transferStateHash, channelDispute.merkleRoot, merkleProofData);
-    require(transferDispute.transferDisputeExpiry == 0, "Adjudicator disputeTransfer: transfer already disputed");
-    // necessary?
-    require(!transferDispute.isDefunded, "Adjudicator disputeTransfer: transfer already defunded");
-    // TODO: offchain-ensure that there can't be an overflow
+    verifyMerkleProof(merkleProofData, channelDispute.merkleRoot, transferStateHash);
+    TransferDispute storage transferDispute = transferDisputes[cts.transferId];
+    require(transferDispute.transferDisputeExpiry == 0, "CMCAdjudicator disputeTransfer: transfer already disputed");
     transferDispute.transferStateHash = transferStateHash;
+    // TODO: offchain-ensure that there can't be an overflow
     transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout);
   }
 
-  // PSEUDOCODE: Please don't delete yet!
-  // require(hash(state) == transferDispute.transferStateHash)
-  // require(inTransferDispute(transferDispute) || afterTransferDispute(transferDispute))
-  // uint256[] finalBalances;
-  // if(afterTransferDispute(transferDispute)) { -- empty it with created state
-  //      finalBalances = state.balances
-  // } else // inTransferDispute(transferDispute) {
-  //      TransferState memory initialTransferState = abi.decode(encodedInitialTransferState, state.encodings[0])
-  //
-  //      require(hash(initialTransferState) == state.initialStateHash)
-  //      TransferInterface transferInterface = TransferInterface(state.transferDefinition)
-  //
-  //      encodedResolvedBalances = transferInterface.resolve(encodedInitialTransferState,encodedTransferResolver)
-  //      finalBalances = abi.decode(encodedResolvedBalances, Balances)
-  // }
-  //
-  // transferDispute.isDefunded = true;
-  // ChannelMastercopy channel = ChannelMastercopy(channelAddress)
-  // channel.transfer(finalBalances, state.assetId)
   function defundTransfer(
-    CoreTransferState memory cts,
-    bytes memory encodedInitialTransferState,
-    bytes memory encodedTransferResolver // TODO: Who should be able to call this?
-  ) public override {
+    CoreTransferState calldata cts,
+    bytes calldata encodedInitialTransferState,
+    bytes calldata encodedTransferResolver
+  )
+    external
+    override
+    transferValid(cts)
+  {
+    TransferDispute storage transferDispute = transferDisputes[cts.transferId];
     require(
       hashTransferState(cts) == transferDispute.transferStateHash,
-      "Adjudicator defundTransfer: Hash of core transfer state does not match stored hash"
+      "CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash"
     );
-    // TODO: check / simplify
-    require(transferDispute.transferDisputeExpiry != 0, "Adjudicator defundTransfer: transfer not yet disputed");
-    require(!transferDispute.isDefunded, "Adjudicator defundTransfer: transfer already defunded");
-    Balance memory finalBalance;
+    require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator defundTransfer: transfer not yet disputed");
+    require(!transferDispute.isDefunded, "CMCAdjudicator defundTransfer: transfer already defunded");
+    transferDispute.isDefunded = true;
+    Balance memory balance;
     if (block.number < transferDispute.transferDisputeExpiry) {
+      verifySenderIsResponder(cts);
       require(
         keccak256(encodedInitialTransferState) == cts.initialStateHash,
-        "Adjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
+        "CMCAdjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
       );
       ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
-      finalBalance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
+      balance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
     } else {
-      finalBalance = cts.initialBalance;
+      balance = cts.initialBalance;
     }
-    transferBalance(cts.assetId, finalBalance);
+    transferBalance(cts.assetId, balance);
   }
 
-  function verifySenderIsParticipant(CoreChannelState memory ccs) internal view {
-    require(msg.sender == ccs.alice || msg.sender == ccs.bob, "Adjudicator: msg.sender is not channel participant");
+  function verifySenderIsParticipant(CoreChannelState calldata ccs) internal view {
+    require(msg.sender == ccs.alice || msg.sender == ccs.bob, "CMCAdjudicator: msg.sender is not channel participant");
+  }
+
+  function verifySenderIsInitiatorOrResponder(CoreTransferState calldata cts) internal view {
+    require(msg.sender == cts.initiator || msg.sender == cts.responder, "CMCAdjudicator: msg.sender is neither transfer initiator nor responder");
+  }
+
+  function verifySenderIsResponder(CoreTransferState calldata cts) internal view {
+    require(msg.sender == cts.responder, "CMCAdjudicator: msg.sender is not transfer responder");
   }
 
   function verifySignatures(
-    address alice,
-    address bob,
-    CoreChannelState memory ccs,
-    bytes[2] memory signatures
+    CoreChannelState calldata ccs,
+    bytes[2] calldata signatures
   ) internal pure {
-    verifySignature(alice, ccs, signatures[0]);
-    verifySignature(bob, ccs, signatures[1]);
+    bytes32 channelStateHash = hashChannelState(ccs);
+    verifySignature(ccs.alice, channelStateHash, signatures[0]);
+    verifySignature(ccs.bob, channelStateHash, signatures[1]);
   }
 
   function verifySignature(
     address participant,
-    CoreChannelState memory ccs,
-    bytes memory signature
+    bytes32 hash,
+    bytes calldata signature
   ) internal pure {
-    // TODO WIP, check this!!
-    bytes32 generatedHash = hashChannelState(ccs);
     require(
-      participant == generatedHash.verifyChannelMessage(signature),
-      "Adjudicator: invalid signature on core channel state"
+      participant == hash.verifyChannelMessage(signature),
+      "CMCAdjudicator: invalid signature on core channel state"
     );
-    return;
   }
 
   function verifyMerkleProof(
-    bytes32 leaf,
+    bytes32[] calldata proof,
     bytes32 root,
-    bytes32[] memory proof
+    bytes32 leaf
   ) internal pure {
-    require(MerkleProof.verify(proof, root, leaf), "Adjudicator: Merkle proof verification failed");
+    require(MerkleProof.verify(proof, root, leaf), "CMCAdjudicator: Merkle proof verification failed");
   }
 
   function inConsensusPhase() internal view returns (bool) {
@@ -226,11 +207,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     return channelDispute.consensusExpiry <= block.number && block.number < channelDispute.defundExpiry;
   }
 
-  function hashChannelState(CoreChannelState memory ccs) internal pure returns (bytes32) {
+  function hashChannelState(CoreChannelState calldata ccs) internal pure returns (bytes32) {
     return keccak256(abi.encode(ccs));
   }
 
-  function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
+  function hashTransferState(CoreTransferState calldata cts) internal pure returns (bytes32) {
     return keccak256(abi.encode(cts));
   }
 

@@ -7,10 +7,11 @@ import "./Types.sol";
 
 interface ICMCAdjudicator {
 
-    function getLatestChannelDispute(
+    function getChannelDispute(
     ) external view returns (ChannelDispute memory);
 
-    function getLatestTransferDispute(
+    function getTransferDispute(
+        bytes32 transferId
     ) external view returns (TransferDispute memory);
 
     function disputeChannel(
@@ -18,11 +19,9 @@ interface ICMCAdjudicator {
         bytes[2] memory signatures
     ) external;
 
-
     function defundChannel(
         CoreChannelState memory ccs
     ) external;
-
 
     function disputeTransfer(
         CoreTransferState memory cts,
