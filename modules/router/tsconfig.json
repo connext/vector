@@ -4,7 +4,7 @@
     "module": "commonjs",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2020",
+    "target": "ES2017",
     "noImplicitAny": true,
     "moduleResolution": "node",
     "sourceMap": true,

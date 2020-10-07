@@ -12,11 +12,10 @@ const ajv = new Ajv();
 export type ChainJsonProviders = {
   [k: string]: providers.JsonRpcProvider;
 };
-const chainProviders: ChainJsonProviders = Object.fromEntries(
-  Object.entries(config.chainProviders).map(([chainId, url]) => {
-    return [chainId, new providers.JsonRpcProvider(url)];
-  }),
-);
+const chainProviders: ChainJsonProviders = Object.entries(config.chainProviders).reduce((acc, [chainId, url]) => {
+  acc[chainId] = new providers.JsonRpcProvider(url);
+  return acc;
+}, {} as ChainJsonProviders);
 
 export async function setupListeners(node: INodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
   // TODO, node should be wrapper around grpc

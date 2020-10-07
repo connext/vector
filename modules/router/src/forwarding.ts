@@ -12,7 +12,7 @@ import {
   NodeError,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
-import { BigNumber, providers } from "ethers";
+import { BigNumber } from "ethers";
 
 import { getSwappedAmount } from "./services/swap";
 import { getRebalanceProfile } from "./services/rebalance";
