@@ -53,8 +53,8 @@ struct TransferDispute {
 }
 
 struct RegisteredTransfer {
-  string resolverEncoding;
-  string stateEncoding;
-  address definition;
   string name;
+  address definition;
+  string stateEncoding;
+  string resolverEncoding;
 }
