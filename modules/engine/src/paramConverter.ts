@@ -18,7 +18,7 @@ import {
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
-import { getTransferNameFromType } from "./utils";
+import { TransferName } from "../../types/dist/src";
 
 export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
@@ -52,23 +52,18 @@ export async function convertConditionalTransferParams(
   // via the transfer params as a `recoveryAddress` variable
   // const transferStateRecipient = recipient ? getSignerAddressFromPublicIdentifier(recipient) : channelCounterparty;
 
-  const name = getTransferNameFromType(type, chainAddresses[channel.networkContext.chainId]);
-  if (name.isError) {
-    return Result.fail(name.getError()!);
-  }
-
-  // If the transfer name is withdraw, then it should not be
-  // treated as a conditional transfer
-  if (name.getValue() === TransferNames.Withdraw) {
-    return Result.fail(new InvalidTransferType(name.getValue()));
-  }
-
   // Get the transfer information from the chain reader
-  const registryRes = await chainReader.getRegisteredTransferByName(
-    name.getValue(),
-    chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
-    channel.networkContext.chainId,
-  );
+  const registryRes = !type.startsWith(`0x`)
+    ? await chainReader.getRegisteredTransferByName(
+        type as TransferName,
+        chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
+        channel.networkContext.chainId,
+      )
+    : await chainReader.getRegisteredTransferByDefinition(
+        type,
+        chainAddresses[channel.networkContext.chainId].transferRegistryAddress,
+        channel.networkContext.chainId,
+      );
   if (registryRes.isError) {
     return Result.fail(new InvalidTransferType(registryRes.getError()!.message));
   }

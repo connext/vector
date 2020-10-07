@@ -5,15 +5,12 @@ import {
   EngineParams,
   FullChannelState,
   FullTransferState,
-  HashlockTransferResolverEncoding,
   HashlockTransferState,
-  HashlockTransferStateEncoding,
   RegisteredTransfer,
   ResolveTransferParams,
   Result,
   TransferNames,
-  WithdrawResolverEncoding,
-  WithdrawStateEncoding,
+  ChainError,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -52,14 +49,14 @@ describe("ParamConverter", () => {
   };
   const withdrawRegisteredInfo: RegisteredTransfer = {
     definition: mkAddress("0xdef"),
-    resolverEncoding: WithdrawResolverEncoding,
-    stateEncoding: WithdrawStateEncoding,
-    name: TransferNames.HashlockTransfer,
+    resolverEncoding: "resolve",
+    stateEncoding: "state",
+    name: TransferNames.Withdraw,
   };
   const transferRegisteredInfo: RegisteredTransfer = {
     definition: mkAddress("0xdef"),
-    resolverEncoding: HashlockTransferResolverEncoding,
-    stateEncoding: HashlockTransferStateEncoding,
+    resolverEncoding: "resolve",
+    stateEncoding: "state",
     name: TransferNames.HashlockTransfer,
   };
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -117,6 +114,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
+        transferDefinition: transferRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -158,6 +156,7 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
+        transferDefinition: transferRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
@@ -183,6 +182,7 @@ describe("ParamConverter", () => {
     });
 
     it("should fail if invalid type", async () => {
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
@@ -196,7 +196,7 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
+      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
     });
   });
 
@@ -231,18 +231,6 @@ describe("ParamConverter", () => {
         },
       });
     });
-
-    it("should fail if invalid type", async () => {
-      const params: any = generateParams();
-      // Set incorrect type
-      params.conditionType = "FailingTest";
-      const transferState: FullTransferState = createTestFullHashlockTransferState({
-        channelAddress: params.channelAddress,
-      });
-      const ret = convertResolveConditionParams(params, transferState);
-      expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
-    });
   });
 
   describe("convertWithdrawParams", () => {
@@ -257,9 +245,9 @@ describe("ParamConverter", () => {
     };
 
     beforeEach(() => {
-      chainReader.getRegisteredTransferByName.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
+      chainReader.getRegisteredTransferByName.resolves(Result.ok<RegisteredTransfer>(withdrawRegisteredInfo));
 
-      chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
+      chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(withdrawRegisteredInfo));
     });
 
     const generateChainData = (params, channel) => {
@@ -297,6 +285,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
+        transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [
@@ -343,6 +332,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
+        transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [

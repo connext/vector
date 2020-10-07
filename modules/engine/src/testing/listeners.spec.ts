@@ -17,6 +17,8 @@ import {
   WITHDRAWAL_RESOLVED_EVENT,
   WithdrawStateEncoding,
   WithdrawResolverEncoding,
+  RegisteredTransfer,
+  TransferNames,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -65,6 +67,12 @@ describe(testName, () => {
   const messaging = {} as any;
   const container = getEngineEvtContainer();
   const withdrawTransactionHash = getRandomBytes32();
+  const withdrawRegisteredInfo: RegisteredTransfer = {
+    definition: withdrawAddress,
+    resolverEncoding: "resolve",
+    stateEncoding: "state",
+    name: TransferNames.Withdraw,
+  };
 
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
@@ -93,6 +101,7 @@ describe(testName, () => {
           wait: () => Promise.resolve({ transactionHash: withdrawTransactionHash }),
         }),
       ) as any,
+      getRegisteredTransferByName: Promise.resolve(Result.ok(withdrawRegisteredInfo)),
     });
 
     vector = Sinon.createStubInstance(Vector);
