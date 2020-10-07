@@ -1,7 +1,6 @@
 import { TStringLiteral, Type } from "@sinclair/typebox";
 
 import { UpdateType } from "../channel";
-import { TransferNames, TransferStateMap } from "../transferDefinitions";
 
 ////////////////////////////////////////
 //////// Shared object/string types

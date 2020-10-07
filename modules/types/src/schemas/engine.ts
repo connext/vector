@@ -70,7 +70,7 @@ const CreateConditionalTransferParamsSchema = Type.Object({
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
   meta: TBasicMeta,
-  type: Type.Union([TransferNameSchema, TAddress]),
+  type: Type.String(), // Type.Union([TransferNameSchema, TAddress]),
   details: Type.Any(), // initial state w.o balance object
 });
 

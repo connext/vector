@@ -267,10 +267,10 @@ export async function forwardTransferCreation(
   // `to` in the balance field
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { balance, ...details } = createdTransferState;
-  const transfer = await node.conditionalTransfer({
+  const params = {
+    channelAddress: recipientChannel.channelAddress,
     amount: recipientAmount,
     assetId: recipientAssetId,
-    channelAddress: recipientChannel.channelAddress,
     timeout: BigNumber.from(transferTimeout)
       .sub(TRANSFER_DECREMENT)
       .toString(),
@@ -282,7 +282,8 @@ export async function forwardTransferCreation(
         initiator === senderChannel.bobIdentifier ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
       ...meta,
     },
-  });
+  };
+  const transfer = await node.conditionalTransfer(params);
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
       // store transfer
@@ -299,6 +300,7 @@ export async function forwardTransferCreation(
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
         message: transfer.getError()?.message,
+        ...(transfer.getError()!.context ?? {}),
       }),
     );
   }
