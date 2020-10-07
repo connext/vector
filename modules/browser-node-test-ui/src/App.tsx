@@ -29,6 +29,7 @@ function App() {
         );
         setNode(client);
       } catch (e) {
+        console.error("Error connecting client: ", e);
         setConnectError(e.message);
       }
     };
