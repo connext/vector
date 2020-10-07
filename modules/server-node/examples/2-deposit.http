@@ -18,8 +18,7 @@ Content-Type: application/json
   "channelAddress": "{{aliceBobChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
-  "chainId": "{{chainId}}",
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  "chainId": "{{chainId}}"
 }
 
 ##############
@@ -29,6 +28,5 @@ Content-Type: application/json
 
 {
   "channelAddress": "{{aliceBobChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000",
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  "assetId": "0x0000000000000000000000000000000000000000"
 }
