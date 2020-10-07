@@ -235,14 +235,8 @@ export async function forwardTransferCreation(
 
   // Create the initial  state of the transfer by updating the
   // `to` in the balance field
-  const transferInitialState = {
-    ...createdTransferState,
-    balance: {
-      ...createdTransferState.balance,
-      // to: [node, paymentRecipient]
-      to: [node.signerAddress, getSignerAddressFromPublicIdentifier(recipientIdentifier)],
-    },
-  };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { balance, ...details } = createdTransferState;
   const transfer = await node.conditionalTransfer({
     amount: recipientAmount,
     assetId: recipientAssetId,
@@ -250,8 +244,8 @@ export async function forwardTransferCreation(
     timeout: BigNumber.from(transferTimeout)
       .sub(TRANSFER_DECREMENT)
       .toString(),
-    transferDefinition,
-    transferInitialState,
+    type: transferDefinition,
+    details,
     meta: {
       // Node is never the initiator, that is always payment sender
       senderIdentifier:
@@ -269,7 +263,7 @@ export async function forwardTransferCreation(
         assetId: recipientAssetId,
         routingId,
         transferDefinition,
-        transferInitialState,
+        details,
       });
     }
     return Result.fail(

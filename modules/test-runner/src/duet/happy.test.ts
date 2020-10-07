@@ -1,4 +1,4 @@
-import { TransferName } from "@connext/vector-types";
+import { TransferNames } from "@connext/vector-types";
 import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
@@ -143,9 +143,10 @@ describe(testName, () => {
       amount: transferAmt.toString(),
       assetId,
       channelAddress: channel.channelAddress,
-      conditionType: TransferName.HashlockTransfer,
+      type: TransferNames.HashlockTransfer,
       details: {
         lockHash,
+        expiry: "0",
       },
     });
     expect(transferRes.getError()).to.not.be.ok;
@@ -157,8 +158,7 @@ describe(testName, () => {
 
     const resolveRes = await bob.resolveTransfer({
       channelAddress: channel.channelAddress,
-      conditionType: TransferName.HashlockTransfer,
-      details: {
+      transferResolver: {
         preImage,
       },
       transferId,
@@ -188,9 +188,10 @@ describe(testName, () => {
       amount: transferAmt.toString(),
       assetId,
       channelAddress: channel.channelAddress,
-      conditionType: TransferName.HashlockTransfer,
+      type: TransferNames.HashlockTransfer,
       details: {
         lockHash,
+        expiry: "0",
       },
     });
     expect(transferRes.isError).to.not.be.ok;

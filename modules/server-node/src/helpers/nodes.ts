@@ -47,7 +47,6 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     store,
     signer,
     vectorTx,
-    config.chainProviders,
     config.chainAddresses,
     logger.child({ module: "VectorEngine" }),
   );
