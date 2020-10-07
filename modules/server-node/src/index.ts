@@ -12,7 +12,9 @@ import {
   ILockService,
   IVectorEngine,
   IVectorChainService,
+  EngineEvents,
 } from "@connext/vector-types";
+import Axios from "axios";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -275,6 +277,40 @@ server.post<{ Body: ServerNodeParams.Setup }>(
     try {
       const res = await engine.request<"chan_setup">(rpc);
       return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: ServerNodeParams.RequestSetup }>(
+  "/request-setup",
+  { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
+  async (request, reply) => {
+    let engine = defaultEngine;
+    if (request.body.bobIdentifier) {
+      engine = getNode(request.body.bobIdentifier)!;
+      if (!engine) {
+        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.bobIdentifier });
+      }
+    }
+
+    try {
+      const setupPromise = engine.waitFor(
+        EngineEvents.SETUP,
+        10_000,
+        data => data.bobIdentifier === engine.publicIdentifier && data.chainId === request.body.chainId,
+      );
+      await Axios.post(`${request.body.aliceUrl}/setup`, {
+        chainId: request.body.chainId,
+        counterpartyIdentifier: engine.publicIdentifier,
+        timeout: request.body.timeout,
+        meta: request.body.meta,
+        publicIdentifier: request.body.aliceIdentifier,
+      } as ServerNodeParams.Setup);
+      const setup = await setupPromise;
+      return reply.status(200).send({ channelAddress: setup.channelAddress } as ServerNodeResponses.RequestSetup);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

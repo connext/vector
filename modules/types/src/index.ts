@@ -11,6 +11,7 @@ export * from "./externalValidation";
 export * from "./lock";
 export * from "./messaging";
 export * from "./network";
+export * from "./node";
 export * from "./protocol";
 export * from "./rpc";
 export * from "./schemas";

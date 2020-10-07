@@ -11,6 +11,8 @@ import {
   WITHDRAWAL_CREATED_EVENT,
   WITHDRAWAL_RESOLVED_EVENT,
   WITHDRAWAL_RECONCILED_EVENT,
+  SETUP_EVENT,
+  SetupPayload,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -18,6 +20,7 @@ import { EngineEvtContainer } from "./index";
 
 export const getEngineEvtContainer = (): EngineEvtContainer => {
   return {
+    [SETUP_EVENT]: Evt.create<SetupPayload>(),
     [CONDITIONAL_TRANSFER_CREATED_EVENT]: Evt.create<ConditionalTransferCreatedPayload>(),
     [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: Evt.create<ConditionalTransferResolvedPayload>(),
     [DEPOSIT_RECONCILED_EVENT]: Evt.create<DepositReconciledPayload>(),

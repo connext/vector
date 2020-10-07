@@ -1,16 +1,12 @@
 import {
   ChainProviders,
-  ConditionalTransferCreatedPayload,
-  ConditionalTransferResolvedPayload,
   EngineEvent,
   EngineEventMap,
-  EngineEvents,
+  INodeService,
   Result,
   ServerNodeParams,
   ServerNodeResponses,
-  Values,
-  VectorError,
-  DepositReconciledPayload,
+  NodeError,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -20,81 +16,14 @@ import { BaseLogger } from "pino";
 
 const ajv = new Ajv();
 
-export interface IServerNodeService {
-  publicIdentifier: string;
-  signerAddress: string;
-  getStateChannelByParticipants(
-    params: ServerNodeParams.GetChannelStateByParticipants,
-  ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, ServerNodeError>>;
-
-  getStateChannel(
-    params: ServerNodeParams.GetChannelState,
-  ): Promise<Result<ServerNodeResponses.GetChannelState, ServerNodeError>>;
-
-  getTransferByRoutingId(
-    params: ServerNodeParams.GetTransferStateByRoutingId,
-  ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, ServerNodeError>>;
-
-  getTransfersByRoutingId(
-    params: ServerNodeParams.GetTransferStatesByRoutingId,
-  ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, ServerNodeError>>;
-
-  setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>>;
-
-  deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>>;
-
-  conditionalTransfer(
-    params: ServerNodeParams.ConditionalTransfer,
-  ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>>;
-
-  resolveTransfer(
-    params: ServerNodeParams.ResolveTransfer,
-  ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>>;
-
-  withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, ServerNodeError>>;
-
-  once<T extends EngineEvent>(
-    event: T,
-    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void>;
-
-  on<T extends EngineEvent>(
-    event: T,
-    callback: (payload: EngineEventMap[T]) => void | Promise<void>,
-    filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void>;
-
-  off<T extends EngineEvent>(event: T): Promise<void>;
-}
-
-export class ServerNodeError extends VectorError {
-  readonly type = VectorError.errors.ServerNodeError;
-
-  static readonly reasons = {
-    InternalServerError: "Failed to send request",
-    InvalidParams: "Request has invalid parameters",
-    ProviderNotFound: "Provider not available for chain",
-    Timeout: "Timeout",
-    TransactionNotMined: "Failed to wait for transaction to be mined",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof ServerNodeError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
-  ) {
-    super(message, context);
-  }
-}
-
 export type EventCallbackConfig = {
-  [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: { evt: Evt<ConditionalTransferCreatedPayload>; url: string };
-  [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: { evt: Evt<ConditionalTransferResolvedPayload>; url: string };
-  [EngineEvents.DEPOSIT_RECONCILED]: { evt: Evt<DepositReconciledPayload>; url: string };
+  [event in keyof EngineEventMap]: {
+    evt?: Evt<EngineEventMap[event]>;
+    url?: string;
+  };
 };
 
-export class RestServerNodeService implements IServerNodeService {
+export class RestServerNodeService implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
   public chainProviders: { [chainId: string]: providers.JsonRpcProvider } = {};
@@ -126,29 +55,41 @@ export class RestServerNodeService implements IServerNodeService {
 
     service.publicIdentifier = node.getValue().publicIdentifier;
     service.signerAddress = node.getValue().signerAddress;
+
+    if (evts) {
+      const urls = Object.fromEntries(
+        Object.entries(evts).map(([event, config]) => {
+          return [event, config.url];
+        }),
+      );
+      try {
+        await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${serverNodeUrl}/event/subscribe`, urls);
+        logger.info({ urls, method: "connect" }, "Engine event subscription created");
+      } catch (e) {
+        logger.error({ error: e.response?.data, urls, method: "connect" }, "Error creating subscription");
+      }
+    }
     return service;
   }
 
   private assertProvider(chainId: number): providers.JsonRpcProvider {
     if (!this.chainProviders[chainId]) {
-      throw new ServerNodeError(ServerNodeError.reasons.ProviderNotFound, { chainId });
+      throw new NodeError(NodeError.reasons.ProviderNotFound, { chainId });
     }
     return this.chainProviders[chainId];
   }
 
-  async getConfig(): Promise<Result<ServerNodeResponses.GetConfig, ServerNodeError>> {
+  async getConfig(): Promise<Result<ServerNodeResponses.GetConfig, NodeError>> {
     return this.executeHttpRequest("config", "get", {}, ServerNodeParams.GetConfigSchema);
   }
 
-  async createNode(
-    params: ServerNodeParams.CreateNode,
-  ): Promise<Result<ServerNodeResponses.CreateNode, ServerNodeError>> {
+  async createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>> {
     return this.executeHttpRequest(`node`, "post", params, ServerNodeParams.CreateNodeSchema);
   }
 
   async getStateChannel(
     params: ServerNodeParams.GetChannelState,
-  ): Promise<Result<ServerNodeResponses.GetChannelState, ServerNodeError>> {
+  ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
     return this.executeHttpRequest(
       `channel/${params.channelAddress}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
@@ -159,7 +100,7 @@ export class RestServerNodeService implements IServerNodeService {
 
   async getTransfersByRoutingId(
     params: ServerNodeParams.GetTransferStatesByRoutingId,
-  ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, ServerNodeError>> {
+  ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>> {
     return this.executeHttpRequest(
       `transfer/${params.routingId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
@@ -170,7 +111,7 @@ export class RestServerNodeService implements IServerNodeService {
 
   async getTransferByRoutingId(
     params: ServerNodeParams.GetTransferStateByRoutingId,
-  ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, ServerNodeError>> {
+  ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {
     return this.executeHttpRequest(
       `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier ??
         this.publicIdentifier}`,
@@ -182,7 +123,7 @@ export class RestServerNodeService implements IServerNodeService {
 
   async getStateChannelByParticipants(
     params: ServerNodeParams.GetChannelStateByParticipants,
-  ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, ServerNodeError>> {
+  ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>> {
     return this.executeHttpRequest(
       `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
@@ -191,7 +132,7 @@ export class RestServerNodeService implements IServerNodeService {
     );
   }
 
-  async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, ServerNodeError>> {
+  async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
     return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
       "setup",
       "post",
@@ -200,12 +141,12 @@ export class RestServerNodeService implements IServerNodeService {
     );
   }
 
-  async deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, ServerNodeError>> {
+  async deposit(params: ServerNodeParams.SendDepositTx): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
     let provider: providers.JsonRpcProvider;
     try {
       provider = this.assertProvider(params.chainId);
     } catch (e) {
-      return Result.fail(new ServerNodeError(ServerNodeError.reasons.ProviderNotFound));
+      return Result.fail(new NodeError(NodeError.reasons.ProviderNotFound));
     }
 
     const sendDepositTxRes = await this.executeHttpRequest<
@@ -229,7 +170,7 @@ export class RestServerNodeService implements IServerNodeService {
       const receipt = await provider.waitForTransaction(txHash);
       this.logger.info({ txHash: receipt.transactionHash }, "Tx has been mined");
     } catch (e) {
-      return Result.fail(new ServerNodeError(ServerNodeError.reasons.TransactionNotMined, { txHash, params }));
+      return Result.fail(new NodeError(NodeError.reasons.TransactionNotMined, { txHash, params }));
     }
     return this.executeHttpRequest<ServerNodeParams.Deposit, ServerNodeResponses.Deposit>(
       "deposit",
@@ -245,7 +186,7 @@ export class RestServerNodeService implements IServerNodeService {
 
   async conditionalTransfer(
     params: ServerNodeParams.ConditionalTransfer,
-  ): Promise<Result<ServerNodeResponses.ConditionalTransfer, ServerNodeError>> {
+  ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
     return this.executeHttpRequest<ServerNodeParams.ConditionalTransfer, ServerNodeResponses.ConditionalTransfer>(
       `hashlock-transfer/create`,
       "post",
@@ -256,7 +197,7 @@ export class RestServerNodeService implements IServerNodeService {
 
   async resolveTransfer(
     params: ServerNodeParams.ResolveTransfer,
-  ): Promise<Result<ServerNodeResponses.ResolveTransfer, ServerNodeError>> {
+  ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>> {
     return this.executeHttpRequest<ServerNodeParams.ResolveTransfer, ServerNodeResponses.ResolveTransfer>(
       `hashlock-transfer/resolve`,
       "post",
@@ -265,7 +206,7 @@ export class RestServerNodeService implements IServerNodeService {
     );
   }
 
-  async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, ServerNodeError>> {
+  async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, NodeError>> {
     return this.executeHttpRequest<ServerNodeParams.Withdraw, ServerNodeResponses.Withdraw>(
       `withdraw`,
       "post",
@@ -279,11 +220,11 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
-    if (!this.evts) {
-      this.logger.warn("No evts provided, subscriptions will not work");
+    if (!this.evts || !this.evts[event]?.evt) {
+      this.logger.warn({ event, method: "once" }, "No evts provided for event, subscriptions will not work");
       return;
     }
-    throw new Error("Method not implemented.");
+    this.evts[event].evt.pipe(filter!).attachOnce(callback);
   }
 
   async on<T extends EngineEvent>(
@@ -291,32 +232,27 @@ export class RestServerNodeService implements IServerNodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
   ): Promise<void> {
-    if (!this.evts || !this.evts[event as string]) {
-      this.logger.warn("No evts provided, subscriptions will not work");
+    if (!this.evts || !this.evts[event]?.evt) {
+      this.logger.warn({ event, method: "on" }, "No evts provided for event, subscriptions will not work");
       return;
     }
-    const url = `${this.evts[event as string].url}`;
-    this.evts[event as string].evt.pipe(filter!).attach(callback);
-    try {
-      await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
-        [event]: url,
-      });
-      this.logger.info({ event, url }, "Engine event subscription created");
-    } catch (e) {
-      this.logger.error({ error: e.response?.data, event, method: "on" }, "Error creating subscription");
+    this.evts[event].evt.pipe(filter!).attach(callback);
+  }
+
+  public waitFor<T extends EngineEvent>(
+    event: T,
+    timeout: number,
+    filter: (payload: EngineEventMap[T]) => boolean = () => true,
+  ): Promise<EngineEventMap[T] | undefined> {
+    if (!this.evts || !this.evts[event]?.evt) {
+      this.logger.warn({ event, method: "waitFor" }, "No evts provided for event, subscriptions will not work");
+      return undefined;
     }
+    return this.evts[event].evt.pipe(filter).waitFor(timeout) as Promise<EngineEventMap[T]>;
   }
 
   async off<T extends EngineEvent>(event: T): Promise<void> {
-    this.evts[event as string].evt.detach();
-    try {
-      await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${this.serverNodeUrl}/event/subscribe`, {
-        [event]: "",
-      });
-      this.logger.info({ event }, "Engine event subscription removed");
-    } catch (e) {
-      this.logger.error({ error: e.response?.data, event, method: "off" }, "Error removed subscription");
-    }
+    this.evts[event].evt.detach();
   }
 
   // Helper methods
@@ -325,13 +261,13 @@ export class RestServerNodeService implements IServerNodeService {
     method: "get" | "post",
     params: T,
     paramSchema: any,
-  ): Promise<Result<U, ServerNodeError>> {
+  ): Promise<Result<U, NodeError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
     // Validate parameters are in line with schema
     const validate = ajv.compile(paramSchema);
     if (!validate(params)) {
       return Result.fail(
-        new ServerNodeError(ServerNodeError.reasons.InvalidParams, {
+        new NodeError(NodeError.reasons.InvalidParams, {
           errors: validate.errors?.map(err => err.message).join(","),
         }),
       );
@@ -342,9 +278,7 @@ export class RestServerNodeService implements IServerNodeService {
       const res = method === "get" ? await Axios.get(url) : await Axios.post(url, params);
       return Result.ok(res.data);
     } catch (e) {
-      return Result.fail(
-        new ServerNodeError(ServerNodeError.reasons.InternalServerError, { error: e.message, params, url }),
-      );
+      return Result.fail(new NodeError(NodeError.reasons.InternalServerError, { error: e.message, params, url }));
     }
   }
 }

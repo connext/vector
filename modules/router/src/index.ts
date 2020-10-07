@@ -19,6 +19,7 @@ const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 const evts = {
+  [EngineEvents.SETUP]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${routerBase}${conditionalTransferCreatedPath}`,
@@ -31,6 +32,9 @@ const evts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${routerBase}${depositReconciledPath}`,
   },
+  [EngineEvents.WITHDRAWAL_CREATED]: {},
+  [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.WITHDRAWAL_RESOLVED]: {},
 };
 
 const server = fastify();

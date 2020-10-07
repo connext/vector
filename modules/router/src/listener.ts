@@ -1,5 +1,4 @@
-import { EngineEvents, RouterSchemas } from "@connext/vector-types";
-import { IServerNodeService } from "@connext/vector-utils";
+import { EngineEvents, RouterSchemas, INodeService } from "@connext/vector-types";
 import Ajv from "ajv";
 import { BaseLogger } from "pino";
 
@@ -8,7 +7,7 @@ import { IRouterStore } from "./services/store";
 
 const ajv = new Ajv();
 
-export async function setupListeners(node: IServerNodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
+export async function setupListeners(node: INodeService, store: IRouterStore, logger: BaseLogger): Promise<void> {
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
   await node.on(
