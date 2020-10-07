@@ -50,7 +50,7 @@ export abstract class VectorError extends Error {
     ChainError: "ChainError",
     ValidationError: "ValidationError",
     RouterError: "RouterError",
-    ServerNodeError: "ServerNodeError",
+    NodeError: "NodeError",
     // etc.
   } as const;
 
@@ -158,6 +158,26 @@ export class InboundChannelUpdateError extends VectorError {
     public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
     public readonly state?: FullChannelState<any>,
+    public readonly context?: any,
+  ) {
+    super(message, context);
+  }
+}
+
+export class NodeError extends VectorError {
+  readonly type = VectorError.errors.NodeError;
+
+  static readonly reasons = {
+    InternalServerError: "Failed to send request",
+    InvalidParams: "Request has invalid parameters",
+    ProviderNotFound: "Provider not available for chain",
+    Timeout: "Timeout",
+    TransactionNotMined: "Failed to wait for transaction to be mined",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof NodeError.reasons>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
     super(message, context);
