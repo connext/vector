@@ -5,12 +5,6 @@ pragma experimental "ABIEncoderV2";
 import "./Types.sol";
 
 interface ITransferDefinition {
-  // Returns the state encoding of the transfer
-  function stateEncoding() external pure returns (string memory);
-
-  // Returns the resolver encoding of the transfer
-  function resolverEncoding() external pure returns (string memory);
-
   // Validates the initial state of the transfer.
   // Called by validator.ts during `create` updates.
   function create(bytes calldata) external view returns (bool);
