@@ -134,7 +134,6 @@ const convertChannelEntityToFullChannelState = (
         details = {
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
-          transferEncodings: channelEntity.latestUpdate.transferEncodings!.split("$"),
           transferId: channelEntity.latestUpdate.transferId!,
           transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
         } as ResolveUpdateDetails;
