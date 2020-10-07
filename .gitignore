@@ -35,6 +35,7 @@ config-prod.json
 
 # Docs
 modules/client/docs
+modules/documentation/site
 
 # IDEs and editors
 **/*.launch
