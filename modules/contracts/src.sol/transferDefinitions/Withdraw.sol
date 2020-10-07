@@ -33,11 +33,12 @@ contract Withdraw is ITransferDefinition {
   string Name = "Withdraw";
 
   function getRegistryInformation() external override view returns (RegisteredTransfer memory) {
-    RegisteredTransfer memory info;
-    info.name = Name;
-    info.stateEncoding = StateEncoding;
-    info.resolverEncoding = ResolverEncoding;
-    info.definition = address(this);
+    RegisteredTransfer memory info = RegisteredTransfer({
+      name: Name,
+      stateEncoding: StateEncoding,
+      resolverEncoding: ResolverEncoding,
+      definition: address(this)
+    });
     return info;
   }
 
