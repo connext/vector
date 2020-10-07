@@ -15,7 +15,7 @@ import { providers } from "ethers";
 import Dexie, { DexieOptions } from "dexie";
 import { BaseLogger } from "pino";
 
-type StoredTransfer = FullTransferState & { createUpdateNonce: number; resolveUpdateNonce: number };
+type StoredTransfer = FullTransferState & { createUpdateNonce: number; resolveUpdateNonce: number; routingId: string };
 
 class VectorIndexedDBDatabase extends Dexie {
   channels: Dexie.Table<FullChannelState, string>;
@@ -51,6 +51,7 @@ const storedTransferToTransferState = (stored: StoredTransfer): FullTransferStat
   const transfer: any = stored;
   delete transfer.createUpdateNonce;
   delete transfer.resolveUpdateNonce;
+  delete transfer.routingId;
   return transfer as FullTransferState;
 };
 
@@ -101,6 +102,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
           ...transfer!,
           createUpdateNonce: channelState.latestUpdate.nonce,
           resolveUpdateNonce: 0,
+          routingId: transfer?.meta?.routingId, // allow indexing on routingId
         });
       } else if (channelState.latestUpdate.type === UpdateType.resolve) {
         await this.db.transfers.update((channelState.latestUpdate.details as ResolveUpdateDetails).transferId, {

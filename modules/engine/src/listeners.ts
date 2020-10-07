@@ -4,7 +4,6 @@ import {
   ChannelUpdateEvent,
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
-  CreateUpdateDetails,
   DepositReconciledPayload,
   EngineEvents,
   FullChannelState,
@@ -17,6 +16,7 @@ import {
   ProtocolEventName,
   ResolveUpdateDetails,
   TransferNames,
+  SetupPayload,
   UpdateType,
   WithdrawalCreatedPayload,
   WithdrawalResolvedPayload,
@@ -39,7 +39,21 @@ export async function setupEngineListeners(
   chainAddresses: ChainAddresses,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  // Setup listener for deposit reconciliations
+  // Set up listener for channel setu[]
+  vector.on(
+    ProtocolEventName.CHANNEL_UPDATE_EVENT,
+    event => handleSetup(event, signer, vector, evts, logger),
+    event => {
+      const {
+        updatedChannelState: {
+          latestUpdate: { type },
+        },
+      } = event;
+      return type === UpdateType.setup;
+    },
+  );
+
+  // Set up listener for deposit reconciliations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     event => handleDepositReconciliation(event, signer, vector, evts, logger),
@@ -53,13 +67,13 @@ export async function setupEngineListeners(
     },
   );
 
-  // Setup listener for conditional transfer creations
+  // Set up listener for conditional transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event => await handleConditionalTransferCreation(event, store, chainService, chainAddresses, evts, logger),
   );
 
-  // Setup listener for conditional transfer resolutions
+  // Set up listener for conditional transfer resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event => await handleConditionalTransferResolution(event, chainAddresses, store, chainService, evts, logger),
@@ -72,7 +86,7 @@ export async function setupEngineListeners(
       await handleWithdrawalTransferCreation(event, signer, vector, store, evts, chainAddresses, chainService, logger),
   );
 
-  // Setup listener for withdrawal resolutions
+  // Set up listener for withdrawal resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event =>
@@ -82,6 +96,30 @@ export async function setupEngineListeners(
   // TODO: how to monitor for withdrawal reconciliations (onchain tx submitted)
   // who will submit the transaction? should both engines watch the multisig
   // indefinitely?
+}
+
+async function handleSetup(
+  event: ChannelUpdateEvent,
+  signer: IChannelSigner,
+  vector: IVectorProtocol,
+  evts: EngineEvtContainer,
+  logger: Pino.BaseLogger,
+): Promise<void> {
+  logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling setup event");
+  // Emit the properly structured event
+  const {
+    channelAddress,
+    aliceIdentifier,
+    bobIdentifier,
+    networkContext: { chainId },
+  } = event.updatedChannelState as FullChannelState<typeof UpdateType.setup>;
+  const payload: SetupPayload = {
+    channelAddress,
+    aliceIdentifier,
+    bobIdentifier,
+    chainId,
+  };
+  evts[EngineEvents.SETUP].post(payload);
 }
 
 async function handleDepositReconciliation(

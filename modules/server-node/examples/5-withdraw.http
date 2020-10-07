@@ -28,6 +28,5 @@ Content-Type: application/json
   "fee": "{{feeAmount}}",
   "meta": {
     "hello": "world"
-  },
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  }
 }
