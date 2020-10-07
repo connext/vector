@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { ConditionalTransferCreatedPayload, ConditionalTransferType, Result } from "@connext/vector-types";
+import { ConditionalTransferCreatedPayload, Result, TransferNames } from "@connext/vector-types";
 import {
   createTestChannelState,
   createTestFullHashlockTransferState,
@@ -14,6 +14,8 @@ import Sinon from "sinon";
 
 import { RouterStore } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
+
+import { env } from "./env";
 
 describe("Forwarding", () => {
   describe("transferCreation", () => {
@@ -37,10 +39,9 @@ describe("Forwarding", () => {
         assetId: mkAddress("0x0"),
         meta: { routingId, path: [channelAddress] },
       });
-      const conditionType = ConditionalTransferType.HashlockTransfer;
+      const conditionType = TransferNames.HashlockTransfer;
       return {
         channelAddress,
-        routingId,
         transfer,
         channelBalance,
         conditionType,
@@ -60,11 +61,14 @@ describe("Forwarding", () => {
     it("successfully forwards a transfer creation with no swaps, no cross-chain and no collateralization", async () => {
       const data = generateTransferData();
       const senderChannel = createTestChannelState("create", {
+        alice: mkAddress("0xa"),
+        bob: mkAddress("0xb1"),
         channelAddress: data.channelAddress,
         balances: [data.channelBalance],
       });
       const receiverChannel = createTestChannelState("deposit", {
-        participants: [mkAddress("0xb"), mkAddress("0xc")],
+        alice: mkAddress("0xa"),
+        bob: mkAddress("0xb2"),
         assetIds: [constants.AddressZero],
         balances: [
           {
@@ -77,7 +81,7 @@ describe("Forwarding", () => {
       node["getStateChannelByParticipants"].resolves(Result.ok(receiverChannel));
       node["signerAddress"] = mkAddress("0xb");
       node["conditionalTransfer"].resolves(Result.ok({} as any));
-      await forwardTransferCreation(data, node as IServerNodeService, store, logger);
+      await forwardTransferCreation(data, node as IServerNodeService, store, logger, env.hydratedProviders);
     });
 
     it.skip("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {});
