@@ -42,7 +42,7 @@ export async function setupEngineListeners(
   // Set up listener for channel setu[]
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleSetup(event, signer, vector, evts, logger),
+    async event => await handleSetup(event, signer, vector, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -56,7 +56,7 @@ export async function setupEngineListeners(
   // Set up listener for deposit reconciliations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleDepositReconciliation(event, signer, vector, evts, logger),
+    async event => await handleDepositReconciliation(event, signer, vector, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -71,12 +71,28 @@ export async function setupEngineListeners(
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event => await handleConditionalTransferCreation(event, store, chainService, chainAddresses, evts, logger),
+    event => {
+      const {
+        updatedChannelState: {
+          latestUpdate: { type },
+        },
+      } = event;
+      return type === UpdateType.create;
+    },
   );
 
   // Set up listener for conditional transfer resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event => await handleConditionalTransferResolution(event, chainAddresses, store, chainService, evts, logger),
+    event => {
+      const {
+        updatedChannelState: {
+          latestUpdate: { type },
+        },
+      } = event;
+      return type === UpdateType.resolve;
+    },
   );
 
   // Set up listener for withdrawal transfer creations
@@ -84,6 +100,14 @@ export async function setupEngineListeners(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event =>
       await handleWithdrawalTransferCreation(event, signer, vector, store, evts, chainAddresses, chainService, logger),
+    event => {
+      const {
+        updatedChannelState: {
+          latestUpdate: { type },
+        },
+      } = event;
+      return type === UpdateType.create;
+    },
   );
 
   // Set up listener for withdrawal resolutions
@@ -91,6 +115,14 @@ export async function setupEngineListeners(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event =>
       await handleWithdrawalTransferResolution(event, signer, store, evts, chainAddresses, chainService, logger),
+    event => {
+      const {
+        updatedChannelState: {
+          latestUpdate: { type },
+        },
+      } = event;
+      return type === UpdateType.resolve;
+    },
   );
 
   // TODO: how to monitor for withdrawal reconciliations (onchain tx submitted)
@@ -153,8 +185,7 @@ async function handleConditionalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  const isWithdraw = await isWithdrawTransfer(event, chainAddresses, chainService);
-  if (isWithdraw || event.updatedChannelState.latestUpdate.type !== UpdateType.create) {
+  if (await isWithdrawTransfer(event, chainAddresses, chainService)) {
     return;
   }
   const {
@@ -219,8 +250,7 @@ async function handleConditionalTransferResolution(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  const isWithdraw = await isWithdrawTransfer(event, chainAddresses, chainService);
-  if (isWithdraw || event.updatedChannelState.latestUpdate.type !== UpdateType.resolve) {
+  if (await isWithdrawTransfer(event, chainAddresses, chainService)) {
     return;
   }
   logger.info(
@@ -270,8 +300,7 @@ async function handleWithdrawalTransferCreation(
   chainService: IVectorChainService,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  const isWithdraw = await isWithdrawTransfer(event, chainAddresses, chainService);
-  if (!isWithdraw || event.updatedChannelState.latestUpdate.type !== UpdateType.create) {
+  if (!(await isWithdrawTransfer(event, chainAddresses, chainService))) {
     return;
   }
   const method = "handleWithdrawalTransferCreation";
@@ -404,8 +433,7 @@ async function handleWithdrawalTransferResolution(
   chainService: IVectorChainService,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<void> {
-  const isWithdraw = await isWithdrawTransfer(event, chainAddresses, chainService);
-  if (!isWithdraw || event.updatedChannelState.latestUpdate.type !== UpdateType.resolve) {
+  if (!(await isWithdrawTransfer(event, chainAddresses, chainService))) {
     return;
   }
   const method = "handleWithdrawalTransferResolution";

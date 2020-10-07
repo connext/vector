@@ -166,6 +166,7 @@ export class Vector implements IVectorProtocol {
       const received = msg.getValue();
 
       if (received.update.fromIdentifier === this.publicIdentifier) {
+        this.logger.debug({ method: "onReceiveProtocolMessage" }, "Received update from ourselves, doing nothing");
         return;
       }
 
@@ -182,6 +183,7 @@ export class Vector implements IVectorProtocol {
         this.logger,
       );
       if (inboundRes.isError) {
+        this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
         return;
       }
 
@@ -380,7 +382,7 @@ export class Vector implements IVectorProtocol {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     filter: (payload: ProtocolEventPayloadsMap[T]) => boolean = (_payload: ProtocolEventPayloadsMap[T]) => true,
   ): void {
-    this.evts[event].pipe(filter).attachOnce(callback);
+    this.evts[event].pipe(filter).attach(callback);
   }
 
   public once<T extends ProtocolEventName>(
