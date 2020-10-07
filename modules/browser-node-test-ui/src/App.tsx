@@ -41,7 +41,7 @@ function App() {
         <img src={logo} className="App-logo" alt="logo" />
         <p>
           {node?.publicIdentifier
-            ? `Node with publicIdentifier ${node?.publicIdentifier} connected`
+            ? `Node with publicIdentifier ${node?.publicIdentifier} connected ↗️`
             : connectError
             ? `Error connecting node: ${connectError}`
             : "Loading..."}

@@ -194,12 +194,17 @@ services:
     command: '-D -V'
     environment:
       JWT_SIGNER_PUBLIC_KEY: '$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY'
+    ports:
+      - '4222:4222'
+      - '4221:4221'
 
   redis:
     $common
     image: '$redis_image'
     deploy:
       mode: global
+    ports:
+      - '6379:6379'
 
   evm_$chain_id_1:
     $common
