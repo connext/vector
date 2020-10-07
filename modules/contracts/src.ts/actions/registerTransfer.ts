@@ -1,3 +1,4 @@
+import { RegisteredTransfer } from "@connext/vector-types";
 import { getEthProvider } from "@connext/vector-utils";
 import { Contract, Wallet } from "ethers";
 import { Argv } from "yargs";
@@ -31,6 +32,15 @@ export const registerTransfer = async (
   const transferEntry = addressBook.getEntry(transferName);
   if (!transferEntry) {
     throw new Error(`No transfer found in address-book, cannot add`);
+  }
+
+  // Check if transfer is already in registry
+  const registered = await registry.getTransferDefinitions();
+  const entry = registered.find((info: RegisteredTransfer) => info.name === transferName);
+  if (entry) {
+    log(`Transfer ${transferName} already registered at ${entry.definition}, doing nothing`);
+    log("\nAll done!");
+    return;
   }
 
   log(`Getting registry information for ${transferName} at ${transferEntry.address}`);

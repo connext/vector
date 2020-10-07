@@ -11,6 +11,7 @@ import {
   DEFAULT_TRANSFER_TIMEOUT,
   Balance,
   TransferNames,
+  HashlockTransferStateEncoding,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -35,10 +36,6 @@ import Sinon from "sinon";
 import * as vectorUpdate from "../update";
 
 import { env } from "./env";
-
-// Helper
-const HashlockTransferEncoding =
-  "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes32 lockHash, uint256 expiry)";
 
 type ApplyUpdateTestParams<T extends UpdateType = any> = {
   name: string;
@@ -678,7 +675,7 @@ describe("generateUpdate", () => {
             ...emptyHashlockTransfer.transferState,
             balance: { to: participants, amount: ["7", "0"] },
           },
-          HashlockTransferEncoding,
+          HashlockTransferStateEncoding,
         ),
         transferResolver: undefined,
       },
@@ -725,7 +722,7 @@ describe("generateUpdate", () => {
             ...emptyHashlockTransfer.transferState,
             balance: { to: participants, amount: ["7", "0"] },
           },
-          HashlockTransferEncoding,
+          HashlockTransferStateEncoding,
         ),
         transferResolver: emptyHashlockTransfer.transferResolver,
       },

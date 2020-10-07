@@ -79,15 +79,16 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
-    if (!this.transferRegistries.has(chainId.toString())) {
+    let registry = this.transferRegistries.get(chainId.toString());
+    if (!registry) {
       // Registry for chain not loaded, load into memory
       const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
       if (loadRes.isError) {
         return Result.fail(loadRes.getError()!);
       }
+      registry = loadRes.getValue();
     }
 
-    const registry = this.transferRegistries.get(chainId.toString())!;
     const info = registry.find(r => r.name === name);
     if (!info) {
       return Result.fail(new ChainError(ChainError.reasons.TransferNotRegistered, { name, transferRegistry, chainId }));
@@ -344,16 +345,21 @@ export class EthereumChainReader implements IVectorChainReader {
       // Try with evm first
       const evm = this.tryEvm(registry.interface.encodeFunctionData("getTransferDefinitions"), bytecode);
 
-      if (evm.isError) {
+      if (!evm.isError) {
         try {
-          registered = await registry.getTransferDefinitions();
-        } catch (e) {
-          return Result.fail(new ChainError(e.message, { chainId, transferRegistry, name }));
-        }
-      } else {
-        registered = registry.interface.decodeFunctionResult("getTransferDefinitions", evm.getValue()!)[0];
+          registered = registry.interface.decodeFunctionResult("getTransferDefinitions", evm.getValue()!)[0];
+        } catch (e) {}
       }
     }
+    if (!registered) {
+      try {
+        registered = await registry.getTransferDefinitions();
+        console.log("registered", registered);
+      } catch (e) {
+        return Result.fail(new ChainError(e.message, { chainId, transferRegistry, name }));
+      }
+    }
+    console.log("setting registry on", chainId, "to", registered);
     this.transferRegistries.set(chainId.toString(), registered);
     return Result.ok(registered);
   }

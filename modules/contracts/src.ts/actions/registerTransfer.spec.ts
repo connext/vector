@@ -6,7 +6,7 @@ import { addressBookPath, alice } from "../tests";
 import { migrate } from "./migrate";
 import { registerTransfer } from "./registerTransfer";
 
-describe.only("registerTransfer()", () => {
+describe("registerTransfer()", () => {
   beforeEach(async () => {
     await expect(migrate(alice, addressBookPath, true)).to.be.fulfilled;
   });

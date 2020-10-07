@@ -1,4 +1,3 @@
-import { TransferDefinition } from "@connext/vector-contracts";
 import {
   FullChannelState,
   FullTransferState,
@@ -9,7 +8,8 @@ import {
   UpdateType,
   ResolveTransferParams,
   TransferResolver,
-  JsonRpcProvider,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
 } from "@connext/vector-types";
 import {
   createlockHash,
@@ -18,7 +18,7 @@ import {
   hashTransferState,
   expect,
 } from "@connext/vector-utils";
-import { BigNumberish, constants, Contract } from "ethers";
+import { BigNumberish, constants } from "ethers";
 
 import { env } from "../env";
 import { chainId } from "../constants";
@@ -53,13 +53,8 @@ export const createTransfer = async (
     assetId,
   };
 
-  const definition = new Contract(
-    env.chainAddresses[chainId].hashlockTransferAddress,
-    TransferDefinition.abi,
-    new JsonRpcProvider(env.chainProviders[chainId]),
-  );
-  const stateEncoding = await definition.stateEncoding();
-  const resolverEncoding = await definition.resolverEncoding();
+  const stateEncoding = HashlockTransferStateEncoding;
+  const resolverEncoding = HashlockTransferResolverEncoding;
 
   const ret = await payor.create(params);
   expect(ret.getError()).to.be.undefined;
