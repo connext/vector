@@ -13,7 +13,7 @@ import {
   postAuthResponseSchema,
 } from "./schemas";
 
-const logger = pino({ level: "info" });
+const logger = pino({ level: "debug" });
 
 const server = fastify({ logger });
 

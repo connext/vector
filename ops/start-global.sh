@@ -231,8 +231,8 @@ services:
     $common
     $auth_image
     environment:
-      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '"`cat $keyFile.pub`"'
-      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '"`cat $keyFile`"'
+      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '`cat $keyFile.pub`'
+      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '`cat $keyFile`'
       #VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
       #VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY_FILE: '/run/secrets/$jwt_private_key_secret'
       VECTOR_NATS_URL: 'nats://nats:4222'
@@ -249,7 +249,7 @@ services:
     $common
     image: '$nats_image'
     environment:
-      JWT_SIGNER_PUBLIC_KEY: '"`cat $keyFile.pub`"'
+      JWT_SIGNER_PUBLIC_KEY: '`cat $keyFile.pub`'
       #JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
     secrets:
       - '$jwt_public_key_secret'

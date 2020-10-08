@@ -8,4 +8,7 @@ then export JWT_SIGNER_PUBLIC_KEY="`cat $JWT_SIGNER_PUBLIC_KEY_FILE`"
 else echo "public key must be provided via either a secret or an env var." && exit 1
 fi
 
+echo "JWT_SIGNER_PUBLIC_KEY:"
+echo "$JWT_SIGNER_PUBLIC_KEY"
+
 exec /bin/nats-server -D -V

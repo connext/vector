@@ -19,6 +19,12 @@ then export VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY="`cat $VECTOR_NATS_JWT_SIGNER_PRI
 else echo "private key must be provided via either a secret or an env var." && exit 1
 fi
 
+echo "VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY:"
+echo "$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY"
+echo
+echo "VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY:"
+echo "$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY"
+
 node_bin="`pwd`/node_modules/.bin"
 nodemon="$node_bin/nodemon"
 pino="$node_bin/pino-pretty"
