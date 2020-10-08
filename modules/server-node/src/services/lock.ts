@@ -1,5 +1,6 @@
 import { ILockService, IMessagingService, LockError, LockInformation, Result } from "@connext/vector-types";
 import Redis from "ioredis";
+import { BaseLogger } from "pino";
 
 import { MemoLock } from "./memo-lock";
 
@@ -10,6 +11,7 @@ export class LockService implements ILockService {
     private readonly publicIdentifier: string,
     private readonly messagingService: IMessagingService,
     redisUrl: string,
+    private readonly log: BaseLogger,
   ) {
     const redis = new Redis(redisUrl);
     this.memoLock = new MemoLock(redis);
@@ -19,8 +21,9 @@ export class LockService implements ILockService {
     publicIdentifier: string,
     messagingService: IMessagingService,
     redisUrl: string,
+    log: BaseLogger,
   ): Promise<LockService> {
-    const lock = new LockService(publicIdentifier, messagingService, redisUrl);
+    const lock = new LockService(publicIdentifier, messagingService, redisUrl, log);
     await lock.memoLock.setupSubs();
     await lock.setupPeerListeners();
     return lock;
@@ -35,13 +38,41 @@ export class LockService implements ILockService {
         if (lockRequest.isError) {
           // Handle a lock failure here
           // TODO: is there anything that has to happen here?
+          this.log.error(
+            {
+              method: "onReceiveLockMessage",
+              error: lockRequest.getError()?.message,
+              context: lockRequest.getError()?.context,
+            },
+            "Error in lockRequest",
+          );
           return;
         }
         const { type, lockName, lockValue } = lockRequest.getValue();
         if (type === "acquire") {
-          await this.acquireLock(lockName, true);
+          try {
+            await this.acquireLock(lockName, true);
+          } catch (e) {
+            this.log.error(
+              {
+                method: "onReceiveLockMessage",
+                error: e.message,
+              },
+              "Error acquiring lock",
+            );
+          }
         } else if (type === "release") {
-          await this.releaseLock(lockName, lockValue!, true);
+          try {
+            await this.releaseLock(lockName, lockValue!, true);
+          } catch (e) {
+            this.log.error(
+              {
+                method: "onReceiveLockMessage",
+                error: e.message,
+              },
+              "Error releasing lock",
+            );
+          }
         }
       },
     );
@@ -63,6 +94,7 @@ export class LockService implements ILockService {
       if (!lockValue) {
         throw new LockError("Could not get lock, successfully sent lock message");
       }
+      this.log.debug({ method: "acquireLock", lockName, lockValue }, "Acquired lock");
       return lockValue;
     }
   }
@@ -84,6 +116,7 @@ export class LockService implements ILockService {
       if (result.isError) {
         throw result.getError()!;
       }
+      this.log.debug({ method: "releaseLock", lockName, lockValue }, "Released lock");
     }
   }
 }

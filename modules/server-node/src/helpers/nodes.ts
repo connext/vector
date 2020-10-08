@@ -51,7 +51,12 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
   );
   await messaging.connect();
 
-  const lockService = await LockService.connect(signer.publicIdentifier, messaging, config.redisUrl);
+  const lockService = await LockService.connect(
+    signer.publicIdentifier,
+    messaging,
+    config.redisUrl,
+    logger.child({ module: "LockService" }),
+  );
 
   const vectorEngine = await VectorEngine.connect(
     messaging,
