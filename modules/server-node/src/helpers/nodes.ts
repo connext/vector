@@ -1,14 +1,19 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
-import { EngineEvents, IVectorChainService, IVectorEngine } from "@connext/vector-types";
+import { EngineEvents, ILockService, IVectorChainService, IVectorEngine } from "@connext/vector-types";
 import { ChannelSigner, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "ethers";
 
-import { logger, lock, _providers, store } from "..";
+import { logger, _providers, store } from "..";
 import { config } from "../config";
+import { LockService } from "../services/lock";
 
 const ETH_STANDARD_PATH = "m/44'/60'/0'/0";
+
+export function getLockService(publicIdentifier: string): ILockService | undefined {
+  return nodes[publicIdentifier]?.lockService;
+}
 
 export function getPath(index = 0): string {
   return `${ETH_STANDARD_PATH}/${(String(index).match(/.{1,9}/gi) || [index]).join("/")}`;
@@ -19,7 +24,12 @@ export function getIndexFromPath(path: string): number {
 }
 
 export const nodes: {
-  [publicIdentifier: string]: { node: IVectorEngine; chainService: IVectorChainService; index: number };
+  [publicIdentifier: string]: {
+    node: IVectorEngine;
+    chainService: IVectorChainService;
+    lockService: ILockService;
+    index: number;
+  };
 } = {};
 
 export const createNode = async (index: number): Promise<IVectorEngine> => {
@@ -41,9 +51,16 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
   );
   await messaging.connect();
 
+  const lockService = await LockService.connect(
+    signer.publicIdentifier,
+    messaging,
+    config.redisUrl,
+    logger.child({ module: "LockService" }),
+  );
+
   const vectorEngine = await VectorEngine.connect(
     messaging,
-    lock,
+    lockService,
     store,
     signer,
     vectorTx,
@@ -67,7 +84,7 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     }
   });
 
-  nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index };
+  nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index, lockService };
   return vectorEngine;
 };
 
