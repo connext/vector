@@ -1,9 +1,10 @@
 import {
-  delay,
-  expect,
   getBearerTokenFunction,
-  getRandomChannelSigner,
   NatsMessagingService,
+} from "@connext/vector-messaging";
+import {
+  expect,
+  getRandomChannelSigner,
 } from "@connext/vector-utils";
 import axios from "axios";
 import pino from "pino";

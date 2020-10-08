@@ -1,4 +1,4 @@
-import { NatsMessagingService, getBearerTokenFunction, constructRpcRequest } from "@connext/vector-utils";
+import { NatsMessagingService, getBearerTokenFunction } from "@connext/vector-messaging";
 import {
   ServerNodeParams,
   ServerNodeResponses,
@@ -15,6 +15,7 @@ import {
   EngineEvents,
   CreateUpdateDetails,
 } from "@connext/vector-types";
+import { constructRpcRequest } from "@connext/vector-utils";
 import { VectorEngine } from "@connext/vector-engine";
 import { BaseLogger } from "pino";
 import { VectorChainService } from "@connext/vector-contracts";

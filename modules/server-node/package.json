@@ -15,7 +15,7 @@
     "@connext/vector-contracts": "0.0.1",
     "@connext/vector-engine": "0.0.1",
     "@connext/vector-messaging": "0.0.1",
-    "@connext/vector-engine": "0.0.1",
+    "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
     "@prisma/client": "2.7.1",
     "@sinclair/typebox": "0.10.1",

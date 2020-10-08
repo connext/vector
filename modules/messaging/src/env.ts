@@ -2,7 +2,7 @@ import { TlsOptions } from "tls";
 
 export class Config {
 
-  public natsClientPrefix: string = process.env.NATS_CLIENT_PREFIX || "ts-natsutil";
+  public natsClientPrefix: string = process.env.NATS_CLIENT_PREFIX || "vector";
   public natsClusterId?: string = process.env.NATS_CLUSTER_ID;
   public natsDeadLetterSubject: string = process.env.NATS_DEADLETTER_SUBJECT || "nats.deadletter";
   public natsEncoding: BufferEncoding = (process.env.NATS_BUFFER_ENCODING || "utf-8") as BufferEncoding;

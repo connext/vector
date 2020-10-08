@@ -1,8 +1,8 @@
-import * as natsws from '@provide/nats.ws';
-import { Config } from './env';
-import { ILogger, INatsService, INatsSubscription, natsPayloadTypeBinary, natsPayloadTypeJson } from '.';
+import * as natsws from "@provide/nats.ws";
+import { Config } from "./env";
+import { ILogger, INatsService, INatsSubscription, natsPayloadTypeBinary, natsPayloadTypeJson } from ".";
 
-const uuidv4 = require('uuid/v4');
+const uuidv4 = require("uuid/v4");
 
 export class NatsWebsocketService implements INatsService {
 
@@ -24,13 +24,13 @@ export class NatsWebsocketService implements INatsService {
     this.bearerToken = bearerToken;
     this.config = Config.fromEnv();
     this.log = log;
-    this.servers = servers ? servers : (this.config.natsServers || '').split(',');
+    this.servers = servers ? servers : (this.config.natsServers || "").split(",");
     this.token = token ? token : this.config.natsToken;
   }
 
   async connect(): Promise<any> {
     if (this.connection && !this.connection.isClosed()) {
-      this.log?.debug('Attempted to establish NATS connection short-circuirted; connection is already open');
+      this.log?.debug("Attempted to establish NATS connection short-circuirted; connection is already open");
       return Promise.resolve(this.connection);
     }
 
@@ -48,14 +48,14 @@ export class NatsWebsocketService implements INatsService {
       }).then((nc) => {
         this.connection = nc;
 
-        nc.addEventListener('close', () => {
-          this.log?.debug('Connection closed');
+        nc.addEventListener("close", () => {
+          console.log("[messaging] Connection closed");
           this.connection = null;
         });
 
-        nc.addEventListener('error', () => {
+        nc.addEventListener("error", () => {
           if (nc.isClosed()) {
-            this.log?.debug('Connection closed');
+            console.log("[messaging] Connection error");
             this.connection = null;
           }
         });
@@ -149,7 +149,7 @@ export class NatsWebsocketService implements INatsService {
 
   private assertConnected(): void {
     if (!this.connection) {
-      throw new Error('No connection established');
+      throw new Error("No connection established");
     }
 
     if (this.connection.isClosed()) {

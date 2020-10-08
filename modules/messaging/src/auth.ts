@@ -2,7 +2,7 @@ import * as jwt from "jsonwebtoken";
 
 import { ILogger } from ".";
 
-const defaultIssuer = "ts-natsutil"; // FIXME
+const defaultIssuer = "vector"; // FIXME
 const defaultSigningAlgorithm = "RS256";
 
 export class AuthService {

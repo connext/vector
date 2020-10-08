@@ -259,7 +259,7 @@ engine: utils protocol $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-auth-bundle: utils $(shell find modules/auth $(find_options))
+auth-bundle: utils messaging $(shell find modules/auth $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/auth && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
