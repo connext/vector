@@ -6,7 +6,7 @@ project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`
 registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
 
 registry_url="https://index.docker.io/v1/repositories/${registry#*/}"
-images="auth builder database ethprovider node proxy"
+images="auth builder database ethprovider global_proxy nats node proxy"
 
 commit="`git rev-parse HEAD | head -c 8`"
 git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"

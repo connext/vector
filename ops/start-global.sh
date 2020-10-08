@@ -30,7 +30,7 @@ public_port="`getConfig port`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
 
-if [[ -z "$public_port" || "$public_port" == "null" ]]
+if [[ "production" != "true" && (-z "$public_port" || "$public_port" == "null") ]]
 then public_port=3002
 fi
 
