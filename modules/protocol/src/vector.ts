@@ -135,11 +135,26 @@ export class Vector implements IVectorProtocol {
       step: "start",
       type: params.type,
       channelAddress: params.channelAddress,
-      updateSender: this.signer.publicIdentifier,
+      updateSender: this.publicIdentifier,
     });
-    const key = await this.lockService.acquireLock(params.channelAddress);
+    let aliceIdentifier: string;
+    let bobIdentifier: string;
+    if (params.type === UpdateType.setup) {
+      aliceIdentifier = this.publicIdentifier;
+      bobIdentifier = (params as UpdateParams<"setup">).details.counterpartyIdentifier;
+    } else {
+      const channel = await this.storeService.getChannelState(params.channelAddress);
+      if (!channel) {
+        return Result.fail(new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params));
+      }
+      aliceIdentifier = channel.aliceIdentifier;
+      bobIdentifier = channel.bobIdentifier;
+    }
+    const isAlice = this.publicIdentifier === aliceIdentifier;
+    const counterpartyIdentifier = isAlice ? bobIdentifier : aliceIdentifier;
+    const key = await this.lockService.acquireLock(params.channelAddress, isAlice, counterpartyIdentifier);
     const outboundRes = await this.lockedOperation(params);
-    await this.lockService.releaseLock(params.channelAddress, key);
+    await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
     return outboundRes;
   }
 

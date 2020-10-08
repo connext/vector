@@ -98,6 +98,16 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_getChannelStates>(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getTransferByRoutingId(
     params: ServerNodeParams.GetTransferStateByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {

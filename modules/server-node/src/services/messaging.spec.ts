@@ -77,8 +77,7 @@ describe("messaging", () => {
       expect(result.getError()).to.be.undefined;
       expect(result.getValue()).to.be.deep.eq(lockInformation);
       expect(from).to.be.eq(signerA.publicIdentifier);
-      console.log("signerB replying");
-      await messagingB.publish(inbox, { ...lockInformation, lockValue: "release" });
+      await messagingB.respondToLockMessage(inbox, { ...lockInformation, lockValue: "release" });
     });
 
     await delay(1_000);

@@ -1,5 +1,4 @@
 import {
-  ChainProviders,
   EngineEvent,
   EngineEventMap,
   INodeService,
@@ -80,6 +79,10 @@ export class RestServerNodeService implements INodeService {
       params,
       ServerNodeParams.GetChannelStateSchema,
     );
+  }
+
+  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
+    return this.executeHttpRequest(`channel`, "get", {}, ServerNodeParams.GetChannelStateSchema);
   }
 
   async getTransfersByRoutingId(

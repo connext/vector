@@ -112,7 +112,10 @@ export class NatsMessagingService implements IMessagingService {
       if (parsedMsg.data.error) {
         return Result.fail(new LockError(LockError.reasons.Unknown, lockInfo));
       }
-      return Result.ok(parsedData.lockValue);
+      if (lockInfo.type === "acquire" && !parsedMsg.data.lockInformation?.lockValue) {
+        return Result.fail(new LockError(LockError.reasons.Unknown, lockInfo));
+      }
+      return Result.ok(parsedMsg.data.lockInformation?.lockValue);
     } catch (e) {
       return Result.fail(new LockError(LockError.reasons.Unknown, { ...lockInfo, error: e.message }));
     }
@@ -143,7 +146,7 @@ export class NatsMessagingService implements IMessagingService {
         callback(Result.fail(parsedMsg.data.error), from, msg.reply);
         return;
       }
-      callback(Result.ok({ ...parsedMsg.data.lockInfo }), from, msg.reply);
+      callback(Result.ok(parsedMsg.data.lockInfo), from, msg.reply);
     });
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
@@ -253,10 +256,9 @@ export class NatsMessagingService implements IMessagingService {
     );
   }
 
-  async respondToLockMessage(inbox: string, lockInformation: LockInformation): Promise<void> {
+  async respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void> {
     this.assertConnected();
     const subject = inbox;
-    // TODO: get the lock value?
     this.log.debug({ method: "respondToLockMessage", subject, lockInformation }, `Sending lock response`);
     await this.connection!.publish(subject, JSON.stringify({ lockInformation }));
   }

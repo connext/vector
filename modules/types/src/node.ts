@@ -9,6 +9,10 @@ export interface INodeService {
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>>;
 
+  getStateChannels(
+    params?: ServerNodeParams.GetChannelStates,
+  ): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>>;
+
   getStateChannel(
     params: ServerNodeParams.GetChannelState,
   ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>>;

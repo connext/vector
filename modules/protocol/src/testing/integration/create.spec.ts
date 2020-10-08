@@ -36,6 +36,11 @@ describe(testName, () => {
     });
   });
 
+  afterEach(() => {
+    alice.off();
+    bob.off();
+  });
+
   it("should create an eth transfer from alice -> bob", async () => {
     // Set test constants
     const assetId = constants.AddressZero;

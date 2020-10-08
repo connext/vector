@@ -1,7 +1,7 @@
 @aliceUrl = http://localhost:8003
 @bobUrl = http://localhost:8004
 @rogerUrl = http://localhost:8000
-@aliceBobChannel = 0x71804AfF6Ab73CC4507bA0E0F500e52349C0f2de
+@aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
 @aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
 @bobRogerChannel = 0x927c6026c3b8130251f528ef0CAFfab4fae57402
 @adminToken = cxt1234
