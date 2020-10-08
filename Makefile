@@ -91,6 +91,9 @@ restart-global:
 stop-global:
 	@bash ops/stop.sh global
 
+start-browser-node-test-ui: browser-node
+	@bash ops/start-browser-node-test-ui.sh
+
 stop-all:
 	@bash ops/stop.sh trio
 	@bash ops/stop.sh router
@@ -268,11 +271,6 @@ auth: auth-bundle $(shell find modules/auth/ops $(find_options))
 browser-node: engine $(shell find modules/browser-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-browser-node-test-ui: engine $(shell find modules/browser-node-test-ui $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/browser-node-test-ui && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 server-node-bundle: engine $(shell find modules/server-node $(find_options))

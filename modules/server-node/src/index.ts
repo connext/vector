@@ -1,4 +1,5 @@
 import fastify from "fastify";
+import fastifyCors from "fastify-cors";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
 import { providers } from "ethers";
@@ -30,6 +31,11 @@ server.register(fastifyOas, {
     },
   },
   exposeRoute: true,
+});
+server.register(fastifyCors, {
+  origin: "*",
+  methods: ["GET", "PUT", "POST", "OPTIONS"],
+  preflightContinue: true,
 });
 
 export const logger = pino();
