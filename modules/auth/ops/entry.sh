@@ -19,11 +19,16 @@ then export VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY="`cat $VECTOR_NATS_JWT_SIGNER_PRI
 else echo "private key must be provided via either a secret or an env var." && exit 1
 fi
 
-echo "VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY:"
-echo "$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY"
-echo
-echo "VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY:"
-echo "$VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY"
+# Ensure keys have proper newlines inserted (bc newlines are stripped from env vars)
+export VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY=`
+  echo $VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY | tr -d '\n\r' |\
+  sed 's/-----BEGIN RSA PRIVATE KEY-----/\n-----BEGIN RSA PRIVATE KEY-----\n/' |\
+  sed 's/-----END RSA PRIVATE KEY-----/\n-----END RSA PRIVATE KEY-----\n/'`
+
+export VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY=`
+  echo $VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY | tr -d '\n\r' |\
+  sed 's/-----BEGIN PUBLIC KEY-----/\n-----BEGIN PUBLIC KEY-----\n/' | \
+  sed 's/-----END PUBLIC KEY-----/\n-----END PUBLIC KEY-----\n/'`
 
 node_bin="`pwd`/node_modules/.bin"
 nodemon="$node_bin/nodemon"

@@ -91,9 +91,13 @@ tmp="$root/.tmp"
 rm -rf $tmp
 mkdir -p $tmp
 keyFile=$tmp/id_rsa
-ssh-keygen -t rsa -b 4096 -m PEM -f $keyFile -N ""
+pubFile=$tmp/id_rsa.pub
+ssh-keygen -t rsa -b 4096 -m PEM -f $keyFile -N "" > /dev/null
+mv $pubFile $pubFile.tmp
+ssh-keygen -f $pubFile.tmp -e -m PKCS8 | tr -d '\n\r' > $pubFile
+
 docker secret create $jwt_private_key_secret $keyFile
-docker secret create $jwt_public_key_secret $keyFile.pub
+docker secret create $jwt_public_key_secret $pubFile
 
 #fi
 
