@@ -129,10 +129,7 @@ usermod -aG docker $user
 systemctl enable docker
 
 echo;
-advertise_ip=\`ifconfig eth1 | grep 'inet ' | awk '{print \$2;exit}' | sed 's/addr://'\`
-if [[ -z "\$advertise_ip" ]]
-then advertise_ip=\`ifconfig eth0 | grep 'inet ' | awk '{print \$2;exit}' | sed 's/addr://'\`
-fi
+advertise_ip=\`ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1 | head -n 1\`
 docker swarm init "--advertise-addr=\$advertise_ip" || true
 sleep 3
 echo;
@@ -158,7 +155,7 @@ DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -
 apt-get autoremove -y
 
 if [[ ! -d vector ]]
-then git clone https://github.com/ConnextProject/vector.git
+then git clone https://github.com/connext/vector.git
 fi
 
 chown -R $user:$user .

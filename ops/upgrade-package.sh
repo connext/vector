@@ -22,7 +22,7 @@ find modules/*/package.json modules/contracts/ops/package.json package.json \
   -type f \
   -not -path "*/node_modules/*" \
   -not -path "*/dist/*" \
-  -exec sed -i -E 's|"'"$package"'": "[a-z0-9.-^]+"|"'"$package"'": "'"$version"'"|g' {} \;
+  -exec sed -i -E 's|"'"$package"'": "[a-z0-9.^-]+"|"'"$package"'": "'"$version"'"|g' {} \;
 
 echo "After:"
 grep -r '"'$package'": "' modules/*/package.json modules/*/ops/package.json package.json
