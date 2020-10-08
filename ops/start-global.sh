@@ -80,17 +80,22 @@ jwt_private_key_secret="${project}_jwt_private_key"
 jwt_public_key_secret="${project}_jwt_public_key"
 
 # Generate custom, secure JWT signing keys if we don't have any yet
-if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$jwt_private_key_secret"`" ]]
-then
-  echo "WARNING: Generating new nats jwt signing keys & saving them in .env"
-  tmp="$root/.tmp"
-  rm -rf $tmp
-  mkdir -p $tmp
-  keyFile=$tmp/id_rsa
-  ssh-keygen -t rsa -b 4096 -m PEM -f $keyFile -N ""
-  docker secret create $jwt_private_key_secret $keyFile
-  docker secret create $jwt_public_key_secret $keyFile.pub
-fi
+#if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$jwt_private_key_secret"`" ]]
+#then
+
+docker secret rm $jwt_private_key_secret
+docker secret rm $jwt_public_key_secret
+
+echo "WARNING: Generating new nats jwt signing keys & saving them in .env"
+tmp="$root/.tmp"
+rm -rf $tmp
+mkdir -p $tmp
+keyFile=$tmp/id_rsa
+ssh-keygen -t rsa -b 4096 -m PEM -f $keyFile -N ""
+docker secret create $jwt_private_key_secret $keyFile
+docker secret create $jwt_public_key_secret $keyFile.pub
+
+#fi
 
 ####################
 # Auth config
@@ -226,8 +231,10 @@ services:
     $common
     $auth_image
     environment:
-      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
-      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY_FILE: '/run/secrets/$jwt_private_key_secret'
+      VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY: '"`cat $keyFile.pub`"'
+      VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY: '"`cat $keyFile`"'
+      #VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
+      #VECTOR_NATS_JWT_SIGNER_PRIVATE_KEY_FILE: '/run/secrets/$jwt_private_key_secret'
       VECTOR_NATS_URL: 'nats://nats:4222'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
@@ -242,7 +249,8 @@ services:
     $common
     image: '$nats_image'
     environment:
-      JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
+      JWT_SIGNER_PUBLIC_KEY: '"`cat $keyFile.pub`"'
+      #JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
     secrets:
       - '$jwt_public_key_secret'
     ports:

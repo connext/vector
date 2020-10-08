@@ -1,26 +1,29 @@
-import { NatsMessagingService, getBearerTokenFunction } from "@connext/vector-messaging";
+import { VectorChainService } from "@connext/vector-contracts";
+import { VectorEngine } from "@connext/vector-engine";
 import {
-  ServerNodeParams,
-  ServerNodeResponses,
+  ChainAddresses,
+  ChainProviders,
+  ChannelRpcMethods,
+  CreateUpdateDetails,
   EngineEvent,
   EngineEventMap,
-  Result,
-  IChannelSigner,
-  IVectorEngine,
-  ChainProviders,
-  ChainAddresses,
-  INodeService,
-  NodeError,
-  ChannelRpcMethods,
   EngineEvents,
-  CreateUpdateDetails,
+  IChannelSigner,
+  INodeService,
+  IVectorEngine,
+  NodeError,
+  Result,
+  ServerNodeParams,
+  ServerNodeResponses,
 } from "@connext/vector-types";
-import { constructRpcRequest } from "@connext/vector-utils";
-import { VectorEngine } from "@connext/vector-engine";
-import { BaseLogger } from "pino";
-import { VectorChainService } from "@connext/vector-contracts";
-import { providers } from "ethers";
+import {
+  constructRpcRequest,
+  getBearerTokenFunction,
+  NatsMessagingService,
+} from "@connext/vector-utils";
 import Axios from "axios";
+import { providers } from "ethers";
+import { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";

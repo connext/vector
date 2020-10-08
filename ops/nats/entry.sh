@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
 
-if [[ -z "$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY" && -n "$VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY_FILE" ]]
-then
-  echo "Loading key from file: $VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY_FILE"
-  export VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY="`cat $VECTOR_NATS_JWT_SIGNER_PUBLIC_KEY_FILE`"
-else
-  echo "Using key provided by env var"
+if [[ -n "$JWT_SIGNER_PUBLIC_KEY" ]]
+then echo "Using public key provided by env var"
+elif [[ -n "$JWT_SIGNER_PUBLIC_KEY_FILE" ]]
+then export JWT_SIGNER_PUBLIC_KEY_FILE="`cat $JWT_SIGNER_PUBLIC_KEY_FILE`"
+else echo "public key must be provided via either a secret or an env var." && exit 1
 fi
 
 exec /bin/nats-server -D -V

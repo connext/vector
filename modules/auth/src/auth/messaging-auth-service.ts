@@ -1,6 +1,6 @@
 import { BaseLogger } from "pino";
-import { AuthService } from "@connext/vector-messaging";
 import {
+  AuthService,
   getRandomBytes32,
   getSignerAddressFromPublicIdentifier,
   recoverAddressFromChannelMessage,

@@ -7,10 +7,11 @@ import {
   IChannelSigner,
   OutboundChannelUpdateError,
 } from "@connext/vector-types";
-import { BaseLogger } from "pino";
 import axios, { AxiosResponse } from "axios";
+import { BaseLogger } from "pino";
+import { INatsService, natsServiceFactory } from "ts-natsutil";
 
-import { INatsService, natsServiceFactory } from "./service";
+export { AuthService } from "ts-natsutil";
 
 export const getBearerTokenFunction = (signer: IChannelSigner, authUrl: string) => async (): Promise<string> => {
   const nonceResponse = await axios.get(`${authUrl}/auth/${signer.publicIdentifier}`);

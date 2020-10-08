@@ -1,9 +1,7 @@
 import {
-  getBearerTokenFunction,
   NatsMessagingService,
-} from "@connext/vector-messaging";
-import {
   expect,
+  getBearerTokenFunction,
   getRandomChannelSigner,
 } from "@connext/vector-utils";
 import axios from "axios";

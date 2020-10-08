@@ -1,10 +1,11 @@
-import { getBearerTokenFunction, NatsMessagingService } from "@connext/vector-messaging";
 import { IChannelSigner } from "@connext/vector-types";
 import {
-  expect,
   createTestChannelUpdate,
   delay,
+  expect,
+  getBearerTokenFunction,
   getRandomChannelSigner,
+  NatsMessagingService,
 } from "@connext/vector-utils";
 import pino from "pino";
 
