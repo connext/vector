@@ -13,6 +13,11 @@ describe(testName, () => {
   let bob: IVectorProtocol;
   let channelAddress: string;
 
+  afterEach(() => {
+    alice.off();
+    bob.off();
+  });
+
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
       {

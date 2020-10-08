@@ -13,6 +13,11 @@ describe(testName, () => {
   let bob: IVectorProtocol;
   let carol: IVectorProtocol;
 
+  afterEach(() => {
+    alice.off();
+    bob.off();
+  });
+
   beforeEach(async () => {
     [alice, bob, carol] = await createVectorInstances(true, 3);
 

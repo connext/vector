@@ -221,15 +221,19 @@ describe("Vector", () => {
 
   describe("Vector.deposit", () => {
     let vector: Vector;
+    const channelAddress: string = mkAddress("0xccc");
 
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
 
+      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }));
+
       vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      console.log("CONNECTED");
     });
 
     it("should work", async () => {
-      const { details } = createTestUpdateParams(UpdateType.deposit);
+      const { details } = createTestUpdateParams(UpdateType.deposit, { channelAddress });
       const result = await vector.deposit(details);
       expect(result.getError()).to.be.undefined;
       expect(lockService.acquireLock.callCount).to.be.eq(1);
@@ -238,7 +242,7 @@ describe("Vector", () => {
 
     describe("should validate parameters", () => {
       const validParams = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress,
         amount: "12039",
         assetId: mkAddress("0xaaa"),
       };
@@ -280,15 +284,18 @@ describe("Vector", () => {
 
   describe("Vector.create", () => {
     let vector: Vector;
+    const channelAddress: string = mkAddress("0xccc");
 
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
+
+      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }));
 
       vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
 
     it("should work", async () => {
-      const { details } = createTestUpdateParams(UpdateType.create);
+      const { details } = createTestUpdateParams(UpdateType.create, { channelAddress });
       const result = await vector.create(details);
       expect(result.getError()).to.be.undefined;
       expect(lockService.acquireLock.callCount).to.be.eq(1);
@@ -297,7 +304,7 @@ describe("Vector", () => {
 
     describe("should validate parameters", () => {
       const validParams: CreateTransferParams = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress,
         amount: "123214",
         assetId: mkAddress("0xaaa"),
         transferDefinition: mkAddress("0xdef"),
@@ -377,15 +384,18 @@ describe("Vector", () => {
 
   describe("Vector.resolve", () => {
     let vector: Vector;
+    const channelAddress: string = mkAddress("0xccc");
 
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
+
+      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }));
 
       vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
 
     it("should work", async () => {
-      const { details } = createTestUpdateParams(UpdateType.resolve);
+      const { details } = createTestUpdateParams(UpdateType.resolve, { channelAddress });
       const result = await vector.resolve(details);
       expect(result.getError()).to.be.undefined;
       expect(lockService.acquireLock.callCount).to.be.eq(1);
@@ -394,7 +404,7 @@ describe("Vector", () => {
 
     describe("should validate parameters", () => {
       const validParams = {
-        channelAddress: mkAddress("0xccc"),
+        channelAddress,
         transferId: mkBytes32("0xaaabbb"),
         transferResolver: {
           preImage: mkBytes32("0xeeeeffff"),
