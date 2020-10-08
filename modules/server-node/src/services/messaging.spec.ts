@@ -1,13 +1,13 @@
+import { IChannelSigner, LockInformation } from "@connext/vector-types";
 import {
-  expect,
   createTestChannelUpdate,
   delay,
-  getRandomChannelSigner,
+  expect,
   getBearerTokenFunction,
+  getRandomChannelSigner,
   NatsMessagingService,
   mkAddress,
 } from "@connext/vector-utils";
-import { IChannelSigner, LockInformation } from "@connext/vector-types";
 import pino from "pino";
 
 import { config } from "../config";

@@ -1,6 +1,6 @@
 import { BaseLogger } from "pino";
-import { AuthService } from "ts-natsutil";
 import {
+  AuthService,
   getRandomBytes32,
   getSignerAddressFromPublicIdentifier,
   recoverAddressFromChannelMessage,
@@ -61,16 +61,14 @@ export class MessagingAuthService {
       throw new Error(`Verification failed... nonce expired for address: ${userIdentifier}`);
     }
 
+    // publish as "to.from.subject", respond to _INBOX
     const permissions = {
       publish: {
-        allow: [`*.${userIdentifier}.>`, `_INBOX.>`], // publish as to.from.subject, respond to INBOX
+        allow: [`*.${userIdentifier}.>`, `_INBOX.>`],
       },
       subscribe: {
         allow: [`>`],
       },
-      // response: {
-      // TODO: consider some sane ttl to safeguard DDOS
-      // },
     };
 
     const jwt = await this.vend(userIdentifier, nonceTTL, permissions);

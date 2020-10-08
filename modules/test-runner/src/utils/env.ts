@@ -5,7 +5,7 @@ export const env = {
   bobUrl: process.env.VECTOR_BOB_URL || "http://bob:8000",
   carolUrl: process.env.VECTOR_CAROL_URL || "http://carol:8000",
   chainProviders: JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS || "{}"),
-  contractAddresses: JSON.parse(process.env.VECTOR_CONTRACT_ADDRESSES || "{}"),
+  chainAddresses: JSON.parse(process.env.VECTOR_CHAIN_ADDRESSES || "{}"),
   daveUrl: process.env.VECTOR_DAVE_URL || "http://dave:8000",
   logLevel: process.env.VECTOR_LOG_LEVEL || "error",
   natsUrl: process.env.VECTOR_NATS_URL || "http://nats:4222",

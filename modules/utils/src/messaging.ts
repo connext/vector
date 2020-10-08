@@ -9,9 +9,11 @@ import {
   LockError,
   LockInformation,
 } from "@connext/vector-types";
-import { INatsService, natsServiceFactory } from "ts-natsutil";
-import { BaseLogger } from "pino";
 import axios, { AxiosResponse } from "axios";
+import { BaseLogger } from "pino";
+import { INatsService, natsServiceFactory } from "ts-natsutil";
+
+export { AuthService } from "ts-natsutil";
 
 export const getBearerTokenFunction = (signer: IChannelSigner, authUrl: string) => async (): Promise<string> => {
   const nonceResponse = await axios.get(`${authUrl}/auth/${signer.publicIdentifier}`);
@@ -60,6 +62,7 @@ export class NatsMessagingService implements IMessagingService {
     if (!this.bearerToken) {
       this.bearerToken = await this.getBearerToken();
     }
+    // TODO: fail fast w sensible error message if bearer token is invalid
     const service = natsServiceFactory(
       {
         bearerToken: this.bearerToken,
@@ -160,8 +163,8 @@ export class NatsMessagingService implements IMessagingService {
     >
   > {
     this.assertConnected();
+    const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
     try {
-      const subject = `${channelUpdate.toIdentifier}.${channelUpdate.fromIdentifier}.protocol`;
       const msgBody = JSON.stringify({
         update: channelUpdate,
         previousUpdate,
@@ -186,7 +189,12 @@ export class NatsMessagingService implements IMessagingService {
       return Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.update });
     } catch (e) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.MessageFailed, channelUpdate, undefined, e),
+        new OutboundChannelUpdateError(
+          OutboundChannelUpdateError.reasons.MessageFailed,
+          channelUpdate,
+          undefined,
+          { message: e.message, subject },
+        ),
       );
     }
   }

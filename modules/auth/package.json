@@ -17,8 +17,7 @@
     "crypto": "1.0.1",
     "fastify": "3.4.1",
     "fastify-cors": "4.1.0",
-    "pino": "6.6.1",
-    "ts-natsutil": "1.1.1"
+    "pino": "6.6.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",
