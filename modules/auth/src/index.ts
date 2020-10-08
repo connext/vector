@@ -12,13 +12,9 @@ import {
   postAuthResponseSchema,
 } from "./schemas";
 
-const logger = pino({
-  level: "info",
-});
+const logger = pino({ level: "info" });
 
-const server = fastify({
-  logger,
-});
+const server = fastify({ logger });
 
 const messagingService = new MessagingAuthService(
   {

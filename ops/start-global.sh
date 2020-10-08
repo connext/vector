@@ -241,8 +241,6 @@ services:
   nats:
     $common
     image: '$nats_image'
-    deploy:
-      mode: global
     environment:
       JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
     secrets:
@@ -251,8 +249,6 @@ services:
   redis:
     $common
     image: '$redis_image'
-    deploy:
-      mode: global
 
   $evm_services
 
