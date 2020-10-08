@@ -1,6 +1,6 @@
 import { Static, Type } from "@sinclair/typebox";
 
-import { TContractAddresses, TUrl } from "./schemas";
+import { TContractAddresses, TUrl } from ".";
 
 export const VectorNodeConfigSchema = Type.Object({
   adminToken: Type.String(),

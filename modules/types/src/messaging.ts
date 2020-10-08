@@ -7,10 +7,16 @@ export interface IMessagingService {
 
   onReceiveLockMessage(
     myPublicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string) => void,
+    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
   ): Promise<void>;
 
-  sendLockMessage(lockInfo: LockInformation, to: string, from: string): Promise<Result<string | void, LockError>>;
+  sendLockMessage(
+    lockInfo: LockInformation,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<string | void, LockError>>;
 
   onReceiveProtocolMessage(
     myPublicIdentifier: string,

@@ -7,12 +7,10 @@ import {
   NatsMessagingService,
   mkAddress,
 } from "@connext/vector-utils";
-import { IChannelSigner } from "@connext/vector-types";
+import { IChannelSigner, LockInformation } from "@connext/vector-types";
 import pino from "pino";
 
 import { config } from "../config";
-import { hexlify } from "ethers/lib/utils";
-import { randomBytes } from "crypto";
 
 describe("messaging", () => {
   const logger = pino();
@@ -69,8 +67,8 @@ describe("messaging", () => {
     expect(res.getValue().update).to.deep.eq(update);
   });
 
-  it.only("should send a lock message from A to B", async () => {
-    const lockInformation = {
+  it("should send a lock message from A to B", async () => {
+    const lockInformation: LockInformation = {
       type: "acquire",
       lockName: mkAddress("0xccc"),
     };

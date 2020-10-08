@@ -40,6 +40,7 @@ export class NatsMessagingService implements IMessagingService {
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
+
   sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
     throw new Error("Method not implemented.");
   }
@@ -91,20 +92,17 @@ export class NatsMessagingService implements IMessagingService {
     lockInfo: LockInformation,
     to: string,
     from: string,
+    timeout = 30_000, // TODO this timeout is copied from memolock
+    numRetries = 0,
   ): Promise<Result<string | undefined, LockError>> {
-    console.log("sending message to", to, "from", from, "with info", lockInfo);
     this.assertConnected();
-    console.log("connected, starting logic");
     const method = "sendLockMessage";
     try {
       const subject = `${to}.${from}.lock`;
-      console.log("subject", subject);
       const msgBody = JSON.stringify({ lockInfo });
-      console.log("body", msgBody);
-      this.log.error({ method, msgBody }, "Sending message");
-      const msg = await this.connection!.request(subject, 30000, msgBody);
-      // TODO this timeout is copied from memolock
-      this.log.error({ method, msgBody, msg }, "Received response");
+      this.log.debug({ method, msgBody }, "Sending message");
+      const msg = await this.connection!.request(subject, timeout, msgBody);
+      this.log.debug({ method, msgBody, msg }, "Received response");
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       parsedMsg.data = parsedData;
@@ -124,16 +122,14 @@ export class NatsMessagingService implements IMessagingService {
     this.assertConnected();
     const method = "onReceiveLockMessage";
     const subscriptionSubject = `${publicIdentifier}.*.lock`;
-    console.log("****** subscribing to subject", subscriptionSubject);
     await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
-      this.log.error({ method, msg }, "Received message");
+      this.log.debug({ method, msg }, "Received message");
       const from = msg.subject.split(".")[1];
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       if (err) {
         callback(Result.fail(new LockError(err)), from, msg.reply);
         return;
       }
-      console.log("parsedMsg", parsedMsg);
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       // TODO: validate msg structure
       if (!parsedMsg.reply) {
@@ -146,7 +142,7 @@ export class NatsMessagingService implements IMessagingService {
       }
       callback(Result.ok({ ...parsedMsg.data.lockInfo }), from, msg.reply);
     });
-    this.log.error({ method, subject: subscriptionSubject }, `Subscription created`);
+    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
 
   async sendProtocolMessage(

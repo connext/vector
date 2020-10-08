@@ -14,7 +14,7 @@ import { getRandomBytes32 } from "../../hexStrings";
 export class MemoryMessagingService implements IMessagingService {
   onReceiveLockMessage(
     publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string) => void,
+    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
