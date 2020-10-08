@@ -1,3 +1,9 @@
+export type LockInformation = {
+  type: "acquire" | "release";
+  lockName: string;
+  lockValue?: string;
+};
+
 export interface ILockService {
   acquireLock(
     lockName: string /* Bytes32? */,
