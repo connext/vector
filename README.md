@@ -9,8 +9,7 @@ Out of the box, it supports the following features:
 - 💸 Conditional transfers with arbitrary generality routed over one (eventually many) intermediary nodes.
 - 🔀 Instant cross-chain and cross-asset transfers/communication. Works with any evm-compatible chain.
 - 🔌 Plug in support for non-evm turing complete chains.
-- 💳 Simplified deposits, just send funds directly to the channel address from anywhere!
-- 🦄 Use a channel as a wallet - call arbitrary contract functions (e.g. Uniswap!) using channel funds.
+- 💳 Simplified deposits/withdraw, just send funds directly to the channel address from anywhere and use your channel as a wallet!
 - ⛽ Native e2e gas abstraction for end-users.
 - 💤 Transfers to offline recipients.
 
