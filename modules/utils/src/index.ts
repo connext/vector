@@ -14,7 +14,6 @@ export * from "./hexStrings";
 export * from "./identifiers";
 export * from "./json";
 export * from "./math";
-export * from "./messaging";
 export * from "./rpc";
 export * from "./serverNode";
 export * from "./strings";

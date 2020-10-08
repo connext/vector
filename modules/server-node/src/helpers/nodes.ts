@@ -1,7 +1,8 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
+import { getBearerTokenFunction, NatsMessagingService } from "@connext/vector-messaging";
 import { EngineEvents, IVectorChainService, IVectorEngine } from "@connext/vector-types";
-import { ChannelSigner, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
+import { ChannelSigner } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "ethers";
 

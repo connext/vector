@@ -1,5 +1,5 @@
 import { BaseLogger } from "pino";
-import { AuthService } from "ts-natsutil";
+import { AuthService } from "@connext/vector-messaging";
 import {
   getRandomBytes32,
   getSignerAddressFromPublicIdentifier,

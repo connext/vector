@@ -11,14 +11,14 @@
     "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
+    "@connext/vector-messaging": "0.0.1",
     "@connext/vector-types": "0.0.1",
     "@connext/vector-utils": "0.0.1",
     "@sinclair/typebox": "0.10.1",
     "crypto": "1.0.1",
     "fastify": "3.4.1",
     "fastify-cors": "^4.1.0",
-    "pino": "6.6.1",
-    "ts-natsutil": "1.1.1"
+    "pino": "6.6.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.12",

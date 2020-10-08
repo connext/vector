@@ -239,6 +239,11 @@ utils: types $(shell find modules/utils $(find_options))
 	$(docker_run) "cd modules/utils && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
+messaging: utils $(shell find modules/messaging $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/messaging && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
 contracts: utils $(shell find modules/contracts $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build"
@@ -275,7 +280,7 @@ browser-node-test-ui: engine $(shell find modules/browser-node-test-ui $(find_op
 	$(docker_run) "cd modules/browser-node-test-ui && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-server-node-bundle: engine $(shell find modules/server-node $(find_options))
+server-node-bundle: engine messaging $(shell find modules/server-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
