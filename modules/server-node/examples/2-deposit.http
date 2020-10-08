@@ -1,7 +1,7 @@
-@aliceUrl = http://localhost:8002
-@bobUrl = http://localhost:8003
+@aliceUrl = http://localhost:8003
+@bobUrl = http://localhost:8004
 @rogerUrl = http://localhost:8000
-@aliceBobChannel = 0xc27e351f43a8cCad42B609343a0A43905336c97b
+@aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
 @aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
 @chainId = 1337
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
@@ -23,7 +23,7 @@ Content-Type: application/json
 
 ##############
 ### Reconcile Deposit
-POST {{aliceUrl}}/deposit
+POST {{bobUrl}}/deposit
 Content-Type: application/json
 
 {

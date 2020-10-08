@@ -1,5 +1,4 @@
-import { TransferNames } from "@connext/vector-types";
-import { INodeService } from "@connext/vector-types";
+import { TransferNames, INodeService } from "@connext/vector-types";
 import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
