@@ -42,7 +42,7 @@ duet: global node
 trio: global node router
 extras: test-runner
 
-all: global node router duet trio extras
+all: global node browser-node router duet trio extras
 
 ########################################
 # Command & Control Shortcuts
