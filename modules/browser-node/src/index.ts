@@ -47,7 +47,11 @@ export class BrowserNode implements INodeService {
     const messaging = new NatsMessagingService({ messagingUrl }, log, getBearerTokenFunction(signer, authUrl));
     await messaging.connect();
     const store = new BrowserStore(log.child({ module: "BrowserStore" }));
-    const lock = new BrowserLockService();
+    const lock = new BrowserLockService(
+      signer.publicIdentifier,
+      messaging,
+      log.child({ module: "BrowserLockService" }),
+    );
     const chainService = new VectorChainService(store, chainJsonProviders, signer, log);
     const engine = await VectorEngine.connect(
       messaging,
@@ -55,7 +59,6 @@ export class BrowserNode implements INodeService {
       store,
       signer,
       chainService,
-      chainProviders,
       chainAddresses,
       log.child({ module: "VectorEngine" }),
     );

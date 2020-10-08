@@ -6,14 +6,16 @@
     "1337": {
       "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
       "channelMastercopyAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",
-      "hashlockTransferAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10",
+      "hashlockTransferAddress": "0xf25186B5081Ff5cE73482AD761DB0eB0d25abfBF",
+      "transferRegistryAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10",
       "withdrawAddress": "0xf25186B5081Ff5cE73482AD761DB0eB0d25abfBF",
       "TestToken": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F"
     },
     "1338": {
       "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
       "channelMastercopyAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",
-      "hashlockTransferAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10",
+      "hashlockTransferAddress": "0xf25186B5081Ff5cE73482AD761DB0eB0d25abfBF",
+      "transferRegistryAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10",
       "withdrawAddress": "0xf25186B5081Ff5cE73482AD761DB0eB0d25abfBF",
       "TestToken": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F"
     }

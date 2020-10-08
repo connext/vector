@@ -1,8 +1,22 @@
 import { ChannelUpdate } from "./channel";
-import { InboundChannelUpdateError, OutboundChannelUpdateError, Result } from "./error";
+import { InboundChannelUpdateError, LockError, OutboundChannelUpdateError, Result } from "./error";
+import { LockInformation } from "./lock";
 
 export interface IMessagingService {
   connect(): Promise<void>;
+
+  onReceiveLockMessage(
+    myPublicIdentifier: string,
+    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+
+  sendLockMessage(
+    lockInfo: LockInformation,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<string | void, LockError>>;
 
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
