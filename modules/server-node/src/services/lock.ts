@@ -31,7 +31,7 @@ export class LockService implements ILockService {
     // this callback
     return this.messagingService.onReceiveLockMessage(
       this.publicIdentifier,
-      async (lockRequest: Result<LockInformation, LockError>) => {
+      async (lockRequest: Result<LockInformation, LockError>, from: string, inbox: string) => {
         if (lockRequest.isError) {
           // Handle a lock failure here
           // TODO: is there anything that has to happen here?

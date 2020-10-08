@@ -92,15 +92,19 @@ export class NatsMessagingService implements IMessagingService {
     to: string,
     from: string,
   ): Promise<Result<string | undefined, LockError>> {
+    console.log("sending message to", to, "from", from, "with info", lockInfo);
     this.assertConnected();
+    console.log("connected, starting logic");
     const method = "sendLockMessage";
     try {
       const subject = `${to}.${from}.lock`;
+      console.log("subject", subject);
       const msgBody = JSON.stringify({ lockInfo });
-      this.log.debug({ method, msgBody }, "Sending message");
+      console.log("body", msgBody);
+      this.log.error({ method, msgBody }, "Sending message");
       const msg = await this.connection!.request(subject, 30000, msgBody);
       // TODO this timeout is copied from memolock
-      this.log.debug({ method, msgBody, msg }, "Received response");
+      this.log.error({ method, msgBody, msg }, "Received response");
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       parsedMsg.data = parsedData;
@@ -115,19 +119,21 @@ export class NatsMessagingService implements IMessagingService {
 
   async onReceiveLockMessage(
     publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string) => void,
+    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
   ): Promise<void> {
     this.assertConnected();
     const method = "onReceiveLockMessage";
     const subscriptionSubject = `${publicIdentifier}.*.lock`;
+    console.log("****** subscribing to subject", subscriptionSubject);
     await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
-      this.log.debug({ method, msg }, "Received message");
+      this.log.error({ method, msg }, "Received message");
       const from = msg.subject.split(".")[1];
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       if (err) {
-        callback(Result.fail(new LockError(err)), from);
+        callback(Result.fail(new LockError(err)), from, msg.reply);
         return;
       }
-      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      console.log("parsedMsg", parsedMsg);
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       // TODO: validate msg structure
       if (!parsedMsg.reply) {
@@ -135,12 +141,12 @@ export class NatsMessagingService implements IMessagingService {
       }
       parsedMsg.data = parsedData;
       if (parsedMsg.data.error) {
-        callback(Result.fail(parsedMsg.data.error), from);
+        callback(Result.fail(parsedMsg.data.error), from, msg.reply);
         return;
       }
-      callback(Result.ok({ ...parsedMsg.data.lockInfo }), from);
+      callback(Result.ok({ ...parsedMsg.data.lockInfo }), from, msg.reply);
     });
-    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+    this.log.error({ method, subject: subscriptionSubject }, `Subscription created`);
   }
 
   async sendProtocolMessage(
@@ -241,6 +247,14 @@ export class NatsMessagingService implements IMessagingService {
         previousUpdate,
       }),
     );
+  }
+
+  async respondToLockMessage(inbox: string, lockInformation: LockInformation): Promise<void> {
+    this.assertConnected();
+    const subject = inbox;
+    // TODO: get the lock value?
+    this.log.debug({ method: "respondToLockMessage", subject, lockInformation }, `Sending lock response`);
+    await this.connection!.publish(subject, JSON.stringify({ lockInformation }));
   }
 
   async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
