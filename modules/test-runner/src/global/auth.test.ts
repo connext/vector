@@ -1,5 +1,5 @@
 import {
-  createTestChannelUpdate,
+  delay,
   expect,
   getBearerTokenFunction,
   getRandomChannelSigner,
@@ -11,101 +11,51 @@ import pino from "pino";
 import { env } from "../utils";
 
 describe("Global Auth Service", () => {
-  const signer = getRandomChannelSigner();
-  const userIdentifier = signer.publicIdentifier;
+  const alice = getRandomChannelSigner();
+  const bob = getRandomChannelSigner();
+  const aliceId = alice.publicIdentifier;
+  const bobId = bob.publicIdentifier;
 
-  it("should ping when we pong", async () => {
+  it("should pong when we ping", async () => {
     const res = await axios.get(`${env.authUrl}/ping`);
     expect(res.data).to.equal("pong\n");
   });
 
-  // TODO: this should fail if the authRes is invalid but it's still passing
   it("should dispense a jwt which allows the user to connect to NATS", async () => {
-    const peer = getRandomChannelSigner();
+    const opts = { messagingUrl: env.natsUrl };
 
-    const messaging = new NatsMessagingService(
-      { messagingUrl: env.natsUrl },
-      pino(),
-      getBearerTokenFunction(signer, env.authUrl),
-    );
-    await messaging.connect();
-
-    const peerMessaging = new NatsMessagingService(
-      { messagingUrl: env.natsUrl },
-      pino(),
-      getBearerTokenFunction(peer, env.authUrl),
-    );
-    await peerMessaging.connect();
-    expect(peerMessaging).to.be.ok;
-
-    const update = createTestChannelUpdate("setup", {
-      fromIdentifier: userIdentifier,
-      toIdentifier: getRandomChannelSigner().publicIdentifier,
-    });
-
-    const testSubject = `test.${userIdentifier}`;
-
-    const received = new Promise((res, rej) => {
-      peerMessaging.subscribe(testSubject, (event) => {
-        res(event);
-      });
-      setTimeout(() => rej("Timeout"), 3000);
-    });
-
-    await expect(messaging.publish(testSubject, update)).to.be.fulfilled;
-    console.log("msg sent, waiting to receive it");
-    await expect(received).to.be.fulfilled;
-
-
-
-
-
-
-  /*
-    const nonceRes = await axios.get(`${env.authUrl}/auth/${userIdentifier}`);
+    const nonceRes = await axios.get(`${env.authUrl}/auth/${aliceId}`);
     expect(nonceRes.status).to.equal(200);
     expect(nonceRes.data).to.be.a("string");
 
-    const sig = await signer.signMessage(nonceRes.data);
-    const authRes = await axios.post(`${env.authUrl}/auth`, { sig, userIdentifier });
+    const sig = await alice.signMessage(nonceRes.data);
+    const authRes = await axios.post(`${env.authUrl}/auth`, { sig, userIdentifier: aliceId });
     expect(authRes.status).to.equal(200);
     expect(nonceRes.data).to.be.a("string");
 
-    await messaging.connect();
-    expect(messaging).to.be.ok;
+    const aliceMessaging = new NatsMessagingService(opts, pino(), () => authRes.data);
+    expect(aliceMessaging).to.be.ok;
+    await aliceMessaging.connect();
 
-    const peerNonce = (await axios.get(`${env.authUrl}/auth/${peer.publicIdentifier}`)).data;
-    const peerToken = (await axios.post(`${env.authUrl}/auth`, {
-      sig: await peer.signMessage(peerNonce),
-      userIdentifier: peer.publicIdentifier,
-    })).data;
-
-    const peerMessaging = new NatsMessagingService(
-      { messagingUrl: env.natsUrl },
+    const bobMessaging = new NatsMessagingService(
+      opts,
       pino(),
-      () => Promise.resolve(peerToken),
+      getBearerTokenFunction(bob, env.authUrl),
     );
-    await peerMessaging.connect();
-    expect(peerMessaging).to.be.ok;
+    expect(bobMessaging).to.be.ok;
+    await bobMessaging.connect();
 
-    const testSubject = `test.${userIdentifier}`;
+    const testSubject = `${bobId}.${aliceId}.test.subject`;
 
     const received = new Promise((res, rej) => {
-      peerMessaging.subscribe(testSubject, (event) => {
+      bobMessaging.subscribe(testSubject, (event) => {
         res(event);
       });
-      setTimeout(() => rej("Timeout"), 3000);
+      setTimeout(() => rej("Timeout"), 10002);
     });
 
-    const update = createTestChannelUpdate("setup", {
-      fromIdentifier: userIdentifier,
-      toIdentifier: getRandomChannelSigner().publicIdentifier,
-    });
-
-    await expect(messaging.publish(testSubject, update)).to.be.fulfilled;
-    console.log("msg sent, waiting to receive it");
+    await expect(aliceMessaging.publish(testSubject, { hello: "world" })).to.be.fulfilled;
     await expect(received).to.be.fulfilled;
-*/
 
   });
 
