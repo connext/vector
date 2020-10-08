@@ -11,6 +11,7 @@ import {
   SetupUpdateDetails,
   NetworkContext,
   IChannelSigner,
+  HashlockTransferState,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -148,10 +149,6 @@ export function createTestChannelUpdate<T extends UpdateType>(
         transferId: mkBytes32("0xid"),
         transferEncodings: ["state", "resolver"],
         transferInitialState: {
-          balance: {
-            amount: ["10", "0"],
-            to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
-          },
           lockHash: mkBytes32("0xlockHash"),
           expiry: "0",
         },
@@ -268,10 +265,8 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
   const details: any = {};
   if (type === UpdateType.create) {
     details.transferInitialState = createTestHashlockTransferState({
-      balance: {
-        to: signers.map(s => s.address),
-      },
-      ...(((overrides as unknown) as ChannelUpdate<"create">).details.transferInitialState ?? {}),
+      ...((((overrides as unknown) as ChannelUpdate<"create">).details.transferInitialState ??
+        {}) as HashlockTransferState),
     });
   }
 

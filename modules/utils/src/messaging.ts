@@ -186,12 +186,10 @@ export class NatsMessagingService implements IMessagingService {
       return Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.update });
     } catch (e) {
       return Result.fail(
-        new OutboundChannelUpdateError(
-          OutboundChannelUpdateError.reasons.MessageFailed,
-          channelUpdate,
-          undefined,
-          { message: e.message, subject },
-        ),
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.MessageFailed, channelUpdate, undefined, {
+          message: e.message,
+          subject,
+        }),
       );
     }
   }
