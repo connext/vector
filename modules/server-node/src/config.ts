@@ -1,32 +1,8 @@
-import { TContractAddresses, TUrl } from "@connext/vector-types";
-import { Static, Type } from "@sinclair/typebox";
+import { VectorNodeConfig, VectorNodeConfigSchema } from "@connext/vector-types";
 import Ajv from "ajv";
 
 const ajv = new Ajv();
 
-const VectorNodeConfigSchema = Type.Object({
-  adminToken: Type.String(),
-  authUrl: Type.String({ format: "uri" }),
-  chainAddresses: Type.Map(TContractAddresses),
-  chainProviders: Type.Map(TUrl),
-  dbUrl: Type.Optional(TUrl),
-  logLevel: Type.Optional(
-    Type.Union([
-      Type.Literal("fatal"),
-      Type.Literal("error"),
-      Type.Literal("warn"),
-      Type.Literal("info"),
-      Type.Literal("debug"),
-      Type.Literal("trace"),
-      Type.Literal("silent"),
-    ]),
-  ),
-  mnemonic: Type.Optional(Type.String()),
-  natsUrl: TUrl,
-  redisUrl: TUrl,
-});
-
-type VectorNodeConfig = Static<typeof VectorNodeConfigSchema>;
 const mnemonic = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
 let vectorConfig: VectorNodeConfig;

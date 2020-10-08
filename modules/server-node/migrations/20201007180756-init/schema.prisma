@@ -35,6 +35,7 @@ model Channel {
   balances                    Balance[]
   channelFactoryAddress       String
   channelMastercopyAddress    String
+  transferRegistryAddress     String
   chainId                     Int
   providerUrl                 String
   latestUpdate                Update

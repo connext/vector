@@ -84,8 +84,6 @@ node_env="environment:
       VECTOR_PG_PORT: '$pg_port'
       VECTOR_PG_USERNAME: '$project'"
 
-echo "***** VECTOR_CONFIG" $config
-
 ####################
 # Launch stack
 

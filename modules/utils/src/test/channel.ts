@@ -9,9 +9,6 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  HashlockTransferState,
-  HashlockTransferStateEncoding,
-  HashlockTransferResolverEncoding,
   NetworkContext,
   IChannelSigner,
 } from "@connext/vector-types";
@@ -57,6 +54,7 @@ export function createTestUpdateParams<T extends UpdateType>(
           providerUrl: "http://eth.com",
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
           channelMastercopyAddress: mkAddress("0xcccabbb23132"),
+          transferRegistryAddress: mkAddress("0xdddeffff2222"),
         },
       } as SetupUpdateDetails;
       break;
@@ -74,7 +72,6 @@ export function createTestUpdateParams<T extends UpdateType>(
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestHashlockTransferState(),
         timeout: "1",
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: { test: "meta" },
       };
       break;
@@ -144,30 +141,32 @@ export function createTestChannelUpdate<T extends UpdateType>(
       } as DepositUpdateDetails;
       break;
     case UpdateType.create:
-      details = {
+      const createDeets: CreateUpdateDetails = {
         merkleProofData: [mkBytes32("0xproof")],
         merkleRoot: mkBytes32("0xroot"),
         transferDefinition: mkAddress("0xdef"),
-        transferEncodings: ["create", "resolve"],
         transferId: mkBytes32("0xid"),
+        transferEncodings: ["state", "resolver"],
         transferInitialState: {
           balance: {
             amount: ["10", "0"],
             to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
           },
           lockHash: mkBytes32("0xlockHash"),
-        } as HashlockTransferState,
+          expiry: "0",
+        },
         transferTimeout: "0",
-      } as CreateUpdateDetails;
+      };
+      details = { ...createDeets };
       break;
     case UpdateType.resolve:
-      details = {
+      const resolveDetails: ResolveUpdateDetails = {
         merkleRoot: mkBytes32("0xroot1"),
         transferDefinition: mkAddress("0xdef"),
-        transferEncodings: ["create", "resolve"],
         transferId: mkBytes32("id"),
         transferResolver: { preImage: mkBytes32("0xpre") },
-      } as ResolveUpdateDetails;
+      };
+      details = { ...resolveDetails };
       break;
   }
   return {
@@ -229,6 +228,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       chainId: 1337,
       channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
       channelMastercopyAddress: mkAddress("0xcccabbb23132"),
+      transferRegistryAddress: mkAddress("0xcc22233323132"),
       providerUrl: "http://localhost:8545",
       ...(networkContext ?? {}),
     },

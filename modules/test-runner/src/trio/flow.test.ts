@@ -1,9 +1,9 @@
-import { EngineEvents, RouterSchemas, TransferName } from "@connext/vector-types";
-import { IServerNodeService, RestServerNodeService, expect, getRandomBytes32, delay } from "@connext/vector-utils";
+import { RestServerNodeService, expect, getRandomBytes32, delay } from "@connext/vector-utils";
+import { EngineEvents, RouterSchemas, TransferNames, INodeService } from "@connext/vector-types";
 import { Wallet, utils, providers, constants } from "ethers";
 import pino from "pino";
 
-import { env } from "../utils";
+import { env, getRandomIndex } from "../utils";
 
 import { carolEvts, daveEvts } from "./setup";
 
@@ -16,34 +16,30 @@ const testName = "Trio Ping Pong";
 
 // TODO: need to fix this test to work with the other test
 describe.skip(testName, () => {
-  let carol: IServerNodeService;
-  let dave: IServerNodeService;
-  let roger: IServerNodeService;
+  let carol: INodeService;
+  let dave: INodeService;
+  let roger: INodeService;
 
   before(async () => {
     carol = await RestServerNodeService.connect(
       env.carolUrl,
-      env.chainProviders,
       logger.child({ testName, name: "Carl" }),
       carolEvts,
+      getRandomIndex(),
     );
     expect(carol.signerAddress).to.be.a("string");
     expect(carol.publicIdentifier).to.be.a("string");
 
     dave = await RestServerNodeService.connect(
       env.daveUrl,
-      env.chainProviders,
       logger.child({ testName, name: "Dave" }),
       daveEvts,
+      getRandomIndex(),
     );
     expect(dave.signerAddress).to.be.a("string");
     expect(dave.publicIdentifier).to.be.a("string");
 
-    roger = await RestServerNodeService.connect(
-      env.rogerUrl,
-      env.chainProviders,
-      logger.child({ testName, name: "Roger" }),
-    );
+    roger = await RestServerNodeService.connect(env.rogerUrl, logger.child({ testName, name: "Roger" }));
     expect(roger.signerAddress).to.be.a("string");
     expect(roger.publicIdentifier).to.be.a("string");
 
@@ -56,9 +52,11 @@ describe.skip(testName, () => {
   });
 
   it("roger should setup channels with carol and dave", async () => {
-    let channelRes = await roger.setup({
+    let channelRes = await carol.requestSetup({
+      aliceUrl: env.rogerUrl,
+      aliceIdentifier: roger.publicIdentifier,
+      bobIdentifier: carol.publicIdentifier,
       chainId,
-      counterpartyIdentifier: carol.publicIdentifier,
       timeout: "10000",
     });
     let channel = channelRes.getValue();
@@ -67,9 +65,11 @@ describe.skip(testName, () => {
     let rogerChannel = await roger.getStateChannel({ channelAddress: channel.channelAddress });
     expect(carolChannel.getValue()).to.deep.eq(rogerChannel.getValue());
 
-    channelRes = await roger.setup({
+    channelRes = await dave.requestSetup({
+      aliceUrl: env.rogerUrl,
+      aliceIdentifier: roger.publicIdentifier,
+      bobIdentifier: dave.publicIdentifier,
       chainId,
-      counterpartyIdentifier: dave.publicIdentifier,
       timeout: "10000",
     });
     channel = channelRes.getValue();
@@ -90,9 +90,10 @@ describe.skip(testName, () => {
       });
       const channel = channelRes.getValue()!;
 
-      const depositRes = await carol.deposit({
-        chainId: channel.networkContext.chainId,
-        amount: depositAmt.toString(),
+      const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: depositAmt });
+      await tx.wait();
+
+      const depositRes = await carol.reconcileDeposit({
         assetId,
         channelAddress: channel.channelAddress,
       });
@@ -137,8 +138,7 @@ describe.skip(testName, () => {
           const preImage = preImages[routingId];
           await carol.resolveTransfer({
             channelAddress: carolChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
-            details: {
+            transferResolver: {
               preImage,
             },
             transferId: data.transfer.transferId,
@@ -155,9 +155,10 @@ describe.skip(testName, () => {
             amount: transferAmt.toString(),
             assetId,
             channelAddress: carolChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
+            type: TransferNames.HashlockTransfer,
             details: {
               lockHash,
+              expiry: "0",
             },
             meta: {
               routingId: newRoutingId,
@@ -179,8 +180,7 @@ describe.skip(testName, () => {
           const preImage = preImages[routingId];
           await dave.resolveTransfer({
             channelAddress: daveChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
-            details: {
+            transferResolver: {
               preImage,
             },
             transferId: data.transfer.transferId,
@@ -197,9 +197,10 @@ describe.skip(testName, () => {
             amount: transferAmt.toString(),
             assetId,
             channelAddress: daveChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
+            type: TransferNames.HashlockTransfer,
             details: {
               lockHash,
+              expiry: "0",
             },
             meta: {
               routingId: newRoutingId,
@@ -216,9 +217,10 @@ describe.skip(testName, () => {
         amount: transferAmt.toString(),
         assetId,
         channelAddress: carolChannel.channelAddress,
-        conditionType: TransferName.HashlockTransfer,
+        type: TransferNames.HashlockTransfer,
         details: {
           lockHash,
+          expiry: "0",
         },
         meta: {
           routingId,

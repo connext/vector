@@ -41,21 +41,19 @@ describe("VectorEngine", () => {
       storeService,
       getRandomChannelSigner(),
       Sinon.createStubInstance(VectorChainService),
-      env.chainProviders,
       chainAddresses,
       log,
     );
     expect(engine).to.be.instanceOf(VectorEngine);
   });
 
-  it("should connect without validation", async () => {
+  it("should connect with validation", async () => {
     const engine = await VectorEngine.connect(
       Sinon.createStubInstance(MemoryMessagingService),
       Sinon.createStubInstance(MemoryLockService),
       storeService,
       getRandomChannelSigner(),
       Sinon.createStubInstance(VectorChainService),
-      env.chainProviders,
       chainAddresses,
       log,
       {

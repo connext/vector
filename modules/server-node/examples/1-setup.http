@@ -7,13 +7,12 @@
 @chainId = 1337
 
 ##############
-### Setup Channel
-POST {{aliceUrl}}/setup
+### Request Setup Channel
+POST {{bobUrl}}/request-setup
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{bobPublicIdentifier}}",
+  "aliceUrl": "http://alice:8000",
   "chainId": "{{chainId}}",
-  "timeout": "36000",
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  "timeout": "36000"
 }

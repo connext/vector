@@ -15,8 +15,6 @@ import {
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
-  HashlockTransferResolverEncoding,
-  HashlockTransferStateEncoding,
   OutboundChannelUpdateError,
   IVectorChainReader,
   ILockService,
@@ -25,6 +23,7 @@ import {
   UpdateType,
   Result,
   CreateTransferParams,
+  ChainError,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
@@ -99,7 +98,7 @@ describe("Vector", () => {
       // Sinon has issues mocking out modules, we could use `proxyquire` but that
       // seems a bad choice since we use the utils within the tests
       // Instead, force a create2 failure by forcing a chainReader failure
-      chainReader.getChannelFactoryBytecode.resolves(Result.fail(new Error("fail")));
+      chainReader.getChannelFactoryBytecode.resolves(Result.fail(new ChainError(ChainError.reasons.ProviderNotFound)));
       const { details } = createTestUpdateParams(UpdateType.setup);
       const result = await vector.setup(details);
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.Create2Failed);
@@ -111,7 +110,7 @@ describe("Vector", () => {
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
         channelMastercopyAddress: mkAddress("0x444"),
-        withdrawAddress: mkAddress("0xdef"),
+        transferRegistryAddress: mkAddress("0xdef"),
       };
       const validParams = {
         counterpartyIdentifier: mkPublicIdentifier(),
@@ -143,6 +142,22 @@ describe("Vector", () => {
           params: {
             ...validParams,
             networkContext: { ...validParams.networkContext, channelMastercopyAddress: "fail" },
+          },
+          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
+        },
+        {
+          name: "should fail if there is no transferRegistryAddress",
+          params: {
+            ...validParams,
+            networkContext: { ...validParams.networkContext, transferRegistryAddress: undefined },
+          },
+          error: "should have required property 'transferRegistryAddress'",
+        },
+        {
+          name: "should fail if there is an invalid transferRegistryAddress",
+          params: {
+            ...validParams,
+            networkContext: { ...validParams.networkContext, transferRegistryAddress: "fail" },
           },
           error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
@@ -288,7 +303,6 @@ describe("Vector", () => {
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestHashlockTransferState(),
         timeout: "133215",
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
       };
 
       const tests: ParamValidationTest[] = [
@@ -338,12 +352,6 @@ describe("Vector", () => {
           error: "should have required property 'transferInitialState'",
         },
         {
-          name: "should fail if transferInitialState is invalid",
-          params: { ...validParams, transferInitialState: {} },
-          error:
-            "should have required property 'balance',should have required property 'balance',should match exactly one schema in oneOf",
-        },
-        {
           name: "should fail if timeout is undefined",
           params: { ...validParams, timeout: undefined },
           error: "should have required property 'timeout'",
@@ -352,16 +360,6 @@ describe("Vector", () => {
           name: "should fail if timeout is invalid",
           params: { ...validParams, timeout: "fail" },
           error: 'should match pattern "^([0-9])*$"',
-        },
-        {
-          name: "should fail if encodings is undefined",
-          params: { ...validParams, encodings: undefined },
-          error: "should have required property 'encodings'",
-        },
-        {
-          name: "should fail if encodings is invalid",
-          params: { ...validParams, encodings: [] },
-          error: "should match exactly one schema in oneOf",
         },
       ];
 
@@ -427,13 +425,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferResolver is undefined",
           params: { ...validParams, transferResolver: undefined },
-          error: "should have required property 'transferResolver'",
-        },
-        {
-          name: "should fail if transferResolver is invalid",
-          params: { ...validParams, transferResolver: { test: "fail" } },
-          error:
-            "should have required property 'preImage',should have required property 'responderSignature',should match exactly one schema in oneOf",
+          error: "should have required property '.transferResolver'",
         },
       ];
 

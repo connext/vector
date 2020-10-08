@@ -1,7 +1,15 @@
+import { TransferNames, WithdrawResolverEncoding, WithdrawStateEncoding } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
-import { ChannelMastercopy, ChannelFactory, VectorChannel } from "../artifacts";
+import {
+  ChannelMastercopy,
+  ChannelFactory,
+  VectorChannel,
+  HashlockTransfer,
+  TransferRegistry,
+  Withdraw,
+} from "../artifacts";
 
 import { alice, bob, provider } from "./constants";
 
@@ -31,4 +39,25 @@ export const createTestChannel = async (): Promise<Contract> => {
   const channelAddress = await doneBeingCreated;
   expect(channelAddress).to.be.a("string");
   return new Contract(channelAddress, VectorChannel.abi, alice);
+};
+
+export const createTestWithdraw = async (): Promise<Contract> => {
+  const withdraw = await new ContractFactory(Withdraw.abi, Withdraw.bytecode, alice).deploy();
+  await withdraw.deployed();
+
+  return new Contract(withdraw.address, Withdraw.abi, alice);
+};
+
+export const createTestTransferRegistry = async (): Promise<Contract> => {
+  const transferRegistry = await new ContractFactory(TransferRegistry.abi, TransferRegistry.bytecode, alice).deploy();
+  await transferRegistry.deployed();
+
+  // add transfer to registry
+  const withdraw = await createTestWithdraw();
+  const deployed = new Contract(transferRegistry.address, TransferRegistry.abi, alice);
+
+  const response = await deployed.addTransferDefinition(await withdraw.getRegistryInformation());
+  await response.wait();
+
+  return deployed;
 };

@@ -1,4 +1,5 @@
 import fastify from "fastify";
+import fastifyCors from "fastify-cors";
 import pino from "pino";
 
 import { MessagingAuthService } from "./auth/messaging-auth-service";
@@ -15,6 +16,12 @@ import {
 const logger = pino({ level: "info" });
 
 const server = fastify({ logger });
+
+server.register(fastifyCors, {
+  origin: "*",
+  methods: ["GET", "PUT", "POST", "OPTIONS"],
+  preflightContinue: true,
+});
 
 const messagingService = new MessagingAuthService(
   {
@@ -53,7 +60,7 @@ server.post<{ Body: PostAuthRequestBody }>(
   },
 );
 
-server.listen(config.port, "0.0.0.0", (err) => {
+server.listen(config.port, "0.0.0.0", err => {
   if (err) {
     console.error(err);
     process.exit(1);

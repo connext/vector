@@ -4,14 +4,14 @@ import {
   InboundChannelUpdateError,
   FullChannelState,
   FullTransferState,
-  TransferName,
   Values,
   NetworkContext,
   Result,
   ChannelUpdate,
   DEFAULT_TRANSFER_TIMEOUT,
-  HashlockTransferStateEncoding,
   Balance,
+  TransferNames,
+  HashlockTransferStateEncoding,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -46,8 +46,8 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
   finalBalanceOverrides?: Balance;
   expected?: Partial<{
     channel: Partial<FullChannelState>;
-    activeTransfers: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>[];
-    transfer?: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>;
+    activeTransfers: Partial<FullTransferState>[];
+    transfer?: Partial<FullTransferState>;
   }>;
   error?: Values<typeof InboundChannelUpdateError.reasons>;
 };
@@ -68,6 +68,7 @@ describe("applyUpdate", () => {
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     channelMastercopyAddress: mkAddress("0xcccffff333"),
+    transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };
 
   // Sample transfer (alice creating, bob recieving)
@@ -459,7 +460,7 @@ type GenerateUpdateTestParams = {
   stateOverrides?: PartialFullChannelState<any>;
   paramOverrides?: PartialUpdateParams<any>;
   expectedUpdate?: Partial<ChannelUpdate<any>>;
-  expectedTransfer?: Partial<FullTransferState<typeof TransferName.HashlockTransfer>>;
+  expectedTransfer?: Partial<FullTransferState>;
   error?: Values<typeof InboundChannelUpdateError.reasons>;
   from?: ChannelSigner;
 
@@ -494,6 +495,7 @@ describe("generateUpdate", () => {
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
     channelMastercopyAddress: mkAddress("0xbbbbccc3334"),
+    transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };
 
   // Get transfer constants
@@ -512,6 +514,14 @@ describe("generateUpdate", () => {
   beforeEach(async () => {
     store = Sinon.createStubInstance(MemoryStoreService);
     chainService = Sinon.createStubInstance(VectorChainReader);
+
+    const transferInfo = {
+      name: TransferNames.HashlockTransfer,
+      stateEncoding: emptyHashlockTransfer.transferEncodings[0],
+      resolverEncoding: emptyHashlockTransfer.transferEncodings[1],
+      definition: emptyHashlockTransfer.transferDefinition,
+    };
+    chainService.getRegisteredTransferByDefinition.resolves(Result.ok(transferInfo));
 
     // Mock `applyUpdate` (tested above) so it always returns
     // an empty object
@@ -694,7 +704,6 @@ describe("generateUpdate", () => {
         details: {
           transferId: emptyHashlockTransfer.transferId,
           transferResolver: emptyHashlockTransfer.transferResolver,
-          transferEncodings: emptyHashlockTransfer.transferEncodings,
           merkleRoot: mkHash(),
           meta: { resolve: "test" },
         },

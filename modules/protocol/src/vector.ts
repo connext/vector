@@ -166,6 +166,7 @@ export class Vector implements IVectorProtocol {
       const received = msg.getValue();
 
       if (received.update.fromIdentifier === this.publicIdentifier) {
+        this.logger.debug({ method: "onReceiveProtocolMessage" }, "Received update from ourselves, doing nothing");
         return;
       }
 
@@ -182,6 +183,7 @@ export class Vector implements IVectorProtocol {
         this.logger,
       );
       if (inboundRes.isError) {
+        this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
         return;
       }
 

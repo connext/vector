@@ -8,6 +8,7 @@ import * as HashlockTransfer from "../artifacts/HashlockTransfer.json";
 import * as Proxy from "../artifacts/Proxy.json";
 import * as TestToken from "../artifacts/TestToken.json";
 import * as TransferDefinition from "../artifacts/ITransferDefinition.json";
+import * as TransferRegistry from "../artifacts/TransferRegistry.json";
 import * as VectorChannel from "../artifacts/IVectorChannel.json";
 import * as Withdraw from "../artifacts/Withdraw.json";
 
@@ -32,6 +33,7 @@ export const artifacts: Artifacts = {
   TransferDefinition,
   VectorChannel,
   Withdraw,
+  TransferRegistry,
 } as any;
 
 export {
@@ -44,4 +46,5 @@ export {
   TransferDefinition,
   VectorChannel,
   Withdraw,
+  TransferRegistry,
 };

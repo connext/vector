@@ -1,14 +1,9 @@
 import {
-  HashlockTransferState,
-  WithdrawState,
   TransferState,
   CoreTransferState,
-  WithdrawStateEncoding,
-  HashlockTransferStateEncoding,
   CoreTransferStateEncoding,
-  HashlockTransferResolverEncoding,
-  HashlockTransferResolver,
   Address,
+  TransferResolver,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
@@ -28,16 +23,12 @@ export const getTransferId = (
   );
 };
 
-export const encodeHashlockTransferState = (state: HashlockTransferState): string => {
-  return defaultAbiCoder.encode([HashlockTransferStateEncoding], [state]);
+export const encodeTransferState = (state: TransferState, encoding: string): string => {
+  return defaultAbiCoder.encode([encoding], [state]);
 };
 
-export const encodeHashlockTransferResolver = (resoler: HashlockTransferResolver): string => {
-  return defaultAbiCoder.encode([HashlockTransferResolverEncoding], [resoler]);
-};
-
-export const encodeWithdrawTransferState = (state: WithdrawState): string => {
-  return defaultAbiCoder.encode([WithdrawStateEncoding], [state]);
+export const encodeTransferResolver = (resolver: TransferResolver, encoding: string): string => {
+  return defaultAbiCoder.encode([encoding], [resolver]);
 };
 
 export const encodeCoreTransferState = (state: CoreTransferState): string => {
@@ -46,7 +37,7 @@ export const encodeCoreTransferState = (state: CoreTransferState): string => {
 };
 
 export function hashTransferState(state: TransferState, encoding: string): string {
-  return keccak256(solidityPack(["bytes"], [defaultAbiCoder.encode([encoding], [state])]));
+  return keccak256(solidityPack(["bytes"], [encodeTransferState(state, encoding)]));
 }
 
 export const hashCoreTransferState = (state: CoreTransferState): string => {

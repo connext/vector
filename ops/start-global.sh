@@ -245,6 +245,9 @@ services:
       JWT_SIGNER_PUBLIC_KEY_FILE: '/run/secrets/$jwt_public_key_secret'
     secrets:
       - '$jwt_public_key_secret'
+    ports:
+      - '4222:4222'
+      - '4221:4221'
 
   redis:
     $common

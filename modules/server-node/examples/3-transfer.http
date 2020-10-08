@@ -30,8 +30,7 @@ Content-Type: application/json
   "recipient": "{{bobPublicIdentifier}}",
   "meta": {
     "hello": "world"
-  },
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  }
 }
 
 ##############
@@ -42,6 +41,5 @@ Content-Type: application/json
 {
   "channelAddress": "{{aliceBobChannel}}",
   "routingId": "{{routingId}}",
-  "preImage": "{{preImage}}",
-  "publicIdentifier": "{{bobPublicIdentifier}}"
+  "preImage": "{{preImage}}"
 }

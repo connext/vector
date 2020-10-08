@@ -1,5 +1,6 @@
-import { TransferName } from "@connext/vector-types";
-import { getRandomBytes32, IServerNodeService, RestServerNodeService, expect } from "@connext/vector-utils";
+import { TransferNames } from "@connext/vector-types";
+import { INodeService } from "@connext/vector-types";
+import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
@@ -13,26 +14,14 @@ const logger = pino({ level: env.logLevel });
 const testName = "Duet Happy";
 
 describe(testName, () => {
-  let alice: IServerNodeService;
-  let bob: IServerNodeService;
+  let alice: INodeService;
+  let bob: INodeService;
 
   before(async () => {
-    alice = await RestServerNodeService.connect(
-      env.aliceUrl,
-      env.chainProviders,
-      logger.child({ testName }),
-      undefined,
-      getRandomIndex(),
-    );
+    alice = await RestServerNodeService.connect(env.aliceUrl, logger.child({ testName }), undefined, getRandomIndex());
     expect(alice.signerAddress).to.be.a("string");
     expect(alice.publicIdentifier).to.be.a("string");
-    bob = await RestServerNodeService.connect(
-      env.bobUrl,
-      env.chainProviders,
-      logger.child({ testName }),
-      undefined,
-      getRandomIndex(),
-    );
+    bob = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), undefined, getRandomIndex());
     expect(bob.signerAddress).to.be.a("string");
     expect(bob.publicIdentifier).to.be.a("string");
 
@@ -43,9 +32,11 @@ describe(testName, () => {
   });
 
   it("alice & bob should setup a channel", async () => {
-    const channelRes = await alice.setup({
+    const channelRes = await bob.requestSetup({
       chainId,
-      counterpartyIdentifier: bob.publicIdentifier,
+      bobIdentifier: bob.publicIdentifier,
+      aliceUrl: env.aliceUrl,
+      aliceIdentifier: alice.publicIdentifier,
       timeout: "10000",
     });
     expect(channelRes.getError()).to.be.undefined;
@@ -69,9 +60,16 @@ describe(testName, () => {
     let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
     const aliceBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[0];
 
-    const depositRes = await alice.deposit({
+    const depositTxRes = await alice.sendDepositTx({
       chainId: channel.networkContext.chainId,
       amount: depositAmt.toString(),
+      assetId,
+      channelAddress: channel.channelAddress,
+    });
+    expect(depositTxRes.getError()).to.be.undefined;
+    await provider.waitForTransaction(depositTxRes.getValue().txHash);
+
+    const depositRes = await alice.reconcileDeposit({
       assetId,
       channelAddress: channel.channelAddress,
     });
@@ -90,7 +88,7 @@ describe(testName, () => {
     expect(aliceAfter).to.eq(BigNumber.from(aliceBefore).add(depositAmt));
   });
 
-  it("bob can deposit ETH into channel", async () => {
+  it("bob can deposit ETH into channel by sending to the channelAddress", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await bob.getStateChannelByParticipants({
@@ -103,9 +101,10 @@ describe(testName, () => {
     let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
     const bobBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
 
-    const depositRes = await bob.deposit({
-      chainId: channel.networkContext.chainId,
-      amount: depositAmt.toString(),
+    const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: depositAmt });
+    await tx.wait();
+
+    const depositRes = await bob.reconcileDeposit({
       assetId,
       channelAddress: channel.channelAddress,
     });
@@ -143,9 +142,10 @@ describe(testName, () => {
       amount: transferAmt.toString(),
       assetId,
       channelAddress: channel.channelAddress,
-      conditionType: TransferName.HashlockTransfer,
+      type: TransferNames.HashlockTransfer,
       details: {
         lockHash,
+        expiry: "0",
       },
     });
     expect(transferRes.getError()).to.not.be.ok;
@@ -157,8 +157,7 @@ describe(testName, () => {
 
     const resolveRes = await bob.resolveTransfer({
       channelAddress: channel.channelAddress,
-      conditionType: TransferName.HashlockTransfer,
-      details: {
+      transferResolver: {
         preImage,
       },
       transferId,
@@ -188,9 +187,10 @@ describe(testName, () => {
       amount: transferAmt.toString(),
       assetId,
       channelAddress: channel.channelAddress,
-      conditionType: TransferName.HashlockTransfer,
+      type: TransferNames.HashlockTransfer,
       details: {
         lockHash,
+        expiry: "0",
       },
     });
     expect(transferRes.isError).to.not.be.ok;

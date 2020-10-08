@@ -12,6 +12,7 @@ import {
   TFullTransferState,
   TFullChannelState,
   TChainId,
+  TBasicMeta,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -33,6 +34,7 @@ const BasicTransferServerResponseSchema = {
   200: Type.Object({
     channelAddress: TAddress,
     transferId: TBytes32,
+    routingId: Type.Optional(TBytes32),
   }),
 };
 
@@ -126,6 +128,18 @@ const PostSetupBodySchema = Type.Intersect([
 ]);
 
 const PostSetupResponseSchema = BasicChannelServerResponseSchema;
+
+// POST REQUEST SETUP
+const PostRequestSetupBodySchema = Type.Object({
+  aliceIdentifier: Type.Optional(TPublicIdentifier),
+  bobIdentifier: Type.Optional(TPublicIdentifier),
+  aliceUrl: Type.String({ format: "uri" }),
+  chainId: TChainId,
+  timeout: TIntegerString,
+  meta: TBasicMeta,
+});
+
+const PostRequestSetupResponseSchema = BasicChannelServerResponseSchema;
 
 // POST DEPOSIT
 const PostDepositBodySchema = Type.Intersect([
@@ -234,6 +248,9 @@ export namespace ServerNodeParams {
   export const SetupSchema = PostSetupBodySchema;
   export type Setup = Static<typeof SetupSchema>;
 
+  export const RequestSetupSchema = PostRequestSetupBodySchema;
+  export type RequestSetup = Static<typeof RequestSetupSchema>;
+
   export const DepositSchema = PostDepositBodySchema;
   export type Deposit = Static<typeof DepositSchema>;
 
@@ -287,6 +304,9 @@ export namespace ServerNodeResponses {
 
   export const SetupSchema = PostSetupResponseSchema;
   export type Setup = Static<typeof SetupSchema["200"]>;
+
+  export const RequestSetupSchema = PostRequestSetupResponseSchema;
+  export type RequestSetup = Static<typeof RequestSetupSchema["200"]>;
 
   export const DepositSchema = PostDepositResponseSchema;
   export type Deposit = Static<typeof DepositSchema["200"]>;

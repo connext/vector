@@ -38,6 +38,7 @@ modules/server-node/migrations/migrate.lock
 
 # Docs
 modules/client/docs
+modules/documentation/site
 
 # IDEs and editors
 **/*.launch

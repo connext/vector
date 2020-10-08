@@ -1,6 +1,7 @@
 import { Address } from "./basic";
 import { BalanceEncoding } from "./contracts";
 import {
+  TransferEncodingsMap,
   TransferName,
   TransferResolver,
   TransferResolverMap,
@@ -28,18 +29,17 @@ export type DepositParams = {
 };
 
 export type CreateTransferParams = {
-  channelAddress: string; // TODO: does this need to be in the details AND params?
+  channelAddress: string;
   amount: string;
   assetId: string;
   transferDefinition: string;
   transferInitialState: TransferState;
   timeout: string;
-  encodings: string[]; // [Initial state, resolve state]
   meta?: any;
 };
 
 export type ResolveTransferParams = {
-  channelAddress: string; // TODO: does this need to be in the details AND params?
+  channelAddress: string;
   transferId: string;
   transferResolver: TransferResolver;
   meta?: any;
@@ -129,7 +129,7 @@ export interface CoreTransferState {
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
   channelFactoryAddress: string; // networkContext?
   chainId: number;
-  transferEncodings: string[]; // Initial state encoding, resolver encoding
+  transferEncodings: typeof TransferEncodingsMap[T]; // Initial state encoding, resolver encoding
   transferState: TransferStateMap[T];
   transferResolver?: TransferResolverMap[T]; // undefined iff not resolved
   meta?: any;
@@ -149,8 +149,7 @@ export type ChainAddresses = {
 export type ContractAddresses = {
   channelFactoryAddress: Address;
   channelMastercopyAddress: Address;
-  withdrawAddress?: Address;
-  hashlockTransferAddress?: Address;
+  transferRegistryAddress: Address;
 };
 
 export type NetworkContext = ContractAddresses & {
@@ -171,6 +170,9 @@ export type ChannelUpdate<T extends UpdateType> = {
   bobSignature?: string;
 };
 
+// ChannelUpdateDetails should include everything needed to
+// apply an update to the channel synchronously. It is what is
+// recieved + validated by an update responder
 export interface ChannelUpdateDetailsMap {
   [UpdateType.create]: CreateUpdateDetails;
   [UpdateType.deposit]: DepositUpdateDetails;
@@ -183,7 +185,7 @@ export type CreateUpdateDetails = {
   transferDefinition: Address;
   transferTimeout: string;
   transferInitialState: TransferState;
-  transferEncodings: string[]; // Initial state, resolver state
+  transferEncodings: string[]; // Included for `applyUpdate`
   merkleProofData: string[];
   merkleRoot: string;
   meta?: any;
@@ -195,7 +197,6 @@ export type ResolveUpdateDetails = {
   transferId: string;
   transferDefinition: Address;
   transferResolver: TransferResolver;
-  transferEncodings: string[]; // Initial state, resolver state
   merkleRoot: string;
   meta?: any;
 };

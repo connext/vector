@@ -1,31 +1,33 @@
-import { Bytes32 } from "./basic";
+import { Address, Bytes32 } from "./basic";
 import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
-import { IVectorStore } from "./store";
-import { WithdrawCommitmentJson } from "./transferDefinitions";
+import { TransferName } from "./transferDefinitions";
 import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
 
 ///////////////////////////////////
 ////// Engine transfer types
-// Conditional transfers
-export const ConditionalTransferType = {
-  HashlockTransfer: "HashlockTransfer",
-} as const;
-export type ConditionalTransferType = typeof ConditionalTransferType[keyof typeof ConditionalTransferType];
-
 export type ConditionalTransferResponse = {
   routingId: Bytes32;
 };
 
 ///////////////////////////////////
 ////// Engine event types
+// Emitted on channel setup
+export const SETUP_EVENT = "SETUP";
+export type SetupPayload = {
+  channelAddress: string;
+  aliceIdentifier: string;
+  bobIdentifier: string;
+  chainId: number;
+};
+
 // Emitted when transfer created
 export const CONDITIONAL_TRANSFER_CREATED_EVENT = "CONDITIONAL_TRANSFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
   channelAddress: string;
   transfer: FullTransferState;
   channelBalance: Balance;
-  conditionType: ConditionalTransferType;
+  conditionType: TransferName | Address;
 };
 
 // Emitted when transfer resolved
@@ -66,6 +68,7 @@ export type WithdrawalReconciledPayload = {
 
 // Grouped event types
 export const EngineEvents = {
+  [SETUP_EVENT]: SETUP_EVENT,
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
   [DEPOSIT_RECONCILED_EVENT]: DEPOSIT_RECONCILED_EVENT,
@@ -75,6 +78,7 @@ export const EngineEvents = {
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
 export interface EngineEventMap {
+  [SETUP_EVENT]: SetupPayload;
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;
   [DEPOSIT_RECONCILED_EVENT]: DepositReconciledPayload;
@@ -93,13 +97,18 @@ export interface IVectorEngine {
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean,
+    filter?: (payload: EngineEventMap[T]) => boolean,
   ): void;
   once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: (payload: EngineEventMap[T]) => boolean,
+    filter?: (payload: EngineEventMap[T]) => boolean,
   ): void;
+  waitFor<T extends EngineEvent>(
+    event: T,
+    timeout: number,
+    filter?: (payload: EngineEventMap[T]) => boolean,
+  ): Promise<EngineEventMap[T]>;
   off<T extends EngineEvent>(event?: T): void;
 }
