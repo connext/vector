@@ -6,6 +6,7 @@ import {
   Result,
   IChannelSigner,
   OutboundChannelUpdateError,
+  LockError,
 } from "@connext/vector-types";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 import { BaseLogger } from "pino";
@@ -83,6 +84,67 @@ export class NatsMessagingService implements IMessagingService {
 
   async disconnect(): Promise<void> {
     this.connection?.disconnect();
+  }
+
+  async sendLockMessage(
+    type: string,
+    { myPublicIdentifier, counterpartyPublicIdentifier },
+    lockName: string,
+    lockValue?: string,
+  ): Promise<Result<string | undefined, LockError>> {
+    this.assertConnected();
+    try {
+      const subject = `${counterpartyPublicIdentifier}.${myPublicIdentifier}.lock`;
+      const msgBody = JSON.stringify({
+        type,
+        lockName,
+        lockValue,
+      });
+      this.log.debug({ method: "sendLockMessage", msgBody }, "Sending message");
+      const msg = await this.connection!.request(subject, 30000, msgBody); // TODO this timeout is copied from memolock
+      this.log.debug({ method: "sendProtocolMessage", msgBody, msg }, "Received response");
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        return Result.fail(new LockError(LockError.reasons.Unknown, { lockName, lockValue }));
+      }
+      return Result.ok(lockValue ?? undefined);
+    } catch (e) {
+      return Result.fail(new LockError(LockError.reasons.Unknown, { lockName, lockValue, e }));
+    }
+  }
+
+  async onReceiveLockMessage(
+    myPublicIdentifier: string,
+    callback: (msg: { type: string; lockName: string; lockValue: string }) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    const subscriptionSubject = `${myPublicIdentifier}.>`;
+    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method: "onReceiveProtocolMessage", msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      if (err) {
+        callback(Result.fail(new InboundChannelUpdateError(err, msg.data.update)), from, msg.reply);
+      }
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      // TODO: validate msg structure
+      if (!parsedMsg.reply) {
+        return;
+      }
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        callback(Result.fail(parsedMsg.data.error), from, parsedMsg.reply);
+        return;
+      }
+      callback(
+        Result.ok({ update: parsedMsg.data.update, previousUpdate: parsedMsg.data.previousUpdate }),
+        from,
+        parsedMsg.reply,
+      );
+    });
+    this.log.debug({ method: "onReceiveProtocolMessage", subject: subscriptionSubject }, `Subscription created`);
   }
 
   async sendProtocolMessage(
