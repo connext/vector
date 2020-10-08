@@ -1,9 +1,9 @@
 import {
   WithdrawState,
-  WithdrawStateEncoding,
-  WithdrawResolverEncoding,
   WithdrawResolver,
   Balance,
+  WithdrawStateEncoding,
+  WithdrawResolverEncoding,
 } from "@connext/vector-types";
 import {
   getRandomAddress,
@@ -12,9 +12,11 @@ import {
   recoverAddressFromChannelMessage,
   keyify,
   expect,
+  encodeTransferState,
+  encodeTransferResolver,
 } from "@connext/vector-utils";
 import { Zero } from "@ethersproject/constants";
-import { Contract, ContractFactory, Wallet, utils } from "ethers";
+import { Contract, ContractFactory, Wallet } from "ethers";
 
 import { Withdraw } from "../../artifacts";
 import { provider } from "../constants";
@@ -24,14 +26,6 @@ describe("Withdraw", () => {
   let definition: Contract;
   let alice: Wallet;
   let bob: Wallet;
-
-  const encodeTransferState = (state: WithdrawState): string => {
-    return utils.defaultAbiCoder.encode([WithdrawStateEncoding], [state]);
-  };
-
-  const encodeTransferResolver = (resolver: WithdrawResolver): string => {
-    return utils.defaultAbiCoder.encode([WithdrawResolverEncoding], [resolver]);
-  };
 
   beforeEach(async () => {
     deployer = provider.getWallets()[0];
@@ -57,14 +51,14 @@ describe("Withdraw", () => {
   };
 
   const createTransfer = async (initialState: WithdrawState): Promise<boolean> => {
-    const encodedState = encodeTransferState(initialState);
+    const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
     const ret = (await definition.functions.create(encodedState))[0];
     return ret;
   };
 
   const resolveTransfer = async (initialState: WithdrawState, resolver: WithdrawResolver): Promise<Balance> => {
-    const encodedState = encodeTransferState(initialState);
-    const encodedResolver = encodeTransferResolver(resolver);
+    const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
+    const encodedResolver = encodeTransferResolver(resolver, WithdrawResolverEncoding);
     const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
     return keyify(initialState.balance, ret);
   };

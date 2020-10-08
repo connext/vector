@@ -1,18 +1,16 @@
 import {
   ChainAddresses,
-  ConditionalTransferType,
   CreateTransferParams,
   DEFAULT_TRANSFER_TIMEOUT,
   EngineParams,
   FullChannelState,
   FullTransferState,
-  HashlockTransferResolver,
-  HashlockTransferResolverEncoding,
-  HashlockTransferStateEncoding,
+  HashlockTransferState,
+  RegisteredTransfer,
   ResolveTransferParams,
   Result,
-  WithdrawResolverEncoding,
-  WithdrawStateEncoding,
+  TransferNames,
+  ChainError,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -44,11 +42,22 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawAddress: env.chainAddresses[chainId].withdrawAddress,
-      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
       channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
+      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
+      transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
+  };
+  const withdrawRegisteredInfo: RegisteredTransfer = {
+    definition: mkAddress("0xdef"),
+    resolverEncoding: "resolve",
+    stateEncoding: "state",
+    name: TransferNames.Withdraw,
+  };
+  const transferRegisteredInfo: RegisteredTransfer = {
+    definition: mkAddress("0xdef"),
+    resolverEncoding: "resolve",
+    stateEncoding: "state",
+    name: TransferNames.HashlockTransfer,
   };
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
 
@@ -61,7 +70,17 @@ describe("ParamConverter", () => {
   afterEach(() => Sinon.restore());
 
   describe("convertConditionalTransferParams", () => {
+    beforeEach(() => {
+      chainReader.getRegisteredTransferByName.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
+
+      chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
+    });
+
     const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
+      const hashlockState: Omit<HashlockTransferState, "balance"> = {
+        lockHash: getRandomBytes32(),
+        expiry: "45000",
+      };
       return {
         channelAddress: mkAddress("0xa"),
         amount: "8",
@@ -69,10 +88,8 @@ describe("ParamConverter", () => {
         recipient: bIsRecipient ? signerB.publicIdentifier : getRandomIdentifier(),
         recipientChainId: 1,
         recipientAssetId: mkAddress("0x1"),
-        conditionType: ConditionalTransferType.HashlockTransfer,
-        details: {
-          lockHash: getRandomBytes32(),
-        },
+        type: TransferNames.HashlockTransfer,
+        details: hashlockState,
         meta: {
           message: "test",
           routingId: getRandomBytes32(),
@@ -81,7 +98,6 @@ describe("ParamConverter", () => {
     };
 
     it("should work for A", async () => {
-      console.log(`Block number: ${await chainReader.getBlockNumber(chainId)}`);
       const params = generateParams();
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
@@ -98,17 +114,16 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
+        transferDefinition: transferRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
             to: [signerA.address, signerB.address],
           },
           lockHash: params.details.lockHash,
-          expiry: "0",
+          expiry: params.details.expiry,
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: {
           requireOnline: false,
           routingId: params.meta.routingId,
@@ -126,7 +141,6 @@ describe("ParamConverter", () => {
 
     it("should work for B", async () => {
       const params = generateParams();
-      params.details.timelock = "100";
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
@@ -142,19 +156,16 @@ describe("ParamConverter", () => {
         channelAddress: channelState.channelAddress,
         amount: params.amount,
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].hashlockTransferAddress,
+        transferDefinition: transferRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [params.amount, "0"],
             to: [signerB.address, signerA.address],
           },
           lockHash: params.details.lockHash,
-          expiry: BigNumber.from((await chainReader.getBlockNumber(chainId)).getValue()!)
-            .add(params.details.timelock)
-            .toString(),
+          expiry: params.details.expiry,
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [HashlockTransferStateEncoding, HashlockTransferResolverEncoding],
         meta: {
           requireOnline: false,
           routingId: params.meta.routingId,
@@ -171,6 +182,7 @@ describe("ParamConverter", () => {
     });
 
     it("should fail if invalid type", async () => {
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
@@ -184,7 +196,7 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
+      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
     });
   });
 
@@ -192,11 +204,10 @@ describe("ParamConverter", () => {
     const generateParams = (): EngineParams.ResolveTransfer => {
       return {
         channelAddress: mkAddress("0xa"),
-        conditionType: ConditionalTransferType.HashlockTransfer,
         transferId: getRandomBytes32(),
-        details: {
+        transferResolver: {
           preImage: getRandomBytes32(),
-        } as HashlockTransferResolver,
+        },
         meta: {
           message: "test",
         },
@@ -213,24 +224,12 @@ describe("ParamConverter", () => {
         channelAddress: params.channelAddress,
         transferId: transferState.transferId,
         transferResolver: {
-          preImage: params.details.preImage,
+          preImage: params.transferResolver.preImage,
         },
         meta: {
           details: params.meta,
         },
       });
-    });
-
-    it("should fail if invalid type", async () => {
-      const params: any = generateParams();
-      // Set incorrect type
-      params.conditionType = "FailingTest";
-      const transferState: FullTransferState = createTestFullHashlockTransferState({
-        channelAddress: params.channelAddress,
-      });
-      const ret = convertResolveConditionParams(params, transferState);
-      expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType(params.conditionType));
     });
   });
 
@@ -244,6 +243,12 @@ describe("ParamConverter", () => {
         fee: "1",
       };
     };
+
+    beforeEach(() => {
+      chainReader.getRegisteredTransferByName.resolves(Result.ok<RegisteredTransfer>(withdrawRegisteredInfo));
+
+      chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(withdrawRegisteredInfo));
+    });
 
     const generateChainData = (params, channel) => {
       const commitment = new WithdrawCommitment(
@@ -272,7 +277,7 @@ describe("ParamConverter", () => {
       const signature = await signerA.signMessage(withdrawHash);
 
       const ret: CreateTransferParams = (
-        await convertWithdrawParams(params, signerA, channelState, chainAddresses)
+        await convertWithdrawParams(params, signerA, channelState, chainAddresses, chainReader)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
@@ -280,7 +285,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawAddress,
+        transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [
@@ -299,7 +304,6 @@ describe("ParamConverter", () => {
           fee: params.fee ? params.fee : "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
         meta: {
           withdrawNonce: channelState.nonce.toString(),
         },
@@ -320,7 +324,7 @@ describe("ParamConverter", () => {
       const signature = await signerB.signMessage(withdrawHash);
 
       const ret: CreateTransferParams = (
-        await convertWithdrawParams(params, signerB, channelState, chainAddresses)
+        await convertWithdrawParams(params, signerB, channelState, chainAddresses, chainReader)
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
@@ -328,7 +332,7 @@ describe("ParamConverter", () => {
           .add(params.fee)
           .toString(),
         assetId: params.assetId,
-        transferDefinition: chainAddresses[chainId].withdrawAddress,
+        transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
           balance: {
             amount: [
@@ -347,7 +351,6 @@ describe("ParamConverter", () => {
           fee: params.fee ? params.fee : "0",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-        encodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
         meta: {
           withdrawNonce: channelState.nonce.toString(),
         },

@@ -3,6 +3,8 @@ import { BigNumber, BigNumberish, providers } from "ethers";
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { Result, Values, VectorError } from "./error";
+import { ChainProviders } from "./network";
+import { RegisteredTransfer, TransferName } from "./transferDefinitions";
 
 export const ERC20Abi = [
   // Read-Only Functions
@@ -30,6 +32,7 @@ export class ChainError extends VectorError {
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
     FailedToSendTx: "Failed to send transaction to chain",
+    TransferNotRegistered: "Transfer not in registry",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -60,15 +63,19 @@ export type MultisigTransaction = MinimalTransaction & {
 };
 
 export interface IVectorChainReader {
-  getChannelOnchainBalance(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+  getChannelOnchainBalance(
+    channelAddress: string,
+    chainId: number,
+    assetId: string,
+  ): Promise<Result<BigNumber, ChainError>>;
 
-  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+  getTotalDepositedA(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;
 
-  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, Error>>;
+  getTotalDepositedB(channelAddress: string, chainId: number, assetId: string): Promise<Result<BigNumber, ChainError>>;
 
-  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+  getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
 
-  getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, Error>>;
+  getChannelMastercopyAddress(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>>;
 
   getChannelAddress(
     initiator: string,
@@ -77,9 +84,25 @@ export interface IVectorChainReader {
     chainId: number,
   ): Promise<Result<string, ChainError>>;
 
-  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, Error>>;
+  getRegisteredTransferByName(
+    name: TransferName,
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer, ChainError>>;
 
-  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, Error>>;
+  getRegisteredTransferByDefinition(
+    definition: Address,
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer, ChainError>>;
+
+  getChainProviders(): Result<ChainProviders, ChainError>;
+
+  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>>;
+
+  resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, ChainError>>;
 
   getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
 

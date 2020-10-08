@@ -8,16 +8,17 @@ import {
   ProtocolEventName,
   ProtocolEventPayloadsMap,
   Result,
-  TransferName,
   UpdateType,
   WithdrawalCreatedPayload,
   WITHDRAWAL_CREATED_EVENT,
   WithdrawCommitmentJson,
   WithdrawResolver,
-  WithdrawResolverEncoding,
   WithdrawState,
-  WithdrawStateEncoding,
   WITHDRAWAL_RESOLVED_EVENT,
+  WithdrawStateEncoding,
+  WithdrawResolverEncoding,
+  RegisteredTransfer,
+  TransferNames,
 } from "@connext/vector-types";
 import {
   getTestLoggers,
@@ -51,13 +52,12 @@ const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   // Get env constants
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-  const withdrawAddress = env.chainAddresses[chainId].withdrawAddress;
+  const withdrawAddress = mkAddress("0xdefff");
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      withdrawAddress,
       channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      hashlockTransferAddress: env.chainAddresses[chainId].hashlockTransferAddress,
+      transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
   };
 
@@ -67,6 +67,12 @@ describe(testName, () => {
   const messaging = {} as any;
   const container = getEngineEvtContainer();
   const withdrawTransactionHash = getRandomBytes32();
+  const withdrawRegisteredInfo: RegisteredTransfer = {
+    definition: withdrawAddress,
+    resolverEncoding: "resolve",
+    stateEncoding: "state",
+    name: TransferNames.Withdraw,
+  };
 
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
@@ -95,6 +101,7 @@ describe(testName, () => {
           wait: () => Promise.resolve({ transactionHash: withdrawTransactionHash }),
         }),
       ) as any,
+      getRegisteredTransferByName: Promise.resolve(Result.ok(withdrawRegisteredInfo)),
     });
 
     vector = Sinon.createStubInstance(Vector);
@@ -116,7 +123,7 @@ describe(testName, () => {
       responder: IChannelSigner,
       overrides: Partial<WithdrawCommitmentJson> = {},
     ): Promise<{
-      transfer: FullTransferState<typeof TransferName.Withdraw>;
+      transfer: FullTransferState;
       resolver: WithdrawResolver;
       commitment: WithdrawCommitmentJson;
     }> => {
@@ -151,14 +158,16 @@ describe(testName, () => {
         nonce: commitment.nonce,
         fee: fee.toString(),
       };
-      const initialStateHash = hashTransferState(initialState, WithdrawStateEncoding);
+      const stateEncoding = WithdrawStateEncoding;
+      const resolverEncoding = WithdrawResolverEncoding;
+      const initialStateHash = hashTransferState(initialState, stateEncoding);
 
       // Generate transfer
       const json: WithdrawCommitmentJson = commitment.toJson();
       const transfer = {
         channelFactoryAddress: chainAddresses[chainId].channelFactoryAddress,
         chainId,
-        transferEncodings: [WithdrawStateEncoding, WithdrawResolverEncoding],
+        transferEncodings: [stateEncoding, resolverEncoding],
         transferState: initialState,
         transferResolver: undefined,
         meta: { test: "meta" },
@@ -204,7 +213,6 @@ describe(testName, () => {
         },
         assetIds: [commitment.assetId],
         networkContext: {
-          withdrawAddress,
           chainId,
         },
       });
@@ -318,14 +326,12 @@ describe(testName, () => {
           details: {
             transferDefinition: transfer.transferDefinition,
             transferResolver: resolver,
-            transferEncodings: transfer.transferEncodings,
             transferId: transfer.transferId,
             merkleRoot: mkHash(),
           },
         },
         assetIds: [commitment.assetId],
         networkContext: {
-          withdrawAddress,
           chainId,
         },
       });

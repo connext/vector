@@ -129,9 +129,9 @@ export async function applyUpdate<T extends UpdateType>(
         transferInitialState,
         transferDefinition,
         transferTimeout,
-        transferEncodings,
         meta,
         transferId,
+        transferEncodings,
       } = details as CreateUpdateDetails;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
@@ -246,7 +246,17 @@ export async function generateUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.create: {
-      proposedUpdate = generateCreateUpdate(state!, params as UpdateParams<"create">, signer, activeTransfers);
+      const proposedRes = await generateCreateUpdate(
+        state!,
+        params as UpdateParams<"create">,
+        signer,
+        activeTransfers,
+        chainReader,
+      );
+      if (proposedRes.isError) {
+        return Result.fail(new OutboundChannelUpdateError(proposedRes.getError()!.message as any, params, state));
+      }
+      proposedUpdate = proposedRes.getValue();
       break;
     }
     case UpdateType.resolve: {
@@ -415,14 +425,15 @@ async function generateDepositUpdate(
 }
 
 // Generates the transfer creation update based on user input
-function generateCreateUpdate(
+async function generateCreateUpdate(
   state: FullChannelState,
   params: UpdateParams<"create">,
   signer: IChannelSigner,
   transfers: CoreTransferState[],
-): ChannelUpdate<"create"> {
+  chainReader: IVectorChainReader,
+): Promise<Result<ChannelUpdate<"create">, OutboundChannelUpdateError>> {
   const {
-    details: { assetId, transferDefinition, timeout, encodings, transferInitialState, meta },
+    details: { assetId, transferDefinition, timeout, transferInitialState, meta },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -431,16 +442,38 @@ function generateCreateUpdate(
   // - nonce (all)
   // - merkle root
 
+  // FIXME: This will fail if the transfer registry address changes during
+  // the lifetime of the channel. We can fix this by either including the
+  // chain addresses in the protocol, putting those within the chain-
+  // reader itself, or including them in the create update params
+  // FIXME: this limitation also means we can never pass in the bytecode
+  // (which is used to execute pure-evm calls) since that exists within
+  // the chain addresses.
+  const registryRes = await chainReader.getRegisteredTransferByDefinition(
+    transferDefinition,
+    state.networkContext.transferRegistryAddress,
+    state.networkContext.chainId,
+  );
+  if (registryRes.isError) {
+    return Result.fail(
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotRegistered, params, state, {
+        chainError: registryRes.getError()!.message,
+      }),
+    );
+  }
+
+  const { stateEncoding, resolverEncoding } = registryRes.getValue()!;
+
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
-  const initialStateHash = hashTransferState(transferInitialState, encodings[0]);
+  const initialStateHash = hashTransferState(transferInitialState, stateEncoding);
   const transferState: FullTransferState = {
     initialBalance: transferInitialState.balance,
     assetId,
     transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
     channelAddress: state.channelAddress,
     transferDefinition,
-    transferEncodings: encodings,
+    transferEncodings: [stateEncoding, resolverEncoding],
     transferTimeout: timeout,
     initialStateHash,
     transferState: transferInitialState,
@@ -475,13 +508,13 @@ function generateCreateUpdate(
       transferDefinition,
       transferTimeout: timeout,
       transferInitialState,
-      transferEncodings: encodings,
+      transferEncodings: [stateEncoding, resolverEncoding],
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
     },
   };
-  return unsigned;
+  return Result.ok(unsigned);
 }
 
 // Generates resolve update from user input params
@@ -563,7 +596,6 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      transferEncodings: transferToResolve.transferEncodings,
       merkleRoot: root === "0x" ? constants.HashZero : root,
       meta,
     },

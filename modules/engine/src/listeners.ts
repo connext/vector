@@ -4,8 +4,6 @@ import {
   ChannelUpdateEvent,
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
-  ConditionalTransferType,
-  CreateUpdateDetails,
   DepositReconciledPayload,
   EngineEvents,
   FullChannelState,
@@ -17,13 +15,14 @@ import {
   IVectorProtocol,
   ProtocolEventName,
   ResolveUpdateDetails,
+  TransferNames,
   SetupPayload,
-  TransferName,
   UpdateType,
   WithdrawalCreatedPayload,
   WithdrawalResolvedPayload,
   WITHDRAWAL_RECONCILED_EVENT,
   WithdrawState,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import Pino from "pino";
@@ -43,7 +42,7 @@ export async function setupEngineListeners(
   // Set up listener for channel setu[]
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleSetup(event, signer, vector, evts, logger),
+    async event => await handleSetup(event, signer, vector, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -57,7 +56,7 @@ export async function setupEngineListeners(
   // Set up listener for deposit reconciliations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleDepositReconciliation(event, signer, vector, evts, logger),
+    async event => await handleDepositReconciliation(event, signer, vector, evts, logger),
     event => {
       const {
         updatedChannelState: {
@@ -71,72 +70,58 @@ export async function setupEngineListeners(
   // Set up listener for conditional transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleConditionalTransferCreation(event, signer, vector, store, chainAddresses, evts, logger),
+    async event => await handleConditionalTransferCreation(event, store, chainService, chainAddresses, evts, logger),
     event => {
       const {
         updatedChannelState: {
-          latestUpdate: { type, details },
-          networkContext: { chainId },
+          latestUpdate: { type },
         },
       } = event;
-      return (
-        type === UpdateType.create &&
-        (details as CreateUpdateDetails).transferDefinition !== chainAddresses[chainId].withdrawAddress
-      );
+      return type === UpdateType.create;
     },
   );
 
   // Set up listener for conditional transfer resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleConditionalTransferResolution(event, chainAddresses, store, evts, logger),
+    async event => await handleConditionalTransferResolution(event, chainAddresses, store, chainService, evts, logger),
     event => {
       const {
         updatedChannelState: {
-          latestUpdate: { type, details },
-          networkContext: { chainId },
+          latestUpdate: { type },
         },
       } = event;
-      return (
-        type === UpdateType.resolve &&
-        (details as ResolveUpdateDetails).transferDefinition !== chainAddresses[chainId].withdrawAddress
-      );
+      return type === UpdateType.resolve;
     },
   );
 
   // Set up listener for withdrawal transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleWithdrawalTransferCreation(event, signer, vector, store, evts, chainService, logger),
+    async event =>
+      await handleWithdrawalTransferCreation(event, signer, vector, store, evts, chainAddresses, chainService, logger),
     event => {
       const {
         updatedChannelState: {
-          latestUpdate: { type, details },
-          networkContext: { chainId },
+          latestUpdate: { type },
         },
       } = event;
-      return (
-        type === UpdateType.create &&
-        (details as CreateUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawAddress
-      );
+      return type === UpdateType.create;
     },
   );
 
   // Set up listener for withdrawal resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    event => handleWithdrawalTransferResolution(event, signer, store, evts, chainService, logger),
+    async event =>
+      await handleWithdrawalTransferResolution(event, signer, store, evts, chainAddresses, chainService, logger),
     event => {
       const {
         updatedChannelState: {
-          latestUpdate: { type, details },
-          networkContext: { chainId },
+          latestUpdate: { type },
         },
       } = event;
-      return (
-        type === UpdateType.resolve &&
-        (details as ResolveUpdateDetails).transferDefinition === chainAddresses[chainId].withdrawAddress
-      );
+      return type === UpdateType.resolve;
     },
   );
 
@@ -194,13 +179,15 @@ async function handleDepositReconciliation(
 
 async function handleConditionalTransferCreation(
   event: ChannelUpdateEvent,
-  signer: IChannelSigner,
-  vector: IVectorProtocol,
   store: IEngineStore,
+  chainService: IVectorChainReader,
   chainAddresses: ChainAddresses,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
+  if (await isWithdrawTransfer(event, chainAddresses, chainService)) {
+    return;
+  }
   const {
     assetIds,
     balances,
@@ -224,11 +211,17 @@ async function handleConditionalTransferCreation(
     return;
   }
 
-  let conditionType: ConditionalTransferType | undefined;
-  switch (transferDefinition) {
-    case chainAddresses[chainId].hashlockTransferAddress:
-      conditionType = ConditionalTransferType.HashlockTransfer;
-      break;
+  const registryInfo = await chainService.getRegisteredTransferByDefinition(
+    transferDefinition,
+    chainAddresses[chainId].transferRegistryAddress,
+    chainId,
+  );
+  let conditionType: string;
+  if (registryInfo.isError) {
+    logger.warn({ error: registryInfo.getError()!.message }, "Faild to get registry info");
+    conditionType = transferDefinition;
+  } else {
+    conditionType = registryInfo.getValue().name;
   }
 
   const assetIdx = assetIds.findIndex(a => a === assetId);
@@ -236,12 +229,12 @@ async function handleConditionalTransferCreation(
     channelAddress,
     channelBalance: balances[assetIdx],
     transfer,
-    conditionType: conditionType!,
+    conditionType,
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
 
   // If we should not route the transfer, do nothing
-  if (!routingId || transfer.meta.routingId !== routingId) {
+  if (!routingId || transfer.meta?.routingId !== routingId) {
     logger.warn({ transferId, routingId, meta: transfer.meta }, "Cannot route transfer");
     return;
   }
@@ -253,9 +246,13 @@ async function handleConditionalTransferResolution(
   event: ChannelUpdateEvent,
   chainAddresses: ChainAddresses,
   store: IEngineStore,
+  chainService: IVectorChainReader,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
+  if (await isWithdrawTransfer(event, chainAddresses, chainService)) {
+    return;
+  }
   logger.info(
     { channelAddress: event.updatedChannelState.channelAddress },
     "Handling conditional transfer resolve event",
@@ -271,18 +268,24 @@ async function handleConditionalTransferResolution(
     },
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
   // Emit the properly structured event
-  let conditionType: ConditionalTransferType | undefined;
-  switch (transferDefinition) {
-    case chainAddresses[chainId].hashlockTransferAddress:
-      conditionType = ConditionalTransferType.HashlockTransfer;
-      break;
+  const registryInfo = await chainService.getRegisteredTransferByDefinition(
+    transferDefinition,
+    chainAddresses[chainId].transferRegistryAddress,
+    chainId,
+  );
+  let conditionType: string;
+  if (registryInfo.isError) {
+    logger.warn({ error: registryInfo.getError()!.message }, "Faild to get registry info");
+    conditionType = transferDefinition;
+  } else {
+    conditionType = registryInfo.getValue().name;
   }
   const transfer = await store.getTransferState(transferId);
   const payload: ConditionalTransferResolvedPayload = {
     channelAddress,
     channelBalance: balances[assetIds.findIndex(a => a === assetId)],
     transfer: transfer!,
-    conditionType: conditionType!,
+    conditionType,
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
 }
@@ -293,9 +296,13 @@ async function handleWithdrawalTransferCreation(
   vector: IVectorProtocol,
   store: IEngineStore,
   evts: EngineEvtContainer,
+  chainAddresses: ChainAddresses,
   chainService: IVectorChainService,
   logger: Pino.BaseLogger,
 ): Promise<void> {
+  if (!(await isWithdrawTransfer(event, chainAddresses, chainService))) {
+    return;
+  }
   const method = "handleWithdrawalTransferCreation";
   // If you receive a withdrawal creation, you should
   // resolve the withdrawal with your signature
@@ -422,9 +429,13 @@ async function handleWithdrawalTransferResolution(
   signer: IChannelSigner,
   store: IEngineStore,
   evts: EngineEvtContainer,
+  chainAddresses: ChainAddresses,
   chainService: IVectorChainService,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<void> {
+  if (!(await isWithdrawTransfer(event, chainAddresses, chainService))) {
+    return;
+  }
   const method = "handleWithdrawalTransferResolution";
 
   const {
@@ -442,7 +453,7 @@ async function handleWithdrawalTransferResolution(
   logger.info({ method, channelAddress, transferId }, "Started");
 
   // Get the withdrawal amount
-  const transfer = (await store.getTransferState(transferId)) as FullTransferState<typeof TransferName.Withdraw>;
+  const transfer = (await store.getTransferState(transferId)) as FullTransferState;
   if (!transfer) {
     logger.warn({ method, transferId, channelAddress }, "Could not find transfer for withdrawal resolution");
     return;
@@ -539,3 +550,26 @@ async function handleWithdrawalTransferResolution(
   const receipt = await tx.wait();
   logger.info({ method, transactionHash: receipt.transactionHash }, "Withdraw tx mined, completed");
 }
+
+const isWithdrawTransfer = async (
+  event: ChannelUpdateEvent,
+  chainAddresses: ChainAddresses,
+  chainService: IVectorChainReader,
+): Promise<boolean> => {
+  const {
+    updatedChannelState: {
+      latestUpdate: { details },
+      networkContext: { chainId },
+    },
+  } = event;
+  const withdrawInfo = await chainService.getRegisteredTransferByName(
+    TransferNames.Withdraw,
+    chainAddresses[chainId].transferRegistryAddress,
+    chainId,
+  );
+  if (withdrawInfo.isError) {
+    return false;
+  }
+  const { definition } = withdrawInfo.getValue();
+  return (details as ResolveUpdateDetails).transferDefinition === definition;
+};

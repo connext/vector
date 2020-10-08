@@ -1,4 +1,10 @@
-import { EngineEvents, RouterSchemas, INodeService } from "@connext/vector-types";
+import {
+  EngineEvents,
+  RouterSchemas,
+  INodeService,
+  ConditionalTransferCreatedPayload,
+  DepositReconciledPayload,
+} from "@connext/vector-types";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
@@ -22,7 +28,7 @@ export async function setupListeners(node: INodeService, store: IRouterStore, lo
   // Set up listener to handle transfer creation
   await node.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-    async data => {
+    async (data: ConditionalTransferCreatedPayload) => {
       const res = await forwardTransferCreation(data, node, store, logger, chainProviders);
       if (res.isError) {
         return logger.error(
@@ -32,7 +38,7 @@ export async function setupListeners(node: INodeService, store: IRouterStore, lo
       }
       logger.info({ method: "forwardTransferCreation", result: res.getValue() }, "Successfully forwarded transfer");
     },
-    data => {
+    (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
       const validate = ajv.compile(RouterSchemas.RouterMeta);
       const valid = validate(data.transfer.meta);
@@ -67,7 +73,7 @@ export async function setupListeners(node: INodeService, store: IRouterStore, lo
   // Set up listener to handle transfer resolution
   await node.on(
     EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
-    async data => {
+    async (data: ConditionalTransferCreatedPayload) => {
       const res = await forwardTransferResolution(data, node, store, logger);
       if (res.isError) {
         return logger.error(
@@ -77,7 +83,7 @@ export async function setupListeners(node: INodeService, store: IRouterStore, lo
       }
       logger.info({ method: "forwardTransferResolution", result: res.getValue() }, "Successfully forwarded resolution");
     },
-    data => {
+    (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
       const validate = ajv.compile(RouterSchemas.RouterMeta);
       const valid = validate(data.transfer.meta);
@@ -118,7 +124,7 @@ export async function setupListeners(node: INodeService, store: IRouterStore, lo
 
   await node.on(
     EngineEvents.DEPOSIT_RECONCILED, // TODO types
-    async data => {
+    async (data: DepositReconciledPayload) => {
       // await handleCollateralization(data);
     },
   );
