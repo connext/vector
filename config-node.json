@@ -20,7 +20,6 @@
     "1337": "http://evm_1337:8545",
     "1338": "http://evm_1338:8545"
   },
-  "mnemonic": "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
   "natsUrl": "nats://nats:4222",
   "port": 3000,
   "redisUrl": "redis://redis:6379"
