@@ -102,18 +102,18 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // Only Alice or Bob can defund their channel
     verifyMsgSenderisAliceOrBob(ccs);
 
+    // Verify that the given channel state matches the stored one
+    require(
+      hashChannelState(ccs) == channelDispute.channelStateHash,
+      "CMCAdjudicator defundChannel: Hash of core channel state does not match stored hash"
+    );
+
     // We need to be in defund phase for that
     require(inDefundPhase(), "CMCAdjudicator defundChannel: Not in defund phase");
 
     // We can't defund twice
     require(!channelDispute.isDefunded, "CMCAdjudicator defundChannel: channel already defunded");
     channelDispute.isDefunded = true;
-
-    // Verify that the given channel state matches the stored one
-    require(
-      hashChannelState(ccs) == channelDispute.channelStateHash,
-      "CMCAdjudicator defundChannel: Hash of core channel state does not match stored hash"
-    );
 
     // TODO SECURITY: Beware of reentrancy
     // TODO: offchain-ensure that all arrays have the same length:
@@ -147,12 +147,12 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // Only initiator or responder of the transfer may start a dispute
     verifyMsgSenderIsInitiatorOrResponder(cts);
 
-    // The channel needs to be in defund phase for that, i.e. channel state is "finalized"
-    require(inDefundPhase(), "CMCAdjudicator disputeTransfer: Not in defund phase");
-
     // Verify that the given transfer state is included in the "finalized" channel state
     bytes32 transferStateHash = hashTransferState(cts);
     verifyMerkleProof(merkleProofData, channelDispute.merkleRoot, transferStateHash);
+
+    // The channel needs to be in defund phase for that, i.e. channel state is "finalized"
+    require(inDefundPhase(), "CMCAdjudicator disputeTransfer: Not in defund phase");
 
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
