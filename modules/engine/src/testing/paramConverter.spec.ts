@@ -112,14 +112,13 @@ describe("ParamConverter", () => {
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
-        amount: params.amount,
+        balance: {
+          amount: [params.amount, "0"],
+          to: [signerA.address, signerB.address],
+        },
         assetId: params.assetId,
         transferDefinition: transferRegisteredInfo.definition,
         transferInitialState: {
-          balance: {
-            amount: [params.amount, "0"],
-            to: [signerA.address, signerB.address],
-          },
           lockHash: params.details.lockHash,
           expiry: params.details.expiry,
         },
@@ -154,14 +153,13 @@ describe("ParamConverter", () => {
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
-        amount: params.amount,
+        balance: {
+          amount: [params.amount, "0"],
+          to: [signerB.address, signerA.address],
+        },
         assetId: params.assetId,
         transferDefinition: transferRegisteredInfo.definition,
         transferInitialState: {
-          balance: {
-            amount: [params.amount, "0"],
-            to: [signerB.address, signerA.address],
-          },
           lockHash: params.details.lockHash,
           expiry: params.details.expiry,
         },
@@ -281,21 +279,18 @@ describe("ParamConverter", () => {
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
-        amount: BigNumber.from(params.amount)
-          .add(params.fee)
-          .toString(),
+        balance: {
+          amount: [
+            BigNumber.from(params.amount)
+              .add(params.fee)
+              .toString(),
+            "0",
+          ],
+          to: [params.recipient, channelState.bob],
+        },
         assetId: params.assetId,
         transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
-          balance: {
-            amount: [
-              BigNumber.from(params.amount)
-                .add(params.fee)
-                .toString(),
-              "0",
-            ],
-            to: [params.recipient, channelState.bob],
-          },
           initiatorSignature: signature,
           initiator: signerA.address,
           responder: signerB.address,
@@ -328,21 +323,18 @@ describe("ParamConverter", () => {
       ).getValue();
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
-        amount: BigNumber.from(params.amount)
-          .add(params.fee)
-          .toString(),
+        balance: {
+          amount: [
+            BigNumber.from(params.amount)
+              .add(params.fee)
+              .toString(),
+            "0",
+          ],
+          to: [params.recipient, channelState.alice],
+        },
         assetId: params.assetId,
         transferDefinition: withdrawRegisteredInfo.definition,
         transferInitialState: {
-          balance: {
-            amount: [
-              BigNumber.from(params.amount)
-                .add(params.fee)
-                .toString(),
-              "0",
-            ],
-            to: [params.recipient, channelState.alice],
-          },
           initiatorSignature: signature,
           responder: signerA.address,
           initiator: signerB.address,
