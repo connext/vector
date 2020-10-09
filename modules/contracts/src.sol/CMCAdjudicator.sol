@@ -48,13 +48,14 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
   function disputeChannel(
     CoreChannelState calldata ccs,
-    bytes[2] calldata signatures
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
   )
     external
     override
     channelValid(ccs)
   {
-    verifySignatures(ccs, signatures);
+    verifySignatures(ccs, aliceSignature, bobSignature);
     require(!inDefundPhase(), "CMCAdjudicator disputeChannel: Not allowed in defund phase");
     require(channelDispute.nonce <= ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
     if (inConsensusPhase()) {
@@ -173,21 +174,17 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
   function verifySignatures(
     CoreChannelState calldata ccs,
-    bytes[2] calldata signatures
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
   ) internal pure {
     bytes32 channelStateHash = hashChannelState(ccs);
-    verifySignature(ccs.alice, channelStateHash, signatures[0]);
-    verifySignature(ccs.bob, channelStateHash, signatures[1]);
-  }
-
-  function verifySignature(
-    address participant,
-    bytes32 hash,
-    bytes calldata signature
-  ) internal pure {
     require(
-      participant == hash.verifyChannelMessage(signature),
-      "CMCAdjudicator: invalid signature on core channel state"
+      channelStateHash.checkSignature(aliceSignature, ccs.alice),
+      "CMCAdjudicator: Invalid alice signature"
+    );
+    require(
+      channelStateHash.checkSignature(bobSignature, ccs.bob),
+      "CMCAdjudicator: Invalid bob signature"
     );
   }
 

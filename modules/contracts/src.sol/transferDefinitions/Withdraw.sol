@@ -68,12 +68,12 @@ contract Withdraw is ITransferDefinition {
     TransferResolver memory resolver = abi.decode(encodedResolver, (TransferResolver));
 
     require(
-      state.initiator == state.data.verifyChannelMessage(state.initiatorSignature),
+      state.data.checkSignature(state.initiatorSignature, state.initiator),
       "invalid withdrawer signature"
     );
 
     // Allow for a withdrawal to be canceled if an incorrect signature is passed in
-    if (state.responder == state.data.verifyChannelMessage(resolver.responderSignature)) {
+    if (state.data.checkSignature(resolver.responderSignature, state.responder)) {
       // Reduce withdraw amount by optional fee -- note that it's up to the offchain validators to ensure
       // That the withdraw commitment takes this fee into account
       state.balance.amount[1] = state.fee;
