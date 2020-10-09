@@ -323,6 +323,10 @@ services:
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_ENV: '$VECTOR_ENV'
 
+  redis:
+    $common
+    image: '$redis_image'
+
 EOF
 
 docker stack deploy -c $docker_compose $stack

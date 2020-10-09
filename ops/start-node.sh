@@ -97,6 +97,12 @@ else
   fi
 fi
 
+redis_image="redis:5-alpine";
+bash $root/ops/pull-images.sh $redis_image > /dev/null
+
+# to access from other containers
+redis_url="redis://redis:6379"
+
 ########################################
 ## Database config
 
@@ -272,6 +278,10 @@ services:
       POSTGRES_USER: '$pg_user'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_ENV: '$VECTOR_ENV'
+
+  redis:
+    $common
+    image: '$redis_image'
 
 EOF
 

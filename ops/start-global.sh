@@ -57,12 +57,6 @@ fi
 
 builder_image="${project}_builder"
 
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
-
-# to access from other containers
-redis_url="redis://redis:6379"
-
 common="networks:
       - '$project'
     logging:
@@ -251,10 +245,6 @@ services:
     ports:
       - '4222:4222'
       - '4221:4221'
-
-  redis:
-    $common
-    image: '$redis_image'
 
   $evm_services
 
