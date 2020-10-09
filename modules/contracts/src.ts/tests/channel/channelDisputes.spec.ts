@@ -39,7 +39,7 @@ describe("Channel Disputes", () => {
     await tx.wait();
     const txReciept = await provider.getTransactionReceipt(tx.hash);
     const start = toBN(txReciept.blockNumber);
-    const channelDispute = await channel.getLatestChannelDispute();
+    const channelDispute = await channel.getChannelDispute();
     expect(channelDispute.channelStateHash).to.equal(hashedState);
     expect(channelDispute.nonce).to.equal(channelState.nonce);
     expect(channelDispute.merkleRoot).to.equal(channelState.merkleRoot);
