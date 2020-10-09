@@ -188,9 +188,9 @@ const convertTransferEntityToFullTransferState = (
     assetId: transfer.createUpdate!.assetId,
     chainId: transfer.channel!.chainId,
     channelAddress: transfer.channel!.channelAddress!,
-    initialBalance: {
-      amount: [transfer.initialAmountA, transfer.initialAmountB],
-      to: [transfer.initialToA, transfer.initialToB],
+    balance: {
+      amount: [transfer.amountA, transfer.amountB],
+      to: [transfer.toA, transfer.toB],
     },
     initiator:
       transfer.createUpdate!.fromIdentifier === transfer.channel?.publicIdentifierA
@@ -469,10 +469,10 @@ export class PrismaStore implements IServerNodeStore {
             channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
             routingId: transfer!.meta.routingId ?? getRandomBytes32(),
-            initialAmountA: transfer!.initialBalance.amount[0],
-            initialToA: transfer!.initialBalance.to[0],
-            initialAmountB: transfer!.initialBalance.amount[1],
-            initialToB: transfer!.initialBalance.to[1],
+            amountA: transfer!.balance.amount[0],
+            toA: transfer!.balance.to[0],
+            amountB: transfer!.balance.amount[1],
+            toB: transfer!.balance.to[1],
             initialStateHash: transfer!.initialStateHash,
           }
         : undefined;

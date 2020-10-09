@@ -837,28 +837,28 @@
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialAmountA",
+      "field": "amountA",
       "type": "String",
       "arity": "Required"
     },
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialAmountB",
+      "field": "amountB",
       "type": "String",
       "arity": "Required"
     },
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialToA",
+      "field": "toA",
       "type": "String",
       "arity": "Required"
     },
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialToB",
+      "field": "toB",
       "type": "String",
       "arity": "Required"
     },

@@ -103,11 +103,11 @@ model Transfer {
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
 
-  // initial balance
-  initialAmountA String
-  initialAmountB String
-  initialToA     String
-  initialToB     String
+  // balance
+  amountA String
+  amountB String
+  toA     String
+  toB     String
 
   initialStateHash String
 

@@ -92,7 +92,7 @@ export async function forwardTransferCreation(
 
   const {
     transfer: {
-      initialBalance: {
+      balance: {
         amount: [senderAmount],
       },
       assetId: senderAssetId,
