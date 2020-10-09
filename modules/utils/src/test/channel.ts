@@ -68,7 +68,7 @@ export function createTestUpdateParams<T extends UpdateType>(
     case UpdateType.create:
       details = {
         channelAddress: base.channelAddress,
-        amount: "15",
+        balance: { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["15", "0"] },
         assetId: mkAddress("0x0"),
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestHashlockTransferState(),
@@ -148,6 +148,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
         transferDefinition: mkAddress("0xdef"),
         transferId: mkBytes32("0xid"),
         transferEncodings: ["state", "resolver"],
+        balance: { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["7", "0"] },
         transferInitialState: {
           lockHash: mkBytes32("0xlockHash"),
           expiry: "0",

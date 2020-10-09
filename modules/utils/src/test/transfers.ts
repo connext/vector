@@ -37,7 +37,7 @@ export const createTestHashlockTransferStates = (
 
 export const createCoreTransferState = (overrides: Partial<CoreTransferState> = {}): CoreTransferState => {
   return {
-    initialBalance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
+    balance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
     assetId: mkAddress(),
     channelAddress: mkAddress("0xccc"),
     transferId: mkBytes32("0xeeefff"),
@@ -78,7 +78,7 @@ export function createTestFullHashlockTransferState(
     chainId: 2,
     channelAddress: mkAddress("0xccc"),
     channelFactoryAddress: mkAddress("0xaaaaddddffff"),
-    initialBalance: overrides.initialBalance ?? { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["13", "0"] },
+    balance: overrides.balance ?? { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["13", "0"] },
     initialStateHash: hashTransferState(transferState, transferEncodings[0]),
     meta: meta ?? { super: "cool stuff", routingId: mkHash("0xaabb") },
     transferDefinition: mkAddress("0xdef"),
@@ -87,8 +87,8 @@ export function createTestFullHashlockTransferState(
     transferResolver,
     transferState,
     transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-    initiator: overrides.initialBalance?.to[0] ?? mkAddress("0x111"),
-    responder: overrides.initialBalance?.to[1] ?? mkAddress("0x222"),
+    initiator: overrides.balance?.to[0] ?? mkAddress("0x111"),
+    responder: overrides.balance?.to[1] ?? mkAddress("0x222"),
   };
 
   return {

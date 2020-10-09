@@ -175,12 +175,12 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       );
       ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
       finalBalance = transferDefinition.resolve(
-        abi.encode(cts.initialBalance),
+        abi.encode(cts.balance),
         encodedInitialTransferState,
         encodedTransferResolver
       );
     } else {
-      finalBalance = cts.initialBalance;
+      finalBalance = cts.balance;
     }
     transferBalance(cts.assetId, finalBalance);
   }

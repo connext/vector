@@ -25,7 +25,7 @@ contract Withdraw is ITransferDefinition {
     bytes responderSignature;
   }
 
-  string StateEncoding = "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
+  string StateEncoding = "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
 
   string ResolverEncoding = "tuple(bytes responderSignature)";
 

@@ -131,6 +131,7 @@ export async function applyUpdate<T extends UpdateType>(
         transferTimeout,
         meta,
         transferId,
+        balance: transferBalance,
         transferEncodings,
       } = details as CreateUpdateDetails;
       // Generate the new balance field for the channel
@@ -144,7 +145,7 @@ export async function applyUpdate<T extends UpdateType>(
       };
       const initiator = getSignerAddressFromPublicIdentifier(update.fromIdentifier);
       const createdTransfer = {
-        initialBalance: transferInitialState.balance,
+        balance: transferBalance,
         assetId,
         transferId,
         channelAddress,
@@ -433,7 +434,7 @@ async function generateCreateUpdate(
   chainReader: IVectorChainReader,
 ): Promise<Result<ChannelUpdate<"create">, OutboundChannelUpdateError>> {
   const {
-    details: { assetId, transferDefinition, timeout, transferInitialState, meta },
+    details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
   } = params;
 
   // Creating a transfer is able to effect the following fields
@@ -468,7 +469,7 @@ async function generateCreateUpdate(
   // which means we must gather the list of open transfers for the channel
   const initialStateHash = hashTransferState(transferInitialState, stateEncoding);
   const transferState: FullTransferState = {
-    initialBalance: transferInitialState.balance,
+    balance,
     assetId,
     transferId: getTransferId(state.channelAddress, state.nonce.toString(), transferDefinition, timeout),
     channelAddress: state.channelAddress,
@@ -491,22 +492,17 @@ async function generateCreateUpdate(
   const merkle = new MerkleTree(hashes, utils.keccak256);
 
   // Create the update from the user provided params
-  const balance = getUpdatedChannelBalance(
-    UpdateType.create,
-    assetId,
-    transferInitialState.balance,
-    state,
-    transferState.initiator,
-  );
+  const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
   const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
-    balance,
+    balance: channelBalance,
     assetId,
     details: {
       transferId: transferState.transferId,
       transferDefinition,
       transferTimeout: timeout,
+      balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),

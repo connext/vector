@@ -48,7 +48,7 @@ export const TNetworkContext = Type.Intersect([
 // risk to not validating these using the schema validation. Instead,
 // use relaxed schema validation for all transfer types to make it easier
 // to support generic transfer types (since no schemas have to be updated)
-export const TransferStateSchema = Type.Intersect([Type.Any(), Type.Object({ balance: TBalance })]);
+export const TransferStateSchema = Type.Any();
 export const TransferResolverSchema = Type.Any();
 export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
 export const TransferNameSchema = Type.String();

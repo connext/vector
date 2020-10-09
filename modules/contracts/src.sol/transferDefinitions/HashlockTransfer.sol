@@ -19,7 +19,7 @@ contract HashlockTransfer is ITransferDefinition {
     bytes32 preImage;
   }
 
-  string StateEncoding = "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes32 lockHash, uint256 expiry)";
+  string StateEncoding = "tuple(bytes32 lockHash, uint256 expiry)";
 
   string ResolverEncoding = "tuple(bytes32 preImage)";
 

@@ -30,7 +30,7 @@ export type DepositParams = {
 
 export type CreateTransferParams = {
   channelAddress: string;
-  amount: string;
+  balance: Balance;
   assetId: string;
   transferDefinition: string;
   transferInitialState: TransferState;
@@ -115,7 +115,7 @@ export interface ChannelCommitmentData {
 }
 
 export interface CoreTransferState {
-  initialBalance: Balance;
+  balance: Balance;
   assetId: Address;
   channelAddress: Address;
   transferId: string;
@@ -182,6 +182,7 @@ export interface ChannelUpdateDetailsMap {
 
 export type CreateUpdateDetails = {
   transferId: string;
+  balance: Balance;
   transferDefinition: Address;
   transferTimeout: string;
   transferInitialState: TransferState;
