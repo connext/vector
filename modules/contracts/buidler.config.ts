@@ -20,6 +20,10 @@ const config: BuidlerConfig = {
   },
   solc: {
     version: packageJson.devDependencies.solc,
+    optimizer: {
+      enabled: true,
+      runs: 200,
+    },
   },
   defaultNetwork: "buidlerevm",
   networks: {
