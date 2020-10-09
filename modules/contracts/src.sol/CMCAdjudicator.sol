@@ -68,8 +68,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       channelDispute.merkleRoot = ccs.merkleRoot;
     } else {
       // during regular operation
-      // Only participants may start a dispute
-      verifySenderIsParticipant(ccs);
+      // Only alice or bob may start a dispute
+      verifyMsgSenderisAliceOrBob(ccs);
       // For equality, skip updates without effect and only set new expiries
       if (channelDispute.nonce < ccs.nonce) {
         channelDispute.channelStateHash = hashChannelState(ccs);
@@ -89,7 +89,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     override
     channelValid(ccs)
   {
-    verifySenderIsParticipant(ccs);
+    verifyMsgSenderisAliceOrBob(ccs);
     require(inDefundPhase(), "CMCAdjudicator defundChannel: Not in defund phase");
     require(!channelDispute.isDefunded, "CMCAdjudicator defundChannel: channel already defunded");
     channelDispute.isDefunded = true;
@@ -117,7 +117,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     override
     transferValid(cts)
   {
-    verifySenderIsInitiatorOrResponder(cts);
+    verifyMsgSenderIsInitiatorOrResponder(cts);
     require(inDefundPhase(), "CMCAdjudicator disputeTransfer: Not in defund phase");
     bytes32 transferStateHash = hashTransferState(cts);
     verifyMerkleProof(merkleProofData, channelDispute.merkleRoot, transferStateHash);
@@ -147,7 +147,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     transferDispute.isDefunded = true;
     Balance memory balance;
     if (block.number < transferDispute.transferDisputeExpiry) {
-      verifySenderIsResponder(cts);
+      verifyMsgSenderIsResponder(cts);
       require(
         keccak256(encodedInitialTransferState) == cts.initialStateHash,
         "CMCAdjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
@@ -160,15 +160,15 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     transferBalance(cts.assetId, balance);
   }
 
-  function verifySenderIsParticipant(CoreChannelState calldata ccs) internal view {
-    require(msg.sender == ccs.alice || msg.sender == ccs.bob, "CMCAdjudicator: msg.sender is not channel participant");
+  function verifyMsgSenderisAliceOrBob(CoreChannelState calldata ccs) internal view {
+    require(msg.sender == ccs.alice || msg.sender == ccs.bob, "CMCAdjudicator: msg.sender is neither alice nor bob");
   }
 
-  function verifySenderIsInitiatorOrResponder(CoreTransferState calldata cts) internal view {
+  function verifyMsgSenderIsInitiatorOrResponder(CoreTransferState calldata cts) internal view {
     require(msg.sender == cts.initiator || msg.sender == cts.responder, "CMCAdjudicator: msg.sender is neither transfer initiator nor responder");
   }
 
-  function verifySenderIsResponder(CoreTransferState calldata cts) internal view {
+  function verifyMsgSenderIsResponder(CoreTransferState calldata cts) internal view {
     require(msg.sender == cts.responder, "CMCAdjudicator: msg.sender is not transfer responder");
   }
 
@@ -193,7 +193,10 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     bytes32 root,
     bytes32 leaf
   ) internal pure {
-    require(MerkleProof.verify(proof, root, leaf), "CMCAdjudicator: Merkle proof verification failed");
+    require(
+      MerkleProof.verify(proof, root, leaf),
+      "CMCAdjudicator: Merkle proof verification failed"
+    );
   }
 
   function inConsensusPhase() internal view returns (bool) {
