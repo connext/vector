@@ -1,6 +1,8 @@
 @aliceUrl = http://localhost:8003
 @bobUrl = http://localhost:8004
-@rogerUrl = http://localhost:8000
+@carolUrl = http://localhost:8005
+@daveUrl = http://localhost:8006
+@rogerUrl = http://localhost:8007
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
 @nodePublicIdentifier = indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR
@@ -8,11 +10,11 @@
 
 ##############
 ### Request Setup Channel
-POST {{bobUrl}}/request-setup
+POST {{carolUrl}}/request-setup
 Content-Type: application/json
 
 {
-  "aliceUrl": "http://alice:8000",
+  "aliceUrl": "http://roger:8000",
   "chainId": "{{chainId}}",
   "timeout": "36000"
 }
