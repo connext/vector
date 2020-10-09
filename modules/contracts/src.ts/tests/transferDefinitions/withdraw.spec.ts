@@ -14,6 +14,7 @@ import {
   expect,
   encodeTransferState,
   encodeTransferResolver,
+  encodeBalance,
 } from "@connext/vector-utils";
 import { Zero } from "@ethersproject/constants";
 import { Contract, ContractFactory, Wallet } from "ethers";
@@ -35,47 +36,56 @@ describe("Withdraw", () => {
     await definition.deployed();
   });
 
-  const createInitialState = async (data: string): Promise<WithdrawState> => {
+  const createInitialState = async (data: string): Promise<{ state: WithdrawState; balance: Balance }> => {
     return {
       balance: {
         amount: ["10000", Zero.toString()],
         to: [getRandomAddress(), getRandomAddress()],
       },
-      initiatorSignature: await signChannelMessage(data, alice.privateKey),
-      initiator: alice.address,
-      responder: bob.address,
-      data,
-      nonce: getRandomBytes32(),
-      fee: "0",
+      state: {
+        initiatorSignature: await signChannelMessage(data, alice.privateKey),
+        initiator: alice.address,
+        responder: bob.address,
+        data,
+        nonce: getRandomBytes32(),
+        fee: "0",
+      },
     };
   };
 
-  const createTransfer = async (initialState: WithdrawState): Promise<boolean> => {
+  const createTransfer = async (balance: Balance, initialState: WithdrawState): Promise<boolean> => {
     const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
-    const ret = (await definition.functions.create(encodedState))[0];
+    const encodedBalance = encodeBalance(balance);
+    const ret = (await definition.functions.create(encodedBalance, encodedState))[0];
     return ret;
   };
 
-  const resolveTransfer = async (initialState: WithdrawState, resolver: WithdrawResolver): Promise<Balance> => {
+  const resolveTransfer = async (
+    balance: Balance,
+    initialState: WithdrawState,
+    resolver: WithdrawResolver,
+  ): Promise<Balance> => {
     const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
     const encodedResolver = encodeTransferResolver(resolver, WithdrawResolverEncoding);
-    const ret = (await definition.functions.resolve(encodedState, encodedResolver))[0];
-    return keyify(initialState.balance, ret);
+    const encodedBalance = encodeBalance(balance);
+    const ret = (await definition.functions.resolve(encodedBalance, encodedState, encodedResolver))[0];
+    return keyify(balance, ret);
   };
 
   const validateResult = async (
+    initialBalance: Balance,
     initialState: WithdrawState,
     resolver: WithdrawResolver,
     result: Balance,
   ): Promise<void> => {
     if (await recoverAddressFromChannelMessage(initialState.data, resolver.responderSignature)) {
       // Withdraw completed
-      expect(result.to).to.deep.equal(initialState.balance.to);
+      expect(result.to).to.deep.equal(initialBalance.to);
       expect(result.amount[0].toString()).to.eq("0");
       expect(result.amount[1].toString()).to.eq(initialState.fee.toString());
     } else {
       // Payment reverted
-      expect(result).to.deep.equal(initialState.balance);
+      expect(result).to.deep.equal(initialBalance);
     }
   };
 
@@ -86,27 +96,27 @@ describe("Withdraw", () => {
   describe("Create", () => {
     it("should create successfully", async () => {
       const data = getRandomBytes32();
-      const initialState = await createInitialState(data);
-      expect(await createTransfer(initialState)).to.be.true;
+      const { balance, state } = await createInitialState(data);
+      expect(await createTransfer(balance, state)).to.be.true;
     });
   });
 
   describe("Resolve", () => {
     it("should resolve successfully", async () => {
       const data = getRandomBytes32();
-      const initialState = await createInitialState(data);
+      const { balance, state } = await createInitialState(data);
       const responderSignature = await signChannelMessage(data, bob.privateKey);
-      const result = await resolveTransfer(initialState, { responderSignature });
-      await validateResult(initialState, { responderSignature }, result);
+      const result = await resolveTransfer(balance, state, { responderSignature });
+      await validateResult(balance, state, { responderSignature }, result);
     });
 
     it("should resolve successfully with fees", async () => {
       const data = getRandomBytes32();
-      const initialState = await createInitialState(data);
-      initialState.fee = "100";
+      const { balance, state } = await createInitialState(data);
+      state.fee = "100";
       const responderSignature = await signChannelMessage(data, bob.privateKey);
-      const result = await resolveTransfer(initialState, { responderSignature });
-      await validateResult(initialState, { responderSignature }, result);
+      const result = await resolveTransfer(balance, state, { responderSignature });
+      await validateResult(balance, state, { responderSignature }, result);
     });
   });
 });

@@ -26,7 +26,7 @@ struct CoreChannelState {
 }
 
 struct CoreTransferState {
-  Balance initialBalance;
+  Balance balance;
   address assetId;
   address channelAddress;
   bytes32 transferId;

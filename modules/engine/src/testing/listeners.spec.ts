@@ -146,11 +146,11 @@ describe(testName, () => {
       const responderSignature = await responder.signMessage(commitment.hashToSign());
 
       // Generate state
+      const balance = {
+        to: [commitment.recipient, commitment.bob],
+        amount: [fee.add(commitment.amount).toString(), "0"],
+      };
       const initialState: WithdrawState = {
-        balance: {
-          to: [commitment.recipient, commitment.bob],
-          amount: [fee.add(commitment.amount).toString(), "0"],
-        },
         initiatorSignature,
         initiator: initiator.address,
         responder: responder.address,
@@ -172,7 +172,7 @@ describe(testName, () => {
         transferResolver: undefined,
         meta: { test: "meta" },
         ...createCoreTransferState({
-          initialBalance: initialState.balance,
+          balance,
           assetId: commitment.assetId,
           channelAddress: commitment.channelAddress,
           transferDefinition: withdrawAddress,

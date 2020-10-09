@@ -41,10 +41,10 @@ export const createTransfer = async (
     amount: [amount.toString(), "0"],
   };
 
-  const transferInitialState = createTestHashlockTransferState({ lockHash, assetId, balance });
+  const transferInitialState = createTestHashlockTransferState({ lockHash });
   const params: CreateTransferParams = {
     channelAddress,
-    amount: amount.toString(),
+    balance,
     transferDefinition: env.chainAddresses[chainId].hashlockTransferAddress,
     transferInitialState,
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
@@ -60,7 +60,7 @@ export const createTransfer = async (
   const { transferId } = (channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details;
   const transfer = await payee.getTransferState(transferId);
   expect(transfer).to.containSubset({
-    initialBalance: balance,
+    balance,
     assetId,
     channelAddress,
     transferId,

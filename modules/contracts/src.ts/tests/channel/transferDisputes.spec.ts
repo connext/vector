@@ -16,7 +16,7 @@ describe("Transfer Disputes", () => {
   beforeEach(async () => {
     channel = (await createTestChannel()).connect(alice);
     transferState = {
-      initialBalance: { amount: ["0", "1"], to: [alice.address, bob.address] },
+      balance: { amount: ["0", "1"], to: [alice.address, bob.address] },
       assetId: AddressZero,
       channelAddress: channel.address,
       transferId: getRandomBytes32(),

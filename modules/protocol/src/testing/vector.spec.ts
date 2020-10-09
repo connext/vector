@@ -305,7 +305,7 @@ describe("Vector", () => {
     describe("should validate parameters", () => {
       const validParams: CreateTransferParams = {
         channelAddress,
-        amount: "123214",
+        balance: { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["123214", "0"] },
         assetId: mkAddress("0xaaa"),
         transferDefinition: mkAddress("0xdef"),
         transferInitialState: createTestHashlockTransferState(),
@@ -324,14 +324,14 @@ describe("Vector", () => {
           error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {
-          name: "should fail if amount is undefined",
-          params: { ...validParams, amount: undefined },
-          error: "should have required property 'amount'",
+          name: "should fail if balance is undefined",
+          params: { ...validParams, balance: undefined },
+          error: "should have required property 'balance'",
         },
         {
-          name: "should fail if amount is invalid",
-          params: { ...validParams, amount: "fail" },
-          error: 'should match pattern "^([0-9])*$"',
+          name: "should fail if balance is invalid",
+          params: { ...validParams, balance: "fail" },
+          error: "should be object",
         },
         {
           name: "should fail if assetId is undefined",
@@ -356,7 +356,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferInitialState is undefined",
           params: { ...validParams, transferInitialState: undefined },
-          error: "should have required property 'transferInitialState'",
+          error: "should have required property '.transferInitialState'",
         },
         {
           name: "should fail if timeout is undefined",

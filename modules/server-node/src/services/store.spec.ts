@@ -9,6 +9,7 @@ import {
   getRandomIdentifier,
   getSignerAddressFromPublicIdentifier,
   createTestTxResponse,
+  mkAddress,
 } from "@connext/vector-utils";
 
 import { config } from "../config";
@@ -144,6 +145,7 @@ describe("store", () => {
       nonce: depositState.nonce + 1,
       latestUpdate: {
         details: {
+          balance: transfer.balance,
           transferInitialState: transfer.transferState,
           transferId: transfer.transferId,
           meta: transfer.meta,
@@ -194,12 +196,14 @@ describe("store", () => {
     const transfer1 = createTestFullHashlockTransferState({
       transferId: mkHash("0x111"),
       meta: { routingId: mkBytes32("0xddd") },
+      balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
     });
     const createState = createTestChannelState("create", {
       channelAddress: transfer1.channelAddress,
       networkContext: { channelFactoryAddress: transfer1.channelFactoryAddress, chainId: transfer1.chainId },
       latestUpdate: {
         details: {
+          balance: transfer1.balance,
           transferInitialState: transfer1.transferState,
           transferId: transfer1.transferId,
           meta: transfer1.meta,
@@ -227,6 +231,7 @@ describe("store", () => {
     const transfer2 = createTestFullHashlockTransferState({
       channelAddress: createState.channelAddress,
       meta: { routingId: mkBytes32("0xeee") },
+      balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
     });
     transfer2.transferResolver = undefined;
 
@@ -235,6 +240,7 @@ describe("store", () => {
       networkContext: { channelFactoryAddress: transfer2.channelFactoryAddress, chainId: transfer2.chainId },
       latestUpdate: {
         details: {
+          balance: transfer2.balance,
           transferInitialState: transfer2.transferState,
           transferId: transfer2.transferId,
           meta: transfer2.meta,
@@ -291,15 +297,31 @@ describe("store", () => {
   });
 
   it("should get multiple transfers by routingId", async () => {
+    const routingId = mkBytes32("0xddd");
+    const alice = getRandomIdentifier();
+    const bob1 = getRandomIdentifier();
     const transfer1 = createTestFullHashlockTransferState({
       transferId: mkHash("0x111"),
-      meta: { routingId: mkBytes32("0xddd") },
+      meta: { routingId },
+      balance: {
+        to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(bob1)],
+        amount: ["7", "0"],
+      },
+      responder: getSignerAddressFromPublicIdentifier(alice),
+      initiator: getSignerAddressFromPublicIdentifier(bob1),
     });
     const createState = createTestChannelState("create", {
+      aliceIdentifier: alice,
+      alice: getSignerAddressFromPublicIdentifier(alice),
+      bobIdentifier: bob1,
+      bob: getSignerAddressFromPublicIdentifier(bob1),
       channelAddress: transfer1.channelAddress,
       networkContext: { channelFactoryAddress: transfer1.channelFactoryAddress, chainId: transfer1.chainId },
       latestUpdate: {
+        fromIdentifier: bob1,
+        toIdentifier: alice,
         details: {
+          balance: transfer1.balance,
           transferInitialState: transfer1.transferState,
           transferId: transfer1.transferId,
           meta: transfer1.meta,
@@ -327,18 +349,28 @@ describe("store", () => {
     const newBob = getRandomIdentifier();
     const transfer2 = createTestFullHashlockTransferState({
       transferId: mkHash("0x122"),
-      meta: { routingId: mkBytes32("0xddd") },
+      meta: { routingId },
+      balance: {
+        to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(newBob)],
+        amount: ["7", "0"],
+      },
       channelAddress: getRandomBytes32(),
+      initiator: getSignerAddressFromPublicIdentifier(alice),
       responder: getSignerAddressFromPublicIdentifier(newBob),
     });
     transfer2.transferResolver = undefined;
     const createState2 = createTestChannelState("create", {
+      aliceIdentifier: alice,
+      alice: getSignerAddressFromPublicIdentifier(alice),
       channelAddress: transfer2.channelAddress,
       bob: getSignerAddressFromPublicIdentifier(newBob),
       bobIdentifier: newBob,
       networkContext: { channelFactoryAddress: transfer2.channelFactoryAddress, chainId: transfer2.chainId },
       latestUpdate: {
+        fromIdentifier: alice,
+        toIdentifier: newBob,
         details: {
+          balance: transfer2.balance,
           transferInitialState: transfer2.transferState,
           transferId: transfer2.transferId,
           meta: transfer2.meta,
@@ -361,7 +393,7 @@ describe("store", () => {
       transfer2,
     );
 
-    const transfers = await store.getTransfersByRoutingId(transfer2.meta.routingId);
+    const transfers = await store.getTransfersByRoutingId(routingId);
     expect(transfers.length).to.eq(2);
 
     const t1 = transfers.find(t => t.transferId === transfer1.transferId);
