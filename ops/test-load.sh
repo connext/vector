@@ -55,5 +55,5 @@ else
     $common \
     --entrypoint=bash \
     --volume="$root:/root" \
-    ${project}_builder -c "cd modules/test-runner && npm start load-test"
+    ${project}_builder -c "cd modules/test-runner && npm run load-test"
 fi

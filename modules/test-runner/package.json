@@ -7,7 +7,7 @@
     "build": "webpack --config ops/webpack.config.js",
     "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
     "test": "bash ops/entry.sh",
-    "load-test": "ts-node modules/test-runner/src/load/index.ts"
+    "load-test": "ts-node ./src/load/index.ts"
   },
   "author": "",
   "license": "ISC",
