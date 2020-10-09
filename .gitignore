@@ -26,15 +26,19 @@ config-prod.json
 **/.pyEnv
 **/.rpt2_cache
 **/.test-store
+**/.tmp
 **/cache/**
 
 # Data Storage
 **/.bot-store/
 **/.chaindata
 **/.db-snapshots
+modules/server-node/connext-store.db
+modules/server-node/migrations/migrate.lock
 
 # Docs
 modules/client/docs
+modules/documentation/site
 
 # IDEs and editors
 **/*.launch
@@ -65,5 +69,3 @@ cypress/videos
 
 # Local address book
 address-book.json
-modules/server-node/connext-store.db
-modules/server-node/migrations/migrate.lock

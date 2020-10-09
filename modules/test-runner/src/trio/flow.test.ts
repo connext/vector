@@ -1,5 +1,5 @@
-import { EngineEvents, RouterSchemas, TransferName, INodeService } from "@connext/vector-types";
 import { RestServerNodeService, expect, getRandomBytes32, delay } from "@connext/vector-utils";
+import { EngineEvents, RouterSchemas, TransferNames, INodeService } from "@connext/vector-types";
 import { Wallet, utils, providers, constants } from "ethers";
 import pino from "pino";
 
@@ -138,8 +138,7 @@ describe.skip(testName, () => {
           const preImage = preImages[routingId];
           await carol.resolveTransfer({
             channelAddress: carolChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
-            details: {
+            transferResolver: {
               preImage,
             },
             transferId: data.transfer.transferId,
@@ -156,9 +155,10 @@ describe.skip(testName, () => {
             amount: transferAmt.toString(),
             assetId,
             channelAddress: carolChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
+            type: TransferNames.HashlockTransfer,
             details: {
               lockHash,
+              expiry: "0",
             },
             meta: {
               routingId: newRoutingId,
@@ -180,8 +180,7 @@ describe.skip(testName, () => {
           const preImage = preImages[routingId];
           await dave.resolveTransfer({
             channelAddress: daveChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
-            details: {
+            transferResolver: {
               preImage,
             },
             transferId: data.transfer.transferId,
@@ -198,9 +197,10 @@ describe.skip(testName, () => {
             amount: transferAmt.toString(),
             assetId,
             channelAddress: daveChannel.channelAddress,
-            conditionType: TransferName.HashlockTransfer,
+            type: TransferNames.HashlockTransfer,
             details: {
               lockHash,
+              expiry: "0",
             },
             meta: {
               routingId: newRoutingId,
@@ -217,9 +217,10 @@ describe.skip(testName, () => {
         amount: transferAmt.toString(),
         assetId,
         channelAddress: carolChannel.channelAddress,
-        conditionType: TransferName.HashlockTransfer,
+        type: TransferNames.HashlockTransfer,
         details: {
           lockHash,
+          expiry: "0",
         },
         meta: {
           routingId,

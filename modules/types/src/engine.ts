@@ -1,16 +1,11 @@
-import { Bytes32 } from "./basic";
+import { Address, Bytes32 } from "./basic";
 import { Balance, FullTransferState } from "./channel";
 import { EngineParams } from "./schemas";
+import { TransferName } from "./transferDefinitions";
 import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap } from "./vectorProvider";
 
 ///////////////////////////////////
 ////// Engine transfer types
-// Conditional transfers
-export const ConditionalTransferType = {
-  HashlockTransfer: "HashlockTransfer",
-} as const;
-export type ConditionalTransferType = typeof ConditionalTransferType[keyof typeof ConditionalTransferType];
-
 export type ConditionalTransferResponse = {
   routingId: Bytes32;
 };
@@ -32,7 +27,7 @@ export type ConditionalTransferCreatedPayload = {
   channelAddress: string;
   transfer: FullTransferState;
   channelBalance: Balance;
-  conditionType: ConditionalTransferType;
+  conditionType: TransferName | Address;
 };
 
 // Emitted when transfer resolved

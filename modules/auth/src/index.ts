@@ -1,4 +1,5 @@
 import fastify from "fastify";
+import fastifyCors from "fastify-cors";
 import pino from "pino";
 
 import { MessagingAuthService } from "./auth/messaging-auth-service";
@@ -12,12 +13,14 @@ import {
   postAuthResponseSchema,
 } from "./schemas";
 
-const logger = pino({
-  level: "info",
-});
+const logger = pino({ level: "debug" });
 
-const server = fastify({
-  logger,
+const server = fastify({ logger });
+
+server.register(fastifyCors, {
+  origin: "*",
+  methods: ["GET", "PUT", "POST", "OPTIONS"],
+  preflightContinue: true,
 });
 
 const messagingService = new MessagingAuthService(
@@ -30,6 +33,7 @@ const messagingService = new MessagingAuthService(
   config.adminToken,
 );
 
+// Used during startup to monitor whether this service is awake & responsive
 server.get("/ping", async () => {
   return "pong\n";
 });
@@ -56,7 +60,7 @@ server.post<{ Body: PostAuthRequestBody }>(
   },
 );
 
-server.listen(config.port, "0.0.0.0", (err) => {
+server.listen(config.port, "0.0.0.0", err => {
   if (err) {
     console.error(err);
     process.exit(1);

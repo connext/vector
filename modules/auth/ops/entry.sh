@@ -5,6 +5,31 @@ if [[ -d "modules/auth" ]]
 then cd modules/auth
 fi
 
+if [[ -n "$VECTOR_JWT_SIGNER_PUBLIC_KEY" ]]
+then echo "Using public key provided by env var"
+elif [[ -n "$VECTOR_JWT_SIGNER_PUBLIC_KEY_FILE" ]]
+then export VECTOR_JWT_SIGNER_PUBLIC_KEY="`cat $VECTOR_JWT_SIGNER_PUBLIC_KEY_FILE`"
+else echo "public key must be provided via either a secret or an env var." && exit 1
+fi
+
+if [[ -n "$VECTOR_JWT_SIGNER_PRIVATE_KEY" ]]
+then echo "Using private key provided by env var"
+elif [[ -n "$VECTOR_JWT_SIGNER_PRIVATE_KEY_FILE" ]]
+then export VECTOR_JWT_SIGNER_PRIVATE_KEY="`cat $VECTOR_JWT_SIGNER_PRIVATE_KEY_FILE`"
+else echo "private key must be provided via either a secret or an env var." && exit 1
+fi
+
+# Ensure keys have proper newlines inserted (bc newlines are stripped from env vars)
+export VECTOR_JWT_SIGNER_PRIVATE_KEY=`
+  echo $VECTOR_JWT_SIGNER_PRIVATE_KEY | tr -d '\n\r' |\
+  sed 's/-----BEGIN RSA PRIVATE KEY-----/\n-----BEGIN RSA PRIVATE KEY-----\n/' |\
+  sed 's/-----END RSA PRIVATE KEY-----/\n-----END RSA PRIVATE KEY-----\n/'`
+
+export VECTOR_JWT_SIGNER_PUBLIC_KEY=`
+  echo $VECTOR_JWT_SIGNER_PUBLIC_KEY | tr -d '\n\r' |\
+  sed 's/-----BEGIN PUBLIC KEY-----/\n-----BEGIN PUBLIC KEY-----\n/' | \
+  sed 's/-----END PUBLIC KEY-----/\n-----END PUBLIC KEY-----\n/'`
+
 node_bin="`pwd`/node_modules/.bin"
 nodemon="$node_bin/nodemon"
 pino="$node_bin/pino-pretty"

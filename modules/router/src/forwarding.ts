@@ -97,12 +97,12 @@ export async function forwardTransferCreation(
       },
       assetId: senderAssetId,
       meta: untypedMeta,
-      transferState: conditionData,
+      transferState: createdTransferState,
       channelAddress: senderChannelAddress,
       initiator,
       transferTimeout,
+      transferDefinition,
     },
-    conditionType,
   } = data;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
   const { routingId } = meta;
@@ -262,22 +262,28 @@ export async function forwardTransferCreation(
   }
 
   // If the above is not the case, we can make the transfer!
-  const transfer = await node.conditionalTransfer({
+
+  // Create the initial  state of the transfer by updating the
+  // `to` in the balance field
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { balance, ...details } = createdTransferState;
+  const params = {
+    channelAddress: recipientChannel.channelAddress,
     amount: recipientAmount,
     assetId: recipientAssetId,
-    channelAddress: recipientChannel.channelAddress,
     timeout: BigNumber.from(transferTimeout)
       .sub(TRANSFER_DECREMENT)
       .toString(),
-    details: conditionData,
+    type: transferDefinition,
+    details,
     meta: {
       // Node is never the initiator, that is always payment sender
       senderIdentifier:
         initiator === senderChannel.bobIdentifier ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
       ...meta,
     },
-    conditionType,
-  });
+  };
+  const transfer = await node.conditionalTransfer(params);
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
       // store transfer
@@ -287,12 +293,14 @@ export async function forwardTransferCreation(
         amount: recipientAmount,
         assetId: recipientAssetId,
         routingId,
-        conditionData,
+        transferDefinition,
+        details,
       });
     }
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
         message: transfer.getError()?.message,
+        ...(transfer.getError()!.context ?? {}),
       }),
     );
   }
@@ -345,8 +353,7 @@ export async function forwardTransferResolution(
     channelAddress: incomingTransfer.channelAddress,
     transferId: incomingTransfer.transferId,
     meta: {},
-    conditionType,
-    details: { ...transferResolver },
+    transferResolver,
   };
   const resolution = await node.resolveTransfer(resolveParams);
   if (resolution.isError) {

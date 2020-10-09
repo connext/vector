@@ -1,14 +1,19 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
-import { EngineEvents, IVectorChainService, IVectorEngine } from "@connext/vector-types";
+import { EngineEvents, ILockService, IVectorChainService, IVectorEngine } from "@connext/vector-types";
 import { ChannelSigner, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "ethers";
 
-import { logger, lock, _providers, store } from "..";
+import { logger, _providers, store } from "..";
 import { config } from "../config";
+import { LockService } from "../services/lock";
 
 const ETH_STANDARD_PATH = "m/44'/60'/0'/0";
+
+export function getLockService(publicIdentifier: string): ILockService | undefined {
+  return nodes[publicIdentifier]?.lockService;
+}
 
 export function getPath(index = 0): string {
   return `${ETH_STANDARD_PATH}/${(String(index).match(/.{1,9}/gi) || [index]).join("/")}`;
@@ -19,10 +24,16 @@ export function getIndexFromPath(path: string): number {
 }
 
 export const nodes: {
-  [publicIdentifier: string]: { node: IVectorEngine; chainService: IVectorChainService; index: number };
+  [publicIdentifier: string]: {
+    node: IVectorEngine;
+    chainService: IVectorChainService;
+    lockService: ILockService;
+    index: number;
+  };
 } = {};
 
 export const createNode = async (index: number): Promise<IVectorEngine> => {
+  const method = "createNode";
   const pk = Wallet.fromMnemonic(config.mnemonic!, getPath(index)).privateKey;
   const signer = new ChannelSigner(pk);
 
@@ -30,7 +41,10 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     return nodes[signer.publicIdentifier].node;
   }
 
+  logger.info({ method, publicIdentifier: signer.publicIdentifier }, "Created ChannelSigner");
+
   const vectorTx = new VectorChainService(store, _providers, pk, logger.child({ module: "VectorChainService" }));
+  logger.info({ method, providers: config.chainProviders }, "Connected VectorChainService");
 
   const messaging = new NatsMessagingService(
     {
@@ -40,14 +54,22 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     getBearerTokenFunction(signer, config.authUrl),
   );
   await messaging.connect();
+  logger.info({ method, messagingUrl: config.natsUrl }, "Connected NatsMessagingService");
+
+  const lockService = await LockService.connect(
+    signer.publicIdentifier,
+    messaging,
+    config.redisUrl,
+    logger.child({ module: "LockService" }),
+  );
+  logger.info({ method }, "Connected LockService");
 
   const vectorEngine = await VectorEngine.connect(
     messaging,
-    lock,
+    lockService,
     store,
     signer,
     vectorTx,
-    config.chainProviders,
     config.chainAddresses,
     logger.child({ module: "VectorEngine" }),
   );
@@ -68,7 +90,7 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     }
   });
 
-  nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index };
+  nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index, lockService };
   return vectorEngine;
 };
 

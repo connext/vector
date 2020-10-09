@@ -51,6 +51,7 @@ export abstract class VectorError extends Error {
     ValidationError: "ValidationError",
     RouterError: "RouterError",
     NodeError: "NodeError",
+    LockError: "LockError",
     // etc.
   } as const;
 
@@ -115,6 +116,7 @@ export class OutboundChannelUpdateError extends VectorError {
     SyncValidationFailed: "Failed to validate update for sync",
     TransferNotFound: "No transfer found in storage",
     TransferNotActive: "Transfer not found in activeTransfers",
+    TransferNotRegistered: "Transfer not found in activeTransfers",
   } as const;
 
   constructor(
@@ -126,6 +128,14 @@ export class OutboundChannelUpdateError extends VectorError {
   ) {
     super(message, context);
   }
+}
+
+export class LockError extends VectorError {
+  readonly type = VectorError.errors.LockError;
+
+  static readonly reasons = {
+    Unknown: "Unknown Lock Error //TODO",
+  };
 }
 
 // Thrown by the protocol when applying an update

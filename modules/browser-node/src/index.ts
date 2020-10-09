@@ -1,25 +1,29 @@
-import { NatsMessagingService, getBearerTokenFunction, constructRpcRequest } from "@connext/vector-utils";
+import { VectorChainService } from "@connext/vector-contracts";
+import { VectorEngine } from "@connext/vector-engine";
 import {
-  ServerNodeParams,
-  ServerNodeResponses,
+  ChainAddresses,
+  ChainProviders,
+  ChannelRpcMethods,
+  CreateUpdateDetails,
   EngineEvent,
   EngineEventMap,
-  Result,
-  IChannelSigner,
-  IVectorEngine,
-  ChainProviders,
-  ChainAddresses,
-  INodeService,
-  NodeError,
-  ChannelRpcMethods,
   EngineEvents,
-  CreateUpdateDetails,
+  IChannelSigner,
+  INodeService,
+  IVectorEngine,
+  NodeError,
+  Result,
+  ServerNodeParams,
+  ServerNodeResponses,
 } from "@connext/vector-types";
-import { VectorEngine } from "@connext/vector-engine";
-import { BaseLogger } from "pino";
-import { VectorChainService } from "@connext/vector-contracts";
-import { providers } from "ethers";
+import {
+  constructRpcRequest,
+  getBearerTokenFunction,
+  NatsMessagingService,
+} from "@connext/vector-utils";
 import Axios from "axios";
+import { providers } from "ethers";
+import { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
@@ -41,8 +45,13 @@ export class BrowserNode implements INodeService {
       }),
     );
     const messaging = new NatsMessagingService({ messagingUrl }, log, getBearerTokenFunction(signer, authUrl));
+    await messaging.connect();
     const store = new BrowserStore(log.child({ module: "BrowserStore" }));
-    const lock = new BrowserLockService();
+    const lock = new BrowserLockService(
+      signer.publicIdentifier,
+      messaging,
+      log.child({ module: "BrowserLockService" }),
+    );
     const chainService = new VectorChainService(store, chainJsonProviders, signer, log);
     const engine = await VectorEngine.connect(
       messaging,
@@ -50,7 +59,6 @@ export class BrowserNode implements INodeService {
       store,
       signer,
       chainService,
-      chainProviders,
       chainAddresses,
       log.child({ module: "VectorEngine" }),
     );
@@ -84,6 +92,16 @@ export class BrowserNode implements INodeService {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, params);
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_getChannelState>(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_getChannelStates>(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);

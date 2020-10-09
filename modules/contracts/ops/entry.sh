@@ -20,8 +20,6 @@ mkdir -p $data_dir /data /tmp
 touch $address_book
 rm -f $chain_addresses
 
-# TODO: the gasLimit shouldn't need to be 1000x higher than mainnet but cf tests fail otherwise..
-
 if [[ "$evm" == "buidler" ]]
 then
   echo "Using buidler EVM"  
@@ -35,7 +33,6 @@ then
           privateKey: "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3",
           balance: "1000000000000000000000000000"
         }],
-        blockGasLimit: 9000000000,
         gasPrice: 100000000000,
       },
     },
@@ -49,7 +46,6 @@ then
   launch=$cwd'/node_modules/.bin/ganache-cli \
     --db='$data_dir' \
     --defaultBalanceEther=2000000000 \
-    --gasLimit=9000000000 \
     --gasPrice=100000000000 \
     --mnemonic="'"$mnemonic"'" \
     --networkId='$chain_id' \

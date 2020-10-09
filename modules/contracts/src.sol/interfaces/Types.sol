@@ -46,3 +46,10 @@ struct TransferDispute {
   uint256 transferDisputeExpiry;
   bool isDefunded;
 }
+
+struct RegisteredTransfer {
+  string name;
+  address definition;
+  string stateEncoding;
+  string resolverEncoding;
+}

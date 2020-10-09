@@ -11,13 +11,13 @@ registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' 
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-####################
-# Load config
-
 if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
 then echo "A $stack stack is already running" && exit;
 else echo; echo "Preparing to launch $stack stack"
 fi
+
+####################
+# Load config
 
 node_config="`cat $root/config-node.json`"
 prod_config="`cat $root/config-prod.json`"
@@ -96,6 +96,12 @@ else
     fi
   fi
 fi
+
+redis_image="redis:5-alpine";
+bash $root/ops/pull-images.sh $redis_image > /dev/null
+
+# to access from other containers
+redis_url="redis://redis:6379"
 
 ########################################
 ## Database config
@@ -272,6 +278,10 @@ services:
       POSTGRES_USER: '$pg_user'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_ENV: '$VECTOR_ENV'
+
+  redis:
+    $common
+    image: '$redis_image'
 
 EOF
 

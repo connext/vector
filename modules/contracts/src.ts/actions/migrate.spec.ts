@@ -6,8 +6,6 @@ import { migrate } from "./migrate";
 
 describe("migrate()", () => {
   it("should run without error", async () => {
-    await expect(
-      migrate(alice, addressBookPath, true),
-    ).to.be.fulfilled;
+    await expect(migrate(alice, addressBookPath, false)).to.be.fulfilled;
   });
 });

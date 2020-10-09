@@ -1,4 +1,5 @@
 import fastify from "fastify";
+import fastifyCors from "fastify-cors";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
 import { providers } from "ethers";
@@ -9,7 +10,6 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   ResolveUpdateDetails,
-  ILockService,
   IVectorEngine,
   IVectorChainService,
   EngineEvents,
@@ -21,9 +21,9 @@ import { constructRpcRequest } from "@connext/vector-utils";
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, getChainService, getNode, getNodes } from "./helpers/nodes";
-import { LockService } from "./services/lock";
 
-const server = fastify();
+export const logger = pino();
+const server = fastify({ logger });
 server.register(fastifyOas, {
   swagger: {
     info: {
@@ -33,9 +33,12 @@ server.register(fastifyOas, {
   },
   exposeRoute: true,
 });
-
-export const logger = pino();
-export let lock: ILockService;
+server.register(fastifyCors, {
+  origin: "*",
+  methods: ["GET", "PUT", "POST", "OPTIONS"],
+  preflightContinue: true,
+});
+// export let lock: ILockService;
 export const store = new PrismaStore();
 
 export const _providers = Object.fromEntries(
@@ -45,7 +48,6 @@ export const _providers = Object.fromEntries(
 let defaultEngine: IVectorEngine;
 let defaultChainService: IVectorChainService;
 server.addHook("onReady", async () => {
-  lock = await LockService.connect(config.redisUrl);
   defaultEngine = await createNode(0);
   defaultChainService = getChainService(defaultEngine.publicIdentifier)!;
 });

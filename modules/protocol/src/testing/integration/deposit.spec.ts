@@ -18,6 +18,11 @@ describe(testName, () => {
   let aliceSigner: IChannelSigner;
   let bobSigner: IChannelSigner;
 
+  afterEach(() => {
+    alice.off();
+    bob.off();
+  });
+
   beforeEach(async () => {
     const setup = await getSetupChannel(testName);
     alice = setup.alice.protocol;

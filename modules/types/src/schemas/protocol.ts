@@ -3,7 +3,7 @@
 import { Static, Type } from "@sinclair/typebox";
 
 import { TPublicIdentifier, TIntegerString, TAddress } from "..";
-import { TBytes32, TransferEncodingSchema, TransferResolverSchema, TransferStateSchema } from "../schemas";
+import { TBytes32, TransferResolverSchema, TransferStateSchema } from "../schemas";
 
 import { TBasicMeta, TSetupUpdateDetails } from "./basic";
 
@@ -34,7 +34,6 @@ const CreateProtocolParamsSchema = Type.Object({
   transferDefinition: TAddress,
   transferInitialState: TransferStateSchema,
   timeout: TIntegerString,
-  encodings: TransferEncodingSchema,
   meta: TBasicMeta,
 });
 

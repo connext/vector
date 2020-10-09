@@ -9,8 +9,7 @@ Out of the box, it supports the following features:
 - 💸 Conditional transfers with arbitrary generality routed over one (eventually many) intermediary nodes.
 - 🔀 Instant cross-chain and cross-asset transfers/communication. Works with any evm-compatible chain.
 - 🔌 Plug in support for non-evm turing complete chains.
-- 💳 Simplified deposits, just send funds directly to the channel address from anywhere!
-- 🦄 Use a channel as a wallet - call arbitrary contract functions (e.g. Uniswap!) using channel funds.
+- 💳 Simplified deposits/withdraw, just send funds directly to the channel address from anywhere and use your channel as a wallet!
 - ⛽ Native e2e gas abstraction for end-users.
 - 💤 Transfers to offline recipients.
 
@@ -154,7 +153,7 @@ Note that the engine and protocol are isomorphic. Immediately after the core imp
 
 ## Interacting with a vector node
 
-This quick start will guide you through getting to a simple e2e transfer flow between two peers running [server-nodes](https://github.com/connext/vector/tree/master/modules/server-node) (Alice, Bob) that is routed through one intermediary routing node (Roger).
+This quick start will guide you through getting to a simple e2e transfer flow between two peers running [server-nodes](https://github.com/connext/vector/tree/master/modules/server-node) (Carol, Dave) that is routed through one intermediary routing node (Roger).
 
 Prerequisites:
 
@@ -179,7 +178,7 @@ The above command will spin up three server-nodes, one with an attached router i
 
 Once you have the above trio set up, you can interact with your nodes via a REST interface. We've documented [example requests](https://github.com/connext/vector/tree/master/modules/server-node/examples) in the server-node module. If you're developing with VSCode, there are several REST client plugins available in the marketplace that you can use to make these queries _directly from the examples_.
 
-First, set up your channels from Alice -> Roger and Roger -> Bob (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)). Note `aliceUrl` is the internal URL that Carol has access to on the Docker network. In these examples, Carol and Dave are requesting Roger to set up the channel with them so that they can be the "Bob" within the channel, which lets them deposit by transferrring directly into the channel address.:
+First, set up your channels from Carol -> Roger and Roger -> Carol (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)). Note `aliceUrl` is the internal URL that Carol has access to on the Docker network. In these examples, Carol and Dave are requesting Roger to set up the channel with them so that they can be the "Bob" within the channel, which lets them deposit by transferrring directly into the channel address.:
 
 ```
 ### Node -> Carol
@@ -203,7 +202,7 @@ Content-Type: application/json
 }
 ```
 
-Then, send an Eth deposit to Alice's channel onchain. This can be done by connecting Metamask to your local EVM at `http://localhost:8545` and sending a transfer directly to the `channelAddress`, at any time, regardless of either channel participant's liveness status. A convenient way to do this using HTTP JSON-RPC calls is with a POST request:
+Then, send an Eth deposit to Carol's channel onchain. This can be done by connecting Metamask to your local EVM at `http://localhost:8545` and sending a transfer directly to the `channelAddress`, at any time, regardless of either channel participant's liveness status. A convenient way to do this using HTTP JSON-RPC calls is with a POST request:
 
 ```
 # Send a transaction to {{channelAddress}} for 100000000000000000 Wei
@@ -223,34 +222,34 @@ Content-Type: application/json
 }
 ```
 
-To add this to Alice's offchain balance, you need to wait for the tx to be mined and then call:
+To add this to Carol's offchain balance, you need to wait for the tx to be mined and then call:
 
 ```
-POST {{aliceUrl}}/deposit
+POST {{carolUrl}}/deposit
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceNodeChannel}}",
+  "channelAddress": "{{carolNodeChannel}}",
   "assetId": "0x0000000000000000000000000000000000000000"
 }
 ```
 
-Then, create a transfer between Alice and Bob through Roger (in [3_transfer](https://github.com/connext/vector/blob/master/modules/server-node/examples/3-transfer.http)):
+Then, create a transfer between Carol and Dave through Roger (in [3_transfer](https://github.com/connext/vector/blob/master/modules/server-node/examples/3-transfer.http)):
 
 ```
-POST {{aliceUrl}}/hashlock-transfer/create
+POST {{carolUrl}}/hashlock-transfer/create
 Content-Type: application/json
 
 {
   "conditionType": "HashlockTransfer",
-  "channelAddress": "{{aliceNodeChannel}}",
+  "channelAddress": "{{carolNodeChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
   "details": {
     "lockHash": "{{lockHash}}"
   },
   "routingId": "{{routingId}}",
-  "recipient": "{{bobPublicIdentifier}}",
+  "recipient": "{{davePublicIdentifier}}",
   "meta": {
     "hello": "world"
   }
@@ -260,11 +259,11 @@ Content-Type: application/json
 Lastly, unlock the transfer for Bob to get his funds:
 
 ```
-POST {{bobUrl}}/hashlock-transfer/resolve
+POST {{daveUrl}}/hashlock-transfer/resolve
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceBobChannel}}",
+  "channelAddress": "{{daveNodeChannel}}",
   "routingId": "{{routingId}}",
   "preImage": "{{preImage}}"
 }

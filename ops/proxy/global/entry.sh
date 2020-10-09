@@ -3,7 +3,12 @@
 echo "Proxy container launched in env:"
 echo "VECTOR_DOMAINNAME=$VECTOR_DOMAINNAME"
 echo "VECTOR_EMAIL=$VECTOR_EMAIL"
-echo "VECTOR_NODE_URL=$VECTOR_NODE_URL"
+echo "VECTOR_AUTH_URL=$VECTOR_AUTH_URL"
+echo "VECTOR_NATS_HOST=$VECTOR_NATS_HOST"
+
+export VECTOR_NATS_TCP_URL="$VECTOR_NATS_HOST:4222"
+export VECTOR_NATS_WS_URL="$VECTOR_NATS_HOST:4221"
+export VECTOR_EMAIL="${VECTOR_EMAIL:-noreply@gmail.com}"
 
 # Provide a message indicating that we're still waiting for everything to wake up
 function loading_msg {
@@ -18,9 +23,9 @@ loading_pid="$!"
 # Wait for downstream services to wake up
 # Define service hostnames & ports we depend on
 
-echo "waiting for $VECTOR_NODE_URL..."
-wait-for -t 60 $VECTOR_NODE_URL 2> /dev/null
-while ! curl -s $VECTOR_NODE_URL > /dev/null
+echo "waiting for $VECTOR_AUTH_URL..."
+wait-for -t 60 $VECTOR_AUTH_URL 2> /dev/null
+while ! curl -s $VECTOR_AUTH_URL > /dev/null
 do sleep 2
 done
 

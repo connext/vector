@@ -1,6 +1,6 @@
 import { Options } from "yargs";
 
-export type ConstructorArgs = { name: string; value: string; }[];
+export type ConstructorArgs = { name: string; value: string }[];
 
 export const defaults = {
   mnemonic: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
@@ -39,6 +39,12 @@ export const cliOpts = {
     type: "string",
     default: defaults.mnemonic,
   },
+  transferName: {
+    alias: "transfer-name",
+    description: "Name of transfer to add to registry",
+    type: "string",
+    default: "HashlockTransfer",
+  },
   toAddress: {
     alias: "to-address",
     description: "The address to which funds will be sent",
@@ -67,4 +73,3 @@ export const cliOpts = {
     type: "string",
   },
 } as { [key: string]: Options };
-
