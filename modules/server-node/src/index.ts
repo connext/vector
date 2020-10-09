@@ -22,7 +22,8 @@ import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, getChainService, getNode, getNodes } from "./helpers/nodes";
 
-const server = fastify();
+export const logger = pino();
+const server = fastify({ logger });
 server.register(fastifyOas, {
   swagger: {
     info: {
@@ -37,8 +38,6 @@ server.register(fastifyCors, {
   methods: ["GET", "PUT", "POST", "OPTIONS"],
   preflightContinue: true,
 });
-
-export const logger = pino();
 // export let lock: ILockService;
 export const store = new PrismaStore();
 
