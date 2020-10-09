@@ -55,10 +55,18 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     override
     channelValid(ccs)
   {
+    // Verify Alice's and Bob's signature on the channel state
     verifySignatures(ccs, aliceSignature, bobSignature);
+
+    // We cannot dispute a channel in its defund phase
     require(!inDefundPhase(), "CMCAdjudicator disputeChannel: Not allowed in defund phase");
+
+    // New nonce mustn't be smaller than the stored one
     require(channelDispute.nonce <= ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
+
     if (inConsensusPhase()) {
+      // In the consensus phase the nonce must even be strictly greater than the stored one,
+      // i.e. we have newer state -- which is then stored
       require(
         channelDispute.nonce < ccs.nonce,
         "CMCAdjudicator disputeChannel: Same nonce not allowed in consensus phase"
@@ -66,11 +74,13 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       channelDispute.channelStateHash = hashChannelState(ccs);
       channelDispute.nonce = ccs.nonce;
       channelDispute.merkleRoot = ccs.merkleRoot;
-    } else {
-      // during regular operation
-      // Only alice or bob may start a dispute
+
+    } else { // We are not already in a dispute
+      // Only Alice or Bob may start a dispute
       verifyMsgSenderisAliceOrBob(ccs);
-      // For equality, skip updates without effect and only set new expiries
+
+      // Store the given state and set the expiries
+      // For nonce equality, skip updates without effect and only set new expiries
       if (channelDispute.nonce < ccs.nonce) {
         channelDispute.channelStateHash = hashChannelState(ccs);
         channelDispute.nonce = ccs.nonce;
@@ -89,22 +99,39 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     override
     channelValid(ccs)
   {
+    // Only Alice or Bob can defund their channel
     verifyMsgSenderisAliceOrBob(ccs);
+
+    // We need to be in defund phase for that
     require(inDefundPhase(), "CMCAdjudicator defundChannel: Not in defund phase");
+
+    // We can't defund twice
     require(!channelDispute.isDefunded, "CMCAdjudicator defundChannel: channel already defunded");
     channelDispute.isDefunded = true;
+
+    // Verify that the given channel state matches the stored one
     require(
       hashChannelState(ccs) == channelDispute.channelStateHash,
       "CMCAdjudicator defundChannel: Hash of core channel state does not match stored hash"
     );
+
     // TODO SECURITY: Beware of reentrancy
     // TODO: offchain-ensure that all arrays have the same length:
     // assetIds, balances, processedDepositsA, processedDepositsB
+    // Make sure there are no duplicates in the assetIds -- duplicates are often a source of double-spends
+
+    // Defund all assets stored in the channel
     for (uint256 i = 0; i < ccs.assetIds.length; i++) {
       address assetId = ccs.assetIds[i];
       Balance memory balance = ccs.balances[i];
+
+      // Add unprocessed deposits to amounts
       balance.amount[0] += totalDepositedA(assetId) - ccs.processedDepositsA[i];
       balance.amount[1] += totalDepositedB(assetId) - ccs.processedDepositsB[i];
+
+      // Transfer funds; this will never revert or fail otherwise,
+      // i.e. if the underlying "real" asset transfer fails,
+      // the funds are made available for emergency withdrawal
       transferBalance(assetId, balance);
     }
   }
@@ -117,12 +144,23 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     override
     transferValid(cts)
   {
+    // Only initiator or responder of the transfer may start a dispute
     verifyMsgSenderIsInitiatorOrResponder(cts);
+
+    // The channel needs to be in defund phase for that, i.e. channel state is "finalized"
     require(inDefundPhase(), "CMCAdjudicator disputeTransfer: Not in defund phase");
+
+    // Verify that the given transfer state is included in the "finalized" channel state
     bytes32 transferStateHash = hashTransferState(cts);
     verifyMerkleProof(merkleProofData, channelDispute.merkleRoot, transferStateHash);
+
+    // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
+
+    // Verify that this transfer has not been disputed before
     require(transferDispute.transferDisputeExpiry == 0, "CMCAdjudicator disputeTransfer: transfer already disputed");
+
+    // Store transfer state and set expiry
     transferDispute.transferStateHash = transferStateHash;
     // TODO: offchain-ensure that there can't be an overflow
     transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout);
@@ -137,16 +175,27 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     override
     transferValid(cts)
   {
+    // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
+
+    // Verify that the given transfer state matches the stored one
     require(
       hashTransferState(cts) == transferDispute.transferStateHash,
       "CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash"
     );
+
+    // Verify that a dispute for this transfer has already been started
     require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator defundTransfer: transfer not yet disputed");
+
+    // We can't defund twice
     require(!transferDispute.isDefunded, "CMCAdjudicator defundTransfer: transfer already defunded");
     transferDispute.isDefunded = true;
+
     Balance memory balance;
+
     if (block.number < transferDispute.transferDisputeExpiry) {
+
+      // Before dispute expiry, responder can resolve
       verifyMsgSenderIsResponder(cts);
       require(
         keccak256(encodedInitialTransferState) == cts.initialStateHash,
@@ -154,9 +203,15 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       );
       ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
       balance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
-    } else {
+
+    } else { // After dispute expiry, if the responder hasn't resolved, we defund the initial balance
       balance = cts.initialBalance;
     }
+
+    // Depending on previous code path, defund either resolved or initial balance
+    // This will never revert or fail otherwise,
+    // i.e. if the underlying "real" asset transfer fails,
+    // the funds are made available for emergency withdrawal
     transferBalance(cts.assetId, balance);
   }
 
