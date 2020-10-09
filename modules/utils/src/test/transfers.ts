@@ -1,10 +1,11 @@
-import { BigNumber } from "@connext/types";
 import {
-  Balance,
   TransferState,
   CoreTransferState,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
+  HashlockTransferState,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
@@ -15,27 +16,17 @@ import { mkAddress, mkHash, mkBytes32 } from "./util";
 
 const { keccak256, solidityPack } = utils;
 
-export type PartialTransferOverrides = Partial<{ balance: Partial<Balance>; assetId: string }>;
-
-export const createTestHashlockTransferState = (
-  overrides: PartialTransferOverrides & { lockHash?: string; expiry?: string } = {},
-): TransferState => {
-  const { balance: balanceOverrides, ...defaultOverrides } = overrides;
+export const createTestHashlockTransferState = (overrides: Partial<HashlockTransferState> = {}): TransferState => {
   return {
-    balance: {
-      to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
-      amount: ["1", "0"],
-      ...(balanceOverrides ?? {}),
-    },
     lockHash: mkHash("0xeee"),
     expiry: "0",
-    ...defaultOverrides,
+    ...overrides,
   };
 };
 
 export const createTestHashlockTransferStates = (
   count = 2,
-  overrides: PartialTransferOverrides[] = [],
+  overrides: Partial<HashlockTransferState>[] = [],
 ): TransferState[] => {
   return Array(count)
     .fill(0)
@@ -46,7 +37,7 @@ export const createTestHashlockTransferStates = (
 
 export const createCoreTransferState = (overrides: Partial<CoreTransferState> = {}): CoreTransferState => {
   return {
-    initialBalance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
+    balance: { to: [mkAddress("0xaa"), mkAddress("0xbbb")], amount: ["1", "0"] },
     assetId: mkAddress(),
     channelAddress: mkAddress("0xccc"),
     transferId: mkBytes32("0xeeefff"),
@@ -60,7 +51,6 @@ export const createCoreTransferState = (overrides: Partial<CoreTransferState> = 
 };
 
 type TestHashlockTransferOptions = {
-  balance: Balance;
   assetId: string;
   preImage: string;
   expiry: string;
@@ -72,25 +62,15 @@ export function createTestFullHashlockTransferState(
   overrides: Partial<TestHashlockTransferOptions> = {},
 ): FullTransferState {
   // get overrides/defaults values
-  const { balance, assetId, preImage, expiry, meta, ...core } = overrides;
+  const { assetId, preImage, expiry, meta, ...core } = overrides;
 
   // Taken from onchain defs
-  const transferEncodings = [
-    "tuple(tuple(uint256[2] amount, address[2] to) balance, bytes32 lockHash, uint256 expiry)",
-    "tuple(bytes32 preImage)",
-  ];
+  const transferEncodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   const transferResolver = { preImage: preImage ?? getRandomBytes32() };
   const transferState = createTestHashlockTransferState({
     lockHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
     expiry: expiry ?? "0",
-    assetId: assetId ?? mkAddress(),
-    balance: balance ?? { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["4", "0"] },
   });
-
-  // get transfer value
-  const transferValue = transferState.balance.amount.map((prev, curr) => {
-    return BigNumber.from(prev).add(curr);
-  }, BigNumber.from(0));
 
   // get default values
   const defaults = {
@@ -98,7 +78,7 @@ export function createTestFullHashlockTransferState(
     chainId: 2,
     channelAddress: mkAddress("0xccc"),
     channelFactoryAddress: mkAddress("0xaaaaddddffff"),
-    initialBalance: { ...transferState.balance, amount: [transferValue.toString(), "0"] },
+    balance: overrides.balance ?? { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["13", "0"] },
     initialStateHash: hashTransferState(transferState, transferEncodings[0]),
     meta: meta ?? { super: "cool stuff", routingId: mkHash("0xaabb") },
     transferDefinition: mkAddress("0xdef"),
@@ -107,8 +87,8 @@ export function createTestFullHashlockTransferState(
     transferResolver,
     transferState,
     transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-    initiator: transferState.balance.to[0],
-    responder: transferState.balance.to[1],
+    initiator: overrides.balance?.to[0] ?? mkAddress("0x111"),
+    responder: overrides.balance?.to[1] ?? mkAddress("0x222"),
   };
 
   return {

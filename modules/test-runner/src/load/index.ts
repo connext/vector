@@ -54,7 +54,7 @@ export const daveEvts = {
   },
 };
 
-export const logger = pino({ level: env.logLevel });
+export const logger = pino({ level: "info" });
 const server = fastify();
 
 server.get("/ping", async () => {

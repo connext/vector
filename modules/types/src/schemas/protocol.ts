@@ -5,7 +5,7 @@ import { Static, Type } from "@sinclair/typebox";
 import { TPublicIdentifier, TIntegerString, TAddress } from "..";
 import { TBytes32, TransferResolverSchema, TransferStateSchema } from "../schemas";
 
-import { TBasicMeta, TSetupUpdateDetails } from "./basic";
+import { TBalance, TBasicMeta, TSetupUpdateDetails } from "./basic";
 
 ////////////////////////////////////////
 // Protocol API Parameter schemas
@@ -29,7 +29,7 @@ const DepositProtocolParamsSchema = Type.Object({
 // Create
 const CreateProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
-  amount: TIntegerString,
+  balance: TBalance,
   assetId: TAddress,
   transferDefinition: TAddress,
   transferInitialState: TransferStateSchema,

@@ -4,6 +4,8 @@ import {
   CoreTransferStateEncoding,
   Address,
   TransferResolver,
+  Balance,
+  BalanceEncoding,
 } from "@connext/vector-types";
 import { utils } from "ethers";
 
@@ -25,6 +27,10 @@ export const getTransferId = (
 
 export const encodeTransferState = (state: TransferState, encoding: string): string => {
   return defaultAbiCoder.encode([encoding], [state]);
+};
+
+export const encodeBalance = (balance: Balance): string => {
+  return defaultAbiCoder.encode([BalanceEncoding], [balance]);
 };
 
 export const encodeTransferResolver = (resolver: TransferResolver, encoding: string): string => {

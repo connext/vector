@@ -1,9 +1,11 @@
 @aliceUrl = http://localhost:8003
 @bobUrl = http://localhost:8004
-@rogerUrl = http://localhost:8000
+@carolUrl = http://localhost:8005
+@daveUrl = http://localhost:8006
+@rogerUrl = http://localhost:8007
 @aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
-@aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
-@bobRogerChannel = 0x927c6026c3b8130251f528ef0CAFfab4fae57402
+@carolRogerChannel = 0xEd985dC74648f968F9B42Ef2CCF2ed98777f4C3A
+@daveRogerChannel = 0x927c6026c3b8130251f528ef0CAFfab4fae57402
 @adminToken = cxt1234
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
@@ -20,7 +22,7 @@ GET {{aliceUrl}}/channel
 
 ##############
 ### GET CHANNEL
-GET {{aliceUrl}}/channel/{{aliceBobChannel}}
+GET {{carolUrl}}/channel/{{carolRogerChannel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS

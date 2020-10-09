@@ -83,7 +83,6 @@ describe("messaging", () => {
     await delay(1_000);
 
     const res = await messagingA.sendLockMessage(lockInformation, signerB.publicIdentifier, signerA.publicIdentifier);
-    console.log("error", res.getError());
     expect(res.getError()).to.be.undefined;
     expect(res.getValue()).to.be.a("string");
   });

@@ -322,9 +322,9 @@ async function handleWithdrawalTransferCreation(
 
   // Get the recipient + amount from the transfer state
   const transfer = (await store.getTransferState(transferId))!;
-  const { balance, nonce, initiatorSignature, fee, initiator, responder } = transferInitialState as WithdrawState;
+  const { nonce, initiatorSignature, fee, initiator, responder } = transferInitialState as WithdrawState;
 
-  const withdrawalAmount = balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
+  const withdrawalAmount = transfer.balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
   logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
 
   // Post to evt
@@ -333,7 +333,7 @@ async function handleWithdrawalTransferCreation(
     assetId,
     amount: withdrawalAmount.toString(),
     fee,
-    recipient: balance.to[0],
+    recipient: transfer.balance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,
     transfer,
@@ -352,7 +352,7 @@ async function handleWithdrawalTransferCreation(
     channelAddress,
     alice,
     bob,
-    balance.to[0],
+    transfer.balance.to[0],
     assetId,
     withdrawalAmount.toString(),
     nonce,
@@ -459,7 +459,7 @@ async function handleWithdrawalTransferResolution(
     return;
   }
 
-  const withdrawalAmount = transfer.initialBalance.amount
+  const withdrawalAmount = transfer.balance.amount
     .reduce((prev, curr) => prev.add(curr), BigNumber.from(0))
     .sub(transfer.transferState.fee);
 
@@ -480,7 +480,7 @@ async function handleWithdrawalTransferResolution(
     assetId,
     amount: withdrawalAmount.toString(),
     fee: transfer.transferState.fee,
-    recipient: transfer.initialBalance.to[0],
+    recipient: transfer.balance.to[0],
     channelBalance: balances[assetIdx],
     channelAddress,
     transfer,
@@ -498,7 +498,7 @@ async function handleWithdrawalTransferResolution(
     channelAddress,
     alice,
     bob,
-    transfer.initialBalance.to[0],
+    transfer.balance.to[0],
     assetId,
     withdrawalAmount.toString(),
     transfer.transferState.nonce,
