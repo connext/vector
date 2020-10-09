@@ -13,12 +13,12 @@ import {
   ChainAddresses,
   RouterSchemas,
   TransferNames,
+  TransferName,
   IVectorChainReader,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 
 import { InvalidTransferType } from "./errors";
-import { TransferName } from "../../types/dist/src";
 
 export async function convertConditionalTransferParams(
   params: EngineParams.ConditionalTransfer,
@@ -72,12 +72,11 @@ export async function convertConditionalTransferParams(
   // Construct initial state
   const transferInitialState = {
     ...details,
-    balance: { to: [signer.address, channelCounterparty], amount: [amount.toString(), "0"] },
   };
 
   return Result.ok({
     channelAddress,
-    amount,
+    balance: { to: [signer.address, channelCounterparty], amount: [amount.toString(), "0"] },
     assetId,
     transferDefinition: definition,
     transferInitialState,
@@ -136,10 +135,6 @@ export async function convertWithdrawParams(
   const channelCounterparty = channel.alice === signer.address ? channel.bob : channel.alice;
 
   const transferInitialState: WithdrawState = {
-    balance: {
-      amount: [amount, "0"],
-      to: [recipient, channelCounterparty],
-    },
     initiatorSignature,
     initiator: signer.address,
     responder: channelCounterparty,
@@ -161,7 +156,10 @@ export async function convertWithdrawParams(
 
   return Result.ok({
     channelAddress,
-    amount,
+    balance: {
+      amount: [amount, "0"],
+      to: [recipient, channelCounterparty],
+    },
     assetId,
     transferDefinition: definition,
     transferInitialState,

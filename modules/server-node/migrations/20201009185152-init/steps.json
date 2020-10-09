@@ -508,6 +508,34 @@
     {
       "tag": "CreateField",
       "model": "Update",
+      "field": "transferAmountA",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferAmountB",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferToA",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferToB",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
       "field": "transferId",
       "type": "String",
       "arity": "Optional"
@@ -837,28 +865,28 @@
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialAmountA",
+      "field": "amountA",
       "type": "String",
       "arity": "Required"
     },
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialAmountB",
+      "field": "amountB",
       "type": "String",
       "arity": "Required"
     },
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialToA",
+      "field": "toA",
       "type": "String",
       "arity": "Required"
     },
     {
       "tag": "CreateField",
       "model": "Transfer",
-      "field": "initialToB",
+      "field": "toB",
       "type": "String",
       "arity": "Required"
     },

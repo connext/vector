@@ -120,6 +120,10 @@ const convertChannelEntityToFullChannelState = (
         break;
       case "create":
         details = {
+          balance: {
+            to: [channelEntity.latestUpdate.transferToA!, channelEntity.latestUpdate.transferToB!],
+            amount: [channelEntity.latestUpdate.transferAmountA!, channelEntity.latestUpdate.transferAmountB!],
+          },
           merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
@@ -188,9 +192,9 @@ const convertTransferEntityToFullTransferState = (
     assetId: transfer.createUpdate!.assetId,
     chainId: transfer.channel!.chainId,
     channelAddress: transfer.channel!.channelAddress!,
-    initialBalance: {
-      amount: [transfer.initialAmountA, transfer.initialAmountB],
-      to: [transfer.initialToA, transfer.initialToB],
+    balance: {
+      amount: [transfer.amountA, transfer.amountB],
+      to: [transfer.toA, transfer.toB],
     },
     initiator:
       transfer.createUpdate!.fromIdentifier === transfer.channel?.publicIdentifierA
@@ -469,10 +473,10 @@ export class PrismaStore implements IServerNodeStore {
             channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
             routingId: transfer!.meta.routingId ?? getRandomBytes32(),
-            initialAmountA: transfer!.initialBalance.amount[0],
-            initialToA: transfer!.initialBalance.to[0],
-            initialAmountB: transfer!.initialBalance.amount[1],
-            initialToB: transfer!.initialBalance.to[1],
+            amountA: transfer!.balance.amount[0],
+            toA: transfer!.balance.to[0],
+            amountB: transfer!.balance.amount[1],
+            toB: transfer!.balance.to[1],
             initialStateHash: transfer!.initialStateHash,
           }
         : undefined;
@@ -520,6 +524,11 @@ export class PrismaStore implements IServerNodeStore {
         transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
           : undefined,
+
+        transferAmountA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[0] ?? undefined,
+        transferToA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[0] ?? undefined,
+        transferAmountB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
+        transferToB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
         merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
         merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
         transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,

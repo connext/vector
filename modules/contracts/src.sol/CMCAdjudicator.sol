@@ -10,7 +10,6 @@ import "./lib/LibChannelCrypto.sol";
 import "./lib/MerkleProof.sol";
 import "./lib/SafeMath.sol";
 
-
 /// @title Adjudicator - Dispute logic for ONE channel
 contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
@@ -175,9 +174,13 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
         "Adjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
       );
       ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
-      finalBalance = transferDefinition.resolve(encodedInitialTransferState, encodedTransferResolver);
+      finalBalance = transferDefinition.resolve(
+        abi.encode(cts.balance),
+        encodedInitialTransferState,
+        encodedTransferResolver
+      );
     } else {
-      finalBalance = cts.initialBalance;
+      finalBalance = cts.balance;
     }
     transferBalance(cts.assetId, finalBalance);
   }
@@ -233,5 +236,4 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   function hashTransferState(CoreTransferState memory cts) internal pure returns (bytes32) {
     return keccak256(abi.encode(cts));
   }
-
 }

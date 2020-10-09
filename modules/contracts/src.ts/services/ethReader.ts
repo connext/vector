@@ -11,6 +11,7 @@ import {
   RegisteredTransfer,
   TransferName,
 } from "@connext/vector-types";
+import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import pino from "pino";
@@ -208,10 +209,21 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
+    // Try to encode
+    let encodedState: string;
+    let encodedBalance: string;
+    try {
+      encodedState = encodeTransferState(transfer.transferState, transfer.transferEncodings[0]);
+      encodedBalance = encodeBalance(transfer.balance);
+    } catch (e) {
+      return Result.fail(e);
+    }
     const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
     if (bytecode) {
-      const evmRes = this.tryEvm(contract.interface.encodeFunctionData("create", [encodedState]), bytecode);
+      const evmRes = this.tryEvm(
+        contract.interface.encodeFunctionData("create", [encodedBalance, encodedState]),
+        bytecode,
+      );
       if (!evmRes.isError) {
         const decoded = contract.interface.decodeFunctionResult("create", evmRes.getValue()!)[0];
         return Result.ok(decoded);
@@ -222,7 +234,7 @@ export class EthereumChainReader implements IVectorChainReader {
       "Calling create onchain",
     );
     try {
-      const valid = await contract.create(encodedState);
+      const valid = await contract.create(encodedBalance, encodedState);
       return Result.ok(valid);
     } catch (e) {
       return Result.fail(e);
@@ -239,9 +251,11 @@ export class EthereumChainReader implements IVectorChainReader {
     // Try to encode
     let encodedState: string;
     let encodedResolver: string;
+    let encodedBalance: string;
     try {
-      encodedState = defaultAbiCoder.encode([transfer.transferEncodings[0]], [transfer.transferState]);
-      encodedResolver = defaultAbiCoder.encode([transfer.transferEncodings[1]], [transfer.transferResolver]);
+      encodedState = encodeTransferState(transfer.transferState, transfer.transferEncodings[0]);
+      encodedResolver = encodeTransferResolver(transfer.transferResolver!, transfer.transferEncodings[1]);
+      encodedBalance = encodeBalance(transfer.balance);
     } catch (e) {
       return Result.fail(e);
     }
@@ -250,7 +264,7 @@ export class EthereumChainReader implements IVectorChainReader {
     const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
     if (bytecode) {
       const evmRes = this.tryEvm(
-        contract.interface.encodeFunctionData("resolve", [encodedState, encodedResolver]),
+        contract.interface.encodeFunctionData("resolve", [encodedBalance, encodedState, encodedResolver]),
         bytecode,
       );
       if (!evmRes.isError) {
@@ -263,7 +277,7 @@ export class EthereumChainReader implements IVectorChainReader {
       "Calling resolve onchain",
     );
     try {
-      const ret = await contract.resolve(encodedState, encodedResolver);
+      const ret = await contract.resolve(encodedBalance, encodedState, encodedResolver);
       return Result.ok({
         to: ret.to,
         amount: ret.amount.map((a: BigNumber) => a.toString()),
