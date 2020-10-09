@@ -2,12 +2,8 @@
 
 Basic UI to test that `browser-node` comes up properly.
 
-## Setup
-
-- Create `.env` file that matches the structure of the `.env-example` in this module.
-
 ## Running
 
+- Verify the `config-node.json` has the correct params, change the mnemonic if needed. By default it's configured to connect to a local global stack.
 - Run `make start-global` from repo root.
-- Run `make browser-node` to link all packages and the `browser-node` bundle.
-- Run `npm start` in this module.
+- Run `make start-browser-node-test-ui` from repo root to start the UI.

@@ -1,7 +1,8 @@
 {
   "adminToken": "cxt1234",
-  "authUrl": "http://auth:5040",
+  "authUrl": "http://localhost:5040",
   "logLevel": "info",
+  "mnemonic": "dial accuse that borrow dinosaur arrange erode dilemma want citizen nuclear hurt",
   "chainAddresses": {
     "1337": {
       "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
@@ -17,10 +18,9 @@
     }
   },
   "chainProviders": {
-    "1337": "http://evm_1337:8545",
-    "1338": "http://evm_1338:8545"
+    "1337": "http://localhost:8545",
+    "1338": "http://localhost:8546"
   },
-  "natsUrl": "nats://nats:4222",
-  "port": 3000,
-  "redisUrl": "redis://redis:6379"
+  "natsUrl": "ws://localhost:4221",
+  "port": 3333
 }

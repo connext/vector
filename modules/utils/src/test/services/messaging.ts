@@ -12,15 +12,6 @@ import { Evt } from "evt";
 import { getRandomBytes32 } from "../../hexStrings";
 
 export class MemoryMessagingService implements IMessagingService {
-  onReceiveLockMessage(
-    publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  sendLockMessage(lockInfo: LockInformation, to: string, from: string): Promise<Result<string | void, LockError>> {
-    throw new Error("Method not implemented.");
-  }
   private readonly evt: Evt<{
     to?: string;
     from: string;
@@ -123,6 +114,19 @@ export class MemoryMessagingService implements IMessagingService {
           replyTo!,
         );
       });
+  }
+
+  respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  sendLockMessage(lockInfo: LockInformation, to: string, from: string): Promise<Result<string | void, LockError>> {
+    throw new Error("Method not implemented.");
   }
 
   async subscribe(subject: string, callback: (data: any) => void): Promise<void> {

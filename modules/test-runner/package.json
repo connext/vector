@@ -6,7 +6,8 @@
   "scripts": {
     "build": "webpack --config ops/webpack.config.js",
     "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
-    "test": "bash ops/entry.sh"
+    "test": "bash ops/entry.sh",
+    "load-test": "ts-node ./src/load/index.ts"
   },
   "author": "",
   "license": "ISC",
@@ -26,6 +27,7 @@
     "fastify": "3.4.1",
     "ts-loader": "8.0.4",
     "ts-mocha": "7.0.0",
+    "ts-node": "9.0.0",
     "typescript": "4.0.3",
     "webpack": "4.44.2",
     "webpack-cli": "3.3.12"

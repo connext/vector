@@ -30,7 +30,7 @@ public_port="`getConfig port`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
 
-if [[ -z "$public_port" || "$public_port" == "null" ]]
+if [[ "production" != "true" && (-z "$public_port" || "$public_port" == "null") ]]
 then public_port=3002
 fi
 
@@ -252,11 +252,11 @@ services:
       - '4222:4222'
       - '4221:4221'
 
+  $evm_services
+
   redis:
     $common
     image: '$redis_image'
-
-  $evm_services
 
 EOF
 

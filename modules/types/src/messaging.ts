@@ -9,7 +9,6 @@ export interface IMessagingService {
     myPublicIdentifier: string,
     callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
   ): Promise<void>;
-
   sendLockMessage(
     lockInfo: LockInformation,
     to: string,
@@ -17,6 +16,7 @@ export interface IMessagingService {
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<string | void, LockError>>;
+  respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void>;
 
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
@@ -26,11 +26,6 @@ export interface IMessagingService {
       inbox: string,
     ) => void,
   ): Promise<void>;
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void>;
-
   sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
@@ -42,14 +37,18 @@ export interface IMessagingService {
       OutboundChannelUpdateError | InboundChannelUpdateError
     >
   >;
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>>;
-
   respondToProtocolMessage(
     inbox: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void>;
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
+
+  onReceiveCheckIn(
+    myPublicIdentifier: string,
+    callback: (nonce: string, from: string, inbox: string) => void,
+  ): Promise<void>;
+  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>>;
 
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;

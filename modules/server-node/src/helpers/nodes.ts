@@ -33,6 +33,7 @@ export const nodes: {
 } = {};
 
 export const createNode = async (index: number): Promise<IVectorEngine> => {
+  const method = "createNode";
   const pk = Wallet.fromMnemonic(config.mnemonic!, getPath(index)).privateKey;
   const signer = new ChannelSigner(pk);
 
@@ -40,7 +41,10 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     return nodes[signer.publicIdentifier].node;
   }
 
+  logger.info({ method, publicIdentifier: signer.publicIdentifier }, "Created ChannelSigner");
+
   const vectorTx = new VectorChainService(store, _providers, pk, logger.child({ module: "VectorChainService" }));
+  logger.info({ method, providers: config.chainProviders }, "Connected VectorChainService");
 
   const messaging = new NatsMessagingService(
     {
@@ -50,6 +54,7 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     getBearerTokenFunction(signer, config.authUrl),
   );
   await messaging.connect();
+  logger.info({ method, messagingUrl: config.natsUrl }, "Connected NatsMessagingService");
 
   const lockService = await LockService.connect(
     signer.publicIdentifier,
@@ -57,6 +62,7 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     config.redisUrl,
     logger.child({ module: "LockService" }),
   );
+  logger.info({ method }, "Connected LockService");
 
   const vectorEngine = await VectorEngine.connect(
     messaging,

@@ -6,8 +6,9 @@ echo "VECTOR_EMAIL=$VECTOR_EMAIL"
 echo "VECTOR_AUTH_URL=$VECTOR_AUTH_URL"
 echo "VECTOR_NATS_HOST=$VECTOR_NATS_HOST"
 
-export $VECTOR_NATS_TCP_URL="$VECTOR_NATS_HOST:4222"
-export $VECTOR_NATS_WS_URL="$VECTOR_NATS_HOST:4221"
+export VECTOR_NATS_TCP_URL="$VECTOR_NATS_HOST:4222"
+export VECTOR_NATS_WS_URL="$VECTOR_NATS_HOST:4221"
+export VECTOR_EMAIL="${VECTOR_EMAIL:-noreply@gmail.com}"
 
 # Provide a message indicating that we're still waiting for everything to wake up
 function loading_msg {
@@ -25,18 +26,6 @@ loading_pid="$!"
 echo "waiting for $VECTOR_AUTH_URL..."
 wait-for -t 60 $VECTOR_AUTH_URL 2> /dev/null
 while ! curl -s $VECTOR_AUTH_URL > /dev/null
-do sleep 2
-done
-
-echo "waiting for $VECTOR_NATS_TCP_URL..."
-wait-for -t 60 $VECTOR_NATS_TCP_URL 2> /dev/null
-while ! curl -s $VECTOR_NATS_TCP_URL > /dev/null
-do sleep 2
-done
-
-echo "waiting for $VECTOR_NATS_WS_URL..."
-wait-for -t 60 $VECTOR_NATS_WS_URL 2> /dev/null
-while ! curl -s $VECTOR_NATS_WS_URL > /dev/null
 do sleep 2
 done
 
