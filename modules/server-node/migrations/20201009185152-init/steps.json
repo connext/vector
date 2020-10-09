@@ -508,6 +508,34 @@
     {
       "tag": "CreateField",
       "model": "Update",
+      "field": "transferAmountA",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferAmountB",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferToA",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
+      "field": "transferToB",
+      "type": "String",
+      "arity": "Optional"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Update",
       "field": "transferId",
       "type": "String",
       "arity": "Optional"

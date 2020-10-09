@@ -54,7 +54,7 @@ export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, m
 export const TransferNameSchema = Type.String();
 
 export const TFullTransferState = Type.Object({
-  initialBalance: TBalance,
+  balance: TBalance,
   assetId: TAddress,
   channelAddress: TAddress,
   transferId: TBytes32,
@@ -89,6 +89,7 @@ export const TDepositUpdateDetails = Type.Object({
 // Create update details
 export const TCreateUpdateDetails = Type.Object({
   transferId: TBytes32,
+  balance: TBalance,
   transferDefinition: TAddress,
   transferTimeout: TIntegerString,
   transferInitialState: TransferStateSchema,

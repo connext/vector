@@ -120,6 +120,10 @@ const convertChannelEntityToFullChannelState = (
         break;
       case "create":
         details = {
+          balance: {
+            to: [channelEntity.latestUpdate.transferToA!, channelEntity.latestUpdate.transferToB!],
+            amount: [channelEntity.latestUpdate.transferAmountA!, channelEntity.latestUpdate.transferAmountB!],
+          },
           merkleProofData: channelEntity.latestUpdate.merkleProofData!.split(","),
           merkleRoot: channelEntity.latestUpdate.merkleRoot!,
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
@@ -520,6 +524,11 @@ export class PrismaStore implements IServerNodeStore {
         transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState
           ? JSON.stringify((channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState)
           : undefined,
+
+        transferAmountA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[0] ?? undefined,
+        transferToA: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[0] ?? undefined,
+        transferAmountB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.amount[1] ?? undefined,
+        transferToB: (channelState.latestUpdate!.details as CreateUpdateDetails).balance?.to[1] ?? undefined,
         merkleRoot: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleRoot,
         merkleProofData: (channelState.latestUpdate!.details as CreateUpdateDetails).merkleProofData?.join(),
         transferDefinition: (channelState.latestUpdate!.details as CreateUpdateDetails).transferDefinition,

@@ -32,7 +32,7 @@ describe("Forwarding", () => {
       };
       const transfer = createTestFullHashlockTransferState({
         channelAddress,
-        initialBalance: {
+        balance: {
           amount: ["2", "0"],
           to: channelBalance.to,
         },

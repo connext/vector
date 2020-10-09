@@ -74,6 +74,10 @@ model Update {
   totalDepositedB String?
 
   // create details
+  transferAmountA      String?
+  transferAmountB      String?
+  transferToA          String?
+  transferToB          String?
   transferId           String?
   transferDefinition   String?
   transferTimeout      String?
