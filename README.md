@@ -178,7 +178,27 @@ The above command will spin up three server-nodes, one with an attached router i
 
 Once you have the above trio set up, you can interact with your nodes via a REST interface. We've documented [example requests](https://github.com/connext/vector/tree/master/modules/server-node/examples) in the server-node module. If you're developing with VSCode, there are several REST client plugins available in the marketplace that you can use to make these queries _directly from the examples_.
 
-First, set up your channels from Carol -> Roger and Roger -> Carol (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)). Note `aliceUrl` is the internal URL that Carol has access to on the Docker network. In these examples, Carol and Dave are requesting Roger to set up the channel with them so that they can be the "Bob" within the channel, which lets them deposit by transferrring directly into the channel address.:
+First, set up your nodes (in [0_config](https://github.com/connext/vector/blob/master/modules/server-node/examples/0-config.http)) on the servers to register signers and create the engines.
+
+```
+### Node -> Carol
+POST {{carolUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0
+}
+
+### Node -> Dave
+POST {{daveUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0
+}
+```
+
+Then, set up your channels from Carol -> Roger and Roger -> Carol (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)). Note `aliceUrl` is the internal URL that Carol has access to on the Docker network. In these examples, Carol and Dave are requesting Roger to set up the channel with them so that they can be the "Bob" within the channel, which lets them deposit by transferrring directly into the channel address.:
 
 ```
 ### Node -> Carol
@@ -188,7 +208,8 @@ Content-Type: application/json
 {
   "aliceUrl": "http://roger:8000",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "36000",
+  "publicIdentifier": "{{carolIdentifier}}"
 }
 
 ### Node -> Dave
@@ -198,7 +219,8 @@ Content-Type: application/json
 {
   "aliceUrl": "http://roger:8000",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "36000",
+  "publicIdentifier": "{{daveIdentifier}}"
 }
 ```
 
@@ -230,7 +252,8 @@ Content-Type: application/json
 
 {
   "channelAddress": "{{carolNodeChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000"
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{carolIdentifier}}"
 }
 ```
 
@@ -252,7 +275,8 @@ Content-Type: application/json
   "recipient": "{{davePublicIdentifier}}",
   "meta": {
     "hello": "world"
-  }
+  },
+  "publicIdentifier": "{{carolIdentifier}}"
 }
 ```
 
@@ -265,7 +289,8 @@ Content-Type: application/json
 {
   "channelAddress": "{{daveNodeChannel}}",
   "routingId": "{{routingId}}",
-  "preImage": "{{preImage}}"
+  "preImage": "{{preImage}}",
+  "publicIdentifier": "{{daveIdentifier}}"
 }
 ```
 

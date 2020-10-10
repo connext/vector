@@ -10,8 +10,6 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   ResolveUpdateDetails,
-  IVectorEngine,
-  IVectorChainService,
   EngineEvents,
   CreateUpdateDetails,
 } from "@connext/vector-types";
