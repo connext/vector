@@ -44,18 +44,18 @@ describe(testName, () => {
 
   it("alice & bob should setup a channel", async () => {
     const channelRes = await bobService.requestSetup({
-      chainId,
-      bobIdentifier,
       aliceUrl: env.aliceUrl,
       aliceIdentifier,
-      timeout: "10000",
+      bobIdentifier,
+      chainId,
+      timeout: "360000",
     });
     expect(channelRes.getError()).to.be.undefined;
     const channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
     const aliceChannel = await aliceService.getStateChannel({
       channelAddress: channel.channelAddress,
-      publicIdentifier: alice,
+      publicIdentifier: aliceIdentifier,
     });
     const bobChannel = await bobService.getStateChannel({
       channelAddress: channel.channelAddress,

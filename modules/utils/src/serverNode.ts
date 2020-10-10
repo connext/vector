@@ -112,7 +112,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.RequestSetup, ServerNodeResponses.RequestSetup>(
       "request-setup",
       "post",
-      { ...params, bobIdentifier: params.bobIdentifier },
+      params,
       ServerNodeParams.RequestSetupSchema,
     );
   }
