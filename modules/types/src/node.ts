@@ -23,6 +23,8 @@ export interface INodeService {
     params: ServerNodeParams.GetTransferStatesByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>>;
 
+  createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>>;
+
   setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, NodeError>>;
 
   requestSetup(params: ServerNodeParams.RequestSetup): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>>;
