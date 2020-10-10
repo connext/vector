@@ -52,12 +52,18 @@ const logger = pino();
 let router: IRouter;
 const store = new RouterStore();
 server.addHook("onReady", async () => {
-  const node = await RestServerNodeService.connect(
+  const service = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RestServerNodeService" }),
     evts,
   );
-  router = await Router.connect(node, store, logger);
+  // Create signer at 0
+  const node = await service.createNode({ index: 0 });
+  if (node.isError) {
+    throw node.getError();
+  }
+  const { publicIdentifier, signerAddress } = node.getValue();
+  router = await Router.connect(publicIdentifier, signerAddress, service, store, logger);
 });
 
 server.get("/ping", async () => {

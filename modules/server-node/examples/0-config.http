@@ -36,3 +36,12 @@ Content-Type: application/json
 {
   "adminToken": "{{adminToken}}"
 }
+
+##############
+### CREATE NODE
+POST {{aliceUrl}}/node
+Content-Type: application/json
+
+{
+  "index": 0,
+}

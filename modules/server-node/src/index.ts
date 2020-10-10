@@ -10,8 +10,6 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   ResolveUpdateDetails,
-  IVectorEngine,
-  IVectorChainService,
   EngineEvents,
   CreateUpdateDetails,
 } from "@connext/vector-types";
@@ -38,19 +36,12 @@ server.register(fastifyCors, {
   methods: ["GET", "PUT", "POST", "OPTIONS"],
   preflightContinue: true,
 });
-// export let lock: ILockService;
+
 export const store = new PrismaStore();
 
 export const _providers = Object.fromEntries(
   Object.entries(config.chainProviders).map(([chainId, url]: any) => [chainId, new providers.JsonRpcProvider(url)]),
 );
-
-let defaultEngine: IVectorEngine;
-let defaultChainService: IVectorChainService;
-server.addHook("onReady", async () => {
-  defaultEngine = await createNode(0);
-  defaultChainService = getChainService(defaultEngine.publicIdentifier)!;
-});
 
 server.get("/ping", async () => {
   return "pong\n";
@@ -73,13 +64,11 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   "/channel/:channelAddress/:publicIdentifier",
   { schema: { params: ServerNodeParams.GetChannelStateSchema } },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.params.publicIdentifier) {
-      engine = getNode(request.params.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-      }
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
+
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
     try {
       const res = await engine.request<"chan_getChannelState">(params);
@@ -98,7 +87,10 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   "/channel/:channelAddress",
   { schema: { params: ServerNodeParams.GetChannelStateSchema } },
   async (request, reply) => {
-    const engine = defaultEngine;
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
     try {
       const res = await engine.request<"chan_getChannelState">(params);
@@ -117,12 +109,9 @@ server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
   "/channel/:alice/:bob/:chainId/:publicIdentifier",
   { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.params.publicIdentifier) {
-      engine = getNode(request.params.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-      }
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
     try {
@@ -142,7 +131,10 @@ server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
   "/channel/:alice/:bob/:chainId",
   { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
   async (request, reply) => {
-    const engine = defaultEngine;
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
     try {
       const res = await engine.request<"chan_getChannelStateByParticipants">(params);
@@ -161,12 +153,9 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/channel/:channelAddress/transfer/:routingId/:publicIdentifier",
   { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.params.publicIdentifier) {
-      engine = getNode(request.params.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-      }
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
     try {
@@ -186,7 +175,10 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/channel/:channelAddress/transfer/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
   async (request, reply) => {
-    const engine = defaultEngine;
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
     try {
       const res = await engine.request<"chan_getTransferStateByRoutingId">(params);
@@ -205,12 +197,9 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/transfer/:routingId/:publicIdentifier",
   { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.params.publicIdentifier) {
-      engine = getNode(request.params.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-      }
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
     try {
@@ -230,7 +219,10 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/transfer/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
   async (request, reply) => {
-    const engine = defaultEngine;
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
     try {
       const res = await engine.request<"chan_getTransferStatesByRoutingId">(params);
@@ -249,7 +241,10 @@ server.get<{ Params: ServerNodeParams.GetChannelStates }>(
   "/channel",
   { schema: { response: ServerNodeResponses.GetChannelStatesSchema, params: ServerNodeParams.GetChannelStatesSchema } },
   async (request, reply) => {
-    const engine = defaultEngine;
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
     try {
       const res = await engine.request<"chan_getChannelStates">(params);
@@ -265,12 +260,9 @@ server.post<{ Body: ServerNodeParams.Setup }>(
   "/setup",
   { schema: { body: ServerNodeParams.SetupSchema, response: ServerNodeResponses.SetupSchema } },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.body.publicIdentifier) {
-      engine = getNode(request.body.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
-      }
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_setup, {
       chainId: request.body.chainId,
@@ -291,14 +283,10 @@ server.post<{ Body: ServerNodeParams.RequestSetup }>(
   "/request-setup",
   { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.body.bobIdentifier) {
-      engine = getNode(request.body.bobIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.bobIdentifier });
-      }
+    const engine = getNode(request.body.bobIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.bobIdentifier });
     }
-
     try {
       const setupPromise = engine.waitFor(
         EngineEvents.SETUP,
@@ -325,17 +313,11 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
   "/send-deposit-tx",
   { schema: { body: ServerNodeParams.SendDepositTxSchema, response: ServerNodeResponses.SendDepositTxSchema } },
   async (request, reply) => {
-    let chainService = defaultChainService;
-    let engine = defaultEngine;
-    if (request.body.publicIdentifier) {
-      chainService = getChainService(request.body.publicIdentifier)!;
-      if (!chainService) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
-      }
-      engine = getNode(request.body.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
-      }
+    const chainService = getChainService(request.body.publicIdentifier);
+    const engine = getNode(request.body.publicIdentifier);
+
+    if (!engine || !chainService) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
     const channelState = await store.getChannelState(request.body.channelAddress);
@@ -362,12 +344,9 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
   "/deposit",
   { schema: { body: ServerNodeParams.DepositSchema, response: ServerNodeResponses.DepositSchema } },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.body.publicIdentifier) {
-      engine = getNode(request.body.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
-      }
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_deposit, {
@@ -393,12 +372,9 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
     },
   },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.body.publicIdentifier) {
-      engine = getNode(request.body.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
-      }
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, request.body);
@@ -425,12 +401,9 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
     },
   },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.body.publicIdentifier) {
-      engine = getNode(request.body.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
-      }
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, request.body);
     try {
@@ -455,12 +428,9 @@ server.post<{ Body: ServerNodeParams.Withdraw }>(
     },
   },
   async (request, reply) => {
-    let engine = defaultEngine;
-    if (request.body.publicIdentifier) {
-      engine = getNode(request.body.publicIdentifier)!;
-      if (!engine) {
-        return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
-      }
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdraw, request.body);
     try {

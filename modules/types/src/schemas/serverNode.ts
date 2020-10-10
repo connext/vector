@@ -42,7 +42,7 @@ const BasicTransferServerResponseSchema = {
 const GetTransferStateByRoutingIdParamsSchema = Type.Object({
   channelAddress: TAddress,
   routingId: TBytes32,
-  publicIdentifier: Type.Optional(TPublicIdentifier),
+  publicIdentifier: TPublicIdentifier,
 });
 
 const GetTransferStateByRoutingIdResponseSchema = {
@@ -52,7 +52,7 @@ const GetTransferStateByRoutingIdResponseSchema = {
 // GET TRANSFERS BY ROUTINGID
 const GetTransferStatesByRoutingIdParamsSchema = Type.Object({
   routingId: TBytes32,
-  publicIdentifier: Type.Optional(TPublicIdentifier),
+  publicIdentifier: TPublicIdentifier,
 });
 
 const GetTransferStatesByRoutingIdResponseSchema = {
@@ -62,7 +62,7 @@ const GetTransferStatesByRoutingIdResponseSchema = {
 // GET CHANNEL STATE
 const GetChannelStateParamsSchema = Type.Intersect([
   EngineParams.GetChannelStateSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const GetChannelStateResponseSchema = {
@@ -72,7 +72,7 @@ const GetChannelStateResponseSchema = {
 // GET CHANNEL STATES
 const GetChannelStatesParamsSchema = Type.Intersect([
   EngineParams.GetChannelStatesSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const GetChannelStatesResponseSchema = {
@@ -82,7 +82,7 @@ const GetChannelStatesResponseSchema = {
 // GET CHANNEL STATE BY PARTICIPANTS
 const GetChannelStateByParticipantsParamsSchema = Type.Intersect([
   EngineParams.GetChannelStateByParticipantsSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const GetChannelStateByParticipantsResponseSchema = GetChannelStateResponseSchema;
@@ -124,15 +124,15 @@ const PostRegisterListenerResponseSchema = {
 // POST SETUP
 const PostSetupBodySchema = Type.Intersect([
   EngineParams.SetupSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostSetupResponseSchema = BasicChannelServerResponseSchema;
 
 // POST REQUEST SETUP
 const PostRequestSetupBodySchema = Type.Object({
-  aliceIdentifier: Type.Optional(TPublicIdentifier),
-  bobIdentifier: Type.Optional(TPublicIdentifier),
+  aliceIdentifier: TPublicIdentifier,
+  bobIdentifier: TPublicIdentifier,
   aliceUrl: Type.String({ format: "uri" }),
   chainId: TChainId,
   timeout: TIntegerString,
@@ -144,7 +144,7 @@ const PostRequestSetupResponseSchema = BasicChannelServerResponseSchema;
 // POST DEPOSIT
 const PostDepositBodySchema = Type.Intersect([
   EngineParams.DepositSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostDepositResponseSchema = BasicChannelServerResponseSchema;
@@ -155,7 +155,7 @@ const PostSendDepositTxBodySchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   chainId: TChainId,
-  publicIdentifier: Type.Optional(TPublicIdentifier),
+  publicIdentifier: TPublicIdentifier,
 });
 
 const PostSendDepositTxResponseSchema = {
@@ -167,7 +167,7 @@ const PostSendDepositTxResponseSchema = {
 // POST CREATE CONDITIONAL TRANSFER
 const PostConditionalTransferBodySchema = Type.Intersect([
   EngineParams.ConditionalTransferSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostConditionalTransferResponseSchema = BasicTransferServerResponseSchema;
@@ -175,7 +175,7 @@ const PostConditionalTransferResponseSchema = BasicTransferServerResponseSchema;
 // POST RESOLVE CONDITIONAL TRANSFER
 const PostResolveTransferBodySchema = Type.Intersect([
   EngineParams.ResolveTransferSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
@@ -183,7 +183,7 @@ const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
 // POST WITHDRAW TRANSFER
 const PostWithdrawTransferBodySchema = Type.Intersect([
   EngineParams.WithdrawSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostWithdrawTransferResponseSchema = {

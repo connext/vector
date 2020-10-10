@@ -3,7 +3,9 @@ import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 import { INodeService, TransferNames } from "@connext/vector-types";
 
-import { env, getRandomIndex } from "../utils";
+import { env } from "../utils";
+
+import { carolEvts, daveEvts } from "./setup";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -13,75 +15,98 @@ const logger = pino({ level: env.logLevel });
 const testName = "Trio Happy";
 
 describe.only(testName, () => {
-  let carol: INodeService;
-  let dave: INodeService;
-  let roger: INodeService;
+  let carolService: INodeService;
+  let carolIdentifier: string;
+  let carol: string;
+
+  let daveService: INodeService;
+  let daveIdentifier: string;
+  let dave: string;
+
+  let rogerService: INodeService;
+  let rogerIdentifier: string;
+  let roger: string;
+
   before(async () => {
-    carol = await RestServerNodeService.connect(
+    carolService = await RestServerNodeService.connect(
       env.carolUrl,
-      logger.child({ testName, name: "Carol" }),
-      undefined,
-      getRandomIndex(),
+      logger.child({ testName, name: "Carl" }),
+      carolEvts,
     );
-    expect(carol.signerAddress).to.be.a("string");
-    expect(carol.publicIdentifier).to.be.a("string");
+    const carolConfigRes = await carolService.createNode({ index: 0 });
+    expect(carolConfigRes.getError()).to.not.be.ok;
+    const carolConfig = carolConfigRes.getValue();
+    carolIdentifier = carolConfig.publicIdentifier;
+    carol = carolConfig.signerAddress;
+    const carolTx = await wallet.sendTransaction({ to: carol, value: utils.parseEther("0.5") });
+    await carolTx.wait();
 
-    dave = await RestServerNodeService.connect(
-      env.daveUrl,
-      logger.child({ testName, name: "Dave" }),
-      undefined,
-      getRandomIndex(),
-    );
-    expect(dave.signerAddress).to.be.a("string");
-    expect(dave.publicIdentifier).to.be.a("string");
+    daveService = await RestServerNodeService.connect(env.daveUrl, logger.child({ testName, name: "Dave" }), daveEvts);
+    const daveConfigRes = await daveService.createNode({ index: 0 });
+    expect(daveConfigRes.getError()).to.not.be.ok;
+    const daveConfig = daveConfigRes.getValue();
+    daveIdentifier = daveConfig.publicIdentifier;
+    dave = daveConfig.signerAddress;
+    const daveTx = await wallet.sendTransaction({ to: dave, value: utils.parseEther("0.5") });
+    await daveTx.wait();
 
-    // dont use random index for roger
-    roger = await RestServerNodeService.connect(env.rogerUrl, logger.child({ testName, name: "Roger" }));
-    expect(roger.signerAddress).to.be.a("string");
-    expect(roger.publicIdentifier).to.be.a("string");
-
-    let tx = await wallet.sendTransaction({ to: carol.signerAddress, value: utils.parseEther("0.5") });
-    await tx.wait();
-    tx = await wallet.sendTransaction({ to: dave.signerAddress, value: utils.parseEther("0.5") });
-    await tx.wait();
-    tx = await wallet.sendTransaction({ to: roger.signerAddress, value: utils.parseEther("0.5") });
-    await tx.wait();
+    rogerService = await RestServerNodeService.connect(env.rogerUrl, logger.child({ testName, name: "Roger" }));
+    const rogerConfigRes = await rogerService.createNode({ index: 0 });
+    expect(rogerConfigRes.getError()).to.not.be.ok;
+    const rogerConfig = rogerConfigRes.getValue();
+    rogerIdentifier = rogerConfig.publicIdentifier;
+    roger = rogerConfig.signerAddress;
+    const rogerTx = await wallet.sendTransaction({ to: roger, value: utils.parseEther("0.5") });
+    await rogerTx.wait();
   });
 
   it("roger should setup channels with carol and dave", async () => {
-    let channelRes = await carol.requestSetup({
+    let channelRes = await carolService.requestSetup({
       aliceUrl: env.rogerUrl,
-      aliceIdentifier: roger.publicIdentifier,
-      bobIdentifier: carol.publicIdentifier,
+      aliceIdentifier: rogerIdentifier,
+      bobIdentifier: carolIdentifier,
       chainId,
       timeout: "10000",
     });
     let channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
-    const carolChannel = await carol.getStateChannel({ channelAddress: channel.channelAddress });
-    let rogerChannel = await roger.getStateChannel({ channelAddress: channel.channelAddress });
+    const carolChannel = await carolService.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: carolIdentifier,
+    });
+    let rogerChannel = await rogerService.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: rogerIdentifier,
+    });
     expect(carolChannel.getValue()).to.deep.eq(rogerChannel.getValue());
 
-    channelRes = await dave.requestSetup({
+    channelRes = await daveService.requestSetup({
       aliceUrl: env.rogerUrl,
-      aliceIdentifier: roger.publicIdentifier,
-      bobIdentifier: dave.publicIdentifier,
+      aliceIdentifier: rogerIdentifier,
+      bobIdentifier: daveIdentifier,
       chainId,
       timeout: "10000",
     });
     channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
-    const daveChannel = await dave.getStateChannel({ channelAddress: channel.channelAddress });
-    rogerChannel = await roger.getStateChannel({ channelAddress: channel.channelAddress });
+    const daveChannel = await daveService.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: daveIdentifier,
+    });
+    rogerChannel = await rogerService.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: rogerIdentifier,
+    });
     expect(daveChannel.getValue()).to.deep.eq(rogerChannel.getValue());
   });
 
   it("carol can deposit ETH into channel", async () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
-    const channelRes = await carol.getStateChannelByParticipants({
-      alice: roger.publicIdentifier,
-      bob: carol.publicIdentifier,
+    const channelRes = await carolService.getStateChannelByParticipants({
+      publicIdentifier: carolIdentifier,
+      alice: rogerIdentifier,
+      bob: carolIdentifier,
       chainId,
     });
     const channel = channelRes.getValue()!;
@@ -92,16 +117,21 @@ describe.only(testName, () => {
     const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: depositAmt });
     await tx.wait();
 
-    const depositRes = await carol.reconcileDeposit({
+    const depositRes = await carolService.reconcileDeposit({
       assetId,
       channelAddress: channel.channelAddress,
+      publicIdentifier: carolIdentifier,
     });
     const deposit = depositRes.getValue();
 
     expect(deposit.channelAddress).to.be.a("string");
 
-    const carolChannel = (await carol.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
-    const rogerChannel = (await roger.getStateChannel({ channelAddress: channel.channelAddress })).getValue()!;
+    const carolChannel = (
+      await carolService.getStateChannel({ channelAddress: channel.channelAddress, publicIdentifier: carolIdentifier })
+    ).getValue()!;
+    const rogerChannel = (
+      await rogerService.getStateChannel({ channelAddress: channel.channelAddress, publicIdentifier: rogerIdentifier })
+    ).getValue()!;
 
     assetIdx = carolChannel.assetIds.findIndex((_assetId: string) => _assetId === assetId);
     const carolAfter = carolChannel.balances[assetIdx].amount[1];
@@ -113,17 +143,19 @@ describe.only(testName, () => {
   it("carol can transfer ETH to dave via roger and resolve the transfer", async () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
-    const carolChannelRes = await carol.getStateChannelByParticipants({
-      alice: roger.publicIdentifier,
-      bob: carol.publicIdentifier,
+    const carolChannelRes = await carolService.getStateChannelByParticipants({
+      alice: rogerIdentifier,
+      bob: carolIdentifier,
       chainId,
+      publicIdentifier: carolIdentifier,
     });
     const carolChannel = carolChannelRes.getValue()!;
 
-    const daveChannelRes = await dave.getStateChannelByParticipants({
-      alice: roger.publicIdentifier,
-      bob: dave.publicIdentifier,
+    const daveChannelRes = await daveService.getStateChannelByParticipants({
+      alice: rogerIdentifier,
+      bob: daveIdentifier,
       chainId,
+      publicIdentifier: daveIdentifier,
     });
     const daveChannel = daveChannelRes.getValue()!;
 
@@ -135,7 +167,8 @@ describe.only(testName, () => {
     const preImage = getRandomBytes32();
     const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
     const routingId = getRandomBytes32();
-    const transferRes = await carol.conditionalTransfer({
+    const transferRes = await carolService.conditionalTransfer({
+      publicIdentifier: carolIdentifier,
       amount: transferAmt.toString(),
       assetId,
       channelAddress: carolChannel.channelAddress,
@@ -147,12 +180,15 @@ describe.only(testName, () => {
       meta: {
         routingId,
       },
-      recipient: dave.publicIdentifier,
+      recipient: daveIdentifier,
     });
     expect(transferRes.getError()).to.not.be.ok;
 
     const carolChannelAfterTransfer = (
-      await carol.getStateChannel({ channelAddress: carolChannel.channelAddress })
+      await carolService.getStateChannel({
+        channelAddress: carolChannel.channelAddress,
+        publicIdentifier: carolIdentifier,
+      })
     ).getValue()!;
     const carolBalanceAfterTransfer =
       carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[1];
@@ -164,9 +200,14 @@ describe.only(testName, () => {
 
     // Get daves transfer
     const daveTransfer = (
-      await dave.getTransferByRoutingId({ channelAddress: daveChannel.channelAddress, routingId })
+      await daveService.getTransferByRoutingId({
+        channelAddress: daveChannel.channelAddress,
+        routingId,
+        publicIdentifier: daveIdentifier,
+      })
     ).getValue()!;
-    const resolveRes = await dave.resolveTransfer({
+    const resolveRes = await daveService.resolveTransfer({
+      publicIdentifier: daveIdentifier,
       channelAddress: daveChannel.channelAddress,
       transferResolver: {
         preImage,
@@ -176,7 +217,10 @@ describe.only(testName, () => {
     expect(resolveRes.getError()).to.not.be.ok;
 
     const channelAfterResolve = (
-      await dave.getStateChannel({ channelAddress: daveChannel.channelAddress })
+      await daveService.getStateChannel({
+        channelAddress: daveChannel.channelAddress,
+        publicIdentifier: daveIdentifier,
+      })
     ).getValue()!;
     daveAssetIdx = channelAfterResolve.assetIds.findIndex(_assetId => _assetId === assetId);
     const daveAfterResolve = channelAfterResolve.balances[daveAssetIdx].amount[1];

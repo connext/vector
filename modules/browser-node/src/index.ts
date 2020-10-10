@@ -16,11 +16,7 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
-import {
-  constructRpcRequest,
-  getBearerTokenFunction,
-  NatsMessagingService,
-} from "@connext/vector-utils";
+import { constructRpcRequest, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
@@ -72,6 +68,10 @@ export class BrowserNode implements INodeService {
 
   get signerAddress(): string {
     return this.engine.signerAddress;
+  }
+
+  createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>> {
+    return Promise.resolve(Result.fail(new NodeError(NodeError.reasons.MultinodeProhibitted, { params })));
   }
 
   async getStateChannelByParticipants(

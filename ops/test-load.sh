@@ -29,7 +29,7 @@ common="$interactive $stack_env \
   --env=VECTOR_NUM_AGENTS=${num_agents}
   --env=VECTOR_ROGER_URL=http://roger:8000 \
   --env=VECTOR_ROUTER_URL=http://router:8009 \
-  --name=${project}_${stack}_test_runner \
+  --name=${project}${stack}_test_runner \
   --network=$project \
   --rm \
   --tmpfs /tmp"

@@ -208,6 +208,9 @@ test-trio: test-runner trio
 watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
 
+test-load: test-runner trio
+	bash ops/test-load.sh
+
 ########################################
 # Begin Real Build Rules
 

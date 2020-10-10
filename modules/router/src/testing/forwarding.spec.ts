@@ -4,8 +4,10 @@ import {
   createTestChannelState,
   createTestFullHashlockTransferState,
   getRandomBytes32,
+  getRandomIdentifier,
   IServerNodeService,
   mkAddress,
+  mkPublicIdentifier,
   RestServerNodeService,
 } from "@connext/vector-utils";
 import { constants } from "ethers";
@@ -81,7 +83,15 @@ describe("Forwarding", () => {
       node["getStateChannelByParticipants"].resolves(Result.ok(receiverChannel));
       node["signerAddress"] = mkAddress("0xb");
       node["conditionalTransfer"].resolves(Result.ok({} as any));
-      await forwardTransferCreation(data, node as IServerNodeService, store, logger, env.hydratedProviders);
+      await forwardTransferCreation(
+        data,
+        mkPublicIdentifier("indraBBB"),
+        mkAddress("0xb"),
+        node as IServerNodeService,
+        store,
+        logger,
+        env.hydratedProviders,
+      );
     });
 
     it.skip("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {});

@@ -5,16 +5,19 @@
 @rogerUrl = http://localhost:8007
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
-@nodePublicIdentifier = indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR
+@rogerPublicIdentifier = indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR
 @chainId = 1337
 
 ##############
 ### Request Setup Channel
-POST {{carolUrl}}/request-setup
+POST {{bobUrl}}/request-setup
 Content-Type: application/json
 
 {
-  "aliceUrl": "http://roger:8000",
+  "aliceUrl": "{{aliceUrl}}",
+  "aliceIdentifier": "{{alicePublicIdentifier}}",
+  "bobIdentifier": "{{bobPublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "36000",
+  "publicIdentifier": "{{bobPublicIdentifier}}"
 }
