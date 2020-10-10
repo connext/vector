@@ -59,14 +59,16 @@ export class ForwardResolutionError extends VectorError {
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
-  node: INodeService,
+  publicIdentifier: string,
+  signerAddress: string,
+  service: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
   chainProviders: ChainJsonProviders,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.info(
-    { data, method, node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier } },
+    { data, method, node: { signerAddress, publicIdentifier } },
     "Received transfer event, starting forwarding",
   );
 
@@ -110,7 +112,10 @@ export async function forwardTransferCreation(
 
   const recipientIdentifier = path.recipient;
 
-  const senderChannelRes = await node.getStateChannel({ channelAddress: senderChannelAddress });
+  const senderChannelRes = await service.getStateChannel({
+    channelAddress: senderChannelAddress,
+    publicIdentifier,
+  });
   if (senderChannelRes.isError) {
     return Result.fail(
       new ForwardTransferError(
@@ -158,10 +163,11 @@ export async function forwardTransferCreation(
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
-  const recipientChannelRes = await node.getStateChannelByParticipants({
-    alice: node.publicIdentifier,
+  const recipientChannelRes = await service.getStateChannelByParticipants({
+    alice: publicIdentifier,
     bob: recipientIdentifier,
     chainId: recipientChainId,
+    publicIdentifier,
   });
   if (recipientChannelRes.isError) {
     return Result.fail(
@@ -175,7 +181,7 @@ export async function forwardTransferCreation(
   if (!recipientChannel) {
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.RecipientChannelNotFound, {
-        participants: [node.publicIdentifier, recipientIdentifier],
+        participants: [publicIdentifier, recipientIdentifier],
         chainId: recipientChainId,
       }),
     );
@@ -194,7 +200,7 @@ export async function forwardTransferCreation(
   const routerBalanceInRecipientChannel =
     assetIdx === -1
       ? "0"
-      : node.signerAddress == recipientChannel.alice
+      : signerAddress == recipientChannel.alice
       ? recipientChannel.balances[assetIdx].amount[0]
       : recipientChannel.balances[assetIdx].amount[1];
 
@@ -217,7 +223,8 @@ export async function forwardTransferCreation(
       );
     }
 
-    const depositRes = await node.sendDepositTx({
+    const depositRes = await service.sendDepositTx({
+      publicIdentifier,
       chainId: recipientChainId,
       channelAddress: recipientChannel.channelAddress,
       assetId: recipientAssetId,
@@ -237,7 +244,8 @@ export async function forwardTransferCreation(
     const receipt = await provider.waitForTransaction(depositRes.getValue().txHash);
     logger.info({ method, txHash: receipt.transactionHash, logs: receipt.logs }, "Deposit transaction mined");
 
-    const reconciled = await node.reconcileDeposit({
+    const reconciled = await service.reconcileDeposit({
+      publicIdentifier,
       channelAddress: recipientChannel.channelAddress,
       assetId: recipientAssetId,
     });
@@ -275,6 +283,7 @@ export async function forwardTransferCreation(
       .sub(TRANSFER_DECREMENT)
       .toString(),
     type: transferDefinition,
+    publicIdentifier,
     details,
     meta: {
       // Node is never the initiator, that is always payment sender
@@ -283,7 +292,7 @@ export async function forwardTransferCreation(
       ...meta,
     },
   };
-  const transfer = await node.conditionalTransfer(params);
+  const transfer = await service.conditionalTransfer(params);
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
       // store transfer
@@ -310,24 +319,25 @@ export async function forwardTransferCreation(
 
 export async function forwardTransferResolution(
   data: ConditionalTransferResolvedPayload,
-  node: INodeService,
+  publicIdentifier: string,
+  signerAddress: string,
+  service: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<undefined | ServerNodeResponses.ResolveTransfer, ForwardResolutionError>> {
   const method = "forwardTransferResolution";
   logger.info(
-    { data, method, node: { signerAddress: node.signerAddress, publicIdentifier: node.publicIdentifier } },
+    { data, method, node: { signerAddress, publicIdentifier } },
     "Received transfer resolution, starting forwarding",
   );
   const {
     channelAddress,
     transfer: { transferId, transferResolver, meta },
-    conditionType,
   } = data;
   const { routingId } = meta as RouterSchemas.RouterMeta;
 
   // Find the channel with the corresponding transfer to unlock
-  const transfersRes = await node.getTransfersByRoutingId({ routingId });
+  const transfersRes = await service.getTransfersByRoutingId({ routingId, publicIdentifier });
   if (transfersRes.isError) {
     return Result.fail(
       new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
@@ -338,7 +348,7 @@ export async function forwardTransferResolution(
   }
 
   // find transfer where node is responder
-  const incomingTransfer = transfersRes.getValue().find(transfer => transfer.responder === node.signerAddress);
+  const incomingTransfer = transfersRes.getValue().find(transfer => transfer.responder === signerAddress);
 
   if (!incomingTransfer) {
     return Result.fail(
@@ -354,8 +364,9 @@ export async function forwardTransferResolution(
     transferId: incomingTransfer.transferId,
     meta: {},
     transferResolver,
+    publicIdentifier,
   };
-  const resolution = await node.resolveTransfer(resolveParams);
+  const resolution = await service.resolveTransfer(resolveParams);
   if (resolution.isError) {
     // Store the transfer, retry later
     // TODO: add logic to periodically retry resolving transfers
@@ -376,7 +387,13 @@ export async function forwardTransferResolution(
   return Result.ok(resolution.getValue());
 }
 
-export async function handleIsAlive(data: any, node: INodeService, store: IRouterStore) {
+export async function handleIsAlive(
+  data: any,
+  publicIdentifier: string,
+  signerAddress: string,
+  service: INodeService,
+  store: IRouterStore,
+) {
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   // const updates = await store.getQueuedUpdates(data.channelAdress);
   // updates.forEach(async update => {

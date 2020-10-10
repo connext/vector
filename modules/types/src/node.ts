@@ -3,8 +3,6 @@ import { NodeError, Result } from "./error";
 import { ServerNodeParams, ServerNodeResponses } from "./schemas";
 
 export interface INodeService {
-  publicIdentifier: string;
-  signerAddress: string;
   getStateChannelByParticipants(
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>>;
