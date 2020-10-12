@@ -1,7 +1,7 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import { EngineEvents, ILockService, IVectorChainService, IVectorEngine } from "@connext/vector-types";
-import { ChannelSigner, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
+import { ChannelSigner, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "ethers";
 
@@ -46,15 +46,13 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
   const vectorTx = new VectorChainService(store, _providers, pk, logger.child({ module: "VectorChainService" }));
   logger.info({ method, providers: config.chainProviders }, "Connected VectorChainService");
 
-  const messaging = new NatsMessagingService(
-    {
-      messagingUrl: config.natsUrl,
-    },
-    logger.child({ module: "NatsMessagingService" }),
-    getBearerTokenFunction(signer, config.authUrl),
-  );
+  const messaging = new NatsMessagingService({
+    logger: logger.child({ module: "NatsMessagingService" }),
+    messagingUrl: config.messagingUrl,
+    signer,
+  });
   await messaging.connect();
-  logger.info({ method, messagingUrl: config.natsUrl }, "Connected NatsMessagingService");
+  logger.info({ method, messagingUrl: config.messagingUrl }, "Connected NatsMessagingService");
 
   const lockService = await LockService.connect(
     signer.publicIdentifier,

@@ -214,7 +214,7 @@ volumes:
 
 services:
 
-  proxy:
+  messaging:
     $common
     image: '$proxy_image'
     $proxy_ports

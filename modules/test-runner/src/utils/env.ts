@@ -2,6 +2,7 @@ export const env = {
   adminToken: process.env.VECTOR_ADMIN_TOKEN || "cxt1234",
   aliceUrl: process.env.VECTOR_ALICE_URL || "http://alice:8000",
   authUrl: process.env.VECTOR_AUTH_URL || "http://auth:5040",
+  messagingUrl: process.env.VECTOR_MESSAGING_URL || "http://messaging",
   bobUrl: process.env.VECTOR_BOB_URL || "http://bob:8000",
   carolUrl: process.env.VECTOR_CAROL_URL || "http://carol:8000",
   chainProviders: JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS || "{}"),
