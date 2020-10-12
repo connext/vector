@@ -1,5 +1,6 @@
 import fastify from "fastify";
 import fastifyOas from "fastify-oas";
+import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
 import { RestServerNodeService } from "@connext/vector-utils";
@@ -53,9 +54,11 @@ server.register(fastifyOas, {
   exposeRoute: true,
 });
 
+const register = new Registry();
+server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });
+
 let router: IRouter;
 const store = new RouterStore();
-const register = new Registry();
 
 server.addHook("onReady", async () => {
   const nodeService = await RestServerNodeService.connect(
@@ -79,8 +82,6 @@ const configureMetrics = (
   publicIdentifier: string,
   signerAddress: string,
 ) => {
-  collectDefaultMetrics({ register, prefix: "router_" });
-
   const channelCounter = new Gauge({
     name: "router_channels_total",
     help: "router_channels_total_help",
@@ -98,16 +99,6 @@ const configureMetrics = (
 
 server.get("/ping", async () => {
   return "pong\n";
-});
-
-server.get("/metrics", async (req, res) => {
-  try {
-    res.header("Content-Type", register.contentType);
-    const metrics = register.metrics();
-    res.send(metrics);
-  } catch (ex) {
-    res.status(500).send(ex);
-  }
 });
 
 server.post(conditionalTransferCreatedPath, async (request, response) => {
