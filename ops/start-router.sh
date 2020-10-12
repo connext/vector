@@ -44,6 +44,58 @@ else VECTOR_ENV="dev"
 fi
 
 ####################
+# Observability tools config
+
+echo "Setting up observability config"
+
+grafana_image="grafana/grafana:latest"
+pull_if_unavailable "$grafana_image"
+echo "Pulled grafana image"
+
+prometheus_image="prom/prometheus:latest"
+pull_if_unavailable "$prometheus_image"
+echo "Pulled prometheus image"
+
+cadvisor_image="gcr.io/google-containers/cadvisor:latest"
+pull_if_unavailable "$cadvisor_image"
+echo "Pulled cadvisor image"
+
+prometheus_services="prometheus:
+    image: $prometheus_image
+    $common
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - $root/ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  cadvisor:
+    $common
+    image: $cadvisor_image
+    ports:
+      - 8081:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro"
+
+grafana_service="grafana:
+    image: '$grafana_image'
+    $common
+    networks:
+      - '$project'
+    ports:
+      - '3008:3000'
+    volumes:
+      - 'grafana:/var/lib/grafana'"
+
+# TODO we probably want to remove observability from dev env once it's working
+# bc these make indra take a log longer to wake up
+observability_services="$prometheus_services
+  $grafana_service"
+
+####################
 # Misc Config
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
@@ -264,6 +316,7 @@ $stack_secrets
 
 volumes:
   certs:
+  grafana:
   database:
 
 services:
@@ -326,6 +379,8 @@ services:
   redis:
     $common
     image: '$redis_image'
+
+  $observability_services
 
 EOF
 
