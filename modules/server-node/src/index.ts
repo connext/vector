@@ -15,6 +15,7 @@ import {
 } from "@connext/vector-types";
 import Axios from "axios";
 import { constructRpcRequest } from "@connext/vector-utils";
+import { Static, Type } from "@sinclair/typebox";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -39,7 +40,7 @@ server.register(fastifyCors, {
 
 export const store = new PrismaStore();
 
-export const _providers = Object.fromEntries(
+export const _providers: { [chainId: string]: providers.JsonRpcProvider } = Object.fromEntries(
   Object.entries(config.chainProviders).map(([chainId, url]: any) => [chainId, new providers.JsonRpcProvider(url)]),
 );
 
@@ -527,6 +528,31 @@ server.post<{ Body: ServerNodeParams.CreateNode }>(
         publicIdentifier: newNode.publicIdentifier,
         signerAddress: newNode.signerAddress,
       } as ServerNodeResponses.CreateNode);
+    } catch (e) {
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+const JsonRpcRequestSchema = Type.Object({
+  method: Type.String(),
+  params: Type.Any(),
+});
+type JsonRpcRequest = Static<typeof JsonRpcRequestSchema>;
+
+server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
+  "/ethprovider/:chainId",
+  { schema: { body: JsonRpcRequestSchema } },
+  async (request, reply) => {
+    const provider = _providers[request.params.chainId];
+    if (!provider) {
+      return reply
+        .status(400)
+        .send({ message: "Provider not configured for chainId", chainId: request.params.chainId });
+    }
+    try {
+      const result = await provider.send(request.body.method, request.body.params);
+      return reply.status(200).send({ result });
     } catch (e) {
       return reply.status(500).send({ message: e.message });
     }
