@@ -19,7 +19,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   ChannelDispute private channelDispute;
   mapping(bytes32 => TransferDispute) private transferDisputes;
 
-  modifier channelValid(CoreChannelState calldata ccs) {
+  modifier validateChannel(CoreChannelState calldata ccs) {
     require(
       ccs.channelAddress == address(this) &&
       ccs.alice == alice &&
@@ -29,7 +29,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     _;
   }
 
-  modifier transferValid(CoreTransferState calldata cts) {
+  modifier validateTransfer(CoreTransferState calldata cts) {
     require(
       cts.channelAddress == address(this),
       "CMCCMCAdjudicator: Mismatch between given core transfer state and channel we are at"
@@ -52,7 +52,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
-    channelValid(ccs)
+    validateChannel(ccs)
   {
     // Verify Alice's and Bob's signature on the channel state
     verifySignatures(ccs, aliceSignature, bobSignature);
@@ -96,7 +96,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
-    channelValid(ccs)
+    validateChannel(ccs)
   {
     // Only Alice or Bob can defund their channel
     verifyMsgSenderisAliceOrBob(ccs);
@@ -141,7 +141,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
-    transferValid(cts)
+    validateTransfer(cts)
   {
     // Only initiator or responder of the transfer may start a dispute
     verifyMsgSenderIsInitiatorOrResponder(cts);
@@ -172,7 +172,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
-    transferValid(cts)
+    validateTransfer(cts)
   {
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
