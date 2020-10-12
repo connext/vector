@@ -528,7 +528,7 @@ server.post<{ Body: ServerNodeParams.CreateNode }>(
         signerAddress: newNode.signerAddress,
       } as ServerNodeResponses.CreateNode);
     } catch (e) {
-      return reply.status(500).send({ message: e.message });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
   },
 );
