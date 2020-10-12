@@ -237,24 +237,24 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetChannelStates }>(
-  "/channel",
-  { schema: { response: ServerNodeResponses.GetChannelStatesSchema, params: ServerNodeParams.GetChannelStatesSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
-    try {
-      const res = await engine.request<"chan_getChannelStates">(params);
-      return reply.status(200).send(res.map(chan => chan.channelAddress));
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send({ message: e.message, context: e.context });
-    }
-  },
-);
+server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelStatesSchema } }, async (request, reply) => {
+  const engines = getNodes();
+  if (engines.length > 1) {
+    return reply.status(400).send({ message: "More than one node exists and publicIdentifier was not specified" });
+  }
+  const engine = engines[0]?.node;
+  if (!engine) {
+    return reply.status(400).send({ message: "Node not found" });
+  }
+  const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+  try {
+    const res = await engine.request<"chan_getChannelStates">(params);
+    return reply.status(200).send(res.map(chan => chan.channelAddress));
+  } catch (e) {
+    logger.error({ message: e.message, stack: e.stack, context: e.context });
+    return reply.status(500).send({ message: e.message, context: e.context });
+  }
+});
 
 server.post<{ Body: ServerNodeParams.Setup }>(
   "/setup",
