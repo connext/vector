@@ -9,6 +9,7 @@ import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
+import { requestCollateral } from "./collateral";
 import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
 import { IRouterStore } from "./services/store";
@@ -26,20 +27,20 @@ const chainProviders: ChainJsonProviders = Object.entries(config.chainProviders)
 export async function setupListeners(
   publicIdentifier: string,
   signerAddress: string,
-  service: INodeService,
+  nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<void> {
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
-  await service.on(
+  await nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
       const res = await forwardTransferCreation(
         data,
         publicIdentifier,
         signerAddress,
-        service,
+        nodeService,
         store,
         logger,
         chainProviders,
@@ -85,10 +86,10 @@ export async function setupListeners(
   );
 
   // Set up listener to handle transfer resolution
-  await service.on(
+  await nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
     async (data: ConditionalTransferCreatedPayload) => {
-      const res = await forwardTransferResolution(data, publicIdentifier, signerAddress, service, store, logger);
+      const res = await forwardTransferResolution(data, publicIdentifier, signerAddress, nodeService, store, logger);
       if (res.isError) {
         return logger.error(
           { method: "forwardTransferResolution", error: res.getError()?.message, context: res.getError()?.context },
@@ -123,7 +124,7 @@ export async function setupListeners(
           },
           "No resolver found in transfer",
         );
-        false;
+        return false;
       }
 
       // If we are the receiver of this transfer, do nothing
@@ -136,12 +137,16 @@ export async function setupListeners(
     },
   );
 
-  await service.on(
+  await nodeService.on(
     EngineEvents.DEPOSIT_RECONCILED, // TODO types
     async (data: DepositReconciledPayload) => {
       // await handleCollateralization(data);
     },
   );
+
+  await nodeService.on(EngineEvents.REQUEST_COLLATERAL, async data => {
+    await requestCollateral(data, publicIdentifier, nodeService, chainProviders, logger);
+  });
 
   // service.on(
   //   EngineEvents.IS_ALIVE, // TODO types

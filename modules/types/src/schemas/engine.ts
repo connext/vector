@@ -60,6 +60,13 @@ const DepositEngineParamsSchema = Type.Object({
   meta: TBasicMeta,
 });
 
+// Request collateral engine params
+const RequestCollateralEngineParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  assetId: TAddress,
+  amount: Type.Optional(TIntegerString),
+});
+
 // Create conditional transfer engine params
 const CreateConditionalTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
@@ -130,6 +137,9 @@ export namespace EngineParams {
 
   export const DepositSchema = DepositEngineParamsSchema;
   export type Deposit = Static<typeof DepositEngineParamsSchema>;
+
+  export const RequestCollateralSchema = RequestCollateralEngineParamsSchema;
+  export type RequestCollateral = Static<typeof RequestCollateralEngineParamsSchema>;
 
   export const ConditionalTransferSchema = CreateConditionalTransferParamsSchema;
   export type ConditionalTransfer = Static<typeof CreateConditionalTransferParamsSchema>;

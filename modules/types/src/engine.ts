@@ -42,6 +42,14 @@ export type DepositReconciledPayload = {
   channelBalance: Balance;
 };
 
+// Emitted when a counterparty requests collateral
+export const REQUEST_COLLATERAL_EVENT = "REQUEST_COLLATERAL";
+export type RequestCollateralPayload = {
+  channelAddress: string;
+  assetId: string;
+  amount: string;
+};
+
 // Emitted when a withdrawal transfer is created
 export const WITHDRAWAL_CREATED_EVENT = "WITHDRAWAL_CREATED";
 export type WithdrawalCreatedPayload = {
@@ -72,6 +80,7 @@ export const EngineEvents = {
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
   [DEPOSIT_RECONCILED_EVENT]: DEPOSIT_RECONCILED_EVENT,
+  [REQUEST_COLLATERAL_EVENT]: REQUEST_COLLATERAL_EVENT,
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
   [WITHDRAWAL_RESOLVED_EVENT]: WITHDRAWAL_RESOLVED_EVENT,
   [WITHDRAWAL_RECONCILED_EVENT]: WITHDRAWAL_RECONCILED_EVENT,
@@ -82,6 +91,7 @@ export interface EngineEventMap {
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;
   [DEPOSIT_RECONCILED_EVENT]: DepositReconciledPayload;
+  [REQUEST_COLLATERAL_EVENT]: RequestCollateralPayload;
   [WITHDRAWAL_CREATED_EVENT]: WithdrawalCreatedPayload;
   [WITHDRAWAL_RESOLVED_EVENT]: WithdrawalResolvedPayload;
   [WITHDRAWAL_RECONCILED_EVENT]: WithdrawalReconciledPayload;

@@ -1,7 +1,6 @@
 import { Vector } from "@connext/vector-protocol";
 import {
   ChainAddresses,
-  ChainProviders,
   IChannelSigner,
   ILockService,
   IMessagingService,
@@ -20,6 +19,8 @@ import {
   WITHDRAWAL_RECONCILED_EVENT,
   ChannelRpcMethods,
   IExternalValidation,
+  REQUEST_COLLATERAL_EVENT,
+  RequestCollateralPayload,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -224,6 +225,14 @@ export class VectorEngine implements IVectorEngine {
     }
 
     return this.vector.deposit(params);
+  }
+
+  private async requestCollateral(
+    params: EngineParams.RequestCollateral,
+  ): Promise<Result<undefined, OutboundChannelUpdateError | Error>> {
+    // nothing to do except emit event
+    this.evts[REQUEST_COLLATERAL_EVENT].post(params as RequestCollateralPayload);
+    return Result.ok(undefined);
   }
 
   private async createTransfer(
