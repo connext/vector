@@ -277,7 +277,8 @@ grafana_service="grafana:
     ports:
       - '3008:3000'
     volumes:
-      - '$root/ops/grafana:/etc/grafana'"
+      - '$root/ops/grafana/grafana:/etc/grafana'
+      - '$root/ops/grafana/dashboards:/etc/dashboards'"
 
 # TODO we probably want to remove observability from dev env once it's working
 # bc these make indra take a log longer to wake up

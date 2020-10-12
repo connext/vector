@@ -8,8 +8,9 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
+  INodeService,
 } from "@connext/vector-types";
-import { collectDefaultMetrics, Registry } from "prom-client";
+import { collectDefaultMetrics, Registry, Gauge } from "prom-client";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
@@ -57,20 +58,43 @@ const store = new RouterStore();
 const register = new Registry();
 
 server.addHook("onReady", async () => {
-  const service = await RestServerNodeService.connect(
+  const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RestServerNodeService" }),
     evts,
   );
   // Create signer at 0
-  const node = await service.createNode({ index: 0 });
+  const node = await nodeService.createNode({ index: 0 });
   if (node.isError) {
     throw node.getError();
   }
   const { publicIdentifier, signerAddress } = node.getValue();
-  router = await Router.connect(publicIdentifier, signerAddress, service, store, logger);
-  collectDefaultMetrics({ register });
+  router = await Router.connect(publicIdentifier, signerAddress, nodeService, store, logger);
+  configureMetrics(register, nodeService, publicIdentifier, signerAddress);
 });
+
+const configureMetrics = (
+  register: Registry,
+  nodeService: INodeService,
+  publicIdentifier: string,
+  signerAddress: string,
+) => {
+  collectDefaultMetrics({ register, prefix: "router_" });
+
+  const channelCounter = new Gauge({
+    name: "router_channels_total",
+    help: "router_channels_total_help",
+    registers: [register],
+  });
+
+  // TODO: fix this once this issue is fixed by using the `collect` function in the gauge
+  // https://github.com/siimon/prom-client/issues/383
+  setInterval(async () => {
+    logger.info({}, "Collecting metrics");
+    const channels = await nodeService.getStateChannels({ publicIdentifier });
+    channelCounter.set(channels.getValue().length);
+  }, 30_000);
+};
 
 server.get("/ping", async () => {
   return "pong\n";

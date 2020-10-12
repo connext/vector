@@ -69,8 +69,10 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
-    return this.executeHttpRequest(`channel`, "get", {}, ServerNodeParams.GetChannelStateSchema);
+  async getStateChannels(
+    params: ServerNodeParams.GetChannelStates,
+  ): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>> {
+    return this.executeHttpRequest(`channel`, "get", params, ServerNodeParams.GetChannelStatesSchema);
   }
 
   async getTransfersByRoutingId(
