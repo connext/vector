@@ -39,24 +39,47 @@ const BasicTransferServerResponseSchema = {
 };
 
 // GET TRANSFER BY ROUTINGID
-const GetTransferStateByRoutingIdParamsSchema = Type.Object({
-  channelAddress: TAddress,
-  routingId: TBytes32,
-  publicIdentifier: TPublicIdentifier,
-});
+const GetTransferStateByRoutingIdParamsSchema = Type.Intersect([
+  EngineParams.GetTransferStateByRoutingIdSchema,
+  Type.Object({
+    publicIdentifier: TPublicIdentifier,
+  }),
+]);
 
 const GetTransferStateByRoutingIdResponseSchema = {
   200: Type.Union([Type.Undefined, TFullTransferState]),
 };
 
 // GET TRANSFERS BY ROUTINGID
-const GetTransferStatesByRoutingIdParamsSchema = Type.Object({
-  routingId: TBytes32,
-  publicIdentifier: TPublicIdentifier,
-});
+const GetTransferStatesByRoutingIdParamsSchema = Type.Intersect([
+  EngineParams.GetTransferStatesByRoutingIdSchema,
+  Type.Object({
+    publicIdentifier: TPublicIdentifier,
+  }),
+]);
 
 const GetTransferStatesByRoutingIdResponseSchema = {
   200: Type.Array(TFullTransferState),
+};
+
+// GET ACTIVE TRANSFERS BY ADDR
+const GetActiveTransfersByChannelAddressParamsSchema = Type.Intersect([
+  EngineParams.GetActiveTransfersSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetActiveTransfersByChannelAddressResponseSchema = {
+  200: Type.Array(TFullTransferState),
+};
+
+// GET TRANSFERS BY TRANSFERID
+const GetTransferStateParamsSchema = Type.Intersect([
+  EngineParams.GetTransferStateSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetTransferStateResponseSchema = {
+  200: Type.Union([Type.Undefined, TFullTransferState]),
 };
 
 // GET CHANNEL STATE
@@ -230,6 +253,12 @@ export namespace ServerNodeParams {
   export const GetTransferStatesByRoutingIdSchema = GetTransferStatesByRoutingIdParamsSchema;
   export type GetTransferStatesByRoutingId = Static<typeof GetTransferStatesByRoutingIdParamsSchema>;
 
+  export const GetTransferStateSchema = GetTransferStateParamsSchema;
+  export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
+
+  export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressParamsSchema;
+  export type GetActiveTransfersByChannelAddress = Static<typeof GetActiveTransfersByChannelAddressParamsSchema>;
+
   export const GetChannelStateSchema = GetChannelStateParamsSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema>;
 
@@ -283,6 +312,14 @@ export namespace ServerNodeResponses {
 
   export const GetTransferStatesByRoutingIdSchema = GetTransferStatesByRoutingIdResponseSchema;
   export type GetTransferStatesByRoutingId = Static<typeof GetTransferStatesByRoutingIdResponseSchema["200"]>;
+
+  export const GetTransferStateSchema = GetTransferStateResponseSchema;
+  export type GetTransferState = Static<typeof GetTransferStateResponseSchema>;
+
+  export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressResponseSchema;
+  export type GetActiveTransfersByChannelAddress = Static<
+    typeof GetActiveTransfersByChannelAddressResponseSchema["200"]
+  >;
 
   export const GetChannelStateSchema = GetChannelStateResponseSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;

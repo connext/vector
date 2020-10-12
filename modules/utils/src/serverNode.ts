@@ -97,6 +97,28 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  async getTransfer(
+    params: ServerNodeParams.GetTransferState,
+  ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
+    return this.executeHttpRequest(
+      `transfer/${params.transferId}/${params.publicIdentifier}`,
+      "get",
+      params,
+      ServerNodeParams.GetTransferStateSchema,
+    );
+  }
+
+  async getActiveTransfers(
+    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+  ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
+    return this.executeHttpRequest(
+      `channel/${params.channelAddress}/transfer/active/${params.publicIdentifier}`,
+      "get",
+      params,
+      ServerNodeParams.GetActiveTransfersByChannelAddressSchema,
+    );
+  }
+
   async getStateChannelByParticipants(
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>> {
