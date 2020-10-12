@@ -3,10 +3,10 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCDeposit.sol";
-import "./interfaces/IERC20.sol";
 import "./CMCCore.sol";
 import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {

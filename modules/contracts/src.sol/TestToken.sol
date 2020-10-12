@@ -2,8 +2,8 @@
 
 pragma solidity ^0.7.1;
 
-import "./interfaces/IERC20.sol";
-import "./lib/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 /* This token is only useful for testing
@@ -48,14 +48,14 @@ contract TestToken is IERC20 {
         return _balances[account];
     }
 
-    function mint(address account, uint256 amount) public override virtual returns (bool) {
+    function mint(address account, uint256 amount) public virtual returns (bool) {
         _totalSupply = _totalSupply.add(amount);
         _balances[account] = _balances[account].add(amount);
         emit Transfer(address(0), account, amount);
         return true;
     }
 
-    function burn(address account, uint256 amount) public override virtual returns (bool) {
+    function burn(address account, uint256 amount) public virtual returns (bool) {
         _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
         _totalSupply = _totalSupply.sub(amount);
         emit Transfer(account, address(0), amount);

@@ -2,7 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./ECDSA.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 
 
 library LibChannelCrypto {
