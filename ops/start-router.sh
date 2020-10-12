@@ -235,19 +235,14 @@ fi
 ####################
 # Observability tools config
 
-echo "Setting up observability config"
-
 grafana_image="grafana/grafana:latest"
 bash $root/ops/pull-images.sh $grafana_image > /dev/null
-echo "Pulled grafana image"
 
 prometheus_image="prom/prometheus:latest"
 bash $root/ops/pull-images.sh $prometheus_image > /dev/null
-echo "Pulled prometheus image"
 
 cadvisor_image="gcr.io/google-containers/cadvisor:latest"
 bash $root/ops/pull-images.sh $cadvisor_image > /dev/null
-echo "Pulled cadvisor image"
 
 prometheus_services="prometheus:
     image: $prometheus_image
