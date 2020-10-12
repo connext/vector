@@ -9,12 +9,15 @@ import {
   DepositReconciledPayload,
   EngineEvents,
 } from "@connext/vector-types";
+import { collectDefaultMetrics, Registry } from "prom-client";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { RouterStore } from "./services/store";
 
-const routerBase = `http://router:${config.port}`;
+const PORT = 8000;
+
+const routerBase = `http://router:${PORT}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
@@ -37,7 +40,8 @@ const evts = {
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
 };
 
-const server = fastify();
+const logger = pino();
+const server = fastify({ logger });
 server.register(fastifyOas, {
   swagger: {
     info: {
@@ -48,9 +52,10 @@ server.register(fastifyOas, {
   exposeRoute: true,
 });
 
-const logger = pino();
 let router: IRouter;
 const store = new RouterStore();
+const register = new Registry();
+
 server.addHook("onReady", async () => {
   const service = await RestServerNodeService.connect(
     config.nodeUrl,
@@ -64,10 +69,21 @@ server.addHook("onReady", async () => {
   }
   const { publicIdentifier, signerAddress } = node.getValue();
   router = await Router.connect(publicIdentifier, signerAddress, service, store, logger);
+  collectDefaultMetrics({ register });
 });
 
 server.get("/ping", async () => {
   return "pong\n";
+});
+
+server.get("/metrics", async (req, res) => {
+  try {
+    res.header("Content-Type", register.contentType);
+    const metrics = register.metrics();
+    res.send(metrics);
+  } catch (ex) {
+    res.status(500).send(ex);
+  }
 });
 
 server.post(conditionalTransferCreatedPath, async (request, response) => {
@@ -85,7 +101,7 @@ server.post(depositReconciledPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(config.port, "0.0.0.0", (err, address) => {
+server.listen(PORT, "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

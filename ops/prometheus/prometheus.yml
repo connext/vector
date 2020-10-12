@@ -9,8 +9,8 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       - targets: ["localhost:9090"]
-  - job_name: "node"
+  - job_name: "router"
     # Override the global default and scrape targets from this job every 5 seconds.
     scrape_interval: 30s
     static_configs:
-      - targets: ["node:8888"]
+      - targets: ["router:8000"]

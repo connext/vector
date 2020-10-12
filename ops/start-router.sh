@@ -180,7 +180,8 @@ fi
 ########################################
 ## Router config
 
-router_port="8008"
+router_internal_port="8000"
+router_dev_port="8008"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -193,8 +194,8 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$router_port:$router_port'"
-  echo "$stack.router configured to be exposed on *:$router_port"
+      - '$router_dev_port:$router_internal_port'"
+  echo "$stack.router configured to be exposed on *:$router_dev_port"
 fi
 
 # Add whichever secrets we're using to the router's service config
@@ -256,7 +257,7 @@ prometheus_services="prometheus:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
-      - $root/ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
   cadvisor:
     $common
     image: $cadvisor_image
@@ -276,7 +277,7 @@ grafana_service="grafana:
     ports:
       - '3008:3000'
     volumes:
-      - 'grafana:/var/lib/grafana'"
+      - '$root/ops/grafana:/etc/grafana'"
 
 # TODO we probably want to remove observability from dev env once it's working
 # bc these make indra take a log longer to wake up
@@ -316,7 +317,6 @@ $stack_secrets
 
 volumes:
   certs:
-  grafana:
   database:
 
 services:
@@ -349,8 +349,6 @@ services:
   router:
     $common
     $router_image
-    ports:
-      - '$router_port:$router_port'
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
       VECTOR_ENV: '$VECTOR_ENV'
@@ -361,7 +359,6 @@ services:
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
-      VECTOR_PORT: '$router_port'
 
   database:
     $common
