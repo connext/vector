@@ -12,7 +12,6 @@ import {
   TChainId,
   TIntegerString,
   TransferResolverSchema,
-  TransferNameSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -43,6 +42,16 @@ const GetChannelStateByParticipantsParamsSchema = Type.Object({
   alice: TPublicIdentifier,
   bob: TPublicIdentifier,
   chainId: TChainId,
+});
+
+// Returns all active transfers for the channel
+const GetActiveTransfersParamsSchema = Type.Object({
+  channelAddress: TAddress,
+});
+
+// Returns the transfer associated with the transferID
+const GetTransferStateParamsSchema = Type.Object({
+  transferId: TBytes32,
 });
 
 // Setup engine params
@@ -124,6 +133,12 @@ export namespace EngineParams {
 
   export const GetChannelStateByParticipantsSchema = GetChannelStateByParticipantsParamsSchema;
   export type GetChannelStateByParticipants = Static<typeof GetChannelStateByParticipantsSchema>;
+
+  export const GetActiveTransfersSchema = GetActiveTransfersParamsSchema;
+  export type GetActiveTransfers = Static<typeof GetActiveTransfersParamsSchema>;
+
+  export const GetTransferStateSchema = GetTransferStateParamsSchema;
+  export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
 
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
