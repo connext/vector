@@ -11,7 +11,7 @@ import {
   EngineEvents,
   INodeService,
 } from "@connext/vector-types";
-import { collectDefaultMetrics, Registry, Gauge } from "prom-client";
+import { Registry, Gauge } from "prom-client";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
@@ -82,9 +82,18 @@ const configureMetrics = (
   publicIdentifier: string,
   signerAddress: string,
 ) => {
+  // Track the total number of channels
   const channelCounter = new Gauge({
     name: "router_channels_total",
     help: "router_channels_total_help",
+    registers: [register],
+  });
+
+  // Track the total number of payments
+  const paymentCounter = new Gauge({
+    name: "router_payments_total",
+    help: "router_payments_total_help",
+    labelNames: ["channelAddress"],
     registers: [register],
   });
 
@@ -93,7 +102,24 @@ const configureMetrics = (
   setInterval(async () => {
     logger.info({}, "Collecting metrics");
     const channels = await nodeService.getStateChannels({ publicIdentifier });
-    channelCounter.set(channels.getValue().length);
+    if (channels.isError) {
+      logger.error({ error: channels.getError()!.message, publicIdentifier }, "Failed to fetch channels");
+      return;
+    }
+    const channelAddresses = channels.getValue();
+    channelCounter.set(channelAddresses.length);
+
+    for (const channelAddr of channelAddresses) {
+      const payments = await nodeService.getActiveTransfers({ channelAddress: channelAddr, publicIdentifier });
+      if (payments.isError) {
+        logger.error(
+          { error: payments.getError()!.message, channelAddress: channelAddr },
+          "Failed to get active payments",
+        );
+        return;
+      }
+      paymentCounter.set({ channelAddress: channelAddr }, payments.getValue().length);
+    }
   }, 30_000);
 };
 
