@@ -7,7 +7,7 @@ import {
   Values,
   VectorError,
 } from "@connext/vector-types";
-import { BigNumber, constants, providers } from "ethers";
+import { BigNumber, constants } from "ethers";
 import { BaseLogger } from "pino";
 
 import { ChainJsonProviders } from "./listener";
