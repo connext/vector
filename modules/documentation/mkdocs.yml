@@ -12,7 +12,8 @@ theme:
   font:
     text: Proxima Nova
   palette:
-    primary: white
+    primary: "#002868"
+    accent: "#FCA311"
 
   features:
     - navigation.tabs
@@ -31,15 +32,19 @@ extra:
 nav:
   - Intro:
       - index.md
-      - status.md
+      - channelBasics.md
       - faq.md
-  - Getting Started: gettingStarted.md
+  - Quick Start:
+      - quickStart.md
   - Node Guides:
-      - deployProdNode.md
+      - nodeIntro.md
       - configureNode.md
-      - integrateBrowserNode
+      - depositAndWithdraw.md
+      - transfers.md
+      - prodNodeDeployment.md
   - Router Guides:
-      - deployProdRouter.md
+      - routerIntro.md
       - configureRouter.md
-  - Reference:
+      - deployProdRouter.md
+  - API Reference:
       - nodeAPI.md
