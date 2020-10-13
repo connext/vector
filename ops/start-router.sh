@@ -209,27 +209,23 @@ fi
 ####################
 # Proxy config
 
-proxy_image="${project}_router_proxy:$version";
+proxy_image="${project}_${stack}_proxy:$version";
 bash $root/ops/pull-images.sh $proxy_image > /dev/null
 
-if [[ -z "$domain_name" && -n "$public_port" ]]
-then
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
-elif [[ -n "$domain_name" && -z "$public_port" ]]
+if [[ -n "$domain_name" ]]
 then
   public_url="https://127.0.0.1:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
   echo "$stack.proxy will be exposed on *:80 and *:443"
+
 else
-  echo "Either a domain name or a public port must be provided but not both."
-  echo " - If a public port is provided then the stack will use http on the given port"
-  echo " - If a domain name is provided then https is activated on port *:443"
-  exit 1
+  public_port=${public_port:-3001}
+  public_url="http://127.0.0.1:$public_port"
+  proxy_ports="ports:
+      - '$public_port:80'"
+  echo "$stack.proxy will be exposed on *:$public_port"
 fi
 
 ####################

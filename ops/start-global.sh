@@ -19,20 +19,18 @@ fi
 ####################
 # Load config
 
-default_config="`cat $root/config-node.json $root/config-router.json | jq -s '.[0] + .[1]'`"
-config="`cat $root/config-prod.json`"
-
-function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
-function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
+function getConfig {
+  value="`echo "`cat $root/config-prod.json`" | jq ".$1" | tr -d '"'`"
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
 
 admin_token="`getConfig adminToken`"
-public_port="`getConfig port`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
-
-if [[ "$production" != "true" && (-z "$public_port" || "$public_port" == "null") ]]
-then public_port=3002
-fi
+public_port="`getConfig port`"
 
 ########################################
 ## Docker registry & image version config
@@ -157,27 +155,23 @@ fi
 ####################
 # Proxy config
 
-proxy_image="${project}_global_proxy:$version";
+proxy_image="${project}_${stack}_proxy:$version";
 bash $root/ops/pull-images.sh $proxy_image > /dev/null
 
-if [[ -z "$domain_name" && -n "$public_port" ]]
-then
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
-elif [[ -n "$domain_name" && -z "$public_port" ]]
+if [[ -n "$domain_name" ]]
 then
   public_url="https://127.0.0.1:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
   echo "$stack.proxy will be exposed on *:80 and *:443"
+
 else
-  echo "Either a domain name or a public port must be provided but not both."
-  echo " - If a public port is provided then the stack will use http on the given port"
-  echo " - If a domain name is provided then https is activated on port *:443"
-  exit 1
+  public_port=${public_port:-3002}
+  public_url="http://127.0.0.1:$public_port"
+  proxy_ports="ports:
+      - '$public_port:80'"
+  echo "$stack.proxy will be exposed on *:$public_port"
 fi
 
 ####################
