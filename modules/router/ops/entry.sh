@@ -31,7 +31,7 @@ done
 
 export PATH="./node_modules/.bin:${PATH}"
 
-if [[ "$PRODUCTION" == "true" ]]
+if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting router in prod-mode"
   export NODE_ENV=production

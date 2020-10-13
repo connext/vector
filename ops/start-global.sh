@@ -223,7 +223,7 @@ services:
       VECTOR_NATS_URL: 'nats://nats:4222'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
-      PRODUCTION: '$production'
+      VECTOR_PROD: '$production'
     ports:
       - '$auth_port:$auth_port'
     secrets:

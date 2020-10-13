@@ -34,7 +34,7 @@ node_bin="`pwd`/node_modules/.bin"
 nodemon="$node_bin/nodemon"
 pino="$node_bin/pino-pretty"
 
-if [[ "$PRODUCTION" == "true" ]]
+if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting node in prod-mode"
   export NODE_ENV=production

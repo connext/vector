@@ -285,7 +285,7 @@ services:
     $node_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      PRODUCTION: '$production'
+      VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -300,7 +300,7 @@ services:
     $router_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      PRODUCTION: '$production'
+      VECTOR_PROD: '$production'
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: 'database'
@@ -320,7 +320,7 @@ services:
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$project'
       VECTOR_ADMIN_TOKEN: '$admin_token'
-      PRODUCTION: '$production'
+      VECTOR_PROD: '$production'
 
   redis:
     $common

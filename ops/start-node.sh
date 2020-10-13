@@ -254,7 +254,7 @@ services:
     $node_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      PRODUCTION: '$production'
+      VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -275,7 +275,7 @@ services:
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$pg_user'
       VECTOR_ADMIN_TOKEN: '$admin_token'
-      PRODUCTION: '$production'
+      VECTOR_PROD: '$production'
 
   redis:
     $common
