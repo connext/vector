@@ -118,7 +118,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "Prometheus",
-      "description": "Number of active payments in each channel",
+      "description": "Total, successful, and failed forwarded payment attempts by router.",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -161,17 +161,29 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "router_payments_total",
+          "expr": "sum(router_forwarded_payment_attempts)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Total",
           "refId": "A"
+        },
+        {
+          "expr": "sum(router_failed_forwarded_payments)",
+          "interval": "",
+          "legendFormat": "Failed",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(router_successful_forwarded_payments)",
+          "interval": "",
+          "legendFormat": "Attempts",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Number of Payments",
+      "title": "Forwarded Payments",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -209,6 +221,23 @@
       }
     },
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 123123,
+      "type": "gettingstarted"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -226,7 +255,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 8
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 2,
@@ -318,5 +347,5 @@
   "timezone": "",
   "title": "Router Main",
   "uid": "Oe5I2JcGk",
-  "version": 1
+  "version": 2
 }
