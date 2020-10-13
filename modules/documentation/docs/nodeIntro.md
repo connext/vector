@@ -1,4 +1,4 @@
-# Node Basics
+# Basics
 
 A Connext node is an implementation of the Connext protocols. Anyone who is using Connext *in any way* should most likely be running a node.
 
