@@ -2,7 +2,7 @@
 set -e
 
 # This is the order they'll be published in
-default_packages="types,utils,contracts,protocol,engine,browser-node"
+default_packages="protocol,engine,browser-node"
 
 # To publish contracts, run bash ops/npm-publish.sh contracts
 packages="${1:-$default_packages}"
@@ -92,20 +92,17 @@ do
   path="${nickname#*-}" # i.e. 'types'
   version="$target_version"
   echo "Updating $nickname package version to $version"
-  echo "PATH" "$path"
-  echo "NICKNAME" "$nickname"
-  echo "FULLNAME" "$fullname"
   cd $path
   mv package.json .package.json
   cat .package.json | sed 's/"version": ".*"/"version": "'$version'"/' > package.json
   rm .package.json
   echo "Publishing $fullname"
 
-  # # If the version has a release-candidate suffix like "-rc.2" then tag it as "next"
-  # if [[ "$version" == *-rc* ]]
-  # then npm publish --tag next --access=public
-  # else npm publish --access=public
-  # fi
+  # If the version has a release-candidate suffix like "-rc.2" then tag it as "next"
+  if [[ "$version" == *-rc* ]]
+  then npm publish --tag next --access=public
+  else npm publish --access=public
+  fi
 
   echo "Updating $fullname references in root"
   mv package.json .package.json
