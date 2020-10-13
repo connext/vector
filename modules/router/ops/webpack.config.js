@@ -7,7 +7,7 @@ module.exports = {
 
   context: path.join(__dirname, ".."),
 
-  entry: path.join(__dirname, "../src/main.ts"),
+  entry: path.join(__dirname, "../src/index.ts"),
 
   externals: {
     "pg-native": "commonjs2 pg-native",

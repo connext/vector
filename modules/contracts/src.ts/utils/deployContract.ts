@@ -1,7 +1,6 @@
 import { constants, Contract, ContractFactory, Wallet, providers, utils, BigNumber } from "ethers";
 
 import { artifacts } from "../artifacts";
-import { ConstructorArgs } from "../constants";
 
 import { AddressBook } from "./addressBook";
 
@@ -20,7 +19,6 @@ export const isContractDeployed = async (
 ): Promise<boolean> => {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   const log = silent ? () => {} : console.log;
-
   log(`\nChecking for valid ${name} contract...`);
   if (!address || address === "") {
     log("This contract is not in our address book.");
@@ -50,18 +48,16 @@ export const isContractDeployed = async (
 
 export const deployContract = async (
   name: string,
-  args: ConstructorArgs,
+  args: string[],
   wallet: Wallet,
   addressBook: AddressBook,
   silent = false,
 ): Promise<Contract> => {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   const log = silent ? () => {} : console.log;
-
   // NOTE: No special case for testnet token bc non-testnet-tokens are not mintable & throw errors
   const factory = ContractFactory.fromSolidity(artifacts[name]).connect(wallet);
-  const constructorArgs = args.map((a) => a.value);
-  const deployTx = factory.getDeployTransaction(...constructorArgs);
+  const deployTx = factory.getDeployTransaction(...args);
   const tx = await wallet.sendTransaction({
     ...deployTx,
     gasLimit: BigNumber.from("5000000"),
@@ -70,16 +66,12 @@ export const deployContract = async (
   const receipt = await tx.wait();
   const address = Contract.getContractAddress(tx);
   const contract = new Contract(address, artifacts[name].abi, wallet);
-
-  // const { gasUsed, cumulativeGasUsed } = receipt;
-  // log(`Gas from deploy:`, stringify({ gasUsed, cumulativeGasUsed }));
-
   log(`Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(receipt.gasUsed.mul(tx.gasPrice))} deploying ${name} to address: ${address}`);
   const runtimeCodeHash = hash(await wallet.provider.getCode(address));
   const creationCodeHash = hash(artifacts[name].bytecode);
   addressBook.setEntry(name, {
     address,
-    constructorArgs: args.length === 0 ? undefined : args,
+    args: args.length > 0 ? args : undefined,
     creationCodeHash,
     runtimeCodeHash,
     txHash: tx.hash,

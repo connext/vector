@@ -1,7 +1,5 @@
 {
   "adminToken": "cxt1234",
-  "authUrl": "http://auth:5040",
-  "logLevel": "info",
   "chainAddresses": {
     "1337": {
       "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
@@ -20,7 +18,8 @@
     "1337": "http://evm_1337:8545",
     "1338": "http://evm_1338:8545"
   },
-  "natsUrl": "nats://nats:4222",
+  "logLevel": "info",
+  "messagingUrl": "http://messaging",
   "port": 3000,
   "redisUrl": "redis://redis:6379"
 }

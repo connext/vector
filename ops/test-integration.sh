@@ -28,7 +28,7 @@ common="$interactive $stack_env \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
   --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
   --env=VECTOR_ALICE_URL=http://alice:8000 \
-  --env=VECTOR_AUTH_URL=http://auth:5040 \
+  --env=VECTOR_MESSAGING_URL=http://messaging \
   --env=VECTOR_BOB_URL=http://bob:8000 \
   --env=VECTOR_CAROL_URL=http://carol:8000 \
   --env=VECTOR_CHAIN_PROVIDERS=`cat $root/.chaindata/chain-providers.json | tr -d ' \n'` \
@@ -36,7 +36,6 @@ common="$interactive $stack_env \
   --env=VECTOR_DAVE_URL=http://dave:8000 \
   --env=VECTOR_ENV=${ENV:-dev} \
   --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error} \
-  --env=VECTOR_NATS_URL=nats://nats:4222 \
   --env=VECTOR_NODE_URL=http://node:8000 \
   --env=VECTOR_ROGER_URL=http://roger:8000 \
   --env=VECTOR_ROUTER_URL=http://router:8009 \

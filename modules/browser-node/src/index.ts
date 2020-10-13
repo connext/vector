@@ -17,7 +17,7 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
-import { constructRpcRequest, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
+import { constructRpcRequest, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
@@ -32,7 +32,6 @@ export class BrowserNode implements INodeService {
     messagingUrl: string,
     log: BaseLogger,
     signer: IChannelSigner,
-    authUrl: string,
     chainProviders: ChainProviders,
     chainAddresses: ChainAddresses,
   ): Promise<BrowserNode> {
@@ -41,7 +40,11 @@ export class BrowserNode implements INodeService {
         return [chainId, new providers.JsonRpcProvider(url)];
       }),
     );
-    const messaging = new NatsMessagingService({ messagingUrl }, log, getBearerTokenFunction(signer, authUrl));
+    const messaging = new NatsMessagingService({
+      logger: log.child({ module: "MessagingService"}),
+      messagingUrl,
+      signer,
+    });
     await messaging.connect();
     const store = new BrowserStore(log.child({ module: "BrowserStore" }));
     const lock = new BrowserLockService(

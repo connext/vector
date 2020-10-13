@@ -26,10 +26,16 @@ prod_config="`cat $root/config-prod.json`"
 config="`echo $default_config $prod_config | jq -s '.[0] + .[1]'`"
 
 function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
-function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
+function getConfig {
+  value="`echo "$config" | jq ".$1" | tr -d '"'`"
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
 
 admin_token="`getConfig adminToken`"
-auth_url="`getConfig authUrl`"
+messaging_url="`getConfig messagingUrl`"
 aws_access_id="`getConfig awsAccessId`"
 aws_access_key="`getConfig awsAccessKey`"
 chain_providers="`getConfig chainProviders`"
@@ -74,7 +80,7 @@ common="networks:
 # If no global service urls provided, spin up local ones & use those
 
 if [[ \
-  "$auth_url" == "`getDefault authUrl`" || \
+  "$messaging_url" == "`getDefault messagingUrl`" || \
   "$chain_providers" == "`getDefault chainProviders`" \
   ]]
 then
@@ -86,7 +92,7 @@ then
   config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 else
-  echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
+  echo "Connecting to external global services: messaging=$messaging_url | chain_providers=$chain_providers"
   if [[ -n "$mnemonic" ]]
   then
     mnemonic_secret=""
@@ -180,8 +186,8 @@ fi
 ########################################
 ## Router config
 
-router_internal_port="8000"
-router_dev_port="8008"
+router_internal_port="9000"
+router_dev_port="9000"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -324,6 +330,7 @@ services:
     environment:
       VECTOR_DOMAINNAME: '$domain_name'
       VECTOR_NODE_URL: 'node:$node_internal_port'
+      VECTOR_ROUTER_URL: 'router:$router_port'
     volumes:
       - 'certs:/etc/letsencrypt'
 

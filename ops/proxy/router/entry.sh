@@ -4,6 +4,7 @@ echo "Proxy container launched in env:"
 echo "VECTOR_DOMAINNAME=$VECTOR_DOMAINNAME"
 echo "VECTOR_EMAIL=$VECTOR_EMAIL"
 echo "VECTOR_NODE_URL=$VECTOR_NODE_URL"
+echo "VECTOR_ROUTER_URL=$VECTOR_ROUTER_URL"
 
 # Provide a message indicating that we're still waiting for everything to wake up
 function loading_msg {
@@ -21,6 +22,12 @@ loading_pid="$!"
 echo "waiting for $VECTOR_NODE_URL..."
 wait-for -t 60 $VECTOR_NODE_URL 2> /dev/null
 while ! curl -s $VECTOR_NODE_URL > /dev/null
+do sleep 2
+done
+
+echo "waiting for $VECTOR_ROUTER_URL..."
+wait-for -t 60 $VECTOR_ROUTER_URL 2> /dev/null
+while ! curl -s $VECTOR_ROUTER_URL > /dev/null
 do sleep 2
 done
 
