@@ -1,7 +1,6 @@
 import {
   NatsMessagingService,
   expect,
-  getBearerTokenFunction,
   getRandomChannelSigner,
 } from "@connext/vector-utils";
 import axios from "axios";
@@ -16,24 +15,30 @@ describe("Global Auth Service", () => {
   const senderId = sender.publicIdentifier;
 
   it("should pong when we ping", async () => {
-    const res = await axios.get(`${env.authUrl}/ping`);
+    const res = await axios.get(`${env.messagingUrl}/ping`);
     expect(res.data).to.equal("pong\n");
   });
 
   it("should dispense a jwt which allows the user to connect to NATS", async () => {
     const testSubject = `${recipientId}.${senderId}.test.subject`;
-    const opts = { messagingUrl: env.natsUrl };
 
-    const nonceRes = await axios.get(`${env.authUrl}/auth/${recipientId}`);
+    const nonceRes = await axios.get(`${env.messagingUrl}/auth/${recipientId}`);
     expect(nonceRes.status).to.equal(200);
     expect(nonceRes.data).to.be.a("string");
 
     const sig = await recipient.signMessage(nonceRes.data);
-    const verifyRes = await axios.post(`${env.authUrl}/auth`, { sig, userIdentifier: recipientId });
+    const verifyRes = await axios.post(`${env.messagingUrl}/auth`, {
+      sig,
+      userIdentifier: recipientId,
+    });
     expect(verifyRes.status).to.equal(200);
     expect(verifyRes.data).to.be.a("string");
 
-    const recipientMessaging = new NatsMessagingService(opts, pino(), () => verifyRes.data);
+    const recipientMessaging = new NatsMessagingService({
+      bearerToken: verifyRes.data,
+      logger: pino(),
+      messagingUrl: env.messagingUrl,
+    });
     await recipientMessaging.connect();
 
     const received = new Promise((res, rej) => {
@@ -41,11 +46,11 @@ describe("Global Auth Service", () => {
       setTimeout(() => rej("Timeout"), 10002);
     });
 
-    const senderMessaging = new NatsMessagingService(
-      opts,
-      pino(),
-      getBearerTokenFunction(sender, env.authUrl),
-    );
+    const senderMessaging = new NatsMessagingService({
+      logger: pino(),
+      messagingUrl: env.messagingUrl,
+      signer: sender,
+    });
     await senderMessaging.connect();
 
     await expect(senderMessaging.publish(testSubject, { hello: "world" })).to.be.fulfilled;

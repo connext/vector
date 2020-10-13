@@ -28,10 +28,9 @@ function App() {
       console.log(config);
       try {
         const client = await BrowserNode.connect(
-          config.natsUrl,
+          config.messagingUrl,
           logger,
           signer,
-          config.authUrl,
           config.chainProviders,
           config.chainAddresses,
         );

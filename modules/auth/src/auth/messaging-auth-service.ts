@@ -5,9 +5,17 @@ import {
   getSignerAddressFromPublicIdentifier,
   recoverAddressFromChannelMessage,
 } from "@connext/vector-utils";
-import { MessagingConfig } from "@connext/vector-types";
 
 const nonceTTL = 24 * 60 * 60 * 1000; // 1 day
+
+type AuthConfig = {
+  clusterId?: string;
+  messagingUrl: string | string[];
+  options?: any;
+  privateKey?: string;
+  publicKey?: string;
+  token?: string;
+};
 
 export class MessagingAuthService {
   private auth: AuthService;
@@ -15,7 +23,7 @@ export class MessagingAuthService {
   private nonces: { [key: string]: { nonce: string; expiry: number } } = {};
 
   constructor(
-    private readonly config: MessagingConfig,
+    private readonly config: AuthConfig,
     private readonly logger: BaseLogger,
     private readonly adminToken: string,
   ) {

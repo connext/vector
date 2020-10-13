@@ -40,7 +40,6 @@ const VectorRouterConfigSchema = Type.Object({
       Type.Literal("silent"),
     ]),
   ),
-  port: Type.Integer(),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
 });
 
