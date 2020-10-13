@@ -95,7 +95,6 @@ docker run \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
   --env="CHAIN_ADDRESSES=$CHAIN_ADDRESSES" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
-  --env="VECTOR_ENV=$VECTOR_ENV" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --name="${project}_test_$unit" \
   --network "$project" \

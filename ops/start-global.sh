@@ -34,11 +34,6 @@ if [[ "$production" != "true" && (-z "$public_port" || "$public_port" == "null")
 then public_port=3002
 fi
 
-if [[ "$production" == "true" ]]
-then VECTOR_ENV="prod"
-else VECTOR_ENV="dev"
-fi
-
 ########################################
 ## Docker registry & image version config
 
@@ -228,7 +223,7 @@ services:
       VECTOR_NATS_URL: 'nats://nats:4222'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
-      VECTOR_ENV: '$VECTOR_ENV'
+      PRODUCTION: '$production'
     ports:
       - '$auth_port:$auth_port'
     secrets:

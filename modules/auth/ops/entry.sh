@@ -34,8 +34,13 @@ node_bin="`pwd`/node_modules/.bin"
 nodemon="$node_bin/nodemon"
 pino="$node_bin/pino-pretty"
 
-if [[ "$VECTOR_ENV" == "dev" ]]
+if [[ "$PRODUCTION" == "true" ]]
 then
+  echo "Starting node in prod-mode"
+  export NODE_ENV=production
+  exec node --no-deprecation dist/bundle.js
+
+else
   echo "Starting node in dev-mode"
   exec $nodemon \
     --delay 1 \
@@ -48,10 +53,4 @@ then
     --watch src \
     --exec ts-node \
     ./src/index.ts | $pino
-
-else
-  echo "Starting node in prod-mode"
-  export NODE_ENV=production
-  exec node --no-deprecation dist/bundle.js
 fi
-

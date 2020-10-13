@@ -33,7 +33,7 @@ export PATH="./node_modules/.bin:${PATH}"
 echo "Running database migrations"
 prisma migrate up --experimental
 
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$PRODUCTION" == "true" ]]
 then
   echo "Starting node in prod-mode"
   export NODE_ENV=production

@@ -27,5 +27,6 @@ if (!valid) {
 export const config = {
   mnemonic,
   dbUrl,
+  redisUrl: "redis://redis:6379",
   ...vectorConfig,
 } as VectorNodeConfig;

@@ -53,7 +53,7 @@ fi
 ########################################
 # Launch tests
 
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$PRODUCTION" == "true" ]]
 then opts="--forbid-only"
 else opts="--bail"
 fi

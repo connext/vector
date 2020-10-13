@@ -67,7 +67,6 @@ docker run \
   $interactive \
   --entrypoint="bash" \
   --env="VECTOR_CONFIG=$config" \
-  --env="VECTOR_ENV=dev" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@$postgres_host:5432/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \
   --name="${project}_test_$unit" \

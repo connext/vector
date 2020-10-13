@@ -34,7 +34,7 @@ common="$interactive $stack_env \
   --env=VECTOR_CHAIN_PROVIDERS=`cat $root/.chaindata/chain-providers.json | tr -d ' \n'` \
   --env=VECTOR_CHAIN_ADDRESSES=`cat $root/.chaindata/chain-addresses.json | tr -d ' \n'` \
   --env=VECTOR_DAVE_URL=http://dave:8000 \
-  --env=VECTOR_ENV=${ENV:-dev} \
+  --env=PRODUCTION=${PRODUCTION} \
   --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error} \
   --env=VECTOR_NODE_URL=http://node:8000 \
   --env=VECTOR_ROGER_URL=http://roger:8000 \
@@ -45,7 +45,7 @@ common="$interactive $stack_env \
   --tmpfs /tmp"
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$PRODUCTION" == "true" ]]
 then
   git_tag="`git tag --points-at HEAD | grep "vector-" | head -n 1`"
   if [[ -z "$version" ]]
