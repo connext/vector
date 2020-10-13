@@ -66,6 +66,3 @@ cypress/videos
 **/.env
 **/react-app-env.d.ts
 .secret
-
-# Local address book
-address-book.json

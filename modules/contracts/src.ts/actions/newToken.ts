@@ -27,11 +27,7 @@ export const newToken = async (
   const savedAddress = addressBook.getEntry(name).address;
   if (force || !(await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))) {
     log(`Preparing to deploy new token to chain w id: ${chainId}\n`);
-    const constructorArgs = [
-      { name: "symbol", value: "TEST" },
-      { name: "name", value: name },
-    ];
-    const token = await deployContract(name, constructorArgs, wallet, addressBook, silent);
+    const token = await deployContract(name, [ "TEST", name ], wallet, addressBook, silent);
     log(`Success!`);
     await token.mint(wallet.address, initialSupply);
     log(

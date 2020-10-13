@@ -1,7 +1,20 @@
 import fs from "fs";
 
-import { AddressBookEntry, AddressBook as AddressBookJson } from "@connext/types";
 import { AddressZero } from "@ethersproject/constants";
+
+export type AddressBookEntry = {
+  address: string;
+  args?: string[];
+  creationCodeHash?: string;
+  runtimeCodeHash?: string;
+  txHash?: string;
+};
+
+export type AddressBookJson = {
+  [chainId: string]: {
+    [contractName: string]: AddressBookEntry;
+  };
+};
 
 export interface AddressBook {
   getEntry: (contractName: string) => AddressBookEntry;

@@ -1,7 +1,5 @@
 import { Options } from "yargs";
 
-export type ConstructorArgs = { name: string; value: string }[];
-
 export const defaults = {
   mnemonic: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
   providerUrl: "http://localhost:8545",
