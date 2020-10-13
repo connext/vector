@@ -8,7 +8,7 @@ RUN npm install pg prisma sqlite3
 COPY ops ops
 COPY dist dist
 COPY migrations migrations
-COPY schema.prisma
+COPY schema.prisma schema.prisma
 RUN mkdir -p node_modules/.prisma node_modules/@prisma
 RUN cp -r ./dist/.prisma/client node_modules/.prisma/client
 RUN cp -r ./dist/@prisma/client node_modules/@prisma/client
