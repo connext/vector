@@ -1,18 +1,21 @@
-import { BigNumberJson } from "@connext/types";
+import { HexString } from "@connext/vector-types";
 import { BigNumber, BigNumberish } from "ethers";
 
 export const isBN = BigNumber.isBigNumber;
+
+// bigNumberifyJson & deBigNumberifyJson convert values between BigNumber & BigNumberJson
+export type BigNumberJson = { _hex: HexString; _isBigNumber: true };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const isBNJson = (value: any): boolean => !isBN(value) && !!value._hex;
 
 export const toBN = (n: BigNumberish | BigNumberJson): BigNumber =>
   BigNumber.from(
-    (n && typeof (n as BigNumberJson)._hex === "string")
+    n && typeof (n as BigNumberJson)._hex === "string"
       ? (n as BigNumberJson)._hex
       : typeof n.toString === "function"
-        ? n.toString()
-        : "0",
+      ? n.toString()
+      : "0",
   );
 
 export const toBNJson = (n: BigNumberish | BigNumberJson): BigNumberJson => ({

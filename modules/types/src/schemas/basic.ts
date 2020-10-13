@@ -67,7 +67,7 @@ export const TFullTransferState = Type.Object({
   chainId: TChainId,
   transferEncodings: TransferEncodingSchema, // Initial state encoding, resolver encoding
   transferState: TransferStateSchema,
-  transferResolver: TransferResolverSchema, // undefined iff not resolved
+  transferResolver: Type.Optional(Type.Any()), // undefined iff not resolved
   meta: TBasicMeta,
 });
 

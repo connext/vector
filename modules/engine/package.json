@@ -19,14 +19,14 @@
     "@connext/vector-types": "0.0.1-beta.2",
     "@connext/vector-utils": "0.0.1-beta.2",
     "@sinclair/typebox": "0.10.1",
-    "ajv": "6.12.5",
-    "ethers": "5.0.14",
+    "ajv": "6.12.6",
+    "ethers": "5.0.17",
     "evt": "1.8.10",
-    "pino": "6.6.1",
-    "pino-pretty": "4.2.1"
+    "pino": "6.7.0",
+    "pino-pretty": "4.3.0"
   },
   "devDependencies": {
-    "@types/chai": "4.2.12",
+    "@types/chai": "4.2.13",
     "@types/chai-as-promised": "7.1.3",
     "@types/chai-subset": "1.3.3",
     "@types/mocha": "8.0.3",

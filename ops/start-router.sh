@@ -186,7 +186,8 @@ fi
 ########################################
 ## Router config
 
-router_port="9000"
+router_internal_port="9000"
+router_dev_port="9000"
 
 if [[ $VECTOR_ENV == "prod" ]]
 then
@@ -199,8 +200,8 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$router_port:$router_port'"
-  echo "$stack.router configured to be exposed on *:$router_port"
+      - '$router_dev_port:$router_internal_port'"
+  echo "$stack.router configured to be exposed on *:$router_dev_port"
 fi
 
 # Add whichever secrets we're using to the router's service config
@@ -236,6 +237,54 @@ else
   echo " - If a domain name is provided then https is activated on port *:443"
   exit 1
 fi
+
+####################
+# Observability tools config
+
+grafana_image="grafana/grafana:latest"
+bash $root/ops/pull-images.sh $grafana_image > /dev/null
+
+prometheus_image="prom/prometheus:latest"
+bash $root/ops/pull-images.sh $prometheus_image > /dev/null
+
+cadvisor_image="gcr.io/google-containers/cadvisor:latest"
+bash $root/ops/pull-images.sh $cadvisor_image > /dev/null
+
+prometheus_services="prometheus:
+    image: $prometheus_image
+    $common
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  cadvisor:
+    $common
+    image: $cadvisor_image
+    ports:
+      - 8081:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro"
+
+grafana_service="grafana:
+    image: '$grafana_image'
+    $common
+    networks:
+      - '$project'
+    ports:
+      - '3008:3000'
+    volumes:
+      - '$root/ops/grafana/grafana:/etc/grafana'
+      - '$root/ops/grafana/dashboards:/etc/dashboards'"
+
+# TODO we probably want to remove observability from dev env once it's working
+# bc these make indra take a log longer to wake up
+observability_services="$prometheus_services
+  $grafana_service"
 
 ####################
 # Launch stack
@@ -330,6 +379,8 @@ services:
   redis:
     $common
     image: '$redis_image'
+
+  $observability_services
 
 EOF
 

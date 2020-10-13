@@ -132,6 +132,40 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(channel);
   }
 
+  private async getTransferState(
+    params: EngineParams.GetTransferState,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferState], Error>> {
+    const validate = ajv.compile(EngineParams.GetTransferStateSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+
+    try {
+      const transfer = await this.store.getTransferState(params.transferId);
+      return Result.ok(transfer);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  private async getActiveTransfers(
+    params: EngineParams.GetActiveTransfers,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getActiveTransfers], Error>> {
+    const validate = ajv.compile(EngineParams.GetActiveTransfersSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+
+    try {
+      const transfers = await this.store.getActiveTransfers(params.channelAddress);
+      return Result.ok(transfers);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   private async getTransferStateByRoutingId(
     params: EngineParams.GetTransferStateByRoutingId,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getTransferStateByRoutingId], Error>> {

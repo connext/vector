@@ -1,4 +1,4 @@
-import { HexString } from "@connext/types";
+import { HexString } from "@connext/vector-types";
 import { utils } from "ethers";
 
 import * as ChannelFactory from "../artifacts/ChannelFactory.json";

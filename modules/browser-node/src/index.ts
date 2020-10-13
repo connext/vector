@@ -8,6 +8,7 @@ import {
   EngineEvent,
   EngineEventMap,
   EngineEvents,
+  FullTransferState,
   IChannelSigner,
   INodeService,
   IVectorEngine,
@@ -130,6 +131,30 @@ export class BrowserNode implements INodeService {
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_getTransferStatesByRoutingId>(rpc);
       return Result.ok(res as ServerNodeResponses.GetTransferStatesByRoutingId);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransfer(
+    params: ServerNodeParams.GetTransferState,
+  ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferState, params);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_getTransferState>(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getActiveTransfers(
+    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+  ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getActiveTransfers, params);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_getActiveTransfers>(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }

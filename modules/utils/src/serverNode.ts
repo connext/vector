@@ -69,8 +69,10 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
-    return this.executeHttpRequest(`channel`, "get", {}, ServerNodeParams.GetChannelStateSchema);
+  async getStateChannels(
+    params: ServerNodeParams.GetChannelStates,
+  ): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>> {
+    return this.executeHttpRequest(`channel`, "get", params, ServerNodeParams.GetChannelStatesSchema);
   }
 
   async getTransfersByRoutingId(
@@ -92,6 +94,28 @@ export class RestServerNodeService implements INodeService {
       "get",
       params,
       ServerNodeParams.GetTransferStateByRoutingIdSchema,
+    );
+  }
+
+  async getTransfer(
+    params: ServerNodeParams.GetTransferState,
+  ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
+    return this.executeHttpRequest(
+      `transfer/${params.transferId}/${params.publicIdentifier}`,
+      "get",
+      params,
+      ServerNodeParams.GetTransferStateSchema,
+    );
+  }
+
+  async getActiveTransfers(
+    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+  ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
+    return this.executeHttpRequest(
+      `channel/${params.channelAddress}/transfer/active/${params.publicIdentifier}`,
+      "get",
+      params,
+      ServerNodeParams.GetActiveTransfersByChannelAddressSchema,
     );
   }
 
