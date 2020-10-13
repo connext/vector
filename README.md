@@ -94,12 +94,11 @@ Any of these values can be overwritten by providing the same key with a new valu
 **Node Config Keys:**
 
 - `adminToken` (type: `string`): Currently, this is only used during development to protect a few admin endpoints eg to reset the database between tests. If/when we add admin-only features in prod, they will only be accessible to those who provide the correct adminToken.
-- `authUrl` (type: `string`): The url used to authenticate with the messaging service (TODO: merge this with the nats url?)
 - `chainAddresses` (type: `object`): Specifies the addresses of all relevant contracts, keyed by `chainId`.
 - `chainProviders` (type: `object`): Specifies the URL to use to connect to each chain's provider, keyed by `chainId`
 - `logLevel` (type: `string`): one of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.
+- `messagingUrl` (type: `string`): The url used to connect to the messaging service.
 - `mnemonic` (type: `string`): Optional. If provided, the node will use this mnemonic. If not provided, the node will use a hard coded mnemonic with testnet funds in dev-mode (production=false). If not provided in prod, docker secrets will be used to manage the mnemonic; this is a much safer place to store a mnemonic that eg holds mainnet funds.
-- `natsUrl` (type: `string`): The URL of the messaging service (TODO: merge with auth url?)
 - `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
 - `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
 
