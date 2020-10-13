@@ -1,4 +1,4 @@
-![Master](https://github.com/connext/vector/workflows/Master/badge.svg)
+![master](https://github.com/connext/vector/workflows/Master/badge.svg)
 
 # ↗️ Vector
 
