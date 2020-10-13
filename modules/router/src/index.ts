@@ -17,7 +17,7 @@ import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { RouterStore } from "./services/store";
 
-const routerPort = 9000;
+const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
