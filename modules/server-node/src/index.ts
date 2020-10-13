@@ -529,6 +529,7 @@ server.post<{ Body: ServerNodeParams.CreateNode }>(
         signerAddress: newNode.signerAddress,
       } as ServerNodeResponses.CreateNode);
     } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
       return reply.status(500).send({ message: e.message });
     }
   },

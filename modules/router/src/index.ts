@@ -14,7 +14,8 @@ import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { RouterStore } from "./services/store";
 
-const routerBase = `http://router:${config.port}`;
+const routerPort = 9000;
+const routerBase = `http://router:${routerPort}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
@@ -85,7 +86,7 @@ server.post(depositReconciledPath, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(config.port, "0.0.0.0", (err, address) => {
+server.listen(routerPort, "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);
