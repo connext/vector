@@ -8,7 +8,6 @@ import {
   EngineEvent,
   EngineEventMap,
   EngineEvents,
-  FullTransferState,
   IChannelSigner,
   INodeService,
   IVectorEngine,
@@ -41,7 +40,7 @@ export class BrowserNode implements INodeService {
       }),
     );
     const messaging = new NatsMessagingService({
-      logger: log.child({ module: "MessagingService"}),
+      logger: log.child({ module: "MessagingService" }),
       messagingUrl,
       signer,
     });
