@@ -57,12 +57,6 @@ fi
 
 builder_image="${project}_builder"
 
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
-
-# to access from other containers
-redis_url="redis://redis:6379"
-
 common="networks:
       - '$project'
     logging:
@@ -254,10 +248,6 @@ services:
 
   $evm_services
 
-  redis:
-    $common
-    image: '$redis_image'
-
 EOF
 
 docker stack deploy -c $docker_compose $stack
@@ -281,7 +271,7 @@ function abort {
 
 timeout=$(expr `date +%s` + 60)
 echo "Waiting for $public_auth_url to wake up.."
-while [[ -n "`curl -k -m 5 -s $public_auth_url || true`" ]]
+while [[ -z "`curl -k -m 5 -s $public_auth_url || true`" ]]
 do
   if [[ "`date +%s`" -gt "$timeout" ]]
   then abort
