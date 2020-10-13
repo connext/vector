@@ -1,10 +1,10 @@
-# Node Configuration
+# Configuration and Deployment
 
 The `node` stack is configurable via the `config-node.json` file. Note that the `duet` and `trio` stacks are designed exclusively for development/testing so these are not configurable.
 
-There is an additional `config-prod.json` file that can apply to either the node or router but not both. The `config-prod.json` file contains your domain name and, because it's _not_ tracked by git, it's a good place to put overrides for secret values like API keys. A prod-mode deployment using a domain name w https must be exposed on port 443, therefore only a single prod-mode stack can run on a given machine at a time. We cover this in depth in the Node Deployment section.
+There is an additional `config-prod.json` file that can apply to either the node or router but not both. The `config-prod.json` file contains your domain name and, because it's _not_ tracked by git, it's a good place to put overrides for secret values like API keys. A prod-mode deployment using a domain name w https must be exposed on port 443, therefore only a single prod-mode stack can run on a given machine at a time.
 
-## Configuration Keys
+## Node Configuration API
 
 `config-node.json` contains the default configuration for the `node` stack: `make start-node`.
 
@@ -21,6 +21,22 @@ Any of these values can be overwritten by providing the same key with a new valu
 - `natsUrl` (type: `string`): The URL of the messaging service (TODO: merge with auth url?)
 - `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
 - `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
+
+### Prod Configuration API
+
+Changes to `config-prod.json` aren't tracked by git so this is a good place to store secret API keys, etc.
+
+Be careful, changes to this file will be applied to both `node` & `router` stacks running on this machine.
+
+**Prod Config Keys:**
+
+- `awsAccessId` (type: `string`): An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups
+- `awsAccessKey` (type: `string`): An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.
+- `domainName` (type: `string`): If provided, https will be auto-configured & the stack will be exposed on port 443.
+- `production` (type: `boolean`): Enables prod-mode if true. Implications of this flag:
+  - if `false`, ops will automatically build anything that isn't available locally before starting up a given stack. If `true`, nothing will be built locally. Instead, all images will be pulled from docker hub.
+  - if `false`, the `global` stack will start up 2 local testnet evm.
+  - Mnemonic handling is affected, see docs for the `mnemonic` key in node config.
 
 ## Example Configurations
 

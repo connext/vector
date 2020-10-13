@@ -41,10 +41,10 @@ nav:
       - configureNode.md
       - depositAndWithdraw.md
       - transfers.md
-      - prodNodeDeployment.md
+      - events.md
   - Router Guides:
       - routerIntro.md
       - configureRouter.md
-      - deployProdRouter.md
+      - managingCollateral.md
   - API Reference:
       - nodeAPI.md
