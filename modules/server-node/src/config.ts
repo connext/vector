@@ -3,6 +3,8 @@ import Ajv from "ajv";
 
 const ajv = new Ajv();
 
+console.log(`Starting node in env: ${JSON.stringify(process.env, null, 2)}`);
+
 const mnemonic = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
 let vectorConfig: VectorNodeConfig;

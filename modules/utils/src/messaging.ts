@@ -1,21 +1,29 @@
 import {
-  ChannelUpdate,
-  InboundChannelUpdateError,
-  IMessagingService,
-  MessagingConfig,
-  Result,
   IChannelSigner,
-  OutboundChannelUpdateError,
+  ChannelUpdate,
+  IMessagingService,
+  InboundChannelUpdateError,
   LockError,
   LockInformation,
+  OutboundChannelUpdateError,
+  Result,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
-import { BaseLogger } from "pino";
+import pino, { BaseLogger } from "pino";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 
 export { AuthService } from "ts-natsutil";
 
-export const getBearerTokenFunction = (signer: IChannelSigner, authUrl: string) => async (): Promise<string> => {
+export type MessagingConfig = {
+  messagingUrl?: string;
+  authUrl?: string;
+  natsUrl?: string;
+  bearerToken?: string;
+  signer?: IChannelSigner;
+  logger?: BaseLogger;
+};
+
+export const getBearerToken = (authUrl: string, signer: IChannelSigner) => async (): Promise<string> => {
   const nonceResponse = await axios.get(`${authUrl}/auth/${signer.publicIdentifier}`);
   const nonce = nonceResponse.data;
   const sig = await signer.signMessage(nonce);
@@ -28,13 +36,45 @@ export const getBearerTokenFunction = (signer: IChannelSigner, authUrl: string) 
 
 export class NatsMessagingService implements IMessagingService {
   private connection: INatsService | undefined;
+  private log: BaseLogger;
+
+  private authUrl?: string;
   private bearerToken?: string;
+  private natsUrl?: string;
+  private signer?: IChannelSigner;
 
   constructor(
     private readonly config: MessagingConfig,
-    private readonly log: BaseLogger,
-    private readonly getBearerToken: () => Promise<string>,
-  ) {}
+  ) {
+    this.log = config.logger || pino();
+
+    // Either messagingUrl or authUrl+natsUrl must be specified
+    if (config.messagingUrl) {
+      this.authUrl = config.messagingUrl;
+      this.natsUrl = `nats://${
+        config.messagingUrl.replace(/^.*:[\/\//, "").replace(/\//).replace(/:[0-9]+/, "")
+      }:4222`;
+    } else if (!config.authUrl || !config.natsUrl) {
+      throw new Error(`Either a messagingUrl or both an authUrl + natsUrl must be provided`);
+    }
+
+    // Let authUrl and/or natsUrl overwrite messagingUrl if both are provided
+    if (config.authUrl) {
+      this.authUrl = config.authUrl;
+    }
+    if (config.natsUrl) {
+      this.natsUrl = config.natsUrl;
+    }
+
+    if (config.bearerToken) {
+      this.bearerToken = config.bearerToken;
+    } else if (config.signer) {
+      this.signer = config.signer;
+    } else {
+      throw new Error(`Either a bearerToken or signer must be provided`);
+    }
+
+  }
 
   onReceiveCheckIn(
     myPublicIdentifier: string,
@@ -58,15 +98,22 @@ export class NatsMessagingService implements IMessagingService {
   }
 
   async connect(): Promise<void> {
-    const messagingUrl = this.config.messagingUrl;
     if (!this.bearerToken) {
-      this.bearerToken = await this.getBearerToken();
+      const nonce = (
+        await axios.get(`${this.authUrl}/auth/${this.signer.publicIdentifier}`)
+      ).data;
+      const sig = await this.signer.signMessage(nonce);
+      const verifyResponse: AxiosResponse<string> = await axios.post(`${this.authUrl}/auth`, {
+        sig,
+        userIdentifier: this.signer.publicIdentifier,
+      });
+      this.bearerToken = verifyResponse.data;
     }
     // TODO: fail fast w sensible error message if bearer token is invalid
     const service = natsServiceFactory(
       {
         bearerToken: this.bearerToken,
-        natsServers: typeof messagingUrl === `string` ? [messagingUrl] : messagingUrl, // FIXME-- rename to servers instead of natsServers
+        natsServers: [this.natsUrl],
       },
       this.log.child({ module: "Messaging-Nats" }),
     );

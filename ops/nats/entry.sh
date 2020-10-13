@@ -14,4 +14,7 @@ export JWT_SIGNER_PUBLIC_KEY=`
   sed 's/-----BEGIN PUBLIC KEY-----/\n-----BEGIN PUBLIC KEY-----\n/' |\
   sed 's/-----END PUBLIC KEY-----/\n-----END PUBLIC KEY-----\n/'`
 
+echo "JWT_SIGNER_PUBLIC_KEY:"
+echo "$JWT_SIGNER_PUBLIC_KEY"
+
 exec /bin/nats-server -D -V

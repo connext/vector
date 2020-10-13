@@ -56,12 +56,3 @@ export interface IMessagingService {
   flush(): Promise<void>;
   request(subject: string, timeout: number, data: any): Promise<any>;
 }
-
-export type MessagingConfig = {
-  clusterId?: string;
-  messagingUrl: string | string[];
-  options?: any;
-  privateKey?: string;
-  publicKey?: string;
-  token?: string;
-};

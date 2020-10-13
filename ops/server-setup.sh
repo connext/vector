@@ -129,8 +129,7 @@ usermod -aG docker $user
 systemctl enable docker
 
 echo;
-advertise_ip=\`ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1 | head -n 1\`
-docker swarm init "--advertise-addr=\$advertise_ip" || true
+docker swarm init "--advertise-addr=eth0" || true
 sleep 3
 echo;
 
