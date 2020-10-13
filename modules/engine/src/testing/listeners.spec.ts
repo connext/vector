@@ -33,6 +33,7 @@ import {
   hashTransferState,
   createTestChannelState,
   mkHash,
+  MemoryMessagingService,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
 import { BigNumber, utils } from "ethers";
@@ -64,7 +65,6 @@ describe(testName, () => {
   // Get test constants
   const alice: IChannelSigner = getRandomChannelSigner();
   const bob: IChannelSigner = getRandomChannelSigner();
-  const messaging = {} as any;
   const container = getEngineEvtContainer();
   const withdrawTransactionHash = getRandomBytes32();
   const withdrawRegisteredInfo: RegisteredTransfer = {
@@ -77,6 +77,7 @@ describe(testName, () => {
   // Declare mocks
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
   let chainService: Sinon.SinonStubbedInstance<VectorChainService>;
+  let messaging: Sinon.SinonStubbedInstance<MemoryMessagingService>;
 
   // Create an EVT to post to, that can be aliased as a
   // vector instance
@@ -105,6 +106,7 @@ describe(testName, () => {
     });
 
     vector = Sinon.createStubInstance(Vector);
+    messaging = Sinon.createStubInstance(MemoryMessagingService);
     vector.on = on as any;
   });
 
