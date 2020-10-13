@@ -1,3 +1,5 @@
+![Master](https://github.com/connext/vector/workflows/master/badge.svg)
+
 # ↗️ Vector
 
 Vector is an ultra-simple, flexible state channel protocol and implementation.
