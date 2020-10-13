@@ -275,6 +275,7 @@ services:
     environment:
       VECTOR_DOMAINNAME: '$domain_name'
       VECTOR_NODE_URL: 'node:$node_internal_port'
+      VECTOR_ROUTER_URL: 'router:$router_port'
     volumes:
       - 'certs:/etc/letsencrypt'
 
