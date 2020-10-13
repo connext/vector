@@ -42,7 +42,7 @@ function wait_for {
 
 if [[ "$stack" == "global" ]]
 then
-  wait_for "auth" "$VECTOR_AUTH_URL"
+  wait_for "messaging" "$VECTOR_MESSAGING_URL"
 
 elif [[ "$stack" == "node" ]]
 then
