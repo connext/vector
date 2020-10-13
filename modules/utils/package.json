@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-utils",
-  "version": "0.0.1-beta.0",
+  "version": "0.0.1-beta.2",
   "description": "Crypto module for Connext client",
   "main": "dist/index.js",
   "files": [
@@ -13,7 +13,7 @@
     "test": "ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.0.1-beta.0",
+    "@connext/vector-types": "0.0.1-beta.2",
     "async-mutex": "0.2.4",
     "axios": "0.20.0",
     "bs58check": "2.1.2",
