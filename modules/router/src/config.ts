@@ -52,6 +52,9 @@ try {
   throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
 }
 
+// Set defaults
+vectorConfig.nodeUrl = vectorConfig.nodeUrl || "http://node:8000";
+
 const validate = ajv.compile(VectorRouterConfigSchema);
 const valid = validate(vectorConfig);
 

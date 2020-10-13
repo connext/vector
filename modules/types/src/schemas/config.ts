@@ -22,6 +22,7 @@ export const VectorNodeConfigSchema = Type.Object({
   messagingUrl: Type.Optional(TUrl),
   mnemonic: Type.Optional(Type.String()),
   natsUrl: Type.Optional(TUrl),
+  redisUrl: TUrl,
 });
 
 export type VectorNodeConfig = Static<typeof VectorNodeConfigSchema>;

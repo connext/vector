@@ -86,20 +86,23 @@ fi
 # Auth config
 
 auth_port="5040"
-echo "$stack.auth configured to be exposed on *:$auth_port"
 
 if [[ "$production" == "true" ]]
 then
   auth_image_name="${project}_auth:$version";
   auth_image="image: '$auth_image_name'"
   bash $root/ops/pull-images.sh "$auth_image_name" > /dev/null
+
 else
   auth_image_name="${project}_builder:latest";
   bash $root/ops/pull-images.sh "$auth_image_name" > /dev/null
   auth_image="image: '$auth_image_name'
     entrypoint: 'bash modules/auth/ops/entry.sh'
+    ports:
+      - '$auth_port:$auth_port'
     volumes:
       - '$root:/root'"
+  echo "$stack.auth configured to be exposed on *:$auth_port"
 fi
 
 ####################
@@ -218,8 +221,6 @@ services:
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
       VECTOR_PROD: '$production'
-    ports:
-      - '$auth_port:$auth_port'
     secrets:
       - '$jwt_private_key_secret'
       - '$jwt_public_key_secret'

@@ -18,7 +18,5 @@
     "1337": "http://evm_1337:8545",
     "1338": "http://evm_1338:8545"
   },
-  "logLevel": "info",
-  "messagingUrl": "http://messaging",
-  "port": 3000
+  "logLevel": "info"
 }

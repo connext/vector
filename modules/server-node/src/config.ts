@@ -17,6 +17,10 @@ try {
   throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
 }
 
+// Set defaults
+vectorConfig.redisUrl = vectorConfig.redisUrl || "redis://redis:6379";
+vectorConfig.messagingUrl = vectorConfig.messagingUrl || "http://messaging";
+
 const validate = ajv.compile(VectorNodeConfigSchema);
 const valid = validate(vectorConfig);
 
@@ -27,6 +31,5 @@ if (!valid) {
 export const config = {
   mnemonic,
   dbUrl,
-  redisUrl: "redis://redis:6379",
   ...vectorConfig,
 } as VectorNodeConfig;

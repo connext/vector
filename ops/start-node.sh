@@ -69,10 +69,7 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-if [[ \
-  "$messaging_url" == "`getDefault messagingUrl`" || \
-  "$chain_providers" == "`getDefault chainProviders`" \
-  ]]
+if [[ -n "$messaging_url" || "$chain_providers" == "`getDefault chainProviders`" ]]
 then
   bash $root/ops/start-global.sh
   mnemonic_secret=""
@@ -82,7 +79,7 @@ then
   config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 else
-  echo "Connecting to external global services: messaging=$messaging_url | chain_providers=$chain_providers"
+  echo "Connecting to external services: messaging=$messaging_url | chain_providers=$chain_providers"
   if [[ -n "$mnemonic" ]]
   then
     mnemonic_secret=""
