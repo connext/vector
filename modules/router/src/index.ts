@@ -9,9 +9,8 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
-  INodeService,
 } from "@connext/vector-types";
-import { Registry, Gauge } from "prom-client";
+import { Registry } from "prom-client";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
@@ -72,56 +71,8 @@ server.addHook("onReady", async () => {
     throw node.getError();
   }
   const { publicIdentifier, signerAddress } = node.getValue();
-  router = await Router.connect(publicIdentifier, signerAddress, nodeService, store, logger);
-  configureMetrics(register, nodeService, publicIdentifier, signerAddress);
+  router = await Router.connect(publicIdentifier, signerAddress, nodeService, store, logger, register);
 });
-
-const configureMetrics = (
-  register: Registry,
-  nodeService: INodeService,
-  publicIdentifier: string,
-  signerAddress: string,
-) => {
-  // Track the total number of channels
-  const channelCounter = new Gauge({
-    name: "router_channels_total",
-    help: "router_channels_total_help",
-    registers: [register],
-  });
-
-  // Track the total number of payments
-  const paymentCounter = new Gauge({
-    name: "router_payments_total",
-    help: "router_payments_total_help",
-    labelNames: ["channelAddress"],
-    registers: [register],
-  });
-
-  // TODO: fix this once this issue is fixed by using the `collect` function in the gauge
-  // https://github.com/siimon/prom-client/issues/383
-  setInterval(async () => {
-    logger.info({}, "Collecting metrics");
-    const channels = await nodeService.getStateChannels({ publicIdentifier });
-    if (channels.isError) {
-      logger.error({ error: channels.getError()!.message, publicIdentifier }, "Failed to fetch channels");
-      return;
-    }
-    const channelAddresses = channels.getValue();
-    channelCounter.set(channelAddresses.length);
-
-    for (const channelAddr of channelAddresses) {
-      const payments = await nodeService.getActiveTransfers({ channelAddress: channelAddr, publicIdentifier });
-      if (payments.isError) {
-        logger.error(
-          { error: payments.getError()!.message, channelAddress: channelAddr },
-          "Failed to get active payments",
-        );
-        return;
-      }
-      paymentCounter.set({ channelAddress: channelAddr }, payments.getValue().length);
-    }
-  }, 30_000);
-};
 
 server.get("/ping", async () => {
   return "pong\n";

@@ -5,6 +5,7 @@ import {
   ConditionalTransferCreatedPayload,
   DepositReconciledPayload,
 } from "@connext/vector-types";
+import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
@@ -23,18 +24,51 @@ const chainProviders: ChainJsonProviders = Object.entries(config.chainProviders)
   return acc;
 }, {} as ChainJsonProviders);
 
+const configureMetrics = (register: Registry) => {
+  // Track number of times a payment was forwarded
+  const attempts = new Gauge({
+    name: "router_forwarded_payment_attempts",
+    help: "router_forwarded_payment_attempts_help",
+    labelNames: ["transferId"],
+  });
+  register.registerMetric(attempts);
+
+  // Track successful forwards
+  const successful = new Gauge({
+    name: "router_successful_forwarded_payments",
+    help: "router_successful_forwarded_payments_help",
+    labelNames: ["transferId"],
+  });
+  register.registerMetric(successful);
+
+  // Track failing forwards
+  const failed = new Gauge({
+    name: "router_failed_forwarded_payments",
+    help: "router_failed_forwarded_payments_help",
+    labelNames: ["transferId"],
+  });
+  register.registerMetric(failed);
+
+  // Return the metrics so they can be incremented as needed
+  return { failed, successful, attempts };
+};
+
 export async function setupListeners(
   publicIdentifier: string,
   signerAddress: string,
   service: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
+  register: Registry,
 ): Promise<void> {
+  const { failed, successful, attempts } = configureMetrics(register);
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
   await service.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
+      attempts.labels(data.transfer.transferId).inc(1);
+      const end = successful.startTimer();
       const res = await forwardTransferCreation(
         data,
         publicIdentifier,
@@ -45,11 +79,14 @@ export async function setupListeners(
         chainProviders,
       );
       if (res.isError) {
+        failed.labels(data.transfer.transferId).inc(1);
         return logger.error(
           { method: "forwardTransferCreation", error: res.getError()?.message, context: res.getError()?.context },
           "Error forwarding transfer",
         );
       }
+      end();
+      successful.labels(data.transfer.transferId).inc(1);
       logger.info({ method: "forwardTransferCreation", result: res.getValue() }, "Successfully forwarded transfer");
     },
     (data: ConditionalTransferCreatedPayload) => {
