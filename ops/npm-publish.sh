@@ -2,7 +2,7 @@
 set -e
 
 # This is the order they'll be published in
-default_packages="protocol,engine,browser-node"
+default_packages="types,utils,contracts,protocol,engine,browser-node"
 
 # To publish contracts, run bash ops/npm-publish.sh contracts
 packages="${1:-$default_packages}"
