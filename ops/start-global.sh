@@ -20,7 +20,8 @@ fi
 # Load config
 
 function getConfig {
-  value="`echo "`cat $root/config-prod.json`" | jq ".$1" | tr -d '"'`"
+  config="`cat $root/config-node.json $root/config-prod.json | jq -s '.[0] + .[1]'`"
+  value="`echo $config | jq ".$1" | tr -d '"'`"
   if [[ "$value" == "null" ]]
   then echo ""
   else echo "$value"
@@ -56,6 +57,20 @@ common="networks:
       driver: 'json-file'
       options:
           max-size: '100m'"
+
+####################
+# Redis config
+# Used by duet & trio
+
+if [[ "$production" = "true" ]]
+then redis_service=""
+else
+  redis_image="redis:5-alpine";
+  bash $root/ops/pull-images.sh $redis_image > /dev/null
+  redis_service="redis:
+    $common
+    image: '$redis_image'"
+fi
 
 ####################
 # Nats config
@@ -237,6 +252,8 @@ services:
       - '4221:4221'
 
   $evm_services
+
+  $redis_service
 
 EOF
 

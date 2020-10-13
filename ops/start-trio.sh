@@ -28,9 +28,6 @@ config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
 
 version="latest"
 
-# to access from other containers
-redis_url="redis://redis:6379"
-
 common="networks:
       - '$project'
     logging:
@@ -179,6 +176,7 @@ services:
     $common
     image: '$database_image'
     $database_env
+
 
 EOF
 

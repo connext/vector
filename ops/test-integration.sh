@@ -38,7 +38,7 @@ common="$interactive $stack_env \
   --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error} \
   --env=VECTOR_NODE_URL=http://node:8000 \
   --env=VECTOR_ROGER_URL=http://roger:8000 \
-  --env=VECTOR_ROUTER_URL=http://router:8009 \
+  --env=VECTOR_ROUTER_URL=http://router:9000 \
   --name=${project}_${stack}_test_runner \
   --network=$project \
   --rm \
