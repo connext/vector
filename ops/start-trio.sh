@@ -102,15 +102,16 @@ node_env="environment:
 ########################################
 ## Router config
 
-router_port="8009"
-echo "$stack.router will be exposed on *:$router_port"
+router_port="8000"
+router_exposed_port="8009"
+echo "$stack.router will be exposed on *:$router_exposed_port"
 
 router_image="image: '${project}_builder'
     entrypoint: 'bash modules/router/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
-      - '$router_port:$router_port'"
+      - '$router_exposed_port:$router_port'"
 
 ####################
 # Observability tools config
