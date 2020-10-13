@@ -33,7 +33,7 @@ then
 
   # TODO: do we really want to do this in prod?
   echo "Running database migrations"
-  ./node_modules/.bin/prisma migrate up --experimental &
+  ./node_modules/.bin/prisma migrate up --experimental
 
   echo "Starting node in prod-mode"
   export NODE_ENV=production
@@ -41,13 +41,11 @@ then
 
 else
 
-  # TODO: how do we expose prisma studio on all interfaces (ie 0.0.0.0) instead of just localhost?
-  echo "Starting prisma studio in the background"
-  ./node_modules/.bin/prisma studio --experimental &
-  sleep 3 # give prisma a sec to start up & log it's endpoint
+  # TODO: we need to expose prisma studio on all interfaces (ie 0.0.0.0), not just localhost
+  # ./node_modules/.bin/prisma studio --experimental &
 
   echo "Running database migrations"
-  ./node_modules/.bin/prisma migrate up --experimental &
+  ./node_modules/.bin/prisma migrate up --experimental
 
   echo "Starting node in dev-mode"
   exec  ./node_modules/.bin/nodemon \
