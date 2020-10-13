@@ -4,12 +4,14 @@ import {
   INodeService,
   ConditionalTransferCreatedPayload,
   DepositReconciledPayload,
+  Result,
+  FullChannelState,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
-import { requestCollateral } from "./collateral";
+import { requestCollateral, RequestCollateralError } from "./collateral";
 import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
 import { IRouterStore } from "./services/store";
@@ -145,7 +147,37 @@ export async function setupListeners(
   );
 
   await nodeService.on(EngineEvents.REQUEST_COLLATERAL, async data => {
-    await requestCollateral(data, publicIdentifier, nodeService, chainProviders, logger);
+    const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress, publicIdentifier });
+    if (channelRes.isError) {
+      logger.error(
+        {
+          channelAddress: data.channelAddress,
+          error: channelRes.getError()?.message,
+          context: channelRes.getError()?.context,
+        },
+        "Error requesting collateral",
+      );
+    }
+    const channel: FullChannelState = channelRes.getValue();
+    if (!channel) {
+      logger.error({ channelAddress: data.channelAddress }, "Error requesting collateral");
+    }
+
+    const res = await requestCollateral(
+      channel,
+      data.assetId,
+      publicIdentifier,
+      nodeService,
+      chainProviders,
+      logger,
+      data.amount,
+    );
+    if (res.isError) {
+      logger.error({ error: res.getError()?.message, context: res.getError()?.context }, "Error requesting collateral");
+      return;
+    }
+
+    logger.info({ res: res.getValue() }, "Succesfully requested collateral");
   });
 
   // service.on(

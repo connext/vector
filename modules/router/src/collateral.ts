@@ -1,7 +1,6 @@
 import {
   FullChannelState,
   INodeService,
-  RequestCollateralPayload,
   Result,
   ServerNodeResponses,
   Values,
@@ -35,7 +34,7 @@ export class RequestCollateralError extends VectorError {
 }
 
 export const requestCollateral = async (
-  channelAddress: string,
+  channel: FullChannelState,
   assetId: string,
   publicIdentifier: string,
   node: INodeService,
@@ -44,30 +43,11 @@ export const requestCollateral = async (
   requestedAmount?: string,
   transferAmount?: string, // used when called internally
 ): Promise<Result<undefined | ServerNodeResponses.Deposit, RequestCollateralError>> => {
-  const channelRes = await node.getStateChannel({ channelAddress, publicIdentifier });
-  if (channelRes.isError) {
-    return Result.fail(
-      new RequestCollateralError(RequestCollateralError.reasons.ChannelNotFound, {
-        channelAddress,
-        error: channelRes.getError()?.message,
-        context: channelRes.getError()?.context,
-      }),
-    );
-  }
-  const channel: FullChannelState = channelRes.getValue();
-  if (!channel) {
-    return Result.fail(
-      new RequestCollateralError(RequestCollateralError.reasons.ChannelNotFound, {
-        channelAddress,
-      }),
-    );
-  }
-
   const profileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.UnableToGetRebalanceProfile, {
-        channelAddress,
+        channelAddress: channel.channelAddress,
         error: profileRes.getError()?.message,
         context: profileRes.getError()?.context,
       }),
@@ -77,13 +57,18 @@ export const requestCollateral = async (
   if (requestedAmount && BigNumber.from(requestedAmount).gt(profile.reclaimThreshold)) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.TargetHigherThanThreshold, {
-        channelAddress,
+        channelAddress: channel.channelAddress,
         profile,
         requestedAmount,
       }),
     );
   }
-  const target = requestedAmount || profile.target;
+  let target = BigNumber.from(requestedAmount || profile.target);
+
+  if (transferAmount) {
+    target = target.add(transferAmount);
+  }
+
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
   const assetIdx = channel.assetIds.findIndex(assetId => assetId === assetId);
@@ -99,7 +84,7 @@ export const requestCollateral = async (
   if (!provider) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
-        channelAddress,
+        channelAddress: channel.channelAddress,
         chainId: channel.networkContext.chainId,
         assetId,
         requestedAmount,
@@ -112,13 +97,13 @@ export const requestCollateral = async (
     amount: amountToDeposit.toString(),
     assetId: assetId,
     chainId: channel.networkContext.chainId,
-    channelAddress,
+    channelAddress: channel.channelAddress,
     publicIdentifier,
   });
   if (txRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.TxError, {
-        channelAddress,
+        channelAddress: channel.channelAddress,
         error: txRes.getError()?.message,
         context: txRes.getError()?.context,
       }),
@@ -133,12 +118,12 @@ export const requestCollateral = async (
   const depositRes = await node.reconcileDeposit({
     assetId: assetId,
     publicIdentifier,
-    channelAddress,
+    channelAddress: channel.channelAddress,
   });
   if (depositRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.UnableToCollateralize, {
-        channelAddress,
+        channelAddress: channel.channelAddress,
         error: depositRes.getError()?.message,
         context: depositRes.getError()?.context,
       }),
