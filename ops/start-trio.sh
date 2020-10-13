@@ -113,6 +113,52 @@ router_image="image: '${project}_builder'
       - '$router_port:$router_port'"
 
 ####################
+# Observability tools config
+
+grafana_image="grafana/grafana:latest"
+bash $root/ops/pull-images.sh $grafana_image > /dev/null
+
+prometheus_image="prom/prometheus:latest"
+bash $root/ops/pull-images.sh $prometheus_image > /dev/null
+
+cadvisor_image="gcr.io/google-containers/cadvisor:latest"
+bash $root/ops/pull-images.sh $cadvisor_image > /dev/null
+
+prometheus_services="prometheus:
+    image: $prometheus_image
+    $common
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  cadvisor:
+    $common
+    image: $cadvisor_image
+    ports:
+      - 8081:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro"
+
+grafana_service="grafana:
+    image: '$grafana_image'
+    $common
+    networks:
+      - '$project'
+    ports:
+      - '3008:3000'
+    volumes:
+      - '$root/ops/grafana/grafana:/etc/grafana'
+      - '$root/ops/grafana/dashboards:/etc/dashboards'"
+
+observability_services="$prometheus_services
+  $grafana_service"
+
+####################
 # Launch stack
 
 docker_compose=$root/.${stack}.docker-compose.yml
@@ -181,6 +227,8 @@ services:
     $common
     image: '$database_image'
     $database_env
+
+  $observability_services
 
 EOF
 
