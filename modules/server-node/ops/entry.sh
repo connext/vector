@@ -30,16 +30,17 @@ wait-for -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT" > /dev/null
 
 if [[ "$VECTOR_ENV" == "prod" ]]
 then
+  echo "Starting node in prod-mode"
 
   # TODO: do we really want to do this in prod?
   echo "Running database migrations"
   ./node_modules/.bin/prisma migrate up --experimental
 
-  echo "Starting node in prod-mode"
   export NODE_ENV=production
   exec node --no-deprecation dist/bundle.js
 
 else
+  echo "Starting node in dev-mode"
 
   # TODO: we need to expose prisma studio on all interfaces (ie 0.0.0.0), not just localhost
   # ./node_modules/.bin/prisma studio --experimental &
@@ -47,7 +48,6 @@ else
   echo "Running database migrations"
   ./node_modules/.bin/prisma migrate up --experimental
 
-  echo "Starting node in dev-mode"
   exec  ./node_modules/.bin/nodemon \
     --delay 1 \
     --exitcrash \
