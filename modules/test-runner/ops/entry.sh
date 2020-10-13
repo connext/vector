@@ -7,17 +7,6 @@ fi
 cmd="${1:-test}"
 stack="${2:-node}"
 
-# Set defaults in src/util/env instead of here
-export VECTOR_ADMIN_TOKEN="$VECTOR_ADMIN_TOKEN"
-export VECTOR_CHAIN_ADDRESSES="$VECTOR_CHAIN_ADDRESSES"
-export VECTOR_CHAIN_PROVIDERS="$VECTOR_CHAIN_PROVIDERS"
-export VECTOR_CLIENT_LOG_LEVEL="$VECTOR_CLIENT_LOG_LEVEL"
-export VECTOR_LOG_LEVEL="$VECTOR_LOG_LEVEL"
-export VECTOR_NATS_URL="$VECTOR_NATS_URL"
-export VECTOR_NODE_URL="$VECTOR_NODE_URL"
-
-export VECTOR_ENV="${VECTOR_ENV:-dev}"
-
 ########################################
 # Wait for dependencies to wake up
 
