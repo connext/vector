@@ -147,6 +147,7 @@ export async function setupListeners(
   );
 
   await nodeService.on(EngineEvents.REQUEST_COLLATERAL, async data => {
+    logger.info({ data }, "Received request collateral event");
     const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress, publicIdentifier });
     if (channelRes.isError) {
       logger.error(

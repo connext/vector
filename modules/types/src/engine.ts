@@ -47,7 +47,7 @@ export const REQUEST_COLLATERAL_EVENT = "REQUEST_COLLATERAL";
 export type RequestCollateralPayload = {
   channelAddress: string;
   assetId: string;
-  amount: string;
+  amount?: string;
 };
 
 // Emitted when a withdrawal transfer is created

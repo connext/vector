@@ -19,7 +19,7 @@ import { Static, Type } from "@sinclair/typebox";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { createNode, getChainService, getNode, getNodes } from "./helpers/nodes";
+import { createNode, deleteNodes, getChainService, getNode, getNodes, nodes } from "./helpers/nodes";
 
 export const logger = pino();
 const server = fastify({ logger });
@@ -41,8 +41,22 @@ server.register(fastifyCors, {
 export const store = new PrismaStore();
 
 export const _providers: { [chainId: string]: providers.JsonRpcProvider } = Object.fromEntries(
-  Object.entries(config.chainProviders).map(([chainId, url]: any) => [chainId, new providers.JsonRpcProvider(url)]),
+  Object.entries(config.chainProviders).map(([chainId, url]) => [chainId, new providers.JsonRpcProvider(url)]),
 );
+
+server.addHook("onReady", async () => {
+  // get persisted mnemonic
+  let storedMnemonic = await store.getMnemonic();
+  if (!storedMnemonic) {
+    await store.setMnemonic(config.mnemonic);
+    storedMnemonic = config.mnemonic;
+  }
+
+  const persistedNodes = await store.getNodeIndexes();
+  for (const nodeIndex of persistedNodes) {
+    await createNode(nodeIndex.index, store, storedMnemonic);
+  }
+});
 
 server.get("/ping", async () => {
   return "pong\n";
@@ -364,6 +378,29 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
   },
 );
 
+server.post<{ Body: ServerNodeParams.RequestCollateral }>(
+  "/request-collateral",
+  { schema: { body: ServerNodeParams.RequestCollateralSchema, response: ServerNodeResponses.RequestCollateralSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, {
+      assetId: request.body.assetId,
+      channelAddress: request.body.channelAddress,
+    });
+    try {
+      const res = await engine.request<"chan_requestCollateral">(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
 server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
   "/hashlock-transfer/create",
   {
@@ -522,7 +559,14 @@ server.post<{ Body: ServerNodeParams.CreateNode }>(
   { schema: { body: ServerNodeParams.CreateNodeSchema, response: ServerNodeResponses.CreateNodeSchema } },
   async (request, reply) => {
     try {
-      const newNode = await createNode(request.body.index);
+      let storedMnemonic = await store.getMnemonic();
+      if (request.body.mnemonic && request.body.mnemonic !== storedMnemonic) {
+        // new mnemonic, reset nodes and store mnemonic
+        await deleteNodes(store);
+        store.setMnemonic(request.body.mnemonic);
+        storedMnemonic = request.body.mnemonic;
+      }
+      const newNode = await createNode(request.body.index, store, storedMnemonic!);
       return reply.status(200).send({
         index: request.body.index,
         publicIdentifier: newNode.publicIdentifier,
@@ -562,8 +606,8 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
 
 server.listen(8000, "0.0.0.0", (err, address) => {
   if (err) {
-    console.error(err);
+    logger.error(err);
     process.exit(1);
   }
-  console.log(`Server listening at ${address}`);
+  logger.info(`Server listening at ${address}`);
 });
