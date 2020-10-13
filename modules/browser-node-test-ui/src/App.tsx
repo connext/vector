@@ -1,4 +1,4 @@
-import { BrowserNode } from "@connext/browser-node";
+import { BrowserNode } from "@connext/vector-browser-node";
 import { ChannelSigner } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";

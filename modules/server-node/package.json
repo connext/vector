@@ -1,5 +1,5 @@
 {
-  "name": "@connext/server-node",
+  "name": "@connext/vector-server-node",
   "version": "0.0.1",
   "author": "",
   "license": "ISC",
@@ -12,10 +12,10 @@
     "migration:generate": "prisma migrate save --experimental"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.0.1",
-    "@connext/vector-engine": "0.0.1",
-    "@connext/vector-types": "0.0.1",
-    "@connext/vector-utils": "0.0.1",
+    "@connext/vector-contracts": "0.0.1-beta.0",
+    "@connext/vector-engine": "0.0.1-beta.0",
+    "@connext/vector-types": "0.0.1-beta.0",
+    "@connext/vector-utils": "0.0.1-beta.0",
     "@prisma/client": "2.8.1",
     "@sinclair/typebox": "0.10.1",
     "ajv": "6.12.6",

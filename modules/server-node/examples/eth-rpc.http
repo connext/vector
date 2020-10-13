@@ -1,4 +1,4 @@
-@ethNode = http://localhost:8545
+@ethNode = http://localhost:8002/ethprovider/1337
 @sugarDaddy = 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
 @alice = 0x119a11d0D1686C7330cA0650E26Fd6889Fbeb832
 @bob = 0x95B7e93A3aF19AcAE95aD120d4D8307bF1a6Be63
@@ -29,4 +29,13 @@ Content-Type: application/json
   "method":"eth_getBalance",
   "params":["{{alice}}",  "latest"],
   "id":1
+}
+
+### GET BLOCK NUMBER
+POST {{ethNode}}
+Content-Type: application/json
+
+{
+  "method":"eth_blockNumber",
+  "params":[]
 }
