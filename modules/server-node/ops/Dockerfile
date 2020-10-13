@@ -7,6 +7,8 @@ RUN curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721
 RUN npm install pg prisma sqlite3
 COPY ops ops
 COPY dist dist
+COPY migrations migrations
+COPY schema.prisma
 RUN mkdir -p node_modules/.prisma node_modules/@prisma
 RUN cp -r ./dist/.prisma/client node_modules/.prisma/client
 RUN cp -r ./dist/@prisma/client node_modules/@prisma/client
