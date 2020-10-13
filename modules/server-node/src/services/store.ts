@@ -810,11 +810,14 @@ export class PrismaStore implements IServerNodeStore {
       },
     });
   }
-  getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]> {
-    throw new Error("Method not implemented.");
+
+  async getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]> {
+    const entries = await this.prisma.nodeIndex.findMany();
+    return entries;
   }
-  removeNodeIndexes(): Promise<void> {
-    throw new Error("Method not implemented.");
+
+  async removeNodeIndexes(): Promise<void> {
+    await this.prisma.nodeIndex.deleteMany({});
   }
 
   async clear(): Promise<void> {
