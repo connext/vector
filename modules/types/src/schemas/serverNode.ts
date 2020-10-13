@@ -172,6 +172,14 @@ const PostDepositBodySchema = Type.Intersect([
 
 const PostDepositResponseSchema = BasicChannelServerResponseSchema;
 
+// POST DEPOSIT
+const PostRequestCollateralBodySchema = Type.Intersect([
+  EngineParams.RequestCollateralSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostRequestCollateralResponseSchema = BasicChannelServerResponseSchema;
+
 // POST SEND DEPOSIT TX
 const PostSendDepositTxBodySchema = Type.Object({
   channelAddress: TAddress,
@@ -220,6 +228,7 @@ const PostWithdrawTransferResponseSchema = {
 // CREATE NODE
 const PostCreateNodeBodySchema = Type.Object({
   index: Type.Integer({ minimum: 0, maximum: 2147483647 }),
+  mnemonic: Type.Optional(Type.String()),
 });
 
 const PostCreateNodeResponseSchema = {
@@ -282,6 +291,9 @@ export namespace ServerNodeParams {
 
   export const DepositSchema = PostDepositBodySchema;
   export type Deposit = Static<typeof DepositSchema>;
+
+  export const RequestCollateralSchema = PostRequestCollateralBodySchema;
+  export type RequestCollateral = Static<typeof RequestCollateralSchema>;
 
   export const SendDepositTxSchema = PostSendDepositTxBodySchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema>;
@@ -347,6 +359,9 @@ export namespace ServerNodeResponses {
 
   export const DepositSchema = PostDepositResponseSchema;
   export type Deposit = Static<typeof DepositSchema["200"]>;
+
+  export const RequestCollateralSchema = PostRequestCollateralResponseSchema;
+  export type RequestCollateral = Static<typeof RequestCollateralSchema["200"]>;
 
   export const SendDepositTxSchema = PostSendDepositTxResponseSchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema["200"]>;

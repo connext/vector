@@ -18,6 +18,7 @@ import { getSwappedAmount } from "./services/swap";
 import { getRebalanceProfile } from "./services/rebalance";
 import { IRouterStore } from "./services/store";
 import { ChainJsonProviders } from "./listener";
+import { requestCollateral } from "./collateral";
 
 export class ForwardTransferError extends VectorError {
   readonly type = VectorError.errors.RouterError;
@@ -61,7 +62,7 @@ export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
   publicIdentifier: string,
   signerAddress: string,
-  service: INodeService,
+  nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
   chainProviders: ChainJsonProviders,
@@ -112,7 +113,7 @@ export async function forwardTransferCreation(
 
   const recipientIdentifier = path.recipient;
 
-  const senderChannelRes = await service.getStateChannel({
+  const senderChannelRes = await nodeService.getStateChannel({
     channelAddress: senderChannelAddress,
     publicIdentifier,
   });
@@ -163,7 +164,7 @@ export async function forwardTransferCreation(
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
-  const recipientChannelRes = await service.getStateChannelByParticipants({
+  const recipientChannelRes = await nodeService.getStateChannelByParticipants({
     alice: publicIdentifier,
     bob: recipientIdentifier,
     chainId: recipientChainId,
@@ -187,86 +188,23 @@ export async function forwardTransferCreation(
     );
   }
 
-  // TODO use a provider or service pattern here so we can unit test
-  const profileRes = await getRebalanceProfile(recipientChannel.channelAddress, recipientAssetId);
-  if (profileRes.isError) {
-    return Result.fail(profileRes.getError()!);
-  }
-
-  const profile = profileRes.getValue();
-
-  // Figure out router balance
-  const assetIdx = recipientChannel.assetIds.findIndex((a: string) => a === recipientAssetId);
-  const routerBalanceInRecipientChannel =
-    assetIdx === -1
-      ? "0"
-      : signerAddress == recipientChannel.alice
-      ? recipientChannel.balances[assetIdx].amount[0]
-      : recipientChannel.balances[assetIdx].amount[1];
-
-  // If there are not enough funds, fall back to sending the entire transfer amount + required collateral amount
-  if (BigNumber.from(routerBalanceInRecipientChannel).lt(recipientAmount)) {
-    logger.info(
-      { method, routerBalanceInRecipientChannel, recipientAmount },
-      "Just-in-time collateralization required",
+  const requestCollateralRes = await requestCollateral(
+    recipientChannel,
+    recipientAssetId,
+    publicIdentifier,
+    nodeService,
+    chainProviders,
+    logger,
+    undefined,
+    recipientAmount,
+  );
+  if (requestCollateralRes.isError) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        message: requestCollateralRes.getError()?.message,
+        context: requestCollateralRes.getError()?.context,
+      }),
     );
-    // This means we need to collateralize this tx in-flight. To avoid having to rebalance twice, we should collateralize
-    // the `amount` plus the `profile.target`
-
-    const provider = chainProviders[recipientChainId];
-    if (!provider) {
-      return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-          message: "Provider not found",
-          context: { recipientChainId },
-        }),
-      );
-    }
-
-    const depositRes = await service.sendDepositTx({
-      publicIdentifier,
-      chainId: recipientChainId,
-      channelAddress: recipientChannel.channelAddress,
-      assetId: recipientAssetId,
-      amount: BigNumber.from(recipientAmount)
-        .add(profile.target)
-        .toString(),
-    });
-    if (depositRes.isError) {
-      return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-          message: depositRes.getError()?.message,
-          context: depositRes.getError()?.context,
-        }),
-      );
-    }
-
-    const receipt = await provider.waitForTransaction(depositRes.getValue().txHash);
-    logger.info({ method, txHash: receipt.transactionHash, logs: receipt.logs }, "Deposit transaction mined");
-
-    const reconciled = await service.reconcileDeposit({
-      publicIdentifier,
-      channelAddress: recipientChannel.channelAddress,
-      assetId: recipientAssetId,
-    });
-    if (reconciled.isError) {
-      return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-          message: reconciled.getError()?.message,
-          context: reconciled.getError()?.context,
-        }),
-      );
-    }
-
-    // TODO we'll need to check for a failed deposit here too.
-
-    // TODO what do we do here about concurrent deposits? Do we want to set a lock?
-    // Ideally, we should add to the core contracts to do one of two things:
-    // 1. Allow for multiple deposits to be stored by Alice onchain in the mapping.
-    //  --> note that this means the dispute + utils code now needs to account for these too
-    // 2. Allow for passing in the nonce to the depositA function. This way, if a deposit gets
-    //    stuck, it's possible to "cancel and overwrite" it by sending another tx at the same
-    //    nonce. Only one of the two txs will succeed.
   }
 
   // If the above is not the case, we can make the transfer!
@@ -292,7 +230,7 @@ export async function forwardTransferCreation(
       ...meta,
     },
   };
-  const transfer = await service.conditionalTransfer(params);
+  const transfer = await nodeService.conditionalTransfer(params);
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
       // store transfer

@@ -3,10 +3,10 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelFactory.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./Proxy.sol";
 import "./lib/LibAsset.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 /// @title Channel Factory - Allows us to create new channel proxy contract

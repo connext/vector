@@ -3,12 +3,13 @@ import fastifyOas from "fastify-oas";
 import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
-import { RestServerNodeService } from "@connext/vector-utils";
+import { EventCallbackConfig, RestServerNodeService } from "@connext/vector-utils";
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
+  RequestCollateralPayload,
 } from "@connext/vector-types";
 import { Registry } from "prom-client";
 
@@ -21,7 +22,8 @@ const routerBase = `http://router:${routerPort}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
-const evts = {
+const requestCollateralPath = "/request-collateral";
+const evts: EventCallbackConfig = {
   [EngineEvents.SETUP]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -34,6 +36,10 @@ const evts = {
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${routerBase}${depositReconciledPath}`,
+  },
+  [EngineEvents.REQUEST_COLLATERAL]: {
+    evt: Evt.create<RequestCollateralPayload>(),
+    url: `${routerBase}${requestCollateralPath}`,
   },
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
@@ -78,17 +84,22 @@ server.get("/ping", async () => {
 });
 
 server.post(conditionalTransferCreatedPath, async (request, response) => {
-  evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
+  evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt!.post(request.body as ConditionalTransferCreatedPayload);
   return response.status(200).send({ message: "success" });
 });
 
 server.post(conditionalTransferResolvedPath, async (request, response) => {
-  evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+  evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt!.post(request.body as ConditionalTransferResolvedPayload);
   return response.status(200).send({ message: "success" });
 });
 
 server.post(depositReconciledPath, async (request, response) => {
-  evts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
+  evts[EngineEvents.DEPOSIT_RECONCILED].evt!.post(request.body as DepositReconciledPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(requestCollateralPath, async (request, response) => {
+  evts[EngineEvents.REQUEST_COLLATERAL].evt!.post(request.body as RequestCollateralPayload);
   return response.status(200).send({ message: "success" });
 });
 

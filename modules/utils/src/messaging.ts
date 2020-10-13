@@ -7,6 +7,7 @@ import {
   LockInformation,
   OutboundChannelUpdateError,
   Result,
+  EngineParams,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -43,17 +44,13 @@ export class NatsMessagingService implements IMessagingService {
   private natsUrl?: string;
   private signer?: IChannelSigner;
 
-  constructor(
-    private readonly config: MessagingConfig,
-  ) {
+  constructor(private readonly config: MessagingConfig) {
     this.log = config.logger || pino();
 
     // Either messagingUrl or authUrl+natsUrl must be specified
     if (config.messagingUrl) {
       this.authUrl = config.messagingUrl;
-      this.natsUrl = `nats://${
-        config.messagingUrl.replace(/^.*:[\/\//, "").replace(/\//).replace(/:[0-9]+/, "")
-      }:4222`;
+      this.natsUrl = `nats://${config.messagingUrl.replace(/^.*:[\/\//, "").replace(/\//).replace(/:[0-9]+/, "")}:4222`;
     } else if (!config.authUrl || !config.natsUrl) {
       throw new Error(`Either a messagingUrl or both an authUrl + natsUrl must be provided`);
     }
@@ -73,18 +70,6 @@ export class NatsMessagingService implements IMessagingService {
     } else {
       throw new Error(`Either a bearerToken or signer must be provided`);
     }
-
-  }
-
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
-    throw new Error("Method not implemented.");
   }
 
   private isConnected(): boolean {
@@ -99,9 +84,7 @@ export class NatsMessagingService implements IMessagingService {
 
   async connect(): Promise<void> {
     if (!this.bearerToken) {
-      const nonce = (
-        await axios.get(`${this.authUrl}/auth/${this.signer.publicIdentifier}`)
-      ).data;
+      const nonce = (await axios.get(`${this.authUrl}/auth/${this.signer.publicIdentifier}`)).data;
       const sig = await this.signer.signMessage(nonce);
       const verifyResponse: AxiosResponse<string> = await axios.post(`${this.authUrl}/auth`, {
         sig,
@@ -138,66 +121,7 @@ export class NatsMessagingService implements IMessagingService {
     this.connection?.disconnect();
   }
 
-  async sendLockMessage(
-    lockInfo: LockInformation,
-    to: string,
-    from: string,
-    timeout = 30_000, // TODO this timeout is copied from memolock
-    numRetries = 0,
-  ): Promise<Result<string | undefined, LockError>> {
-    this.assertConnected();
-    const method = "sendLockMessage";
-    try {
-      const subject = `${to}.${from}.lock`;
-      const msgBody = JSON.stringify({ lockInfo });
-      this.log.debug({ method, msgBody }, "Sending message");
-      const msg = await this.connection!.request(subject, timeout, msgBody);
-      this.log.debug({ method, msgBody, msg }, "Received response");
-      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
-      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
-      parsedMsg.data = parsedData;
-      if (parsedMsg.data.error) {
-        return Result.fail(new LockError(LockError.reasons.Unknown, lockInfo));
-      }
-      if (lockInfo.type === "acquire" && !parsedMsg.data.lockInformation?.lockValue) {
-        return Result.fail(new LockError(LockError.reasons.Unknown, lockInfo));
-      }
-      return Result.ok(parsedMsg.data.lockInformation?.lockValue);
-    } catch (e) {
-      return Result.fail(new LockError(LockError.reasons.Unknown, { ...lockInfo, error: e.message }));
-    }
-  }
-
-  async onReceiveLockMessage(
-    publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    this.assertConnected();
-    const method = "onReceiveLockMessage";
-    const subscriptionSubject = `${publicIdentifier}.*.lock`;
-    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
-      this.log.debug({ method, msg }, "Received message");
-      const from = msg.subject.split(".")[1];
-      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
-      if (err) {
-        callback(Result.fail(new LockError(err)), from, msg.reply);
-        return;
-      }
-      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
-      // TODO: validate msg structure
-      if (!parsedMsg.reply) {
-        return;
-      }
-      parsedMsg.data = parsedData;
-      if (parsedMsg.data.error) {
-        callback(Result.fail(parsedMsg.data.error), from, msg.reply);
-        return;
-      }
-      callback(Result.ok(parsedMsg.data.lockInfo), from, msg.reply);
-    });
-    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
-  }
-
+  // PROTOCOL METHODS
   async sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
@@ -301,13 +225,6 @@ export class NatsMessagingService implements IMessagingService {
     );
   }
 
-  async respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void> {
-    this.assertConnected();
-    const subject = inbox;
-    this.log.debug({ method: "respondToLockMessage", subject, lockInformation }, `Sending lock response`);
-    await this.connection!.publish(subject, JSON.stringify({ lockInformation }));
-  }
-
   async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
     this.assertConnected();
     const subject = inbox;
@@ -319,6 +236,157 @@ export class NatsMessagingService implements IMessagingService {
       }),
     );
   }
+  ////////////
+
+  // REQUEST COLLATERAL METHODS
+
+  async sendRequestCollateralMessage(
+    requestCollateralParams: EngineParams.RequestCollateral,
+    to: string,
+    from: string,
+    timeout = 30_000,
+    numRetries = 0,
+  ): Promise<Result<undefined, Error>> {
+    this.assertConnected();
+    const method = "sendRequestCollateralMessage";
+    try {
+      const subject = `${to}.${from}.request-collateral`;
+      const msgBody = JSON.stringify(requestCollateralParams);
+      this.log.debug({ method, msgBody, subject }, "Sending message");
+      const msg = await this.connection!.request(subject, timeout, msgBody);
+      this.log.debug({ method, msgBody, msg }, "Received response");
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        return Result.fail(new Error(parsedMsg.data.error));
+      }
+      return Result.ok(undefined);
+    } catch (e) {
+      return Result.fail(new Error(e.message));
+    }
+  }
+
+  async onReceiveRequestCollateralMessage(
+    publicIdentifier: string,
+    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    const method = "onReceiveRequestCollateralMessage";
+    const subscriptionSubject = `${publicIdentifier}.*.request-collateral`;
+    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method, msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      if (err) {
+        callback(Result.fail(new Error(err)), from, msg.reply);
+        return;
+      }
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      // TODO: validate msg structure
+      if (!parsedMsg.reply) {
+        return;
+      }
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        callback(Result.fail(parsedMsg.data.error), from, msg.reply);
+        return;
+      }
+      callback(Result.ok(parsedMsg.data), from, msg.reply);
+    });
+    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+  }
+
+  async respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
+    this.assertConnected();
+    const subject = inbox;
+    this.log.debug({ method: "respondToLockMessage", subject, params }, `Sending lock response`);
+    await this.connection!.publish(subject, JSON.stringify(params));
+  }
+
+  ////////////
+
+  // LOCK METHODS
+  async sendLockMessage(
+    lockInfo: LockInformation,
+    to: string,
+    from: string,
+    timeout = 30_000, // TODO this timeout is copied from memolock
+    numRetries = 0,
+  ): Promise<Result<string | undefined, LockError>> {
+    this.assertConnected();
+    const method = "sendLockMessage";
+    try {
+      const subject = `${to}.${from}.lock`;
+      const msgBody = JSON.stringify({ lockInfo });
+      this.log.debug({ method, msgBody }, "Sending message");
+      const msg = await this.connection!.request(subject, timeout, msgBody);
+      this.log.debug({ method, msgBody, msg }, "Received response");
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        return Result.fail(new LockError(LockError.reasons.Unknown, lockInfo));
+      }
+      if (lockInfo.type === "acquire" && !parsedMsg.data.lockInformation?.lockValue) {
+        return Result.fail(new LockError(LockError.reasons.Unknown, lockInfo));
+      }
+      return Result.ok(parsedMsg.data.lockInformation?.lockValue);
+    } catch (e) {
+      return Result.fail(new LockError(LockError.reasons.Unknown, { ...lockInfo, error: e.message }));
+    }
+  }
+
+  async onReceiveLockMessage(
+    publicIdentifier: string,
+    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    const method = "onReceiveLockMessage";
+    const subscriptionSubject = `${publicIdentifier}.*.lock`;
+    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method, msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      if (err) {
+        callback(Result.fail(new LockError(err)), from, msg.reply);
+        return;
+      }
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      // TODO: validate msg structure
+      if (!parsedMsg.reply) {
+        return;
+      }
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        callback(Result.fail(parsedMsg.data.error), from, msg.reply);
+        return;
+      }
+      callback(Result.ok(parsedMsg.data.lockInfo), from, msg.reply);
+    });
+    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+  }
+
+  async respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void> {
+    this.assertConnected();
+    const subject = inbox;
+    this.log.debug({ method: "respondToLockMessage", subject, lockInformation }, `Sending lock response`);
+    await this.connection!.publish(subject, JSON.stringify({ lockInformation }));
+  }
+  ////////////
+
+  // CHECKIN METHODS
+  onReceiveCheckIn(
+    myPublicIdentifier: string,
+    callback: (nonce: string, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
+    throw new Error("Method not implemented.");
+  }
+  ////////////
 
   // Generic methods
   public async publish(subject: string, data: any): Promise<void> {

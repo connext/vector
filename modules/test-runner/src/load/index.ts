@@ -21,6 +21,7 @@ export const carolEvts = {
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-carol`,
@@ -40,6 +41,7 @@ export const daveEvts = {
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-dave`,

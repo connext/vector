@@ -19,6 +19,8 @@ import {
   WITHDRAWAL_RECONCILED_EVENT,
   ChannelRpcMethods,
   IExternalValidation,
+  REQUEST_COLLATERAL_EVENT,
+  RequestCollateralPayload,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -220,7 +222,6 @@ export class VectorEngine implements IVectorEngine {
   ): Promise<
     Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
   > {
-    this.logger.info({ params, method: "setup" }, "Method called");
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
@@ -257,6 +258,30 @@ export class VectorEngine implements IVectorEngine {
     }
 
     return this.vector.deposit(params);
+  }
+
+  private async requestCollateral(
+    params: EngineParams.RequestCollateral,
+  ): Promise<Result<undefined, OutboundChannelUpdateError | Error>> {
+    const validate = ajv.compile(EngineParams.RequestCollateralSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+
+    const channel = await this.store.getChannelState(params.channelAddress);
+    if (!channel) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
+
+    const request = await this.messaging.sendRequestCollateralMessage(
+      params,
+      this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
+      this.publicIdentifier,
+    );
+    return request;
   }
 
   private async createTransfer(
