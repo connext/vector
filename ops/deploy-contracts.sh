@@ -15,4 +15,4 @@ docker run \
   --tmpfs="/tmp" \
   --tty \
   --volume="$root/address-book.json:/data/address-book.json" \
-  ${project}_ethprovider:latest dist/cli.js migrate --address-book=/data/address-book.json "$args"
+  ${project}_ethprovider:latest dist/cli.js migrate --address-book=/data/address-book.json $args
