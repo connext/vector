@@ -1,4 +1,4 @@
-import { Address, DecString } from "@connext/types";
+import { Address, DecString } from "@connext/vector-types";
 import { getEthProvider } from "@connext/vector-utils";
 import { AddressZero, EtherSymbol } from "@ethersproject/constants";
 import * as tokenArtifacts from "@openzeppelin/contracts/build/contracts/ERC20Mintable.json";
@@ -37,12 +37,8 @@ export const fund = async (
       }
       log(`Sending ${EtherSymbol} ${amount} to ${recipient} via tx: ${tx.hash}`);
       await sender.provider.waitForTransaction(tx.hash);
-      const recipientBal = `${EtherSymbol} ${formatEther(
-        await sender.provider.getBalance(recipient),
-      )}`;
-      const senderBal = `${EtherSymbol} ${formatEther(
-        await sender.provider.getBalance(sender.address),
-      )}`;
+      const recipientBal = `${EtherSymbol} ${formatEther(await sender.provider.getBalance(recipient))}`;
+      const senderBal = `${EtherSymbol} ${formatEther(await sender.provider.getBalance(sender.address))}`;
       log(`Tx mined! New balances: recipient ${recipientBal} | sender ${senderBal}`);
     }
   };
