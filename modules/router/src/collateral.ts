@@ -63,11 +63,13 @@ export const requestCollateral = async (
       }),
     );
   }
-  let target = BigNumber.from(requestedAmount || profile.target);
 
+  let target = BigNumber.from(requestedAmount || profile.target);
   if (transferAmount) {
     target = target.add(transferAmount);
   }
+
+  logger.info({ target, requestedAmount, profile, transferAmount }, "Collateral target calculated");
 
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
@@ -93,6 +95,7 @@ export const requestCollateral = async (
   }
 
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
+  logger.info({ amountToDeposit }, "Deposit amount calculated, submitting deposit tx");
   const txRes = await node.sendDepositTx({
     amount: amountToDeposit.toString(),
     assetId: assetId,

@@ -48,12 +48,14 @@ server.addHook("onReady", async () => {
   // get persisted mnemonic
   let storedMnemonic = await store.getMnemonic();
   if (!storedMnemonic) {
+    logger.info("No mnemonic found in store, setting mnemonic from config");
     await store.setMnemonic(config.mnemonic);
     storedMnemonic = config.mnemonic;
   }
 
   const persistedNodes = await store.getNodeIndexes();
   for (const nodeIndex of persistedNodes) {
+    logger.info({ node: nodeIndex }, "Rehydrating persisted node");
     await createNode(nodeIndex.index, store, storedMnemonic);
   }
 });
@@ -561,6 +563,7 @@ server.post<{ Body: ServerNodeParams.CreateNode }>(
     try {
       let storedMnemonic = await store.getMnemonic();
       if (request.body.mnemonic && request.body.mnemonic !== storedMnemonic) {
+        logger.warn({}, "Mnemonic provided, resetting stored mnemonic");
         // new mnemonic, reset nodes and store mnemonic
         await deleteNodes(store);
         store.setMnemonic(request.body.mnemonic);
