@@ -10,6 +10,7 @@ export const ChannelRpcMethods = {
   // chan_getTransferState: "chan_getTransferState",
   chan_setup: "chan_setup",
   chan_deposit: "chan_deposit",
+  chan_requestCollateral: "chan_requestCollateral",
   chan_createTransfer: "chan_createTransfer",
   chan_resolveTransfer: "chan_resolveTransfer",
   chan_withdraw: "chan_withdraw",
@@ -24,6 +25,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getChannelStates]: undefined;
   [ChannelRpcMethods.chan_setup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_deposit]: EngineParams.Deposit;
+  [ChannelRpcMethods.chan_requestCollateral]: EngineParams.Deposit;
   [ChannelRpcMethods.chan_createTransfer]: EngineParams.ConditionalTransfer;
   [ChannelRpcMethods.chan_resolveTransfer]: EngineParams.ResolveTransfer;
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
@@ -37,6 +39,7 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_getTransferStatesByRoutingId]: FullTransferState[];
   [ChannelRpcMethods.chan_setup]: FullChannelState;
   [ChannelRpcMethods.chan_deposit]: FullChannelState;
+  [ChannelRpcMethods.chan_requestCollateral]: FullChannelState;
   [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
