@@ -35,17 +35,20 @@ export class RequestCollateralError extends VectorError {
 }
 
 export const requestCollateral = async (
-  data: RequestCollateralPayload,
+  channelAddress: string,
+  assetId: string,
   publicIdentifier: string,
   node: INodeService,
   chainProviders: ChainJsonProviders,
   logger: BaseLogger,
+  requestedAmount?: string,
+  transferAmount?: string, // used when called internally
 ): Promise<Result<undefined | ServerNodeResponses.Deposit, RequestCollateralError>> => {
-  const channelRes = await node.getStateChannel({ channelAddress: data.channelAddress, publicIdentifier });
+  const channelRes = await node.getStateChannel({ channelAddress, publicIdentifier });
   if (channelRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ChannelNotFound, {
-        channelAddress: data.channelAddress,
+        channelAddress,
         error: channelRes.getError()?.message,
         context: channelRes.getError()?.context,
       }),
@@ -55,35 +58,35 @@ export const requestCollateral = async (
   if (!channel) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ChannelNotFound, {
-        channelAddress: data.channelAddress,
+        channelAddress,
       }),
     );
   }
 
-  const profileRes = await getRebalanceProfile(channel.networkContext.chainId, data.assetId);
+  const profileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.UnableToGetRebalanceProfile, {
-        channelAddress: data.channelAddress,
+        channelAddress,
         error: profileRes.getError()?.message,
         context: profileRes.getError()?.context,
       }),
     );
   }
   const profile = profileRes.getValue();
-  if (data.amount && BigNumber.from(data.amount).gt(profile.reclaimThreshold)) {
+  if (requestedAmount && BigNumber.from(requestedAmount).gt(profile.reclaimThreshold)) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.TargetHigherThanThreshold, {
-        channelAddress: data.channelAddress,
+        channelAddress,
         profile,
-        data,
+        requestedAmount,
       }),
     );
   }
-  const target = data.amount || profile.target;
+  const target = requestedAmount || profile.target;
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
-  const assetIdx = channel.assetIds.findIndex(assetId => assetId === data.assetId);
+  const assetIdx = channel.assetIds.findIndex(assetId => assetId === assetId);
   const myBalance =
     assetIdx === -1 ? constants.Zero : BigNumber.from(channel.balances[assetIdx].amount[iAmAlice ? 0 : 1]);
 
@@ -96,9 +99,10 @@ export const requestCollateral = async (
   if (!provider) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
-        channelAddress: data.channelAddress,
+        channelAddress,
         chainId: channel.networkContext.chainId,
-        data,
+        assetId,
+        requestedAmount,
       }),
     );
   }
@@ -106,15 +110,15 @@ export const requestCollateral = async (
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
   const txRes = await node.sendDepositTx({
     amount: amountToDeposit.toString(),
-    assetId: data.assetId,
+    assetId: assetId,
     chainId: channel.networkContext.chainId,
-    channelAddress: data.channelAddress,
+    channelAddress,
     publicIdentifier,
   });
   if (txRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.TxError, {
-        channelAddress: data.channelAddress,
+        channelAddress,
         error: txRes.getError()?.message,
         context: txRes.getError()?.context,
       }),
@@ -127,14 +131,14 @@ export const requestCollateral = async (
   logger.info({ txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
 
   const depositRes = await node.reconcileDeposit({
-    assetId: data.assetId,
+    assetId: assetId,
     publicIdentifier,
-    channelAddress: data.channelAddress,
+    channelAddress,
   });
   if (depositRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.UnableToCollateralize, {
-        channelAddress: data.channelAddress,
+        channelAddress,
         error: depositRes.getError()?.message,
         context: depositRes.getError()?.context,
       }),
