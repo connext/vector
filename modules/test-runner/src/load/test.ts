@@ -1,4 +1,4 @@
-import { RestServerNodeService } from "@connext/vector-utils";
+import { getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { constants } from "ethers";
 import PriorityQueue from "p-queue";
 
@@ -38,16 +38,28 @@ export const concurrencyTest = async (): Promise<void> => {
   );
   const manager = await AgentManager.connect(agentService);
 
+  // Preload manager with preImages + routingIds for payments
+  const paymentData = Array(queuedPayments)
+    .fill(0)
+    .map(_ => {
+      const [routingId, preImage] = [getRandomBytes32(), getRandomBytes32()];
+      manager.preImages[routingId] = preImage;
+      return [routingId, preImage];
+    });
+
   // Create tasks to fill queue with (25 random payments)
   const tasks = Array(queuedPayments)
     .fill(0)
-    .map(_ => {
+    .map((_, idx) => {
       return async () => {
         // Get random sender + receiver
         const sender = manager.getRandomAgent();
         const receiver = manager.getRandomAgent(sender);
 
-        return sender.createHashlockTransfer(receiver.publicIdentifier, constants.AddressZero);
+        // Save payment secrets to manager before creating
+        // payment
+        const [routingId, preImage] = paymentData[idx];
+        await sender.createHashlockTransfer(receiver.publicIdentifier, constants.AddressZero, preImage, routingId);
         // NOTE: receiver will automatically resolve
       };
     });

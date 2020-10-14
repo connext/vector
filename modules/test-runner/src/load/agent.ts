@@ -111,12 +111,12 @@ export class Agent {
   async createHashlockTransfer(
     recipient: string,
     assetId: string,
+    preImage: string = getRandomBytes32(),
+    routingId: string = getRandomBytes32(),
   ): Promise<{ channelAddress: string; transferId: string; routingId: string; preImage: string }> {
     this.assertChannel();
     // Create the transfer information
-    const preImage = getRandomBytes32();
     const lockHash = createlockHash(preImage);
-    const routingId = getRandomBytes32();
 
     // Create transfer
     logger.debug({ recipient, sender: this.publicIdentifier, preImage, routingId }, "Creating transfer");
