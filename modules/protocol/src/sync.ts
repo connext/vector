@@ -36,7 +36,10 @@ export async function outbound(
   signer: IChannelSigner,
   logger: pino.BaseLogger,
 ): Promise<
-  Result<{ updatedChannel: FullChannelState; updatedTransfers?: FullTransferState[] }, OutboundChannelUpdateError>
+  Result<
+    { updatedChannel: FullChannelState; updatedTransfers?: FullTransferState[]; updatedTransfer?: FullTransferState },
+    OutboundChannelUpdateError
+  >
 > {
   const method = "outboud";
   // Before doing anything, run the validation
@@ -186,6 +189,7 @@ export async function outbound(
     return Result.ok({
       updatedChannel: { ...nextState, latestUpdate: counterpartyUpdate },
       updatedTransfers: updatedActiveTransfers,
+      updatedTransfer: transfer,
     });
   } catch (e) {
     logger.error("e", e.message);
@@ -212,7 +216,12 @@ export async function inbound(
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
-): Promise<Result<{ nextState: FullChannelState; activeTransfers: FullTransferState[] }, InboundChannelUpdateError>> {
+): Promise<
+  Result<
+    { nextState: FullChannelState; activeTransfers: FullTransferState[]; updatedTransfer?: FullTransferState },
+    InboundChannelUpdateError
+  >
+> {
   let channelFromStore = await storeService.getChannelState(update.channelAddress);
 
   // Create a helper to handle errors so the message is sent
@@ -386,7 +395,7 @@ export async function inbound(
   await messagingService.respondToProtocolMessage(inbox, nextState.latestUpdate, previousState.latestUpdate);
 
   // Return the double signed state
-  return Result.ok({ nextState, activeTransfers });
+  return Result.ok({ nextState, activeTransfers, updatedTransfer: transfer });
 }
 
 // This function should be called in `outbound` by an update initiator

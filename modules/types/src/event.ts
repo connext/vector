@@ -3,6 +3,7 @@ import { FullChannelState, FullTransferState } from "./channel";
 export type ChannelUpdateEvent = {
   updatedChannelState: FullChannelState;
   updatedTransfers?: FullTransferState[];
+  updatedTransfer?: FullTransferState;
 };
 
 export const ProtocolEventName = {

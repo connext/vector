@@ -28,6 +28,7 @@ export type ConditionalTransferCreatedPayload = {
   transfer: FullTransferState;
   channelBalance: Balance;
   conditionType: TransferName | Address;
+  activeTransferIds?: string[];
 };
 
 // Emitted when transfer resolved

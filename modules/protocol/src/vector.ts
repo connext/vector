@@ -114,10 +114,11 @@ export class Vector implements IVectorProtocol {
       return outboundRes as Result<any, OutboundChannelUpdateError>;
     }
     // Post to channel update evt
-    const { updatedChannel, updatedTransfers } = outboundRes.getValue();
+    const { updatedChannel, updatedTransfers, updatedTransfer } = outboundRes.getValue();
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
       updatedChannelState: updatedChannel,
       updatedTransfers,
+      updatedTransfer,
     });
     return Result.ok(outboundRes.getValue().updatedChannel);
   }
@@ -206,6 +207,7 @@ export class Vector implements IVectorProtocol {
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
         updatedChannelState: inboundRes.getValue().nextState,
         updatedTransfers: inboundRes.getValue().activeTransfers,
+        updatedTransfer: inboundRes.getValue().updatedTransfer,
       });
     });
 
