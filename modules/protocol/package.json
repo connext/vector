@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "rm -rf ./dist/* && tsc",
+    "build": "rm -rf dist && tsc",
     "test": "ts-mocha --check-leaks --global wallet --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/*.spec.ts'"
   },
   "author": "Arjun Bhuptani",

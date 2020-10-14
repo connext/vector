@@ -12,8 +12,7 @@
     "src"
   ],
   "scripts": {
-    "build": "rm -rf ./dist/* && ./node_modules/.bin/tsc -b . && ./node_modules/.bin/rollup -c",
-    "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'"
+    "build": "rm -rf dist && tsc && rollup -c"
   },
   "dependencies": {
     "@sinclair/typebox": "0.10.1",

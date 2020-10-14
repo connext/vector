@@ -1,7 +1,7 @@
 {
   "name": "@connext/vector-utils",
   "version": "0.0.1-beta.2",
-  "description": "Crypto module for Connext client",
+  "description": "Crypto & other utils for vector state channels",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -9,7 +9,7 @@
     "types"
   ],
   "scripts": {
-    "build": "rm -rf ./dist/* && ./node_modules/.bin/tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc",
     "test": "ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {

@@ -59,8 +59,7 @@ common="networks:
           max-size: '100m'"
 
 ####################
-# Redis config
-# Used by duet & trio
+# Redis config (Used by duet & trio)
 
 if [[ "$production" = "true" ]]
 then redis_service=""

@@ -12,7 +12,7 @@
     "types"
   ],
   "scripts": {
-    "build": "rm -rf ./dist/* && ./node_modules/.bin/tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc",
     "start": "node dist/index.js",
     "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
