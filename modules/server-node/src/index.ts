@@ -14,7 +14,7 @@ import {
   CreateUpdateDetails,
 } from "@connext/vector-types";
 import Axios from "axios";
-import { constructRpcRequest } from "@connext/vector-utils";
+import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
 
 import { PrismaStore } from "./services/store";
@@ -40,9 +40,7 @@ server.register(fastifyCors, {
 
 export const store = new PrismaStore();
 
-export const _providers: { [chainId: string]: providers.JsonRpcProvider } = Object.fromEntries(
-  Object.entries(config.chainProviders).map(([chainId, url]) => [chainId, new providers.JsonRpcProvider(url)]),
-);
+export const _providers = hydrateProviders(config.chainProviders);
 
 server.addHook("onReady", async () => {
   // get persisted mnemonic
@@ -614,7 +612,7 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
   "/ethprovider/:chainId",
   { schema: { body: JsonRpcRequestSchema } },
   async (request, reply) => {
-    const provider = _providers[request.params.chainId];
+    const provider = _providers[parseInt(request.params.chainId)];
     if (!provider) {
       return reply
         .status(400)
