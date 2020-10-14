@@ -22,7 +22,7 @@ const fakeProvider = Sinon.createStubInstance(providers.JsonRpcProvider, {
 });
 const hydratedProviders = { 1337: fakeProvider };
 
-describe.only("Forwarding", () => {
+describe("Forwarding", () => {
   describe("transferCreation", () => {
     const logger = pino({ level: config.logLevel });
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
