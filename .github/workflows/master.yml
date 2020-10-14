@@ -112,3 +112,59 @@ jobs:
           docker service logs --tail 200 trio_router
           docker service logs --tail 200 trio_carol
           docker service logs --tail 200 trio_dave
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make node
+      - run: make start-node
+      - run: make test-node
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 node_node
+
+  routing-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make router
+      - run: make start-router
+      - run: make test-routing-node
+      - name: Print logs
+        if: failure()
+        run: |
+          docker service logs --tail 200 router_node
+          docker service logs --tail 200 router_router
+
+  node-prod:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v1
+      - run: |
+          make pull
+          mv config-prod.json config-prod.json.backup
+          cat config-prod.json.backup | jq '.production = true' > config-prod.json
+          make restart-node
+          make test-node
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 node_node
+
+  routing-node-prod:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v1
+      - run: |
+          make pull
+          mv config-prod.json config-prod.json.backup
+          cat config-prod.json.backup | jq '.production = true' > config-prod.json
+          make restart-router
+          make test-routing-node
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 node_node
