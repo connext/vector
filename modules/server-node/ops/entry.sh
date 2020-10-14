@@ -22,7 +22,11 @@ export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD
 ########################################
 # Wait for dependencies to wake up
 
-wait-for -q -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT"
+db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
+echo "Waiting for database at $db"
+wait-for -q -t 60 $db
+sleep 3
+echo "Database is available"
 
 ########################################
 # Launch it
@@ -37,6 +41,7 @@ echo "Preview finished with exit code ${$?}"
 echo "Running database migration for real"
 prisma migrate up --experimental --create-db
 echo "Migration finished with exit code ${$?}"
+mkdir -p static
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then
