@@ -8,18 +8,17 @@ import {
 } from "@connext/vector-utils";
 import Sinon from "sinon";
 import pino from "pino";
-import { BigNumber, constants, providers } from "ethers";
+import { BigNumber, constants } from "ethers";
 import { INodeService, Result } from "@connext/vector-types";
 
 import { config } from "../config";
 import { requestCollateral } from "../collateral";
 import { getRebalanceProfile } from "../services/rebalance";
 
+import { mockProvider } from "./utils/mocks";
+
 const logger = pino({ level: config.logLevel });
-const fakeProvider = Sinon.createStubInstance(providers.JsonRpcProvider, {
-  waitForTransaction: Promise.resolve({} as any),
-});
-const hydratedProviders = { 1337: fakeProvider };
+const hydratedProviders = { 1337: mockProvider };
 
 describe("Collateral", () => {
   let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
@@ -32,8 +31,8 @@ describe("Collateral", () => {
   });
 
   afterEach(() => {
-    Sinon.restore();
-    Sinon.reset();
+    // TODO: this breaks tests, why???
+    // Sinon.restore();
   });
 
   it("should request collateral without a target", async () => {

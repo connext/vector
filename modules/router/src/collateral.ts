@@ -7,7 +7,7 @@ import {
   VectorError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
-import { BigNumber, constants } from "ethers";
+import { BigNumber } from "ethers";
 import { BaseLogger } from "pino";
 
 import { ChainJsonProviders } from "./listener";

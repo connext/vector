@@ -9,7 +9,7 @@ import {
   mkPublicIdentifier,
   RestServerNodeService,
 } from "@connext/vector-utils";
-import { constants, providers } from "ethers";
+import { constants } from "ethers";
 import pino from "pino";
 import Sinon from "sinon";
 
@@ -17,10 +17,9 @@ import { RouterStore } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
 import { config } from "../config";
 
-const fakeProvider = Sinon.createStubInstance(providers.JsonRpcProvider, {
-  waitForTransaction: Promise.resolve({} as any),
-});
-const hydratedProviders = { 1337: fakeProvider };
+import { mockProvider } from "./utils/mocks";
+
+const hydratedProviders = { 1337: mockProvider };
 
 describe("Forwarding", () => {
   describe("transferCreation", () => {
