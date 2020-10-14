@@ -8,15 +8,17 @@ project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
-test_type="${1:cyclical}"
+test_type="${1:-cyclical}"
+echo "$test_type"
 num_agents="${2:-5}"
 if [[ "$test_type" == "cyclical" ]]
 then
   echo "Running cyclical test"
-  test_cmd = "npm run load-test-cyclical"
+  test_cmd="npm run load-test-cyclical"
 elif [[ "$test_type" == "concurrency" ]]
+then
   echo "Running concurrency test"
-  test_cmd = "npm run load-test-concurrency"
+  test_cmd="npm run load-test-concurrency"
 else
   echo "Unknown test type!"
   exit 1

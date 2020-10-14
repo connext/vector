@@ -4,15 +4,14 @@ import {
   INodeService,
   ConditionalTransferCreatedPayload,
   DepositReconciledPayload,
-  Result,
   FullChannelState,
 } from "@connext/vector-types";
-import { Gauge, Histogram, Registry } from "prom-client";
+import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
-import { requestCollateral, RequestCollateralError } from "./collateral";
+import { requestCollateral } from "./collateral";
 import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
 import { IRouterStore } from "./services/store";
@@ -33,24 +32,24 @@ const configureMetrics = (register: Registry) => {
     name: "router_forwarded_payment_attempts",
     help: "router_forwarded_payment_attempts_help",
     labelNames: ["transferId"],
+    registers: [register],
   });
-  register.registerMetric(attempts);
 
   // Track successful forwards
   const successful = new Gauge({
     name: "router_successful_forwarded_payments",
     help: "router_successful_forwarded_payments_help",
     labelNames: ["transferId"],
+    registers: [register],
   });
-  register.registerMetric(successful);
 
   // Track failing forwards
   const failed = new Gauge({
     name: "router_failed_forwarded_payments",
     help: "router_failed_forwarded_payments_help",
     labelNames: ["transferId"],
+    registers: [register],
   });
-  register.registerMetric(failed);
 
   // Return the metrics so they can be incremented as needed
   return { failed, successful, attempts };

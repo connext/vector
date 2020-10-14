@@ -51,15 +51,15 @@ export class Router implements IRouter {
     const channelCounter = new Gauge({
       name: "router_channels_total",
       help: "router_channels_total_help",
+      registers: [this.register],
     });
-    this.register.registerMetric(channelCounter);
 
     const collateral = new Gauge({
       name: "router_channels_collateral",
       help: "router_channels_collateral_help",
       labelNames: ["assetId", "channelAddress"],
+      registers: [this.register],
     });
-    this.register.registerMetric(collateral);
 
     // TODO: fix this once this issue is fixed by using the `collect` function in the gauge
     // https://github.com/siimon/prom-client/issues/383

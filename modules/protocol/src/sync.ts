@@ -35,7 +35,9 @@ export async function outbound(
   externalValidationService: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
-): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
+): Promise<
+  Result<{ updatedChannel: FullChannelState; updatedTransfers?: FullTransferState[] }, OutboundChannelUpdateError>
+> {
   const method = "outboud";
   // Before doing anything, run the validation
   // If this passes, it is safe to force-unwrap various things that may
@@ -80,6 +82,7 @@ export async function outbound(
   let update = updateValue.update;
   let nextState = updateValue.channelState;
   let transfer = updateValue.transfer;
+  let updatedActiveTransfers = updateValue.updatedActiveTransfers;
 
   // Send and wait for response
   logger.info({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
@@ -121,6 +124,7 @@ export async function outbound(
       syncedChannel,
       proposedChannel,
       transfer: regeneratedTransfer,
+      updatedActiveTransfers: regeneratedActiveTransfers,
     } = syncedResult.getValue()!;
     result = await messagingService.sendProtocolMessage(regeneratedUpdate, syncedChannel.latestUpdate);
 
@@ -130,6 +134,7 @@ export async function outbound(
     update = regeneratedUpdate;
     nextState = proposedChannel;
     transfer = regeneratedTransfer;
+    updatedActiveTransfers = regeneratedActiveTransfers;
   }
 
   // Error object should now be either the error from trying to sync, or the
@@ -178,7 +183,10 @@ export async function outbound(
       },
       transfer,
     );
-    return Result.ok({ ...nextState, latestUpdate: counterpartyUpdate });
+    return Result.ok({
+      updatedChannel: { ...nextState, latestUpdate: counterpartyUpdate },
+      updatedTransfers: updatedActiveTransfers,
+    });
   } catch (e) {
     logger.error("e", e.message);
     return Result.fail(
@@ -204,7 +212,7 @@ export async function inbound(
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
-): Promise<Result<FullChannelState, InboundChannelUpdateError>> {
+): Promise<Result<{ nextState: FullChannelState; activeTransfers: FullTransferState[] }, InboundChannelUpdateError>> {
   let channelFromStore = await storeService.getChannelState(update.channelAddress);
 
   // Create a helper to handle errors so the message is sent
@@ -214,7 +222,7 @@ export async function inbound(
     prevUpdate: ChannelUpdate<any> = update,
     state?: FullChannelState,
     context: any = {},
-  ): Promise<Result<FullChannelState, InboundChannelUpdateError>> => {
+  ): Promise<Result<never, InboundChannelUpdateError>> => {
     logger.error(
       { method: "inbound", channel: update.channelAddress, error: reason, context },
       "Error responding to channel update",
@@ -363,7 +371,7 @@ export async function inbound(
     return returnError(validateRes.getError()!.message, update, previousState);
   }
 
-  const { commitment, nextState, transfer } = validateRes.getValue()!;
+  const { commitment, nextState, transfer, activeTransfers } = validateRes.getValue()!;
 
   // Save the newly signed update to your channel
   try {
@@ -378,7 +386,7 @@ export async function inbound(
   await messagingService.respondToProtocolMessage(inbox, nextState.latestUpdate, previousState.latestUpdate);
 
   // Return the double signed state
-  return Result.ok(nextState);
+  return Result.ok({ nextState, activeTransfers });
 }
 
 // This function should be called in `outbound` by an update initiator
@@ -391,6 +399,7 @@ type OutboundSync = {
   syncedChannel: FullChannelState<any>;
   proposedChannel: FullChannelState<any>;
   transfer?: FullTransferState;
+  updatedActiveTransfers?: FullTransferState[];
 };
 const syncStateAndRecreateUpdate = async (
   receivedError: InboundChannelUpdateError,
@@ -489,7 +498,14 @@ const syncStateAndRecreateUpdate = async (
     update: regeneratedUpdate,
     channelState: proposedChannel,
     transfer: regeneratedTransfer,
+    updatedActiveTransfers: regeneratedActiveTransfers,
   } = generateRes.getValue()!;
   // Return the updated channel state and the regenerated update
-  return Result.ok({ syncedChannel, regeneratedUpdate, proposedChannel, transfer: regeneratedTransfer });
+  return Result.ok({
+    syncedChannel,
+    regeneratedUpdate,
+    proposedChannel,
+    transfer: regeneratedTransfer,
+    updatedActiveTransfers: regeneratedActiveTransfers,
+  });
 };

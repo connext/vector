@@ -422,11 +422,15 @@ export class AgentManager {
         // Create new transfer to continue cycle
         const receiver = this.getRandomAgent(agent);
         try {
-          const { preImage, routingId } = await agent.createHashlockTransfer(
+          const { preImage, routingId, transferId } = await agent.createHashlockTransfer(
             receiver.publicIdentifier,
             constants.AddressZero,
           );
           this.preImages[routingId] = preImage;
+          logger.info(
+            { transferId, channelAddress, receiver: receiver.publicIdentifier, routingId },
+            "Created transfer",
+          );
         } catch (e) {
           logger.error(
             { error: e.message, agent: agent.publicIdentifier, channelAddress },
