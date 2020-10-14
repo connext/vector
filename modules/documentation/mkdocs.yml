@@ -41,7 +41,8 @@ nav:
       # - intro/channelBasics.md
       # - intro/faq.md
   - Quick Start:
-      - quickStart/quickStart.md
+      - quickStart/serverNode.md
+      - quickStart/browserNode.md
   - Node Guides:
       - node/basics.md
       - node/configure.md
