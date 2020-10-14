@@ -18,5 +18,5 @@ You can think of Connext as a shared standard for blockchains and other decentra
 - etc.
 
 If you're still confused about where to begin, join us in our community chat! We're **very** responsive and happy to point you to the right resources. :)
-
+ 
 ## User Case Studies
