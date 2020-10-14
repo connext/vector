@@ -37,11 +37,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     _;
   }
 
-  function getChannelDispute() public override view returns (ChannelDispute memory) {
+  function getChannelDispute() public override view onlyOnProxy returns (ChannelDispute memory) {
     return channelDispute;
   }
 
-  function getTransferDispute(bytes32 transferId) public override view returns (TransferDispute memory) {
+  function getTransferDispute(bytes32 transferId) public override view onlyOnProxy returns (TransferDispute memory) {
     return transferDisputes[transferId];
   }
 
@@ -52,6 +52,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
+    onlyOnProxy
     validateChannel(ccs)
   {
     // Verify Alice's and Bob's signature on the channel state
@@ -96,6 +97,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
+    onlyOnProxy
     validateChannel(ccs)
   {
     // Only Alice or Bob can defund their channel
@@ -141,6 +143,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
+    onlyOnProxy
     validateTransfer(cts)
   {
     // Only initiator or responder of the transfer may start a dispute
@@ -172,6 +175,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   )
     external
     override
+    onlyOnProxy
     validateTransfer(cts)
   {
     // Get stored dispute for this transfer
