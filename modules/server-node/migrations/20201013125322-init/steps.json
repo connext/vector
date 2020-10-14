@@ -122,29 +122,6 @@
           "tag": "Model",
           "model": "Balance"
         },
-        "directive": "map"
-      }
-    },
-    {
-      "tag": "CreateArgument",
-      "location": {
-        "tag": "Directive",
-        "path": {
-          "tag": "Model",
-          "model": "Balance"
-        },
-        "directive": "map"
-      },
-      "argument": "name",
-      "value": "\"balance\""
-    },
-    {
-      "tag": "CreateDirective",
-      "location": {
-        "path": {
-          "tag": "Model",
-          "model": "Balance"
-        },
         "directive": "id"
       }
     },
@@ -160,6 +137,29 @@
       },
       "argument": "",
       "value": "[participant, channelAddress, assetId]"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Balance"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Balance"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"balance\""
     },
     {
       "tag": "CreateModel",
@@ -293,6 +293,13 @@
       "model": "Channel",
       "field": "activeTransfers",
       "type": "Transfer",
+      "arity": "List"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
+      "field": "OnchainTransaction",
+      "type": "OnchainTransaction",
       "arity": "List"
     },
     {
@@ -674,29 +681,6 @@
           "tag": "Model",
           "model": "Update"
         },
-        "directive": "map"
-      }
-    },
-    {
-      "tag": "CreateArgument",
-      "location": {
-        "tag": "Directive",
-        "path": {
-          "tag": "Model",
-          "model": "Update"
-        },
-        "directive": "map"
-      },
-      "argument": "name",
-      "value": "\"update\""
-    },
-    {
-      "tag": "CreateDirective",
-      "location": {
-        "path": {
-          "tag": "Model",
-          "model": "Update"
-        },
         "directive": "id"
       }
     },
@@ -712,6 +696,29 @@
       },
       "argument": "",
       "value": "[channelAddressId, nonce]"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Update"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Update"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"update\""
     },
     {
       "tag": "CreateModel",
@@ -1401,7 +1408,7 @@
         "directive": "map"
       },
       "argument": "name",
-      "value": "\"onchain-transaction\""
+      "value": "\"onchain_transaction\""
     },
     {
       "tag": "CreateDirective",
@@ -1434,6 +1441,132 @@
         },
         "directive": "unique"
       }
+    },
+    {
+      "tag": "CreateModel",
+      "model": "Configuration"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Configuration",
+      "field": "id",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Configuration",
+          "field": "id"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateField",
+      "model": "Configuration",
+      "field": "mnemonic",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "Configuration",
+          "field": "mnemonic"
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "Configuration"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "Configuration"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"configuration\""
+    },
+    {
+      "tag": "CreateModel",
+      "model": "NodeIndex"
+    },
+    {
+      "tag": "CreateField",
+      "model": "NodeIndex",
+      "field": "index",
+      "type": "Int",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "NodeIndex",
+          "field": "index"
+        },
+        "directive": "id"
+      }
+    },
+    {
+      "tag": "CreateField",
+      "model": "NodeIndex",
+      "field": "publicIdentifier",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "NodeIndex",
+          "field": "publicIdentifier"
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "NodeIndex"
+        },
+        "directive": "map"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Model",
+          "model": "NodeIndex"
+        },
+        "directive": "map"
+      },
+      "argument": "name",
+      "value": "\"node_index\""
     }
   ]
 }

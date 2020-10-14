@@ -1,4 +1,4 @@
-# Quick Start
+# Server Node Quick Start
 
 This quick start will guide you through getting to a simple e2e transfer flow between two peers running [server-nodes](https://github.com/connext/vector/tree/master/modules/server-node) (Carol, Dave) that is routed through one intermediary routing node (Roger).
 
@@ -137,7 +137,7 @@ Content-Type: application/json
 
 Lastly, unlock the transfer for Bob to get his funds:
 
-```
+``` http
 POST {{daveUrl}}/hashlock-transfer/resolve
 Content-Type: application/json
 

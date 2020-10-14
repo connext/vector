@@ -1,5 +1,4 @@
-import { tidy } from "@connext/types";
-import { RegisteredTransfer } from "@connext/vector-types";
+import { RegisteredTransfer, tidy } from "@connext/vector-types";
 import { getEthProvider } from "@connext/vector-utils";
 import { Contract, Wallet } from "ethers";
 import { Argv } from "yargs";

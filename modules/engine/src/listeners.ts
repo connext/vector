@@ -23,6 +23,7 @@ import {
   WITHDRAWAL_RECONCILED_EVENT,
   WithdrawState,
   IVectorChainReader,
+  REQUEST_COLLATERAL_EVENT,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import Pino from "pino";
@@ -128,6 +129,20 @@ export async function setupEngineListeners(
   // TODO: how to monitor for withdrawal reconciliations (onchain tx submitted)
   // who will submit the transaction? should both engines watch the multisig
   // indefinitely?
+
+  await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {
+    if (params.isError) {
+      logger.error(
+        { error: params.getError()?.message, method: "onReceiveRequestCollateralMessage" },
+        "Error received",
+      );
+    }
+    logger.info({ params: params.getValue() }, "Handling request collateral message");
+
+    evts[REQUEST_COLLATERAL_EVENT].post(params.getValue());
+
+    await messaging.respondToRequestCollateralMessage(inbox, { message: "Successfully requested collateral" });
+  });
 }
 
 async function handleSetup(

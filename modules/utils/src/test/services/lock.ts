@@ -1,4 +1,4 @@
-import { ILockService } from "@connext/types";
+import { ILockService } from "@connext/vector-types";
 import { Mutex, MutexInterface } from "async-mutex";
 
 const IO_SEND_AND_WAIT_TIMEOUT = 10_000;

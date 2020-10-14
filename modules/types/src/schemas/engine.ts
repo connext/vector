@@ -12,7 +12,6 @@ import {
   TChainId,
   TIntegerString,
   TransferResolverSchema,
-  TransferNameSchema,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -45,6 +44,16 @@ const GetChannelStateByParticipantsParamsSchema = Type.Object({
   chainId: TChainId,
 });
 
+// Returns all active transfers for the channel
+const GetActiveTransfersParamsSchema = Type.Object({
+  channelAddress: TAddress,
+});
+
+// Returns the transfer associated with the transferID
+const GetTransferStateParamsSchema = Type.Object({
+  transferId: TBytes32,
+});
+
 // Setup engine params
 const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
@@ -58,6 +67,13 @@ const DepositEngineParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
   meta: TBasicMeta,
+});
+
+// Request collateral engine params
+const RequestCollateralEngineParamsSchema = Type.Object({
+  channelAddress: TAddress,
+  assetId: TAddress,
+  amount: Type.Optional(TIntegerString),
 });
 
 // Create conditional transfer engine params
@@ -125,11 +141,20 @@ export namespace EngineParams {
   export const GetChannelStateByParticipantsSchema = GetChannelStateByParticipantsParamsSchema;
   export type GetChannelStateByParticipants = Static<typeof GetChannelStateByParticipantsSchema>;
 
+  export const GetActiveTransfersSchema = GetActiveTransfersParamsSchema;
+  export type GetActiveTransfers = Static<typeof GetActiveTransfersParamsSchema>;
+
+  export const GetTransferStateSchema = GetTransferStateParamsSchema;
+  export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
+
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
 
   export const DepositSchema = DepositEngineParamsSchema;
   export type Deposit = Static<typeof DepositEngineParamsSchema>;
+
+  export const RequestCollateralSchema = RequestCollateralEngineParamsSchema;
+  export type RequestCollateral = Static<typeof RequestCollateralEngineParamsSchema>;
 
   export const ConditionalTransferSchema = CreateConditionalTransferParamsSchema;
   export type ConditionalTransfer = Static<typeof CreateConditionalTransferParamsSchema>;

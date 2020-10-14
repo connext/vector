@@ -35,6 +35,11 @@ export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined>;
   getSubscriptions(): Promise<{ [event: string]: string }>;
+  setMnemonic(mnemonic: string): Promise<void>;
+  getMnemonic(): Promise<string | undefined>;
+  setNodeIndex(index: number, publicIdentifier: string): Promise<void>;
+  getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]>;
+  removeNodeIndexes(): Promise<void>;
 }
 
 const convertOnchainTransactionEntityToTransaction = (
@@ -224,6 +229,7 @@ export class PrismaStore implements IServerNodeStore {
   constructor(private readonly dbUrl?: string) {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
   }
+
   async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
     const entity = await this.prisma.onchainTransaction.findOne({
       where: { transactionHash },
@@ -767,10 +773,60 @@ export class PrismaStore implements IServerNodeStore {
     return transfers.map(convertTransferEntityToFullTransferState);
   }
 
+  async setMnemonic(mnemonic: string): Promise<void> {
+    await this.prisma.configuration.upsert({
+      where: {
+        id: 0,
+      },
+      create: {
+        id: 0,
+        mnemonic,
+      },
+      update: {
+        mnemonic,
+      },
+    });
+  }
+
+  async getMnemonic(): Promise<string | undefined> {
+    const config = await this.prisma.configuration.findOne({ where: { id: 0 } });
+    if (!config) {
+      return undefined;
+    }
+    return config.mnemonic;
+  }
+
+  async setNodeIndex(index: number, publicIdentifier: string): Promise<void> {
+    await this.prisma.nodeIndex.upsert({
+      where: {
+        index,
+      },
+      create: {
+        index,
+        publicIdentifier,
+      },
+      update: {
+        publicIdentifier,
+      },
+    });
+  }
+
+  async getNodeIndexes(): Promise<{ index: number; publicIdentifier: string }[]> {
+    const entries = await this.prisma.nodeIndex.findMany();
+    return entries;
+  }
+
+  async removeNodeIndexes(): Promise<void> {
+    await this.prisma.nodeIndex.deleteMany({});
+  }
+
   async clear(): Promise<void> {
     await this.prisma.channel.deleteMany({});
     await this.prisma.balance.deleteMany({});
     await this.prisma.update.deleteMany({});
     await this.prisma.transfer.deleteMany({});
+    await this.prisma.onchainTransaction.deleteMany({});
+    await this.prisma.configuration.deleteMany({});
+    await this.prisma.nodeIndex.deleteMany({});
   }
 }

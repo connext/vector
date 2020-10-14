@@ -5,7 +5,7 @@ const ajv = new Ajv();
 
 console.log(`Starting node in env: ${JSON.stringify(process.env, null, 2)}`);
 
-const mnemonic = process.env.VECTOR_MNEMONIC;
+const mnemonicEnv = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
 let vectorConfig: VectorNodeConfig;
 try {
@@ -28,8 +28,10 @@ if (!valid) {
   throw new Error(validate.errors?.map(err => err.message).join(","));
 }
 
+const mnemonic = mnemonicEnv || vectorConfig.mnemonic;
+
 export const config = {
-  mnemonic,
   dbUrl,
   ...vectorConfig,
-} as VectorNodeConfig;
+  mnemonic,
+} as Omit<VectorNodeConfig, "mnemonic"> & { mnemonic: string };

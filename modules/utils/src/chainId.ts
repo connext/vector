@@ -1,5 +1,5 @@
+import { JsonRpcResponse } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
-import { JsonRpcResponse } from "@connext/types";
 import { BigNumber } from "ethers";
 
 // Gets the chainId from the provider URL using a regular POST method
