@@ -19,13 +19,18 @@ fi
 ####################
 # Load config
 
-node_config="`cat $root/config-node.json`"
-router_config="`cat $root/config-router.json`"
-default_config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
-prod_config="`cat $root/config-prod.json`"
-config="`echo $default_config $prod_config | jq -s '.[0] + .[1]'`"
+# The router stack inherits defaults from the node config
+if [[ ! -f "$root/node.config.js" ]]
+then cp $root/ops/config/node.default.js $root/node.config.js
+fi
+node_config="`node $root/node.config.js | jq '.'`"
 
-function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
+if [[ ! -f "$root/${stack}.config.js" ]]
+then cp $root/ops/config/${stack}.default.js $root/${stack}.config.js
+fi
+router_config="`node $root/${stack}.config.js | jq '.'`"
+
+config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
 function getConfig {
   value="`echo "$config" | jq ".$1" | tr -d '"'`"
   if [[ "$value" == "null" ]]
@@ -43,6 +48,8 @@ domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
+
+default_providers="`node $root/ops/config/node.default.js | jq '.chainProviders'`"
 
 ####################
 # Misc Config
@@ -74,10 +81,7 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-if [[ \
-  "$messaging_url" == "`getDefault messagingUrl`" || \
-  "$chain_providers" == "`getDefault chainProviders`" \
-  ]]
+if [[ -n "$messaging_url" || "$chain_providers" == "$default_providers" ]]
 then
   bash $root/ops/start-global.sh
   mnemonic_secret=""

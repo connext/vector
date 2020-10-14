@@ -19,9 +19,11 @@ fi
 ####################
 # Load config
 
-node_config="`cat $root/config-node.json`"
-prod_config="`cat $root/config-prod.json`"
-config="`echo $node_config $prod_config | jq -s '.[0] + .[1]'`"
+if [[ ! -f "$root/${stack}.config.js" ]]
+then cp $root/ops/config/${stack}.default.js $root/${stack}.config.js
+fi
+
+config="`node $root/${stack}.config.js | jq '.'`"
 
 function getDefault { echo "$node_config" | jq ".$1" | tr -d '"'; }
 function getConfig {
