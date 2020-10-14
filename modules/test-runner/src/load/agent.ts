@@ -309,11 +309,13 @@ export class AgentManager {
     // Create the manager
     const manager = new AgentManager(roger, rogerIdentifier, rogerService, agents, agentService);
 
+    // Automatically resolve any created transfers
+    await manager.setupAutomaticResolve();
+
     return manager;
   }
 
-  // Should return function to kill cyclical transfers
-  async startCyclicalTransfers(): Promise<() => Promise<void>> {
+  private async setupAutomaticResolve(): Promise<void> {
     await this.agentService.on(
       EngineEvents.CONDITIONAL_TRANSFER_CREATED,
       async data => {
@@ -376,7 +378,12 @@ export class AgentManager {
       },
       data => this.agents.map(a => a.channelAddress).includes(data.channelAddress),
     );
+  }
 
+  // Should return function to kill cyclical transfers
+  async startCyclicalTransfers(): Promise<() => Promise<void>> {
+    // Register listener that will resolve transfers once it is
+    // created
     await this.agentService.on(
       EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
       async data => {
@@ -384,7 +391,7 @@ export class AgentManager {
         const { channelAddress, transfer } = data;
 
         // Find the agent from the recipient in routing meta
-        const { routingId, path } = transfer.meta;
+        const { routingId } = transfer.meta;
         // Make sure there is a routingID
         if (!routingId) {
           logger.debug({}, "No routingId");
