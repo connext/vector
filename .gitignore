@@ -1,6 +1,3 @@
-# Sensitive Data & Config
-*.config.js
-
 # Build Output
 **/*.0x
 **/.flags
@@ -11,7 +8,9 @@
 **/node_modules/**
 **/tsconfig.tsbuildinfo
 *.docker-compose.yml
+docker-compose.yml
 modules/*/package-lock.json
+config-prod.json
 
 # Cache
 **/.bot-store
@@ -62,3 +61,8 @@ cypress/videos
 # OS
 **/.bash_history
 **/.DS_Store
+
+# Sensitive Data
+**/.env
+**/react-app-env.d.ts
+.secret

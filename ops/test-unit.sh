@@ -18,8 +18,8 @@ then interactive="--interactive --tty"
 else echo "Running in non-interactive mode"
 fi
 
-node_config="`node $root/ops/config/node.default.js`"
-router_config="`node $root/ops/config/router.default.js`"
+node_config="`cat $root/config-node.json`"
+router_config="`cat $root/config-router.json`"
 config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
 
 ########################################
@@ -75,11 +75,10 @@ then
   CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
   config="`echo "$config" '{"chainProviders":'$CHAIN_PROVIDERS'}' | jq -s '.[0] + .[1]'`"
 
-
   # FIXME: assigning chain addresses here fails if the addresses have
   # already been created (meaning repeatedly running unit tests will fail).
   # Assigning them in the IF statement above will always work. 
-  # That's really weird, and above by bash paygrade
+  # That's really weird, and above my bash paygrade
   # CHAIN_ADDRESSES="`cat "$chain_data/chain-addresses.json"`"
   config="`echo "$config" '{"chainAddresses":'$CHAIN_ADDRESSES'}' | jq -s '.[0] + .[1]'`"
 

@@ -40,17 +40,18 @@ ops: database global-proxy node-proxy router-proxy nats
 dev: auth-js contracts-js server-node-js router-js test-runner-js
 prod: auth-img server-node-img router-img test-runner-img
 
-global: auth-js ethprovider global-proxy nats
+global: global-dev
+global-dev: auth-js ethprovider global-proxy nats
 global-prod: auth-img global-proxy nats
 
-node: global database node-proxy server-node-js
+node-dev: global-dev database node-proxy server-node-js
 node-prod: global-prod database node-proxy server-node-img
 
-router: node router-js router-proxy
+router-dev: node-dev router-js router-proxy
 router-prod: node-prod router-img router-proxy
 
-duet: global server-node-js
-trio: global server-node-js router-js
+duet: global-dev server-node-js
+trio: global-dev server-node-js router-js
 
 extras: test-runner
 
@@ -89,7 +90,7 @@ restart-trio: stop-trio
 stop-trio:
 	@bash ops/stop.sh trio
 
-start-global: global
+start-global: global-dev
 	@bash ops/start-global.sh
 restart-global: stop-global
 	@bash ops/start-global.sh
@@ -124,9 +125,6 @@ reset: stop-all
 
 reset-images:
 	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node .flags/nats
-
-reset-config:
-	rm -f *.config.js
 
 purge: clean reset
 
@@ -196,9 +194,9 @@ watch-router: engine
 
 # Integration Tests
 
-test-global: global test-runner-js
+test-global: global-dev test-runner-js
 	bash ops/test-integration.sh global test
-watch-global: global test-runner-js
+watch-global: global-dev test-runner-js
 	bash ops/test-integration.sh global watch
 
 test-duet: test-runner-js duet

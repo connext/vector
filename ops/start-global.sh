@@ -19,13 +19,8 @@ fi
 ####################
 # Load config
 
-if [[ ! -f "$root/${stack}.config.js" ]]
-then cp $root/ops/config/${stack}.default.js $root/${stack}.config.js
-fi
-
-config="`node $root/${stack}.config.js | jq '.'`"
-
 function getConfig {
+  config="`cat $root/config-node.json $root/config-prod.json | jq -s '.[0] + .[1]'`"
   value="`echo $config | jq ".$1" | tr -d '"'`"
   if [[ "$value" == "null" ]]
   then echo ""

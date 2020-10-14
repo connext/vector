@@ -19,11 +19,9 @@ fi
 ####################
 # Load config
 
-if [[ ! -f "$root/${stack}.config.js" ]]
-then cp $root/ops/config/${stack}.default.js $root/${stack}.config.js
-fi
-
-config="`node $root/${stack}.config.js | jq '.'`"
+node_config="`cat $root/config-node.json`"
+prod_config="`cat $root/config-prod.json`"
+config="`echo $node_config $prod_config | jq -s '.[0] + .[1]'`"
 
 function getConfig {
   value="`echo "$config" | jq ".$1" | tr -d '"'`"
@@ -44,7 +42,7 @@ public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
 
 chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
-default_providers="`node $root/ops/config/node.default.js | jq '.chainProviders' | tr -d '\n\r '`"
+default_providers="`node $root/config-node.json | jq '.chainProviders' | tr -d '\n\r '`"
 
 ####################
 # Misc Config
