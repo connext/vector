@@ -27,13 +27,13 @@ function App() {
     const init = async () => {
       console.log(config);
       try {
-        const client = await BrowserNode.connect(
-          config.messagingUrl,
+        const client = await BrowserNode.connect({
+          chainAddresses: config.chainAddresses,
+          chainProviders: config.chainProviders,
           logger,
+          messagingUrl: config.messagingUrl,
           signer,
-          config.chainProviders,
-          config.chainAddresses,
-        );
+        });
         const channelsRes = await client.getStateChannels();
         if (channelsRes.isError) {
           setConnectError(channelsRes.getError().message);
