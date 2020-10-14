@@ -9,7 +9,8 @@ COPY ops ops
 COPY dist dist
 COPY migrations migrations
 COPY schema.prisma schema.prisma
-RUN mkdir -p node_modules/.prisma node_modules/@prisma
-RUN cp -r ./dist/.prisma/client node_modules/.prisma/client
-RUN cp -r ./dist/@prisma/client node_modules/@prisma/client
+RUN mkdir -p node_modules
+RUN cp -r ./dist/.prisma node_modules/.prisma
+RUN cp -r ./dist/@prisma node_modules/@prisma
+ENV PATH="/root/node_modules/.bin:./node_modules/.bin:${PATH}"
 ENTRYPOINT ["bash", "ops/entry.sh"]
