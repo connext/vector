@@ -9,20 +9,19 @@ docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay $project 2> /dev/null || true
 
 test_type="${1:-cyclical}"
-echo "$test_type"
 num_agents="${2:-5}"
+
 if [[ "$test_type" == "cyclical" ]]
 then
-  echo "Running cyclical test"
   test_cmd="npm run load-test-cyclical"
 elif [[ "$test_type" == "concurrency" ]]
 then
-  echo "Running concurrency test"
   test_cmd="npm run load-test-concurrency"
 else
   echo "Unknown test type!"
   exit 1
 fi
+echo "Running $test_type test with $num_agents agents"
 
 sugar_daddy="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
