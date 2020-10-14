@@ -188,6 +188,28 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   },
 );
 
+server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
+  "/channel/:channelAddress/active-transfer/:publicIdentifier",
+  { schema: { params: ServerNodeParams.GetActiveTransfersByChannelAddressSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getActiveTransfers, request.params);
+    try {
+      const res = await engine.request<"chan_getActiveTransfers">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
 server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/channel/:channelAddress/transfer/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
