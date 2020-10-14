@@ -103,7 +103,6 @@ stop-all:
 	@bash ops/stop.sh evm
 
 clean: stop-all
-	docker container prune -f
 	rm -rf .flags/*
 	rm -rf node_modules/@connext modules/*/node_modules/@connext
 	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
@@ -115,10 +114,6 @@ clean: stop-all
 
 reset: stop-all
 	docker container prune -f
-	docker network rm $(project) 2> /dev/null || true
-	docker secret rm $(project)_database_dev 2> /dev/null || true
-	docker volume rm $(project)_database_dev  2> /dev/null || true
-	docker volume rm `docker volume ls -q -f name=$(project)_database_test_*` 2> /dev/null || true
 	rm -rf .chaindata/*
 	rm -rf *.docker-compose.yml
 

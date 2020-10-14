@@ -4,7 +4,6 @@ on:
   push:
     branches-ignore:
       - master
-      - staging
 
 jobs:
   build:
@@ -92,17 +91,3 @@ jobs:
           docker service logs --tail 200 trio_router
           docker service logs --tail 200 trio_carol
           docker service logs --tail 200 trio_dave
-
-# prod-node:
-#   runs-on: ubuntu-latest
-#   needs: [build]
-#   steps:
-#     - uses: actions/checkout@v1
-#     - run: make node && make test-runner
-#     - run: VECTOR_ENV=prod make start-node
-#     - run: VECTOR_ENV=prod make test-node
-#     - name: Print logs
-#       if: failure()
-#       run: |
-#         docker service logs --tail 200 node_proxy
-#         docker service logs --tail 200 node_node

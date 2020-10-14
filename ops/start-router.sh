@@ -44,11 +44,6 @@ production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
 
-if [[ "$production" == "true" ]]
-then VECTOR_ENV="prod"
-else VECTOR_ENV="dev"
-fi
-
 ####################
 # Misc Config
 
@@ -119,7 +114,7 @@ pg_db="$project"
 pg_user="$project"
 pg_dev_port="5434"
 
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$production" == "true" ]]
 then
   # Use a secret to store the database password
   db_secret="${project}_${stack}_database"
@@ -153,7 +148,7 @@ fi
 
 node_internal_port="8000"
 node_dev_port="8002"
-if [[ $VECTOR_ENV == "prod" ]]
+if [[ $production == "true" ]]
 then
   node_image_name="${project}_node"
   bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
@@ -189,7 +184,7 @@ fi
 router_internal_port="9000"
 router_dev_port="9000"
 
-if [[ $VECTOR_ENV == "prod" ]]
+if [[ $production == "true" ]]
 then
   router_image_name="${project}_router"
   bash $root/ops/pull-images.sh $version $router_image_name > /dev/null
@@ -215,27 +210,23 @@ fi
 ####################
 # Proxy config
 
-proxy_image="${project}_router_proxy:$version";
+proxy_image="${project}_${stack}_proxy:$version";
 bash $root/ops/pull-images.sh $proxy_image > /dev/null
 
-if [[ -z "$domain_name" && -n "$public_port" ]]
-then
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
-elif [[ -n "$domain_name" && -z "$public_port" ]]
+if [[ -n "$domain_name" ]]
 then
   public_url="https://127.0.0.1:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
   echo "$stack.proxy will be exposed on *:80 and *:443"
+
 else
-  echo "Either a domain name or a public port must be provided but not both."
-  echo " - If a public port is provided then the stack will use http on the given port"
-  echo " - If a domain name is provided then https is activated on port *:443"
-  exit 1
+  public_port=${public_port:-3001}
+  public_url="http://127.0.0.1:$public_port"
+  proxy_ports="ports:
+      - '$public_port:80'"
+  echo "$stack.proxy will be exposed on *:$public_port"
 fi
 
 ####################
@@ -330,7 +321,7 @@ services:
     environment:
       VECTOR_DOMAINNAME: '$domain_name'
       VECTOR_NODE_URL: 'node:$node_internal_port'
-      VECTOR_ROUTER_URL: 'router:$router_port'
+      VECTOR_ROUTER_URL: 'router:$router_internal_port'
     volumes:
       - 'certs:/etc/letsencrypt'
 
@@ -339,7 +330,7 @@ services:
     $node_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -354,7 +345,7 @@ services:
     $router_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: 'database'
@@ -374,7 +365,7 @@ services:
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$project'
       VECTOR_ADMIN_TOKEN: '$admin_token'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
 
   redis:
     $common

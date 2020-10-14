@@ -28,9 +28,6 @@ config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
 
 version="latest"
 
-# to access from other containers
-redis_url="redis://redis:6379"
-
 common="networks:
       - '$project'
     logging:
@@ -93,7 +90,6 @@ node_image="image: '${project}_builder'
 
 node_env="environment:
       VECTOR_CONFIG: '$config'
-      VECTOR_ENV: 'dev'
       VECTOR_PG_DATABASE: '$project'
       VECTOR_PG_PASSWORD: '$project'
       VECTOR_PG_PORT: '$pg_port'
@@ -205,7 +201,6 @@ services:
     $router_image
     environment:
       VECTOR_CONFIG: '$config'
-      VECTOR_ENV: 'dev'
       VECTOR_NODE_URL: 'http://roger:$internal_node_port'
       VECTOR_PG_DATABASE: '$project'
       VECTOR_PG_HOST: '$roger_database'

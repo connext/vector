@@ -19,25 +19,19 @@ fi
 ####################
 # Load config
 
-default_config="`cat $root/config-node.json $root/config-router.json | jq -s '.[0] + .[1]'`"
-config="`cat $root/config-prod.json`"
-
-function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
-function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
+function getConfig {
+  config="`cat $root/config-node.json $root/config-prod.json | jq -s '.[0] + .[1]'`"
+  value="`echo $config | jq ".$1" | tr -d '"'`"
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
 
 admin_token="`getConfig adminToken`"
-public_port="`getConfig port`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
-
-if [[ "$production" != "true" && (-z "$public_port" || "$public_port" == "null") ]]
-then public_port=3002
-fi
-
-if [[ "$production" == "true" ]]
-then VECTOR_ENV="prod"
-else VECTOR_ENV="dev"
-fi
+public_port="`getConfig port`"
 
 ########################################
 ## Docker registry & image version config
@@ -57,18 +51,26 @@ fi
 
 builder_image="${project}_builder"
 
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
-
-# to access from other containers
-redis_url="redis://redis:6379"
-
 common="networks:
       - '$project'
     logging:
       driver: 'json-file'
       options:
           max-size: '100m'"
+
+####################
+# Redis config
+# Used by duet & trio
+
+if [[ "$production" = "true" ]]
+then redis_service=""
+else
+  redis_image="redis:5-alpine";
+  bash $root/ops/pull-images.sh $redis_image > /dev/null
+  redis_service="redis:
+    $common
+    image: '$redis_image'"
+fi
 
 ####################
 # Nats config
@@ -99,20 +101,23 @@ fi
 # Auth config
 
 auth_port="5040"
-echo "$stack.auth configured to be exposed on *:$auth_port"
 
 if [[ "$production" == "true" ]]
 then
   auth_image_name="${project}_auth:$version";
   auth_image="image: '$auth_image_name'"
   bash $root/ops/pull-images.sh "$auth_image_name" > /dev/null
+
 else
   auth_image_name="${project}_builder:latest";
   bash $root/ops/pull-images.sh "$auth_image_name" > /dev/null
   auth_image="image: '$auth_image_name'
     entrypoint: 'bash modules/auth/ops/entry.sh'
+    ports:
+      - '$auth_port:$auth_port'
     volumes:
       - '$root:/root'"
+  echo "$stack.auth configured to be exposed on *:$auth_port"
 fi
 
 ####################
@@ -168,27 +173,23 @@ fi
 ####################
 # Proxy config
 
-proxy_image="${project}_global_proxy:$version";
+proxy_image="${project}_${stack}_proxy:$version";
 bash $root/ops/pull-images.sh $proxy_image > /dev/null
 
-if [[ -z "$domain_name" && -n "$public_port" ]]
-then
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
-elif [[ -n "$domain_name" && -z "$public_port" ]]
+if [[ -n "$domain_name" ]]
 then
   public_url="https://127.0.0.1:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
   echo "$stack.proxy will be exposed on *:80 and *:443"
+
 else
-  echo "Either a domain name or a public port must be provided but not both."
-  echo " - If a public port is provided then the stack will use http on the given port"
-  echo " - If a domain name is provided then https is activated on port *:443"
-  exit 1
+  public_port=${public_port:-3002}
+  public_url="http://127.0.0.1:$public_port"
+  proxy_ports="ports:
+      - '$public_port:80'"
+  echo "$stack.proxy will be exposed on *:$public_port"
 fi
 
 ####################
@@ -234,9 +235,7 @@ services:
       VECTOR_NATS_URL: 'nats://nats:4222'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PORT: '$auth_port'
-      VECTOR_ENV: '$VECTOR_ENV'
-    ports:
-      - '$auth_port:$auth_port'
+      VECTOR_PROD: '$production'
     secrets:
       - '$jwt_private_key_secret'
       - '$jwt_public_key_secret'
@@ -254,9 +253,7 @@ services:
 
   $evm_services
 
-  redis:
-    $common
-    image: '$redis_image'
+  $redis_service
 
 EOF
 
@@ -281,17 +278,11 @@ function abort {
 
 timeout=$(expr `date +%s` + 60)
 echo "Waiting for $public_auth_url to wake up.."
-while true
+while [[ -z "`curl -k -m 5 -s $public_auth_url || true`" ]]
 do
-  res="`curl -k -m 5 -s $public_auth_url || true`"
-  if [[ -z "$res" ]]
-  then
-    if [[ "`date +%s`" -gt "$timeout" ]]
-    then abort
-    else sleep 1
-    fi
-  else
-    break
+  if [[ "`date +%s`" -gt "$timeout" ]]
+  then abort
+  else sleep 1
   fi
 done
 
