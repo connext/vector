@@ -75,29 +75,6 @@ export class Router implements IRouter {
       }
       const channelAddresses = channels.getValue();
       channelCounter.set(channelAddresses.length);
-
-      for (const channelAddr of channelAddresses) {
-        const channelState = await this.service.getStateChannel({
-          channelAddress: channelAddr,
-          publicIdentifier: this.publicIdentifier,
-        });
-        if (channelState.isError) {
-          this.logger.error(
-            { error: channelState.getError()!.message, channelAddress: channelAddr },
-            "Failed to get channel",
-          );
-          return;
-        }
-        const { balances, assetIds } = channelState.getValue();
-        assetIds.forEach((assetId: string, index: number) => {
-          const balance = balances[index];
-          if (!balance) {
-            return;
-          }
-          // Set the proper collateral gauge
-          collateral.set({ assetId, channelAddress: channelAddr }, parseFloat(utils.formatEther(balance.amount[0])));
-        });
-      }
       this.logger.info({}, "Done collecting metrics");
     }, 30_000);
   }
