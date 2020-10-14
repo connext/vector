@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "id": null,
   "links": [],
   "panels": [
     {
@@ -173,6 +174,23 @@
       "type": "bargauge"
     },
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 123123,
+      "type": "gettingstarted"
+    },
+    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -202,7 +220,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 17
       },
       "id": 7,
       "options": {
@@ -248,7 +266,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 5,
@@ -278,21 +296,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(router_forwarded_payment_attempts[1m]))",
+          "expr": "sum(router_failed) / sum(router_forwarded_payment_attempts)",
           "interval": "",
-          "legendFormat": "Total",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(rate(router_failed_forwarded_payments[1m]))",
-          "interval": "",
-          "legendFormat": "Failed",
+          "legendFormat": "Failure Rate",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(router_successful_forwarded_payments[1m]))",
+          "expr": "sum(router_successful_forwarded_payments) / sum(router_forwarded_payment_attempts)",
           "interval": "",
-          "legendFormat": "Successful",
+          "legendFormat": "Success Rate",
           "refId": "C"
         }
       ],
@@ -361,7 +373,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 25
       },
       "heatmap": {},
       "hideZeroBuckets": false,
