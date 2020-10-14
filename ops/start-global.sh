@@ -259,7 +259,6 @@ EOF
 
 docker stack deploy -c $docker_compose $stack
 echo "The $stack stack has been deployed."
-public_auth_url="http://127.0.0.1:5040/ping"
 
 function abort {
   echo "====="
@@ -270,15 +269,15 @@ function abort {
   docker service ps global_auth || true
   docker service logs --tail 50 --raw global_auth || true
   echo "====="
-  curl $public_auth_url || true
+  curl $public_url || true
   echo "====="
   echo "Timed out waiting for $stack stack to wake up, see above for diagnostic info."
   exit 1
 }
 
 timeout=$(expr `date +%s` + 60)
-echo "Waiting for $public_auth_url to wake up.."
-while [[ -z "`curl -k -m 5 -s $public_auth_url || true`" ]]
+echo "Waiting for $public_url to wake up.."
+while [[ -z "`curl -k -m 5 -s $public_url || true`" ]]
 do
   if [[ "`date +%s`" -gt "$timeout" ]]
   then abort
