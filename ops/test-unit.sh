@@ -18,8 +18,8 @@ then interactive="--interactive --tty"
 else echo "Running in non-interactive mode"
 fi
 
-node_config="`cat $root/config-node.json`"
-router_config="`cat $root/config-router.json`"
+node_config="`node $root/ops/config/node.default.js`"
+router_config="`node $root/ops/config/router.default.js`"
 config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
 
 ########################################

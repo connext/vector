@@ -43,7 +43,8 @@ production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
 
-default_providers="`node $root/ops/config/node.default.js | jq '.chainProviders'`"
+chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
+default_providers="`node $root/ops/config/node.default.js | jq '.chainProviders' | tr -d '\n\r '`"
 
 ####################
 # Misc Config

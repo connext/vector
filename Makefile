@@ -322,7 +322,6 @@ server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 
-router: router-img
 router-js: engine $(shell find modules/router $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/router && npm run build"

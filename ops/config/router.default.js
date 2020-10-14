@@ -26,7 +26,7 @@ const config = {
       chainId: 1337,
       assetId: AddressZero,
       reclaimThreshold: "200000000000000000",
-      target: AddressZero,
+      target: "100000000000000000",
       collateralizeThreshold: "50000000000000000",
     },
     {

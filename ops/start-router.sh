@@ -43,13 +43,13 @@ admin_token="`getConfig adminToken`"
 messaging_url="`getConfig messagingUrl`"
 aws_access_id="`getConfig awsAccessId`"
 aws_access_key="`getConfig awsAccessKey`"
-chain_providers="`getConfig chainProviders`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
 
-default_providers="`node $root/ops/config/node.default.js | jq '.chainProviders'`"
+chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
+default_providers="`node $root/ops/config/node.default.js | jq '.chainProviders' | tr -d '\n\r '`"
 
 ####################
 # Misc Config
