@@ -204,7 +204,10 @@ watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
 
 test-load: test-runner trio
-	bash ops/test-load.sh
+	bash ops/test-load.sh cyclical
+
+test-concurrency: test-runner trio
+	bash ops/test-load.sh concurrency 3
 
 ########################################
 # Begin Real Build Rules

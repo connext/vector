@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "id": null,
   "links": [],
   "panels": [
     {
@@ -161,28 +162,22 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(router_forwarded_payment_attempts)",
+          "expr": "sum(rate(router_forwarded_payment_attempts[1m]))",
           "interval": "",
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(router_failed_forwarded_payments)",
+          "expr": "sum(rate(router_failed_forwarded_payments[1m]))",
           "interval": "",
           "legendFormat": "Failed",
           "refId": "B"
         },
         {
-          "expr": "sum(router_successful_forwarded_payments)",
+          "expr": "sum(rate(router_successful_forwarded_payments[1m]))",
           "interval": "",
           "legendFormat": "Successful",
           "refId": "C"
-        },
-        {
-          "expr": "sum(router_forwarded_payment_attempts)",
-          "interval": "",
-          "legendFormat": "Attempts",
-          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -227,6 +222,23 @@
       }
     },
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 123123,
+      "type": "gettingstarted"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -244,7 +256,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 8
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 2,
@@ -351,7 +363,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 17
       },
       "id": 7,
       "options": {
