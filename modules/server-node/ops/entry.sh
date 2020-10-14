@@ -29,8 +29,11 @@ wait-for -q -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT"
 
 export PATH="./node_modules/.bin:${PATH}"
 
-# TODO: should we really do this in prod?
-echo "Running database migrations"
+echo "pwd=`pwd`"
+ls
+echo "Database migration dry run"
+prisma migrate up --experimental --preview
+echo "Running database migration for real"
 prisma migrate up --experimental
 
 if [[ "$VECTOR_PROD" == "true" ]]
