@@ -3,5 +3,5 @@
   "awsAccessKey": "",
   "domainName": "",
   "messagingUrl": "",
-  "production": true
+  "production": false
 }
