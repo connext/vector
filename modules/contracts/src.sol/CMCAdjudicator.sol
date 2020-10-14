@@ -266,6 +266,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   function hashChannelState(CoreChannelState calldata ccs) internal pure returns (bytes32) {
+    // TODO: include commitment type
     return keccak256(abi.encode(ccs));
   }
 
