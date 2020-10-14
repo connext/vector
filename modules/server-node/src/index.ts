@@ -409,10 +409,7 @@ server.post<{ Body: ServerNodeParams.RequestCollateral }>(
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, {
-      assetId: request.body.assetId,
-      channelAddress: request.body.channelAddress,
-    });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, request.body);
     try {
       const res = await engine.request<"chan_requestCollateral">(rpc);
       return reply.status(200).send(res);
