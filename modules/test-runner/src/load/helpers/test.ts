@@ -2,7 +2,7 @@ import { RestServerNodeService } from "@connext/vector-utils";
 import { constants } from "ethers";
 import PriorityQueue from "p-queue";
 
-import { env } from "../utils";
+import { env } from "../../utils";
 
 import { AgentManager } from "./agent";
 import { carolEvts, logger } from "./setupServer";
@@ -41,7 +41,7 @@ export const concurrencyTest = async (): Promise<void> => {
   // Create tasks to fill queue with (25 random payments)
   const tasks = Array(queuedPayments)
     .fill(0)
-    .map(_ => {
+    .map(() => {
       return async () => {
         // Get random sender + receiver
         const sender = manager.getRandomAgent();

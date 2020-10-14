@@ -8,7 +8,7 @@ import {
   EngineEvents,
 } from "@connext/vector-types";
 
-import { env } from "../utils";
+import { env } from "../../utils";
 
 const serverBase = `http://vector_test_runner:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";

@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { ConditionalTransferCreatedPayload, Result, TransferNames } from "@connext/vector-types";
+import { ConditionalTransferCreatedPayload, INodeService, Result, TransferNames } from "@connext/vector-types";
 import {
   createTestChannelState,
   createTestFullHashlockTransferState,
   getRandomBytes32,
-  getRandomIdentifier,
-  IServerNodeService,
   mkAddress,
   mkPublicIdentifier,
   RestServerNodeService,
@@ -87,7 +85,7 @@ describe("Forwarding", () => {
         data,
         mkPublicIdentifier("indraBBB"),
         mkAddress("0xb"),
-        node as IServerNodeService,
+        node as INodeService,
         store,
         logger,
         env.hydratedProviders,

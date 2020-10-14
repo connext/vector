@@ -3,10 +3,9 @@ import {
   RouterSchemas,
   INodeService,
   ConditionalTransferCreatedPayload,
-  DepositReconciledPayload,
   FullChannelState,
 } from "@connext/vector-types";
-import { Gauge, Histogram, Registry } from "prom-client";
+import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
