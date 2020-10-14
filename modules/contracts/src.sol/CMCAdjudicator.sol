@@ -37,11 +37,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     _;
   }
 
-  function getChannelDispute() public override view onlyOnProxy returns (ChannelDispute memory) {
+  function getChannelDispute() external override view onlyOnProxy returns (ChannelDispute memory) {
     return channelDispute;
   }
 
-  function getTransferDispute(bytes32 transferId) public override view onlyOnProxy returns (TransferDispute memory) {
+  function getTransferDispute(bytes32 transferId) external override view onlyOnProxy returns (TransferDispute memory) {
     return transferDisputes[transferId];
   }
 
