@@ -61,7 +61,7 @@ echo "Starting isolated testnet to migrate contracts.."
 eval "$launch > /tmp/evm.log &"
 pid=$!
 
-wait-for localhost:8545
+wait-for -q -t 60 localhost:8545
 
 # Because stupid ganache hardcoded it's chainId, prefer this env var over ethProvider.getNetwork()
 export REAL_CHAIN_ID=$chain_id

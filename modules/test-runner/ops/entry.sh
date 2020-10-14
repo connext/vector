@@ -26,7 +26,7 @@ function wait_for {
     fi
   fi
   echo "Waiting for $name at $target ($host) to wake up..."
-  wait-for -t 60 $host 2> /dev/null
+  wait-for -q -t 60 $host
 }
 
 if [[ "$stack" == "global" ]]

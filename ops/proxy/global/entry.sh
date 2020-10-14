@@ -24,7 +24,7 @@ loading_pid="$!"
 # Define service hostnames & ports we depend on
 
 echo "waiting for $VECTOR_AUTH_URL..."
-wait-for -t 60 $VECTOR_AUTH_URL 2> /dev/null
+wait-for -q -t 60 $VECTOR_AUTH_URL
 while ! curl -s $VECTOR_AUTH_URL > /dev/null
 do sleep 2
 done

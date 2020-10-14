@@ -22,7 +22,7 @@ export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD
 ########################################
 # Wait for dependencies to wake up
 
-wait-for -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT" > /dev/null
+wait-for -q -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT"
 
 ########################################
 # Launch it
