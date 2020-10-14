@@ -16,7 +16,7 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
-import { constructRpcRequest, NatsMessagingService } from "@connext/vector-utils";
+import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
@@ -36,11 +36,7 @@ export class BrowserNode implements INodeService {
   private constructor(private readonly engine: IVectorEngine) {}
 
   static async connect(config: BrowserNodeConfig): Promise<BrowserNode> {
-    const chainJsonProviders = Object.fromEntries(
-      Object.entries(config.chainProviders).map(([chainId, url]) => {
-        return [chainId, new providers.JsonRpcProvider(url)];
-      }),
-    );
+    const chainJsonProviders = hydrateProviders(config.chainProviders);
     const messaging = new NatsMessagingService({
       logger: config.logger.child({ module: "MessagingService" }),
       messagingUrl: config.messagingUrl,
