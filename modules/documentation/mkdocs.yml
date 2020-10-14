@@ -18,6 +18,12 @@ theme:
   features:
     - navigation.tabs
 
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.highlight
+
 extra:
   social:
     - icon: fontawesome/brands/github
@@ -32,19 +38,19 @@ extra:
 nav:
   - Intro:
       - index.md
-      - channelBasics.md
-      - faq.md
+      # - intro/channelBasics.md
+      # - intro/faq.md
   - Quick Start:
-      - quickStart.md
+      - quickStart/quickStart.md
   - Node Guides:
-      - nodeIntro.md
-      - configureNode.md
-      - depositAndWithdraw.md
-      - transfers.md
-      - events.md
+      - node/basics.md
+      - node/configure.md
+      - node/depositAndWithdraw.md
+      - node/transfers.md
+      - node/events.md
   - Router Guides:
-      - routerIntro.md
-      - configureRouter.md
-      - managingCollateral.md
+      - router/basics.md
+      - router/configure.md
+      # - router/managingCollateral.md
   - API Reference:
-      - nodeAPI.md
+      - reference/nodeAPI.md
