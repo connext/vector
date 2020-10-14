@@ -39,6 +39,10 @@ public_port="`getConfig port`"
 chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
 default_providers="`cat $root/config-node.json | jq '.chainProviders' | tr -d '\n\r '`"
 
+if [[ "$VECTOR_PROD" = "true" ]]
+then production="true"
+fi
+
 ########################################
 ## Docker registry & image version config
 
