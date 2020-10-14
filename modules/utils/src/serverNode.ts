@@ -22,6 +22,8 @@ export type EventCallbackConfig = {
 };
 
 export class RestServerNodeService implements INodeService {
+  private publicIdentifier: string | undefined = undefined;
+
   private constructor(
     private readonly serverNodeUrl: string,
     private readonly logger: BaseLogger,
@@ -32,6 +34,7 @@ export class RestServerNodeService implements INodeService {
     serverNodeUrl: string,
     logger: BaseLogger,
     evts?: EventCallbackConfig,
+    index?: number,
   ): Promise<RestServerNodeService> {
     const service = new RestServerNodeService(serverNodeUrl, logger, evts);
     if (evts) {
@@ -47,6 +50,20 @@ export class RestServerNodeService implements INodeService {
         logger.error({ error: e.response?.data, urls, method: "connect" }, "Error creating subscription");
       }
     }
+
+    // If an index is provided, the service will only host a single channel
+    // and the publicIdentifier will be automatically included in parameters
+    if (index) {
+      // Create the public identifier and signer address
+      const node = await service.createNode({ index });
+      if (node.isError) {
+        logger.error({ error: node.getError()!.message, method: "connect" }, "Failed to create node");
+        return service;
+      }
+      const { publicIdentifier } = node.getValue();
+      service.publicIdentifier = publicIdentifier;
+    }
+
     return service;
   }
 
@@ -62,7 +79,7 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetChannelState,
   ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/${params.publicIdentifier}`,
+      `channel/${params.channelAddress}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateSchema,
@@ -79,7 +96,7 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetTransferStatesByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>> {
     return this.executeHttpRequest(
-      `transfer/${params.routingId}/${params.publicIdentifier}`,
+      `transfer/${params.routingId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStatesByRoutingIdSchema,
@@ -90,7 +107,8 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetTransferStateByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier}`,
+      `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier ??
+        this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStateByRoutingIdSchema,
@@ -101,7 +119,7 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetTransferState,
   ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
     return this.executeHttpRequest(
-      `transfer/${params.transferId}/${params.publicIdentifier}`,
+      `transfer/${params.transferId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStateSchema,
@@ -112,7 +130,7 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetActiveTransfersByChannelAddress,
   ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/active-transfer/${params.publicIdentifier}`,
+      `channel/${params.channelAddress}/active-transfer/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetActiveTransfersByChannelAddressSchema,
@@ -123,7 +141,7 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier}`,
+      `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier ?? this.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateByParticipantsSchema,
@@ -145,7 +163,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
       "setup",
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier },
+      params,
       ServerNodeParams.SetupSchema,
     );
   }
@@ -255,7 +273,9 @@ export class RestServerNodeService implements INodeService {
     const url = `${this.serverNodeUrl}/${urlPath}`;
     // Validate parameters are in line with schema
     const validate = ajv.compile(paramSchema);
-    if (!validate(params)) {
+    // IFF the public identifier is undefined, it should be overridden by
+    // the pubId defined in the parameters.
+    if (!validate({ publicIdentifier: this.publicIdentifier, ...params })) {
       return Result.fail(
         new NodeError(NodeError.reasons.InvalidParams, {
           errors: validate.errors?.map(err => err.message).join(","),

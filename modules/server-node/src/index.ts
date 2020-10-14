@@ -19,7 +19,7 @@ import { Static, Type } from "@sinclair/typebox";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
-import { createNode, deleteNodes, getChainService, getNode, getNodes, nodes } from "./helpers/nodes";
+import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 
 export const logger = pino();
 const server = fastify({ logger });
@@ -100,52 +100,8 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetChannelState }>(
-  "/channel/:channelAddress",
-  { schema: { params: ServerNodeParams.GetChannelStateSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, request.params);
-    try {
-      const res = await engine.request<"chan_getChannelState">(params);
-      if (!res) {
-        return reply.status(404).send({ message: "Channel not found", channelAddress: request.params.channelAddress });
-      }
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
-    }
-  },
-);
-
 server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
   "/channel/:alice/:bob/:chainId/:publicIdentifier",
-  { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, request.params);
-    try {
-      const res = await engine.request<"chan_getChannelStateByParticipants">(params);
-      if (!res) {
-        return reply.status(404).send({ message: "Channel not found", alice: request.params });
-      }
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
-    }
-  },
-);
-
-server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
-  "/channel/:alice/:bob/:chainId",
   { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
@@ -210,6 +166,8 @@ server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
   },
 );
 
+// TODO: @rahul -- should we include the public identifier in the url
+// here as a param?
 server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/channel/:channelAddress/transfer/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
@@ -254,28 +212,9 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
-  "/transfer/:routingId",
-  { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, request.params);
-    try {
-      const res = await engine.request<"chan_getTransferStatesByRoutingId">(params);
-      if (!res) {
-        return reply.status(404).send({ message: "Transfer not found", params: request.params });
-      }
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
-    }
-  },
-);
-
+// TODO: @rahul -- what is going on here? what is this endpoint
+// trying to do? return all channels for a specific engine or for
+// all engines on the node?
 server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelStatesSchema } }, async (request, reply) => {
   const engines = getNodes();
   if (engines.length > 1) {
@@ -318,6 +257,8 @@ server.post<{ Body: ServerNodeParams.Setup }>(
   },
 );
 
+// TODO: @rahul -- is bob the only one who should ever be requesting a setup like this?
+// seems like we can take out the pubID from the params then
 server.post<{ Body: ServerNodeParams.RequestSetup }>(
   "/request-setup",
   { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
@@ -425,6 +366,8 @@ server.post<{ Body: ServerNodeParams.RequestCollateral }>(
   },
 );
 
+// TODO: @rahul -- do we want to have the transfer types built into the url
+// paths of a transfer
 server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
   "/hashlock-transfer/create",
   {
