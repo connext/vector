@@ -1,5 +1,5 @@
-import { startServer } from "./setupServer";
-import { concurrencyTest } from "./test";
+import { startServer } from "./helpers/setupServer";
+import { concurrencyTest } from "./helpers/test";
 
 startServer().then(async () => {
   await concurrencyTest();

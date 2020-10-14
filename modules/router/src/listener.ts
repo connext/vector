@@ -3,7 +3,6 @@ import {
   RouterSchemas,
   INodeService,
   ConditionalTransferCreatedPayload,
-  DepositReconciledPayload,
   FullChannelState,
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
@@ -58,8 +57,15 @@ const configureMetrics = (register: Registry) => {
     registers: [register],
   });
 
+  const transferSendTime = new Gauge({
+    name: "router_sent_payments_time",
+    help: "router_sent_payments_time_help",
+    labelNames: ["routingId"],
+    registers: [register],
+  });
+
   // Return the metrics so they can be incremented as needed
-  return { failed, successful, attempts, activeTransfers };
+  return { failed, successful, attempts, activeTransfers, transferSendTime };
 };
 
 export async function setupListeners(
@@ -71,15 +77,15 @@ export async function setupListeners(
   register: Registry,
 ): Promise<void> {
   // TODO, node should be wrapper around grpc
-  const { failed, successful, attempts, activeTransfers } = configureMetrics(register);
+  const { failed, successful, attempts, activeTransfers, transferSendTime } = configureMetrics(register);
 
   // Set up listener to handle transfer creation
   await nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
       const meta = data.transfer.meta as RouterSchemas.RouterMeta;
-      attempts.labels(data.transfer.transferId).inc(1);
-      const end = successful.startTimer();
+      attempts.labels(meta.routingId).inc(1);
+      const end = transferSendTime.labels(meta.routingId).startTimer();
       const res = await forwardTransferCreation(
         data,
         publicIdentifier,

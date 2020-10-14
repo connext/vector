@@ -1,5 +1,5 @@
-import { startServer } from "./setupServer";
-import { cyclicalTransferTest } from "./test";
+import { startServer } from "./helpers/setupServer";
+import { cyclicalTransferTest } from "./helpers/test";
 
 startServer().then(async () => {
   await cyclicalTransferTest();

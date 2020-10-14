@@ -2,7 +2,7 @@ import { getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { constants } from "ethers";
 import PriorityQueue from "p-queue";
 
-import { env } from "../utils";
+import { env } from "../../utils";
 
 import { AgentManager } from "./agent";
 import { carolEvts, logger } from "./setupServer";

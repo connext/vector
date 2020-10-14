@@ -5,7 +5,7 @@ import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers
 import { formatEther, parseEther } from "ethers/lib/utils";
 import PriorityQueue from "p-queue";
 
-import { env, getRandomIndex } from "../utils";
+import { env, getRandomIndex } from "../../utils";
 
 import { config } from "./config";
 import { logger } from "./setupServer";
