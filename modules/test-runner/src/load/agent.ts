@@ -8,8 +8,7 @@ import PriorityQueue from "p-queue";
 import { env, getRandomIndex } from "../utils";
 
 import { config } from "./config";
-
-import { logger } from "./index";
+import { logger } from "./setupServer";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
