@@ -33,8 +33,10 @@ echo "pwd=`pwd`"
 ls
 echo "Database migration dry run"
 prisma migrate up --experimental --preview
+echo "Preview finished with exit code ${$?}"
 echo "Running database migration for real"
-prisma migrate up --experimental
+prisma migrate up --experimental --create-db
+echo "Migration finished with exit code ${$?}"
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then
