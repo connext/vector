@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eE
 
 if [[ -d "modules/server-node" ]]
 then cd modules/server-node
@@ -32,16 +32,20 @@ echo "Database is available"
 # Launch it
 
 export PATH="./node_modules/.bin:${PATH}"
-
-echo "pwd=`pwd`"
-ls
-echo "Database migration dry run"
-prisma migrate up --experimental --preview
-echo "Preview finished with exit code ${$?}"
-echo "Running database migration for real"
-prisma migrate up --experimental --create-db
-echo "Migration finished with exit code ${$?}"
 mkdir -p static
+
+echo "Prisma info:"
+which prisma
+ls -l `which prisma`
+ls -l node_modules/prisma-cli/dist/index.js
+
+node node_modules/prisma-cli/dist/index.js --version
+
+echo "Prisma version:"
+prisma --version
+
+echo "Running database migration"
+prisma migrate up --experimental
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then

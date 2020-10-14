@@ -303,11 +303,11 @@ auth-img: auth-bundle $(shell find modules/auth/ops $(find_options))
 
 
 server-node: server-node-img
-server-node-js: engine $(shell find modules/server-node $(find_options))
+server-node-js: engine $(shell find modules/server-node/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-server-node-bundle: server-node-js $(shell find modules/server-node $(find_options))
+server-node-bundle: server-node-js $(shell find modules/server-node/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
