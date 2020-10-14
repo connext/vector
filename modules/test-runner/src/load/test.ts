@@ -65,5 +65,6 @@ export const concurrencyTest = async (): Promise<void> => {
     const promises = tasks.map(t => queue.add(t));
 
     await Promise.all(promises);
+    logger.info({}, "Test complete, increasing concurrency");
   }
 };

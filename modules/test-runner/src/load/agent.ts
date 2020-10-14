@@ -11,6 +11,14 @@ import { config } from "./config";
 
 import { logger } from "./index";
 
+const chainId = parseInt(Object.keys(env.chainProviders)[0]);
+const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
+const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
+const transferAmount = utils.parseEther("0.00001").toString();
+const agentBalance = utils.parseEther("5").toString();
+
+const walletQueue = new PriorityQueue({ concurrency: 1 });
+
 const fundAddressToTarget = async (address: string, assetId: string, target: BigNumber): Promise<void> => {
   const balance = await (assetId === constants.AddressZero
     ? provider.getBalance(address)
@@ -58,13 +66,6 @@ const fundAddress = async (address: string, assetId: string, value: BigNumber): 
   logger.debug({ newBalance: formatEther(balance), address, assetId }, "Successfully funded");
 };
 
-const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
-const wallet = Wallet.fromMnemonic(env.sugarDaddy).connect(provider);
-const transferAmount = utils.parseEther("0.0001").toString();
-
-const walletQueue = new PriorityQueue({ concurrency: 1 });
-
 // This class manages a single channel connected to roger.
 // Many agents will be used throughout the test, and are
 // managed cohesively in the `AgentContainer` class
@@ -85,7 +86,7 @@ export class Agent {
     index: number = getRandomIndex(),
     minimumChannelBalance: { assetId: string; amount: BigNumber } = {
       assetId: constants.AddressZero,
-      amount: BigNumber.from(transferAmount).mul(5),
+      amount: BigNumber.from(agentBalance),
     },
   ): Promise<Agent> {
     // Create node on server at idx
