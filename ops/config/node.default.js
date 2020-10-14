@@ -1,3 +1,5 @@
+const { AddressZero } = require("@ethersproject/constants");
+
 let addressBook;
 try {
   addressBook = require("./address-book.json");
@@ -6,21 +8,29 @@ try {
   addressBook = require("../../address-book.json");
 }
 
+// TODO: if testnet chainId then use .chaindata/address-book.json instead of the prod one?
+
 const chainProviders = {
   "1337": "http://evm_1337:8545",
   "1338": "http://evm_1338:8545",
 };
 
-const defaultAddresses = {
-  channelFactoryAddress: "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
-  channelMastercopyAddress: "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",
-  transferRegistryAddress: "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10",
-  TestToken: "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",
-};
-
 chainAddresses = {};
 Object.keys(chainProviders).forEach(chainId => {
-  chainAddresses[chainId] = addressBook[chainId] || defaultAddresses;
+  if (addressBook[chainId]) {
+    chainAddresses[chainId] = {};
+    Object.entries(addressBook[chainId]).forEach(([key, value]) => {
+      const newKey = key.charAt(0).toLowerCase() + key.substring(1) + "Address";
+      chainAddresses[chainId][newKey] = value.address;
+    });
+  } else {
+    chainAddresses[chainId] = {
+      channelFactoryAddress: AddressZero,
+      channelMastercopyAddress: AddressZero,
+      transferRegistryAddress: AddressZero,
+      TestToken: AddressZero,
+    };
+  }
 });
 
 const config = {

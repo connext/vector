@@ -189,7 +189,7 @@ test-browser-node: browser-node
 watch-browser-node: browser-node
 	bash ops/test-unit.sh browser-node watch
 
-test-router: router
+test-router: router-js
 	bash ops/test-unit.sh router test
 watch-router: engine
 	bash ops/test-unit.sh router watch
@@ -210,6 +210,16 @@ test-trio: test-runner-js trio
 	bash ops/test-integration.sh trio test
 watch-trio: test-runner-js trio
 	bash ops/test-integration.sh trio watch
+
+test-node: node test-runner-js
+	bash ops/test-integration.sh node test
+watch-node: node test-runner-js
+	bash ops/test-integration.sh node watch
+
+test-routing-node: router test-runner-js
+	bash ops/test-integration.sh router test
+watch-routing-node: router test-runner-js
+	bash ops/test-integration.sh router watch
 
 test-load: test-runner-js trio
 	bash ops/test-load.sh

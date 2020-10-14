@@ -25,7 +25,6 @@ fi
 
 config="`node $root/${stack}.config.js | jq '.'`"
 
-function getDefault { echo "$node_config" | jq ".$1" | tr -d '"'; }
 function getConfig {
   value="`echo "$config" | jq ".$1" | tr -d '"'`"
   if [[ "$value" == "null" ]]
@@ -43,6 +42,8 @@ domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
+
+default_providers="`node $root/ops/config/node.default.js | jq '.chainProviders'`"
 
 ####################
 # Misc Config
@@ -74,7 +75,7 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-if [[ -n "$messaging_url" || "$chain_providers" == "`getDefault chainProviders`" ]]
+if [[ -n "$messaging_url" || "$chain_providers" == "$default_providers" ]]
 then
   bash $root/ops/start-global.sh
   mnemonic_secret=""
