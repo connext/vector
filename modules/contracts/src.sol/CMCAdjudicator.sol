@@ -24,7 +24,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       ccs.channelAddress == address(this) &&
       ccs.alice == alice &&
       ccs.bob == bob,
-      "CMCCMCAdjudicator: Mismatch between given core channel state and channel we are at"
+      "CMCAdjudicator: Mismatch between given core channel state and channel we are at"
     );
     _;
   }
@@ -32,7 +32,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   modifier validateTransfer(CoreTransferState calldata cts) {
     require(
       cts.channelAddress == address(this),
-      "CMCCMCAdjudicator: Mismatch between given core transfer state and channel we are at"
+      "CMCAdjudicator: Mismatch between given core transfer state and channel we are at"
     );
     _;
   }
