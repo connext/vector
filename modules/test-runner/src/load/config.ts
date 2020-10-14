@@ -4,6 +4,7 @@ type TestConfig = {
   numAgents: number;
 };
 
+// const numAgents = parseInt(process.env.VECTOR_NUM_AGENTS ?? "3");
 const numAgents = parseInt("3");
 
 export const config: TestConfig = {

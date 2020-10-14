@@ -4,6 +4,7 @@ import { Gauge, Registry } from "prom-client";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";
+import { BigNumber, utils } from "ethers";
 
 export interface IRouter {
   startup(): Promise<void>;
@@ -53,13 +54,12 @@ export class Router implements IRouter {
     });
     this.register.registerMetric(channelCounter);
 
-    // Track the total number of payments
-    const paymentCounter = new Gauge({
-      name: "router_payments_total",
-      help: "router_payments_total_help",
-      labelNames: ["channelAddress"],
+    const collateral = new Gauge({
+      name: "router_channels_collateral",
+      help: "router_channels_collateral_help",
+      labelNames: ["assetId", "channelAddress"],
     });
-    this.register.registerMetric(paymentCounter);
+    this.register.registerMetric(collateral);
 
     // TODO: fix this once this issue is fixed by using the `collect` function in the gauge
     // https://github.com/siimon/prom-client/issues/383
@@ -77,19 +77,26 @@ export class Router implements IRouter {
       channelCounter.set(channelAddresses.length);
 
       for (const channelAddr of channelAddresses) {
-        const payments = await this.service.getActiveTransfers({
+        const channelState = await this.service.getStateChannel({
           channelAddress: channelAddr,
           publicIdentifier: this.publicIdentifier,
         });
-        if (payments.isError) {
+        if (channelState.isError) {
           this.logger.error(
-            { error: payments.getError()!.message, channelAddress: channelAddr },
-            "Failed to get active payments",
+            { error: channelState.getError()!.message, channelAddress: channelAddr },
+            "Failed to get channel",
           );
           return;
         }
-        this.logger.info({ count: payments.getValue() }, "setting payments");
-        paymentCounter.set({ channelAddress: channelAddr }, payments.getValue().length);
+        const { balances, assetIds } = channelState.getValue();
+        assetIds.forEach((assetId: string, index: number) => {
+          const balance = balances[index];
+          if (!balance) {
+            return;
+          }
+          // Set the proper collateral gauge
+          collateral.set({ assetId, channelAddress: channelAddr }, parseFloat(utils.formatEther(balance.amount[0])));
+        });
       }
       this.logger.info({}, "Done collecting metrics");
     }, 30_000);

@@ -7,7 +7,7 @@ import {
   Result,
   FullChannelState,
 } from "@connext/vector-types";
-import { Gauge, Registry } from "prom-client";
+import { Gauge, Histogram, Registry } from "prom-client";
 import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
@@ -67,11 +67,13 @@ export async function setupListeners(
   const { failed, successful, attempts } = configureMetrics(register);
   // TODO, node should be wrapper around grpc
   // Set up listener to handle transfer creation
+  logger.error({}, "*** registering router listeners");
   await nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
       attempts.labels(data.transfer.transferId).inc(1);
       const end = successful.startTimer();
+      logger.error({}, "*** forwarding transfer");
       const res = await forwardTransferCreation(
         data,
         publicIdentifier,
@@ -81,6 +83,7 @@ export async function setupListeners(
         logger,
         chainProviders,
       );
+      logger.error({}, "*** forwarded");
       if (res.isError) {
         failed.labels(data.transfer.transferId).inc(1);
         return logger.error(

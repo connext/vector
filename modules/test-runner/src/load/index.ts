@@ -10,7 +10,7 @@ import {
 
 import { env } from "../utils";
 
-import { test } from "./test";
+import { cyclicalTransferTest } from "./test";
 
 const serverBase = `http://vector_test_runner:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
@@ -102,5 +102,5 @@ server.listen(env.port, "0.0.0.0", (err, address) => {
 });
 
 server.addHook("onReady", async () => {
-  await test();
+  await cyclicalTransferTest();
 });
