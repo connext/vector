@@ -34,11 +34,10 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 # Build Shortcuts
 
 default: dev
-all: dev prod ops
-
 ops: database global-proxy node-proxy router-proxy nats
-dev: auth-js contracts-js server-node-js router-js test-runner-js
-prod: auth-img server-node-img router-img test-runner-img
+dev: ops global node router duet trio extras test-runner-js
+prod: ops global-prod node-prod router-prod test-runner
+all: dev prod
 
 global: auth-js ethprovider global-proxy nats
 global-prod: auth-img global-proxy nats
@@ -109,12 +108,13 @@ stop-all:
 
 clean: stop-all
 	rm -rf .flags
-	rm -rf node_modules/@connext modules/*/node_modules/@connext
-	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
+	rm -rf modules/*/.*cache* modules/*/node_modules/.cache modules/contracts/cache/*.json
+	rm -rf modules/*/artifacts modules/*/build modules/*/dist
 	rm -rf modules/*/node_modules/*/.git
 	rm -rf modules/*/node_modules/.bin
-	rm -rf modules/*/artifacts modules/*/build modules/*/dist
 	rm -rf modules/*/package-lock.json
+	rm -rf node_modules/@connext modules/*/node_modules/@connext
+	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
 
 reset: stop-all
 	docker container prune -f
