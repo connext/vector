@@ -185,6 +185,23 @@
         "h": 9,
         "w": 24,
         "x": 0,
+        "y": 3
+      },
+      "id": 123123,
+      "type": "gettingstarted"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
         "y": 8
       },
       "id": 123123,
