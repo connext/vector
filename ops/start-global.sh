@@ -19,8 +19,11 @@ fi
 ####################
 # Load config
 
+config="`cat $root/config-node.json $root/config-router.json $root/config-prod.json |\
+  jq -s '.[0] + .[1] + .[2]'
+`"
+
 function getConfig {
-  config="`cat $root/config-node.json $root/config-prod.json | jq -s '.[0] + .[1]'`"
   value="`echo $config | jq ".$1" | tr -d '"'`"
   if [[ "$value" == "null" ]]
   then echo ""
@@ -32,6 +35,9 @@ admin_token="`getConfig adminToken`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
+
+chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
+default_providers="`cat $root/config-node.json | jq '.chainProviders' | tr -d '\n\r '`"
 
 ########################################
 ## Docker registry & image version config
@@ -122,7 +128,7 @@ fi
 ####################
 # Eth Provider config
 
-if [[ "$production" != "true" ]]
+if [[ "$chain_providers" == "$default_providers" ]]
 then
   mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
@@ -284,7 +290,7 @@ do
   fi
 done
 
-if [[ "$production" != "true" ]]
+if [[ "$chain_providers" == "$default_providers" ]]
 then
   chain_addresses_1="$chain_data_1/chain-addresses.json"
   chain_addresses_2="$chain_data_2/chain-addresses.json"
@@ -302,6 +308,8 @@ then
     else sleep 1
     fi
   done
+
+  # Save multi-chain providers & addresses
 
   echo '{
     "'$chain_id_1'":"http://evm_'$chain_id_1':8545",
