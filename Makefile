@@ -57,9 +57,9 @@ extras: test-runner
 ########################################
 # Command & Control Shortcuts
 
-start: start-node
-restart: restart-node
-stop: stop-node
+start: start-router
+restart: restart-router
+stop: stop-router
 
 start-node: node
 	@bash ops/start-node.sh
