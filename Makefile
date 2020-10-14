@@ -166,14 +166,14 @@ test-contracts: contracts-js
 watch-contracts: utils
 	bash ops/test-unit.sh contracts watch
 
-test-protocol: protocol
+test-protocol: contracts-bundle protocol
 	bash ops/test-unit.sh protocol test 1340
-watch-protocol: contracts-js
+watch-protocol: contracts-bundle
 	bash ops/test-unit.sh protocol watch 1340
 
-test-engine: engine
+test-engine: contracts-bundle engine
 	bash ops/test-unit.sh engine test 1341
-watch-engine: protocol
+watch-engine: contracts-bundle protocol
 	bash ops/test-unit.sh engine watch 1341
 
 test-server-node: server-node-js
