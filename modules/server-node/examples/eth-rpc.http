@@ -2,7 +2,10 @@
 @sugarDaddy = 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
 @alice = 0x119a11d0D1686C7330cA0650E26Fd6889Fbeb832
 @bob = 0x95B7e93A3aF19AcAE95aD120d4D8307bF1a6Be63
-@amount = 0x16345785d8a0000
+@roger = 0x9CD130fE9aC1EF5173eEBE0C163C7a19f3E4ed2B
+
+# 1 ETH
+@amount = 0xDE0B6B3A7640000 
 
 ### SEND ETH
 POST {{ethNode}}
@@ -13,7 +16,7 @@ Content-Type: application/json
   "method":"eth_sendTransaction",
   "params":[{
     "from": "{{sugarDaddy}}",
-    "to": "{{alice}}",
+    "to": "{{roger}}",
     "value": "{{amount}}",
     "data": "0x0"
   }],
@@ -27,6 +30,15 @@ Content-Type: application/json
 {
   "jsonrpc":"2.0",
   "method":"eth_getBalance",
-  "params":["{{alice}}",  "latest"],
+  "params":["{{roger}}",  "latest"],
   "id":1
+}
+
+### GET BLOCK NUMBER
+POST {{ethNode}}
+Content-Type: application/json
+
+{
+  "method":"eth_blockNumber",
+  "params":[]
 }

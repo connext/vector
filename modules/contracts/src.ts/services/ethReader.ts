@@ -1,6 +1,7 @@
 import * as evm from "@connext/pure-evm-wasm";
-import { Address, tidy } from "@connext/types";
 import {
+  Address,
+  tidy,
   Balance,
   ERC20Abi,
   FullTransferState,
@@ -13,7 +14,6 @@ import {
 } from "@connext/vector-types";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers } from "ethers";
-import { defaultAbiCoder } from "ethers/lib/utils";
 import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry } from "../artifacts";

@@ -1,4 +1,4 @@
-import { DecString } from "@connext/types";
+import { DecString } from "@connext/vector-types";
 import { BigNumber, BigNumberish, constants, utils } from "ethers";
 
 const { Zero, MaxUint256 } = constants;
@@ -13,8 +13,7 @@ export const fromWad = (wad: BigNumberish, decimals = 18): string => {
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export const maxBN = (lobn: any) =>
-  lobn.reduce((max: any, current: any) => (max.gt(current) ? max : current), Zero);
+export const maxBN = (lobn: any) => lobn.reduce((max: any, current: any) => (max.gt(current) ? max : current), Zero);
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const minBN = (lobn: any) =>
@@ -25,9 +24,7 @@ export const inverse = (value: string, precision = 18): string =>
 
 export const sanitizeDecimals = (value: string, decimals = 18): string => {
   const [integer, fractional] = value.split(".");
-  const _fractional = fractional
-    ? fractional.substring(0, decimals).replace(/0+$/gi, "")
-    : undefined;
+  const _fractional = fractional ? fractional.substring(0, decimals).replace(/0+$/gi, "") : undefined;
   return _fractional ? [integer, _fractional].join(".") : integer;
 };
 
@@ -36,11 +33,7 @@ export const removeDecimals = (value: string): string => {
   return integer;
 };
 
-export const calculateExchangeAmount = (
-  inputAmount: string,
-  swapRate: DecString,
-  precision = 18,
-): string => {
+export const calculateExchangeAmount = (inputAmount: string, swapRate: DecString, precision = 18): string => {
   const swapRateWad = toWad(swapRate, precision);
   const inputWad = toWad(inputAmount, precision * 2);
   const outputWad = inputWad.mul(swapRateWad);
@@ -62,11 +55,7 @@ export const calculateExchangeWad = (
 
 const roundFractional = (fractional: string, precision = 2): string => {
   return String(
-    Math.round(
-      Number(
-        fractional.substring(0, precision) + "." + fractional.substring(precision, precision + 1),
-      ),
-    ),
+    Math.round(Number(fractional.substring(0, precision) + "." + fractional.substring(precision, precision + 1))),
   );
 };
 

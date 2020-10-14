@@ -16,41 +16,32 @@ if [[ -z "$VECTOR_MNEMONIC" && -n "$VECTOR_MNEMONIC_FILE" ]]
 then export VECTOR_MNEMONIC="`cat $VECTOR_MNEMONIC_FILE`"
 fi
 
-if [[ -z "$VECTOR_DATABASE_URL" ]]
-then export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
-fi
+# TODO: if no *_PG_* env vars provided, spin up a sqlite instance locally & use that?
+export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
 
-# TODO: if no *_PG_* env vars provided, spin up an sqlite instance locally & use that?
+########################################
+# Wait for dependencies to wake up
 
-# Wait for db to wake up
 wait-for -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT" > /dev/null
 
 ########################################
-# Launch Node
+# Launch it
 
-if [[ "$VECTOR_ENV" == "prod" ]]
+export PATH="./node_modules/.bin:${PATH}"
+
+# TODO: should we really do this in prod?
+echo "Running database migrations"
+prisma migrate up --experimental
+
+if [[ "$VECTOR_PROD" == "true" ]]
 then
-
-  # TODO: do we really want to do this in prod?
-  echo "Running database migrations"
-  ./node_modules/.bin/prisma migrate up --experimental &
-
   echo "Starting node in prod-mode"
   export NODE_ENV=production
-  exec node --no-deprecation dist/bundle.js
+  exec node --no-deprecation dist/bundle.js | $pretty
 
 else
-
-  # TODO: how do we expose prisma studio on all interfaces (ie 0.0.0.0) instead of just localhost?
-  echo "Starting prisma studio in the background"
-  ./node_modules/.bin/prisma studio --experimental &
-  sleep 3 # give prisma a sec to start up & log it's endpoint
-
-  echo "Running database migrations"
-  ./node_modules/.bin/prisma migrate up --experimental &
-
   echo "Starting node in dev-mode"
-  exec  ./node_modules/.bin/nodemon \
+  exec  nodemon \
     --delay 1 \
     --exitcrash \
     --ignore *.test.ts \
@@ -60,7 +51,5 @@ else
     --polling-interval 1000 \
     --watch src \
     --exec ts-node \
-    ./src/index.ts \
-    | ./node_modules/.bin/pino-pretty
-
+    ./src/index.ts | pino-pretty
 fi

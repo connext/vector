@@ -4,7 +4,7 @@ import { TContractAddresses, TUrl } from ".";
 
 export const VectorNodeConfigSchema = Type.Object({
   adminToken: Type.String(),
-  authUrl: Type.String({ format: "uri" }),
+  authUrl: Type.Optional(Type.String({ format: "uri" })),
   chainAddresses: Type.Map(TContractAddresses),
   chainProviders: Type.Map(TUrl),
   dbUrl: Type.Optional(TUrl),
@@ -19,8 +19,9 @@ export const VectorNodeConfigSchema = Type.Object({
       Type.Literal("silent"),
     ]),
   ),
+  messagingUrl: Type.Optional(TUrl),
   mnemonic: Type.Optional(Type.String()),
-  natsUrl: TUrl,
+  natsUrl: Type.Optional(TUrl),
   redisUrl: TUrl,
 });
 

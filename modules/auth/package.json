@@ -11,16 +11,16 @@
     "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.0.1",
-    "@connext/vector-utils": "0.0.1",
+    "@connext/vector-types": "0.0.1-beta.2",
+    "@connext/vector-utils": "0.0.1-beta.2",
     "@sinclair/typebox": "0.10.1",
     "crypto": "1.0.1",
-    "fastify": "3.4.1",
+    "fastify": "3.6.0",
     "fastify-cors": "4.1.0",
-    "pino": "6.6.1"
+    "pino": "6.7.0"
   },
   "devDependencies": {
-    "@types/chai": "4.2.12",
+    "@types/chai": "4.2.13",
     "@types/chai-as-promised": "7.1.3",
     "@types/chai-subset": "1.3.3",
     "@types/mocha": "8.0.3",
@@ -28,10 +28,10 @@
     "babel-loader": "8.1.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
-    "copy-webpack-plugin": "6.1.1",
+    "copy-webpack-plugin": "6.2.1",
     "mocha": "8.1.3",
     "nodemon": "2.0.4",
-    "pino-pretty": "4.2.1",
+    "pino-pretty": "4.3.0",
     "ts-loader": "8.0.4",
     "ts-mocha": "7.0.0",
     "ts-node": "9.0.0",

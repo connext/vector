@@ -3,7 +3,6 @@ import {
   createTestChannelUpdate,
   delay,
   expect,
-  getBearerTokenFunction,
   getRandomChannelSigner,
   NatsMessagingService,
   mkAddress,
@@ -24,18 +23,18 @@ describe("messaging", () => {
     signerB = getRandomChannelSigner();
     messagingA = new NatsMessagingService(
       {
-        messagingUrl: config.natsUrl,
+        messagingUrl: config.messagingUrl,
+        signer: signerA,
+        logger: logger.child({ module: "MessagingA", pubId: signerA.publicIdentifier }),
       },
-      logger.child({ module: "MessagingA", pubId: signerA.publicIdentifier }),
-      getBearerTokenFunction(signerA, config.authUrl),
     );
 
     messagingB = new NatsMessagingService(
       {
-        messagingUrl: config.natsUrl,
+        messagingUrl: config.messagingUrl,
+        signer: signerB,
+        logger: logger.child({ module: "MessagingB", pubId: signerB.publicIdentifier }),
       },
-      logger.child({ module: "MessagingB", pubId: signerB.publicIdentifier }),
-      getBearerTokenFunction(signerB, config.authUrl),
     );
 
     await messagingA.connect();

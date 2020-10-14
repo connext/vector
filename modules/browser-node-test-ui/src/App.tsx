@@ -1,4 +1,4 @@
-import { BrowserNode } from "@connext/browser-node";
+import { BrowserNode } from "@connext/vector-browser-node";
 import { ChannelSigner } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
@@ -27,14 +27,13 @@ function App() {
     const init = async () => {
       console.log(config);
       try {
-        const client = await BrowserNode.connect(
-          config.natsUrl,
+        const client = await BrowserNode.connect({
+          chainAddresses: config.chainAddresses,
+          chainProviders: config.chainProviders,
           logger,
+          messagingUrl: config.messagingUrl,
           signer,
-          config.authUrl,
-          config.chainProviders,
-          config.chainAddresses,
-        );
+        });
         const channelsRes = await client.getStateChannels();
         if (channelsRes.isError) {
           setConnectError(channelsRes.getError().message);

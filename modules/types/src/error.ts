@@ -180,6 +180,7 @@ export class NodeError extends VectorError {
   static readonly reasons = {
     InternalServerError: "Failed to send request",
     InvalidParams: "Request has invalid parameters",
+    MultinodeProhibitted: "Not allowed to have multiple nodes",
     ProviderNotFound: "Provider not available for chain",
     Timeout: "Timeout",
     TransactionNotMined: "Failed to wait for transaction to be mined",

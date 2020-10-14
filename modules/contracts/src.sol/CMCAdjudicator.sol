@@ -7,8 +7,8 @@ import "./interfaces/ITransferDefinition.sol";
 import "./CMCCore.sol";
 import "./CMCAccountant.sol";
 import "./lib/LibChannelCrypto.sol";
-import "./lib/MerkleProof.sol";
-import "./lib/SafeMath.sol";
+import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// @title CMCAdjudicator - Dispute logic for ONE channel
 contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {

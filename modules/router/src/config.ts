@@ -40,7 +40,6 @@ const VectorRouterConfigSchema = Type.Object({
       Type.Literal("silent"),
     ]),
   ),
-  port: Type.Integer(),
   rebalanceProfiles: Type.Array(RebalanceProfileSchema),
 });
 
@@ -52,6 +51,9 @@ try {
 } catch (e) {
   throw new Error(`VECTOR_CONFIG contains invalid JSON: ${e.message}`);
 }
+
+// Set defaults
+vectorConfig.nodeUrl = vectorConfig.nodeUrl || "http://node:8000";
 
 const validate = ajv.compile(VectorRouterConfigSchema);
 const valid = validate(vectorConfig);

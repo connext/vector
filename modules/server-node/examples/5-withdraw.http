@@ -21,6 +21,7 @@ POST {{aliceUrl}}/withdraw
 Content-Type: application/json
 
 {
+  "publicIdentifier": "{{alicePublicIdentifier}}",
   "channelAddress": "{{aliceBobChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",

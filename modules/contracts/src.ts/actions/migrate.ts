@@ -4,8 +4,9 @@ import { Contract, providers, utils, Wallet } from "ethers";
 import { Argv } from "yargs";
 
 import { artifacts } from "../artifacts";
-import { cliOpts, ConstructorArgs } from "../constants";
+import { cliOpts } from "../constants";
 import { getAddressBook, isContractDeployed, deployContract } from "../utils";
+
 import { registerTransfer } from "./registerTransfer";
 
 const { formatEther } = utils;
@@ -34,7 +35,7 @@ export const migrate = async (wallet: Wallet, addressBookPath: string, silent = 
   ////////////////////////////////////////
   // Deploy contracts
 
-  const deployHelper = async (name: string, args: ConstructorArgs): Promise<Contract> => {
+  const deployHelper = async (name: string, args: string[]): Promise<Contract> => {
     const savedAddress = addressBook.getEntry(name)["address"];
     if (savedAddress && (await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))) {
       log(`${name} is up to date, no action required. Address: ${savedAddress}`);
@@ -45,7 +46,7 @@ export const migrate = async (wallet: Wallet, addressBookPath: string, silent = 
   };
 
   const mastercopy = await deployHelper("ChannelMastercopy", []);
-  await deployHelper("ChannelFactory", [{ name: "mastercopy", value: mastercopy.address }]);
+  await deployHelper("ChannelFactory", [mastercopy.address]);
   await deployHelper("TransferRegistry", []);
 
   // Transfers

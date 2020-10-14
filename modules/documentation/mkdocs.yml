@@ -12,10 +12,17 @@ theme:
   font:
     text: Proxima Nova
   palette:
-    primary: white
+    primary: "#002868"
+    accent: "#FCA311"
 
   features:
     - navigation.tabs
+
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.highlight
 
 extra:
   social:
@@ -31,15 +38,20 @@ extra:
 nav:
   - Intro:
       - index.md
-      - status.md
-      - faq.md
-  - Getting Started: gettingStarted.md
+      # - intro/channelBasics.md
+      # - intro/faq.md
+  - Quick Start:
+      - quickStart/serverNode.md
+      - quickStart/browserNode.md
   - Node Guides:
-      - deployProdNode.md
-      - configureNode.md
-      - integrateBrowserNode
+      - node/basics.md
+      - node/configure.md
+      - node/depositAndWithdraw.md
+      - node/transfers.md
+      - node/events.md
   - Router Guides:
-      - deployProdRouter.md
-      - configureRouter.md
-  - Reference:
-      - nodeAPI.md
+      - router/basics.md
+      - router/configure.md
+      # - router/managingCollateral.md
+  - API Reference:
+      - reference/nodeAPI.md

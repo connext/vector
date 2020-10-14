@@ -1,14 +1,14 @@
-import {
-  Address,
-  HexString,
-  IChannelSigner,
-  PrivateKey,
-  PublicKey,
-  PublicIdentifier,
-  SignatureString,
-  UrlString,
-} from "@connext/types";
 import { Wallet, Signer, providers } from "ethers";
+import {
+  UrlString,
+  IChannelSigner,
+  PublicIdentifier,
+  PublicKey,
+  PrivateKey,
+  HexString,
+  SignatureString,
+  Address,
+} from "@connext/vector-types";
 
 import {
   decrypt,

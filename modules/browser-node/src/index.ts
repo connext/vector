@@ -16,11 +16,7 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
-import {
-  constructRpcRequest,
-  getBearerTokenFunction,
-  NatsMessagingService,
-} from "@connext/vector-utils";
+import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
@@ -28,39 +24,40 @@ import { BaseLogger } from "pino";
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 
+export type BrowserNodeConfig = {
+  messagingUrl: string;
+  logger: BaseLogger;
+  signer: IChannelSigner;
+  chainProviders: ChainProviders;
+  chainAddresses: ChainAddresses;
+};
+
 export class BrowserNode implements INodeService {
   private constructor(private readonly engine: IVectorEngine) {}
 
-  static async connect(
-    messagingUrl: string,
-    log: BaseLogger,
-    signer: IChannelSigner,
-    authUrl: string,
-    chainProviders: ChainProviders,
-    chainAddresses: ChainAddresses,
-  ): Promise<BrowserNode> {
-    const chainJsonProviders = Object.fromEntries(
-      Object.entries(chainProviders).map(([chainId, url]) => {
-        return [chainId, new providers.JsonRpcProvider(url)];
-      }),
-    );
-    const messaging = new NatsMessagingService({ messagingUrl }, log, getBearerTokenFunction(signer, authUrl));
+  static async connect(config: BrowserNodeConfig): Promise<BrowserNode> {
+    const chainJsonProviders = hydrateProviders(config.chainProviders);
+    const messaging = new NatsMessagingService({
+      logger: config.logger.child({ module: "MessagingService" }),
+      messagingUrl: config.messagingUrl,
+      signer: config.signer,
+    });
     await messaging.connect();
-    const store = new BrowserStore(log.child({ module: "BrowserStore" }));
+    const store = new BrowserStore(config.logger.child({ module: "BrowserStore" }));
     const lock = new BrowserLockService(
-      signer.publicIdentifier,
+      config.signer.publicIdentifier,
       messaging,
-      log.child({ module: "BrowserLockService" }),
+      config.logger.child({ module: "BrowserLockService" }),
     );
-    const chainService = new VectorChainService(store, chainJsonProviders, signer, log);
+    const chainService = new VectorChainService(store, chainJsonProviders, config.signer, config.logger);
     const engine = await VectorEngine.connect(
       messaging,
       lock,
       store,
-      signer,
+      config.signer,
       chainService,
-      chainAddresses,
-      log.child({ module: "VectorEngine" }),
+      config.chainAddresses,
+      config.logger.child({ module: "VectorEngine" }),
     );
     const node = new BrowserNode(engine);
     return node;
@@ -72,6 +69,10 @@ export class BrowserNode implements INodeService {
 
   get signerAddress(): string {
     return this.engine.signerAddress;
+  }
+
+  createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>> {
+    return Promise.resolve(Result.fail(new NodeError(NodeError.reasons.MultinodeProhibitted, { params })));
   }
 
   async getStateChannelByParticipants(
@@ -127,6 +128,30 @@ export class BrowserNode implements INodeService {
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_getTransferStatesByRoutingId>(rpc);
       return Result.ok(res as ServerNodeResponses.GetTransferStatesByRoutingId);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getTransfer(
+    params: ServerNodeParams.GetTransferState,
+  ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferState, params);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_getTransferState>(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getActiveTransfers(
+    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+  ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getActiveTransfers, params);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_getActiveTransfers>(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }

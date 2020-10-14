@@ -1,4 +1,4 @@
-import { Address, AssetId, PublicKey, PublicIdentifier } from "@connext/types";
+import { Address, AssetId, PublicKey, PublicIdentifier } from "@connext/vector-types";
 import bs58check from "bs58check";
 import { utils } from "ethers";
 import { hexToBuffer, bufferToHex, compress, decompress } from "eccrypto-js";
@@ -20,13 +20,9 @@ export const getPublicIdentifierFromPublicKey = (publicKey: PublicKey): PublicId
   VECTOR_PUB_ID_PREFIX + bs58check.encode(compress(hexToBuffer(publicKey)));
 
 export const getPublicKeyFromPublicIdentifier = (publicIdentifier: PublicIdentifier): string =>
-  `0x${bufferToHex(
-    decompress(bs58check.decode(publicIdentifier.replace(VECTOR_PUB_ID_PREFIX, ""))),
-  )}`;
+  `0x${bufferToHex(decompress(bs58check.decode(publicIdentifier.replace(VECTOR_PUB_ID_PREFIX, ""))))}`;
 
-export const getSignerAddressFromPublicIdentifier = (
-  publicIdentifier: PublicIdentifier,
-): Address => {
+export const getSignerAddressFromPublicIdentifier = (publicIdentifier: PublicIdentifier): Address => {
   const key = `signer-address:${publicIdentifier}`;
   const cached = cache.get<Address>(key);
   if (cached) {
@@ -38,14 +34,12 @@ export const getSignerAddressFromPublicIdentifier = (
 };
 
 // makes sure all addresses are normalized
-export const getAddressFromAssetId = (assetId: AssetId): Address =>
-  getAddress(assetId.toLowerCase());
+export const getAddressFromAssetId = (assetId: AssetId): Address => getAddress(assetId.toLowerCase());
 
 ////////////////////////////////////////
 // Generator
 
-export const getRandomIdentifier = (): PublicIdentifier =>
-  getPublicIdentifierFromPublicKey(getRandomPublicKey());
+export const getRandomIdentifier = (): PublicIdentifier => getPublicIdentifierFromPublicKey(getRandomPublicKey());
 
 ////////////////////////////////////////
 // Validators

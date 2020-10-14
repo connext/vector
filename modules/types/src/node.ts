@@ -3,8 +3,6 @@ import { NodeError, Result } from "./error";
 import { ServerNodeParams, ServerNodeResponses } from "./schemas";
 
 export interface INodeService {
-  publicIdentifier: string;
-  signerAddress: string;
   getStateChannelByParticipants(
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>>;
@@ -24,6 +22,16 @@ export interface INodeService {
   getTransfersByRoutingId(
     params: ServerNodeParams.GetTransferStatesByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>>;
+
+  getTransfer(
+    params: ServerNodeParams.GetTransferState,
+  ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>>;
+
+  getActiveTransfers(
+    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+  ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>>;
+
+  createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>>;
 
   setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, NodeError>>;
 

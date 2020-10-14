@@ -22,9 +22,6 @@ export type EventCallbackConfig = {
 };
 
 export class RestServerNodeService implements INodeService {
-  public publicIdentifier = "";
-  public signerAddress = "";
-
   private constructor(
     private readonly serverNodeUrl: string,
     private readonly logger: BaseLogger,
@@ -35,17 +32,8 @@ export class RestServerNodeService implements INodeService {
     serverNodeUrl: string,
     logger: BaseLogger,
     evts?: EventCallbackConfig,
-    index = 0,
   ): Promise<RestServerNodeService> {
     const service = new RestServerNodeService(serverNodeUrl, logger, evts);
-    const node = await service.createNode({ index });
-    if (node.isError) {
-      throw node.getError();
-    }
-
-    service.publicIdentifier = node.getValue().publicIdentifier;
-    service.signerAddress = node.getValue().signerAddress;
-
     if (evts) {
       const urls = Object.fromEntries(
         Object.entries(evts).map(([event, config]) => {
@@ -74,22 +62,24 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetChannelState,
   ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/${params.publicIdentifier ?? this.publicIdentifier}`,
+      `channel/${params.channelAddress}/${params.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateSchema,
     );
   }
 
-  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
-    return this.executeHttpRequest(`channel`, "get", {}, ServerNodeParams.GetChannelStateSchema);
+  async getStateChannels(
+    params: ServerNodeParams.GetChannelStates,
+  ): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>> {
+    return this.executeHttpRequest(`channel`, "get", params, ServerNodeParams.GetChannelStatesSchema);
   }
 
   async getTransfersByRoutingId(
     params: ServerNodeParams.GetTransferStatesByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>> {
     return this.executeHttpRequest(
-      `transfer/${params.routingId}/${params.publicIdentifier ?? this.publicIdentifier}`,
+      `transfer/${params.routingId}/${params.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStatesByRoutingIdSchema,
@@ -100,11 +90,32 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetTransferStateByRoutingId,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier ??
-        this.publicIdentifier}`,
+      `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetTransferStateByRoutingIdSchema,
+    );
+  }
+
+  async getTransfer(
+    params: ServerNodeParams.GetTransferState,
+  ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
+    return this.executeHttpRequest(
+      `transfer/${params.transferId}/${params.publicIdentifier}`,
+      "get",
+      params,
+      ServerNodeParams.GetTransferStateSchema,
+    );
+  }
+
+  async getActiveTransfers(
+    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+  ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
+    return this.executeHttpRequest(
+      `channel/${params.channelAddress}/active-transfer/${params.publicIdentifier}`,
+      "get",
+      params,
+      ServerNodeParams.GetActiveTransfersByChannelAddressSchema,
     );
   }
 
@@ -112,7 +123,7 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetChannelStateByParticipants,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier ?? this.publicIdentifier}`,
+      `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateByParticipantsSchema,
@@ -125,7 +136,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.RequestSetup, ServerNodeResponses.RequestSetup>(
       "request-setup",
       "post",
-      { ...params, bobIdentifier: params.bobIdentifier ?? this.publicIdentifier },
+      params,
       ServerNodeParams.RequestSetupSchema,
     );
   }
@@ -134,7 +145,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
       "setup",
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.SetupSchema,
     );
   }
@@ -145,7 +156,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.SendDepositTx, ServerNodeResponses.SendDepositTx>(
       "send-deposit-tx",
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.SendDepositTxSchema,
     );
   }
@@ -157,7 +168,7 @@ export class RestServerNodeService implements INodeService {
       {
         channelAddress: params.channelAddress,
         assetId: params.assetId,
-        publicIdentifier: params.publicIdentifier ?? this.publicIdentifier,
+        publicIdentifier: params.publicIdentifier,
       },
       ServerNodeParams.DepositSchema,
     );
@@ -169,7 +180,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.ConditionalTransfer, ServerNodeResponses.ConditionalTransfer>(
       `hashlock-transfer/create`,
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ConditionalTransferSchema,
     );
   }
@@ -180,7 +191,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.ResolveTransfer, ServerNodeResponses.ResolveTransfer>(
       `hashlock-transfer/resolve`,
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ResolveTransferSchema,
     );
   }
@@ -189,7 +200,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeParams.Withdraw, ServerNodeResponses.Withdraw>(
       `withdraw`,
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier ?? this.publicIdentifier },
+      { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.WithdrawSchema,
     );
   }

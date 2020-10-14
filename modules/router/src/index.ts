@@ -1,24 +1,29 @@
 import fastify from "fastify";
 import fastifyOas from "fastify-oas";
+import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
-import { RestServerNodeService } from "@connext/vector-utils";
+import { EventCallbackConfig, RestServerNodeService } from "@connext/vector-utils";
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
+  RequestCollateralPayload,
 } from "@connext/vector-types";
+import { Registry } from "prom-client";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
 import { RouterStore } from "./services/store";
 
-const routerBase = `http://router:${config.port}`;
+const routerPort = 8000;
+const routerBase = `http://router:${routerPort}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
-const evts = {
+const requestCollateralPath = "/request-collateral";
+const evts: EventCallbackConfig = {
   [EngineEvents.SETUP]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -32,12 +37,17 @@ const evts = {
     evt: Evt.create<DepositReconciledPayload>(),
     url: `${routerBase}${depositReconciledPath}`,
   },
+  [EngineEvents.REQUEST_COLLATERAL]: {
+    evt: Evt.create<RequestCollateralPayload>(),
+    url: `${routerBase}${requestCollateralPath}`,
+  },
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
 };
 
-const server = fastify();
+const logger = pino();
+const server = fastify({ logger });
 server.register(fastifyOas, {
   swagger: {
     info: {
@@ -48,16 +58,25 @@ server.register(fastifyOas, {
   exposeRoute: true,
 });
 
-const logger = pino();
+const register = new Registry();
+server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });
+
 let router: IRouter;
 const store = new RouterStore();
+
 server.addHook("onReady", async () => {
-  const node = await RestServerNodeService.connect(
+  const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
     logger.child({ module: "RestServerNodeService" }),
     evts,
   );
-  router = await Router.connect(node, store, logger);
+  // Create signer at 0
+  const node = await nodeService.createNode({ index: 0 });
+  if (node.isError) {
+    throw node.getError();
+  }
+  const { publicIdentifier, signerAddress } = node.getValue();
+  router = await Router.connect(publicIdentifier, signerAddress, nodeService, store, logger, register);
 });
 
 server.get("/ping", async () => {
@@ -65,21 +84,26 @@ server.get("/ping", async () => {
 });
 
 server.post(conditionalTransferCreatedPath, async (request, response) => {
-  evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
+  evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt!.post(request.body as ConditionalTransferCreatedPayload);
   return response.status(200).send({ message: "success" });
 });
 
 server.post(conditionalTransferResolvedPath, async (request, response) => {
-  evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+  evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt!.post(request.body as ConditionalTransferResolvedPayload);
   return response.status(200).send({ message: "success" });
 });
 
 server.post(depositReconciledPath, async (request, response) => {
-  evts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
+  evts[EngineEvents.DEPOSIT_RECONCILED].evt!.post(request.body as DepositReconciledPayload);
   return response.status(200).send({ message: "success" });
 });
 
-server.listen(config.port, "0.0.0.0", (err, address) => {
+server.post(requestCollateralPath, async (request, response) => {
+  evts[EngineEvents.REQUEST_COLLATERAL].evt!.post(request.body as RequestCollateralPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.listen(routerPort, "0.0.0.0", (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

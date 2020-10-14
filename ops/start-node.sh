@@ -24,10 +24,16 @@ prod_config="`cat $root/config-prod.json`"
 config="`echo $node_config $prod_config | jq -s '.[0] + .[1]'`"
 
 function getDefault { echo "$node_config" | jq ".$1" | tr -d '"'; }
-function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
+function getConfig {
+  value="`echo "$config" | jq ".$1" | tr -d '"'`"
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
 
 admin_token="`getConfig adminToken`"
-auth_url="`getConfig authUrl`"
+messaging_url="`getConfig messagingUrl`"
 aws_access_id="`getConfig awsAccessId`"
 aws_access_key="`getConfig awsAccessKey`"
 chain_providers="`getConfig chainProviders`"
@@ -35,11 +41,6 @@ domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
-
-if [[ "$production" == "true" ]]
-then VECTOR_ENV="prod"
-else VECTOR_ENV="dev"
-fi
 
 ####################
 # Misc Config
@@ -57,6 +58,9 @@ fi
 builder_image="${project}_builder:$version";
 bash $root/ops/pull-images.sh $builder_image > /dev/null
 
+redis_image="redis:5-alpine";
+bash $root/ops/pull-images.sh $redis_image > /dev/null
+
 common="networks:
       - '$project'
     logging:
@@ -68,10 +72,7 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-if [[ \
-  "$auth_url" == "`getDefault authUrl`" || \
-  "$chain_providers" == "`getDefault chainProviders`" \
-  ]]
+if [[ -n "$messaging_url" || "$chain_providers" == "`getDefault chainProviders`" ]]
 then
   bash $root/ops/start-global.sh
   mnemonic_secret=""
@@ -81,7 +82,7 @@ then
   config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 else
-  echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
+  echo "Connecting to external services: messaging=$messaging_url | chain_providers=$chain_providers"
   if [[ -n "$mnemonic" ]]
   then
     mnemonic_secret=""
@@ -97,12 +98,6 @@ else
   fi
 fi
 
-redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh $redis_image > /dev/null
-
-# to access from other containers
-redis_url="redis://redis:6379"
-
 ########################################
 ## Database config
 
@@ -114,7 +109,7 @@ pg_db="$project"
 pg_user="$project"
 pg_dev_port="5433"
 
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$production" == "true" ]]
 then
   # Use a secret to store the database password
   db_secret="${project}_${stack}_database"
@@ -148,7 +143,7 @@ fi
 
 node_internal_port="8000"
 node_dev_port="8001"
-if [[ $VECTOR_ENV == "prod" ]]
+if [[ $production == "prod" ]]
 then
   node_image_name="${project}_node"
   bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
@@ -181,27 +176,23 @@ fi
 ####################
 # Proxy config
 
-proxy_image="${project}_node_proxy:$version";
+proxy_image="${project}_${stack}_proxy:$version";
 bash $root/ops/pull-images.sh $proxy_image > /dev/null
 
-if [[ -z "$domain_name" && -n "$public_port" ]]
-then
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
-elif [[ -n "$domain_name" && -z "$public_port" ]]
+if [[ -n "$domain_name" ]]
 then
   public_url="https://127.0.0.1:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
   echo "$stack.proxy will be exposed on *:80 and *:443"
+
 else
-  echo "Either a domain name or a public port must be provided but not both."
-  echo " - If a public port is provided then the stack will use http on the given port"
-  echo " - If a domain name is provided then https is activated on port *:443"
-  exit 1
+  public_port=${public_port:-3000}
+  public_url="http://127.0.0.1:$public_port"
+  proxy_ports="ports:
+      - '$public_port:80'"
+  echo "$stack.proxy will be exposed on *:$public_port"
 fi
 
 ####################
@@ -256,7 +247,7 @@ services:
     $node_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -277,7 +268,7 @@ services:
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$pg_user'
       VECTOR_ADMIN_TOKEN: '$admin_token'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
 
   redis:
     $common

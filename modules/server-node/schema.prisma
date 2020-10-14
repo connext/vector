@@ -10,7 +10,6 @@ datasource db {
 }
 
 model Balance {
-  @@map(name: "balance")
   participant      String
   assetId          String
   to               String
@@ -18,36 +17,38 @@ model Balance {
   processedDeposit String
   Channel          Channel @relation(fields: [channelAddress], references: [channelAddress])
   channelAddress   String
+
   @@id([participant, channelAddress, assetId])
+  @@map(name: "balance")
 }
 
 model Channel {
-  @@map(name: "channel")
-  channelAddress              String    @id
-  publicIdentifierA           String
-  publicIdentifierB           String
-  participantA                String
-  participantB                String
-  assetIds                    String
-  timeout                     String
-  nonce                       Int
-  merkleRoot                  String
-  balances                    Balance[]
-  channelFactoryAddress       String
-  channelMastercopyAddress    String
-  transferRegistryAddress     String
-  chainId                     Int
-  providerUrl                 String
-  latestUpdate                Update
+  channelAddress           String    @id
+  publicIdentifierA        String
+  publicIdentifierB        String
+  participantA             String
+  participantB             String
+  assetIds                 String
+  timeout                  String
+  nonce                    Int
+  merkleRoot               String
+  balances                 Balance[]
+  channelFactoryAddress    String
+  channelMastercopyAddress String
+  transferRegistryAddress  String
+  chainId                  Int
+  providerUrl              String
+  latestUpdate             Update
 
-  activeTransfers             Transfer[]
+  activeTransfers Transfer[]
 
+  OnchainTransaction OnchainTransaction[]
   @@unique([publicIdentifierA, publicIdentifierB, chainId])
   @@unique([participantA, participantB, chainId])
+  @@map(name: "channel")
 }
 
 model Update {
-  @@map(name: "update")
   // COMMON PARAMS
   channelAddress   String?
   channel          Channel? @relation(fields: [channelAddress], references: [channelAddress])
@@ -97,10 +98,10 @@ model Update {
   resolvedTransfer Transfer? @relation("ResolvedTransfer")
 
   @@id([channelAddressId, nonce])
+  @@map(name: "update")
 }
 
 model Transfer {
-  @@map(name: "transfer")
   transferId String @id
   routingId  String
 
@@ -115,8 +116,8 @@ model Transfer {
 
   initialStateHash String
 
-  channel        Channel? @relation(fields: [channelAddress], references: [channelAddress])
-  channelAddress String?
+  channel          Channel? @relation(fields: [channelAddress], references: [channelAddress])
+  channelAddress   String?
   channelAddressId String // required for ID so that relation can be removed
 
   // created will always exist
@@ -128,28 +129,28 @@ model Transfer {
   resolveUpdateNonce            Int?
 
   @@unique([routingId, channelAddressId])
+  @@map(name: "transfer")
 }
 
 model EventSubscription {
-  @@map(name: "event-subscription")
   id    String @id @default(uuid())
   event String @unique
   url   String
+
+  @@map(name: "event-subscription")
 }
 
 model OnchainTransaction {
-  @@map(name: "onchain-transaction")
-
   // Response fields
-  transactionHash   String @id
-  to                String
-  from              String
-  data              String
-  value             String
-  chainId           Int
-  nonce             Int
-  gasLimit          String
-  gasPrice          String
+  transactionHash String @id
+  to              String
+  from            String
+  data            String
+  value           String
+  chainId         Int
+  nonce           Int
+  gasLimit        String
+  gasPrice        String
 
   // Receipt fields
   timestamp         String?
@@ -166,12 +167,27 @@ model OnchainTransaction {
   byzantium         Boolean?
 
   // Channel fields
-  status            String @default("submitted") // no enums
-  reason            String // no enums
-  error             String?
-  channelAddress    String
-  channel           Channel @relation(fields: [channelAddress], references: [channelAddress])
+  status         String  @default("submitted") // no enums
+  reason         String // no enums
+  error          String?
+  channelAddress String
+  channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 
   @@unique(transactionHash)
   @@unique([from, nonce])
+  @@map(name: "onchain_transaction")
+}
+
+model Configuration {
+  id       Int    @id
+  mnemonic String @unique
+
+  @@map(name: "configuration")
+}
+
+model NodeIndex {
+  index Int @id
+  publicIdentifier String @unique
+
+  @@map(name: "node_index")
 }

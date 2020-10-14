@@ -1,13 +1,14 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import { EngineEvents, ILockService, IVectorChainService, IVectorEngine } from "@connext/vector-types";
-import { ChannelSigner, getBearerTokenFunction, NatsMessagingService } from "@connext/vector-utils";
+import { ChannelSigner, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "ethers";
 
-import { logger, _providers, store } from "..";
+import { logger, _providers } from "../index";
 import { config } from "../config";
 import { LockService } from "../services/lock";
+import { IServerNodeStore } from "../services/store";
 
 const ETH_STANDARD_PATH = "m/44'/60'/0'/0";
 
@@ -23,7 +24,7 @@ export function getIndexFromPath(path: string): number {
   return Number(path.replace(ETH_STANDARD_PATH, "").replace("/", ""));
 }
 
-export const nodes: {
+export let nodes: {
   [publicIdentifier: string]: {
     node: IVectorEngine;
     chainService: IVectorChainService;
@@ -32,9 +33,14 @@ export const nodes: {
   };
 } = {};
 
-export const createNode = async (index: number): Promise<IVectorEngine> => {
+export const deleteNodes = async (store: IServerNodeStore): Promise<void> => {
+  nodes = {};
+  await store.removeNodeIndexes();
+};
+
+export const createNode = async (index: number, store: IServerNodeStore, mnemonic: string): Promise<IVectorEngine> => {
   const method = "createNode";
-  const pk = Wallet.fromMnemonic(config.mnemonic!, getPath(index)).privateKey;
+  const pk = Wallet.fromMnemonic(mnemonic, getPath(index)).privateKey;
   const signer = new ChannelSigner(pk);
 
   if (nodes[signer.publicIdentifier]) {
@@ -46,15 +52,13 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
   const vectorTx = new VectorChainService(store, _providers, pk, logger.child({ module: "VectorChainService" }));
   logger.info({ method, providers: config.chainProviders }, "Connected VectorChainService");
 
-  const messaging = new NatsMessagingService(
-    {
-      messagingUrl: config.natsUrl,
-    },
-    logger.child({ module: "NatsMessagingService" }),
-    getBearerTokenFunction(signer, config.authUrl),
-  );
+  const messaging = new NatsMessagingService({
+    logger: logger.child({ module: "NatsMessagingService" }),
+    messagingUrl: config.messagingUrl,
+    signer,
+  });
   await messaging.connect();
-  logger.info({ method, messagingUrl: config.natsUrl }, "Connected NatsMessagingService");
+  logger.info({ method, messagingUrl: config.messagingUrl }, "Connected NatsMessagingService");
 
   const lockService = await LockService.connect(
     signer.publicIdentifier,
@@ -74,28 +78,24 @@ export const createNode = async (index: number): Promise<IVectorEngine> => {
     logger.child({ module: "VectorEngine" }),
   );
 
-  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
-    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
-    if (url) {
-      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_CREATED }, "Relaying event");
-      await Axios.post(url, data);
-    }
-  });
-
-  vectorEngine.on(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, async data => {
-    const url = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
-    if (url) {
-      logger.info({ url, event: EngineEvents.CONDITIONAL_TRANSFER_RESOLVED }, "Relaying event");
-      await Axios.post(url, data);
-    }
-  });
+  for (const event of Object.values(EngineEvents)) {
+    vectorEngine.on(event, async data => {
+      const url = await store.getSubscription(event);
+      if (url) {
+        logger.info({ url, event }, "Relaying event");
+        await Axios.post(url, data);
+      }
+    });
+    logger.info({ event, method, publicIdentifier: signer.publicIdentifier, index }, "Set up subscription for event");
+  }
 
   nodes[signer.publicIdentifier] = { node: vectorEngine, chainService: vectorTx, index, lockService };
+  store.setNodeIndex(index, signer.publicIdentifier);
   return vectorEngine;
 };
 
 export const getNode = (publicIdentifier: string): IVectorEngine | undefined => {
-  return nodes[publicIdentifier].node;
+  return nodes[publicIdentifier]?.node;
 };
 
 export const getChainService = (publicIdentifier: string): IVectorChainService | undefined => {

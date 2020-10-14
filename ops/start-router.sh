@@ -26,10 +26,16 @@ prod_config="`cat $root/config-prod.json`"
 config="`echo $default_config $prod_config | jq -s '.[0] + .[1]'`"
 
 function getDefault { echo "$default_config" | jq ".$1" | tr -d '"'; }
-function getConfig { echo "$config" | jq ".$1" | tr -d '"'; }
+function getConfig {
+  value="`echo "$config" | jq ".$1" | tr -d '"'`"
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
 
 admin_token="`getConfig adminToken`"
-auth_url="`getConfig authUrl`"
+messaging_url="`getConfig messagingUrl`"
 aws_access_id="`getConfig awsAccessId`"
 aws_access_key="`getConfig awsAccessKey`"
 chain_providers="`getConfig chainProviders`"
@@ -37,11 +43,6 @@ domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
-
-if [[ "$production" == "true" ]]
-then VECTOR_ENV="prod"
-else VECTOR_ENV="dev"
-fi
 
 ####################
 # Misc Config
@@ -74,7 +75,7 @@ common="networks:
 # If no global service urls provided, spin up local ones & use those
 
 if [[ \
-  "$auth_url" == "`getDefault authUrl`" || \
+  "$messaging_url" == "`getDefault messagingUrl`" || \
   "$chain_providers" == "`getDefault chainProviders`" \
   ]]
 then
@@ -86,7 +87,7 @@ then
   config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
 
 else
-  echo "Connecting to external global services: auth=$auth_url | chain_providers=$chain_providers"
+  echo "Connecting to external global services: messaging=$messaging_url | chain_providers=$chain_providers"
   if [[ -n "$mnemonic" ]]
   then
     mnemonic_secret=""
@@ -113,7 +114,7 @@ pg_db="$project"
 pg_user="$project"
 pg_dev_port="5434"
 
-if [[ "$VECTOR_ENV" == "prod" ]]
+if [[ "$production" == "true" ]]
 then
   # Use a secret to store the database password
   db_secret="${project}_${stack}_database"
@@ -147,7 +148,7 @@ fi
 
 node_internal_port="8000"
 node_dev_port="8002"
-if [[ $VECTOR_ENV == "prod" ]]
+if [[ $production == "true" ]]
 then
   node_image_name="${project}_node"
   bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
@@ -180,9 +181,10 @@ fi
 ########################################
 ## Router config
 
-router_port="8008"
+router_internal_port="9000"
+router_dev_port="9000"
 
-if [[ $VECTOR_ENV == "prod" ]]
+if [[ $production == "true" ]]
 then
   router_image_name="${project}_router"
   bash $root/ops/pull-images.sh $version $router_image_name > /dev/null
@@ -193,8 +195,8 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$router_port:$router_port'"
-  echo "$stack.router configured to be exposed on *:$router_port"
+      - '$router_dev_port:$router_internal_port'"
+  echo "$stack.router configured to be exposed on *:$router_dev_port"
 fi
 
 # Add whichever secrets we're using to the router's service config
@@ -208,28 +210,72 @@ fi
 ####################
 # Proxy config
 
-proxy_image="${project}_router_proxy:$version";
+proxy_image="${project}_${stack}_proxy:$version";
 bash $root/ops/pull-images.sh $proxy_image > /dev/null
 
-if [[ -z "$domain_name" && -n "$public_port" ]]
-then
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
-elif [[ -n "$domain_name" && -z "$public_port" ]]
+if [[ -n "$domain_name" ]]
 then
   public_url="https://127.0.0.1:443"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
   echo "$stack.proxy will be exposed on *:80 and *:443"
+
 else
-  echo "Either a domain name or a public port must be provided but not both."
-  echo " - If a public port is provided then the stack will use http on the given port"
-  echo " - If a domain name is provided then https is activated on port *:443"
-  exit 1
+  public_port=${public_port:-3001}
+  public_url="http://127.0.0.1:$public_port"
+  proxy_ports="ports:
+      - '$public_port:80'"
+  echo "$stack.proxy will be exposed on *:$public_port"
 fi
+
+####################
+# Observability tools config
+
+grafana_image="grafana/grafana:latest"
+bash $root/ops/pull-images.sh $grafana_image > /dev/null
+
+prometheus_image="prom/prometheus:latest"
+bash $root/ops/pull-images.sh $prometheus_image > /dev/null
+
+cadvisor_image="gcr.io/google-containers/cadvisor:latest"
+bash $root/ops/pull-images.sh $cadvisor_image > /dev/null
+
+prometheus_services="prometheus:
+    image: $prometheus_image
+    $common
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  cadvisor:
+    $common
+    image: $cadvisor_image
+    ports:
+      - 8081:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro"
+
+grafana_service="grafana:
+    image: '$grafana_image'
+    $common
+    networks:
+      - '$project'
+    ports:
+      - '3008:3000'
+    volumes:
+      - '$root/ops/grafana/grafana:/etc/grafana'
+      - '$root/ops/grafana/dashboards:/etc/dashboards'"
+
+# TODO we probably want to remove observability from dev env once it's working
+# bc these make indra take a log longer to wake up
+observability_services="$prometheus_services
+  $grafana_service"
 
 ####################
 # Launch stack
@@ -275,6 +321,7 @@ services:
     environment:
       VECTOR_DOMAINNAME: '$domain_name'
       VECTOR_NODE_URL: 'node:$node_internal_port'
+      VECTOR_ROUTER_URL: 'router:$router_internal_port'
     volumes:
       - 'certs:/etc/letsencrypt'
 
@@ -283,7 +330,7 @@ services:
     $node_image
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -296,11 +343,9 @@ services:
   router:
     $common
     $router_image
-    ports:
-      - '$router_port:$router_port'
     environment:
       VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: 'database'
@@ -308,7 +353,6 @@ services:
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
-      VECTOR_PORT: '$router_port'
 
   database:
     $common
@@ -321,11 +365,13 @@ services:
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$project'
       VECTOR_ADMIN_TOKEN: '$admin_token'
-      VECTOR_ENV: '$VECTOR_ENV'
+      VECTOR_PROD: '$production'
 
   redis:
     $common
     image: '$redis_image'
+
+  $observability_services
 
 EOF
 

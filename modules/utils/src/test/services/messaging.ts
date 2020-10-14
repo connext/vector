@@ -116,6 +116,29 @@ export class MemoryMessagingService implements IMessagingService {
       });
   }
 
+  sendRequestCollateralMessage(
+    requestCollateralParams: {} & { amount?: string } & { channelAddress: string; assetId: string },
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<undefined, Error>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveRequestCollateralMessage(
+    publicIdentifier: string,
+    callback: (
+      params: Result<{} & { amount?: string } & { channelAddress: string; assetId: string }, Error>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void> {
     throw new Error("Method not implemented.");
   }

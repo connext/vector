@@ -1,17 +1,18 @@
 # Welcome
 
-Welcome to the Connext docs! These docs will guide you through some of the basics about running Connext.
+Welcome to the Connext docs!
 
-## Commands
+At Connext, our goal is to build the cross-chain routing and micropayment layer of the decentralized web. Connext sits on top of Ethereum, evm-compatible L2 blockchains, and other turing-complete chains, and enables instant, near free transfers that can be routed **across chains** and over liquidity in **any asset**. Most importantly, it does this without giving up the trust-minimization properties of the underlying chain.
 
-- `mkdocs new [dir-name]` - Create a new project.
-- `mkdocs serve` - Start the live-reloading docs server.
-- `mkdocs build` - Build the documentation site.
-- `mkdocs help` - Print this help message.
+You can think of Connext as a shared standard for blockchains and other decentralized networks to communicate with each other about value.
 
-## Project layout
+## Where Do I Start?
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+- If you're building a browser dApp, check out the browser-node quick start guide.
+- If you're building a p2p network that uses programmable micropayments, you likely want to run a router
+
+
+- If you're building a p2p network on top of Connext, you likely want a combination of node and router docs.
+- etc.
+
+If you're still confused about where to begin, join us in our community chat! We're **very** responsive and happy to point you to the right resources. :)

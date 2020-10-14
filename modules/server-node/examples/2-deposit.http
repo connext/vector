@@ -1,10 +1,19 @@
 @aliceUrl = http://localhost:8003
 @bobUrl = http://localhost:8004
-@rogerUrl = http://localhost:8000
+@carolUrl = http://localhost:8005
+@daveUrl = http://localhost:8006
+@rogerUrl = http://localhost:8007
 @aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
-@aliceRogerChannel = 0x228143668de2eD7d4386EB81517c08fb3aA07538
-@chainId = 1337
+@carolRogerChannel = 0xEd985dC74648f968F9B42Ef2CCF2ed98777f4C3A
+@daveRogerChannel = 0x05b2FFe2814240aa788FcD38Fe0DB29354E6d789
+@adminToken = cxt1234
 @alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
+@bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@carolPublicIdentifier = indra8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
+@davePublicIdentifier = indra7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
+@rogerPublicIdentifier = indra8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
+@chainId = 1337
+
 
 # 0.1 ETH
 @ethAmount = 10000000000000000
@@ -18,7 +27,8 @@ Content-Type: application/json
   "channelAddress": "{{aliceBobChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
-  "chainId": "{{chainId}}"
+  "chainId": "{{chainId}}",
+  "publicIdentifier": "{{alicePublicIdentifier}}",
 }
 
 ##############
@@ -28,5 +38,17 @@ Content-Type: application/json
 
 {
   "channelAddress": "{{aliceBobChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000"
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{bobPublicIdentifier}}",
+}
+
+##############
+### Request Collateral
+POST {{daveUrl}}/request-collateral
+Content-Type: application/json
+
+{
+  "channelAddress": "{{daveRogerChannel}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{davePublicIdentifier}}"
 }

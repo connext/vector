@@ -17,8 +17,6 @@
       "hardcodedRate": "1"
     }
   ],
-  "nodeUrl": "http://node:8000",
-  "port": 3001,
   "rebalanceProfiles": [
     {
       "chainId": 1337,

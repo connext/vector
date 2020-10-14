@@ -1,6 +1,7 @@
 import { ChannelUpdate } from "./channel";
 import { InboundChannelUpdateError, LockError, OutboundChannelUpdateError, Result } from "./error";
 import { LockInformation } from "./lock";
+import { EngineParams } from "./schemas";
 
 export interface IMessagingService {
   connect(): Promise<void>;
@@ -44,6 +45,19 @@ export interface IMessagingService {
   ): Promise<void>;
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
 
+  sendRequestCollateralMessage(
+    requestCollateralParams: EngineParams.RequestCollateral,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<undefined, Error>>;
+  onReceiveRequestCollateralMessage(
+    publicIdentifier: string,
+    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
+  ): Promise<void>;
+  respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void>;
+
   onReceiveCheckIn(
     myPublicIdentifier: string,
     callback: (nonce: string, from: string, inbox: string) => void,
@@ -56,12 +70,3 @@ export interface IMessagingService {
   flush(): Promise<void>;
   request(subject: string, timeout: number, data: any): Promise<any>;
 }
-
-export type MessagingConfig = {
-  clusterId?: string;
-  messagingUrl: string | string[];
-  options?: any;
-  privateKey?: string;
-  publicKey?: string;
-  token?: string;
-};

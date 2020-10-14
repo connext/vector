@@ -39,30 +39,53 @@ const BasicTransferServerResponseSchema = {
 };
 
 // GET TRANSFER BY ROUTINGID
-const GetTransferStateByRoutingIdParamsSchema = Type.Object({
-  channelAddress: TAddress,
-  routingId: TBytes32,
-  publicIdentifier: Type.Optional(TPublicIdentifier),
-});
+const GetTransferStateByRoutingIdParamsSchema = Type.Intersect([
+  EngineParams.GetTransferStateByRoutingIdSchema,
+  Type.Object({
+    publicIdentifier: TPublicIdentifier,
+  }),
+]);
 
 const GetTransferStateByRoutingIdResponseSchema = {
   200: Type.Union([Type.Undefined, TFullTransferState]),
 };
 
 // GET TRANSFERS BY ROUTINGID
-const GetTransferStatesByRoutingIdParamsSchema = Type.Object({
-  routingId: TBytes32,
-  publicIdentifier: Type.Optional(TPublicIdentifier),
-});
+const GetTransferStatesByRoutingIdParamsSchema = Type.Intersect([
+  EngineParams.GetTransferStatesByRoutingIdSchema,
+  Type.Object({
+    publicIdentifier: TPublicIdentifier,
+  }),
+]);
 
 const GetTransferStatesByRoutingIdResponseSchema = {
   200: Type.Array(TFullTransferState),
 };
 
+// GET ACTIVE TRANSFERS BY ADDR
+const GetActiveTransfersByChannelAddressParamsSchema = Type.Intersect([
+  EngineParams.GetActiveTransfersSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetActiveTransfersByChannelAddressResponseSchema = {
+  200: Type.Array(TFullTransferState),
+};
+
+// GET TRANSFERS BY TRANSFERID
+const GetTransferStateParamsSchema = Type.Intersect([
+  EngineParams.GetTransferStateSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetTransferStateResponseSchema = {
+  200: Type.Union([Type.Undefined, TFullTransferState]),
+};
+
 // GET CHANNEL STATE
 const GetChannelStateParamsSchema = Type.Intersect([
   EngineParams.GetChannelStateSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const GetChannelStateResponseSchema = {
@@ -72,7 +95,7 @@ const GetChannelStateResponseSchema = {
 // GET CHANNEL STATES
 const GetChannelStatesParamsSchema = Type.Intersect([
   EngineParams.GetChannelStatesSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const GetChannelStatesResponseSchema = {
@@ -82,7 +105,7 @@ const GetChannelStatesResponseSchema = {
 // GET CHANNEL STATE BY PARTICIPANTS
 const GetChannelStateByParticipantsParamsSchema = Type.Intersect([
   EngineParams.GetChannelStateByParticipantsSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const GetChannelStateByParticipantsResponseSchema = GetChannelStateResponseSchema;
@@ -124,15 +147,15 @@ const PostRegisterListenerResponseSchema = {
 // POST SETUP
 const PostSetupBodySchema = Type.Intersect([
   EngineParams.SetupSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostSetupResponseSchema = BasicChannelServerResponseSchema;
 
 // POST REQUEST SETUP
 const PostRequestSetupBodySchema = Type.Object({
-  aliceIdentifier: Type.Optional(TPublicIdentifier),
-  bobIdentifier: Type.Optional(TPublicIdentifier),
+  aliceIdentifier: TPublicIdentifier,
+  bobIdentifier: TPublicIdentifier,
   aliceUrl: Type.String({ format: "uri" }),
   chainId: TChainId,
   timeout: TIntegerString,
@@ -144,10 +167,18 @@ const PostRequestSetupResponseSchema = BasicChannelServerResponseSchema;
 // POST DEPOSIT
 const PostDepositBodySchema = Type.Intersect([
   EngineParams.DepositSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostDepositResponseSchema = BasicChannelServerResponseSchema;
+
+// POST DEPOSIT
+const PostRequestCollateralBodySchema = Type.Intersect([
+  EngineParams.RequestCollateralSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostRequestCollateralResponseSchema = BasicChannelServerResponseSchema;
 
 // POST SEND DEPOSIT TX
 const PostSendDepositTxBodySchema = Type.Object({
@@ -155,7 +186,7 @@ const PostSendDepositTxBodySchema = Type.Object({
   amount: TIntegerString,
   assetId: TAddress,
   chainId: TChainId,
-  publicIdentifier: Type.Optional(TPublicIdentifier),
+  publicIdentifier: TPublicIdentifier,
 });
 
 const PostSendDepositTxResponseSchema = {
@@ -167,7 +198,7 @@ const PostSendDepositTxResponseSchema = {
 // POST CREATE CONDITIONAL TRANSFER
 const PostConditionalTransferBodySchema = Type.Intersect([
   EngineParams.ConditionalTransferSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostConditionalTransferResponseSchema = BasicTransferServerResponseSchema;
@@ -175,7 +206,7 @@ const PostConditionalTransferResponseSchema = BasicTransferServerResponseSchema;
 // POST RESOLVE CONDITIONAL TRANSFER
 const PostResolveTransferBodySchema = Type.Intersect([
   EngineParams.ResolveTransferSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
@@ -183,7 +214,7 @@ const PostResolveTransferResponseSchema = BasicTransferServerResponseSchema;
 // POST WITHDRAW TRANSFER
 const PostWithdrawTransferBodySchema = Type.Intersect([
   EngineParams.WithdrawSchema,
-  Type.Object({ publicIdentifier: Type.Optional(TPublicIdentifier) }),
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
 ]);
 
 const PostWithdrawTransferResponseSchema = {
@@ -197,6 +228,7 @@ const PostWithdrawTransferResponseSchema = {
 // CREATE NODE
 const PostCreateNodeBodySchema = Type.Object({
   index: Type.Integer({ minimum: 0, maximum: 2147483647 }),
+  mnemonic: Type.Optional(Type.String()),
 });
 
 const PostCreateNodeResponseSchema = {
@@ -230,6 +262,12 @@ export namespace ServerNodeParams {
   export const GetTransferStatesByRoutingIdSchema = GetTransferStatesByRoutingIdParamsSchema;
   export type GetTransferStatesByRoutingId = Static<typeof GetTransferStatesByRoutingIdParamsSchema>;
 
+  export const GetTransferStateSchema = GetTransferStateParamsSchema;
+  export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
+
+  export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressParamsSchema;
+  export type GetActiveTransfersByChannelAddress = Static<typeof GetActiveTransfersByChannelAddressParamsSchema>;
+
   export const GetChannelStateSchema = GetChannelStateParamsSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema>;
 
@@ -253,6 +291,9 @@ export namespace ServerNodeParams {
 
   export const DepositSchema = PostDepositBodySchema;
   export type Deposit = Static<typeof DepositSchema>;
+
+  export const RequestCollateralSchema = PostRequestCollateralBodySchema;
+  export type RequestCollateral = Static<typeof RequestCollateralSchema>;
 
   export const SendDepositTxSchema = PostSendDepositTxBodySchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema>;
@@ -284,6 +325,14 @@ export namespace ServerNodeResponses {
   export const GetTransferStatesByRoutingIdSchema = GetTransferStatesByRoutingIdResponseSchema;
   export type GetTransferStatesByRoutingId = Static<typeof GetTransferStatesByRoutingIdResponseSchema["200"]>;
 
+  export const GetTransferStateSchema = GetTransferStateResponseSchema;
+  export type GetTransferState = Static<typeof GetTransferStateResponseSchema>;
+
+  export const GetActiveTransfersByChannelAddressSchema = GetActiveTransfersByChannelAddressResponseSchema;
+  export type GetActiveTransfersByChannelAddress = Static<
+    typeof GetActiveTransfersByChannelAddressResponseSchema["200"]
+  >;
+
   export const GetChannelStateSchema = GetChannelStateResponseSchema;
   export type GetChannelState = Static<typeof GetChannelStateSchema["200"]>;
 
@@ -310,6 +359,9 @@ export namespace ServerNodeResponses {
 
   export const DepositSchema = PostDepositResponseSchema;
   export type Deposit = Static<typeof DepositSchema["200"]>;
+
+  export const RequestCollateralSchema = PostRequestCollateralResponseSchema;
+  export type RequestCollateral = Static<typeof RequestCollateralSchema["200"]>;
 
   export const SendDepositTxSchema = PostSendDepositTxResponseSchema;
   export type SendDepositTx = Static<typeof SendDepositTxSchema["200"]>;
