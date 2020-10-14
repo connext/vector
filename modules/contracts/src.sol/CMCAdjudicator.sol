@@ -235,13 +235,13 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal pure {
-    bytes32 channelStateHash = hashChannelState(ccs);
+    bytes32 ccsHash = hashChannelState(ccs);
     require(
-      channelStateHash.checkSignature(aliceSignature, ccs.alice),
+      ccsHash.checkSignature(aliceSignature, ccs.alice),
       "CMCAdjudicator: Invalid alice signature"
     );
     require(
-      channelStateHash.checkSignature(bobSignature, ccs.bob),
+      ccsHash.checkSignature(bobSignature, ccs.bob),
       "CMCAdjudicator: Invalid bob signature"
     );
   }
