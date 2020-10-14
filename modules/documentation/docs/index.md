@@ -6,17 +6,13 @@ At Connext, our goal is to build the cross-chain routing and micropayment layer 
 
 You can think of Connext as a shared standard for blockchains and other decentralized networks to communicate with each other about value.
 
-## The Basics
-
-- Connext is a system of state channels, etc.
-- Made up of nodes
-- How do these nodes interact and what are routers?
-
 ## Where Do I Start?
+
+- If you're building a browser dApp, check out the browser-node quick start guide.
+- If you're building a p2p network that uses programmable micropayments, you likely want to run a router
+
 
 - If you're building a p2p network on top of Connext, you likely want a combination of node and router docs.
 - etc.
 
 If you're still confused about where to begin, join us in our community chat! We're **very** responsive and happy to point you to the right resources. :)
- 
-## User Case Studies

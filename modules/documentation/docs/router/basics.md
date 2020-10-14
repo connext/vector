@@ -15,5 +15,3 @@ Router consumes the server-node gRPC interface to do the following:
 - When a recipient comes online, the node emits an isAlive event for that channel. Router should catch isAlive events and complete all pending transfers to the recipient.
 
 Note that validation around allowed transfer types all happens in the node itself.
-
-## Supported Functionality
