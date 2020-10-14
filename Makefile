@@ -123,7 +123,7 @@ reset: stop-all
 	rm -rf *.docker-compose.yml
 
 reset-images:
-	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node .flags/nats
+	rm -f .flags/*-img .flags/database .flags/ethprovider .flags/*proxy .flags/nats
 
 purge: clean reset
 

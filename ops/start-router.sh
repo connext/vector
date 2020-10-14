@@ -75,7 +75,7 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-if [[ -n "$messaging_url" || "$chain_providers" == "$default_providers" ]]
+if [[ -z "$messaging_url" || "$chain_providers" == "$default_providers" ]]
 then
   bash $root/ops/start-global.sh
   mnemonic_secret=""
