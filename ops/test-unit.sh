@@ -69,6 +69,7 @@ then
     echo "Chain addresses valid, see fixme in test-unit.sh"
     CHAIN_ADDRESSES="`cat "$chain_data/chain-addresses.json"`"
   else
+    echo "Chain addresses NOT valid wtf? See fixme in test-unit.sh"
     CHAIN_ADDRESSES="{}"
   fi
 
