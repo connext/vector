@@ -108,18 +108,17 @@ stop-all:
 	@bash ops/stop.sh evm
 
 clean: stop-all
-	rm -rf .flags/*
+	rm -rf .flags
 	rm -rf node_modules/@connext modules/*/node_modules/@connext
 	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
 	rm -rf modules/*/node_modules/*/.git
 	rm -rf modules/*/node_modules/.bin
 	rm -rf modules/*/artifacts modules/*/build modules/*/dist
-	rm -rf modules/*/.*cache* modules/*/node_modules/.cache modules/contracts/cache/*.json
 	rm -rf modules/*/package-lock.json
 
 reset: stop-all
 	docker container prune -f
-	rm -rf .chaindata/*
+	rm -rf .chaindata
 	rm -rf *.docker-compose.yml
 
 reset-images:

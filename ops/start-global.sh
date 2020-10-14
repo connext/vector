@@ -291,8 +291,10 @@ then
 
   echo "Waiting for evms to wake up.."
   while [[ \
-    (! -f "$chain_addresses_1" || -z `cat $chain_addresses_1 | grep "channelFactoryAddress"`) ||\
-    (! -f "$chain_addresses_2" || -z `cat $chain_addresses_2 | grep "channelFactoryAddress"`) \
+    ! -f "$chain_addresses_1" ||\
+    ! -f "$chain_addresses_2" ||\
+    -z `cat $chain_addresses_2 | grep "transferRegistryAddress"` ||\
+    -z `cat $chain_addresses_1 | grep "transferRegistryAddress"` \
   ]]
   do
     if [[ "`date +%s`" -gt "$timeout" ]]
