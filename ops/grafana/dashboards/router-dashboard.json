@@ -175,8 +175,14 @@
         {
           "expr": "sum(router_successful_forwarded_payments)",
           "interval": "",
-          "legendFormat": "Attempts",
+          "legendFormat": "Successful",
           "refId": "C"
+        },
+        {
+          "expr": "sum(router_forwarded_payment_attempts)",
+          "interval": "",
+          "legendFormat": "Attempts",
+          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -221,23 +227,6 @@
       }
     },
     {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 8
-      },
-      "id": 123123,
-      "type": "gettingstarted"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -255,7 +244,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 17
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 2,
@@ -331,6 +320,63 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 7,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["mean"],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "router_active_transfers",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Active Transfers By Channel",
+      "type": "bargauge"
     }
   ],
   "schemaVersion": 26,
@@ -340,12 +386,12 @@
     "list": []
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Router Main",
   "uid": "Oe5I2JcGk",
-  "version": 2
+  "version": 1
 }
