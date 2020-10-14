@@ -9,7 +9,6 @@ fi
 
 grep "$@" --exclude=*.swp --exclude=*.pdf --color=auto -r "$target" \
   .github/workflows/* \
-  config-*.json \
   Makefile \
   modules/*/migrations \
   modules/*/ops \

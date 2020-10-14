@@ -281,7 +281,7 @@ function abort {
 
 timeout=$(expr `date +%s` + 60)
 echo "Waiting for $public_url to wake up.."
-while [[ -z "`curl -k -m 5 -s $public_url || true`" ]]
+while [[ "`curl -k -m 5 -s $public_url/ping || true`" != "pong"* ]]
 do
   if [[ "`date +%s`" -gt "$timeout" ]]
   then abort
