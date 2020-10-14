@@ -40,6 +40,7 @@ ops: database global-proxy node-proxy router-proxy nats
 dev: auth-js contracts-js server-node-js router-js test-runner-js
 prod: auth-img server-node-img router-img test-runner-img
 
+global: global-dev
 global-dev: auth-js ethprovider global-proxy nats
 global-prod: auth-img global-proxy nats
 
