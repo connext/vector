@@ -115,8 +115,9 @@ clean: stop-all
 
 reset: stop-all
 	docker container prune -f
-	rm -rf .chaindata
+	docker network rm ${project}
 	rm -rf *.docker-compose.yml
+	rm -rf .chaindata
 
 reset-images:
 	rm -f .flags/*-img .flags/database .flags/ethprovider .flags/*proxy .flags/nats
