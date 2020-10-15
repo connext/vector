@@ -164,7 +164,8 @@ server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
 );
 
 // TODO: @rahul -- should we include the public identifier in the url
-// here as a param?
+// here as a param? seems odd its included in the request params but
+// not in the URL path
 server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   "/channel/:channelAddress/transfer/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
@@ -209,8 +210,8 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   },
 );
 
-// TODO: @rahul -- what is going on here? what is this endpoint
-// trying to do? return all channels for a specific engine or for
+// TODO: @rahul -- what is this endpoint trying to do?
+// return all channels for a specific engine or for
 // all engines on the node?
 server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelStatesSchema } }, async (request, reply) => {
   const engines = getNodes();
@@ -254,8 +255,8 @@ server.post<{ Body: ServerNodeParams.Setup }>(
   },
 );
 
-// TODO: @rahul -- is bob the only one who should ever be requesting a setup like this?
-// seems like we can take out the pubID from the params then
+// TODO: @rahul -- is bob the only one who should ever be requesting a
+// setup like this?
 server.post<{ Body: ServerNodeParams.RequestSetup }>(
   "/request-setup",
   { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
@@ -360,8 +361,6 @@ server.post<{ Body: ServerNodeParams.RequestCollateral }>(
   },
 );
 
-// TODO: @rahul -- do we want to have the transfer types built into the url
-// paths of a transfer
 server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
   "/hashlock-transfer/create",
   {
