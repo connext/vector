@@ -26,7 +26,7 @@ function wait_for {
     fi
   fi
   echo "Waiting for $name at $target ($host) to wake up..."
-  wait-for -q -t 60 $host
+  wait-for -q -t 60 $host | sed '/nc: bad address/d'
 }
 
 if [[ "$stack" == "global" ]]

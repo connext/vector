@@ -24,7 +24,7 @@ export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD
 
 db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
 echo "Waiting for database at $db"
-wait-for -q -t 60 $db
+wait-for -q -t 60 $db | sed '/nc: bad address/d'
 sleep 3
 echo "Database is available"
 
