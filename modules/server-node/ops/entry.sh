@@ -32,14 +32,6 @@ echo "Database is available"
 # Launch it
 
 export PATH="./node_modules/.bin:${PATH}"
-mkdir -p static
-
-echo "Prisma info:"
-which prisma
-ls -l `which prisma`
-ls -l node_modules/prisma-cli/dist/index.js
-
-node node_modules/prisma-cli/dist/index.js --version
 
 echo "Prisma version:"
 prisma --version

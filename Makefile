@@ -34,9 +34,8 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 # Build Shortcuts
 
 default: dev
-ops: database global-proxy node-proxy router-proxy nats
-dev: ops global node router duet trio extras test-runner-js
-prod: ops global-prod node-prod router-prod test-runner
+dev: global node router duet trio test-runner-js
+prod: global-prod node-prod router-prod test-runner
 all: dev prod
 
 global: auth-js ethprovider global-proxy nats
@@ -50,8 +49,6 @@ router-prod: node-prod router-img router-proxy
 
 duet: global server-node-js
 trio: global server-node-js router-js
-
-extras: test-runner
 
 ########################################
 # Command & Control Shortcuts
