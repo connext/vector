@@ -19,7 +19,7 @@ export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD
 
 db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
 echo "Waiting for database at $db"
-wait-for -q -t 60 $db  | sed '/nc: bad address/d'
+wait-for -q -t 60 $db 2>&1 | sed '/nc: bad address/d'
 
 echo "Pinging node at $VECTOR_NODE_URL"
 while [[ -z "`curl -k -m 5 -s $VECTOR_NODE_URL/ping || true`" ]]
