@@ -12,6 +12,9 @@ import { ServerNodeParams, ServerNodeResponses } from "./schemas";
 export type OptionalPublicIdentifier<T> = Omit<T, "publicIdentifier"> & { publicIdentifier?: string };
 
 export interface INodeService {
+  publicIdentifier: string;
+  signerAddress: string;
+
   getStateChannelByParticipants(
     params: OptionalPublicIdentifier<ServerNodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>>;

@@ -23,7 +23,8 @@ export type EventCallbackConfig = {
 };
 
 export class RestServerNodeService implements INodeService {
-  private publicIdentifier: string | undefined = undefined;
+  public publicIdentifier = "";
+  public signerAddress = "";
 
   private constructor(
     private readonly serverNodeUrl: string,
@@ -47,8 +48,9 @@ export class RestServerNodeService implements INodeService {
         logger.error({ error: node.getError()!.message, method: "connect" }, "Failed to create node");
         throw node.getError();
       }
-      const { publicIdentifier } = node.getValue();
+      const { publicIdentifier, signerAddress } = node.getValue();
       service.publicIdentifier = publicIdentifier;
+      service.signerAddress = signerAddress;
     }
 
     return service;
@@ -75,9 +77,14 @@ export class RestServerNodeService implements INodeService {
         }),
       );
       try {
-        await Axios.post<ServerNodeResponses.ConditionalTransfer>(
-          `${this.serverNodeUrl}/${res.getValue().publicIdentifier}/event/subscribe`,
-          urls,
+        await this.executeHttpRequest(
+          `/event/subscribe`,
+          "post",
+          {
+            events: urls,
+            publicIdentifier: res.getValue().publicIdentifier,
+          } as ServerNodeParams.RegisterListener,
+          ServerNodeParams.RegisterListenerSchema,
         );
         this.logger.info({ urls, method: "connect" }, "Engine event subscription created");
       } catch (e) {
@@ -310,10 +317,12 @@ export class RestServerNodeService implements INodeService {
     paramSchema: any,
   ): Promise<Result<U, NodeError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
+    console.log("url: ", url);
     // Validate parameters are in line with schema
     const validate = ajv.compile(paramSchema);
     // IFF the public identifier is undefined, it should be overridden by
     // the pubId defined in the parameters.
+    console.log("params: ", params);
     if (!validate({ publicIdentifier: this.publicIdentifier, ...params })) {
       return Result.fail(
         new NodeError(NodeError.reasons.InvalidParams, {
