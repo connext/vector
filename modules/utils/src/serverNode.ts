@@ -234,7 +234,7 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.ConditionalTransfer>(
-      `transfer/create`,
+      `transfers/create`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ConditionalTransferSchema,
@@ -245,7 +245,7 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.ResolveTransfer>,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.ResolveTransfer>(
-      `transfer/resolve`,
+      `transfers/resolve`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ResolveTransferSchema,

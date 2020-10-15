@@ -20,7 +20,7 @@ describe(testName, () => {
 
     const res = await alice.getConfig();
     const val = res.getValue();
-    expect(val.length).to.be.deep.eq(1);
+    expect(val.length >= 1).to.be.true;
     expect(val[0].signerAddress).to.be.ok;
     expect(val[0].publicIdentifier).to.be.ok;
 

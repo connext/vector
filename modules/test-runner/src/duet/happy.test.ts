@@ -290,9 +290,9 @@ describe(testName, () => {
     const withdrawalAmount = utils.parseEther("0.005");
     const recipient = Wallet.createRandom().address;
     const channelRes = await bobService.getStateChannelByParticipants({
-      counterparty: bobIdentifier,
+      counterparty: aliceIdentifier,
       chainId,
-      publicIdentifier: aliceIdentifier,
+      publicIdentifier: bobIdentifier,
     });
     const channel = channelRes.getValue()!;
     const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
