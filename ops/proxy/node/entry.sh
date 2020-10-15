@@ -5,6 +5,8 @@ echo "VECTOR_DOMAINNAME=$VECTOR_DOMAINNAME"
 echo "VECTOR_EMAIL=$VECTOR_EMAIL"
 echo "VECTOR_NODE_URL=$VECTOR_NODE_URL"
 
+export VECTOR_EMAIL="${VECTOR_EMAIL:-noreply@gmail.com}"
+
 # Provide a message indicating that we're still waiting for everything to wake up
 function loading_msg {
   while true # unix.stackexchange.com/a/37762
