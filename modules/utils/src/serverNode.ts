@@ -222,7 +222,7 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.ConditionalTransfer>(
-      `hashlock-transfer/create`,
+      `transfer/create`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ConditionalTransferSchema,
@@ -233,7 +233,7 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.ResolveTransfer>,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.ResolveTransfer>(
-      `hashlock-transfer/resolve`,
+      `transfer/resolve`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ResolveTransferSchema,

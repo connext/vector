@@ -42,7 +42,7 @@ describe(testName, () => {
     await bobTx.wait();
   });
 
-  it.only("alice & bob should setup a channel", async () => {
+  it("alice & bob should setup a channel", async () => {
     const channelRes = await bobService.requestSetup({
       aliceUrl: env.aliceUrl,
       aliceIdentifier,
@@ -115,9 +115,9 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await bobService.getStateChannelByParticipants({
-      counterparty: bobIdentifier,
+      counterparty: aliceIdentifier,
       chainId,
-      publicIdentifier: aliceIdentifier,
+      publicIdentifier: bobIdentifier,
     });
     const channel = channelRes.getValue()!;
 
