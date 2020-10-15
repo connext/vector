@@ -7,10 +7,11 @@ import {
   ServerNodeResponses,
   NodeError,
   OptionalPublicIdentifier,
+  CONDITIONAL_TRANSFER_CREATED_EVENT,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
-import { Evt } from "evt";
+import { Evt, VoidCtx } from "evt";
 import { BaseLogger } from "pino";
 
 const ajv = new Ajv();
@@ -22,9 +23,16 @@ export type EventCallbackConfig = {
   };
 };
 
+// Holds all the contexts for each public identifier
+type ContextContainer = {
+  [publicIdentifier: string]: VoidCtx;
+};
+
 export class RestServerNodeService implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
+
+  private readonly ctxs: ContextContainer = {};
 
   private constructor(
     private readonly serverNodeUrl: string,
@@ -76,13 +84,17 @@ export class RestServerNodeService implements INodeService {
           return [event, config.url];
         }),
       );
+      const { publicIdentifier } = res.getValue();
+      // Create an evt context for this public identifier only
+      // (see not in `off`)
+      this.ctxs[publicIdentifier] = Evt.newCtx();
       try {
         await this.executeHttpRequest(
           `/event/subscribe`,
           "post",
           {
             events: urls,
-            publicIdentifier: res.getValue().publicIdentifier,
+            publicIdentifier,
           } as ServerNodeParams.RegisterListener,
           ServerNodeParams.RegisterListenerSchema,
         );
@@ -251,17 +263,21 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async once<T extends EngineEvent>(
+  public once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
-  ): Promise<void> {
+  ): void {
     if (!this.evts || !this.evts[event]?.evt) {
-      this.logger.warn({ event, method: "once" }, "No evts provided for event, subscriptions will not work");
-      return;
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
+    if (!publicIdentifier && !this.publicIdentifier) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
     this.evts[event].evt
+      .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
         return filtered && (data.aliceIdentifier === publicIdentifier || data.bobIdentifier === publicIdentifier);
@@ -269,17 +285,21 @@ export class RestServerNodeService implements INodeService {
       .attachOnce(callback);
   }
 
-  async on<T extends EngineEvent>(
+  public on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
-  ): Promise<void> {
+  ): void {
     if (!this.evts || !this.evts[event]?.evt) {
-      this.logger.warn({ event, method: "on" }, "No evts provided for event, subscriptions will not work");
-      return;
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
+    if (!publicIdentifier && !this.publicIdentifier) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
     this.evts[event].evt
+      .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
         return filtered && (data.aliceIdentifier === publicIdentifier || data.bobIdentifier === publicIdentifier);
@@ -294,10 +314,14 @@ export class RestServerNodeService implements INodeService {
     publicIdentifier?: string,
   ): Promise<EngineEventMap[T] | undefined> {
     if (!this.evts || !this.evts[event]?.evt) {
-      this.logger.warn({ event, method: "waitFor" }, "No evts provided for event, subscriptions will not work");
-      return undefined;
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
+    if (!publicIdentifier && !this.publicIdentifier) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
     return this.evts[event].evt
+      .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
         return filtered && (data.aliceIdentifier === publicIdentifier || data.bobIdentifier === publicIdentifier);
@@ -305,8 +329,15 @@ export class RestServerNodeService implements INodeService {
       .waitFor(timeout) as Promise<EngineEventMap[T]>;
   }
 
-  async off<T extends EngineEvent>(event: T, publicIdentifier?: string): Promise<void> {
-    this.evts[event].evt.detach();
+  public off<T extends EngineEvent>(event: T, publicIdentifier?: string): void {
+    if (!this.evts || !this.evts[event]?.evt) {
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
+    }
+    if (!publicIdentifier && !this.publicIdentifier) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
+    ctx.done();
   }
 
   // Helper methods

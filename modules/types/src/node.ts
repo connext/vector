@@ -76,16 +76,16 @@ export interface INodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
     publicIdentifier?: string,
-  ): Promise<void>;
+  ): void;
 
   on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
     publicIdentifier?: string,
-  ): Promise<void>;
+  ): void;
 
-  off<T extends EngineEvent>(event: T, publicIdentifier?: string): Promise<void>;
+  off<T extends EngineEvent>(event: T, publicIdentifier?: string): void;
 
   waitFor<T extends EngineEvent>(
     event: T,
