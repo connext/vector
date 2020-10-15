@@ -68,8 +68,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -116,10 +115,9 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await bobService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
-      publicIdentifier: bobIdentifier,
+      publicIdentifier: aliceIdentifier,
     });
     const channel = channelRes.getValue()!;
 
@@ -156,8 +154,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -210,8 +207,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -245,8 +241,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const withdrawalAmount = utils.parseEther("0.005");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -295,10 +290,9 @@ describe(testName, () => {
     const withdrawalAmount = utils.parseEther("0.005");
     const recipient = Wallet.createRandom().address;
     const channelRes = await bobService.getStateChannelByParticipants({
-      publicIdentifier: bobIdentifier,
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
+      publicIdentifier: aliceIdentifier,
     });
     const channel = channelRes.getValue()!;
     const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);

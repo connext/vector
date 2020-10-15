@@ -90,10 +90,9 @@ const getOrSetupChannel = async (
 ): Promise<string> => {
   // Try to get the channel
   const channelRes = await nodeService.getStateChannelByParticipants({
-    publicIdentifier: nodeIdentifier,
-    alice: rogerIdentifier,
-    bob: nodeIdentifier,
+    counterparty: rogerIdentifier,
     chainId,
+    publicIdentifier: nodeIdentifier,
   });
   const error = channelRes.getError();
   if (!error) {

@@ -104,10 +104,9 @@ describe.only(testName, () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await carolService.getStateChannelByParticipants({
-      publicIdentifier: carolIdentifier,
-      alice: rogerIdentifier,
-      bob: carolIdentifier,
+      counterparty: rogerIdentifier,
       chainId,
+      publicIdentifier: carolIdentifier,
     });
     const channel = channelRes.getValue()!;
 
@@ -144,16 +143,14 @@ describe.only(testName, () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const carolChannelRes = await carolService.getStateChannelByParticipants({
-      alice: rogerIdentifier,
-      bob: carolIdentifier,
+      counterparty: rogerIdentifier,
       chainId,
       publicIdentifier: carolIdentifier,
     });
     const carolChannel = carolChannelRes.getValue()!;
 
     const daveChannelRes = await daveService.getStateChannelByParticipants({
-      alice: rogerIdentifier,
-      bob: daveIdentifier,
+      counterparty: rogerIdentifier,
       chainId,
       publicIdentifier: daveIdentifier,
     });
