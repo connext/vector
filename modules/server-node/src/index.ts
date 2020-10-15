@@ -1,6 +1,5 @@
 import fastify from "fastify";
 import fastifyCors from "fastify-cors";
-import fastifyOas from "fastify-oas";
 import pino from "pino";
 import {
   ChannelRpcMethods,
@@ -22,15 +21,6 @@ import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./h
 
 export const logger = pino();
 const server = fastify({ logger });
-server.register(fastifyOas, {
-  swagger: {
-    info: {
-      title: "Vector Server-Node",
-      version: "0.0.1",
-    },
-  },
-  exposeRoute: true,
-});
 server.register(fastifyCors, {
   origin: "*",
   methods: ["GET", "PUT", "POST", "OPTIONS"],
