@@ -45,7 +45,7 @@ export class RestServerNodeService implements INodeService {
       const node = await service.createNode({ index });
       if (node.isError) {
         logger.error({ error: node.getError()!.message, method: "connect" }, "Failed to create node");
-        return service;
+        throw node.getError();
       }
       const { publicIdentifier } = node.getValue();
       service.publicIdentifier = publicIdentifier;
