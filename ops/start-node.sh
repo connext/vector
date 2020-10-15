@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eu
+set -e
 
 stack="node"
 
@@ -23,7 +23,6 @@ node_config="`cat $root/config-node.json`"
 prod_config="`cat $root/config-prod.json`"
 config="`echo $node_config $prod_config | jq -s '.[0] + .[1]'`"
 
-function getDefault { echo "$node_config" | jq ".$1" | tr -d '"'; }
 function getConfig {
   value="`echo "$config" | jq ".$1" | tr -d '"'`"
   if [[ "$value" == "null" ]]
@@ -36,11 +35,17 @@ admin_token="`getConfig adminToken`"
 messaging_url="`getConfig messagingUrl`"
 aws_access_id="`getConfig awsAccessId`"
 aws_access_key="`getConfig awsAccessKey`"
-chain_providers="`getConfig chainProviders`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
 mnemonic="`getConfig mnemonic`"
+
+chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
+default_providers="`cat $root/config-node.json | jq '.chainProviders' | tr -d '\n\r '`"
+
+if [[ "$VECTOR_PROD" = "true" ]]
+then production="true"
+fi
 
 ####################
 # Misc Config
@@ -72,7 +77,7 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-if [[ -n "$messaging_url" || "$chain_providers" == "`getDefault chainProviders`" ]]
+if [[ -z "$messaging_url" || "$chain_providers" == "$default_providers" ]]
 then
   bash $root/ops/start-global.sh
   mnemonic_secret=""
@@ -143,7 +148,7 @@ fi
 
 node_internal_port="8000"
 node_dev_port="8001"
-if [[ $production == "prod" ]]
+if [[ $production == "true" ]]
 then
   node_image_name="${project}_node"
   bash $root/ops/pull-images.sh $version $node_image_name > /dev/null

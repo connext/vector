@@ -47,13 +47,13 @@ export const migrate = async (wallet: Wallet, addressBookPath: string, silent = 
 
   const mastercopy = await deployHelper("ChannelMastercopy", []);
   await deployHelper("ChannelFactory", [mastercopy.address]);
-  await deployHelper("TransferRegistry", []);
 
-  // Transfers
+  // Deploy Transfers
   await deployHelper("HashlockTransfer", []);
   await deployHelper("Withdraw", []);
 
-  // Register default transfers
+  // Deploy registry & register defaults
+  await deployHelper("TransferRegistry", []);
   log("\nRegistering Withdraw and HashlockTransfer");
   await registerTransfer("Withdraw", wallet, addressBookPath, silent);
   await registerTransfer("HashlockTransfer", wallet, addressBookPath, silent);

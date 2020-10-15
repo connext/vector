@@ -22,15 +22,9 @@
     "solidity"
   ],
   "scripts": {
-    "build": "npm run clean && npm run compile && npm run transpile && npm run bundle",
-    "bundle": "webpack --config ops/webpack.config.js",
-    "clean": "rm -rf ./dist/*",
-    "compile": "npx buidler compile",
-    "lint": "npm run lint-ts && npm run lint-sol",
-    "lint-sol": "solhint 'src.sol/**/*.sol'",
-    "lint-ts": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'test/**/*' 'index.ts'",
-    "test": "npx buidler test",
-    "transpile": "tsc -p tsconfig.json"
+    "build": "rm -rf dist && npx buidler compile && tsc",
+    "build-bundle": "webpack --config ops/webpack.config.js",
+    "test": "npx buidler test"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",

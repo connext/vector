@@ -7,12 +7,17 @@ on:
 
 jobs:
   build:
+    env:
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
       - run: make all
       - run: bash ops/build-report.sh
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      - run: make push
 
   utils:
     runs-on: ubuntu-latest
@@ -43,6 +48,12 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make test-server-node
+
+  browser-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make test-browser-node
 
   router:
     runs-on: ubuntu-latest
@@ -91,3 +102,65 @@ jobs:
           docker service logs --tail 200 trio_router
           docker service logs --tail 200 trio_carol
           docker service logs --tail 200 trio_dave
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make node
+      - run: make start-node
+      - run: make test-node
+      - name: Print logs
+        if: failure()
+        run: docker service logs --tail 200 node_node
+
+  routing-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull-latest
+      - run: make router
+      - run: make start-router
+      - run: make test-routing-node
+      - name: Print logs
+        if: failure()
+        run: |
+          docker service logs --tail 200 router_node
+          docker service logs --tail 200 router_router
+
+  global-prod:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull
+      - run: VECTOR_PROD=true make restart-global
+      - run: VECTOR_PROD=true bash ops/test-integration.sh global
+      - name: Print logs
+        if: failure()
+        run: docker service ls && docker service logs --tail 200 global_auth
+
+  node-prod:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull
+      - run: VECTOR_PROD=true make restart-node
+      - run: VECTOR_PROD=true bash ops/test-integration.sh node
+      - name: Print logs
+        if: failure()
+        run: docker service ls && docker service logs --tail 200 node_node
+
+  routing-node-prod:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v1
+      - run: make pull
+      - run: VECTOR_PROD=true make restart-router
+      - run: VECTOR_PROD=true bash ops/test-integration.sh router
+      - name: Print logs
+        if: failure()
+        run: docker service ls && docker service logs --tail 200 node_node
