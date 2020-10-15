@@ -112,7 +112,7 @@ export class RestServerNodeService implements INodeService {
     params: ServerNodeParams.GetActiveTransfersByChannelAddress,
   ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/transfer/active/${params.publicIdentifier}`,
+      `channel/${params.channelAddress}/active-transfer/${params.publicIdentifier}`,
       "get",
       params,
       ServerNodeParams.GetActiveTransfersByChannelAddressSchema,

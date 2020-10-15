@@ -75,22 +75,6 @@ export class Router implements IRouter {
       }
       const channelAddresses = channels.getValue();
       channelCounter.set(channelAddresses.length);
-
-      for (const channelAddr of channelAddresses) {
-        const payments = await this.service.getActiveTransfers({
-          channelAddress: channelAddr,
-          publicIdentifier: this.publicIdentifier,
-        });
-        if (payments.isError) {
-          this.logger.error(
-            { error: payments.getError()!.message, channelAddress: channelAddr },
-            "Failed to get active payments",
-          );
-          return;
-        }
-        this.logger.info({ count: payments.getValue() }, "setting payments");
-        paymentCounter.set({ channelAddress: channelAddr }, payments.getValue().length);
-      }
       this.logger.info({}, "Done collecting metrics");
     }, 30_000);
   }

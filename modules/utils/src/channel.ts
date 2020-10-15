@@ -32,3 +32,15 @@ export const hashChannelCommitment = (commitment: ChannelCommitmentData): string
     ),
   );
 };
+
+export const getBalanceForAssetId = (
+  channel: CoreChannelState,
+  assetId: string,
+  participant: "alice" | "bob",
+): string => {
+  const assetIdx = channel.assetIds.findIndex(a => a === assetId);
+  if (assetIdx === -1) {
+    return "0";
+  }
+  return channel.balances[assetIdx].amount[participant === "alice" ? 0 : 1];
+};
