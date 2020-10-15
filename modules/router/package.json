@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json && webpack --config ops/webpack.config.js",
+    "build": "rm -rf dist && tsc",
+    "build-bundle": "webpack --config ops/webpack.config.js",
     "start": "node dist/index.js",
-    "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
-    "migration:generate": "prisma migrate save --experimental"
+    "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "author": "",
   "license": "ISC",
@@ -16,7 +16,6 @@
     "@connext/vector-engine": "0.0.1-beta.2",
     "@connext/vector-types": "0.0.1-beta.2",
     "@connext/vector-utils": "0.0.1-beta.2",
-    "@prisma/client": "2.8.1",
     "@sinclair/typebox": "0.10.1",
     "ajv": "6.12.6",
     "axios": "0.20.0",

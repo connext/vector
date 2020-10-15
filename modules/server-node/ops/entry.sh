@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eE
 
 if [[ -d "modules/server-node" ]]
 then cd modules/server-node
@@ -22,22 +22,23 @@ export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD
 ########################################
 # Wait for dependencies to wake up
 
-wait-for -t 60 "$VECTOR_PG_HOST:$VECTOR_PG_PORT" > /dev/null
+db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
+echo "Waiting for database at $db"
+wait-for -q -t 60 $db 2>&1 | sed '/nc: bad address/d'
+echo "Database is available"
 
 ########################################
 # Launch it
 
-export PATH="./node_modules/.bin:${PATH}"
-
-# TODO: should we really do this in prod?
-echo "Running database migrations"
+echo "Running database migration"
+prisma --version
 prisma migrate up --experimental
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting node in prod-mode"
   export NODE_ENV=production
-  exec node --no-deprecation dist/bundle.js | $pretty
+  exec node --no-deprecation dist/bundle.js | pino-pretty
 
 else
   echo "Starting node in dev-mode"

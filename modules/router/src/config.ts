@@ -59,6 +59,7 @@ const validate = ajv.compile(VectorRouterConfigSchema);
 const valid = validate(vectorConfig);
 
 if (!valid) {
+  console.error(`Invalid config: ${JSON.stringify(vectorConfig, null, 2)}`);
   throw new Error(validate.errors?.map(err => err.message).join(","));
 }
 

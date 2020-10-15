@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eu
+set -e
 
 stack="global"
 
@@ -19,8 +19,11 @@ fi
 ####################
 # Load config
 
+config="`cat $root/config-node.json $root/config-router.json $root/config-prod.json |\
+  jq -s '.[0] + .[1] + .[2]'
+`"
+
 function getConfig {
-  config="`cat $root/config-node.json $root/config-prod.json | jq -s '.[0] + .[1]'`"
   value="`echo $config | jq ".$1" | tr -d '"'`"
   if [[ "$value" == "null" ]]
   then echo ""
@@ -32,6 +35,13 @@ admin_token="`getConfig adminToken`"
 domain_name="`getConfig domainName`"
 production="`getConfig production`"
 public_port="`getConfig port`"
+
+chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
+default_providers="`cat $root/config-node.json | jq '.chainProviders' | tr -d '\n\r '`"
+
+if [[ "$VECTOR_PROD" = "true" ]]
+then production="true"
+fi
 
 ########################################
 ## Docker registry & image version config
@@ -59,8 +69,7 @@ common="networks:
           max-size: '100m'"
 
 ####################
-# Redis config
-# Used by duet & trio
+# Redis config (Used by duet & trio)
 
 if [[ "$production" = "true" ]]
 then redis_service=""
@@ -123,7 +132,7 @@ fi
 ####################
 # Eth Provider config
 
-if [[ "$production" != "true" ]]
+if [[ "$chain_providers" == "$default_providers" ]]
 then
   mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
@@ -259,7 +268,6 @@ EOF
 
 docker stack deploy -c $docker_compose $stack
 echo "The $stack stack has been deployed."
-public_auth_url="http://127.0.0.1:5040/ping"
 
 function abort {
   echo "====="
@@ -270,15 +278,15 @@ function abort {
   docker service ps global_auth || true
   docker service logs --tail 50 --raw global_auth || true
   echo "====="
-  curl $public_auth_url || true
+  curl $public_url || true
   echo "====="
   echo "Timed out waiting for $stack stack to wake up, see above for diagnostic info."
   exit 1
 }
 
 timeout=$(expr `date +%s` + 60)
-echo "Waiting for $public_auth_url to wake up.."
-while [[ -z "`curl -k -m 5 -s $public_auth_url || true`" ]]
+echo "Waiting for $public_url to wake up.."
+while [[ "`curl -k -m 5 -s $public_url/ping || true`" != "pong"* ]]
 do
   if [[ "`date +%s`" -gt "$timeout" ]]
   then abort
@@ -286,15 +294,17 @@ do
   fi
 done
 
-if [[ "$production" != "true" ]]
+if [[ "$chain_providers" == "$default_providers" ]]
 then
   chain_addresses_1="$chain_data_1/chain-addresses.json"
   chain_addresses_2="$chain_data_2/chain-addresses.json"
 
   echo "Waiting for evms to wake up.."
   while [[ \
-    (! -f "$chain_addresses_1" || -z `cat $chain_addresses_1 | grep "channelFactoryAddress"`) ||\
-    (! -f "$chain_addresses_2" || -z `cat $chain_addresses_2 | grep "channelFactoryAddress"`) \
+    ! -f "$chain_addresses_1" ||\
+    ! -f "$chain_addresses_2" ||\
+    -z `cat $chain_addresses_2 | grep "transferRegistryAddress"` ||\
+    -z `cat $chain_addresses_1 | grep "transferRegistryAddress"` \
   ]]
   do
     if [[ "`date +%s`" -gt "$timeout" ]]
@@ -302,6 +312,8 @@ then
     else sleep 1
     fi
   done
+
+  # Save multi-chain providers & addresses
 
   echo '{
     "'$chain_id_1'":"http://evm_'$chain_id_1':8545",

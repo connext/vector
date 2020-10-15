@@ -33,60 +33,61 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 ########################################
 # Build Shortcuts
 
-default: router
+default: dev
+dev: global node router duet trio test-runner-js
+prod: global-prod node-prod router-prod test-runner
+all: dev prod
 
-global: auth ethprovider global-proxy nats
-node: global database node-proxy server-node
-router: node router-img router-proxy
-duet: global node
-trio: global node router
-extras: test-runner
+global: auth-js ethprovider global-proxy nats
+global-prod: auth-img global-proxy nats
 
-all: global node browser-node router duet trio extras
+node: global database node-proxy server-node-js
+node-prod: global-prod database node-proxy server-node-img
+
+router: node router-js router-proxy
+router-prod: node-prod router-img router-proxy
+
+duet: global server-node-js
+trio: global server-node-js router-js
 
 ########################################
 # Command & Control Shortcuts
 
-start: start-node
-restart: restart-node
-stop: stop-node
+start: start-router
+restart: restart-router
+stop: stop-router
 
 start-node: node
 	@bash ops/start-node.sh
-restart-node:
-	@bash ops/stop.sh node
+restart-node: stop-node
 	@bash ops/start-node.sh
 stop-node:
 	@bash ops/stop.sh node
 
 start-router: router
 	@bash ops/start-router.sh
-restart-router:
-	@bash ops/stop.sh router
+restart-router: stop-router
 	@bash ops/start-router.sh
 stop-router:
 	@bash ops/stop.sh router
 
 start-duet: duet
 	@bash ops/start-duet.sh
-restart-duet:
-	@bash ops/stop.sh duet
+restart-duet: stop-duet
 	@bash ops/start-duet.sh
 stop-duet:
 	@bash ops/stop.sh duet
 
 start-trio: trio
 	@bash ops/start-trio.sh
-restart-trio:
-	@bash ops/stop.sh trio
+restart-trio: stop-trio
 	@bash ops/start-trio.sh
 stop-trio:
 	@bash ops/stop.sh trio
 
 start-global: global
 	@bash ops/start-global.sh
-restart-global:
-	@bash ops/stop.sh global
+restart-global: stop-global
 	@bash ops/start-global.sh
 stop-global:
 	@bash ops/stop.sh global
@@ -103,22 +104,22 @@ stop-all:
 	@bash ops/stop.sh evm
 
 clean: stop-all
-	rm -rf .flags/*
-	rm -rf node_modules/@connext modules/*/node_modules/@connext
-	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
+	rm -rf .flags
+	rm -rf modules/*/.*cache* modules/*/node_modules/.cache modules/contracts/cache/*.json
+	rm -rf modules/*/artifacts modules/*/build modules/*/dist
 	rm -rf modules/*/node_modules/*/.git
 	rm -rf modules/*/node_modules/.bin
-	rm -rf modules/*/artifacts modules/*/build modules/*/dist
-	rm -rf modules/*/.*cache* modules/*/node_modules/.cache modules/contracts/cache/*.json
 	rm -rf modules/*/package-lock.json
+	rm -rf node_modules/@connext modules/*/node_modules/@connext
+	rm -rf node_modules/@walletconnect modules/*/node_modules/@walletconnect
 
 reset: stop-all
 	docker container prune -f
-	rm -rf .chaindata/*
 	rm -rf *.docker-compose.yml
+	rm -rf .chaindata
 
 reset-images:
-	rm -f .flags/auth .flags/database .flags/ethprovider .flags/*proxy .flags/server-node .flags/nats
+	rm -f .flags/*-img .flags/database .flags/ethprovider .flags/*proxy .flags/nats
 
 purge: clean reset
 
@@ -156,54 +157,64 @@ test-utils: utils
 watch-utils: types
 	bash ops/test-unit.sh utils watch
 
-test-contracts: contracts
+test-contracts: contracts-js
 	bash ops/test-unit.sh contracts test
 watch-contracts: utils
 	bash ops/test-unit.sh contracts watch
 
-test-protocol: protocol
+test-protocol: contracts-bundle protocol
 	bash ops/test-unit.sh protocol test 1340
-watch-protocol: contracts
+watch-protocol: contracts-bundle
 	bash ops/test-unit.sh protocol watch 1340
 
-test-engine: engine
+test-engine: contracts-bundle engine
 	bash ops/test-unit.sh engine test 1341
-watch-engine: protocol
+watch-engine: contracts-bundle protocol
 	bash ops/test-unit.sh engine watch 1341
 
-test-server-node: node
+test-server-node: server-node-js
 	bash ops/test-server-node.sh test
 watch-server-node: engine
 	bash ops/test-server-node.sh watch
 
-test-browser-node: browser-node-bundle
+test-browser-node: browser-node
 	bash ops/test-unit.sh browser-node test
-watch-browser-node: browser-node-bundle
+watch-browser-node: browser-node
 	bash ops/test-unit.sh browser-node watch
 
-test-router: router
+test-router: router-js
 	bash ops/test-unit.sh router test
 watch-router: engine
 	bash ops/test-unit.sh router watch
 
 # Integration Tests
 
-test-global: test-runner global
+test-global: global test-runner-js
 	bash ops/test-integration.sh global test
-watch-global: test-runner global
+watch-global: global test-runner-js
 	bash ops/test-integration.sh global watch
 
-test-duet: test-runner duet
+test-duet: test-runner-js duet
 	bash ops/test-integration.sh duet test
-watch-duet: test-runner duet
+watch-duet: test-runner-js duet
 	bash ops/test-integration.sh duet watch
 
-test-trio: test-runner trio
+test-trio: test-runner-js trio
 	bash ops/test-integration.sh trio test
-watch-trio: test-runner trio
+watch-trio: test-runner-js trio
 	bash ops/test-integration.sh trio watch
 
-test-load: test-runner trio
+test-node: node test-runner-js
+	bash ops/test-integration.sh node test
+watch-node: node test-runner-js
+	bash ops/test-integration.sh node watch
+
+test-routing-node: router test-runner-js
+	bash ops/test-integration.sh router test
+watch-routing-node: router test-runner-js
+	bash ops/test-integration.sh router watch
+
+test-load: test-runner-js trio
 	bash ops/test-load.sh
 
 ########################################
@@ -227,7 +238,7 @@ node-modules: builder package.json $(shell ls modules/*/package.json)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ########################################
-# Build Core JS libs & bundles
+# Build Core JS libs
 # Keep prerequisites synced w the @connext/* dependencies of each module's package.json
 
 types: node-modules $(shell find modules/types $(find_options))
@@ -240,12 +251,23 @@ utils: types $(shell find modules/utils $(find_options))
 	$(docker_run) "cd modules/utils && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-contracts: utils $(shell find modules/contracts $(find_options))
+contracts: contracts-js
+ethprovider: contracts-img
+contracts-js: utils $(shell find modules/contracts $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+contracts-bundle: contracts-js utils $(shell find modules/contracts $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/contracts && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+contracts-img: contracts-bundle $(shell find modules/contracts/ops $(find_options))
+	$(log_start)
+	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
+	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-protocol: utils contracts $(shell find modules/protocol $(find_options))
+protocol: utils contracts-js $(shell find modules/protocol $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/protocol && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
@@ -255,50 +277,69 @@ engine: utils protocol $(shell find modules/engine $(find_options))
 	$(docker_run) "cd modules/engine && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-auth-bundle: utils $(shell find modules/auth $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/auth && npm run build"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-auth: auth-bundle $(shell find modules/auth/ops $(find_options))
-	$(log_start)
-	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
-	docker tag $(project)_auth $(project)_auth:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
 browser-node: engine $(shell find modules/browser-node $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/browser-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-server-node-bundle: engine $(shell find modules/server-node $(find_options))
+
+auth: auth-img
+auth-js: utils $(shell find modules/auth $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/auth && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+auth-bundle: auth-js utils $(shell find modules/auth $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/auth && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+auth-img: auth-bundle $(shell find modules/auth/ops $(find_options))
+	$(log_start)
+	docker build --file modules/auth/ops/Dockerfile $(image_cache) --tag $(project)_auth modules/auth
+	docker tag $(project)_auth $(project)_auth:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+
+server-node: server-node-img
+server-node-js: engine $(shell find modules/server-node/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-server-node: server-node-bundle $(shell find modules/server-node/ops $(find_options))
+server-node-bundle: server-node-js $(shell find modules/server-node/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/server-node && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
 	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/server-node
 	docker tag $(project)_node $(project)_node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-router-bundle: engine $(shell find modules/router $(find_options))
+
+router-js: engine $(shell find modules/router $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/router && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-
+router-bundle: router-js $(shell find modules/router $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/router && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
 router-img: router-bundle $(shell find modules/router/ops $(find_options))
 	$(log_start)
 	docker build --file modules/router/ops/Dockerfile $(image_cache) --tag $(project)_router modules/router
 	docker tag $(project)_router $(project)_router:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-test-runner-bundle: engine $(shell find modules/test-runner/src $(find_options))
+
+test-runner: test-runner-img
+test-runner-js: engine $(shell find modules/test-runner/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/test-runner && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-test-runner: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
+test-runner-bundle: test-runner-js $(shell find modules/test-runner/src $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/test-runner && npm run build-bundle"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+test-runner-img: test-runner-bundle $(shell find modules/test-runner/ops $(find_options))
 	$(log_start)
 	docker build --file modules/test-runner/ops/Dockerfile $(image_cache) --tag $(project)_test_runner modules/test-runner
 	docker tag $(project)_test_runner $(project)_test_runner:$(commit)
@@ -311,12 +352,6 @@ database: $(shell find ops/database $(find_options))
 	$(log_start)
 	docker build --file ops/database/Dockerfile $(image_cache) --tag $(project)_database ops/database
 	docker tag $(project)_database $(project)_database:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-ethprovider: contracts $(shell find modules/contracts/ops $(find_options))
-	$(log_start)
-	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
-	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 nats: $(shell find ops/nats $(find_options))
