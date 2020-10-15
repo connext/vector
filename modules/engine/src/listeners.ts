@@ -139,7 +139,11 @@ export async function setupEngineListeners(
     }
     logger.info({ params: params.getValue() }, "Handling request collateral message");
 
-    evts[REQUEST_COLLATERAL_EVENT].post(params.getValue());
+    evts[REQUEST_COLLATERAL_EVENT].post({
+      ...params.getValue(),
+      aliceIdentifier: signer.publicIdentifier,
+      bobIdentifier: from,
+    });
 
     await messaging.respondToRequestCollateralMessage(inbox, { message: "Successfully requested collateral" });
   });
@@ -179,12 +183,16 @@ async function handleDepositReconciliation(
   logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling deposit reconciliation event");
   // Emit the properly structured event
   const {
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     balances,
     assetIds,
     latestUpdate: { assetId },
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.deposit>;
   const payload: DepositReconciledPayload = {
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     assetId,
     channelBalance: balances[assetIds.findIndex(a => a === assetId)],
@@ -204,6 +212,8 @@ async function handleConditionalTransferCreation(
     return;
   }
   const {
+    aliceIdentifier,
+    bobIdentifier,
     assetIds,
     balances,
     channelAddress,
@@ -241,6 +251,8 @@ async function handleConditionalTransferCreation(
 
   const assetIdx = assetIds.findIndex(a => a === assetId);
   const payload: ConditionalTransferCreatedPayload = {
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     channelBalance: balances[assetIdx],
     transfer,
@@ -273,6 +285,8 @@ async function handleConditionalTransferResolution(
     "Handling conditional transfer resolve event",
   );
   const {
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     assetIds,
     balances,
@@ -297,6 +311,8 @@ async function handleConditionalTransferResolution(
   }
   const transfer = await store.getTransferState(transferId);
   const payload: ConditionalTransferResolvedPayload = {
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     channelBalance: balances[assetIds.findIndex(a => a === assetId)],
     transfer: transfer!,
@@ -322,6 +338,8 @@ async function handleWithdrawalTransferCreation(
   // If you receive a withdrawal creation, you should
   // resolve the withdrawal with your signature
   const {
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     balances,
     assetIds,
@@ -345,6 +363,8 @@ async function handleWithdrawalTransferCreation(
   // Post to evt
   const assetIdx = assetIds.findIndex(a => a === assetId);
   const payload: WithdrawalCreatedPayload = {
+    aliceIdentifier,
+    bobIdentifier,
     assetId,
     amount: withdrawalAmount.toString(),
     fee,
@@ -407,6 +427,8 @@ async function handleWithdrawalTransferCreation(
       logger.info({ method, transactionHash }, "Submitted tx");
       // Post to reconciliation evt on submission
       evts[WITHDRAWAL_RECONCILED_EVENT].post({
+        aliceIdentifier,
+        bobIdentifier,
         channelAddress,
         transferId,
         transactionHash,
@@ -454,6 +476,8 @@ async function handleWithdrawalTransferResolution(
   const method = "handleWithdrawalTransferResolution";
 
   const {
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     balances,
     assetIds,
@@ -492,6 +516,8 @@ async function handleWithdrawalTransferResolution(
   // Post to evt
   const assetIdx = assetIds.findIndex(a => a === assetId);
   const payload: WithdrawalResolvedPayload = {
+    aliceIdentifier,
+    bobIdentifier,
     assetId,
     amount: withdrawalAmount.toString(),
     fee: transfer.transferState.fee,
@@ -532,6 +558,8 @@ async function handleWithdrawalTransferResolution(
     // Withdrawal resolution meta will include the transaction hash,
     // post to EVT here
     evts[WITHDRAWAL_RECONCILED_EVENT].post({
+      aliceIdentifier,
+      bobIdentifier,
       channelAddress,
       transferId,
       transactionHash: meta?.transactionHash,
@@ -557,6 +585,8 @@ async function handleWithdrawalTransferResolution(
   const tx = withdrawalResponse.getValue()!;
   // alice submitted her own withdrawal, post to evt
   evts[WITHDRAWAL_RECONCILED_EVENT].post({
+    aliceIdentifier,
+    bobIdentifier,
     channelAddress,
     transferId,
     transactionHash: tx.hash,

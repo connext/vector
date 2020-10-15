@@ -103,10 +103,11 @@ const GetChannelStatesResponseSchema = {
 };
 
 // GET CHANNEL STATE BY PARTICIPANTS
-const GetChannelStateByParticipantsParamsSchema = Type.Intersect([
-  EngineParams.GetChannelStateByParticipantsSchema,
-  Type.Object({ publicIdentifier: TPublicIdentifier }),
-]);
+const GetChannelStateByParticipantsParamsSchema = Type.Object({
+  publicIdentifier: TPublicIdentifier,
+  counterparty: TPublicIdentifier,
+  chainId: TChainId,
+});
 
 const GetChannelStateByParticipantsResponseSchema = GetChannelStateResponseSchema;
 
