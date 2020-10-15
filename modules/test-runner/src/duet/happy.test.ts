@@ -3,7 +3,7 @@ import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
-import { env } from "../utils";
+import { env, getRandomIndex } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -22,13 +22,19 @@ describe(testName, () => {
   let bob: string;
 
   before(async () => {
-    aliceService = await RestServerNodeService.connect(env.aliceUrl, logger.child({ testName }), undefined, 0);
+    const randomIndex = getRandomIndex();
+    aliceService = await RestServerNodeService.connect(
+      env.aliceUrl,
+      logger.child({ testName }),
+      undefined,
+      randomIndex,
+    );
     aliceIdentifier = aliceService.publicIdentifier;
     alice = aliceService.signerAddress;
     const aliceTx = await wallet.sendTransaction({ to: alice, value: utils.parseEther("0.1") });
     await aliceTx.wait();
 
-    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), undefined, 0);
+    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), undefined, randomIndex);
     bobIdentifier = bobService.publicIdentifier;
     bob = bobService.signerAddress;
 
@@ -36,7 +42,7 @@ describe(testName, () => {
     await bobTx.wait();
   });
 
-  it("alice & bob should setup a channel", async () => {
+  it.only("alice & bob should setup a channel", async () => {
     const channelRes = await bobService.requestSetup({
       aliceUrl: env.aliceUrl,
       aliceIdentifier,
