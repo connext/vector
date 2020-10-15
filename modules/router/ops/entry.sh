@@ -29,8 +29,6 @@ done
 ########################################
 # Launch it
 
-export PATH="./node_modules/.bin:${PATH}"
-
 if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting router in prod-mode"

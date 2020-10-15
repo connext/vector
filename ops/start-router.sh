@@ -183,7 +183,7 @@ fi
 ########################################
 ## Router config
 
-router_internal_port="9000"
+router_internal_port="8000"
 router_dev_port="9000"
 
 if [[ $production == "true" ]]
