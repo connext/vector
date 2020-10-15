@@ -2,7 +2,7 @@
 set -eE
 
 if [[ -d "modules/server-node" ]]
-then cd modules/server-node
+then cd modules/server-node || exit 1
 fi
 
 ########################################

@@ -2,7 +2,7 @@
 set -e
 
 if [[ -d "modules/router" ]]
-then cd modules/router
+then cd modules/router || exit 1
 fi
 
 ########################################

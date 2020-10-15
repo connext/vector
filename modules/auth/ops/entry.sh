@@ -2,7 +2,7 @@
 set -e
 
 if [[ -d "modules/auth" ]]
-then cd modules/auth
+then cd modules/auth || exit 1
 fi
 
 ########################################
@@ -11,18 +11,14 @@ fi
 if [[ -n "$VECTOR_JWT_SIGNER_PUBLIC_KEY" ]]
 then echo "Using public key provided by env var"
 elif [[ -n "$VECTOR_JWT_SIGNER_PUBLIC_KEY_FILE" ]]
-then
-  VECTOR_JWT_SIGNER_PUBLIC_KEY="$(cat "$VECTOR_JWT_SIGNER_PUBLIC_KEY_FILE")"
-  export VECTOR_JWT_SIGNER_PUBLIC_KEY;
+then VECTOR_JWT_SIGNER_PUBLIC_KEY="$(cat "$VECTOR_JWT_SIGNER_PUBLIC_KEY_FILE")"
 else echo "public key must be provided via either a secret or an env var." && exit 1
 fi
 
 if [[ -n "$VECTOR_JWT_SIGNER_PRIVATE_KEY" ]]
 then echo "Using private key provided by env var"
 elif [[ -n "$VECTOR_JWT_SIGNER_PRIVATE_KEY_FILE" ]]
-then
-  VECTOR_JWT_SIGNER_PRIVATE_KEY="$(cat "$VECTOR_JWT_SIGNER_PRIVATE_KEY_FILE")"
-  export VECTOR_JWT_SIGNER_PRIVATE_KEY;
+then VECTOR_JWT_SIGNER_PRIVATE_KEY="$(cat "$VECTOR_JWT_SIGNER_PRIVATE_KEY_FILE")"
 else echo "private key must be provided via either a secret or an env var." && exit 1
 fi
 
@@ -33,7 +29,6 @@ VECTOR_JWT_SIGNER_PRIVATE_KEY=$(
     sed 's/-----BEGIN RSA PRIVATE KEY-----/\n-----BEGIN RSA PRIVATE KEY-----\n/' |\
     sed 's/-----END RSA PRIVATE KEY-----/\n-----END RSA PRIVATE KEY-----\n/'
 )
-export VECTOR_JWT_SIGNER_PRIVATE_KEY
 
 VECTOR_JWT_SIGNER_PUBLIC_KEY=$(
   echo "$VECTOR_JWT_SIGNER_PUBLIC_KEY" |\
@@ -41,6 +36,8 @@ VECTOR_JWT_SIGNER_PUBLIC_KEY=$(
     sed 's/-----BEGIN PUBLIC KEY-----/\n-----BEGIN PUBLIC KEY-----\n/' | \
     sed 's/-----END PUBLIC KEY-----/\n-----END PUBLIC KEY-----\n/'
 )
+
+export VECTOR_JWT_SIGNER_PRIVATE_KEY
 export VECTOR_JWT_SIGNER_PUBLIC_KEY
 
 ########################################
