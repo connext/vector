@@ -22,21 +22,15 @@ describe(testName, () => {
   let bob: string;
 
   before(async () => {
-    aliceService = await RestServerNodeService.connect(env.aliceUrl, logger.child({ testName }));
-    const aliceConfigRes = await aliceService.createNode({ index: 0 });
-    expect(aliceConfigRes.getError()).to.not.be.ok;
-    const aliceConfig = aliceConfigRes.getValue();
-    aliceIdentifier = aliceConfig.publicIdentifier;
-    alice = aliceConfig.signerAddress;
+    aliceService = await RestServerNodeService.connect(env.aliceUrl, logger.child({ testName }), undefined, 0);
+    aliceIdentifier = aliceService.publicIdentifier;
+    alice = aliceService.signerAddress;
     const aliceTx = await wallet.sendTransaction({ to: alice, value: utils.parseEther("0.1") });
     await aliceTx.wait();
 
-    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), undefined);
-    const bobConfigRes = await bobService.createNode({ index: 0 });
-    expect(bobConfigRes.getError()).to.not.be.ok;
-    const bobConfig = bobConfigRes.getValue();
-    bobIdentifier = bobConfig.publicIdentifier;
-    bob = bobConfig.signerAddress;
+    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), undefined, 0);
+    bobIdentifier = bobService.publicIdentifier;
+    bob = bobService.signerAddress;
 
     const bobTx = await wallet.sendTransaction({ to: bob, value: utils.parseEther("0.1") });
     await bobTx.wait();

@@ -317,12 +317,10 @@ export class RestServerNodeService implements INodeService {
     paramSchema: any,
   ): Promise<Result<U, NodeError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
-    console.log("url: ", url);
     // Validate parameters are in line with schema
     const validate = ajv.compile(paramSchema);
     // IFF the public identifier is undefined, it should be overridden by
     // the pubId defined in the parameters.
-    console.log("params: ", params);
     if (!validate({ publicIdentifier: this.publicIdentifier, ...params })) {
       return Result.fail(
         new NodeError(NodeError.reasons.InvalidParams, {
