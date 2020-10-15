@@ -133,10 +133,12 @@ model Transfer {
 }
 
 model EventSubscription {
-  id    String @id @default(uuid())
-  event String @unique
-  url   String
+  id               String @id @default(uuid())
+  event            String
+  publicIdentifier String
+  url              String
 
+  @@unique([publicIdentifier, event])
   @@map(name: "event-subscription")
 }
 
@@ -186,7 +188,7 @@ model Configuration {
 }
 
 model NodeIndex {
-  index Int @id
+  index            Int    @id
   publicIdentifier String @unique
 
   @@map(name: "node_index")

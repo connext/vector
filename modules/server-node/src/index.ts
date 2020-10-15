@@ -75,7 +75,7 @@ server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema 
 });
 
 server.get<{ Params: ServerNodeParams.GetChannelState }>(
-  "/channel/:channelAddress/:publicIdentifier",
+  "/:publicIdentifier/channels/:channelAddress",
   { schema: { params: ServerNodeParams.GetChannelStateSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
@@ -98,7 +98,7 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
 );
 
 server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
-  "/channel/:alice/:bob/:chainId/:publicIdentifier",
+  "/:publicIdentifier/channels/counterparty/:counterparty/chain-id/:chainId",
   { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
@@ -120,7 +120,7 @@ server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
 );
 
 server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
-  "/channel/:channelAddress/transfer/:routingId/:publicIdentifier",
+  "/:publicIdentifier/channels/:channelAddress/transfers/routing-id/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
@@ -142,7 +142,7 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
 );
 
 server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
-  "/channel/:channelAddress/active-transfer/:publicIdentifier",
+  "/:publicIdentifier/channels/:channelAddress/active-transfers",
   { schema: { params: ServerNodeParams.GetActiveTransfersByChannelAddressSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
@@ -163,33 +163,8 @@ server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
   },
 );
 
-// TODO: @rahul -- should we include the public identifier in the url
-// here as a param? seems odd its included in the request params but
-// not in the URL path
 server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
-  "/channel/:channelAddress/transfer/:routingId",
-  { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
-  async (request, reply) => {
-    const engine = getNode(request.params.publicIdentifier);
-    if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
-    }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, request.params);
-    try {
-      const res = await engine.request<"chan_getTransferStateByRoutingId">(params);
-      if (!res) {
-        return reply.status(404).send({ message: "Transfer not found", params: request.params });
-      }
-      return reply.status(200).send(res);
-    } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send({ message: e.message });
-    }
-  },
-);
-
-server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
-  "/transfer/:routingId/:publicIdentifier",
+  "/:publicIdentifier/transfers/routing-id/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
@@ -210,27 +185,50 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   },
 );
 
-// TODO: @rahul -- what is this endpoint trying to do?
-// return all channels for a specific engine or for
-// all engines on the node?
-server.get("/channel", { schema: { response: ServerNodeResponses.GetChannelStatesSchema } }, async (request, reply) => {
-  const engines = getNodes();
-  if (engines.length > 1) {
-    return reply.status(400).send({ message: "More than one node exists and publicIdentifier was not specified" });
-  }
-  const engine = engines[0]?.node;
-  if (!engine) {
-    return reply.status(400).send({ message: "Node not found" });
-  }
-  const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
-  try {
-    const res = await engine.request<"chan_getChannelStates">(params);
-    return reply.status(200).send(res.map(chan => chan.channelAddress));
-  } catch (e) {
-    logger.error({ message: e.message, stack: e.stack, context: e.context });
-    return reply.status(500).send({ message: e.message, context: e.context });
-  }
-});
+server.get<{ Params: ServerNodeParams.GetTransferState }>(
+  "/:publicIdentifier/transfers/:transferId",
+  { schema: { params: ServerNodeParams.GetTransferStateSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getTransferState, request.params);
+    try {
+      const res = await engine.request<"chan_getTransferState">(params);
+      if (!res) {
+        return reply.status(404).send({ message: "Transfer not found", params: request.params });
+      }
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
+
+server.get(
+  "/:publicIdentifier/channels",
+  { schema: { params: ServerNodeParams.GetChannelStatesSchema, response: ServerNodeResponses.GetChannelStatesSchema } },
+  async (request, reply) => {
+    const engines = getNodes();
+    if (engines.length > 1) {
+      return reply.status(400).send({ message: "More than one node exists and publicIdentifier was not specified" });
+    }
+    const engine = engines[0]?.node;
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found" });
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+    try {
+      const res = await engine.request<"chan_getChannelStates">(params);
+      return reply.status(200).send(res.map(chan => chan.channelAddress));
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
 
 server.post<{ Body: ServerNodeParams.Setup }>(
   "/setup",
@@ -255,8 +253,6 @@ server.post<{ Body: ServerNodeParams.Setup }>(
   },
 );
 
-// TODO: @rahul -- is bob the only one who should ever be requesting a
-// setup like this?
 server.post<{ Body: ServerNodeParams.RequestSetup }>(
   "/request-setup",
   { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
@@ -362,7 +358,7 @@ server.post<{ Body: ServerNodeParams.RequestCollateral }>(
 );
 
 server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
-  "/hashlock-transfer/create",
+  "/transfer/create",
   {
     schema: {
       body: ServerNodeParams.ConditionalTransferSchema,
@@ -391,7 +387,7 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
 );
 
 server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
-  "/hashlock-transfer/resolve",
+  "/transfer/resolve",
   {
     schema: {
       body: ServerNodeParams.ResolveTransferSchema,
@@ -445,6 +441,7 @@ server.post<{ Body: ServerNodeParams.Withdraw }>(
   },
 );
 
+// TODO: add public identifier to db
 server.post<{ Body: ServerNodeParams.RegisterListener }>(
   "/event/subscribe",
   {
@@ -456,8 +453,8 @@ server.post<{ Body: ServerNodeParams.RegisterListener }>(
   async (request, reply) => {
     try {
       await Promise.all(
-        Object.entries(request.body).map(([eventName, url]) =>
-          store.registerSubscription(eventName as EngineEvent, url as string),
+        Object.entries(request.body.events).map(([eventName, url]) =>
+          store.registerSubscription(request.body.publicIdentifier, eventName as EngineEvent, url as string),
         ),
       );
       logger.info({ endpoint: "/event/subscribe", body: request.body }, "Successfully set up subscriptions");
@@ -469,7 +466,7 @@ server.post<{ Body: ServerNodeParams.RegisterListener }>(
 );
 
 server.get<{ Params: ServerNodeParams.GetListener }>(
-  "/event/:eventName",
+  "/:publicIdentifier/event/:eventName",
   {
     schema: {
       params: ServerNodeParams.GetListenerSchema,
@@ -477,7 +474,7 @@ server.get<{ Params: ServerNodeParams.GetListener }>(
     },
   },
   async (request, reply) => {
-    const url = await store.getSubscription(request.params.eventName as EngineEvent);
+    const url = await store.getSubscription(request.params.publicIdentifier, request.params.eventName as EngineEvent);
     if (!url) {
       return reply.status(404).send({ message: "Subscription URL not found" });
     }
@@ -485,15 +482,16 @@ server.get<{ Params: ServerNodeParams.GetListener }>(
   },
 );
 
-server.get(
-  "/event",
+server.get<{ Params: ServerNodeParams.GetListeners }>(
+  "/:publicIdentifier/event",
   {
     schema: {
+      params: ServerNodeParams.GetListenersSchema,
       response: ServerNodeResponses.GetListenersSchema,
     },
   },
   async (request, reply) => {
-    const subs = await store.getSubscriptions();
+    const subs = await store.getSubscriptions(request.params.publicIdentifier);
     return reply.status(200).send(subs);
   },
 );

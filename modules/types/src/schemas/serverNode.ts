@@ -124,6 +124,7 @@ const GetConfigResponseSchema = {
 // GET LISTENER
 const GetListenerParamsSchema = Type.Object({
   eventName: Type.Union(Object.values(EngineEvents).map(e => Type.Literal(e)) as [TStringLiteral<EngineEvent>]),
+  publicIdentifier: TPublicIdentifier,
 });
 
 const GetListenerResponseSchema = {
@@ -131,12 +132,14 @@ const GetListenerResponseSchema = {
 };
 
 // GET LISTENERS
+const GetListenersParamsSchema = Type.Object({ publicIdentifier: TPublicIdentifier });
+
 const GetListenersResponseSchema = {
   200: Type.Map(TUrl),
 };
 
 // REGISTER LISTENER
-const PostRegisterListenerBodySchema = Type.Map(TUrl);
+const PostRegisterListenerBodySchema = Type.Object({ publicIdentifier: TPublicIdentifier, events: Type.Map(TUrl) });
 
 const PostRegisterListenerResponseSchema = {
   200: Type.Object({
@@ -279,6 +282,9 @@ export namespace ServerNodeParams {
 
   export const GetListenerSchema = GetListenerParamsSchema;
   export type GetListener = Static<typeof GetListenerSchema>;
+
+  export const GetListenersSchema = GetListenersParamsSchema;
+  export type GetListeners = Static<typeof GetListenersSchema>;
 
   export const GetConfigSchema = Type.Object({});
   export type GetConfig = Static<typeof GetConfigSchema>;

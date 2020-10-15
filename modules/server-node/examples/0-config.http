@@ -16,15 +16,15 @@
 
 ##############
 ### GET CONFIG
-GET {{rogerUrl}}/config
+GET {{aliceUrl}}/config
 
 ##############
 ### GET CHANNELS
-GET {{daveUrl}}/channel
+GET {{aliceUrl}}/{{alicePublicIdentifier}}/channel
 
 ##############
 ### GET CHANNEL
-GET {{daveUrl}}/channel/{{daveRogerChannel}}/{{davePublicIdentifier}}
+GET {{aliceUrl}}/{{alicePublicIdentifier}}/channel/{{aliceBobChannel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS
@@ -41,7 +41,7 @@ Content-Type: application/json
 
 ##############
 ### CREATE NODE
-POST {{daveUrl}}/node
+POST {{bobUrl}}/node
 Content-Type: application/json
 
 {
