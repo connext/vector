@@ -7,11 +7,13 @@
     "build": "tsc -p tsconfig.json",
     "build-bundle": "webpack --config ops/webpack.config.js",
     "test": "bash ops/entry.sh",
-    "load-test": "ts-node ./src/load/index.ts | pino-pretty -t"
+    "load-test-cyclical": "ts-node ./src/load/start-cyclical.ts | pino-pretty -t",
+    "load-test-concurrency": "ts-node ./src/load/start-concurrency.ts | pino-pretty -t"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@connext/vector-contracts": "0.0.1-beta.2",
     "@connext/vector-types": "0.0.1-beta.2",
     "@connext/vector-utils": "0.0.1-beta.2",
     "@ethereum-waffle/chai": "3.1.1",
@@ -25,6 +27,7 @@
     "ethers": "5.0.17",
     "evt": "1.8.10",
     "fastify": "3.6.0",
+    "p-queue": "6.6.2",
     "ts-loader": "8.0.4",
     "ts-mocha": "7.0.0",
     "ts-node": "9.0.0",

@@ -5,6 +5,7 @@ import { EngineParams } from "./schemas";
 
 export interface IMessagingService {
   connect(): Promise<void>;
+  disconnect(): Promise<void>;
 
   onReceiveLockMessage(
     myPublicIdentifier: string,

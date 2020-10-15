@@ -28,7 +28,7 @@ export interface IVectorProtocol {
     callback: (payload: ProtocolEventPayloadsMap[T]) => void | Promise<void>,
     filter?: (payload: ProtocolEventPayloadsMap[T]) => boolean,
   ): void;
-  off<T extends ProtocolEventName>(event?: T): void;
+  off<T extends ProtocolEventName>(event?: T): Promise<void>;
   waitFor<T extends ProtocolEventName>(
     event: T,
     timeout: number,

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { getTestLoggers } from "@connext/vector-utils";
-import { IVectorProtocol } from "@connext/vector-types";
+import { expect, getTestLoggers } from "@connext/vector-utils";
+import { IVectorProtocol, ProtocolEventName } from "@connext/vector-types";
 import { constants } from "ethers";
 
 import { createTransfer, getFundedChannel, resolveTransfer } from "../utils";
@@ -13,9 +13,9 @@ describe(testName, () => {
   let bob: IVectorProtocol;
   let channelAddress: string;
 
-  afterEach(() => {
-    alice.off();
-    bob.off();
+  afterEach(async () => {
+    await alice.off();
+    await bob.off();
   });
 
   beforeEach(async () => {
@@ -42,7 +42,14 @@ describe(testName, () => {
 
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
+    const alicePromise = alice.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
+    const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     await resolveTransfer(channelAddress, transfer, bob, alice);
+
+    const aliceEvent = await alicePromise;
+    const bobEvent = await bobPromise;
+    expect(aliceEvent).to.deep.eq(bobEvent);
+    expect(aliceEvent.updatedTransfer!.transferResolver.preImage).to.be.a("string");
   });
 
   // We need this to test whether resolve still works if the funds in the transfer are burned

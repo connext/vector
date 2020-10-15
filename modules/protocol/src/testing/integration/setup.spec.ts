@@ -13,9 +13,9 @@ describe(testName, () => {
   let bob: IVectorProtocol;
   let carol: IVectorProtocol;
 
-  afterEach(() => {
-    alice.off();
-    bob.off();
+  afterEach(async () => {
+    await alice.off();
+    await bob.off();
   });
 
   beforeEach(async () => {

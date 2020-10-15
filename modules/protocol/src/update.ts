@@ -219,7 +219,12 @@ export async function generateUpdate<T extends UpdateType>(
   logger: pino.BaseLogger = pino(),
 ): Promise<
   Result<
-    { update: ChannelUpdate<T>; channelState: FullChannelState<T>; transfer: FullTransferState | undefined },
+    {
+      update: ChannelUpdate<T>;
+      channelState: FullChannelState<T>;
+      transfer: FullTransferState | undefined;
+      updatedActiveTransfers: FullTransferState[] | undefined;
+    },
     OutboundChannelUpdateError
   >
 > {
@@ -227,6 +232,7 @@ export async function generateUpdate<T extends UpdateType>(
   let proposedUpdate: ChannelUpdate<any>;
   // See note re: resolve in `applyUpdate`
   let finalTransferBalance: Balance | undefined = undefined;
+  let updatedActiveTransfers: FullTransferState[] | undefined;
   switch (params.type) {
     case UpdateType.setup: {
       proposedUpdate = generateSetupUpdate(params as UpdateParams<"setup">, signer);
@@ -257,7 +263,8 @@ export async function generateUpdate<T extends UpdateType>(
       if (proposedRes.isError) {
         return Result.fail(new OutboundChannelUpdateError(proposedRes.getError()!.message as any, params, state));
       }
-      proposedUpdate = proposedRes.getValue();
+      proposedUpdate = proposedRes.getValue().unsigned;
+      updatedActiveTransfers = proposedRes.getValue().updatedTransfers;
       break;
     }
     case UpdateType.resolve: {
@@ -274,9 +281,10 @@ export async function generateUpdate<T extends UpdateType>(
       if (generatedResult.isError) {
         return Result.fail(new OutboundChannelUpdateError(generatedResult.getError()!.message as any, params, state));
       }
-      const { update, transferBalance } = generatedResult.getValue();
+      const { update, transferBalance, updatedTransfers } = generatedResult.getValue();
       proposedUpdate = update;
       finalTransferBalance = transferBalance;
+      updatedActiveTransfers = updatedTransfers;
       break;
     }
     default: {
@@ -336,6 +344,7 @@ export async function generateUpdate<T extends UpdateType>(
     },
     transfer: updatedTransfer,
     channelState: updatedChannel,
+    updatedActiveTransfers,
   });
 }
 
@@ -430,9 +439,11 @@ async function generateCreateUpdate(
   state: FullChannelState,
   params: UpdateParams<"create">,
   signer: IChannelSigner,
-  transfers: CoreTransferState[],
+  transfers: FullTransferState[],
   chainReader: IVectorChainReader,
-): Promise<Result<ChannelUpdate<"create">, OutboundChannelUpdateError>> {
+): Promise<
+  Result<{ unsigned: ChannelUpdate<"create">; updatedTransfers: FullTransferState[] }, OutboundChannelUpdateError>
+> {
   const {
     details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
   } = params;
@@ -486,7 +497,8 @@ async function generateCreateUpdate(
     meta,
   };
   const transferHash = hashCoreTransferState(transferState);
-  const hashes = [...transfers, transferState].map(state => {
+  const updatedTransfers = [...transfers, transferState];
+  const hashes = updatedTransfers.map(state => {
     return hashCoreTransferState(state);
   });
   const merkle = new MerkleTree(hashes, utils.keccak256);
@@ -510,7 +522,7 @@ async function generateCreateUpdate(
       meta,
     },
   };
-  return Result.ok(unsigned);
+  return Result.ok({ unsigned, updatedTransfers });
 }
 
 // Generates resolve update from user input params
@@ -521,7 +533,9 @@ async function generateResolveUpdate(
   transfers: FullTransferState[],
   chainService: IVectorChainReader,
   logger: pino.BaseLogger,
-): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, Error>> {
+): Promise<
+  Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance; updatedTransfers: FullTransferState[] }, Error>
+> {
   // A transfer resolution update can effect the following
   // channel fields:
   // - balances
@@ -539,11 +553,10 @@ async function generateResolveUpdate(
   if (!transferToResolve) {
     return Result.fail(new Error(OutboundChannelUpdateError.reasons.TransferNotActive));
   }
-  const hashes = transfers
-    .filter(x => x.transferId !== transferId)
-    .map(state => {
-      return hashCoreTransferState(state);
-    });
+  const updatedTransfers = transfers.filter(x => x.transferId !== transferId);
+  const hashes = updatedTransfers.map(state => {
+    return hashCoreTransferState(state);
+  });
   const merkle = new MerkleTree(hashes, utils.keccak256);
 
   // Get the final transfer balance from contract
@@ -597,7 +610,7 @@ async function generateResolveUpdate(
     },
   };
 
-  return Result.ok({ update: unsigned, transferBalance });
+  return Result.ok({ update: unsigned, transferBalance, updatedTransfers });
 }
 
 // Holds the logic that is the same between all update types:

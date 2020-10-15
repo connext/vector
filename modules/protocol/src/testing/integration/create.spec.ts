@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { getTestLoggers, expect } from "@connext/vector-utils";
-import { IVectorProtocol, IChannelSigner, IVectorStore } from "@connext/vector-types";
+import { IVectorProtocol, IChannelSigner, IVectorStore, ProtocolEventName } from "@connext/vector-types";
 import { constants } from "ethers";
 
 import { env } from "../env";
@@ -36,15 +36,17 @@ describe(testName, () => {
     });
   });
 
-  afterEach(() => {
-    alice.off();
-    bob.off();
+  afterEach(async () => {
+    await alice.off();
+    await bob.off();
   });
 
   it("should create an eth transfer from alice -> bob", async () => {
     // Set test constants
     const assetId = constants.AddressZero;
     const transferAmount = "7";
+    const alicePromise = alice.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
+    const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { transferResolver, ...toCompare } = transfer;
@@ -52,6 +54,10 @@ describe(testName, () => {
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
     expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+    const aliceEvent = await alicePromise;
+    expect(aliceEvent.updatedTransfers?.length).to.eq(1);
+    const bobEvent = await bobPromise;
+    expect(aliceEvent).to.deep.eq(bobEvent);
   });
 
   it("should create an eth transfer from bob -> alice", async () => {
