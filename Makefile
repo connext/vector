@@ -115,7 +115,6 @@ clean: stop-all
 
 reset: stop-all
 	docker container prune -f
-	docker network rm ${project}
 	rm -rf *.docker-compose.yml
 	rm -rf .chaindata
 

@@ -148,7 +148,7 @@ fi
 
 node_internal_port="8000"
 node_dev_port="8001"
-if [[ $production == "prod" ]]
+if [[ $production == "true" ]]
 then
   node_image_name="${project}_node"
   bash $root/ops/pull-images.sh $version $node_image_name > /dev/null

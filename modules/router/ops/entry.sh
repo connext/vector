@@ -37,7 +37,7 @@ then
 
 else
   echo "Starting router in dev-mode"
-  exec  nodemon \
+  exec nodemon \
     --delay 1 \
     --exitcrash \
     --ignore *.test.ts \
