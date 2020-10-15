@@ -6,6 +6,8 @@ echo "VECTOR_EMAIL=$VECTOR_EMAIL"
 echo "VECTOR_NODE_URL=$VECTOR_NODE_URL"
 echo "VECTOR_ROUTER_URL=$VECTOR_ROUTER_URL"
 
+export VECTOR_EMAIL="${VECTOR_EMAIL:-noreply@gmail.com}"
+
 # Provide a message indicating that we're still waiting for everything to wake up
 function loading_msg {
   while true # unix.stackexchange.com/a/37762
@@ -20,13 +22,13 @@ loading_pid="$!"
 # Define service hostnames & ports we depend on
 
 echo "waiting for $VECTOR_NODE_URL..."
-wait-for -t 60 $VECTOR_NODE_URL 2> /dev/null
+wait-for -q -t 60 $VECTOR_NODE_URL 2>&1 | sed '/nc: bad address/d'
 while ! curl -s $VECTOR_NODE_URL > /dev/null
 do sleep 2
 done
 
 echo "waiting for $VECTOR_ROUTER_URL..."
-wait-for -t 60 $VECTOR_ROUTER_URL 2> /dev/null
+wait-for -q -t 60 $VECTOR_ROUTER_URL 2>&1 | sed '/nc: bad address/d'
 while ! curl -s $VECTOR_ROUTER_URL > /dev/null
 do sleep 2
 done

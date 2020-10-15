@@ -23,7 +23,6 @@ then
 
   find \
     .github/workflows/* \
-    config-*.json \
     Makefile \
     modules/*/migrations \
     modules/*/ops \

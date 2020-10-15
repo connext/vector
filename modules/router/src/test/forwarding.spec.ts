@@ -3,6 +3,7 @@ import { ConditionalTransferCreatedPayload, INodeService, Result, TransferNames 
 import {
   createTestChannelState,
   createTestFullHashlockTransferState,
+  expect,
   getRandomBytes32,
   mkAddress,
   mkPublicIdentifier,
@@ -14,12 +15,15 @@ import Sinon from "sinon";
 
 import { RouterStore } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
+import { config } from "../config";
 
-import { env } from "./env";
+import { mockProvider } from "./utils/mocks";
+
+const hydratedProviders = { 1337: mockProvider };
 
 describe("Forwarding", () => {
   describe("transferCreation", () => {
-    const logger = pino({ level: "info" });
+    const logger = pino({ level: config.logLevel });
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<RouterStore>;
 
@@ -49,7 +53,9 @@ describe("Forwarding", () => {
     };
 
     beforeEach(async () => {
-      node = Sinon.createStubInstance(RestServerNodeService);
+      node = Sinon.createStubInstance(RestServerNodeService, {
+        sendDepositTx: Promise.resolve(Result.ok({ txHash: getRandomBytes32() })),
+      });
       store = Sinon.createStubInstance(RouterStore);
     });
 
@@ -77,19 +83,22 @@ describe("Forwarding", () => {
           },
         ],
       });
-      node["getStateChannel"].resolves(Result.ok(senderChannel));
-      node["getStateChannelByParticipants"].resolves(Result.ok(receiverChannel));
-      node["signerAddress"] = mkAddress("0xb");
-      node["conditionalTransfer"].resolves(Result.ok({} as any));
-      await forwardTransferCreation(
-        data,
-        mkPublicIdentifier("indraBBB"),
-        mkAddress("0xb"),
-        node as INodeService,
-        store,
-        logger,
-        env.hydratedProviders,
-      );
+      node.getStateChannel.resolves(Result.ok(senderChannel));
+      node.getStateChannelByParticipants.resolves(Result.ok(receiverChannel));
+      node.conditionalTransfer.resolves(Result.ok({} as any));
+      node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
+      node.reconcileDeposit.resolves(Result.ok({ channelAddress: data.channelAddress }));
+      await expect(
+        forwardTransferCreation(
+          data,
+          mkPublicIdentifier("indraBBB"),
+          mkAddress("0xb"),
+          node as INodeService,
+          store,
+          logger,
+          hydratedProviders,
+        ),
+      ).to.eventually.be.ok;
     });
 
     it.skip("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {});

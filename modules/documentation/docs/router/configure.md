@@ -13,21 +13,22 @@ Before anything else, you should first ensure that the required Vector contracts
 
 We have a global [address-book in the root of the Vector repo](https://github.com/connext/vector/blob/master/address-book.json) which contains deployed contract addresses indexed by chainId. If you can't find the specific chain(s) that you want to set up a router at, you likely first need to deploy contracts.
 
-To deploy contracts, you can use our contracts CLI tool! First, build the repo:
+To deploy contracts, you can use our contracts CLI tool! First, build the contract artifacts:
 
 ```bash
 # in vector root
-make
+make ethprovider
 ```
 
-This should take a few moments. After it's done, cd into the contract repo and call the CLI migrate command:
+After it's done, cd into the contract repo and call the CLI migrate command:
 
 ```bash
-cd modules/contracts
-dist/cli.js migrate --address-book=/data/address-book.json --mnemonic=$mnemonic --ethProvider=$ethProvider
+bash ops/deploy-contracts.sh --ethProvider="$ethProvider" --mnemonic="$mnemonic"
 ```
 
-Where `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. Infura).
+(Make sure the mnemonic in particular is wrapped in double quotes to ensure it's all interpreted as one argument)
+
+Where `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. Infura). Any newly deployed contracts will have their addresses added to the project root's `address-book.json`
 
 ## Setting Up Required Dependencies
 

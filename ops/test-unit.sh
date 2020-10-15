@@ -55,7 +55,9 @@ then
     --tmpfs "/tmp" \
     ${project}_builder modules/contracts/ops/entry.sh
 
-  while [[ ! -f "$chain_data/chain-addresses.json" ]]
+  chain_addresses="$chain_data/chain-addresses.json"
+
+  while [[ ! -f "$chain_addresses" || -z `cat $chain_addresses | grep "transferRegistryAddress"` ]]
   do
     if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
     then echo "$ethprovider_host was not able to start up successfully" && exit 1
@@ -64,23 +66,13 @@ then
   done
   echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
 
-  if [[ -f "$chain_data/chain-addresses.json" ]]
-  then
-    echo "Chain addresses valid, see fixme in test-unit.sh"
-    CHAIN_ADDRESSES="`cat "$chain_data/chain-addresses.json"`"
-  else
-    CHAIN_ADDRESSES="{}"
-  fi
-
+  CHAIN_ADDRESSES="`cat "$chain_addresses"`"
   CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
+
+  echo "CHAIN_PROVIDERS=${CHAIN_PROVIDERS}"
+  echo "CHAIN_ADDRESSES=${CHAIN_ADDRESSES}"
+
   config="`echo "$config" '{"chainProviders":'$CHAIN_PROVIDERS'}' | jq -s '.[0] + .[1]'`"
-
-
-  # FIXME: assigning chain addresses here fails if the addresses have
-  # already been created (meaning repeatedly running unit tests will fail).
-  # Assigning them in the IF statement above will always work. 
-  # That's really weird, and above by bash paygrade
-  # CHAIN_ADDRESSES="`cat "$chain_data/chain-addresses.json"`"
   config="`echo "$config" '{"chainAddresses":'$CHAIN_ADDRESSES'}' | jq -s '.[0] + .[1]'`"
 
 else

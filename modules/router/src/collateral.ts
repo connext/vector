@@ -6,7 +6,8 @@ import {
   Values,
   VectorError,
 } from "@connext/vector-types";
-import { BigNumber, constants } from "ethers";
+import { getBalanceForAssetId } from "@connext/vector-utils";
+import { BigNumber } from "ethers";
 import { BaseLogger } from "pino";
 
 import { ChainJsonProviders } from "./listener";
@@ -69,13 +70,12 @@ export const requestCollateral = async (
     target = target.add(transferAmount);
   }
 
-  logger.info({ target, requestedAmount, profile, transferAmount }, "Collateral target calculated");
+  logger.info({ target: target.toString(), requestedAmount, profile, transferAmount }, "Collateral target calculated");
 
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
   const assetIdx = channel.assetIds.findIndex(assetId => assetId === assetId);
-  const myBalance =
-    assetIdx === -1 ? constants.Zero : BigNumber.from(channel.balances[assetIdx].amount[iAmAlice ? 0 : 1]);
+  const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
 
   if (myBalance.gte(target)) {
     logger.info({ balance: channel.balances[assetIdx], target }, "Current balance is sufficient, not collateralizing");

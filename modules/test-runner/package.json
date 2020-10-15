@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --config ops/webpack.config.js",
-    "lint": "../../node_modules/.bin/eslint -c '../../.eslintrc.js' --fix 'src/**/*'",
+    "build": "tsc -p tsconfig.json",
+    "build-bundle": "webpack --config ops/webpack.config.js",
     "test": "bash ops/entry.sh",
     "load-test-cyclical": "ts-node ./src/load/start-cyclical.ts | pino-pretty -t",
     "load-test-concurrency": "ts-node ./src/load/start-concurrency.ts | pino-pretty -t"

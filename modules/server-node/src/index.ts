@@ -14,7 +14,7 @@ import {
   CreateUpdateDetails,
 } from "@connext/vector-types";
 import Axios from "axios";
-import { constructRpcRequest } from "@connext/vector-utils";
+import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
 
 import { PrismaStore } from "./services/store";
@@ -40,9 +40,7 @@ server.register(fastifyCors, {
 
 export const store = new PrismaStore();
 
-export const _providers: { [chainId: string]: providers.JsonRpcProvider } = Object.fromEntries(
-  Object.entries(config.chainProviders).map(([chainId, url]) => [chainId, new providers.JsonRpcProvider(url)]),
-);
+export const _providers = hydrateProviders(config.chainProviders);
 
 server.addHook("onReady", async () => {
   // get persisted mnemonic
@@ -411,10 +409,7 @@ server.post<{ Body: ServerNodeParams.RequestCollateral }>(
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, {
-      assetId: request.body.assetId,
-      channelAddress: request.body.channelAddress,
-    });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, request.body);
     try {
       const res = await engine.request<"chan_requestCollateral">(rpc);
       return reply.status(200).send(res);
@@ -614,7 +609,7 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
   "/ethprovider/:chainId",
   { schema: { body: JsonRpcRequestSchema } },
   async (request, reply) => {
-    const provider = _providers[request.params.chainId];
+    const provider = _providers[parseInt(request.params.chainId)];
     if (!provider) {
       return reply
         .status(400)

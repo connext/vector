@@ -19,7 +19,7 @@ export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD
 
 db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
 echo "Waiting for database at $db"
-wait-for -t 60 $db 2> /dev/null
+wait-for -q -t 60 $db 2>&1 | sed '/nc: bad address/d'
 
 echo "Pinging node at $VECTOR_NODE_URL"
 while [[ -z "`curl -k -m 5 -s $VECTOR_NODE_URL/ping || true`" ]]
@@ -29,8 +29,6 @@ done
 ########################################
 # Launch it
 
-export PATH="./node_modules/.bin:${PATH}"
-
 if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting router in prod-mode"
@@ -39,7 +37,7 @@ then
 
 else
   echo "Starting router in dev-mode"
-  exec  nodemon \
+  exec nodemon \
     --delay 1 \
     --exitcrash \
     --ignore *.test.ts \
