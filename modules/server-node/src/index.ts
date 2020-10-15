@@ -2,7 +2,6 @@ import fastify from "fastify";
 import fastifyCors from "fastify-cors";
 import fastifyOas from "fastify-oas";
 import pino from "pino";
-import { providers } from "ethers";
 import {
   ChannelRpcMethods,
   EngineEvent,

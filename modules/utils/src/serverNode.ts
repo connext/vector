@@ -6,6 +6,7 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   NodeError,
+  Omit,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -53,10 +54,11 @@ export class RestServerNodeService implements INodeService {
 
     // If an index is provided, the service will only host a single channel
     // and the publicIdentifier will be automatically included in parameters
-    if (index) {
+    if (index !== undefined || index !== null) {
       // Create the public identifier and signer address
       const node = await service.createNode({ index });
       if (node.isError) {
+        console.log("***** error with config");
         logger.error({ error: node.getError()!.message, method: "connect" }, "Failed to create node");
         return service;
       }
@@ -76,7 +78,7 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getStateChannel(
-    params: ServerNodeParams.GetChannelState,
+    params: Omit<ServerNodeParams.GetChannelState, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
     return this.executeHttpRequest(
       `channel/${params.channelAddress}/${params.publicIdentifier ?? this.publicIdentifier}`,
@@ -87,13 +89,13 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getStateChannels(
-    params: ServerNodeParams.GetChannelStates,
+    params: Omit<ServerNodeParams.GetChannelStates, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>> {
     return this.executeHttpRequest(`channel`, "get", params, ServerNodeParams.GetChannelStatesSchema);
   }
 
   async getTransfersByRoutingId(
-    params: ServerNodeParams.GetTransferStatesByRoutingId,
+    params: Omit<ServerNodeParams.GetTransferStatesByRoutingId, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>> {
     return this.executeHttpRequest(
       `transfer/${params.routingId}/${params.publicIdentifier ?? this.publicIdentifier}`,
@@ -104,7 +106,7 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getTransferByRoutingId(
-    params: ServerNodeParams.GetTransferStateByRoutingId,
+    params: Omit<ServerNodeParams.GetTransferStateByRoutingId, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {
     return this.executeHttpRequest(
       `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier ??
@@ -116,7 +118,7 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getTransfer(
-    params: ServerNodeParams.GetTransferState,
+    params: Omit<ServerNodeParams.GetTransferState, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
     return this.executeHttpRequest(
       `transfer/${params.transferId}/${params.publicIdentifier ?? this.publicIdentifier}`,
@@ -127,7 +129,9 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getActiveTransfers(
-    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+    params: Omit<ServerNodeParams.GetActiveTransfersByChannelAddress, "publicIdentifier"> & {
+      publicIdentifier?: string;
+    },
   ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
     return this.executeHttpRequest(
       `channel/${params.channelAddress}/active-transfer/${params.publicIdentifier ?? this.publicIdentifier}`,
@@ -138,7 +142,7 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getStateChannelByParticipants(
-    params: ServerNodeParams.GetChannelStateByParticipants,
+    params: Omit<ServerNodeParams.GetChannelStateByParticipants, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>> {
     return this.executeHttpRequest(
       `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier ?? this.publicIdentifier}`,
@@ -151,7 +155,7 @@ export class RestServerNodeService implements INodeService {
   async requestSetup(
     params: ServerNodeParams.RequestSetup,
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.RequestSetup, ServerNodeResponses.RequestSetup>(
+    return this.executeHttpRequest<ServerNodeResponses.RequestSetup>(
       "request-setup",
       "post",
       params,
@@ -159,19 +163,16 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
-      "setup",
-      "post",
-      params,
-      ServerNodeParams.SetupSchema,
-    );
+  async setup(
+    params: Omit<ServerNodeParams.Setup, "publicIdentifier"> & { publicIdentifier?: string },
+  ): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
+    return this.executeHttpRequest<ServerNodeResponses.Setup>("setup", "post", params, ServerNodeParams.SetupSchema);
   }
 
   async sendDepositTx(
-    params: ServerNodeParams.SendDepositTx,
+    params: Omit<ServerNodeParams.SendDepositTx, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.SendDepositTx, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.SendDepositTx, ServerNodeResponses.SendDepositTx>(
+    return this.executeHttpRequest<ServerNodeResponses.SendDepositTx>(
       "send-deposit-tx",
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
@@ -179,8 +180,10 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async reconcileDeposit(params: ServerNodeParams.Deposit): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.Deposit, ServerNodeResponses.Deposit>(
+  async reconcileDeposit(
+    params: Omit<ServerNodeParams.Deposit, "publicIdentifier"> & { publicIdentifier?: string },
+  ): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
+    return this.executeHttpRequest<ServerNodeResponses.Deposit>(
       "deposit",
       "post",
       {
@@ -193,9 +196,9 @@ export class RestServerNodeService implements INodeService {
   }
 
   async conditionalTransfer(
-    params: ServerNodeParams.ConditionalTransfer,
+    params: Omit<ServerNodeParams.ConditionalTransfer, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.ConditionalTransfer, ServerNodeResponses.ConditionalTransfer>(
+    return this.executeHttpRequest<ServerNodeResponses.ConditionalTransfer>(
       `hashlock-transfer/create`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
@@ -204,9 +207,9 @@ export class RestServerNodeService implements INodeService {
   }
 
   async resolveTransfer(
-    params: ServerNodeParams.ResolveTransfer,
+    params: Omit<ServerNodeParams.ResolveTransfer, "publicIdentifier"> & { publicIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.ResolveTransfer, ServerNodeResponses.ResolveTransfer>(
+    return this.executeHttpRequest<ServerNodeResponses.ResolveTransfer>(
       `hashlock-transfer/resolve`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
@@ -214,8 +217,10 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.Withdraw, ServerNodeResponses.Withdraw>(
+  async withdraw(
+    params: Omit<ServerNodeParams.Withdraw, "publicIdentifier"> & { publicIdentifier?: string },
+  ): Promise<Result<ServerNodeResponses.Withdraw, NodeError>> {
+    return this.executeHttpRequest<ServerNodeResponses.Withdraw>(
       `withdraw`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
@@ -264,10 +269,10 @@ export class RestServerNodeService implements INodeService {
   }
 
   // Helper methods
-  private async executeHttpRequest<T, U>(
+  private async executeHttpRequest<U>(
     urlPath: string,
     method: "get" | "post",
-    params: T,
+    params: any,
     paramSchema: any,
   ): Promise<Result<U, NodeError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
@@ -288,7 +293,10 @@ export class RestServerNodeService implements INodeService {
       const res = method === "get" ? await Axios.get(url) : await Axios.post(url, params);
       return Result.ok(res.data);
     } catch (e) {
-      return Result.fail(new NodeError(NodeError.reasons.InternalServerError, { error: e.message, params, url }));
+      const jsonErr = Object.keys(e).includes("toJSON") ? e.toJSON() : e;
+      return Result.fail(
+        new NodeError(jsonErr.message ?? NodeError.reasons.InternalServerError, { stack: jsonErr.stack, params, url }),
+      );
     }
   }
 }
