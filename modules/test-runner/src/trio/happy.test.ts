@@ -151,7 +151,6 @@ describe(testName, () => {
       publicIdentifier: carolIdentifier,
     });
     const carolChannel = carolChannelRes.getValue()!;
-
     const daveChannelRes = await daveService.getStateChannelByParticipants({
       counterparty: rogerIdentifier,
       chainId,

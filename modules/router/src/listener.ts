@@ -4,7 +4,6 @@ import {
   INodeService,
   ConditionalTransferCreatedPayload,
   DepositReconciledPayload,
-  Result,
   FullChannelState,
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
@@ -12,7 +11,7 @@ import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
-import { requestCollateral, RequestCollateralError } from "./collateral";
+import { requestCollateral } from "./collateral";
 import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
 import { IRouterStore } from "./services/store";

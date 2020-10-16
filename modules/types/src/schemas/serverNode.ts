@@ -140,7 +140,10 @@ const GetListenersResponseSchema = {
 };
 
 // REGISTER LISTENER
-const PostRegisterListenerBodySchema = Type.Object({ publicIdentifier: TPublicIdentifier, events: Type.Map(TUrl) });
+const PostRegisterListenerBodySchema = Type.Object({
+  publicIdentifier: TPublicIdentifier,
+  events: Type.Map(Type.String()),
+});
 
 const PostRegisterListenerResponseSchema = {
   200: Type.Object({

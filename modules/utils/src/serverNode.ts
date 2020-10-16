@@ -7,7 +7,6 @@ import {
   ServerNodeResponses,
   NodeError,
   OptionalPublicIdentifier,
-  CONDITIONAL_TRANSFER_CREATED_EVENT,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -81,27 +80,30 @@ export class RestServerNodeService implements INodeService {
     if (this.evts) {
       const urls = Object.fromEntries(
         Object.entries(this.evts).map(([event, config]) => {
-          return [event, config.url];
+          return [event, config.url ?? ""];
         }),
       );
       const { publicIdentifier } = res.getValue();
       // Create an evt context for this public identifier only
       // (see not in `off`)
       this.ctxs[publicIdentifier] = Evt.newCtx();
-      try {
-        await this.executeHttpRequest(
-          `/event/subscribe`,
-          "post",
-          {
-            events: urls,
-            publicIdentifier,
-          } as ServerNodeParams.RegisterListener,
-          ServerNodeParams.RegisterListenerSchema,
-        );
-        this.logger.info({ urls, method: "connect" }, "Engine event subscription created");
-      } catch (e) {
-        this.logger.error({ error: e.response?.data, urls, method: "connect" }, "Error creating subscription");
+      const params: ServerNodeParams.RegisterListener = {
+        events: urls,
+        publicIdentifier: publicIdentifier ?? this.publicIdentifier,
+      };
+      // IFF the public identifier is undefined, it should be overridden by
+      // the pubId defined in the parameters.
+      const subscription = await this.executeHttpRequest(
+        `event/subscribe`,
+        "post",
+        params,
+        ServerNodeParams.RegisterListenerSchema,
+      );
+      if (subscription.isError) {
+        this.logger.error({ error: subscription.getError()! }, "Failed to create subscription");
+        return Result.fail(subscription.getError()!);
       }
+      this.logger.info({ urls, method: "connect" }, "Engine event subscription created");
     }
     return res;
   }
@@ -143,9 +145,9 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.GetTransferStateByRoutingId>,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {
     return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}/transfer/routing-id/${
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}/transfers/routing-id/${
         params.routingId
-      }/`,
+      }`,
       "get",
       params,
       ServerNodeParams.GetTransferStateByRoutingIdSchema,
@@ -272,7 +274,8 @@ export class RestServerNodeService implements INodeService {
     if (!this.evts || !this.evts[event]?.evt) {
       throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
-    if (!publicIdentifier && !this.publicIdentifier) {
+    const pubId = publicIdentifier ?? this.publicIdentifier;
+    if (!pubId) {
       throw new NodeError(NodeError.reasons.NoPublicIdentifier);
     }
     const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
@@ -280,7 +283,7 @@ export class RestServerNodeService implements INodeService {
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === publicIdentifier || data.bobIdentifier === publicIdentifier);
+        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
       })
       .attachOnce(callback);
   }
@@ -294,15 +297,16 @@ export class RestServerNodeService implements INodeService {
     if (!this.evts || !this.evts[event]?.evt) {
       throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
-    if (!publicIdentifier && !this.publicIdentifier) {
+    const pubId = publicIdentifier ?? this.publicIdentifier;
+    if (!pubId) {
       throw new NodeError(NodeError.reasons.NoPublicIdentifier);
     }
-    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
+    const ctx = this.ctxs[pubId];
     this.evts[event].evt
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === publicIdentifier || data.bobIdentifier === publicIdentifier);
+        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
       })
       .attach(callback);
   }
@@ -316,15 +320,16 @@ export class RestServerNodeService implements INodeService {
     if (!this.evts || !this.evts[event]?.evt) {
       throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
-    if (!publicIdentifier && !this.publicIdentifier) {
+    const pubId = publicIdentifier ?? this.publicIdentifier;
+    if (!pubId) {
       throw new NodeError(NodeError.reasons.NoPublicIdentifier);
     }
-    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
+    const ctx = this.ctxs[pubId];
     return this.evts[event].evt
       .pipe(ctx)
       .pipe((data: EngineEventMap[T]) => {
         const filtered = filter(data);
-        return filtered && (data.aliceIdentifier === publicIdentifier || data.bobIdentifier === publicIdentifier);
+        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
       })
       .waitFor(timeout) as Promise<EngineEventMap[T]>;
   }
@@ -352,7 +357,8 @@ export class RestServerNodeService implements INodeService {
     const validate = ajv.compile(paramSchema);
     // IFF the public identifier is undefined, it should be overridden by
     // the pubId defined in the parameters.
-    if (!validate({ publicIdentifier: this.publicIdentifier, ...params })) {
+    const filled = { publicIdentifier: this.publicIdentifier, ...params };
+    if (!validate(filled)) {
       return Result.fail(
         new NodeError(NodeError.reasons.InvalidParams, {
           errors: validate.errors?.map(err => err.message).join(","),
@@ -362,12 +368,12 @@ export class RestServerNodeService implements INodeService {
 
     // Attempt request
     try {
-      const res = method === "get" ? await Axios.get(url) : await Axios.post(url, params);
+      const res = method === "get" ? await Axios.get(url) : await Axios.post(url, filled);
       return Result.ok(res.data);
     } catch (e) {
       const jsonErr = Object.keys(e).includes("toJSON") ? e.toJSON() : e;
       return Result.fail(
-        new NodeError(jsonErr.message ?? NodeError.reasons.InternalServerError, { stack: jsonErr.stack, params, url }),
+        new NodeError(jsonErr.message ?? NodeError.reasons.InternalServerError, { stack: jsonErr.stack, filled, url }),
       );
     }
   }

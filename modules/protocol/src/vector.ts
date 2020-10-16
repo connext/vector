@@ -214,29 +214,31 @@ export class Vector implements IVectorProtocol {
     // TODO: https://github.com/connext/vector/issues/53
 
     // sync latest state before starting
-    const channels = await this.storeService.getChannelStates();
-    await Promise.all(
-      channels.map(channel =>
-        sync
-          .outbound(
-            channel.latestUpdate,
-            this.storeService,
-            this.chainReader,
-            this.messagingService,
-            this.externalValidationService,
-            this.signer,
-            this.logger,
-          )
-          .then(res => {
-            if (res.isError) {
-              this.logger.warn(
-                { channel: channel.channelAddress, error: res.getError()!.message! },
-                "Failed to sync on start",
-              );
-            }
-          }),
-      ),
-    );
+    // TODO: Not syncing properly on startup because stores latestUpdate
+    // not the update params, how does this even compile?
+    // const channels = await this.storeService.getChannelStates();
+    // await Promise.all(
+    //   channels.map(channel =>
+    //     sync
+    //       .outbound(
+    //         channel.latestUpdate,
+    //         this.storeService,
+    //         this.chainReader,
+    //         this.messagingService,
+    //         this.externalValidationService,
+    //         this.signer,
+    //         this.logger,
+    //       )
+    //       .then(res => {
+    //         if (res.isError) {
+    //           this.logger.warn(
+    //             { channel: channel.channelAddress, error: res.getError()!.message! },
+    //             "Failed to sync on start",
+    //           );
+    //         }
+    //       }),
+    //   ),
+    // );
     return this;
   }
 

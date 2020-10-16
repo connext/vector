@@ -137,7 +137,7 @@ server.get<{ Params: ServerNodeParams.GetTransferState }>(
 
 // find transfers with same routingId across multiple channels
 // i.e. to forward transfer resolution
-server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+server.get<{ Params: ServerNodeParams.GetTransferStatesByRoutingId }>(
   "/:publicIdentifier/transfers/routing-id/:routingId",
   { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
   async (request, reply) => {
@@ -447,9 +447,9 @@ server.post<{ Body: ServerNodeParams.RegisterListener }>(
   async (request, reply) => {
     try {
       await Promise.all(
-        Object.entries(request.body.events).map(([eventName, url]) =>
-          store.registerSubscription(request.body.publicIdentifier, eventName as EngineEvent, url as string),
-        ),
+        Object.entries(request.body.events).map(([eventName, url]) => {
+          return store.registerSubscription(request.body.publicIdentifier, eventName as EngineEvent, url as string);
+        }),
       );
       logger.info({ endpoint: "/event/subscribe", body: request.body }, "Successfully set up subscriptions");
       return reply.status(200).send({ message: "success" });
