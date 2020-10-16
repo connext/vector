@@ -1,11 +1,11 @@
-import { getRandomBytes32, RestServerNodeService, expect, delay } from "@connext/vector-utils";
+import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
 
 import { env, getRandomIndex } from "../utils";
 
-import { carolEvts, daveEvts, rogerEvts } from "./setup";
+import { carolEvts, daveEvts } from "./setup";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -54,7 +54,7 @@ describe(testName, () => {
     rogerService = await RestServerNodeService.connect(
       env.rogerUrl,
       logger.child({ testName, name: "Roger" }),
-      rogerEvts,
+      undefined,
       0,
     );
     rogerIdentifier = rogerService.publicIdentifier;
@@ -196,9 +196,9 @@ describe(testName, () => {
       carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[1];
     expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
     const [carolCreate, daveCreate] = await Promise.all([carolCreatePromise, daveCreatePromise]);
-    expect(carolCreate).to.deep.eq(daveCreate);
-
-    // Get daves transfer
+    expect(carolCreate).to.be.ok;
+    expect(daveCreate).to.be.ok;
+    // Get daves
     const daveTransferRes = await daveService.getTransferByRoutingId({
       channelAddress: daveChannel.channelAddress,
       routingId,
@@ -208,8 +208,7 @@ describe(testName, () => {
     expect(daveTransferRes.getError()).to.not.be.ok;
     const daveTransfer = daveTransferRes.getValue();
 
-    const carolResolvePromise = carolService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
-    const daveResolvePromise = daveService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
+    const daveResolvePromise = daveService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, 10_000);
     const resolveRes = await daveService.resolveTransfer({
       publicIdentifier: daveIdentifier,
       channelAddress: daveChannel.channelAddress,
@@ -219,9 +218,8 @@ describe(testName, () => {
       transferId: daveTransfer.transferId,
     });
     expect(resolveRes.getError()).to.not.be.ok;
-
-    const [carolResolve, daveResolve] = await Promise.all([carolResolvePromise, daveResolvePromise]);
-    expect(carolResolve).to.deep.eq(daveResolve);
+    const daveResolve = await daveResolvePromise;
+    expect(daveResolve).to.be.ok;
 
     const channelAfterResolve = (
       await daveService.getStateChannel({
