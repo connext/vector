@@ -204,6 +204,12 @@ test-trio: test-runner-js trio
 watch-trio: test-runner-js trio
 	bash ops/test-integration.sh trio watch
 
+test-load: test-runner trio
+	bash ops/test-load.sh cyclical
+
+test-concurrency: test-runner trio
+	bash ops/test-load.sh concurrency 3
+	
 test-node: node test-runner-js
 	bash ops/test-integration.sh node test
 watch-node: node test-runner-js
@@ -214,8 +220,6 @@ test-routing-node: router test-runner-js
 watch-routing-node: router test-runner-js
 	bash ops/test-integration.sh router watch
 
-test-load: test-runner-js trio
-	bash ops/test-load.sh
 
 ########################################
 # Begin Real Build Rules

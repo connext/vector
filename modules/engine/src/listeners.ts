@@ -229,8 +229,7 @@ async function handleConditionalTransferCreation(
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
   logger.info({ channelAddress }, "Handling conditional transfer create event");
   // Emit the properly structured event
-  // TODO: consider a store method to find active transfer by routingId
-  const transfer = await store.getTransferState(transferId);
+  const transfer = event.updatedTransfer;
   if (!transfer) {
     logger.warn({ transferId }, "Transfer not found after creation");
     return;
@@ -257,6 +256,7 @@ async function handleConditionalTransferCreation(
     channelBalance: balances[assetIdx],
     transfer,
     conditionType,
+    activeTransferIds: event.updatedTransfers?.map(t => t.transferId),
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
 
@@ -293,7 +293,7 @@ async function handleConditionalTransferResolution(
     networkContext: { chainId },
     latestUpdate: {
       assetId,
-      details: { transferId, transferDefinition },
+      details: { transferDefinition },
     },
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
   // Emit the properly structured event
@@ -309,7 +309,7 @@ async function handleConditionalTransferResolution(
   } else {
     conditionType = registryInfo.getValue().name;
   }
-  const transfer = await store.getTransferState(transferId);
+  const transfer = event.updatedTransfer;
   const payload: ConditionalTransferResolvedPayload = {
     aliceIdentifier,
     bobIdentifier,
@@ -317,6 +317,7 @@ async function handleConditionalTransferResolution(
     channelBalance: balances[assetIds.findIndex(a => a === assetId)],
     transfer: transfer!,
     conditionType,
+    activeTransferIds: event.updatedTransfers?.map(t => t.transferId),
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
 }

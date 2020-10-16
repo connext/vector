@@ -45,7 +45,9 @@ describe("Vector", () => {
     storeService = Sinon.createStubInstance(MemoryStoreService);
     storeService.getChannelStates.resolves([]);
     // Mock sync outbound
-    Sinon.stub(vectorSync, "outbound").resolves(Result.ok(createTestChannelState(UpdateType.setup)));
+    Sinon.stub(vectorSync, "outbound").resolves(
+      Result.ok({ updatedChannel: createTestChannelState(UpdateType.setup) }),
+    );
   });
 
   afterEach(() => {

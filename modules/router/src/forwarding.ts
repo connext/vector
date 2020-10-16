@@ -68,7 +68,7 @@ export async function forwardTransferCreation(
   chainProviders: ChainJsonProviders,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
-  logger.info(
+  logger.error(
     { data, method, node: { signerAddress, publicIdentifier } },
     "Received transfer event, starting forwarding",
   );
