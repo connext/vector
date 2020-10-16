@@ -168,7 +168,7 @@ describe(testName, () => {
     const routingId = getRandomBytes32();
 
     const carolCreatePromise = carolService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
-    const rogerCreatePromise = rogerService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
+    const daveCreatePromise = daveService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
     const transferRes = await carolService.conditionalTransfer({
       publicIdentifier: carolIdentifier,
       amount: transferAmt.toString(),
@@ -195,18 +195,18 @@ describe(testName, () => {
     const carolBalanceAfterTransfer =
       carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[1];
     expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
-
-    const [carolCreate, rogerCreate] = await Promise.all([carolCreatePromise, rogerCreatePromise]);
-    expect(carolCreate).to.deep.eq(rogerCreate);
+    const [carolCreate, daveCreate] = await Promise.all([carolCreatePromise, daveCreatePromise]);
+    expect(carolCreate).to.deep.eq(daveCreate);
 
     // Get daves transfer
-    const daveTransfer = (
-      await daveService.getTransferByRoutingId({
-        channelAddress: daveChannel.channelAddress,
-        routingId,
-        publicIdentifier: daveIdentifier,
-      })
-    ).getValue()!;
+    const daveTransferRes = await daveService.getTransferByRoutingId({
+      channelAddress: daveChannel.channelAddress,
+      routingId,
+      publicIdentifier: daveIdentifier,
+    });
+
+    expect(daveTransferRes.getError()).to.not.be.ok;
+    const daveTransfer = daveTransferRes.getValue();
 
     const carolResolvePromise = carolService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
     const rogerResolvePromise = rogerService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
