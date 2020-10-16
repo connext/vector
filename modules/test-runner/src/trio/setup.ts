@@ -53,6 +53,26 @@ export const daveEvts = {
   },
 };
 
+export const rogerEvts = {
+  [EngineEvents.SETUP]: {},
+  [EngineEvents.WITHDRAWAL_CREATED]: {},
+  [EngineEvents.WITHDRAWAL_RESOLVED]: {},
+  [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
+    evt: Evt.create<ConditionalTransferCreatedPayload>(),
+    url: `${serverBase}${conditionalTransferCreatedPath}-roger`,
+  },
+  [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: {
+    evt: Evt.create<ConditionalTransferResolvedPayload>(),
+    url: `${serverBase}${conditionalTransferResolvedPath}-roger`,
+  },
+  [EngineEvents.DEPOSIT_RECONCILED]: {
+    evt: Evt.create<DepositReconciledPayload>(),
+    url: `${serverBase}${depositReconciledPath}-roger`,
+  },
+};
+
 const server = fastify();
 
 server.get("/ping", async () => {
@@ -86,6 +106,21 @@ server.post(`${conditionalTransferResolvedPath}-dave`, async (request, response)
 
 server.post(`${depositReconciledPath}-dave`, async (request, response) => {
   daveEvts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${conditionalTransferCreatedPath}-roger`, async (request, response) => {
+  rogerEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${conditionalTransferResolvedPath}-roger`, async (request, response) => {
+  rogerEvts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${depositReconciledPath}-roger`, async (request, response) => {
+  rogerEvts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
   return response.status(200).send({ message: "success" });
 });
 

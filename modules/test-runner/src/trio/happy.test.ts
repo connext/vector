@@ -1,11 +1,11 @@
 import { getRandomBytes32, RestServerNodeService, expect, delay } from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
-import { INodeService, TransferNames } from "@connext/vector-types";
+import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
 
 import { env, getRandomIndex } from "../utils";
 
-import { carolEvts, daveEvts } from "./setup";
+import { carolEvts, daveEvts, rogerEvts } from "./setup";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -26,7 +26,7 @@ describe(testName, () => {
   let rogerService: INodeService;
   let rogerIdentifier: string;
   let roger: string;
-
+  console.log();
   before(async () => {
     const randomIndex = getRandomIndex();
     carolService = await RestServerNodeService.connect(
@@ -54,7 +54,7 @@ describe(testName, () => {
     rogerService = await RestServerNodeService.connect(
       env.rogerUrl,
       logger.child({ testName, name: "Roger" }),
-      undefined,
+      rogerEvts,
       0,
     );
     rogerIdentifier = rogerService.publicIdentifier;
@@ -166,6 +166,9 @@ describe(testName, () => {
     const preImage = getRandomBytes32();
     const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
     const routingId = getRandomBytes32();
+
+    const carolCreatePromise = carolService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
+    const rogerCreatePromise = rogerService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
     const transferRes = await carolService.conditionalTransfer({
       publicIdentifier: carolIdentifier,
       amount: transferAmt.toString(),
@@ -193,9 +196,8 @@ describe(testName, () => {
       carolAssetIdx === -1 ? "0" : carolChannelAfterTransfer.balances[carolAssetIdx].amount[1];
     expect(carolBalanceAfterTransfer).to.be.eq(BigNumber.from(carolBefore).sub(transferAmt));
 
-    // need to delay until dave gets his transfer forwarded
-    // TODO: change to use events
-    await delay(10_000);
+    const [carolCreate, rogerCreate] = await Promise.all([carolCreatePromise, rogerCreatePromise]);
+    expect(carolCreate).to.deep.eq(rogerCreate);
 
     // Get daves transfer
     const daveTransfer = (
@@ -205,6 +207,9 @@ describe(testName, () => {
         publicIdentifier: daveIdentifier,
       })
     ).getValue()!;
+
+    const carolResolvePromise = carolService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
+    const rogerResolvePromise = rogerService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
     const resolveRes = await daveService.resolveTransfer({
       publicIdentifier: daveIdentifier,
       channelAddress: daveChannel.channelAddress,
@@ -214,6 +219,9 @@ describe(testName, () => {
       transferId: daveTransfer.transferId,
     });
     expect(resolveRes.getError()).to.not.be.ok;
+
+    const [carolResolve, rogerResolve] = await Promise.all([carolResolvePromise, rogerResolvePromise]);
+    expect(carolResolve).to.deep.eq(rogerResolve);
 
     const channelAfterResolve = (
       await daveService.getStateChannel({

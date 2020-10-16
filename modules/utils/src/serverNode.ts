@@ -317,6 +317,9 @@ export class RestServerNodeService implements INodeService {
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
     publicIdentifier?: string,
   ): Promise<EngineEventMap[T] | undefined> {
+    console.log("this.evts: ", this.evts);
+    console.log("this.evts[event]?.evt: ", this.evts[event]?.evt);
+    console.log("event: ", event);
     if (!this.evts || !this.evts[event]?.evt) {
       throw new NodeError(NodeError.reasons.NoEvts, { event });
     }

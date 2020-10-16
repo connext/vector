@@ -1,7 +1,7 @@
 import { VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import { EngineEvents, ILockService, IVectorChainService, IVectorEngine } from "@connext/vector-types";
-import { ChannelSigner, NatsMessagingService } from "@connext/vector-utils";
+import { ChannelSigner, NatsMessagingService, logAxiosError } from "@connext/vector-utils";
 import Axios from "axios";
 import { Wallet } from "ethers";
 
@@ -82,8 +82,13 @@ export const createNode = async (index: number, store: IServerNodeStore, mnemoni
     vectorEngine.on(event, async data => {
       const url = await store.getSubscription(vectorEngine.publicIdentifier, event);
       if (url) {
-        logger.info({ url, event }, "Relaying event");
-        await Axios.post(url, data);
+        logger.info({ url, event }, "Sending event to listener");
+        try {
+          const response = await Axios.post(url, data);
+          logger.info({ url, event, response: response.data }, "Successfully relayed event");
+        } catch (error) {
+          logAxiosError(logger, error, { event, url }, "Error sending event to listener");
+        }
       }
     });
     logger.info({ event, method, publicIdentifier: signer.publicIdentifier, index }, "Set up subscription for event");
