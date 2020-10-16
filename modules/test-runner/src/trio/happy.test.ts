@@ -209,7 +209,7 @@ describe(testName, () => {
     const daveTransfer = daveTransferRes.getValue();
 
     const carolResolvePromise = carolService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
-    const rogerResolvePromise = rogerService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
+    const daveResolvePromise = daveService.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 10_000);
     const resolveRes = await daveService.resolveTransfer({
       publicIdentifier: daveIdentifier,
       channelAddress: daveChannel.channelAddress,
@@ -220,8 +220,8 @@ describe(testName, () => {
     });
     expect(resolveRes.getError()).to.not.be.ok;
 
-    const [carolResolve, rogerResolve] = await Promise.all([carolResolvePromise, rogerResolvePromise]);
-    expect(carolResolve).to.deep.eq(rogerResolve);
+    const [carolResolve, daveResolve] = await Promise.all([carolResolvePromise, daveResolvePromise]);
+    expect(carolResolve).to.deep.eq(daveResolve);
 
     const channelAfterResolve = (
       await daveService.getStateChannel({
