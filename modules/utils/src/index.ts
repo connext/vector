@@ -8,6 +8,7 @@ export * from "./crypto";
 export * from "./currency";
 export * from "./delay";
 export * from "./env";
+export * from "./error";
 export * from "./eth";
 export * from "./fs";
 export * from "./hexStrings";
