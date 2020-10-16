@@ -57,10 +57,11 @@ POST {{carolUrl}}/request-setup
 Content-Type: application/json
 
 {
-  "aliceUrl": "http://roger:8000",
+  "aliceUrl": "{{rogerUrl}}",
+  "aliceIdentifier": "{{rogerPublicIdentifier}}",
+  "bobIdentifier": "{{carolPublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000",
-  "publicIdentifier": "{{carolIdentifier}}"
+  "timeout": "36000"
 }
 
 ### Node -> Dave
@@ -68,10 +69,11 @@ POST {{daveUrl}}/request-setup
 Content-Type: application/json
 
 {
-  "aliceUrl": "http://roger:8000",
+  "aliceUrl": "{{rogerUrl}}",
+  "aliceIdentifier": "{{rogerPublicIdentifier}}",
+  "bobIdentifier": "{{davePublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000",
-  "publicIdentifier": "{{daveIdentifier}}"
+  "timeout": "36000"
 }
 ```
 
@@ -104,9 +106,9 @@ POST {{carolUrl}}/deposit
 Content-Type: application/json
 
 {
-  "channelAddress": "{{carolNodeChannel}}",
+  "channelAddress": "{{carolDaveChannel}}",
   "assetId": "0x0000000000000000000000000000000000000000",
-  "publicIdentifier": "{{carolIdentifier}}"
+  "publicIdentifier": "{{carolPublicIdentifier}}",
 }
 ```
 
@@ -115,36 +117,37 @@ Content-Type: application/json
 Then, create a transfer between Carol and Dave through Roger (in [3_transfer](https://github.com/connext/vector/blob/master/modules/server-node/examples/3-transfer.http)):
 
 ```
-POST {{carolUrl}}/hashlock-transfer/create
+POST {{carolUrl}}/transfers/create
 Content-Type: application/json
 
 {
-  "conditionType": "HashlockTransfer",
-  "channelAddress": "{{carolNodeChannel}}",
+  "type": "HashlockTransfer",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "channelAddress": "{{carolRogerChannel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
   "details": {
-    "lockHash": "{{lockHash}}"
+    "lockHash": "{{lockHash}}",
+    "expiry": "0"
   },
-  "routingId": "{{routingId}}",
-  "recipient": "{{davePublicIdentifier}}",
+  "recipient": "{{bobPublicIdentifier}}",
   "meta": {
+    "routingId": "{{routingId}}",
     "hello": "world"
-  },
-  "publicIdentifier": "{{carolIdentifier}}"
+  }
 }
 ```
 
 Lastly, unlock the transfer for Bob to get his funds:
 
 ``` http
-POST {{daveUrl}}/hashlock-transfer/resolve
+POST {{daveUrl}}/transfers/resolve
 Content-Type: application/json
 
 {
-  "channelAddress": "{{daveNodeChannel}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
+  "channelAddress": "{{daveRogerChannel}}",
   "routingId": "{{routingId}}",
-  "preImage": "{{preImage}}",
-  "publicIdentifier": "{{daveIdentifier}}"
+  "preImage": "{{preImage}}"
 }
 ```
