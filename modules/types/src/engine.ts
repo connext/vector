@@ -24,6 +24,8 @@ export type SetupPayload = {
 // Emitted when transfer created
 export const CONDITIONAL_TRANSFER_CREATED_EVENT = "CONDITIONAL_TRANSFER_CREATED";
 export type ConditionalTransferCreatedPayload = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
   channelAddress: string;
   transfer: FullTransferState;
   channelBalance: Balance;
@@ -38,6 +40,8 @@ export type ConditionalTransferResolvedPayload = ConditionalTransferCreatedPaylo
 // Emitted when an onchain deposit is reconciled with offchain balance
 export const DEPOSIT_RECONCILED_EVENT = "DEPOSIT_RECONCILED";
 export type DepositReconciledPayload = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
   channelAddress: string;
   assetId: string;
   channelBalance: Balance;
@@ -46,6 +50,8 @@ export type DepositReconciledPayload = {
 // Emitted when a counterparty requests collateral
 export const REQUEST_COLLATERAL_EVENT = "REQUEST_COLLATERAL";
 export type RequestCollateralPayload = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
   channelAddress: string;
   assetId: string;
   amount?: string;
@@ -54,6 +60,8 @@ export type RequestCollateralPayload = {
 // Emitted when a withdrawal transfer is created
 export const WITHDRAWAL_CREATED_EVENT = "WITHDRAWAL_CREATED";
 export type WithdrawalCreatedPayload = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
   channelAddress: string;
   transfer: FullTransferState;
   fee: string;
@@ -70,6 +78,8 @@ export type WithdrawalResolvedPayload = WithdrawalCreatedPayload;
 // Emitted when withdrawal commitment is submitted to chain
 export const WITHDRAWAL_RECONCILED_EVENT = "WITHDRAWAL_RECONCILED";
 export type WithdrawalReconciledPayload = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
   channelAddress: string;
   transactionHash: string;
   transferId: string;

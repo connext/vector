@@ -6,10 +6,11 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   NodeError,
+  OptionalPublicIdentifier,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
-import { Evt } from "evt";
+import { Evt, VoidCtx } from "evt";
 import { BaseLogger } from "pino";
 
 const ajv = new Ajv();
@@ -21,7 +22,17 @@ export type EventCallbackConfig = {
   };
 };
 
+// Holds all the contexts for each public identifier
+type ContextContainer = {
+  [publicIdentifier: string]: VoidCtx;
+};
+
 export class RestServerNodeService implements INodeService {
+  public publicIdentifier = "";
+  public signerAddress = "";
+
+  private readonly ctxs: ContextContainer = {};
+
   private constructor(
     private readonly serverNodeUrl: string,
     private readonly logger: BaseLogger,
@@ -32,21 +43,23 @@ export class RestServerNodeService implements INodeService {
     serverNodeUrl: string,
     logger: BaseLogger,
     evts?: EventCallbackConfig,
+    index?: number,
   ): Promise<RestServerNodeService> {
     const service = new RestServerNodeService(serverNodeUrl, logger, evts);
-    if (evts) {
-      const urls = Object.fromEntries(
-        Object.entries(evts).map(([event, config]) => {
-          return [event, config.url];
-        }),
-      );
-      try {
-        await Axios.post<ServerNodeResponses.ConditionalTransfer>(`${serverNodeUrl}/event/subscribe`, urls);
-        logger.info({ urls, method: "connect" }, "Engine event subscription created");
-      } catch (e) {
-        logger.error({ error: e.response?.data, urls, method: "connect" }, "Error creating subscription");
+    // If an index is provided, the service will only host a single engine
+    // and the publicIdentifier will be automatically included in parameters
+    if (index !== undefined || index !== null) {
+      // Create the public identifier and signer address
+      const node = await service.createNode({ index });
+      if (node.isError) {
+        logger.error({ error: node.getError()!.message, method: "connect" }, "Failed to create node");
+        throw node.getError();
       }
+      const { publicIdentifier, signerAddress } = node.getValue();
+      service.publicIdentifier = publicIdentifier;
+      service.signerAddress = signerAddress;
     }
+
     return service;
   }
 
@@ -55,14 +68,51 @@ export class RestServerNodeService implements INodeService {
   }
 
   async createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>> {
-    return this.executeHttpRequest(`node`, "post", params, ServerNodeParams.CreateNodeSchema);
+    const res = await this.executeHttpRequest<ServerNodeResponses.CreateNode>(
+      `node`,
+      "post",
+      params,
+      ServerNodeParams.CreateNodeSchema,
+    );
+    if (res.isError) {
+      return res;
+    }
+    if (this.evts) {
+      const urls = Object.fromEntries(
+        Object.entries(this.evts).map(([event, config]) => {
+          return [event, config.url ?? ""];
+        }),
+      );
+      const { publicIdentifier } = res.getValue();
+      // Create an evt context for this public identifier only
+      // (see not in `off`)
+      this.ctxs[publicIdentifier] = Evt.newCtx();
+      const params: ServerNodeParams.RegisterListener = {
+        events: urls,
+        publicIdentifier: publicIdentifier ?? this.publicIdentifier,
+      };
+      // IFF the public identifier is undefined, it should be overridden by
+      // the pubId defined in the parameters.
+      const subscription = await this.executeHttpRequest(
+        `event/subscribe`,
+        "post",
+        params,
+        ServerNodeParams.RegisterListenerSchema,
+      );
+      if (subscription.isError) {
+        this.logger.error({ error: subscription.getError()! }, "Failed to create subscription");
+        return Result.fail(subscription.getError()!);
+      }
+      this.logger.info({ urls, method: "connect" }, "Engine event subscription created");
+    }
+    return res;
   }
 
   async getStateChannel(
-    params: ServerNodeParams.GetChannelState,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelState>,
   ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/${params.publicIdentifier}`,
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}`,
       "get",
       params,
       ServerNodeParams.GetChannelStateSchema,
@@ -70,16 +120,21 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getStateChannels(
-    params: ServerNodeParams.GetChannelStates,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelStates>,
   ): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>> {
-    return this.executeHttpRequest(`channel`, "get", params, ServerNodeParams.GetChannelStatesSchema);
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels`,
+      "get",
+      params,
+      ServerNodeParams.GetChannelStatesSchema,
+    );
   }
 
   async getTransfersByRoutingId(
-    params: ServerNodeParams.GetTransferStatesByRoutingId,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferStatesByRoutingId>,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>> {
     return this.executeHttpRequest(
-      `transfer/${params.routingId}/${params.publicIdentifier}`,
+      `${params.publicIdentifier ?? this.publicIdentifier}/transfers/routing-id/${params.routingId}`,
       "get",
       params,
       ServerNodeParams.GetTransferStatesByRoutingIdSchema,
@@ -87,10 +142,12 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getTransferByRoutingId(
-    params: ServerNodeParams.GetTransferStateByRoutingId,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferStateByRoutingId>,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/transfer/${params.routingId}/${params.publicIdentifier}`,
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}/transfers/routing-id/${
+        params.routingId
+      }`,
       "get",
       params,
       ServerNodeParams.GetTransferStateByRoutingIdSchema,
@@ -98,10 +155,10 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getTransfer(
-    params: ServerNodeParams.GetTransferState,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferState>,
   ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
     return this.executeHttpRequest(
-      `transfer/${params.transferId}/${params.publicIdentifier}`,
+      `${params.publicIdentifier ?? this.publicIdentifier}/transfers/${params.transferId}`,
       "get",
       params,
       ServerNodeParams.GetTransferStateSchema,
@@ -109,10 +166,10 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getActiveTransfers(
-    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetActiveTransfersByChannelAddress>,
   ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.channelAddress}/active-transfer/${params.publicIdentifier}`,
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/${params.channelAddress}/active-transfers`,
       "get",
       params,
       ServerNodeParams.GetActiveTransfersByChannelAddressSchema,
@@ -120,10 +177,12 @@ export class RestServerNodeService implements INodeService {
   }
 
   async getStateChannelByParticipants(
-    params: ServerNodeParams.GetChannelStateByParticipants,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>> {
     return this.executeHttpRequest(
-      `channel/${params.alice}/${params.bob}/${params.chainId}/${params.publicIdentifier}`,
+      `${params.publicIdentifier ?? this.publicIdentifier}/channels/counterparty/${params.counterparty}/chain-id/${
+        params.chainId
+      }`,
       "get",
       params,
       ServerNodeParams.GetChannelStateByParticipantsSchema,
@@ -133,7 +192,7 @@ export class RestServerNodeService implements INodeService {
   async requestSetup(
     params: ServerNodeParams.RequestSetup,
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.RequestSetup, ServerNodeResponses.RequestSetup>(
+    return this.executeHttpRequest<ServerNodeResponses.RequestSetup>(
       "request-setup",
       "post",
       params,
@@ -141,19 +200,16 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async setup(params: ServerNodeParams.Setup): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.Setup, ServerNodeResponses.Setup>(
-      "setup",
-      "post",
-      { ...params, publicIdentifier: params.publicIdentifier },
-      ServerNodeParams.SetupSchema,
-    );
+  async setup(
+    params: OptionalPublicIdentifier<ServerNodeParams.Setup>,
+  ): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
+    return this.executeHttpRequest<ServerNodeResponses.Setup>("setup", "post", params, ServerNodeParams.SetupSchema);
   }
 
   async sendDepositTx(
-    params: ServerNodeParams.SendDepositTx,
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDepositTx>,
   ): Promise<Result<ServerNodeResponses.SendDepositTx, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.SendDepositTx, ServerNodeResponses.SendDepositTx>(
+    return this.executeHttpRequest<ServerNodeResponses.SendDepositTx>(
       "send-deposit-tx",
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
@@ -161,8 +217,10 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async reconcileDeposit(params: ServerNodeParams.Deposit): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.Deposit, ServerNodeResponses.Deposit>(
+  async reconcileDeposit(
+    params: OptionalPublicIdentifier<ServerNodeParams.Deposit>,
+  ): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
+    return this.executeHttpRequest<ServerNodeResponses.Deposit>(
       "deposit",
       "post",
       {
@@ -175,10 +233,10 @@ export class RestServerNodeService implements INodeService {
   }
 
   async conditionalTransfer(
-    params: ServerNodeParams.ConditionalTransfer,
+    params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.ConditionalTransfer, ServerNodeResponses.ConditionalTransfer>(
-      `hashlock-transfer/create`,
+    return this.executeHttpRequest<ServerNodeResponses.ConditionalTransfer>(
+      `transfers/create`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ConditionalTransferSchema,
@@ -186,18 +244,20 @@ export class RestServerNodeService implements INodeService {
   }
 
   async resolveTransfer(
-    params: ServerNodeParams.ResolveTransfer,
+    params: OptionalPublicIdentifier<ServerNodeParams.ResolveTransfer>,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.ResolveTransfer, ServerNodeResponses.ResolveTransfer>(
-      `hashlock-transfer/resolve`,
+    return this.executeHttpRequest<ServerNodeResponses.ResolveTransfer>(
+      `transfers/resolve`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
       ServerNodeParams.ResolveTransferSchema,
     );
   }
 
-  async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, NodeError>> {
-    return this.executeHttpRequest<ServerNodeParams.Withdraw, ServerNodeResponses.Withdraw>(
+  async withdraw(
+    params: OptionalPublicIdentifier<ServerNodeParams.Withdraw>,
+  ): Promise<Result<ServerNodeResponses.Withdraw, NodeError>> {
+    return this.executeHttpRequest<ServerNodeResponses.Withdraw>(
       `withdraw`,
       "post",
       { ...params, publicIdentifier: params.publicIdentifier },
@@ -205,57 +265,100 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async once<T extends EngineEvent>(
+  public once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
-  ): Promise<void> {
+    publicIdentifier?: string,
+  ): void {
     if (!this.evts || !this.evts[event]?.evt) {
-      this.logger.warn({ event, method: "once" }, "No evts provided for event, subscriptions will not work");
-      return;
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
-    this.evts[event].evt.pipe(filter!).attachOnce(callback);
+    const pubId = publicIdentifier ?? this.publicIdentifier;
+    if (!pubId) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
+    this.evts[event].evt
+      .pipe(ctx)
+      .pipe((data: EngineEventMap[T]) => {
+        const filtered = filter(data);
+        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+      })
+      .attachOnce(callback);
   }
 
-  async on<T extends EngineEvent>(
+  public on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
-  ): Promise<void> {
+    publicIdentifier?: string,
+  ): void {
     if (!this.evts || !this.evts[event]?.evt) {
-      this.logger.warn({ event, method: "on" }, "No evts provided for event, subscriptions will not work");
-      return;
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
-    this.evts[event].evt.pipe(filter!).attach(callback);
+    const pubId = publicIdentifier ?? this.publicIdentifier;
+    if (!pubId) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[pubId];
+    this.evts[event].evt
+      .pipe(ctx)
+      .pipe((data: EngineEventMap[T]) => {
+        const filtered = filter(data);
+        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+      })
+      .attach(callback);
   }
 
   public waitFor<T extends EngineEvent>(
     event: T,
     timeout: number,
     filter: (payload: EngineEventMap[T]) => boolean = () => true,
+    publicIdentifier?: string,
   ): Promise<EngineEventMap[T] | undefined> {
     if (!this.evts || !this.evts[event]?.evt) {
-      this.logger.warn({ event, method: "waitFor" }, "No evts provided for event, subscriptions will not work");
-      return undefined;
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
     }
-    return this.evts[event].evt.pipe(filter).waitFor(timeout) as Promise<EngineEventMap[T]>;
+    const pubId = publicIdentifier ?? this.publicIdentifier;
+    if (!pubId) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[pubId];
+    return this.evts[event].evt
+      .pipe(ctx)
+      .pipe((data: EngineEventMap[T]) => {
+        const filtered = filter(data);
+        return filtered && (data.aliceIdentifier === pubId || data.bobIdentifier === pubId);
+      })
+      .waitFor(timeout) as Promise<EngineEventMap[T]>;
   }
 
-  async off<T extends EngineEvent>(event: T): Promise<void> {
-    this.evts[event].evt.detach();
+  public off<T extends EngineEvent>(event: T, publicIdentifier?: string): void {
+    if (!this.evts || !this.evts[event]?.evt) {
+      throw new NodeError(NodeError.reasons.NoEvts, { event });
+    }
+    if (!publicIdentifier && !this.publicIdentifier) {
+      throw new NodeError(NodeError.reasons.NoPublicIdentifier);
+    }
+    const ctx = this.ctxs[publicIdentifier ?? this.publicIdentifier];
+    ctx.done();
   }
 
   // Helper methods
-  private async executeHttpRequest<T, U>(
+  private async executeHttpRequest<U>(
     urlPath: string,
     method: "get" | "post",
-    params: T,
+    params: any,
     paramSchema: any,
   ): Promise<Result<U, NodeError>> {
     const url = `${this.serverNodeUrl}/${urlPath}`;
     // Validate parameters are in line with schema
     const validate = ajv.compile(paramSchema);
-    if (!validate(params)) {
+    // IFF the public identifier is undefined, it should be overridden by
+    // the pubId defined in the parameters.
+    const filled = { publicIdentifier: this.publicIdentifier, ...params };
+    if (!validate(filled)) {
       return Result.fail(
         new NodeError(NodeError.reasons.InvalidParams, {
           errors: validate.errors?.map(err => err.message).join(","),
@@ -265,10 +368,13 @@ export class RestServerNodeService implements INodeService {
 
     // Attempt request
     try {
-      const res = method === "get" ? await Axios.get(url) : await Axios.post(url, params);
+      const res = method === "get" ? await Axios.get(url) : await Axios.post(url, filled);
       return Result.ok(res.data);
     } catch (e) {
-      return Result.fail(new NodeError(NodeError.reasons.InternalServerError, { error: e.message, params, url }));
+      const jsonErr = Object.keys(e).includes("toJSON") ? e.toJSON() : e;
+      return Result.fail(
+        new NodeError(jsonErr.message ?? NodeError.reasons.InternalServerError, { stack: jsonErr.stack, filled, url }),
+      );
     }
   }
 }

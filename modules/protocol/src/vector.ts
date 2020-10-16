@@ -218,6 +218,8 @@ export class Vector implements IVectorProtocol {
     // TODO: https://github.com/connext/vector/issues/53
 
     // sync latest state before starting
+    // TODO: Not syncing properly on startup because stores latestUpdate
+    // not the update params, how does this even compile?
     const channels = await this.storeService.getChannelStates();
     await Promise.all(
       channels.map(channel =>

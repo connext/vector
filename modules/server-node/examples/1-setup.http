@@ -16,13 +16,13 @@
 
 ##############
 ### Request Setup Channel
-POST {{daveUrl}}/request-setup
+POST {{carolUrl}}/request-setup
 Content-Type: application/json
 
 {
   "aliceUrl": "http://roger:8000",
   "aliceIdentifier": "{{rogerPublicIdentifier}}",
-  "bobIdentifier": "{{davePublicIdentifier}}",
+  "bobIdentifier": "{{carolPublicIdentifier}}",
   "chainId": "{{chainId}}",
   "timeout": "36000"
 }

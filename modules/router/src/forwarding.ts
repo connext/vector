@@ -165,10 +165,9 @@ export async function forwardTransferCreation(
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
-    alice: publicIdentifier,
-    bob: recipientIdentifier,
-    chainId: recipientChainId,
     publicIdentifier,
+    counterparty: recipientIdentifier,
+    chainId: recipientChainId,
   });
   if (recipientChannelRes.isError) {
     return Result.fail(

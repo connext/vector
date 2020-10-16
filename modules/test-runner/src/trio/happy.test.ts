@@ -3,7 +3,7 @@ import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 import { INodeService, TransferNames } from "@connext/vector-types";
 
-import { env } from "../utils";
+import { env, getRandomIndex } from "../utils";
 
 import { carolEvts, daveEvts } from "./setup";
 
@@ -14,7 +14,7 @@ const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 const logger = pino({ level: env.logLevel });
 const testName = "Trio Happy";
 
-describe.only(testName, () => {
+describe(testName, () => {
   let carolService: INodeService;
   let carolIdentifier: string;
   let carol: string;
@@ -28,34 +28,37 @@ describe.only(testName, () => {
   let roger: string;
 
   before(async () => {
+    const randomIndex = getRandomIndex();
     carolService = await RestServerNodeService.connect(
       env.carolUrl,
       logger.child({ testName, name: "Carl" }),
       carolEvts,
+      randomIndex,
     );
-    const carolConfigRes = await carolService.createNode({ index: 0 });
-    expect(carolConfigRes.getError()).to.not.be.ok;
-    const carolConfig = carolConfigRes.getValue();
-    carolIdentifier = carolConfig.publicIdentifier;
-    carol = carolConfig.signerAddress;
+    carolIdentifier = carolService.publicIdentifier;
+    carol = carolService.signerAddress;
     const carolTx = await wallet.sendTransaction({ to: carol, value: utils.parseEther("0.5") });
     await carolTx.wait();
 
-    daveService = await RestServerNodeService.connect(env.daveUrl, logger.child({ testName, name: "Dave" }), daveEvts);
-    const daveConfigRes = await daveService.createNode({ index: 0 });
-    expect(daveConfigRes.getError()).to.not.be.ok;
-    const daveConfig = daveConfigRes.getValue();
-    daveIdentifier = daveConfig.publicIdentifier;
-    dave = daveConfig.signerAddress;
+    daveService = await RestServerNodeService.connect(
+      env.daveUrl,
+      logger.child({ testName, name: "Dave" }),
+      daveEvts,
+      randomIndex,
+    );
+    daveIdentifier = daveService.publicIdentifier;
+    dave = daveService.signerAddress;
     const daveTx = await wallet.sendTransaction({ to: dave, value: utils.parseEther("0.5") });
     await daveTx.wait();
 
-    rogerService = await RestServerNodeService.connect(env.rogerUrl, logger.child({ testName, name: "Roger" }));
-    const rogerConfigRes = await rogerService.createNode({ index: 0 });
-    expect(rogerConfigRes.getError()).to.not.be.ok;
-    const rogerConfig = rogerConfigRes.getValue();
-    rogerIdentifier = rogerConfig.publicIdentifier;
-    roger = rogerConfig.signerAddress;
+    rogerService = await RestServerNodeService.connect(
+      env.rogerUrl,
+      logger.child({ testName, name: "Roger" }),
+      undefined,
+      0,
+    );
+    rogerIdentifier = rogerService.publicIdentifier;
+    roger = rogerService.signerAddress;
     const rogerTx = await wallet.sendTransaction({ to: roger, value: utils.parseEther("0.5") });
     await rogerTx.wait();
   });
@@ -104,10 +107,9 @@ describe.only(testName, () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await carolService.getStateChannelByParticipants({
-      publicIdentifier: carolIdentifier,
-      alice: rogerIdentifier,
-      bob: carolIdentifier,
+      counterparty: rogerIdentifier,
       chainId,
+      publicIdentifier: carolIdentifier,
     });
     const channel = channelRes.getValue()!;
 
@@ -144,16 +146,13 @@ describe.only(testName, () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const carolChannelRes = await carolService.getStateChannelByParticipants({
-      alice: rogerIdentifier,
-      bob: carolIdentifier,
+      counterparty: rogerIdentifier,
       chainId,
       publicIdentifier: carolIdentifier,
     });
     const carolChannel = carolChannelRes.getValue()!;
-
     const daveChannelRes = await daveService.getStateChannelByParticipants({
-      alice: rogerIdentifier,
-      bob: daveIdentifier,
+      counterparty: rogerIdentifier,
       chainId,
       publicIdentifier: daveIdentifier,
     });

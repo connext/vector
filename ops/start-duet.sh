@@ -57,15 +57,16 @@ database_env="environment:
 ## Node config
 
 internal_node_port="8000"
-nats_port="4222"
 
 alice_port="8003"
 alice_database="database_a"
+alice_database_port="5432"
 alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
 echo "$stack.alice will be exposed on *:$alice_port"
 
 bob_port="8004"
 bob_database="database_b"
+bob_database_port="5433"
 bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
 echo "$stack.bob will be exposed on *:$bob_port"
 
@@ -119,11 +120,15 @@ services:
     $common
     image: '$database_image'
     $database_env
+    ports:
+      - '$alice_database_port:5432'
 
   $bob_database:
     $common
     image: '$database_image'
     $database_env
+    ports:
+      - '$bob_database_port:5432'
 
 EOF
 

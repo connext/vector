@@ -3,7 +3,7 @@ import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 
-import { env } from "../utils";
+import { env, getRandomIndex } from "../utils";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -22,21 +22,21 @@ describe(testName, () => {
   let bob: string;
 
   before(async () => {
-    aliceService = await RestServerNodeService.connect(env.aliceUrl, logger.child({ testName }));
-    const aliceConfigRes = await aliceService.createNode({ index: 0 });
-    expect(aliceConfigRes.getError()).to.not.be.ok;
-    const aliceConfig = aliceConfigRes.getValue();
-    aliceIdentifier = aliceConfig.publicIdentifier;
-    alice = aliceConfig.signerAddress;
+    const randomIndex = getRandomIndex();
+    aliceService = await RestServerNodeService.connect(
+      env.aliceUrl,
+      logger.child({ testName }),
+      undefined,
+      randomIndex,
+    );
+    aliceIdentifier = aliceService.publicIdentifier;
+    alice = aliceService.signerAddress;
     const aliceTx = await wallet.sendTransaction({ to: alice, value: utils.parseEther("0.1") });
     await aliceTx.wait();
 
-    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), undefined);
-    const bobConfigRes = await bobService.createNode({ index: 0 });
-    expect(bobConfigRes.getError()).to.not.be.ok;
-    const bobConfig = bobConfigRes.getValue();
-    bobIdentifier = bobConfig.publicIdentifier;
-    bob = bobConfig.signerAddress;
+    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), undefined, randomIndex);
+    bobIdentifier = bobService.publicIdentifier;
+    bob = bobService.signerAddress;
 
     const bobTx = await wallet.sendTransaction({ to: bob, value: utils.parseEther("0.1") });
     await bobTx.wait();
@@ -68,8 +68,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -116,8 +115,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const depositAmt = utils.parseEther("0.01");
     const channelRes = await bobService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: aliceIdentifier,
       chainId,
       publicIdentifier: bobIdentifier,
     });
@@ -156,8 +154,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -210,8 +207,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const transferAmt = utils.parseEther("0.005");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -245,8 +241,7 @@ describe(testName, () => {
     const assetId = constants.AddressZero;
     const withdrawalAmount = utils.parseEther("0.005");
     const channelRes = await aliceService.getStateChannelByParticipants({
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: bobIdentifier,
       chainId,
       publicIdentifier: aliceIdentifier,
     });
@@ -295,10 +290,9 @@ describe(testName, () => {
     const withdrawalAmount = utils.parseEther("0.005");
     const recipient = Wallet.createRandom().address;
     const channelRes = await bobService.getStateChannelByParticipants({
-      publicIdentifier: bobIdentifier,
-      alice: aliceIdentifier,
-      bob: bobIdentifier,
+      counterparty: aliceIdentifier,
       chainId,
+      publicIdentifier: bobIdentifier,
     });
     const channel = channelRes.getValue()!;
     const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);

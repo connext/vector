@@ -10,6 +10,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   createTestTxResponse,
   mkAddress,
+  mkPublicIdentifier,
 } from "@connext/vector-utils";
 
 import { config } from "../config";
@@ -278,21 +279,22 @@ describe("store", () => {
   });
 
   it("should create an event subscription", async () => {
+    const pubId = mkPublicIdentifier();
     const subs = {
       [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: "sub1",
       [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: "sub2",
       [EngineEvents.DEPOSIT_RECONCILED]: "sub3",
     };
-    await store.registerSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED, "othersub");
+    await store.registerSubscription(pubId, EngineEvents.CONDITIONAL_TRANSFER_CREATED, "othersub");
 
-    const other = await store.getSubscription(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+    const other = await store.getSubscription(pubId, EngineEvents.CONDITIONAL_TRANSFER_CREATED);
     expect(other).to.eq("othersub");
 
     for (const [event, url] of Object.entries(subs)) {
-      await store.registerSubscription(event as EngineEvent, url);
+      await store.registerSubscription(pubId, event as EngineEvent, url);
     }
 
-    const all = await store.getSubscriptions();
+    const all = await store.getSubscriptions(pubId);
     expect(all).to.deep.eq(subs);
   });
 

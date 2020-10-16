@@ -80,7 +80,7 @@ export const createNode = async (index: number, store: IServerNodeStore, mnemoni
 
   for (const event of Object.values(EngineEvents)) {
     vectorEngine.on(event, async data => {
-      const url = await store.getSubscription(event);
+      const url = await store.getSubscription(vectorEngine.publicIdentifier, event);
       if (url) {
         logger.info({ url, event }, "Relaying event");
         await Axios.post(url, data);

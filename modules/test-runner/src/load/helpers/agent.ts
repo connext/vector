@@ -196,8 +196,7 @@ export class Agent {
     // Try to get the channel
     const channelRes = await this.nodeService.getStateChannelByParticipants({
       publicIdentifier: this.publicIdentifier,
-      alice: this.rogerIdentifier,
-      bob: this.publicIdentifier,
+      counterparty: this.rogerIdentifier,
       chainId,
     });
     if (channelRes.isError) {
