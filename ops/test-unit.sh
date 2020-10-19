@@ -57,8 +57,7 @@ then
 
   chain_addresses="$chain_data/chain-addresses.json"
 
-  # TODO: this change to appease shellcheck might be wrong & should be revisited
-  while ! grep -q "transferRegistryAddress" "$chain_addresses"
+  while ! grep -qs "transferRegistryAddress" "$chain_addresses"
   do
     if [[ -z $(docker container ls -f "name=$ethprovider_host" -q) ]]
     then echo "$ethprovider_host was not able to start up successfully" && exit 1

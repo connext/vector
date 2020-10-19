@@ -4,14 +4,13 @@ set -e
 stack="trio"
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
-registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
+project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
-docker network create --attachable --driver overlay $project 2> /dev/null || true
+docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
-if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
+if ! grep -q "$stack" <<<"$(docker stack ls --format '{{.Name}}' | grep "$stack")"
 then echo "A $stack stack is already running" && exit 0;
 else echo; echo "Preparing to launch $stack stack"
 fi
@@ -19,9 +18,9 @@ fi
 ####################
 # Load Config
 
-node_config="`cat $root/config-node.json`"
-router_config="`cat $root/config-router.json`"
-config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
+node_config="$(cat "$root/config-node.json")"
+router_config="$(cat "$root/config-router.json")"
+config="$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')"
 
 ####################
 # Misc Config
@@ -38,18 +37,16 @@ common="networks:
 ########################################
 # Global services / chain provider config
 
-sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+bash "$root/ops/start-global.sh"
 
-bash $root/ops/start-global.sh
-
-chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
-config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
+chain_addresses="$(cat "$root/.chaindata/chain-addresses.json")"
+config="$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')"
 
 ########################################
 ## Database config
 
 database_image="${project}_database:$version"
-bash $root/ops/pull-images.sh $database_image > /dev/null
+bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 
 pg_port="5432"
 
@@ -62,7 +59,6 @@ database_env="environment:
 ## Node config
 
 internal_node_port="8000"
-nats_port="4222"
 
 carol_node_port="8005"
 carol_database="database_c"
@@ -79,7 +75,7 @@ roger_database="database_r"
 roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
 echo "$stack.roger will be exposed on *:$roger_node_port"
 
-config="`echo "$config" '{"nodeUrl":"http://roger:'$internal_node_port'"}' | jq -s '.[0] + .[1]'`"
+config="$(echo "$config" '{"nodeUrl":"http://roger:'$internal_node_port'"}' | jq -s '.[0] + .[1]')"
 
 public_url="http://localhost:$roger_node_port"
 
@@ -113,13 +109,13 @@ router_image="image: '${project}_builder'
 # Observability tools config
 
 grafana_image="grafana/grafana:latest"
-bash $root/ops/pull-images.sh $grafana_image > /dev/null
+bash "$root/ops/pull-images.sh" "$grafana_image" > /dev/null
 
 prometheus_image="prom/prometheus:latest"
-bash $root/ops/pull-images.sh $prometheus_image > /dev/null
+bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
 
 cadvisor_image="gcr.io/google-containers/cadvisor:latest"
-bash $root/ops/pull-images.sh $cadvisor_image > /dev/null
+bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
 
 prometheus_services="prometheus:
     image: $prometheus_image
@@ -159,8 +155,8 @@ observability_services="$prometheus_services
 # Launch stack
 
 docker_compose=$root/.${stack}.docker-compose.yml
-rm -f $docker_compose
-cat - > $docker_compose <<EOF
+rm -f "$docker_compose"
+cat - > "$docker_compose" <<EOF
 version: '3.4'
 
 networks:
@@ -228,20 +224,19 @@ services:
 
 EOF
 
-docker stack deploy -c $docker_compose $stack
+docker stack deploy -c "$docker_compose" "$stack"
 
 echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
-timeout=$(expr `date +%s` + 60)
+timeout=$(( $(date +%s) + 60 ))
 while true
 do
-  res="`curl -k -m 5 -s $public_url || true`"
+  res="$(curl -k -m 5 -s $public_url || true)"
   if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
   then
-    if [[ "`date +%s`" -gt "$timeout" ]]
+    if [[ "$(date +%s)" -gt "$timeout" ]]
     then echo "Timed out waiting for proxy to respond.." && exit
     else sleep 2
     fi
   else echo "Good Morning!" && exit;
   fi
 done
-
