@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.0.1-beta.4",
+  "version": "0.0.1-beta.5",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "license": "ISC",
   "files": [
@@ -28,8 +28,8 @@
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.0.1-beta.4",
-    "@connext/vector-utils": "0.0.1-beta.4",
+    "@connext/vector-types": "0.0.1-beta.5",
+    "@connext/vector-utils": "0.0.1-beta.5",
     "@nomiclabs/buidler": "1.4.7",
     "@openzeppelin/contracts": "3.2.1-solc-0.7",
     "@ethersproject/constants": "5.0.5",
