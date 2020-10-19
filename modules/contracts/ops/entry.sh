@@ -37,20 +37,20 @@ then
       },
     },
   }' > /tmp/buidler.config.js
-  launch="buidler node --config /tmp/buidler.config.js --hostname 0.0.0.0 --port 8545 "
+  launch="buidler node --config /tmp/buidler.config.js --hostname 0.0.0.0 --port 8545"
   cd /tmp # bc we need to run buidler node in same dir as buidler.config.js
 
 elif [[ "$evm" == "ganache" ]]
 then
   echo "Using ganache EVM"  
-  launch='ganache-cli
-    --db='$data_dir'
-    --defaultBalanceEther=2000000000
-    --gasPrice=100000000000
-    --mnemonic="'"$mnemonic"'"
-    --networkId='$chain_id'
-    --host 0.0.0.0
-    --port=8545 '
+  launch="ganache-cli \
+    --db=$data_dir \
+    --defaultBalanceEther=2000000000 \
+    --gasPrice=100000000000 \
+    --mnemonic=\"$mnemonic\" \
+    --networkId=$chain_id \
+    --host 0.0.0.0 \
+    --port=8545"
 
 else
   echo 'Expected EVM to be either "ganache" or "buidler"'
