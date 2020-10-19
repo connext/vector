@@ -143,6 +143,11 @@ dls:
 lint:
 	bash ops/lint.sh
 
+config:
+	cp -n ops/config/global.default.json global.config.json
+	cp -n ops/config/node.default.json node.config.json
+	cp -n ops/config/router.default.json router.config.json
+
 ########################################
 # Test Commands
 
