@@ -11,8 +11,8 @@ docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
-then echo "A $stack stack is already running" && exit 0;
-else echo; echo "Preparing to launch $stack stack"
+then echo "A $stack stack is already running" && exit 0
+else echo
 fi
 
 ####################
@@ -37,7 +37,7 @@ domain_name=$(getConfig domainName)
 production=$(getConfig production)
 public_port=$(getConfig port)
 
-# Should we spin up local evms or use external ones?
+# Do we need to spin up local evms or will the node use external ones?
 node_config=$root/node.config.json
 if [[ -f "$node_config" ]]
 then
@@ -52,6 +52,8 @@ then
   fi
 else use_local_evms="true";
 fi
+
+echo "Preparing to launch $stack stack (prod=$production)"
 
 ########################################
 ## Docker registry & image version config

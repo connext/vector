@@ -11,8 +11,8 @@ docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
-then echo "A $stack stack is already running" && exit 0;
-else echo; echo "Preparing to launch $stack stack"
+then echo "A $stack stack is already running" && exit 0
+else echo
 fi
 
 ####################
@@ -47,6 +47,8 @@ if [[ "$chain_providers" == "$default_providers" ]]
 then use_local_evms=true
 else use_local_evms=false
 fi
+
+echo "Preparing to launch $stack stack (prod=$production)"
 
 ####################
 # Misc Config

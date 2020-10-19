@@ -158,6 +158,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make pull
+      - run: jq '.production = true' ops/config/global.default.json > global.config.json
       - run: jq '.production = true' ops/config/node.default.json > node.config.json
       - run: make restart-node
       - run: bash ops/test-integration.sh node
@@ -171,6 +172,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make pull
+      - run: jq '.production = true' ops/config/global.default.json > global.config.json
       - run: jq '.production = true' ops/config/routing.default.json > routing.config.json
       - run: make restart-router
       - run: bash ops/test-integration.sh router

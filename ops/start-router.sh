@@ -59,6 +59,8 @@ then use_local_evms=true
 else use_local_evms=false
 fi
 
+echo "Preparing to launch $stack stack (prod=$production)"
+
 ####################
 # Misc Config
 
@@ -97,7 +99,6 @@ fi
 # If no custom ethproviders are given, configure mnemonic/addresses from local evms
 if [[ "$use_local_evms" == "true" ]]
 then
-  bash "$root/ops/start-global.sh"
   mnemonic_secret=""
   eth_mnemonic="${mnemonic:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
   eth_mnemonic_file=""
