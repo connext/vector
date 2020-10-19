@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make test-utils
+      - run: make test-contracts
 
   protocol:
     runs-on: ubuntu-latest
