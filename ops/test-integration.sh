@@ -19,6 +19,12 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
+if [[ ! -f "$root/${stack}.config.json" ]]
+then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
+fi
+config=$(cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]')
+production=$(echo "$config" | jq '.production' | tr -d '"')
+
 ########################################
 ## Launch test runner
 
@@ -36,7 +42,7 @@ common=(
   "--env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error}"
   "--env=VECTOR_MESSAGING_URL=http://messaging"
   "--env=VECTOR_NODE_URL=http://node:8000"
-  "--env=VECTOR_PROD=${VECTOR_PROD}"
+  "--env=VECTOR_PROD=${production}"
   "--env=VECTOR_ROGER_URL=http://roger:8000"
   "--env=VECTOR_ROUTER_URL=http://router:8000"
   "--env=VECTOR_TESTER_NAME=$tester_name"
@@ -47,7 +53,7 @@ common=(
 )
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_PROD" == "true" ]]
+if [[ "$production" == "true" ]]
 then
   git_tag=$(git tag --points-at HEAD | grep "vector-" | head -n 1)
   if [[ -z "$version" ]]
