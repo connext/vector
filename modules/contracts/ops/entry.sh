@@ -37,13 +37,13 @@ then
       },
     },
   }' > /tmp/buidler.config.js
-  launch="$cwd/node_modules/.bin/buidler node --config /tmp/buidler.config.js --hostname 0.0.0.0 --port 8545 "
+  launch="buidler node --config /tmp/buidler.config.js --hostname 0.0.0.0 --port 8545 "
   cd /tmp # bc we need to run buidler node in same dir as buidler.config.js
 
 elif [[ "$evm" == "ganache" ]]
 then
   echo "Using ganache EVM"  
-  launch=$cwd'/node_modules/.bin/ganache-cli
+  launch='ganache-cli
     --db='$data_dir'
     --defaultBalanceEther=2000000000
     --gasPrice=100000000000
@@ -51,15 +51,17 @@ then
     --networkId='$chain_id'
     --host 0.0.0.0
     --port=8545 '
+
 else
   echo 'Expected EVM to be either "ganache" or "buidler"'
   exit 1
 fi
 
-echo "Starting isolated testnet to migrate contracts.."
+echo "Starting testnet to migrate contracts.."
 eval "$launch > /tmp/evm.log &"
 pid=$!
 
+echo "Waiting for local testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
 
 # Because stupid ganache hardcoded it's chainId, prefer this env var over ethProvider.getNetwork()
