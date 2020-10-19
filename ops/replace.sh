@@ -15,7 +15,7 @@ bash ops/search.sh "$old" | sed "s|$old|$new|g" | grep --color=always "$new"
 echo
 echo "Does the above replacement look good? (y/n)"
 echo -n "> "
-read response
+read -r response
 echo
 
 if [[ "$response" == "y" ]]

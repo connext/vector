@@ -4,46 +4,46 @@ set -e
 stack="router"
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
-registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
+project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
-docker network create --attachable --driver overlay $project 2> /dev/null || true
+docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
-if [[ -n "`docker stack ls --format '{{.Name}}' | grep "$stack"`" ]]
-then echo "A $stack stack is already running" && exit;
+if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
+then echo "A $stack stack is already running" && exit 0;
 else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
 # Load config
 
-node_config="`cat $root/config-node.json`"
-router_config="`cat $root/config-router.json`"
-default_config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
-prod_config="`cat $root/config-prod.json`"
-config="`echo $default_config $prod_config | jq -s '.[0] + .[1]'`"
+node_config="$(cat "$root/config-node.json")"
+router_config="$(cat "$root/config-router.json")"
+default_config="$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')"
+prod_config="$(cat "$root/config-prod.json")"
+
+config="$(echo "$default_config" "$prod_config" | jq -s '.[0] + .[1]')"
 
 function getConfig {
-  value="`echo "$config" | jq ".$1" | tr -d '"'`"
+  value="$(echo "$config" | jq ".$1" | tr -d '"')"
   if [[ "$value" == "null" ]]
   then echo ""
   else echo "$value"
   fi
 }
 
-admin_token="`getConfig adminToken`"
-messaging_url="`getConfig messagingUrl`"
-aws_access_id="`getConfig awsAccessId`"
-aws_access_key="`getConfig awsAccessKey`"
-domain_name="`getConfig domainName`"
-production="`getConfig production`"
-public_port="`getConfig port`"
-mnemonic="`getConfig mnemonic`"
+admin_token="$(getConfig adminToken)"
+messaging_url="$(getConfig messagingUrl)"
+aws_access_id="$(getConfig awsAccessId)"
+aws_access_key="$(getConfig awsAccessKey)"
+domain_name="$(getConfig domainName)"
+production="$(getConfig production)"
+public_port="$(getConfig port)"
+mnemonic="$(getConfig mnemonic)"
 
-chain_providers="`echo $config | jq '.chainProviders' | tr -d '\n\r '`"
-default_providers="`cat $root/config-node.json | jq '.chainProviders' | tr -d '\n\r '`"
+chain_providers="$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')"
+default_providers="$(jq '.chainProviders' "$root/config-node.json" | tr -d '\n\r ')"
 
 if [[ "$VECTOR_PROD" = "true" ]]
 then production="true"
@@ -55,18 +55,18 @@ fi
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$production" == "true" ]]
 then
-  if [[ -n "`git tag --points-at HEAD | grep "vector-" | head -n 1`" ]]
-  then version="`cat package.json | grep '"version":' | head -n 1 | cut -d '"' -f 4`"
-  else version="`git rev-parse HEAD | head -c 8`"
+  if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
+  then version="$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)"
+  else version="$(git rev-parse HEAD | head -c 8)"
   fi
 else version="latest"
 fi
 
 builder_image="${project}_builder:$version";
-bash $root/ops/pull-images.sh $builder_image > /dev/null
+bash "$root/ops/pull-images.sh" "$builder_image" > /dev/null
 
 redis_image="redis:5-alpine";
-bash $root/ops/pull-images.sh "$redis_image" > /dev/null
+bash "$root/ops/pull-images.sh" "$redis_image" > /dev/null
 
 common="networks:
       - '$project'
@@ -81,15 +81,15 @@ common="networks:
 
 if [[ -z "$messaging_url" || "$chain_providers" == "$default_providers" ]]
 then
-  bash $root/ops/start-global.sh
+  bash "$root/ops/start-global.sh"
   mnemonic_secret=""
   eth_mnemonic="${mnemonic:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
   eth_mnemonic_file=""
-  chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
-  config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
+  chain_addresses="$(cat "$root/.chaindata/chain-addresses.json")"
+  config="$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')"
 
 else
-  echo "Connecting to external global services: messaging=$messaging_url | chain_providers=$chain_providers"
+  echo "Connecting to external services: messaging=$messaging_url | chain_providers=$chain_providers"
   if [[ -n "$mnemonic" ]]
   then
     mnemonic_secret=""
@@ -99,8 +99,8 @@ else
     mnemonic_secret="${project}_${stack}_mnemonic"
     eth_mnemonic=""
     eth_mnemonic_file="/run/secrets/$mnemonic_secret"
-    if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$mnemonic_secret"`" ]]
-    then bash $root/ops/save-secret.sh $mnemonic_secret
+    if ! grep "$mnemonic_secret" <<<"$(docker secret ls --format '{{.Name}}')"
+    then bash "$root/ops/save-secret.sh" "$mnemonic_secret"
     fi
   fi
 fi
@@ -109,7 +109,7 @@ fi
 ## Database config
 
 database_image="${project}_database:$version";
-bash $root/ops/pull-images.sh $database_image > /dev/null
+bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 
 # database connection settings
 pg_db="$project"
@@ -120,13 +120,13 @@ if [[ "$production" == "true" ]]
 then
   # Use a secret to store the database password
   db_secret="${project}_${stack}_database"
-  if [[ -z "`docker secret ls --format '{{.Name}}' | grep "$db_secret"`" ]]
-  then bash $root/ops/save-secret.sh $db_secret "`head -c 32 /dev/urandom | xxd -plain -c 32`"
+  if ! grep -qs "$db_secret" <<<"$(docker secret ls --format '{{.Name}}')"
+  then bash "$root/ops/save-secret.sh" "$db_secret" "$(head -c 32 /dev/urandom | xxd -plain -c 32)"
   fi
   pg_password=""
   pg_password_file="/run/secrets/$db_secret"
   snapshots_dir="$root/.db-snapshots"
-  mkdir -p $snapshots_dir
+  mkdir -p "$snapshots_dir"
   database_image="image: '$database_image'
     volumes:
       - 'database:/var/lib/postgresql/data'
@@ -153,7 +153,7 @@ node_dev_port="8002"
 if [[ $production == "true" ]]
 then
   node_image_name="${project}_node"
-  bash $root/ops/pull-images.sh $version $node_image_name > /dev/null
+  bash "$root/ops/pull-images.sh" "$version" "$node_image_name" > /dev/null
   node_image="image: '$node_image_name:$version'"
 else
   node_image="image: '${project}_builder'
@@ -189,7 +189,7 @@ router_dev_port="9000"
 if [[ $production == "true" ]]
 then
   router_image_name="${project}_router"
-  bash $root/ops/pull-images.sh $version $router_image_name > /dev/null
+  bash "$root/ops/pull-images.sh" "$version" "$router_image_name" > /dev/null
   router_image="image: '$router_image_name:$version'"
 else
   router_image="image: '${project}_builder'
@@ -213,7 +213,7 @@ fi
 # Proxy config
 
 proxy_image="${project}_${stack}_proxy:$version";
-bash $root/ops/pull-images.sh $proxy_image > /dev/null
+bash "$root/ops/pull-images.sh" "$proxy_image" > /dev/null
 
 if [[ -n "$domain_name" ]]
 then
@@ -224,7 +224,7 @@ then
   echo "$stack.proxy will be exposed on *:80 and *:443"
 
 else
-  public_port=${public_port:-3001}
+  public_port=${public_port:-3000}
   public_url="http://127.0.0.1:$public_port"
   proxy_ports="ports:
       - '$public_port:80'"
@@ -235,13 +235,13 @@ fi
 # Observability tools config
 
 grafana_image="grafana/grafana:latest"
-bash $root/ops/pull-images.sh $grafana_image > /dev/null
+bash "$root/ops/pull-images.sh" "$grafana_image" > /dev/null
 
 prometheus_image="prom/prometheus:latest"
-bash $root/ops/pull-images.sh $prometheus_image > /dev/null
+bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
 
 cadvisor_image="gcr.io/google-containers/cadvisor:latest"
-bash $root/ops/pull-images.sh $cadvisor_image > /dev/null
+bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
 
 prometheus_services="prometheus:
     image: $prometheus_image
@@ -300,8 +300,8 @@ then
 fi
 
 docker_compose=$root/.$stack.docker-compose.yml
-rm -f $docker_compose
-cat - > $docker_compose <<EOF
+rm -f "$docker_compose"
+cat - > "$docker_compose" <<EOF
 version: '3.4'
 
 networks:
@@ -331,7 +331,7 @@ services:
     $common
     $node_image
     environment:
-      VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
+      VECTOR_CONFIG: '$(echo "$config" | tr -d '\n\r')'
       VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
@@ -346,7 +346,7 @@ services:
     $common
     $router_image
     environment:
-      VECTOR_CONFIG: '`echo $config | tr -d '\n\r'`'
+      VECTOR_CONFIG: '$(echo "$config" | tr -d '\n\r')'
       VECTOR_PROD: '$production'
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
       VECTOR_PG_DATABASE: '$pg_db'
@@ -377,16 +377,16 @@ services:
 
 EOF
 
-docker stack deploy -c $docker_compose $stack
+docker stack deploy -c "$docker_compose" "$stack"
 
 echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
-timeout=$(expr `date +%s` + 60)
+timeout=$(( $(date +%s) + 60 ))
 while true
 do
-  res="`curl -k -m 5 -s $public_url || true`"
+  res="$(curl -k -m 5 -s "$public_url" || true)"
   if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
   then
-    if [[ "`date +%s`" -gt "$timeout" ]]
+    if [[ "$(date +%s)" -gt "$timeout" ]]
     then echo "Timed out waiting for proxy to respond.." && exit
     else sleep 2
     fi
