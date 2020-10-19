@@ -1,3 +1,6 @@
+# Config & sensitive data
+*.config.json
+
 # Build Output
 **/*.0x
 **/.flags

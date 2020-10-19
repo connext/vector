@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # turn on swarm mode if it's not already on
@@ -12,7 +12,7 @@ target=$1
 shift
 
 # If a stack matches, stop it & wait for child servies to all exit
-stack_name="$(docker stack ls --format '{{.Name}}' | grep "$target")"
+stack_name=$(docker stack ls --format '{{.Name}}' | grep "$target")
 if [[ -n "$stack_name" ]]
 then
   echo

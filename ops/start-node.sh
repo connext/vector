@@ -3,7 +3,7 @@ set -e
 
 stack="node"
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -11,40 +11,44 @@ docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
-then echo "A $stack stack is already running" && exit 0;
-else echo; echo "Preparing to launch $stack stack"
+then echo "A $stack stack is already running" && exit 0
+else echo
 fi
 
 ####################
 # Load config
 
-node_config="$(cat "$root/config-node.json")"
-prod_config="$(cat "$root/config-prod.json")"
-config="$(echo "$node_config" "$prod_config" | jq -s '.[0] + .[1]')"
+if [[ ! -f "$root/${stack}.config.json" ]]
+then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
+fi
+
+config=$(cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]')
 
 function getConfig {
-  value="$(echo "$config" | jq ".$1" | tr -d '"')"
+  value=$(echo "$config" | jq ".$1" | tr -d '"')
   if [[ "$value" == "null" ]]
   then echo ""
   else echo "$value"
   fi
 }
 
-admin_token="$(getConfig adminToken)"
-messaging_url="$(getConfig messagingUrl)"
-aws_access_id="$(getConfig awsAccessId)"
-aws_access_key="$(getConfig awsAccessKey)"
-domain_name="$(getConfig domainName)"
-production="$(getConfig production)"
-public_port="$(getConfig port)"
-mnemonic="$(getConfig mnemonic)"
+admin_token=$(getConfig adminToken)
+messaging_url=$(getConfig messagingUrl)
+aws_access_id=$(getConfig awsAccessId)
+aws_access_key=$(getConfig awsAccessKey)
+domain_name=$(getConfig domainName)
+production=$(getConfig production)
+public_port=$(getConfig port)
+mnemonic=$(getConfig mnemonic)
 
-chain_providers="$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')"
-default_providers="$(jq '.chainProviders' "$root/config-node.json" | tr -d '\n\r ')"
-
-if [[ "$VECTOR_PROD" = "true" ]]
-then production="true"
+chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
+default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
+if [[ "$chain_providers" == "$default_providers" ]]
+then use_local_evms=true
+else use_local_evms=false
 fi
+
+echo "Preparing to launch $stack stack (prod=$production)"
 
 ####################
 # Misc Config
@@ -53,8 +57,8 @@ fi
 if [[ "$production" == "true" ]]
 then
   if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
-  then version="$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)"
-  else version="$(git rev-parse HEAD | head -c 8)"
+  then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
+  else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
@@ -74,16 +78,20 @@ common="networks:
 
 ########################################
 # Global services / chain provider config
-# If no global service urls provided, spin up local ones & use those
 
-if [[ -z "$messaging_url" || "$chain_providers" == "$default_providers" ]]
+# If no messaging url or custom ethproviders are given, spin up a global stack
+if [[ -z "$messaging_url" || "$use_local_evms" == "true" ]]
+then bash "$root/ops/start-global.sh"
+fi
+
+# If no custom ethproviders are given, configure mnemonic/addresses from local evms
+if [[ "$use_local_evms" == "true" ]]
 then
-  bash "$root/ops/start-global.sh"
   mnemonic_secret=""
   eth_mnemonic="${mnemonic:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
   eth_mnemonic_file=""
-  chain_addresses="$(cat "$root/.chaindata/chain-addresses.json")"
-  config="$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')"
+  chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+  config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
 
 else
   echo "Connecting to external services: messaging=$messaging_url | chain_providers=$chain_providers"
@@ -192,7 +200,7 @@ then
   echo "$stack.proxy will be exposed on *:80 and *:443"
 
 else
-  public_port=${public_port:-3000}
+  public_port=${public_port:-3002}
   public_url="http://127.0.0.1:$public_port"
   proxy_ports="ports:
       - '$public_port:80'"
@@ -286,7 +294,7 @@ echo "The $stack stack has been deployed, waiting for the $public_url to start r
 timeout=$(( $(date +%s) + 60 ))
 while true
 do
-  res="$(curl -k -m 5 -s "$public_url" || true)"
+  res=$(curl -k -m 5 -s "$public_url" || true)
   if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]

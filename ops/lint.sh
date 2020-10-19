@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 eslint="$root/node_modules/.bin/eslint -c $root/.eslintrc.js"
 solhint="$root/node_modules/.bin/solhint -c $root/.solhint.json"
 

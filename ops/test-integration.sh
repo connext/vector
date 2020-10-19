@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -17,6 +17,17 @@ bash "$root/ops/start-$stack.sh"
 if [[ -t 0 && -t 1 && -t 2 ]]
 then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
+fi
+
+# If this stack can be tested in prod-mode..
+if [[ "$stack" == "global" || "$stack" == "node" || "$stack" == "router" ]]
+then
+  if [[ ! -f "$root/${stack}.config.json" ]]
+  then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
+  fi
+  production=$(jq '.production' "$root/$stack.config.json" | tr -d '"')
+else
+  production="false"
 fi
 
 ########################################
@@ -36,7 +47,7 @@ common=(
   "--env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error}"
   "--env=VECTOR_MESSAGING_URL=http://messaging"
   "--env=VECTOR_NODE_URL=http://node:8000"
-  "--env=VECTOR_PROD=${VECTOR_PROD}"
+  "--env=VECTOR_PROD=${production}"
   "--env=VECTOR_ROGER_URL=http://roger:8000"
   "--env=VECTOR_ROUTER_URL=http://router:8000"
   "--env=VECTOR_TESTER_NAME=$tester_name"
@@ -47,14 +58,14 @@ common=(
 )
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
-if [[ "$VECTOR_PROD" == "true" ]]
+if [[ "$production" == "true" ]]
 then
-  git_tag="$(git tag --points-at HEAD | grep "vector-" | head -n 1)"
+  git_tag=$(git tag --points-at HEAD | grep "vector-" | head -n 1)
   if [[ -z "$version" ]]
   then
     if [[ -n "$git_tag" ]]
     then version="${git_tag#vector-}"
-    else version="$(git rev-parse HEAD | head -c 8)"
+    else version=$(git rev-parse HEAD | head -c 8)
     fi
   fi
   image=${project}_test_runner:$version

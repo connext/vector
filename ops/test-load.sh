@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -56,12 +56,12 @@ common=(
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$VECTOR_PROD" == "true" ]]
 then
-  git_tag="$(git tag --points-at HEAD | grep "vector-" | head -n 1)"
+  git_tag=$(git tag --points-at HEAD | grep "vector-" | head -n 1)
   if [[ -z "$version" ]]
   then
     if [[ -n "$git_tag" ]]
     then version="${git_tag#vector-}"
-    else version="$(git rev-parse HEAD | head -c 8)"
+    else version=$(git rev-parse HEAD | head -c 8)
     fi
   fi
   image=${project}_test_runner:$version

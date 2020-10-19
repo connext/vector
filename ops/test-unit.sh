@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -18,9 +18,10 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-node_config=$(cat "$root/config-node.json")
-router_config=$(cat "$root/config-router.json")
-config=$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')
+config=$(
+  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" |\
+  jq -s '.[0] + .[1]'
+)
 
 ########################################
 # If we need a chain for these tests, start the evm & stop it when we're done
@@ -66,14 +67,14 @@ then
   done
   echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
 
-  CHAIN_ADDRESSES="$(cat "$chain_addresses")"
+  CHAIN_ADDRESSES=$(cat "$chain_addresses")
   CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
 
   echo "CHAIN_PROVIDERS=${CHAIN_PROVIDERS}"
   echo "CHAIN_ADDRESSES=${CHAIN_ADDRESSES}"
 
-  config="$(echo "$config" '{"chainProviders":'"$CHAIN_PROVIDERS"'}' | jq -s '.[0] + .[1]')"
-  config="$(echo "$config" '{"chainAddresses":'"$CHAIN_ADDRESSES"'}' | jq -s '.[0] + .[1]')"
+  config=$(echo "$config" '{"chainProviders":'"$CHAIN_PROVIDERS"'}' | jq -s '.[0] + .[1]')
+  config=$(echo "$config" '{"chainAddresses":'"$CHAIN_ADDRESSES"'}' | jq -s '.[0] + .[1]')
 
 else
   CHAIN_PROVIDERS="{}"

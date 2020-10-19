@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-#root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-#project="$(grep '"name":' "$root/package.json" | head -n 1 | cut -d '"' -f 4)"
-
 target=$1
 shift
 

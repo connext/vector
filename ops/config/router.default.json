@@ -17,6 +17,9 @@
       "hardcodedRate": "1"
     }
   ],
+  "domainName": "",
+  "messagingUrl": "",
+  "production": false,
   "rebalanceProfiles": [
     {
       "chainId": 1337,

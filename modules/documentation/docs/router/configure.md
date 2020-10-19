@@ -1,62 +1,44 @@
-# Configuration and Deployment
+# Configuring and Deploying a Routing Vector Node
 
 This guide will take you through the e2e process of configuring and deploying a router.
 
-First get started by cloning the repo if you haven't already
+## Machine Setup
+
+Lets say you want to deploy a vector node + router to `https://vector.example.com` (we'll call this url `$DOMAINNAME`).
+
+!!! Info 
+  If you're planning to launch an instance on your local machine or to a non-Ubuntu OS, you can skip this section and instead install the following dependencies yourself:
+  - `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
+  - `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
+  - `docker`: See the [docker website](https://www.docker.com/) for installation instructions.
+
+First step: get a server via AWS or DigitalOcean or setup some hardware at home. For best results, use the most recent LTS version of Ubuntu & make sure it has at least 32GB of disk space. Note this new server's IP address (we'll call this `$SERVER_IP`). Make sure it's able to connect to the internet via ports 80, 443, 4221, and 4222 (no action required on DigitalOcean, Security Group config needs to be setup properly on AWS).
+
+Set up DNS so that `$DOMAINNAME` points to `$SERVER_IP`. If you're using CloudFlare name servers, turn on CloudFlare's built-in SSL support & make sure it's set to "Full (strict)".
+
+!!! Info
+  If you're just testing things out, you're welcome to skip registering a domain name & instead deploy to a raw IP address. This is a quicker way to get started but isn't recommended for production. In this case, don't turn on CloudFlare's built-in SSL support.
+
+We won't need to ssh into this server right away, most of the setup will be done locally. Start by cloning the repo to your local machine if you haven't already and `cd` into it.
+
 ``` bash
 git clone git@github.com:connext/vector.git
+cd vector
 ```
 
-## Contract Deployment
+Every Vector node needs access to a hot wallet, you should generate a fresh mnemonic for your node's wallet that isn't used anywhere else. You can generate a new mnemonic from a node console with ethers by doing something like this: `require('ethers').Wallet.createRandom()`. Alternatively, you can generate one [here](https://iancoleman.io/bip39/).
 
-Before anything else, you should first ensure that the required Vector contracts are deployed to your chain.
+!!! Warning
+    We have a mnemonic hardcoded throughout our repo which is great to use in local testnets: `candy maple ... sweet treat`. If you try to use this mnemonic on a public testnet, it's possible that someone else is trying to use it at the same time. In the case where two nodes try to use the same mnemonic, vector will fail in unpredictable ways. To avoid encountering hard to debug errors, make sure you are using a private mnemonic that only you know, even on testnets.
 
-We have a global [address-book in the root of the Vector repo](https://github.com/connext/vector/blob/master/address-book.json) which contains deployed contract addresses indexed by chainId. If you can't find the specific chain(s) that you want to set up a router at, you likely first need to deploy contracts.
-
-To deploy contracts, you can use our contracts CLI tool! First, build the contract artifacts:
+Save this mnemonic somewhere safe and copy it to your clipboard. From your local machine, run:
 
 ```bash
-# in vector root
-make ethprovider
-```
-
-After it's done, cd into the contract repo and call the CLI migrate command:
-
-```bash
-bash ops/deploy-contracts.sh --ethProvider="$ethProvider" --mnemonic="$mnemonic"
-```
-
-(Make sure the mnemonic in particular is wrapped in double quotes to ensure it's all interpreted as one argument)
-
-Where `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. Infura). Any newly deployed contracts will have their addresses added to the project root's `address-book.json`
-
-## Setting Up Required Dependencies
-
-In this section, we assume that you are trying to deploy your router to a remote Ubuntu-based instance. If you're spinning up the router locally, or are using an instance on a different operating system, you'll need to install the following dependencies yourself:
-
-- `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
-- `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
-- `docker`: sadly, Docker is kinda annoying to install. See [website](https://www.docker.com/) for instructions.
-
-To set up dependencies for a remote Ubuntu-based instance, we will use the `server-setup.sh` script located in the `ops/` dir.
-
-First, make sure that you've set up your instance and have the instance's IP/URL on hand + ssh access. Then, clone the repo locally if you haven't already:
-
-```
-git clone git@github.com:connext/vector.git
+SSH_KEY=$HOME/.ssh/id_rsa bash ops/server-setup.sh $SERVER_IP
 ```
 
 !!! Info
-    The prod configuration of the router will eventually include a built-in proxy that will automatically set up a DNS and SSL certificates for you. For now, we recommend directly connecting to an exposed instance without setting up a domain name until that's ready.
-
-Next, run `bash ops/server-setup.sh` passing in the instance's IP address or URL. The script will look for your AWS SSH key at `-$HOME/.ssh/id_rsa`. If your ssh key is located elsewhere, be sure to amend the `server-setup.sh` script to direct to your actual keyfile, or else it will fail to log in.
-
-When the script runs, it will prompt you to pass in a mnemonic. Generate a random mnemonic from [here](https://iancoleman.io/bip39/), copy it to your clipboard, and paste it into the prompt. If you choose not to enter a mnemonic, the router will use a default hardcoded mnemonic.
-
-Be sure to back up your mnemonic somewhere safe! Your mnemonic generates the primary key that controls the router.
-
-!!! Warning
-    We **strongly** recommend that you do not use the hardcoded mnemonic for any router that is connected to a public chain, including a testnet. The hardcoded mnemonic is publicly viewable in our repo and using it, even just for testing, could result in unpredictable behavior.
+  `$HOME/.ssh/id_rsa` is the default `SSH_KEY`, if this is the key you'll use to access `$SERVER_IP` then you don't need to supply it explicitly
 
 The script should automatically do the following tasks to set up the environment:
 
@@ -64,17 +46,46 @@ The script should automatically do the following tasks to set up the environment
 2. Securely store your mnemonic as a [docker secret](https://docs.docker.com/engine/swarm/secrets/)
 3. Clone the Vector repo
 
-Once it's done, you should see a message that says
+This script is idempotent which means you can run it over and over again w/out causing any problems. In fact, re-running it every month or so will help keep things up-to-date (you can skip inputting the mnemonic on subsequent runs).
+
+For convenience's sake, we recommend adding an entry to your ssh config to easily access this server. Add something that looks like the following to `$HOME/.ssh/config`:
+
+```bash
+Host new-vector
+  Hostname $SERVER_IP
+  User ubuntu
+  IdentityFile ~/.ssh/id_rsa
+  ServerAliveInterval 120
 ```
-Done configuring server, rebooting now..
+
+Now you can login to your new server with just `ssh new-vector`.
+
+## Contract Deployment
+
+Before moving any further, you should first ensure that the required Vector contracts are deployed to your chain.
+
+We have a global [address-book](https://github.com/connext/vector/blob/master/address-book.json) in the root of the Vector repo which contains the addresses of deployed contracts indexed by chainId. If you can't find the specific chain(s) that you want to deploy a routing node to, you likely need to deploy contracts first.
+
+To deploy contracts, you can use our helper script. (A CLI usable via npx is coming soon!)
+
+```bash
+bash ops/deploy-contracts.sh --ethProvider="$ethProvider" --mnemonic="$mnemonic"
 ```
+
+!!! Warning
+  Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument
+
+In the above command, `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. an Infura url including an API key). Any newly deployed contracts will have their addresses added to the project root's `address-book.json`. Make sure your address-book is stored somewhere safe. The best option would be to submit a PR to our repo so that these addresses are backed up for you and so that they're readily available for everyone else to use too!
+
+!!! Info
+  The account that deploys the contracts does not need to be the same one as your vector node's hot wallet.
 
 ## Configuring the Router
 
-After setting up dependencies, ssh into the server and cd into the Vector repo:
+After setting up dependencies, ssh into the server and enter the Vector repo:
 
 ```
-ssh -i ~/.ssh/{path}/{to}/{key} {username}@{server}
+ssh new-vector
 cd vector
 ```
 
@@ -82,33 +93,36 @@ As we mentioned on the [Router Basics](./basics.md) page, the router sits on top
 
 ### Router Configuration Keys
 
-The router's node can be configured by adding any of the keys in `config-node.json` or `config-router.json` to `config-prod.json` (any values in `config-prod.json` will take precedence).
+Default router configuration can be found in `ops/config/router.default.json`. To setup your custom config, start out by copying this file to `router.config.json`:
 
-The most important keys that you'll want to think about are:
+```
+cp ops/config/router.default.json router.config.json
+```
 
-|         Key         |    Type   |                                                                                                                           Description                                                                                                                           |
-|:-------------------:|:---------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|   `chainAddresses`  |  `object` |                                                                                             Specifies the addresses of all relevant contracts, keyed by  `chainId`.                                                                                             |
-|   `chainProviders`  |  `object` |                                                                                        Specifies the URL to use to connect to each chain's provider, keyed by  `chainId`                                                                                        |
-|      `logLevel`     |  `string` |                                                                              One of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.                                                                             |
-|    `messagingUrl`   |  `string` |                                                                      The url used to connect to the messaging service. This will eventually be defaulted in prod-mode to a global service.                                                                      |
-|        `port`       |  `number` |                                                                                            The port number on which the stack should be exposed to the outside world.                                                                                           |
-|    `allowedSwaps`   |  `object` |                                                                                                Specifies which swaps are allowed & how swap rates are determined.                                                                                               |
-| `rebalanceProfiles` |  `object` |                                                                                    Specifies the thresholds & target while collateralizing some `assetId` on some `chainId` .                                                                                   |
-|    `awsAccessId`    |  `string` |                                                                                    An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups                                                                                   |
-|    `awsAccessKey`   |  `string` |                                                                                     An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.                                                                                    |
-|     `domainName`    |  `string` |                                                                                       If provided, https will be auto-configured & the stack will be exposed on port 443.                                                                                       |
-|     `production`    | `boolean` | Enables prod-mode if true. Implications: If `false`, ops will automatically build anything that isn't available locally before starting up a given stack. If `false`, the `global` stack will set up two testnet evms. If `true, nothing will be built locally. |
+(or you can run `make config`, a helper that copies all default config files to the project root)
 
-!!! Info
-    `production=true` and `domainName` are not yet fully supported.
+The router's node can be configured by adding any of the following keys to `router.config.json`:
+
+|         Key         |    Type   |   Description                                                                                                            |
+|:-------------------:|:---------:|-------------------------------------------------------------------------------------------------------------------------:|
+|   `chainAddresses`  |  `object` |          Specifies the addresses of all relevant contracts, keyed by  `chainId`.                                         |
+|   `chainProviders`  |  `object` |     Specifies the URL to use to connect to each chain's provider, keyed by  `chainId`                                    |
+|      `logLevel`     |  `string` |     One of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.               |
+|    `messagingUrl`   |  `string` |   The url used to connect to the messaging service. This will eventually be defaulted in prod-mode to a global service.  |
+|        `port`       |  `number` |         The port number on which the stack should be exposed to the outside world.                                       |
+|    `allowedSwaps`   |  `object` |             Specifies which swaps are allowed & how swap rates are determined.                                           |
+| `rebalanceProfiles` |  `object` | Specifies the thresholds & target while collateralizing some `assetId` on some `chainId` .                               |
+|    `awsAccessId`    |  `string` | An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups                               |
+|    `awsAccessKey`   |  `string` |  An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.                                |
+|     `domainName`    |  `string` |    If provided, https will be auto-configured & the stack will be exposed on port 443.                                   |
+|     `production`    | `boolean` | If `false`, ops will automatically build anything that isn't available locally. If `true, nothing will be built locally. |
 
 ### Setting Up Supported Chains
 
-To add support for one or many chains on this router, add a `chainAddresses` and `chainProviders` key to the `config-prod.json` file in the root of the vector repo:
+To add support for one or many chains on this router, add a `chainAddresses` and `chainProviders` key to the `router.config.json` file in the root of the vector repo:
 
 ``` bash
-nano config-prod.json
+nano router.config.json
 ```
 
 Recall that you deployed contracts to the chain(s) you want to support [earlier in this guide](#contract-deployment). If you open up your `address-book.json`, you should find deployed addresses for your chain indexed by [chainId](https://chainid.network). Copy them over into the config file like below. Also, plug in a providerURL into your `chainProvider`s object indexed at the same chainId.
@@ -149,7 +163,7 @@ An example profile just for Eth looks like the following. Note that we use a com
 },
 ```
 
-You can add profiles by setting them under the `rebalanceProfile` key in your `config-prod.json`:
+You can add profiles by setting them under the `rebalanceProfile` key in your `router.config.json`:
 
 ``` json
 "rebalanceProfiles": [
@@ -172,7 +186,7 @@ You can add profiles by setting them under the `rebalanceProfile` key in your `c
 
 Connext routers also support in-flight swaps when forwarding transfers! In other words, a router can receive a transfer in $ETH and forward it in $DAI so long as an `allowedSwap` exists for that pair.
 
-To allow swapping between the two assets above, you can set the following up under the `allowedSwaps` key in your `config-prod.json`:
+To allow swapping between the two assets above, you can set the following up under the `allowedSwaps` key in your `router.config.json`:
 
 ```json
   "allowedSwaps": [
@@ -205,12 +219,9 @@ Now that we have our configuration complete, we can spin up the router!
 This part is pretty easy - in the root of the vector repo, do:
 
 ```
-make start-router
+make restart-rerouter
 ```
 
-The build process should take some time, but once it's done you should be able to `GET` the `/config/` endpoint.
-
-!!! Bug
-    The above config endpoint doesn't yet work. We believe this is an issue with the `proxy` and are working to get it fixed ASAP.
-
+!!! Tip
+    `make start-$STACK` is optimized for development & will build everything that's out of date before starting the stack. `make restart-$STACK` on the other hand, won't try to build anything before starting the stack so is better to use in production.
 
