@@ -3,7 +3,7 @@ set -e
 
 stack="duet"
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -18,7 +18,7 @@ fi
 ####################
 # Misc Config
 
-config="$(cat "$root/ops/config/node.default.json")"
+config=$(cat "$root/ops/config/node.default.json")
 
 version="latest"
 
@@ -33,8 +33,8 @@ common="networks:
 # Global services / chain provider config
 
 bash "$root/ops/start-global.sh"
-chain_addresses="$(cat "$root/.chaindata/chain-addresses.json")"
-config="$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')"
+chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
 
 ########################################
 ## Database config
@@ -134,7 +134,7 @@ echo "The $stack stack has been deployed, waiting for $public_url to start respo
 timeout=$(( $(date +%s) + 60 ))
 while true
 do
-  res="$(curl -k -m 5 -s $public_url || true)"
+  res=$(curl -k -m 5 -s $public_url || true)
   if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]

@@ -3,7 +3,7 @@ set -e
 
 stack="trio"
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -18,9 +18,10 @@ fi
 ####################
 # Load Config
 
-node_config="$(cat "$root/config-node.json")"
-router_config="$(cat "$root/config-router.json")"
-config="$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')"
+config=$(
+  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" |\
+  jq -s '.[0] + .[1]'
+)
 
 ####################
 # Misc Config
@@ -39,8 +40,8 @@ common="networks:
 
 bash "$root/ops/start-global.sh"
 
-chain_addresses="$(cat "$root/.chaindata/chain-addresses.json")"
-config="$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')"
+chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
 
 ########################################
 ## Database config
@@ -75,7 +76,7 @@ roger_database="database_r"
 roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
 echo "$stack.roger will be exposed on *:$roger_node_port"
 
-config="$(echo "$config" '{"nodeUrl":"http://roger:'$internal_node_port'"}' | jq -s '.[0] + .[1]')"
+config=$(echo "$config" '{"nodeUrl":"http://roger:'$internal_node_port'"}' | jq -s '.[0] + .[1]')
 
 public_url="http://localhost:$roger_node_port"
 
@@ -230,7 +231,7 @@ echo "The $stack stack has been deployed, waiting for $public_url to start respo
 timeout=$(( $(date +%s) + 60 ))
 while true
 do
-  res="$(curl -k -m 5 -s $public_url || true)"
+  res=$(curl -k -m 5 -s $public_url || true)
   if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]

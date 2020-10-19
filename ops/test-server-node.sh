@@ -3,7 +3,7 @@ set -e
 
 unit="server_node"
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -15,11 +15,11 @@ cmd="${1:-test}"
 ####################
 # Load Config
 
-config="$(cat "$root/config-node.json")"
+config=$(cat "$root/ops/config/node.default.json")
 
 # Override logLevel if env var is provided
 if [[ -n "$LOG_LEVEL" ]]
-then config="$(echo "$config" '{"logLevel":'"$LOG_LEVEL"'}' | jq -s '.[0] + .[1]')"
+then config=$(echo "$config" '{"logLevel":'"$LOG_LEVEL"'}' | jq -s '.[0] + .[1]')
 fi
 
 ####################

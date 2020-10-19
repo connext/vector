@@ -5,7 +5,7 @@ package="$1"
 version="$2"
 
 if [[ -z "$version" ]]
-then version="$(npm info "$package" version)"
+then version=$(npm info "$package" version)
 fi
 
 if [[ -z "$package" || -z "$version" || -n "$3" ]]

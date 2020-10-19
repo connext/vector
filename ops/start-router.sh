@@ -3,7 +3,7 @@ set -e
 
 stack="router"
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -33,10 +33,10 @@ node_config=$(
   cat "$root/ops/config/node.default.json" "$root/node.config.json" | jq -s '.[0] + .[1]'
 )
 
-config="$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')"
+config=$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')
 
 function getConfig {
-  value="$(echo "$config" | jq ".$1" | tr -d '"')"
+  value=$(echo "$config" | jq ".$1" | tr -d '"')
   if [[ "$value" == "null" ]]
   then echo ""
   else echo "$value"
@@ -66,8 +66,8 @@ fi
 if [[ "$production" == "true" ]]
 then
   if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
-  then version="$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)"
-  else version="$(git rev-parse HEAD | head -c 8)"
+  then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
+  else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
@@ -101,8 +101,8 @@ then
   mnemonic_secret=""
   eth_mnemonic="${mnemonic:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
   eth_mnemonic_file=""
-  chain_addresses="$(cat "$root/.chaindata/chain-addresses.json")"
-  config="$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')"
+  chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+  config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
 
 else
   echo "Connecting to external services: messaging=$messaging_url | chain_providers=$chain_providers"
@@ -240,7 +240,7 @@ then
   echo "$stack.proxy will be exposed on *:80 and *:443"
 
 else
-  public_port=${public_port:-3000}
+  public_port=${public_port:-3002}
   public_url="http://127.0.0.1:$public_port"
   proxy_ports="ports:
       - '$public_port:80'"
@@ -399,7 +399,7 @@ echo "The $stack stack has been deployed, waiting for the proxy to start respond
 timeout=$(( $(date +%s) + 60 ))
 while true
 do
-  res="$(curl -k -m 5 -s "$public_url" || true)"
+  res=$(curl -k -m 5 -s "$public_url" || true)
   if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]

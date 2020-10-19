@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
@@ -14,11 +14,11 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-node_config="$(cat "$root/modules/browser-node-test-ui/config-node.json")"
+node_config=$(cat "$root/modules/browser-node-test-ui/config-node.json")
 
 function getConfig { echo "$node_config" | jq ".$1" | tr -d '"'; }
 
-public_port="$(getConfig port)"
+public_port=$(getConfig port)
 
 docker run \
   "${interactive[@]}" \

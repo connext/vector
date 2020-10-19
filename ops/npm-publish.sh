@@ -7,7 +7,7 @@ default_packages="types,utils,contracts,protocol,engine,browser-node"
 # To publish contracts, run bash ops/npm-publish.sh contracts
 packages="${1:-$default_packages}"
 
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep '"name":' "$root/package.json" | head -n 1 | cut -d '"' -f 4)
 
 ########################################
@@ -32,8 +32,8 @@ package_versions=""
 echo
 for package in $(echo "$packages" | tr ',' ' ')
 do
-  package_name="$(grep '"name":' "modules/$package/package.json" | awk -F '"' '{print $4}')"
-  package_version="$(npm view "$package_name" version 2> /dev/null || echo "0.0.0")"
+  package_name=$(grep '"name":' "modules/$package/package.json" | awk -F '"' '{print $4}')
+  package_version=$(npm view "$package_name" version 2> /dev/null || echo "0.0.0")
   package_versions="$package_versions $package_version"
   package_names="$package_names $package_name@$package_version"
   echo "Found previously published npm package: $package_name@$package_version"
@@ -56,9 +56,9 @@ elif [[ "$(get_latest_version "$package_versions" "$target_version")" != "$targe
 then
   for package in $(echo "$packages" | tr ',' ' ')
   do
-    package_name="$(grep '"name":' "modules/$package/package.json" | awk -F '"' '{print $4}')"
+    package_name=$(grep '"name":' "modules/$package/package.json" | awk -F '"' '{print $4}')
     # make sure this is still a unique version number, even though its old
-    version_exists="$(npm view "$package_name@$target_version" version 2> /dev/null || echo "0.0.0")"
+    version_exists=$(npm view "$package_name@$target_version" version 2> /dev/null || echo "0.0.0")
     if [[ -z "$version_exists" ]]
     then echo "Safe to publish $package_name@$target_version"
     else echo "Aborting: version $package_name@$target_version already exists" && exit 1
