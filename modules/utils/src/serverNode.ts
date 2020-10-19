@@ -190,7 +190,7 @@ export class RestServerNodeService implements INodeService {
   }
 
   async requestSetup(
-    params: ServerNodeParams.RequestSetup,
+    params: Omit<ServerNodeParams.RequestSetup, "bobIdentifier"> & { bobIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.RequestSetup>(
       "request-setup",

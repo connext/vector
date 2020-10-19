@@ -49,7 +49,9 @@ export interface INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.Setup>,
   ): Promise<Result<ServerNodeResponses.Setup, NodeError>>;
 
-  requestSetup(params: ServerNodeParams.RequestSetup): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>>;
+  requestSetup(
+    params: Omit<ServerNodeParams.RequestSetup, "bobIdentifier"> & { bobIdentifier?: string },
+  ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>>;
 
   sendDepositTx(
     params: OptionalPublicIdentifier<ServerNodeParams.SendDepositTx>,

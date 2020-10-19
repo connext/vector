@@ -22,6 +22,7 @@ class VectorIndexedDBDatabase extends Dexie {
   transfers: Dexie.Table<StoredTransfer, string>;
   transactions: Dexie.Table<StoredTransaction, string>;
   withdrawCommitment: Dexie.Table<WithdrawCommitmentJson & { transferId: string }, string>;
+  values: Dexie.Table<any, string>;
 
   constructor(
     // eslint-disable-next-line @typescript-eslint/ban-types
@@ -39,11 +40,13 @@ class VectorIndexedDBDatabase extends Dexie {
       transfers: "transferId,[routingId+channelAddress],createUpdateNonce,resolveUpdateNonce",
       transactions: "transactionHash",
       withdrawCommitment: "transferId",
+      values: "key",
     });
     this.channels = this.table("channels");
     this.transfers = this.table("transfers");
     this.transactions = this.table("transactions");
     this.withdrawCommitment = this.table("withdrawCommitment");
+    this.values = this.table("values");
   }
 }
 

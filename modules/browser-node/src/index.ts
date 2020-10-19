@@ -25,7 +25,9 @@ import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 
 export type BrowserNodeConfig = {
-  messagingUrl: string;
+  natsUrl?: string;
+  authUrl?: string;
+  messagingUrl?: string;
   logger: BaseLogger;
   signer: IChannelSigner;
   chainProviders: ChainProviders;
@@ -40,6 +42,8 @@ export class BrowserNode implements INodeService {
     const messaging = new NatsMessagingService({
       logger: config.logger.child({ module: "MessagingService" }),
       messagingUrl: config.messagingUrl,
+      natsUrl: config.natsUrl,
+      authUrl: config.authUrl,
       signer: config.signer,
     });
     await messaging.connect();
@@ -162,7 +166,7 @@ export class BrowserNode implements INodeService {
   }
 
   async requestSetup(
-    params: OptionalPublicIdentifier<ServerNodeParams.RequestSetup>,
+    params: Omit<ServerNodeParams.RequestSetup, "bobIdentifier"> & { bobIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
     try {
       const setupPromise = this.engine.waitFor(

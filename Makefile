@@ -36,7 +36,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 default: dev
 dev: global node router duet trio test-runner-js
 prod: global-prod node-prod router-prod test-runner
-all: dev prod
+all: dev prod browser-node
 
 global: auth-js ethprovider global-proxy nats
 global-prod: auth-img global-proxy nats
