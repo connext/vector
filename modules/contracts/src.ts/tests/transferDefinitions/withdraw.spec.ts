@@ -93,12 +93,20 @@ describe("Withdraw", () => {
     expect(definition.address).to.be.a("string");
   });
 
+  it.skip("should return the registry information", async () => {});
+
   describe("Create", () => {
     it("should create successfully", async () => {
       const data = getRandomBytes32();
       const { balance, state } = await createInitialState(data);
       expect(await createTransfer(balance, state)).to.be.true;
     });
+
+    it.skip("should fail if recipient has nonzero balance", async () => {});
+    it.skip("should fail if there are no signers", async () => {});
+    it.skip("should fail if there is no data", async () => {});
+    it.skip("should fail if the fee is greater than the withdrawal amount", async () => {});
+    it.skip("should fail if the initiators signature is incorrect", async () => {});
   });
 
   describe("Resolve", () => {
@@ -118,5 +126,9 @@ describe("Withdraw", () => {
       const result = await resolveTransfer(balance, state, { responderSignature });
       await validateResult(balance, state, { responderSignature }, result);
     });
+
+    it.skip("should fail if the initiators signature is invalid", async () => {});
+    it.skip("should fail if the responder signature is invalid", async () => {});
+    it.skip("should cancel if the responder gives no signature", async () => {});
   });
 });

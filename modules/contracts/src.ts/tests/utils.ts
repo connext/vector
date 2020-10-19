@@ -1,25 +1,12 @@
-import { TransferNames, WithdrawResolverEncoding, WithdrawStateEncoding } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
-import {
-  ChannelMastercopy,
-  ChannelFactory,
-  VectorChannel,
-  HashlockTransfer,
-  TransferRegistry,
-  Withdraw,
-} from "../artifacts";
+import { ChannelMastercopy, ChannelFactory, VectorChannel, TransferRegistry, Withdraw } from "../artifacts";
 
 import { alice, bob, provider } from "./constants";
 
-export const createTestChannelFactory = async (): Promise<Contract> => {
-  const channelMastercopy = await new ContractFactory(
-    ChannelMastercopy.abi,
-    ChannelMastercopy.bytecode,
-    alice,
-  ).deploy();
-  await channelMastercopy.deployed();
+export const createTestChannelFactory = async (deployedChannelMastercopy?: Contract): Promise<Contract> => {
+  const channelMastercopy = deployedChannelMastercopy ?? (await createTestChannelMastercopy());
   const channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, alice).deploy(
     channelMastercopy.address,
   );
@@ -27,8 +14,18 @@ export const createTestChannelFactory = async (): Promise<Contract> => {
   return new Contract(channelFactory.address, ChannelFactory.abi, alice);
 };
 
-export const createTestChannel = async (): Promise<Contract> => {
-  const channelFactory = await createTestChannelFactory();
+export const createTestChannelMastercopy = async (): Promise<Contract> => {
+  const channelMastercopy = await new ContractFactory(
+    ChannelMastercopy.abi,
+    ChannelMastercopy.bytecode,
+    alice,
+  ).deploy();
+  await channelMastercopy.deployed();
+  return new Contract(channelMastercopy.address, ChannelMastercopy.abi, alice);
+};
+
+export const createTestChannel = async (deployedChannelFactory?: Contract): Promise<Contract> => {
+  const channelFactory = deployedChannelFactory ?? (await createTestChannelFactory()).channelFactory;
   const doneBeingCreated: Promise<string> = new Promise(res => {
     channelFactory.once(channelFactory.filters.ChannelCreation(), res);
   });

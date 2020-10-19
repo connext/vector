@@ -6,7 +6,7 @@ import { Contract } from "ethers";
 import { alice, bob } from "../constants";
 import { createTestChannel } from "../utils";
 
-describe("Channel Deposits", () => {
+describe("CMCDeposit.sol", () => {
   const value = One;
   let channel: Contract;
 
@@ -29,4 +29,7 @@ describe("Channel Deposits", () => {
     expect(await channel.totalDepositedA(AddressZero)).to.equal(aliceDeposits.add(value));
     expect(await channel.totalDepositedB(AddressZero)).to.equal(bobDeposits);
   });
+
+  it.skip("depositA should fail if the amount doesnt match the value", async () => {});
+  it.skip("should fail if the token transfer fails", async () => {});
 });

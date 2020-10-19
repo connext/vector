@@ -93,6 +93,8 @@ describe("HashlockTransfer", () => {
     expect(definition.address).to.be.a("string");
   });
 
+  it.skip("should return the registry information", async () => {});
+
   describe("Create", () => {
     it("should create successfully", async () => {
       const preImage = getRandomBytes32();
