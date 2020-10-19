@@ -7,11 +7,6 @@ struct Balance {
   address payable[2] to;
 }
 
-struct LatestDeposit {
-  uint256 amount;
-  uint256 nonce;
-}
-
 struct CoreChannelState {
   Balance[] balances; // TODO index by assetId? // alice, bob
   address[] assetIds;
@@ -47,8 +42,8 @@ struct ChannelDispute {
 }
 
 struct TransferDispute {
-  uint256 transferDisputeExpiry;
   bytes32 transferStateHash;
+  uint256 transferDisputeExpiry;
   bool isDefunded;
 }
 

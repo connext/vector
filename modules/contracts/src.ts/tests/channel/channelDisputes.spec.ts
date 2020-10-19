@@ -11,7 +11,8 @@ describe("Channel Disputes", () => {
   let channel: Contract;
   let channelState: CoreChannelState;
   let hashedState: string;
-  let signatures: string[];
+  let aliceSignature: string;
+  let bobSignature: string;
 
   beforeEach(async () => {
     channel = (await createTestChannel()).connect(alice);
@@ -28,18 +29,16 @@ describe("Channel Disputes", () => {
       timeout: "1",
     };
     hashedState = hashCoreChannelState(channelState);
-    signatures = [
-      await signChannelMessage(hashedState, alice.privateKey),
-      await signChannelMessage(hashedState, bob.privateKey),
-    ];
+    aliceSignature = await signChannelMessage(hashedState, alice.privateKey);
+    bobSignature = await signChannelMessage(hashedState, bob.privateKey);
   });
 
   it("should validate & store a new channel dispute", async () => {
-    const tx = await channel.disputeChannel(channelState, signatures);
+    const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
     await tx.wait();
     const txReciept = await provider.getTransactionReceipt(tx.hash);
     const start = toBN(txReciept.blockNumber);
-    const channelDispute = await channel.getLatestChannelDispute();
+    const channelDispute = await channel.getChannelDispute();
     expect(channelDispute.channelStateHash).to.equal(hashedState);
     expect(channelDispute.nonce).to.equal(channelState.nonce);
     expect(channelDispute.merkleRoot).to.equal(channelState.merkleRoot);
