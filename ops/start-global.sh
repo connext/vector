@@ -202,7 +202,7 @@ then
   echo "$stack.proxy will be exposed on *:80 and *:443"
 
 else
-  public_port=${public_port:-3002}
+  public_port=${public_port:-3001}
   public_url="http://127.0.0.1:$public_port/ping"
   proxy_ports="ports:
       - '$public_port:80'"
