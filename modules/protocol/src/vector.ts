@@ -24,6 +24,7 @@ import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
+import { getParamsFromUpdate } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -111,14 +112,16 @@ export class Vector implements IVectorProtocol {
         error: outboundRes.getError()?.message,
         context: outboundRes.getError()?.context,
       });
-      return outboundRes;
+      return outboundRes as Result<any, OutboundChannelUpdateError>;
     }
     // Post to channel update evt
-    const updatedChannelState = outboundRes.getValue();
+    const { updatedChannel, updatedTransfers, updatedTransfer } = outboundRes.getValue();
     this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-      updatedChannelState,
+      updatedChannelState: updatedChannel,
+      updatedTransfers,
+      updatedTransfer,
     });
-    return outboundRes;
+    return Result.ok(outboundRes.getValue().updatedChannel);
   }
 
   // Primary protocol execution from the leader side
@@ -203,7 +206,9 @@ export class Vector implements IVectorProtocol {
       }
 
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        updatedChannelState: inboundRes.getValue()!,
+        updatedChannelState: inboundRes.getValue().nextState,
+        updatedTransfers: inboundRes.getValue().activeTransfers,
+        updatedTransfer: inboundRes.getValue().updatedTransfer,
       });
     });
 
@@ -219,7 +224,7 @@ export class Vector implements IVectorProtocol {
       channels.map(channel =>
         sync
           .outbound(
-            channel.latestUpdate,
+            getParamsFromUpdate(channel.latestUpdate, this.signer),
             this.storeService,
             this.chainReader,
             this.messagingService,
@@ -418,12 +423,13 @@ export class Vector implements IVectorProtocol {
     return this.evts[event].pipe(filter).waitFor(timeout);
   }
 
-  public off<T extends ProtocolEventName>(event?: T): void {
+  public async off<T extends ProtocolEventName>(event?: T): Promise<void> {
     if (event) {
       this.evts[event].detach();
       return;
     }
 
-    Object.keys(ProtocolEventName).forEach(k => this.evts[k].detach());
+    Object.values(this.evts).forEach(evt => evt.detach());
+    await this.messagingService.disconnect();
   }
 }

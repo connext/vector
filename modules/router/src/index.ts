@@ -1,5 +1,4 @@
 import fastify from "fastify";
-import fastifyOas from "fastify-oas";
 import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
@@ -48,15 +47,6 @@ const evts: EventCallbackConfig = {
 
 const logger = pino();
 const server = fastify({ logger });
-server.register(fastifyOas, {
-  swagger: {
-    info: {
-      title: "Vector Routing-Node",
-      version: "0.0.1",
-    },
-  },
-  exposeRoute: true,
-});
 
 const register = new Registry();
 server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });
@@ -69,14 +59,16 @@ server.addHook("onReady", async () => {
     config.nodeUrl,
     logger.child({ module: "RestServerNodeService" }),
     evts,
+    0,
   );
-  // Create signer at 0
-  const node = await nodeService.createNode({ index: 0 });
-  if (node.isError) {
-    throw node.getError();
-  }
-  const { publicIdentifier, signerAddress } = node.getValue();
-  router = await Router.connect(publicIdentifier, signerAddress, nodeService, store, logger, register);
+  router = await Router.connect(
+    nodeService.publicIdentifier,
+    nodeService.signerAddress,
+    nodeService,
+    store,
+    logger,
+    register,
+  );
 });
 
 server.get("/ping", async () => {

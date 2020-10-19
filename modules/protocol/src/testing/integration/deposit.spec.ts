@@ -18,9 +18,9 @@ describe(testName, () => {
   let aliceSigner: IChannelSigner;
   let bobSigner: IChannelSigner;
 
-  afterEach(() => {
-    alice.off();
-    bob.off();
+  afterEach(async () => {
+    await alice.off();
+    await bob.off();
   });
 
   beforeEach(async () => {

@@ -32,9 +32,9 @@ import {
 import { BigNumber, providers } from "ethers";
 
 export interface IServerNodeStore extends IEngineStore {
-  registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void>;
-  getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined>;
-  getSubscriptions(): Promise<{ [event: string]: string }>;
+  registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
+  getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
+  getSubscriptions(publicIdentifier: string): Promise<{ [event: string]: string }>;
   setMnemonic(mnemonic: string): Promise<void>;
   getMnemonic(): Promise<string | undefined>;
   setNodeIndex(index: number, publicIdentifier: string): Promise<void>;
@@ -374,12 +374,16 @@ export class PrismaStore implements IServerNodeStore {
     return Promise.resolve();
   }
 
-  async registerSubscription<T extends EngineEvent>(event: T, url: string): Promise<void> {
+  async registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void> {
     await this.prisma.eventSubscription.upsert({
       where: {
-        event,
+        publicIdentifier_event: {
+          event,
+          publicIdentifier,
+        },
       },
       create: {
+        publicIdentifier,
         event,
         url,
       },
@@ -389,13 +393,15 @@ export class PrismaStore implements IServerNodeStore {
     });
   }
 
-  async getSubscription<T extends EngineEvent>(event: T): Promise<string | undefined> {
-    const sub = await this.prisma.eventSubscription.findOne({ where: { event } });
+  async getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined> {
+    const sub = await this.prisma.eventSubscription.findOne({
+      where: { publicIdentifier_event: { publicIdentifier, event } },
+    });
     return sub ? sub.url : undefined;
   }
 
-  async getSubscriptions(): Promise<{ [event: string]: string }> {
-    const subs = await this.prisma.eventSubscription.findMany();
+  async getSubscriptions(publicIdentifier: string): Promise<{ [event: string]: string }> {
+    const subs = await this.prisma.eventSubscription.findMany({ where: { publicIdentifier } });
     return subs.reduce((s, sub) => {
       s[sub.event] = sub.url;
       return s;

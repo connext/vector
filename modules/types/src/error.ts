@@ -181,6 +181,8 @@ export class NodeError extends VectorError {
     InternalServerError: "Failed to send request",
     InvalidParams: "Request has invalid parameters",
     MultinodeProhibitted: "Not allowed to have multiple nodes",
+    NoEvts: "No evts for event",
+    NoPublicIdentifier: "Public identifier not supplied, and no default identifier",
     ProviderNotFound: "Provider not available for chain",
     Timeout: "Timeout",
     TransactionNotMined: "Failed to wait for transaction to be mined",
@@ -194,35 +196,3 @@ export class NodeError extends VectorError {
     super(message, context);
   }
 }
-
-// Thrown by the `generateUpdate`
-// export class ChannelUpdateError extends VectorError {
-//   readonly type = VectorError.errors.ChannelUpdateError;
-
-//   // This is the message that will be thrown by the error
-//   // and all other details will be logged
-//   static readonly reasons = {
-//     InvalidParams: "Invalid params",
-//     ApplyUpdateFailed: "Failed to apply update",
-//     BadSignatures: "Could not recover signers",
-//     ChannelNotFound: "No channel found in storage", // See note in `processChannel`
-//     StaleUpdateNonce: "Update does not progress state nonce",
-//     StaleChannelNonce: "Stored nonce is stale for requested update",
-//     MergeUpdateFailed: "Failed to merge update",
-//     SaveChannelFailed: "Failed to save channel",
-//     StaleChannelNonceNoUpdate: "Stored nonce is one behind, no latest update from counterparty",
-//     MessageFailed: "Failed to send message",
-//     TransferNotFound: "No transfer found in storage",
-//     BadUpdateType: "Unrecognized update type",
-//     Create2Failed: "Failed to get create2 address",
-//   } as const;
-
-//   constructor(
-//     public readonly message: Values<typeof ChannelUpdateError.reasons>,
-//     public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
-//     public readonly state?: FullChannelState,
-//     public readonly context?: any,
-//   ) {
-//     super(message, update, state, context);
-//   }
-// }

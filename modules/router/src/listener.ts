@@ -3,8 +3,6 @@ import {
   RouterSchemas,
   INodeService,
   ConditionalTransferCreatedPayload,
-  DepositReconciledPayload,
-  Result,
   FullChannelState,
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
@@ -12,7 +10,7 @@ import Ajv from "ajv";
 import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
-import { requestCollateral, RequestCollateralError } from "./collateral";
+import { requestCollateral } from "./collateral";
 import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
 import { IRouterStore } from "./services/store";
@@ -32,28 +30,42 @@ const configureMetrics = (register: Registry) => {
   const attempts = new Gauge({
     name: "router_forwarded_payment_attempts",
     help: "router_forwarded_payment_attempts_help",
-    labelNames: ["transferId"],
+    labelNames: ["routingId"],
+    registers: [register],
   });
-  register.registerMetric(attempts);
 
   // Track successful forwards
   const successful = new Gauge({
     name: "router_successful_forwarded_payments",
     help: "router_successful_forwarded_payments_help",
-    labelNames: ["transferId"],
+    labelNames: ["routingId"],
+    registers: [register],
   });
-  register.registerMetric(successful);
 
   // Track failing forwards
   const failed = new Gauge({
     name: "router_failed_forwarded_payments",
     help: "router_failed_forwarded_payments_help",
-    labelNames: ["transferId"],
+    labelNames: ["routingId"],
+    registers: [register],
   });
-  register.registerMetric(failed);
+
+  const activeTransfers = new Gauge({
+    name: "router_active_transfers",
+    help: "router_active_transfers_help",
+    labelNames: ["channelAddress"],
+    registers: [register],
+  });
+
+  const transferSendTime = new Gauge({
+    name: "router_sent_payments_time",
+    help: "router_sent_payments_time_help",
+    labelNames: ["routingId"],
+    registers: [register],
+  });
 
   // Return the metrics so they can be incremented as needed
-  return { failed, successful, attempts };
+  return { failed, successful, attempts, activeTransfers, transferSendTime };
 };
 
 export async function setupListeners(
@@ -64,14 +76,16 @@ export async function setupListeners(
   logger: BaseLogger,
   register: Registry,
 ): Promise<void> {
-  const { failed, successful, attempts } = configureMetrics(register);
   // TODO, node should be wrapper around grpc
+  const { failed, successful, attempts, activeTransfers, transferSendTime } = configureMetrics(register);
+
   // Set up listener to handle transfer creation
   await nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
-      attempts.labels(data.transfer.transferId).inc(1);
-      const end = successful.startTimer();
+      const meta = data.transfer.meta as RouterSchemas.RouterMeta;
+      attempts.labels(meta.routingId).inc(1);
+      const end = transferSendTime.labels(meta.routingId).startTimer();
       const res = await forwardTransferCreation(
         data,
         publicIdentifier,
@@ -82,24 +96,27 @@ export async function setupListeners(
         chainProviders,
       );
       if (res.isError) {
-        failed.labels(data.transfer.transferId).inc(1);
+        failed.labels(meta.routingId).inc(1);
         return logger.error(
           { method: "forwardTransferCreation", error: res.getError()?.message, context: res.getError()?.context },
           "Error forwarding transfer",
         );
       }
       end();
-      successful.labels(data.transfer.transferId).inc(1);
+      successful.labels(meta.routingId).inc(1);
+      activeTransfers.labels(data.channelAddress).set(data.activeTransferIds?.length ?? 0);
       logger.info({ method: "forwardTransferCreation", result: res.getValue() }, "Successfully forwarded transfer");
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
+      const meta = data.transfer.meta as RouterSchemas.RouterMeta;
       const validate = ajv.compile(RouterSchemas.RouterMeta);
-      const valid = validate(data.transfer.meta);
+      const valid = validate(meta);
       if (!valid) {
         logger.info(
           {
             transferId: data.transfer.transferId,
+            routingId: meta.routingId,
             channelAddress: data.channelAddress,
             errors: validate.errors?.map(err => err.message),
           },
@@ -116,8 +133,8 @@ export async function setupListeners(
         return false;
       }
 
-      if (!data.transfer.meta.path[0].recipient || data.transfer.meta.path.recipient === publicIdentifier) {
-        logger.warn({ path: data.transfer.meta.path[0] }, "Not forwarding transfer with no path to follow");
+      if (!meta.path[0].recipient || meta.path[0].recipient === publicIdentifier) {
+        logger.warn({ path: meta.path[0], publicIdentifier }, "Not forwarding transfer with no path to follow");
         return false;
       }
       return true;
@@ -171,15 +188,9 @@ export async function setupListeners(
         logger.info({ routingId: data.transfer.meta.routingId }, "Nothing to reclaim");
         return false;
       }
+      activeTransfers.labels(data.channelAddress).set(data.activeTransferIds?.length ?? 0);
 
       return true;
-    },
-  );
-
-  await nodeService.on(
-    EngineEvents.DEPOSIT_RECONCILED, // TODO types
-    async (data: DepositReconciledPayload) => {
-      // await handleCollateralization(data);
     },
   );
 
@@ -218,7 +229,7 @@ export async function setupListeners(
     logger.info({ res: res.getValue() }, "Succesfully requested collateral");
   });
 
-  // service.on(
+  // await nodeService.on(
   //   EngineEvents.IS_ALIVE, // TODO types
   //   async data => {
   //     await handleIsAlive(data);

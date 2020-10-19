@@ -1,10 +1,21 @@
 import {
   Balance,
   ChannelCommitmentData,
+  ChannelUpdate,
+  CreateTransferParams,
+  CreateUpdateDetails,
+  DepositParams,
   FullChannelState,
   IChannelSigner,
   IVectorChainReader,
+  ResolveTransferParams,
+  ResolveUpdateDetails,
   Result,
+  SetupParams,
+  SetupUpdateDetails,
+  UpdateParams,
+  UpdateParamsMap,
+  UpdateType,
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
@@ -22,6 +33,78 @@ export function addEvtHandler<T = any>(
   // the spread operator will cause errors on the evt package
   const attachArgs = [filter, timeout, callback].filter(x => !!x) as [any, any, any];
   return evt.attach(...attachArgs);
+}
+
+// Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
+// must be converted to the `UpdateParams<T> when syncing
+export function getParamsFromUpdate<T extends UpdateType = any>(
+  update: ChannelUpdate<T>,
+  signer: IChannelSigner,
+): UpdateParams<T> {
+  const { channelAddress, type, details, fromIdentifier, toIdentifier, assetId } = update;
+  let paramDetails: SetupParams | DepositParams | CreateTransferParams | ResolveTransferParams;
+  switch (type) {
+    case "setup": {
+      const { networkContext, timeout } = details as SetupUpdateDetails;
+      const params: SetupParams = {
+        networkContext: { ...networkContext },
+        timeout,
+        counterpartyIdentifier: signer.publicIdentifier === fromIdentifier ? toIdentifier : fromIdentifier,
+      };
+      paramDetails = params;
+      break;
+    }
+    case "deposit": {
+      const params: DepositParams = {
+        channelAddress,
+        assetId,
+      };
+      paramDetails = params;
+      break;
+    }
+    case "create": {
+      // The balance in the update for create is the *channel* balance after
+      // the update has been applied. The balance in the params is the
+      // *initial balance* of the transfer
+      const {
+        balance,
+        transferInitialState,
+        transferDefinition,
+        transferTimeout,
+        meta,
+      } = details as CreateUpdateDetails;
+      const params: CreateTransferParams = {
+        balance,
+        channelAddress,
+        assetId,
+        transferDefinition,
+        transferInitialState,
+        timeout: transferTimeout,
+        meta,
+      };
+      paramDetails = params;
+      break;
+    }
+    case "resolve": {
+      const { transferResolver, transferId, meta } = details as ResolveUpdateDetails;
+      const params: ResolveTransferParams = {
+        channelAddress,
+        transferId,
+        transferResolver,
+        meta,
+      };
+      paramDetails = params;
+      break;
+    }
+    default: {
+      throw new Error(`Invalid update type ${type}`);
+    }
+  }
+  return {
+    channelAddress,
+    type,
+    details: paramDetails as UpdateParamsMap[T],
+  };
 }
 
 // This function signs the state after the update is applied,

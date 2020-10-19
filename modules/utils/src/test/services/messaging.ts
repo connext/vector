@@ -38,6 +38,10 @@ export class MemoryMessagingService implements IMessagingService {
     return;
   }
 
+  async disconnect(): Promise<void> {
+    this.evt.detach();
+  }
+
   onReceiveCheckIn(
     myPublicIdentifier: string,
     callback: (nonce: string, from: string, inbox: string) => void,

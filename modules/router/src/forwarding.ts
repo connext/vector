@@ -68,7 +68,7 @@ export async function forwardTransferCreation(
   chainProviders: ChainJsonProviders,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
-  logger.info(
+  logger.error(
     { data, method, node: { signerAddress, publicIdentifier } },
     "Received transfer event, starting forwarding",
   );
@@ -165,10 +165,9 @@ export async function forwardTransferCreation(
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
-    alice: publicIdentifier,
-    bob: recipientIdentifier,
-    chainId: recipientChainId,
     publicIdentifier,
+    counterparty: recipientIdentifier,
+    chainId: recipientChainId,
   });
   if (recipientChannelRes.isError) {
     return Result.fail(

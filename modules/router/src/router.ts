@@ -1,6 +1,7 @@
 import { BaseLogger } from "pino";
-import { INodeService } from "@connext/vector-types";
+import { FullChannelState, INodeService } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
+import { utils } from "ethers";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";
@@ -50,16 +51,15 @@ export class Router implements IRouter {
     const channelCounter = new Gauge({
       name: "router_channels_total",
       help: "router_channels_total_help",
+      registers: [this.register],
     });
-    this.register.registerMetric(channelCounter);
 
-    // Track the total number of payments
-    const paymentCounter = new Gauge({
-      name: "router_payments_total",
-      help: "router_payments_total_help",
-      labelNames: ["channelAddress"],
+    const collateral = new Gauge({
+      name: "router_channels_collateral",
+      help: "router_channels_collateral_help",
+      labelNames: ["assetId", "channelAddress"],
+      registers: [this.register],
     });
-    this.register.registerMetric(paymentCounter);
 
     // TODO: fix this once this issue is fixed by using the `collect` function in the gauge
     // https://github.com/siimon/prom-client/issues/383
@@ -75,6 +75,33 @@ export class Router implements IRouter {
       }
       const channelAddresses = channels.getValue();
       channelCounter.set(channelAddresses.length);
+
+      for (const channelAddr of channelAddresses) {
+        const channelState = await this.service.getStateChannel({
+          channelAddress: channelAddr,
+          publicIdentifier: this.publicIdentifier,
+        });
+        if (channelState.isError) {
+          this.logger.error(
+            { error: channelState.getError()!.message, channelAddress: channelAddr },
+            "Failed to get channel",
+          );
+          return;
+        }
+        const { balances, assetIds, aliceIdentifier } = channelState.getValue() as FullChannelState;
+        assetIds.forEach((assetId: string, index: number) => {
+          const balance = balances[index];
+          if (!balance) {
+            return;
+          }
+          // Set the proper collateral gauge
+          collateral.set(
+            { assetId, channelAddress: channelAddr },
+            parseFloat(utils.formatEther(balance.amount[this.publicIdentifier === aliceIdentifier ? 0 : 1])),
+          );
+        });
+      }
+
       this.logger.info({}, "Done collecting metrics");
     }, 30_000);
   }

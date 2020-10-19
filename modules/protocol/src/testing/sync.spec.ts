@@ -373,7 +373,7 @@ describe("outbound", () => {
 
     // Verify return values
     expect(res.getError()).to.be.undefined;
-    expect(res.getValue()).to.containSubset({ nonce: 3 });
+    expect(res.getValue().updatedChannel).to.containSubset({ nonce: 3 });
 
     // Verify message only sent once by initiator w/update to sync
     expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
@@ -492,7 +492,7 @@ describe("outbound", () => {
 
         // Verify the update was successfully sent + retried
         expect(res.getError()).to.be.undefined;
-        expect(res.getValue()).to.be.containSubset({
+        expect(res.getValue().updatedChannel).to.be.containSubset({
           nonce: signedUpdate.nonce,
           latestUpdate: signedUpdate,
           channelAddress,

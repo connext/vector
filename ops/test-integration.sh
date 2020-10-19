@@ -19,12 +19,10 @@ then interactive="--interactive --tty"
 else echo "Running in non-interactive mode"
 fi
 
-eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-
 ########################################
 ## Launch test runner
-
-common="$interactive $stack_env \
+tester_name=${project}_${stack}_test_runner
+common="$interactive \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
   --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
   --env=VECTOR_ALICE_URL=http://alice:8000 \
@@ -39,7 +37,8 @@ common="$interactive $stack_env \
   --env=VECTOR_NODE_URL=http://node:8000 \
   --env=VECTOR_ROGER_URL=http://roger:8000 \
   --env=VECTOR_ROUTER_URL=http://router:8000 \
-  --name=${project}_${stack}_test_runner \
+  --env=VECTOR_TESTER_NAME=$tester_name \
+  --name=$tester_name \
   --network=$project \
   --rm \
   --tmpfs /tmp"

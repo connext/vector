@@ -12,13 +12,13 @@ import {
   INodeService,
   IVectorEngine,
   NodeError,
+  OptionalPublicIdentifier,
   Result,
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import Axios from "axios";
-import { providers } from "ethers";
 import { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
@@ -76,9 +76,13 @@ export class BrowserNode implements INodeService {
   }
 
   async getStateChannelByParticipants(
-    params: ServerNodeParams.GetChannelStateByParticipants,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>> {
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, params);
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelStateByParticipants, {
+      alice: params.counterparty,
+      bob: this.publicIdentifier,
+      chainId: params.chainId,
+    });
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_getChannelStateByParticipants>(rpc);
       return Result.ok(res);
@@ -88,7 +92,7 @@ export class BrowserNode implements INodeService {
   }
 
   async getStateChannel(
-    params: ServerNodeParams.GetChannelState,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelState>,
   ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelState, params);
     try {
@@ -110,7 +114,7 @@ export class BrowserNode implements INodeService {
   }
 
   async getTransferByRoutingId(
-    params: ServerNodeParams.GetTransferStateByRoutingId,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferStateByRoutingId>,
   ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferStateByRoutingId, params);
     try {
@@ -122,7 +126,7 @@ export class BrowserNode implements INodeService {
   }
 
   async getTransfersByRoutingId(
-    params: ServerNodeParams.GetTransferStatesByRoutingId,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferStatesByRoutingId>,
   ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferStatesByRoutingId, params);
     try {
@@ -134,7 +138,7 @@ export class BrowserNode implements INodeService {
   }
 
   async getTransfer(
-    params: ServerNodeParams.GetTransferState,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferState>,
   ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getTransferState, params);
     try {
@@ -146,7 +150,7 @@ export class BrowserNode implements INodeService {
   }
 
   async getActiveTransfers(
-    params: ServerNodeParams.GetActiveTransfersByChannelAddress,
+    params: OptionalPublicIdentifier<ServerNodeParams.GetActiveTransfersByChannelAddress>,
   ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getActiveTransfers, params);
     try {
@@ -158,7 +162,7 @@ export class BrowserNode implements INodeService {
   }
 
   async requestSetup(
-    params: ServerNodeParams.RequestSetup,
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestSetup>,
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
     try {
       const setupPromise = this.engine.waitFor(
@@ -190,7 +194,9 @@ export class BrowserNode implements INodeService {
     throw new Error("Method not implemented.");
   }
 
-  async reconcileDeposit(params: ServerNodeParams.Deposit): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
+  async reconcileDeposit(
+    params: OptionalPublicIdentifier<ServerNodeParams.Deposit>,
+  ): Promise<Result<ServerNodeResponses.Deposit, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_deposit, params);
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_deposit>(rpc);
@@ -201,7 +207,7 @@ export class BrowserNode implements INodeService {
   }
 
   async conditionalTransfer(
-    params: ServerNodeParams.ConditionalTransfer,
+    params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_createTransfer, params);
     try {
@@ -217,7 +223,7 @@ export class BrowserNode implements INodeService {
   }
 
   async resolveTransfer(
-    params: ServerNodeParams.ResolveTransfer,
+    params: OptionalPublicIdentifier<ServerNodeParams.ResolveTransfer>,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_resolveTransfer, params);
     try {
@@ -232,7 +238,9 @@ export class BrowserNode implements INodeService {
     }
   }
 
-  async withdraw(params: ServerNodeParams.Withdraw): Promise<Result<ServerNodeResponses.Withdraw, NodeError>> {
+  async withdraw(
+    params: OptionalPublicIdentifier<ServerNodeParams.Withdraw>,
+  ): Promise<Result<ServerNodeResponses.Withdraw, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_withdraw, params);
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_withdraw>(rpc);

@@ -16,19 +16,19 @@
 
 ##############
 ### GET CONFIG
-GET {{rogerUrl}}/config
+GET {{carolUrl}}/config
 
 ##############
 ### GET CHANNELS
-GET {{daveUrl}}/channel
+GET {{aliceUrl}}/{{alicePublicIdentifier}}/channel
 
 ##############
 ### GET CHANNEL
-GET {{daveUrl}}/channel/{{daveRogerChannel}}/{{davePublicIdentifier}}
+GET {{aliceUrl}}/{{alicePublicIdentifier}}/channel/{{aliceBobChannel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS
-GET {{aliceUrl}}/channel/{{alicePublicIdentifier}}/{{bobPublicIdentifier}}/{{chainId}}
+GET {{carolUrl}}/{{carolPublicIdentifier}}/channels/counterparty/{{rogerPublicIdentifier}}/chain-id/{{chainId}}
 
 ##############
 ### CLEAR STORE
@@ -41,7 +41,7 @@ Content-Type: application/json
 
 ##############
 ### CREATE NODE
-POST {{daveUrl}}/node
+POST {{bobUrl}}/node
 Content-Type: application/json
 
 {

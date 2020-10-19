@@ -1,18 +1,31 @@
-@nodeUrl = http://localhost:8003
+@aliceUrl = http://localhost:8003
+@bobUrl = http://localhost:8004
+@carolUrl = http://localhost:8005
+@daveUrl = http://localhost:8006
+@rogerUrl = http://localhost:8007
+@alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
+@bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@carolPublicIdentifier = indra8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
+@davePublicIdentifier = indra7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
+@rogerPublicIdentifier = indra8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
+
 @eventName = CONDITIONAL_TRANSFER_CREATED
 
 ###############
 ### Create Event Subscription
-POST {{nodeUrl}}/event/subscribe
+POST {{carolUrl}}/event/subscribe
 Content-Type: application/json
 
 {
-  "{{eventName}}": "http://localhost:1234"
+  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "events": {
+    "{{eventName}}": "http://localhost:1234"
+  }
 }
 
 ###############
 ### Get Event Subscription
-GET {{nodeUrl}}/event/{{eventName}}
+GET {{carolUrl}}/{{carolPublicIdentifier}}/event/{{eventName}}
 
 ### Get Event Subscriptions
-GET {{nodeUrl}}/event
+GET {{carolUrl}}/{{carolPublicIdentifier}}/event

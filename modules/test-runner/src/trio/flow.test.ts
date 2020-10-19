@@ -106,8 +106,7 @@ describe.skip(testName, () => {
       const assetId = constants.AddressZero;
       const depositAmt = utils.parseEther("0.25");
       const channelRes = await carolService.getStateChannelByParticipants({
-        alice: rogerIdentifier,
-        bob: carolIdentifier,
+        counterparty: rogerIdentifier,
         chainId,
         publicIdentifier: carolIdentifier,
       });
@@ -130,16 +129,14 @@ describe.skip(testName, () => {
 
       const transferAmt = utils.parseEther("0.005");
       const carolChannelRes = await carolService.getStateChannelByParticipants({
-        alice: rogerIdentifier,
-        bob: carolIdentifier,
+        counterparty: rogerIdentifier,
         chainId,
         publicIdentifier: carolIdentifier,
       });
       const carolChannel = carolChannelRes.getValue()!;
 
       const daveChannelRes = await daveService.getStateChannelByParticipants({
-        alice: rogerIdentifier,
-        bob: daveIdentifier,
+        counterparty: rogerIdentifier,
         chainId,
         publicIdentifier: daveIdentifier,
       });
