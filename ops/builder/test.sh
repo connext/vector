@@ -22,8 +22,10 @@ then
   set -o pipefail
   echo "Starting $unit tester"
   if [[ -n "$(which pino-pretty)" ]]
-  then exec npm run test -- "$opts" | pino-pretty --colorize
-  else exec npm run test -- "$opts"
+  # then exec npm run test -- "$opts" | pino-pretty --colorize
+  # else exec npm run test -- "$opts"
+  then exec npm run test | pino-pretty --colorize
+  else exec npm run test
   fi
 
 elif [[ "${cmd##*-}" == "watch" ]]
