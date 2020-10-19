@@ -1,9 +1,9 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { ChannelSigner, getBalanceForAssetId } from "@connext/vector-utils";
+import { ChannelSigner, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
-import { Wallet, constants, utils } from "ethers";
-import { Col, Divider, Row, Spin, Statistic, Input, Typography, Table, Form, Button, Select } from "antd";
+import { Wallet, constants } from "ethers";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select } from "antd";
 
 import "./App.css";
 import { EngineEvents, FullChannelState } from "@connext/vector-types";
@@ -64,8 +64,10 @@ function App() {
         setConnectError(channelsRes.getError().message);
         return;
       }
-      setChannel(channelsRes.getValue()[0]);
-      console.log("channel: ", channelsRes.getValue()[0]);
+      const _channel = channelsRes.getValue()[0];
+      const channelRes = await client.getStateChannel({ channelAddress: _channel });
+      console.log("channel: ", channelRes.getValue());
+      setChannel(channelRes.getValue());
       setNode(client);
       localStorage.setItem("mnemonic", mnemonic);
       client.on(EngineEvents.DEPOSIT_RECONCILED, async data => {
@@ -328,7 +330,7 @@ function App() {
                 labelCol={{ span: 6 }}
                 wrapperCol={{ span: 18 }}
                 name="transfer"
-                initialValues={{ assetId: channel?.assetIds[0] }}
+                initialValues={{ assetId: channel?.assetIds[0], preImage: getRandomBytes32() }}
                 onFinish={values => transfer(values.assetId, values.amount, values.recipient)}
                 onFinishFailed={onFinishFailed}
                 form={transferForm}
@@ -364,6 +366,20 @@ function App() {
                       const assetId = transferForm.getFieldValue("assetId");
                       const amount = getBalanceForAssetId(channel, assetId, "bob");
                       transferForm.setFieldsValue({ amount });
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Pre Image"
+                  name="preImage"
+                  rules={[{ required: true, message: "Please input pre image" }]}
+                >
+                  <Input.Search
+                    enterButton="Random"
+                    onSearch={() => {
+                      const preImage = getRandomBytes32();
+                      transferForm.setFieldsValue({ preImage });
                     }}
                   />
                 </Form.Item>

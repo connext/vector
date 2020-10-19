@@ -107,11 +107,11 @@ export class BrowserNode implements INodeService {
     }
   }
 
-  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
+  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_getChannelStates>(rpc);
-      return Result.ok(res);
+      return Result.ok(res.map(chan => chan.channelAddress));
     } catch (e) {
       return Result.fail(e);
     }
