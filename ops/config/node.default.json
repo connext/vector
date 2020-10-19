@@ -1,0 +1,25 @@
+{
+  "adminToken": "cxt1234",
+  "chainAddresses": {
+    "1337": {
+      "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
+      "channelMastercopyAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",
+      "transferRegistryAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10",
+      "TestToken": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F"
+    },
+    "1338": {
+      "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
+      "channelMastercopyAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",
+      "transferRegistryAddress": "0x345cA3e014Aaf5dcA488057592ee47305D9B3e10",
+      "TestToken": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F"
+    }
+  },
+  "chainProviders": {
+    "1337": "http://evm_1337:8545",
+    "1338": "http://evm_1338:8545"
+  },
+  "domainName": "",
+  "logLevel": "info",
+  "messagingUrl": "",
+  "production": false
+}

@@ -18,29 +18,39 @@ fi
 ####################
 # Load config
 
-config="$(
-  cat "$root/config-node.json" "$root/config-router.json" "$root/config-prod.json" |\
-  jq -s '.[0] + .[1] + .[2]'
-)"
+if [[ ! -f "$root/${stack}.config.json" ]]
+then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
+fi
+
+config=$(cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]')
 
 function getConfig {
-  value="$(echo "$config" | jq ".$1" | tr -d '"')"
+  value=$(echo "$config" | jq ".$1" | tr -d '"')
   if [[ "$value" == "null" ]]
   then echo ""
   else echo "$value"
   fi
 }
 
-admin_token="$(getConfig adminToken)"
-domain_name="$(getConfig domainName)"
-production="$(getConfig production)"
-public_port="$(getConfig port)"
+admin_token=$(getConfig adminToken)
+domain_name=$(getConfig domainName)
+production=$(getConfig production)
+public_port=$(getConfig port)
 
-chain_providers="$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')"
-default_providers="$(jq '.chainProviders' "$root/config-node.json" | tr -d '\n\r ')"
-
-if [[ "$VECTOR_PROD" = "true" ]]
-then production="true"
+# Should we spin up local evms or use external ones?
+node_config=$root/node.config.json
+if [[ -f "$node_config" ]]
+then
+  given_providers=$(echo "$node_config" | jq '.chainProviders' | tr -d '\n\r ')
+  default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
+  if [[ "$default_providers" != "$given_providers" ]]
+  then use_local_evms="true";
+  else
+    echo "Node config contains custom ethproviders, using those instead of spinning up local evms"
+    echo "External ethproviders: $given_providers"
+    use_local_evms="false";
+  fi
+else use_local_evms="true";
 fi
 
 ########################################
@@ -50,8 +60,8 @@ fi
 if [[ "$production" == "true" ]]
 then
   if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
-  then version="$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)"
-  else version="$(git rev-parse HEAD | head -c 8)"
+  then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
+  else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
@@ -130,7 +140,7 @@ fi
 ####################
 # Eth Provider config
 
-if [[ "$chain_providers" == "$default_providers" ]]
+if [[ "$use_local_evms" == "true" ]]
 then
   mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
@@ -292,7 +302,7 @@ do
   fi
 done
 
-if [[ "$chain_providers" == "$default_providers" ]]
+if [[ "$use_local_evms" == "true" ]]
 then
   chain_addresses_1="$chain_data_1/chain-addresses.json"
   chain_addresses_2="$chain_data_2/chain-addresses.json"

@@ -18,7 +18,7 @@ fi
 ####################
 # Misc Config
 
-config="$(cat "$root/config-node.json")"
+config="$(cat "$root/ops/config/node.default.json")"
 
 version="latest"
 
@@ -33,7 +33,6 @@ common="networks:
 # Global services / chain provider config
 
 bash "$root/ops/start-global.sh"
-
 chain_addresses="$(cat "$root/.chaindata/chain-addresses.json")"
 config="$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')"
 

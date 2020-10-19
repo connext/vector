@@ -18,12 +18,22 @@ fi
 ####################
 # Load config
 
-node_config="$(cat "$root/config-node.json")"
-router_config="$(cat "$root/config-router.json")"
-default_config="$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')"
-prod_config="$(cat "$root/config-prod.json")"
+if [[ ! -f "$root/${stack}.config.json" ]]
+then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
+fi
+router_config=$(
+  cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]'
+)
 
-config="$(echo "$default_config" "$prod_config" | jq -s '.[0] + .[1]')"
+# Router inherits from node config
+if [[ ! -f "$root/node.config.json" ]]
+then cp "$root/ops/config/node.default.json" "$root/node.config.json"
+fi
+node_config=$(
+  cat "$root/ops/config/node.default.json" "$root/node.config.json" | jq -s '.[0] + .[1]'
+)
+
+config="$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')"
 
 function getConfig {
   value="$(echo "$config" | jq ".$1" | tr -d '"')"
@@ -33,20 +43,20 @@ function getConfig {
   fi
 }
 
-admin_token="$(getConfig adminToken)"
-messaging_url="$(getConfig messagingUrl)"
-aws_access_id="$(getConfig awsAccessId)"
-aws_access_key="$(getConfig awsAccessKey)"
-domain_name="$(getConfig domainName)"
-production="$(getConfig production)"
-public_port="$(getConfig port)"
-mnemonic="$(getConfig mnemonic)"
+admin_token=$(getConfig adminToken)
+messaging_url=$(getConfig messagingUrl)
+aws_access_id=$(getConfig awsAccessId)
+aws_access_key=$(getConfig awsAccessKey)
+domain_name=$(getConfig domainName)
+production=$(getConfig production)
+public_port=$(getConfig port)
+mnemonic=$(getConfig mnemonic)
 
-chain_providers="$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')"
-default_providers="$(jq '.chainProviders' "$root/config-node.json" | tr -d '\n\r ')"
-
-if [[ "$VECTOR_PROD" = "true" ]]
-then production="true"
+chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
+default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
+if [[ "$chain_providers" == "$default_providers" ]]
+then use_local_evms=true
+else use_local_evms=false
 fi
 
 ####################
@@ -79,7 +89,13 @@ common="networks:
 # Global services / chain provider config
 # If no global service urls provided, spin up local ones & use those
 
-if [[ -z "$messaging_url" || "$chain_providers" == "$default_providers" ]]
+# If no messaging url or custom ethproviders are given, spin up a global stack
+if [[ -z "$messaging_url" || "$use_local_evms" == "true" ]]
+then bash "$root/ops/start-global.sh"
+fi
+
+# If no custom ethproviders are given, configure mnemonic/addresses from local evms
+if [[ "$use_local_evms" == "true" ]]
 then
   bash "$root/ops/start-global.sh"
   mnemonic_secret=""

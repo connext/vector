@@ -145,8 +145,9 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make pull
-      - run: VECTOR_PROD=true make restart-global
-      - run: VECTOR_PROD=true bash ops/test-integration.sh global
+      - run: jq '.production = true' ops/config/global.default.json > global.config.json
+      - run: make restart-global
+      - run: bash ops/test-integration.sh global
       - name: Print logs
         if: failure()
         run: docker service ls && docker service logs --tail 200 global_auth
@@ -157,8 +158,9 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make pull
-      - run: VECTOR_PROD=true make restart-node
-      - run: VECTOR_PROD=true bash ops/test-integration.sh node
+      - run: jq '.production = true' ops/config/global.default.json > global.config.json
+      - run: make restart-node
+      - run: bash ops/test-integration.sh node
       - name: Print logs
         if: failure()
         run: docker service ls && docker service logs --tail 200 node_node
@@ -169,8 +171,9 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make pull
-      - run: VECTOR_PROD=true make restart-router
-      - run: VECTOR_PROD=true bash ops/test-integration.sh router
+      - run: jq '.production = true' ops/config/global.default.json > global.config.json
+      - run: make restart-router
+      - run: bash ops/test-integration.sh router
       - name: Print logs
         if: failure()
         run: docker service ls && docker service logs --tail 200 node_node
