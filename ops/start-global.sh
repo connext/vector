@@ -10,7 +10,7 @@ project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
-if ! grep -q "$stack" <<<"$(docker stack ls --format '{{.Name}}' | grep "$stack")"
+if ! grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}' | grep "$stack")"
 then echo "A $stack stack is already running" && exit 0;
 else echo; echo "Preparing to launch $stack stack"
 fi
@@ -185,7 +185,7 @@ bash "$root/ops/pull-images.sh" "$proxy_image" > /dev/null
 
 if [[ -n "$domain_name" ]]
 then
-  public_url="https://127.0.0.1:443"
+  public_url="https://127.0.0.1:443/ping"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
@@ -193,7 +193,7 @@ then
 
 else
   public_port=${public_port:-3002}
-  public_url="http://127.0.0.1:$public_port"
+  public_url="http://127.0.0.1:$public_port/ping"
   proxy_ports="ports:
       - '$public_port:80'"
   echo "$stack.proxy will be exposed on *:$public_port"
@@ -284,7 +284,7 @@ function abort {
 
 timeout=$(( $(date +%s) + 60 ))
 echo "Waiting for $public_url to wake up.."
-while [[ "$(curl -k -m 5 -s "$public_url/ping" || true)" != "pong"* ]]
+while [[ "$(curl -k -m 5 -s "$public_url" || true)" != "pong"* ]]
 do
   if [[ "$(date +%s)" -gt "$timeout" ]]
   then abort

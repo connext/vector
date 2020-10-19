@@ -11,7 +11,7 @@ secret_value="$2"
 
 # NOTE: any newlines or carriage returns will be stripped out of the secret value
 
-if grep -q "$secret_name\>" <<<"$(docker secret ls)"
+if grep -qs "$secret_name\>" <<<"$(docker secret ls)"
 then
   echo "A secret called $secret_name already exists, skipping secret setup."
   echo "To overwrite this secret, remove the existing one first: 'docker secret rm $secret_name'"

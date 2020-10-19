@@ -31,11 +31,11 @@ do
   for version in $versions
   do
     name="$image:$version"
-    if grep -q "$version" <<<"$(docker image ls | grep "$image")"
+    if grep -qs "$version" <<<"$(docker image ls | grep "$image")"
     then echo "Image $name already exists locally"
     else
 
-      if grep -q "${project}_" <<<"$name"
+      if grep -qs "${project}_" <<<"$name"
       then full_name="${registry%/}/$name"
       else full_name="$name"
       fi

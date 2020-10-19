@@ -53,19 +53,19 @@ function cleanup {
 trap cleanup EXIT SIGINT SIGTERM
 
 postgres_host="${project}_database_test_$unit"
-echo "Starting $postgres_host.."
-  docker run \
-    --detach \
-    --env="POSTGRES_DB=$project" \
-    --env="POSTGRES_PASSWORD=$project" \
-    --env="POSTGRES_USER=$project" \
-    --name="$postgres_host" \
-    --network="$project" \
-    --rm \
-    --tmpfs="/var/lib/postgresql/data" \
-    postgres:12-alpine
+echo "Starting postgres w url postgresql://$project:$project@${project}_database:5432/$project"
+docker run \
+  --detach \
+  --env="POSTGRES_DB=$project" \
+  --env="POSTGRES_PASSWORD=$project" \
+  --env="POSTGRES_USER=$project" \
+  --name="$postgres_host" \
+  --network="$project" \
+  --rm \
+  --tmpfs="/var/lib/postgresql/data" \
+  postgres:12-alpine
 
-echo "postgresql://$project:$project@${project}_database:5432/$project"
+echo "Starting server node unit tests"
 docker run \
   "$interactive" \
   --entrypoint="bash" \
