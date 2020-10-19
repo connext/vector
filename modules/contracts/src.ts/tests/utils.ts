@@ -25,7 +25,7 @@ export const createTestChannelMastercopy = async (): Promise<Contract> => {
 };
 
 export const createTestChannel = async (deployedChannelFactory?: Contract): Promise<Contract> => {
-  const channelFactory = deployedChannelFactory ?? (await createTestChannelFactory()).channelFactory;
+  const channelFactory = deployedChannelFactory ?? (await createTestChannelFactory());
   const doneBeingCreated: Promise<string> = new Promise(res => {
     channelFactory.once(channelFactory.filters.ChannelCreation(), res);
   });

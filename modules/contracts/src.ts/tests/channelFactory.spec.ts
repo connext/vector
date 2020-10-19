@@ -8,7 +8,7 @@ import { ChannelMastercopy, Proxy } from "../artifacts";
 import { VectorChainReader } from "../services";
 
 import { alice, bob, provider } from "./constants";
-import { createTestChannel, createTestChannelFactory } from "./utils";
+import { createTestChannel, createTestChannelFactory, createTestChannelMastercopy } from "./utils";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
@@ -21,9 +21,8 @@ describe("ChannelFactory", () => {
   beforeEach(async () => {
     chainId = (await provider.getNetwork()).chainId;
 
-    const deployRes = await createTestChannelFactory();
-    channelMastercopy = deployRes.channelMastercopy;
-    channelFactory = deployRes.channelFactory;
+    channelMastercopy = await createTestChannelMastercopy();
+    channelFactory = await createTestChannelFactory(channelMastercopy);
 
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
@@ -54,8 +53,6 @@ describe("ChannelFactory", () => {
       chainReader,
     );
     expect(channel.address).to.be.eq(computedAddr.getValue());
-    expect(await channel.alice()).to.be.eq(getSignerAddressFromPublicIdentifier(alicePubId));
-    expect(await channel.bob()).to.be.eq(getSignerAddressFromPublicIdentifier(bobPubId));
   });
 
   it("should create a channel with a deposit", async () => {
