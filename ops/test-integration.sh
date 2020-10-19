@@ -23,26 +23,28 @@ fi
 ## Launch test runner
 
 tester_name=${project}_${stack}_test_runner
-common="${interactive[*]} \
-  --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
-  --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
-  --env=VECTOR_ALICE_URL=http://alice:8000 \
-  --env=VECTOR_MESSAGING_URL=http://messaging \
-  --env=VECTOR_BOB_URL=http://bob:8000 \
-  --env=VECTOR_CAROL_URL=http://carol:8000 \
-  --env=VECTOR_CHAIN_PROVIDERS=$(tr -d ' \n' < "$root/.chaindata/chain-providers.json") \
-  --env=VECTOR_CHAIN_ADDRESSES=$(tr -d ' \n' < "$root/.chaindata/chain-addresses.json") \
-  --env=VECTOR_DAVE_URL=http://dave:8000 \
-  --env=VECTOR_PROD=${VECTOR_PROD} \
-  --env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error} \
-  --env=VECTOR_NODE_URL=http://node:8000 \
-  --env=VECTOR_ROGER_URL=http://roger:8000 \
-  --env=VECTOR_ROUTER_URL=http://router:8000 \
-  --env=VECTOR_TESTER_NAME=$tester_name \
-  --name=$tester_name \
-  --network=$project \
-  --rm \
-  --tmpfs /tmp"
+common=(
+  ${interactive[@]}
+  "--env=NODE_TLS_REJECT_UNAUTHORIZED=0"
+  "--env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN"
+  "--env=VECTOR_ALICE_URL=http://alice:8000"
+  "--env=VECTOR_BOB_URL=http://bob:8000"
+  "--env=VECTOR_CAROL_URL=http://carol:8000"
+  "--env=VECTOR_CHAIN_ADDRESSES=$(tr -d ' \n' < "$root/.chaindata/chain-addresses.json")"
+  "--env=VECTOR_CHAIN_PROVIDERS=$(tr -d ' \n' < "$root/.chaindata/chain-providers.json")"
+  "--env=VECTOR_DAVE_URL=http://dave:8000"
+  "--env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error}"
+  "--env=VECTOR_MESSAGING_URL=http://messaging"
+  "--env=VECTOR_NODE_URL=http://node:8000"
+  "--env=VECTOR_PROD=${VECTOR_PROD}"
+  "--env=VECTOR_ROGER_URL=http://roger:8000"
+  "--env=VECTOR_ROUTER_URL=http://router:8000"
+  "--env=VECTOR_TESTER_NAME=$tester_name"
+  "--name=$tester_name"
+  "--network=$project"
+  "--rm"
+  "--tmpfs=/tmp"
+)
 
 # prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$VECTOR_PROD" == "true" ]]
@@ -57,12 +59,12 @@ then
   fi
   image=${project}_test_runner:$version
   echo "Executing $cmd w image $image"
-  docker run "$common" "$image" "$cmd" "$stack"
+  docker run "${common[@]}" "$image" "$cmd" "$stack"
 
 else
   echo "Executing $cmd w image ${project}_builder"
   docker run \
-    "$common" \
+    "${common[@]}" \
     --entrypoint=bash \
     --volume="$root:/root" \
     "${project}_builder" -c "bash modules/test-runner/ops/entry.sh $cmd $stack"
