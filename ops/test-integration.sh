@@ -19,11 +19,16 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-if [[ ! -f "$root/${stack}.config.json" ]]
-then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
+# If this stack can be tested in prod-mode..
+if [[ "$stack" == "global" || "$stack" == "node" || "$stack" == "router" ]]
+then
+  if [[ ! -f "$root/${stack}.config.json" ]]
+  then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
+  fi
+  production=$(jq '.production' "$root/$stack.config.json" | tr -d '"')
+else
+  production="false"
 fi
-config=$(cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]')
-production=$(echo "$config" | jq '.production' | tr -d '"')
 
 ########################################
 ## Launch test runner
