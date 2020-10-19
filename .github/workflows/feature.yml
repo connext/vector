@@ -163,7 +163,7 @@ jobs:
       - uses: actions/checkout@v1
       - run: make pull
       - run: jq '.production = true' ops/config/global.default.json > global.config.json
-      - run: jq '.production = true' ops/config/routing.default.json > routing.config.json
+      - run: jq '.production = true' ops/config/router.default.json > router.config.json
       - run: make restart-router
       - run: bash ops/test-integration.sh router
       - name: Print logs

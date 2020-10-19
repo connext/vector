@@ -1,6 +1,6 @@
 {
   "name": "ethprovider",
-  "description": "This is only used to install a few large packages into the ethprovider docker container. These take a long time to install, by keeping these separate the central node_module installation will go much more quickly.",
+  "description": "This is only used to install a few large packages into the ethprovider docker container. Ganache takes a long time to install, by keeping it separate the central node_module installation will go more quickly.",
   "dependencies": {
     "@nomiclabs/buidler": "1.4.7",
     "ethers": "5.0.14",
