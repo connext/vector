@@ -25,11 +25,13 @@ function App() {
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
   const [depositLoading, setDepositLoading] = useState<boolean>(false);
   const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
+  const [transferLoading, setTransferLoading] = useState<boolean>(false);
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
 
   const [connectError, setConnectError] = useState<string>();
 
   const [withdrawForm] = Form.useForm();
+  const [transferForm] = Form.useForm();
 
   useEffect(() => {
     const init = async () => {
@@ -129,7 +131,8 @@ function App() {
     setRequestCollateralLoading(false);
   };
 
-  const withdraw = async (assetId: string, amount: string, recipient: string) => {
+  const transfer = async (assetId: string, amount: string, recipient: string) => {
+    setTransferLoading(true);
     const requestRes = await node.withdraw({
       channelAddress: channel.channelAddress,
       assetId,
@@ -137,8 +140,23 @@ function App() {
       recipient,
     });
     if (requestRes.isError) {
-      console.error("Error depositing", requestRes.getError());
+      console.error("Error withdrawing", requestRes.getError());
     }
+    setTransferLoading(false);
+  };
+
+  const withdraw = async (assetId: string, amount: string, recipient: string) => {
+    setWithdrawLoading(true);
+    const requestRes = await node.withdraw({
+      channelAddress: channel.channelAddress,
+      assetId,
+      amount,
+      recipient,
+    });
+    if (requestRes.isError) {
+      console.error("Error withdrawing", requestRes.getError());
+    }
+    setWithdrawLoading(false);
   };
 
   const onFinishFailed = (errorInfo: any) => {
@@ -242,6 +260,7 @@ function App() {
               )}
             </Col>
           </Row>
+
           <Divider orientation="left">Balance & Deposit</Divider>
           <Row gutter={16}>
             {channel && channel.assetIds && (
@@ -277,36 +296,102 @@ function App() {
             )}
           </Row>
           <Row gutter={16}>
-            <Col span={12}>
-              <Input.Search
-                placeholder={constants.AddressZero}
-                enterButton="Reconcile Deposit"
-                size="large"
-                suffix="Asset ID"
-                onSearch={assetId => reconcileDeposit(assetId || constants.AddressZero)}
-                loading={depositLoading}
-              />
-            </Col>
-            <Col span={12}>
-              <Input.Search
-                placeholder={constants.AddressZero}
-                enterButton="Request Collateral"
-                size="large"
-                suffix="Asset ID"
-                onSearch={assetId => requestCollateral(assetId || constants.AddressZero)}
-                loading={requestCollateralLoading}
-              />
+            <Col span={24}>
+              <Form layout="horizontal" name="deposit" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
+                <Form.Item label="Reconcile Deposit">
+                  <Input.Search
+                    placeholder={constants.AddressZero}
+                    enterButton="Reconcile"
+                    suffix="Asset ID"
+                    onSearch={assetId => reconcileDeposit(assetId || constants.AddressZero)}
+                    loading={depositLoading}
+                  />
+                </Form.Item>
+                <Form.Item label="Request Collateral">
+                  <Input.Search
+                    placeholder={constants.AddressZero}
+                    enterButton="Request"
+                    suffix="Asset ID"
+                    onSearch={assetId => requestCollateral(assetId || constants.AddressZero)}
+                    loading={requestCollateralLoading}
+                  />
+                </Form.Item>
+              </Form>
             </Col>
           </Row>
-          <Row gutter={16} style={{ paddingTop: 16 }}></Row>
+
           <Divider orientation="left">Transfer</Divider>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form
+                layout="horizontal"
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                name="transfer"
+                initialValues={{ assetId: channel?.assetIds[0] }}
+                onFinish={values => transfer(values.assetId, values.amount, values.recipient)}
+                onFinishFailed={onFinishFailed}
+                form={transferForm}
+              >
+                <Form.Item label="Asset ID" name="assetId">
+                  <Select>
+                    {channel?.assetIds.map(aid => {
+                      return (
+                        <Select.Option key={aid} value={aid}>
+                          {aid}
+                        </Select.Option>
+                      );
+                    })}
+                  </Select>
+                </Form.Item>
+
+                <Form.Item
+                  label="Recipient"
+                  name="recipient"
+                  rules={[{ required: true, message: "Please input recipient address" }]}
+                >
+                  <Input />
+                </Form.Item>
+
+                <Form.Item
+                  label="Amount"
+                  name="amount"
+                  rules={[{ required: true, message: "Please input transfer amount" }]}
+                >
+                  <Input.Search
+                    enterButton="MAX"
+                    onSearch={() => {
+                      const assetId = transferForm.getFieldValue("assetId");
+                      const amount = getBalanceForAssetId(channel, assetId, "bob");
+                      transferForm.setFieldsValue({ amount });
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item label="Recipient Chain ID" name="recipientChainId">
+                  <Input />
+                </Form.Item>
+
+                <Form.Item label="Recipient Asset ID" name="recipientAssetId">
+                  <Input />
+                </Form.Item>
+
+                <Form.Item wrapperCol={{ offset: 6 }}>
+                  <Button type="primary" htmlType="submit" loading={transferLoading}>
+                    Transfer
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Col>
+          </Row>
+
           <Divider orientation="left">Withdraw</Divider>
           <Row gutter={16}>
             <Col span={24}>
               <Form
                 layout="horizontal"
                 labelCol={{ span: 6 }}
-                wrapperCol={{ span: 16 }}
+                wrapperCol={{ span: 18 }}
                 name="withdraw"
                 initialValues={{ assetId: channel?.assetIds[0], recipient: channel?.bob }}
                 onFinish={values => withdraw(values.assetId, values.amount, values.recipient)}
@@ -348,8 +433,8 @@ function App() {
                   />
                 </Form.Item>
 
-                <Form.Item>
-                  <Button type="primary" htmlType="submit">
+                <Form.Item wrapperCol={{ offset: 6 }}>
+                  <Button type="primary" htmlType="submit" loading={withdrawLoading}>
                     Withdraw
                   </Button>
                 </Form.Item>
