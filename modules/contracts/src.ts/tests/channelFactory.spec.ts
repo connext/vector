@@ -1,3 +1,4 @@
+import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, BigNumber } from "ethers";
@@ -43,13 +44,6 @@ describe("ChannelFactory", () => {
 
   it.skip("should return the correctly calculated channel address", async () => {});
 
-  it("should get the participants from a deployed channel", async () => {
-    const channel = await createTestChannel(channelFactory);
-    const participants = await channel.getParticipants();
-    expect(participants[0]).to.equal(alice.address);
-    expect(participants[1]).to.equal(bob.address);
-  });
-
   it("should create a channel", async () => {
     const channel = await createTestChannel(channelFactory);
     const computedAddr = await getCreate2MultisigAddress(
@@ -60,6 +54,8 @@ describe("ChannelFactory", () => {
       chainReader,
     );
     expect(channel.address).to.be.eq(computedAddr.getValue());
+    expect(await channel.alice()).to.be.eq(getSignerAddressFromPublicIdentifier(alicePubId));
+    expect(await channel.bob()).to.be.eq(getSignerAddressFromPublicIdentifier(bobPubId));
   });
 
   it("should create a channel with a deposit", async () => {
