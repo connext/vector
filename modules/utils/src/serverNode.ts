@@ -212,7 +212,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeResponses.SendDepositTx>(
       "send-deposit-tx",
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier },
+      params,
       ServerNodeParams.SendDepositTxSchema,
     );
   }
@@ -232,13 +232,24 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  async requestCollateral(
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestCollateral>,
+  ): Promise<Result<ServerNodeResponses.RequestCollateral, NodeError>> {
+    return this.executeHttpRequest<ServerNodeResponses.RequestCollateral>(
+      "request-collateral",
+      "post",
+      params,
+      ServerNodeParams.RequestCollateralSchema,
+    );
+  }
+
   async conditionalTransfer(
     params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.ConditionalTransfer>(
       `transfers/create`,
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier },
+      params,
       ServerNodeParams.ConditionalTransferSchema,
     );
   }
@@ -249,7 +260,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeResponses.ResolveTransfer>(
       `transfers/resolve`,
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier },
+      params,
       ServerNodeParams.ResolveTransferSchema,
     );
   }
@@ -260,7 +271,7 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<ServerNodeResponses.Withdraw>(
       `withdraw`,
       "post",
-      { ...params, publicIdentifier: params.publicIdentifier },
+      params,
       ServerNodeParams.WithdrawSchema,
     );
   }

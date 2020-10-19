@@ -61,6 +61,10 @@ export interface INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.Deposit>,
   ): Promise<Result<ServerNodeResponses.Deposit, NodeError>>;
 
+  requestCollateral(
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestCollateral>,
+  ): Promise<Result<ServerNodeResponses.RequestCollateral, NodeError>>;
+
   conditionalTransfer(
     params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>>;

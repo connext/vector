@@ -6,7 +6,7 @@ import { Wallet, constants, utils } from "ethers";
 import { Col, Divider, Row, Spin, Statistic, Input, Typography, Table, Form, Button } from "antd";
 
 import "./App.css";
-import { FullChannelState } from "@connext/vector-types";
+import { EngineEvents, FullChannelState } from "@connext/vector-types";
 
 import { config } from "./config";
 import Axios from "axios";
@@ -67,12 +67,29 @@ function App() {
         return;
       }
       setChannel(channelsRes.getValue()[0]);
-      console.log("channels: ", channelsRes.getValue());
+      console.log("channel: ", channelsRes.getValue()[0]);
       setNode(client);
       localStorage.setItem("mnemonic", mnemonic);
+      client.on(EngineEvents.DEPOSIT_RECONCILED, async data => {
+        console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
+        await updateChannel(client);
+      });
     } catch (e) {
       console.error("Error connecting node: ", e);
       setConnectError(e.message);
+    }
+  };
+
+  const updateChannel = async (node: BrowserNode) => {
+    if (!channel) {
+      return;
+    }
+    const res = await node.getStateChannel({ channelAddress: channel.channelAddress });
+    if (res.isError) {
+      console.error("Error getting state channel", res.getError());
+    } else {
+      console.log("Updated channel:", res.getValue());
+      setChannel(res.getValue());
     }
   };
 
@@ -97,23 +114,17 @@ function App() {
     });
     if (depositRes.isError) {
       console.error("Error depositing", depositRes.getError());
-    } else {
-      const chan = await node.getStateChannel({ channelAddress: channel.channelAddress });
-      setChannel(chan.getValue());
     }
   };
 
   const requestCollateral = async (assetId: string) => {
-    // const requestRes = await node.requestCollateral({
-    //   channelAddress: channel.channelAddress,
-    //   assetId,
-    // });
-    // if (requestRes.isError) {
-    //   console.error("Error depositing", requestRes.getError());
-    // } else {
-    //   const chan = await node.getStateChannel({ channelAddress: channel.channelAddress });
-    //   setChannel(chan.getValue());
-    // }
+    const requestRes = await node.requestCollateral({
+      channelAddress: channel.channelAddress,
+      assetId,
+    });
+    if (requestRes.isError) {
+      console.error("Error depositing", requestRes.getError());
+    }
   };
 
   const onFinishFailed = errorInfo => {
@@ -229,40 +240,38 @@ function App() {
           <Row gutter={16}>
             {channel && channel.assetIds && (
               <Col span={24}>
-                <Row>
-                  <Table
-                    dataSource={channel.assetIds.map((assetId, index) => {
-                      return {
-                        key: index,
-                        assetId,
-                        counterpartyBalance: channel.balances[index].amount[0], // they are Alice
-                        myBalance: channel.balances[index].amount[1], // we are Bob
-                      };
-                    })}
-                    columns={[
-                      {
-                        title: "Asset ID",
-                        dataIndex: "assetId",
-                        key: "assetId",
-                      },
-                      {
-                        title: "My Balance",
-                        dataIndex: "myBalance",
-                        key: "myBalance",
-                      },
-                      {
-                        title: "Counterparty Balance",
-                        dataIndex: "counterpartyBalance",
-                        key: "counterpartyBalance",
-                      },
-                    ]}
-                  />
-                </Row>
+                <Table
+                  dataSource={channel.assetIds.map((assetId, index) => {
+                    return {
+                      key: index,
+                      assetId,
+                      counterpartyBalance: channel.balances[index].amount[0], // they are Alice
+                      myBalance: channel.balances[index].amount[1], // we are Bob
+                    };
+                  })}
+                  columns={[
+                    {
+                      title: "Asset ID",
+                      dataIndex: "assetId",
+                      key: "assetId",
+                    },
+                    {
+                      title: "My Balance",
+                      dataIndex: "myBalance",
+                      key: "myBalance",
+                    },
+                    {
+                      title: "Counterparty Balance",
+                      dataIndex: "counterpartyBalance",
+                      key: "counterpartyBalance",
+                    },
+                  ]}
+                />
               </Col>
             )}
           </Row>
           <Row gutter={16}>
-            <Col span={18}>
+            <Col span={12}>
               <Input.Search
                 placeholder={constants.AddressZero}
                 enterButton="Reconcile Deposit"
@@ -276,9 +285,7 @@ function App() {
                 loading={depositLoading}
               />
             </Col>
-          </Row>
-          <Row gutter={16} style={{ paddingTop: 16 }}>
-            <Col span={18}>
+            <Col span={12}>
               <Input.Search
                 placeholder={constants.AddressZero}
                 enterButton="Request Collateral"
@@ -293,6 +300,7 @@ function App() {
               />
             </Col>
           </Row>
+          <Row gutter={16} style={{ paddingTop: 16 }}></Row>
         </>
       )}
     </div>

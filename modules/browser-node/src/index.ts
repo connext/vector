@@ -210,6 +210,18 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async requestCollateral(
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestCollateral>,
+  ): Promise<Result<ServerNodeResponses.RequestCollateral, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, params);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_requestCollateral>(rpc);
+      return Result.ok({ channelAddress: params.channelAddress });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async conditionalTransfer(
     params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
   ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>> {
