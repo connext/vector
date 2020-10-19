@@ -3,12 +3,13 @@ import { ChannelSigner } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants, utils } from "ethers";
-import { Col, Divider, Row, Spin, Statistic, Input, Typography, Table, Form, Checkbox, Button } from "antd";
+import { Col, Divider, Row, Spin, Statistic, Input, Typography, Table, Form, Button } from "antd";
 
 import "./App.css";
 import { FullChannelState } from "@connext/vector-types";
 
 import { config } from "./config";
+import Axios from "axios";
 
 const logger = pino();
 
@@ -20,21 +21,23 @@ const tailLayout = {
   wrapperCol: { span: 6, offset: 6 },
 };
 
+const storedMnemonic = localStorage.getItem("mnemonic");
+
 function App() {
   const [node, setNode] = useState<BrowserNode>();
-  const [connectError, setConnectError] = useState<string>();
   const [channel, setChannel] = useState<FullChannelState>();
-  const [counterpartyUrl, setCounterpartyUrl] = useState<string>("http://localhost:8007");
-  const [aliceIdentifier, setAliceIdentifier] = useState<string>();
+  const [mnemonic, setMnemonic] = useState<string>();
+  const [counterpartyConfig, setCounterpartyConfig] = useState<string>();
+
   const [setupLoading, setSetupLoading] = useState<boolean>(false);
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
-  const [depositAssetId, setDepositAssetId] = useState<string>(constants.AddressZero);
   const [depositLoading, setDepositLoading] = useState<boolean>(false);
-  const [mnemonic, setMnemonic] = useState<string>();
+  const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
+
+  const [connectError, setConnectError] = useState<string>();
 
   useEffect(() => {
     const init = async () => {
-      const storedMnemonic = localStorage.getItem("mnemonic");
       if (!storedMnemonic) {
         return;
       }
@@ -55,7 +58,7 @@ function App() {
         logger,
         authUrl: config.authUrl, // optional, only for local setups
         natsUrl: config.natsUrl, // optional, only for local setups
-        messagingUrl: config.messagingUrl,
+        messagingUrl: config.messagingUrl, // used in place of authUrl + natsUrl in prod setups
         signer,
       });
       const channelsRes = await client.getStateChannels();
@@ -64,7 +67,7 @@ function App() {
         return;
       }
       setChannel(channelsRes.getValue()[0]);
-      console.log("channel: ", channelsRes.getValue());
+      console.log("channels: ", channelsRes.getValue());
       setNode(client);
       localStorage.setItem("mnemonic", mnemonic);
     } catch (e) {
@@ -73,7 +76,7 @@ function App() {
     }
   };
 
-  const setupChannel = async () => {
+  const setupChannel = async (aliceIdentifier: string, counterpartyUrl: string) => {
     const setupRes = await node.requestSetup({
       aliceIdentifier,
       aliceUrl: counterpartyUrl,
@@ -87,21 +90,30 @@ function App() {
     }
   };
 
-  const reconcileDeposit = async () => {
+  const reconcileDeposit = async (assetId: string) => {
     const depositRes = await node.reconcileDeposit({
       channelAddress: channel.channelAddress,
-      assetId: depositAssetId,
+      assetId,
     });
     if (depositRes.isError) {
-      console.error(depositRes.getError());
+      console.error("Error depositing", depositRes.getError());
     } else {
       const chan = await node.getStateChannel({ channelAddress: channel.channelAddress });
       setChannel(chan.getValue());
     }
   };
 
-  const onFinish = values => {
-    console.log("Success:", values);
+  const requestCollateral = async (assetId: string) => {
+    // const requestRes = await node.requestCollateral({
+    //   channelAddress: channel.channelAddress,
+    //   assetId,
+    // });
+    // if (requestRes.isError) {
+    //   console.error("Error depositing", requestRes.getError());
+    // } else {
+    //   const chan = await node.getStateChannel({ channelAddress: channel.channelAddress });
+    //   setChannel(chan.getValue());
+    // }
   };
 
   const onFinishFailed = errorInfo => {
@@ -109,7 +121,7 @@ function App() {
   };
 
   return (
-    <div style={{ margin: 24 }}>
+    <div style={{ margin: 36 }}>
       <Typography.Title>Vector Browser Node</Typography.Title>
       <Divider orientation="left">Connection</Divider>
       <Row gutter={16}>
@@ -132,7 +144,6 @@ function App() {
                 enterButton="Setup Node"
                 size="large"
                 value={mnemonic}
-                onChange={event => setCounterpartyUrl(event.target.value)}
                 onSearch={async mnemonic => {
                   setConnectLoading(true);
                   try {
@@ -154,102 +165,136 @@ function App() {
           </>
         )}
       </Row>
-      <Divider orientation="left">Channels</Divider>
-      <Row gutter={16}>
-        <Col span={24}>
-          {channel ? (
-            <Statistic title="Channel Address" value={channel.channelAddress} />
-          ) : (
-            <Form {...layout} name="basic" initialValues={{}} onFinish={onFinish} onFinishFailed={onFinishFailed}>
-              <Form.Item
-                label="Counterparty URL"
-                name="counterpartyUrl"
-                rules={[{ required: true, message: "Counterparty URL" }]}
-              >
-                <Input />
-              </Form.Item>
+      {node?.publicIdentifier && (
+        <>
+          <Divider orientation="left">Channel</Divider>
+          <Row gutter={16}>
+            <Col span={24}>
+              {channel ? (
+                <Statistic title="Channel Address" value={channel.channelAddress} />
+              ) : (
+                <Form
+                  {...layout}
+                  name="basic"
+                  initialValues={{}}
+                  onFinish={async (values: { counterpartyUrl: string; counterpartyIdentifier: string }) => {
+                    setSetupLoading(true);
+                    await setupChannel(values.counterpartyIdentifier, values.counterpartyUrl);
+                    setSetupLoading(false);
+                  }}
+                  onFinishFailed={onFinishFailed}
+                >
+                  <Form.Item
+                    label="Counterparty URL"
+                    name="counterpartyUrl"
+                    rules={[{ required: true, message: "Please enter counterparty URL" }]}
+                  >
+                    <Input.Search
+                      onSearch={async value => {
+                        try {
+                          const config = await Axios.get(`${value}/config`);
+                          setCounterpartyConfig(JSON.stringify(config.data, null, 2));
+                        } catch (e) {
+                          console.error("Error getting config from counterparty:", e);
+                        }
+                      }}
+                      enterButton="Get Config"
+                    />
+                  </Form.Item>
 
-              <Form.Item
-                label="Counterparty Public Identifier"
-                name="counterpartyIdentifier"
-                rules={[{ required: true, message: "Counterparty Public Identifier" }]}
-              >
-                <Input.Password />
-              </Form.Item>
+                  {counterpartyConfig && (
+                    <Form.Item label="Counterparty Config">
+                      <Typography.Text code>{counterpartyConfig}</Typography.Text>
+                    </Form.Item>
+                  )}
 
-              <Form.Item {...tailLayout}>
-                <Button type="primary" htmlType="submit" loading={setupLoading}>
-                  Setup
-                </Button>
-              </Form.Item>
-            </Form>
-            // <Input.Search
-            //   placeholder="Counterparty Url"
-            //   enterButton="Setup Channel"
-            //   size="large"
-            //   value={counterpartyUrl}
-            //   onChange={event => setCounterpartyUrl(event.target.value)}
-            //   onSearch={async () => {
-            //     setSetupLoading(true);
-            //     await setupChannel();
-            //     setSetupLoading(false);
-            //   }}
-            //   loading={setupLoading}
-            // />
-          )}
-        </Col>
-      </Row>
-      <Divider orientation="left">Balance</Divider>
-      <Row gutter={16}>
-        {channel && (
-          <Col span={24}>
-            <Row>
-              <Table
-                dataSource={channel.assetIds.map((assetId, index) => {
-                  return {
-                    key: index,
-                    assetId,
-                    counterpartyBalance: channel.balances[index].amount[0], // they are Alice
-                    myBalance: channel.balances[index].amount[1], // we are Bob
-                  };
-                })}
-                columns={[
-                  {
-                    title: "Asset ID",
-                    dataIndex: "assetId",
-                    key: "assetId",
-                  },
-                  {
-                    title: "My Balance",
-                    dataIndex: "myBalance",
-                    key: "myBalance",
-                  },
-                  {
-                    title: "Counterparty Balance",
-                    dataIndex: "counterpartyBalance",
-                    key: "counterpartyBalance",
-                  },
-                ]}
-              />
-            </Row>
-            <Row>
+                  <Form.Item
+                    label="Counterparty Public Identifier"
+                    name="counterpartyIdentifier"
+                    rules={[{ required: true, message: "Please enter counterparty public identifier (i.e. indra...)" }]}
+                  >
+                    <Input />
+                  </Form.Item>
+
+                  <Form.Item {...tailLayout}>
+                    <Button type="primary" htmlType="submit" loading={setupLoading}>
+                      Setup
+                    </Button>
+                  </Form.Item>
+                </Form>
+              )}
+            </Col>
+          </Row>
+          <Divider orientation="left">Balance & Deposit</Divider>
+          <Row gutter={16}>
+            {channel && channel.assetIds && (
+              <Col span={24}>
+                <Row>
+                  <Table
+                    dataSource={channel.assetIds.map((assetId, index) => {
+                      return {
+                        key: index,
+                        assetId,
+                        counterpartyBalance: channel.balances[index].amount[0], // they are Alice
+                        myBalance: channel.balances[index].amount[1], // we are Bob
+                      };
+                    })}
+                    columns={[
+                      {
+                        title: "Asset ID",
+                        dataIndex: "assetId",
+                        key: "assetId",
+                      },
+                      {
+                        title: "My Balance",
+                        dataIndex: "myBalance",
+                        key: "myBalance",
+                      },
+                      {
+                        title: "Counterparty Balance",
+                        dataIndex: "counterpartyBalance",
+                        key: "counterpartyBalance",
+                      },
+                    ]}
+                  />
+                </Row>
+              </Col>
+            )}
+          </Row>
+          <Row gutter={16}>
+            <Col span={18}>
               <Input.Search
-                placeholder="Asset Id"
+                placeholder={constants.AddressZero}
                 enterButton="Reconcile Deposit"
                 size="large"
-                value={depositAssetId}
-                onChange={event => setDepositAssetId(event.target.value)}
-                onSearch={async () => {
+                suffix="Asset ID"
+                onSearch={async assetId => {
                   setDepositLoading(true);
-                  await reconcileDeposit();
+                  await reconcileDeposit(assetId || constants.AddressZero);
                   setDepositLoading(false);
                 }}
                 loading={depositLoading}
               />
-            </Row>
-          </Col>
-        )}
-      </Row>
+            </Col>
+          </Row>
+          <Row gutter={16} style={{ paddingTop: 16 }}>
+            <Col span={18}>
+              <Input.Search
+                placeholder={constants.AddressZero}
+                enterButton="Request Collateral"
+                size="large"
+                suffix="Asset ID"
+                onSearch={async assetId => {
+                  setRequestCollateralLoading(true);
+                  await requestCollateral(assetId || constants.AddressZero);
+                  setRequestCollateralLoading(false);
+                }}
+                loading={requestCollateralLoading}
+              />
+            </Col>
+          </Row>
+        </>
+      )}
     </div>
   );
 }
