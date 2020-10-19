@@ -39,7 +39,7 @@ config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] 
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
-then interactive="--interactive --tty"
+then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
@@ -67,7 +67,7 @@ docker run \
 
 echo "Starting server node unit tests"
 docker run \
-  "$interactive" \
+  "${interactive[@]}" \
   --entrypoint="bash" \
   --env="VECTOR_CONFIG=$config" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@$postgres_host:5432/$project" \

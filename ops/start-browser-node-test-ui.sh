@@ -10,7 +10,7 @@ docker network create --attachable --driver overlay "$project" 2> /dev/null || t
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
-then interactive="--interactive --tty"
+then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
@@ -21,7 +21,7 @@ function getConfig { echo "$node_config" | jq ".$1" | tr -d '"'; }
 public_port="$(getConfig port)"
 
 docker run \
-  "$interactive" \
+  "${interactive[@]}" \
   --entrypoint="bash" \
   --env="REACT_APP_VECTOR_CONFIG=$node_config" \
   --env="SKIP_PREFLIGHT_CHECK=true" \

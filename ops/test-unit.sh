@@ -14,7 +14,7 @@ chain_id=$3
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
-then interactive="--interactive --tty"
+then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
@@ -81,7 +81,7 @@ else
 fi
 
 docker run \
-  "$interactive" \
+  "${interactive[@]}" \
   --entrypoint="bash" \
   --env="VECTOR_CONFIG=$config" \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \

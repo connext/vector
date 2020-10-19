@@ -25,14 +25,14 @@ echo "Running $test_type test with $num_agents agents"
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
-then interactive="--interactive --tty"
+then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
 ########################################
 ## Launch test runner
 
-common="$interactive \
+common="${interactive[*]} \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
   --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
   --env=VECTOR_AUTH_URL=http://auth:5040 \

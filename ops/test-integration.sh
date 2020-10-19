@@ -15,14 +15,15 @@ bash "$root/ops/start-$stack.sh"
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
-then interactive="--interactive --tty"
+then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
 ########################################
 ## Launch test runner
+
 tester_name=${project}_${stack}_test_runner
-common="$interactive \
+common="${interactive[*]} \
   --env=NODE_TLS_REJECT_UNAUTHORIZED=0 \
   --env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN \
   --env=VECTOR_ALICE_URL=http://alice:8000 \
