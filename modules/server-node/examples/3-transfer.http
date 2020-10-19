@@ -21,6 +21,7 @@
 @lockHash = 0x7783846bebe64b2dbf16ca981d27a73ada4bc6976e5be3ef92f0057af8368ce1
 
 @routingId = 0x5e7af61c2bd7243ea005c3f350dbee1eeac55fef120e47db2cfa6e5394bd6942
+@transferId = 0x
 
 ##############
 ### Create Transfer ETH
@@ -45,13 +46,29 @@ Content-Type: application/json
 }
 
 ##############
-### Resolve Transfer ETH
+### Resolve Transfer
 POST {{bobUrl}}/transfers/resolve
 Content-Type: application/json
 
 {
   "publicIdentifier": "{{bobPublicIdentifier}}",
   "channelAddress": "{{aliceBobChannel}}",
-  "routingId": "{{routingId}}",
-  "preImage": "{{preImage}}"
+  "transferId": "{{transferId}}",
+  "transferResolver": {
+    "preImage": "{{preImage}}"
+  }
+}
+
+##############
+### Cancel Transfer
+POST {{bobUrl}}/transfers/resolve
+Content-Type: application/json
+
+{
+  "publicIdentifier": "{{bobPublicIdentifier}}",
+  "channelAddress": "{{aliceBobChannel}}",
+  "transferId": "{{transferId}}",
+  "transferResolver": {
+    "preImage": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  }
 }
