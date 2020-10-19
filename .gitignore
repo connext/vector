@@ -28,6 +28,7 @@ config-prod.json
 **/.test-store
 **/.tmp
 **/cache/**
+**/*.backup
 
 # Data Storage
 **/.bot-store/

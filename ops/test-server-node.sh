@@ -4,23 +4,22 @@ set -e
 unit="server_node"
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
-registry="`cat $root/package.json | grep '"registry":' | head -n 1 | cut -d '"' -f 4`"
+project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
-docker network create --attachable --driver overlay $project 2> /dev/null || true
+docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
 cmd="${1:-test}"
 
 ####################
 # Load Config
 
-config="`cat $root/config-node.json`"
+config="$(cat "$root/config-node.json")"
 
 # Override logLevel if env var is provided
 if [[ -n "$LOG_LEVEL" ]]
-then config="`echo "$config" '{"logLevel":'$LOG_LEVEL'}' | jq -s '.[0] + .[1]'`"
+then config="$(echo "$config" '{"logLevel":'"$LOG_LEVEL"'}' | jq -s '.[0] + .[1]')"
 fi
 
 ####################
@@ -32,20 +31,24 @@ version="latest"
 # Global services / chain provider config
 
 alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
-bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
-sugardaddy_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
-bash $root/ops/start-global.sh
+bash "$root/ops/start-global.sh"
 
-chain_addresses="`cat $root/.chaindata/chain-addresses.json`"
-config="`echo "$config" '{"chainAddresses":'$chain_addresses'}' | jq -s '.[0] + .[1]'`"
+chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
+
+# If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
+if [[ -t 0 && -t 1 && -t 2 ]]
+then interactive="--interactive --tty"
+else echo "Running in non-interactive mode"
+fi
 
 ########################################
 # Launch stack
 
 function cleanup {
   echo "Tests finished, stopping database.."
-  docker container stop $postgres_host 2> /dev/null || true
+  docker container stop "$postgres_host" 2> /dev/null || true
 }
 trap cleanup EXIT SIGINT SIGTERM
 
@@ -64,7 +67,7 @@ echo "Starting $postgres_host.."
 
 echo "postgresql://$project:$project@${project}_database:5432/$project"
 docker run \
-  $interactive \
+  "$interactive" \
   --entrypoint="bash" \
   --env="VECTOR_CONFIG=$config" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@$postgres_host:5432/$project" \
@@ -74,4 +77,4 @@ docker run \
   --rm \
   --tmpfs="/tmp" \
   --volume="$root:/root" \
-  ${project}_builder "/test.sh" "server-node" "$cmd"
+  "${project}_builder:$version" "/test.sh" "server-node" "$cmd"

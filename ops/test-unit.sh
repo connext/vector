@@ -2,11 +2,11 @@
 set -e
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
+project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
-docker network create --attachable --driver overlay $project 2> /dev/null || true
+docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
 unit=$1
 cmd=$2
@@ -18,9 +18,9 @@ then interactive="--interactive --tty"
 else echo "Running in non-interactive mode"
 fi
 
-node_config="`cat $root/config-node.json`"
-router_config="`cat $root/config-router.json`"
-config="`echo $node_config $router_config | jq -s '.[0] + .[1]'`"
+node_config=$(cat "$root/config-node.json")
+router_config=$(cat "$root/config-router.json")
+config=$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')
 
 ########################################
 # If we need a chain for these tests, start the evm & stop it when we're done
@@ -29,18 +29,18 @@ eth_mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble swe
 
 if [[ -n "$chain_id" ]]
 then
-  port="${VECTOR_CHAIN_PORT:-`expr 8545 - 1337 + $chain_id`}"
+  port="${VECTOR_CHAIN_PORT:-$(( 8545 - 1337 + chain_id ))}"
   ethprovider_host="evm_$chain_id"
   chain_data="$root/.chaindata/$chain_id"
-  mkdir -p $chain_data
+  mkdir -p "$chain_data"
 
   function cleanup {
     echo "Tests finished, stopping evm.."
-    docker container stop $ethprovider_host 2> /dev/null || true
+    docker container stop "$ethprovider_host" 2> /dev/null || true
   }
   trap cleanup EXIT SIGINT SIGTERM
 
-  docker run $opts \
+  docker run \
     --detach \
     --entrypoint bash \
     --env "CHAIN_ID=$chain_id" \
@@ -53,27 +53,28 @@ then
     --publish "$port:8545" \
     --rm \
     --tmpfs "/tmp" \
-    ${project}_builder modules/contracts/ops/entry.sh
+    "${project}_builder" modules/contracts/ops/entry.sh
 
   chain_addresses="$chain_data/chain-addresses.json"
 
-  while [[ ! -f "$chain_addresses" || -z `cat $chain_addresses | grep "transferRegistryAddress"` ]]
+  # TODO: this change to appease shellcheck might be wrong & should be revisited
+  while ! grep -q "transferRegistryAddress" "$chain_addresses"
   do
-    if [[ -z `docker container ls -f name=$ethprovider_host -q` ]]
+    if [[ -z $(docker container ls -f "name=$ethprovider_host" -q) ]]
     then echo "$ethprovider_host was not able to start up successfully" && exit 1
     else sleep 1
     fi
   done
   echo "Provider for chain ${chain_id} is awake & ready to go on port ${port}!"
 
-  CHAIN_ADDRESSES="`cat "$chain_addresses"`"
+  CHAIN_ADDRESSES="$(cat "$chain_addresses")"
   CHAIN_PROVIDERS="{\"$chain_id\":\"http://$ethprovider_host:8545\"}"
 
   echo "CHAIN_PROVIDERS=${CHAIN_PROVIDERS}"
   echo "CHAIN_ADDRESSES=${CHAIN_ADDRESSES}"
 
-  config="`echo "$config" '{"chainProviders":'$CHAIN_PROVIDERS'}' | jq -s '.[0] + .[1]'`"
-  config="`echo "$config" '{"chainAddresses":'$CHAIN_ADDRESSES'}' | jq -s '.[0] + .[1]'`"
+  config="$(echo "$config" '{"chainProviders":'"$CHAIN_PROVIDERS"'}' | jq -s '.[0] + .[1]')"
+  config="$(echo "$config" '{"chainAddresses":'"$CHAIN_ADDRESSES"'}' | jq -s '.[0] + .[1]')"
 
 else
   CHAIN_PROVIDERS="{}"
@@ -81,7 +82,7 @@ else
 fi
 
 docker run \
-  $interactive \
+  "$interactive" \
   --entrypoint="bash" \
   --env="VECTOR_CONFIG=$config" \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
@@ -93,4 +94,4 @@ docker run \
   --rm \
   --tmpfs="/tmp" \
   --volume="$root:/root" \
-  ${project}_builder "/test.sh" "$unit" "$cmd"
+  "${project}_builder" "/test.sh" "$unit" "$cmd"

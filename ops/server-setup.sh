@@ -1,7 +1,7 @@
 #!/bin/bash
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
+project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 hostname="$1"
 prvkey="${SSH_KEY:-$HOME/.ssh/id_rsa}"
@@ -22,20 +22,22 @@ fi
 # Prepare to load the node's signing key into the server's secret store
 echo "Optional: Copy the $secret_name secret to your clipboard then paste it below & hit enter (no echo)"
 echo -n "> "
-read -s mnemonic
+read -rs mnemonic
 echo
 
 # If we can login as ubuntu, then the user is already setup
 echo "Attempting to login as $user to $hostname"
-if ssh -q -i $prvkey $user@$hostname exit 2> /dev/null
+if ssh -q -i "$prvkey" "$user@$hostname" exit 2> /dev/null
 then
 	echo "Login success, skipping user setup"
 
 # If we can login as root then setup a sudo user & turn off root login
-elif ssh -q -i $prvkey root@$hostname exit 2> /dev/null
+elif ssh -q -i "$prvkey" "root@$hostname" exit 2> /dev/null
 then
 	echo "Failed to login, configuring a new $user user."
-  ssh -i $prvkey root@$hostname "bash -s" <<-EOF
+  # We need values from both the client & server side, so we aren't quoting "EOF"
+  # shellcheck disable=SC2087
+  ssh -i "$prvkey" "root@$hostname" "bash -s" <<-EOF
 		set -e
 		function createuser {
 			adduser --gecos "" \$1 <<-EOIF
@@ -69,12 +71,12 @@ then
 	EOF
   echo "Waiting for server to wake up again ($?)"
 
-  while ! ssh -q -i $prvkey $user@$hostname exit 2> /dev/null
+  while ! ssh -q -i "$prvkey" "$user@$hostname" exit 2> /dev/null
   do echo -n "." && sleep 3
   done
   echo " Good morning!"
 else
-  ssh -i $prvkey $user@$hostname exit
+  ssh -i "$prvkey" "$user@$hostname" exit
   echo
   echo "Aborting: Can't login as $user or root, idk how to setup this server."
   exit 1
@@ -84,11 +86,13 @@ if [[ -f "$pubkey" ]]
 then
   echo "Copying $pubkey to remote server..."
   echo "scp -i $prvkey $pubkey $user@$hostname:/home/$user/.ssh/another_authorized_key"
-  scp -i $prvkey $pubkey $user@$hostname:/home/$user/.ssh/another_authorized_key
+  scp -i "$prvkey" "$pubkey" "$user@$hostname:/home/$user/.ssh/another_authorized_key"
 fi
 
 echo "Setting up dependencies for $user@$hostname"
-ssh -i $prvkey $user@$hostname "sudo -S bash -s" <<EOF
+# We need values from both the client & server side, so we aren't quoting "EOF"
+# shellcheck disable=SC2087
+ssh -i "$prvkey" "$user@$hostname" "sudo -S bash -s" <<EOF
 set -e
 
 cd /home/$user
