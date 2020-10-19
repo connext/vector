@@ -6,8 +6,9 @@ import { Wallet, constants } from "ethers";
 import { Col, Divider, Row, Spin, Statistic, Input, Typography, Table, Button } from "antd";
 
 import "./App.css";
-import { config } from "./config";
 import { FullChannelState } from "@connext/vector-types";
+
+import { config } from "./config";
 
 const logger = pino();
 const wallet = Wallet.fromMnemonic(config.mnemonic!);

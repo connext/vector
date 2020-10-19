@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ -d "modules/test-runner" ]]
-then cd modules/test-runner
+then cd modules/test-runner || exit 1
 fi
 
 cmd="${1:-test}"
@@ -26,7 +26,7 @@ function wait_for {
     fi
   fi
   echo "Waiting for $name at $target ($host) to wake up..."
-  wait-for -q -t 60 $host 2>&1 | sed '/nc: bad address/d'
+  wait-for -q -t 60 "$host" 2>&1 | sed '/nc: bad address/d'
 }
 
 if [[ "$stack" == "global" ]]
@@ -66,27 +66,28 @@ then
   prev_checksum=""
   while true
   do
-    checksum="`find src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
+    checksum="$(find src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
     if [[ "$checksum" != "$prev_checksum" ]]
     then
       echo
       echo "Changes detected!"
 
-      mocha_pids="`ps | grep [m]ocha | awk '{print $1}'`"
+      mocha_pids="$(pgrep "mocha" | tr '\n\r' ' ')"
       if [[ -n "$mocha_pids" ]]
       then
+        echo "Stopping all mocha processes w pids: ${mocha_pids}"
         echo "Stopping previous test run.."
         for pid in $mocha_pids
-        do kill $pid 2> /dev/null
+        do kill "$pid" 2> /dev/null
         done
       fi
 
       echo "Re-running tests..."
 
-      prev_checksum="`find src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum`"
-      if [[ -n "`which pino-pretty`" ]]
-      then (ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target | pino-pretty --colorize &)
-      else (ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target &)
+      prev_checksum="$(find src -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
+      if [[ -n "$(which pino-pretty)" ]]
+      then (ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit "$target" | pino-pretty --colorize &)
+      else (ts-mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit "$target" &)
       fi
 
     # If no changes, do nothing
@@ -103,9 +104,9 @@ else
   fi
 
   set -o pipefail
-  if [[ -n "`which pino-pretty`" ]]
-  then mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target | pino-pretty --colorize
-  else mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit $target
+  if [[ -n "$(which pino-pretty)" ]]
+  then mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit "$target" | pino-pretty --colorize
+  else mocha $opts --slow 1000 --timeout 180000 --check-leaks --exit "$target"
   fi
 
 fi

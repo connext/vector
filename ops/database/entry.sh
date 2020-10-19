@@ -7,7 +7,7 @@ set -e
 # 60 sec/min * 30 min = 1800
 backup_frequency="1800"
 mkdir -p snapshots
-backup_file="snapshots/`ls snapshots | sort -r | head -n 1`"
+backup_file="$(find snapshots -type f | sort -r | head -n 1)"
 readonly_password="${VECTOR_ADMIN_TOKEN:-cxt1234}"
 
 ########################################
@@ -22,11 +22,11 @@ function unlock {
   sleep 2
   while [[ -f "$lock" ]]
   do
-    mode=${1:-fast}
-    postmaster="`head -n1 $lock`"
+    postmaster="$(head -n1 $lock)"
     log "Waiting on lock for pid $postmaster to be released..."
-    if [[ -n "`ps -o pid | grep $postmaster`" ]]
-    then log "Process $postmaster is running, killing it now.." && kill $postmaster
+
+    if ps -p "$postmaster" > /dev/null
+    then log "Process $postmaster is running, killing it now.." && kill "$postmaster"
     else log "Process $postmaster is NOT running, removing the lock now.." && rm $lock
     fi
     sleep 2
@@ -59,7 +59,7 @@ log "Starting temp database for initialization & backup recovery.."
 unlock fast
 docker-entrypoint.sh postgres &
 PID=$!
-while ! psql -U $POSTGRES_USER -d $POSTGRES_DB -c "select 1" > /dev/null 2>&1
+while ! psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select 1" > /dev/null 2>&1
 do log "Waiting for db to wake up.." && sleep 1
 done
 log "Good morning, Postgres!"
@@ -68,14 +68,14 @@ log "Good morning, Postgres!"
 if [[ "$isFresh" == "true" && -f "$backup_file" && "$VECTOR_PROD" == "true" ]]
 then 
   log "Fresh postgres db started w backup present, we'll restore: $backup_file"
-  psql --username=$POSTGRES_USER $POSTGRES_DB < $backup_file
+  psql "--username=$POSTGRES_USER" "$POSTGRES_DB" < "$backup_file"
   log "Done restoring db snapshot"
 else
   log "Not restoring: Database exists ($isFresh) or no snapshots found ($backup_file) or not in prod-mode (prod=$VECTOR_PROD)"
 fi
 
 # Create a readonly user
-psql --username=$POSTGRES_USER $POSTGRES_DB <<EOF
+psql "--username=$POSTGRES_USER" "$POSTGRES_DB" <<EOF
 CREATE USER readonly;
 ALTER USER readonly PASSWORD '$readonly_password';
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;

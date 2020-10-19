@@ -9,6 +9,6 @@ fi
 echo
 echo " seconds | module"
 echo "---------+----------------"
-for step in `ls $flags`
-do echo "`cat $flags/$step` $step"
+for step in $flags/*
+do echo "$(cat "$step") $step" | sed 's/.flags\///'
 done | sort -nr | awk '{printf(" %7s | %s\n", $1, $2)}'

@@ -22,14 +22,14 @@ loading_pid="$!"
 # Define service hostnames & ports we depend on
 
 echo "waiting for $VECTOR_NODE_URL..."
-wait-for -q -t 60 $VECTOR_NODE_URL 2>&1 | sed '/nc: bad address/d'
-while ! curl -s $VECTOR_NODE_URL > /dev/null
+wait-for -q -t 60 "$VECTOR_NODE_URL" 2>&1 | sed '/nc: bad address/d'
+while ! curl -s "$VECTOR_NODE_URL" > /dev/null
 do sleep 2
 done
 
 echo "waiting for $VECTOR_ROUTER_URL..."
-wait-for -q -t 60 $VECTOR_ROUTER_URL 2>&1 | sed '/nc: bad address/d'
-while ! curl -s $VECTOR_ROUTER_URL > /dev/null
+wait-for -q -t 60 "$VECTOR_ROUTER_URL" 2>&1 | sed '/nc: bad address/d'
+while ! curl -s "$VECTOR_ROUTER_URL" > /dev/null
 do sleep 2
 done
 
@@ -54,14 +54,14 @@ mkdir -p /var/www/letsencrypt
 if [[ "$VECTOR_DOMAINNAME" == "localhost" && ! -f "$certsdir/privkey.pem" ]]
 then
   echo "Developing locally, generating self-signed certs"
-  mkdir -p $certsdir
-  openssl req -x509 -newkey rsa:4096 -keyout $certsdir/privkey.pem -out $certsdir/fullchain.pem -days 365 -nodes -subj '/CN=localhost'
+  mkdir -p "$certsdir"
+  openssl req -x509 -newkey rsa:4096 -keyout "$certsdir/privkey.pem" -out "$certsdir/fullchain.pem" -days 365 -nodes -subj '/CN=localhost'
 fi
 
 if [[ ! -f "$certsdir/privkey.pem" ]]
 then
   echo "Couldn't find certs for $VECTOR_DOMAINNAME, using certbot to initialize those now.."
-  certbot certonly --standalone -m $VECTOR_EMAIL --agree-tos --no-eff-email -d $VECTOR_DOMAINNAME -n
+  certbot certonly --standalone -m "$VECTOR_EMAIL" --agree-tos --no-eff-email -d "$VECTOR_DOMAINNAME" -n
   code=$?
   if [[ "$code" -ne 0 ]]
   then
@@ -77,7 +77,7 @@ export VECTOR_CERTBOT_PORT=31820
 
 function copycerts {
   if [[ -f $certsdir/fullchain.pem && -f $certsdir/privkey.pem ]]
-  then cat $certsdir/fullchain.pem $certsdir/privkey.pem > "$VECTOR_DOMAINNAME.pem"
+  then cat "$certsdir/fullchain.pem" "$certsdir/privkey.pem" > "$VECTOR_DOMAINNAME.pem"
   elif [[ -f "$certsdir-0001/fullchain.pem" && -f "$certsdir-0001/privkey.pem" ]]
   then cat "$certsdir-0001/fullchain.pem" "$certsdir-0001/privkey.pem" > "$VECTOR_DOMAINNAME.pem"
   else

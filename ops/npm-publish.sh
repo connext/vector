@@ -8,7 +8,7 @@ default_packages="types,utils,contracts,protocol,engine,browser-node"
 packages="${1:-$default_packages}"
 
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-project="`cat $root/package.json | grep '"name":' | head -n 1 | cut -d '"' -f 4`"
+project=$(grep '"name":' "$root/package.json" | head -n 1 | cut -d '"' -f 4)
 
 ########################################
 ## Helper functions
@@ -20,7 +20,7 @@ function get_latest_version {
 ########################################
 ## Run some sanity checks to make sure we're really ready to npm publish
 
-if [[ ! "`pwd | sed 's|.*/\(.*\)|\1|'`" =~ "$project" ]]
+if [[ ! "$(pwd | sed 's|.*/\(.*\)|\1|')" =~ $project ]]
 then echo "Aborting: Make sure you're in the $project project root" && exit 1
 fi
 
@@ -30,17 +30,17 @@ package_names=""
 package_versions=""
 
 echo
-for package in `echo $packages | tr ',' ' '`
+for package in $(echo "$packages" | tr ',' ' ')
 do
-  package_name="`cat modules/$package/package.json | grep '"name":' | awk -F '"' '{print $4}'`"
-  package_version="`npm view $package_name version 2> /dev/null || echo "0.0.0"`"
+  package_name="$(grep '"name":' "modules/$package/package.json" | awk -F '"' '{print $4}')"
+  package_version="$(npm view "$package_name" version 2> /dev/null || echo "0.0.0")"
   package_versions="$package_versions $package_version"
   package_names="$package_names $package_name@$package_version"
   echo "Found previously published npm package: $package_name@$package_version"
 done
 echo
 
-highest_version="`get_latest_version $package_versions`"
+highest_version=$(get_latest_version "$package_versions")
 
 echo "What version of @connext/{$packages} packages are we publishing?"
 echo "Currently, latest version: $highest_version"
@@ -52,13 +52,13 @@ if [[ -z "$target_version" ]]
 then echo "Aborting: A new, unique version is required" && exit 1
 # elif [[ "$package_versions" =~ "$target_version" ]]
 # then echo "Aborting: A new, unique version is required" && exit 1
-elif [[ "`get_latest_version $package_versions $target_version`" != "$target_version" ]]
+elif [[ "$(get_latest_version "$package_versions" "$target_version")" != "$target_version" ]]
 then
-  for package in `echo $packages | tr ',' ' '`
+  for package in $(echo "$packages" | tr ',' ' ')
   do
-    package_name="`cat modules/$package/package.json | grep '"name":' | awk -F '"' '{print $4}'`"
+    package_name="$(grep '"name":' "modules/$package/package.json" | awk -F '"' '{print $4}')"
     # make sure this is still a unique version number, even though its old
-    version_exists="`npm view $package_name@$target_version version 2> /dev/null || echo "0.0.0"`"
+    version_exists="$(npm view "$package_name@$target_version" version 2> /dev/null || echo "0.0.0")"
     if [[ -z "$version_exists" ]]
     then echo "Safe to publish $package_name@$target_version"
     else echo "Aborting: version $package_name@$target_version already exists" && exit 1
@@ -80,49 +80,48 @@ if [[ ! "$REPLY" =~ ^[Yy]$ ]]
 then echo "Aborting by user request" && exit 1 # abort!
 fi
 
-echo "Let's go"
-cd modules
+( # () designates a subshell so we don't have to cd back to where we started afterwards
+  echo "Let's go"
+  cd modules
 
-for package in $package_names
-do
-  echo
-  echo "Dealing w package: $package"
-  fullname="${package%@*}" # i.e. '@connext/vector-types'
-  nickname="${fullname#*/}" # i.e. 'vector-types'
-  path="${nickname#*-}" # i.e. 'types'
-  version="$target_version"
-  echo "Updating $nickname package version to $version"
-  cd $path
-  mv package.json .package.json
-  cat .package.json | sed 's/"version": ".*"/"version": "'$version'"/' > package.json
-  rm .package.json
-  echo "Publishing $fullname"
-
-  # If the version has a release-candidate suffix like "-rc.2" then tag it as "next"
-  if [[ "$version" == *-rc* ]]
-  then npm publish --tag next --access=public
-  else npm publish --access=public
-  fi
-
-  echo "Updating $fullname references in root"
-  mv package.json .package.json
-  cat .package.json | sed 's|"'"$fullname"'": ".*"|"'"$fullname"'": "'$version'"|' > package.json
-  rm .package.json
-
-  echo
-  cd ..
-  for module in `ls */package.json`
+  for package in $package_names
   do
-    echo "Updating $fullname references in $module"
-    cd ${module%/*}
+    echo
+    echo "Dealing w package: $package"
+    fullname="${package%@*}" # i.e. '@connext/vector-types'
+    nickname="${fullname#*/}" # i.e. 'vector-types'
+    path="${nickname#*-}" # i.e. 'types'
+    version="$target_version"
+    echo "Updating $nickname package version to $version"
+    cd "$path" || exit 1
     mv package.json .package.json
-    cat .package.json | sed 's|"'"$fullname"'": ".*"|"'"$fullname"'": "'$version'"|' > package.json
+    sed 's/"version": ".*"/"version": "'"$version"'"/' < .package.json > package.json
     rm .package.json
-    cd ..
-  done
-done
+    echo "Publishing $fullname"
 
-cd ..
+    # If the version has a release-candidate suffix like "-rc.2" then tag it as "next"
+    if [[ "$version" == *-rc* ]]
+    then npm publish --tag next --access=public
+    else npm publish --access=public
+    fi
+
+    echo "Updating $fullname references in root"
+    mv package.json .package.json
+    sed 's|"'"$fullname"'": ".*"|"'"$fullname"'": "'"$version"'"|' < .package.json > package.json
+    rm .package.json
+
+    echo
+    cd ..
+    for module in */package.json
+    do (
+      echo "Updating $fullname references in $module"
+      cd "${module%/*}"
+      mv package.json .package.json
+      sed 's|"'"$fullname"'": ".*"|"'"$fullname"'": "'"$version"'"|' < .package.json > package.json
+      rm .package.json
+    ) done
+  done
+)
 
 echo
 echo "Commiting & tagging our changes"
@@ -133,7 +132,7 @@ tag="npm-publish-${1:-"all"}-$target_version"
 
 git add .
 git commit --allow-empty -m "npm publish @connext/{$packages}@$target_version"
-git tag $tag
+git tag "$tag"
 git push origin HEAD --no-verify
-git push origin $tag --no-verify
+git push origin "$tag" --no-verify
  
