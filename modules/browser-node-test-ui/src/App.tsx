@@ -1,9 +1,9 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { ChannelSigner } from "@connext/vector-utils";
+import { ChannelSigner, getBalanceForAssetId } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants, utils } from "ethers";
-import { Col, Divider, Row, Spin, Statistic, Input, Typography, Table, Form, Button } from "antd";
+import { Col, Divider, Row, Spin, Statistic, Input, Typography, Table, Form, Button, Select } from "antd";
 
 import "./App.css";
 import { EngineEvents, FullChannelState } from "@connext/vector-types";
@@ -12,14 +12,6 @@ import { config } from "./config";
 import Axios from "axios";
 
 const logger = pino();
-
-const layout = {
-  labelCol: { span: 6 },
-  wrapperCol: { span: 16 },
-};
-const tailLayout = {
-  wrapperCol: { span: 6, offset: 6 },
-};
 
 const storedMnemonic = localStorage.getItem("mnemonic");
 
@@ -33,8 +25,11 @@ function App() {
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
   const [depositLoading, setDepositLoading] = useState<boolean>(false);
   const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
+  const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
 
   const [connectError, setConnectError] = useState<string>();
+
+  const [withdrawForm] = Form.useForm();
 
   useEffect(() => {
     const init = async () => {
@@ -50,6 +45,7 @@ function App() {
   const connectNode = async (mnemonic: string) => {
     console.log(config);
     try {
+      setConnectLoading(true);
       const wallet = Wallet.fromMnemonic(mnemonic);
       const signer = new ChannelSigner(wallet.privateKey);
       const client = await BrowserNode.connect({
@@ -77,6 +73,8 @@ function App() {
     } catch (e) {
       console.error("Error connecting node: ", e);
       setConnectError(e.message);
+    } finally {
+      setConnectLoading(false);
     }
   };
 
@@ -108,6 +106,7 @@ function App() {
   };
 
   const reconcileDeposit = async (assetId: string) => {
+    setDepositLoading(true);
     const depositRes = await node.reconcileDeposit({
       channelAddress: channel.channelAddress,
       assetId,
@@ -115,9 +114,11 @@ function App() {
     if (depositRes.isError) {
       console.error("Error depositing", depositRes.getError());
     }
+    setDepositLoading(false);
   };
 
   const requestCollateral = async (assetId: string) => {
+    setRequestCollateralLoading(true);
     const requestRes = await node.requestCollateral({
       channelAddress: channel.channelAddress,
       assetId,
@@ -125,9 +126,22 @@ function App() {
     if (requestRes.isError) {
       console.error("Error depositing", requestRes.getError());
     }
+    setRequestCollateralLoading(false);
   };
 
-  const onFinishFailed = errorInfo => {
+  const withdraw = async (assetId: string, amount: string, recipient: string) => {
+    const requestRes = await node.withdraw({
+      channelAddress: channel.channelAddress,
+      assetId,
+      amount,
+      recipient,
+    });
+    if (requestRes.isError) {
+      console.error("Error depositing", requestRes.getError());
+    }
+  };
+
+  const onFinishFailed = (errorInfo: any) => {
     console.log("Failed:", errorInfo);
   };
 
@@ -155,16 +169,7 @@ function App() {
                 enterButton="Setup Node"
                 size="large"
                 value={mnemonic}
-                onSearch={async mnemonic => {
-                  setConnectLoading(true);
-                  try {
-                    await connectNode(mnemonic);
-                  } catch (e) {
-                    console.error("Error connecting node", e);
-                  } finally {
-                    setConnectLoading(false);
-                  }
-                }}
+                onSearch={connectNode}
                 loading={connectLoading}
               />
             </Col>
@@ -185,7 +190,8 @@ function App() {
                 <Statistic title="Channel Address" value={channel.channelAddress} />
               ) : (
                 <Form
-                  {...layout}
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 16 }}
                   name="basic"
                   initialValues={{}}
                   onFinish={async (values: { counterpartyUrl: string; counterpartyIdentifier: string }) => {
@@ -227,7 +233,7 @@ function App() {
                     <Input />
                   </Form.Item>
 
-                  <Form.Item {...tailLayout}>
+                  <Form.Item wrapperCol={{ span: 6, offset: 6 }}>
                     <Button type="primary" htmlType="submit" loading={setupLoading}>
                       Setup
                     </Button>
@@ -277,11 +283,7 @@ function App() {
                 enterButton="Reconcile Deposit"
                 size="large"
                 suffix="Asset ID"
-                onSearch={async assetId => {
-                  setDepositLoading(true);
-                  await reconcileDeposit(assetId || constants.AddressZero);
-                  setDepositLoading(false);
-                }}
+                onSearch={assetId => reconcileDeposit(assetId || constants.AddressZero)}
                 loading={depositLoading}
               />
             </Col>
@@ -291,16 +293,69 @@ function App() {
                 enterButton="Request Collateral"
                 size="large"
                 suffix="Asset ID"
-                onSearch={async assetId => {
-                  setRequestCollateralLoading(true);
-                  await requestCollateral(assetId || constants.AddressZero);
-                  setRequestCollateralLoading(false);
-                }}
+                onSearch={assetId => requestCollateral(assetId || constants.AddressZero)}
                 loading={requestCollateralLoading}
               />
             </Col>
           </Row>
           <Row gutter={16} style={{ paddingTop: 16 }}></Row>
+          <Divider orientation="left">Transfer</Divider>
+          <Divider orientation="left">Withdraw</Divider>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form
+                layout="horizontal"
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 16 }}
+                name="withdraw"
+                initialValues={{ assetId: channel?.assetIds[0], recipient: channel?.bob }}
+                onFinish={values => withdraw(values.assetId, values.amount, values.recipient)}
+                onFinishFailed={onFinishFailed}
+                form={withdrawForm}
+              >
+                <Form.Item label="Asset ID" name="assetId">
+                  <Select>
+                    {channel?.assetIds.map(aid => {
+                      return (
+                        <Select.Option key={aid} value={aid}>
+                          {aid}
+                        </Select.Option>
+                      );
+                    })}
+                  </Select>
+                </Form.Item>
+
+                <Form.Item
+                  label="Recipient"
+                  name="recipient"
+                  rules={[{ required: true, message: "Please input recipient address" }]}
+                >
+                  <Input />
+                </Form.Item>
+
+                <Form.Item
+                  label="Amount"
+                  name="amount"
+                  rules={[{ required: true, message: "Please input withdrawal amount" }]}
+                >
+                  <Input.Search
+                    enterButton="MAX"
+                    onSearch={() => {
+                      const assetId = withdrawForm.getFieldValue("assetId");
+                      const amount = getBalanceForAssetId(channel, assetId, "bob");
+                      withdrawForm.setFieldsValue({ amount });
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item>
+                  <Button type="primary" htmlType="submit">
+                    Withdraw
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Col>
+          </Row>
         </>
       )}
     </div>
