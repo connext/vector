@@ -25,8 +25,6 @@ then
   if [[ -n "$(which pino-pretty)" ]]
   then exec npm run test -- "${opts[@]}" | pino-pretty --colorize
   else exec npm run test -- "${opts[@]}"
-  # then exec npm run test | pino-pretty --colorize
-  # else exec npm run test
   fi
 
 elif [[ "${cmd##*-}" == "watch" ]]
@@ -51,7 +49,7 @@ then
       echo
       echo "Changes detected!"
 
-      test_pids="$(pgrep "$test_cmd" | tr '\n\r' ' ')"
+      test_pids="$(pgrep -f "$test_cmd" | tr '\n\r' ' ')"
       if [[ -n "$test_pids" ]]
       then
         echo "Stopping all ${test_cmd} processes w pids: ${test_pids}"
