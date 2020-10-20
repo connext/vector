@@ -9,7 +9,7 @@ import { WithdrawCommitment } from "./withdraw";
 
 const { parseEther } = utils;
 
-describe.only("withdrawCommitment", () => {
+describe("withdrawCommitment", () => {
   let addressBook: AddressBook;
   let channel: Contract;
   let token: Contract;
@@ -19,7 +19,7 @@ describe.only("withdrawCommitment", () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["TestToken", []]]);
     token = addressBook.getContract("TestToken");
-    channel = await createTestChannel();
+    channel = await createTestChannel(addressBook);
     await (await alice.sendTransaction({
       to: channel.address,
       value: BigNumber.from(amount).mul(2),

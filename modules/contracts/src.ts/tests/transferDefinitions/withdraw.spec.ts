@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import {
   WithdrawState,
   WithdrawResolver,
@@ -17,23 +18,21 @@ import {
   encodeBalance,
 } from "@connext/vector-utils";
 import { Zero } from "@ethersproject/constants";
-import { Contract, ContractFactory, Wallet } from "ethers";
+import { Contract } from "ethers";
 
-import { Withdraw } from "../../artifacts";
-import { provider } from "../constants";
+import { deployContracts } from "../../actions";
+import { AddressBook } from "../../addressBook";
+import { alice, bob } from "../constants";
+import { getTestAddressBook } from "../utils";
 
 describe("Withdraw", () => {
-  let deployer: Wallet;
-  let definition: Contract;
-  let alice: Wallet;
-  let bob: Wallet;
+  let addressBook: AddressBook;
+  let transfer: Contract;
 
   beforeEach(async () => {
-    deployer = provider.getWallets()[0];
-    alice = provider.getWallets()[1];
-    bob = provider.getWallets()[2];
-    definition = await new ContractFactory(Withdraw.abi, Withdraw.bytecode, deployer).deploy();
-    await definition.deployed();
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [["Withdraw", []]]);
+    transfer = addressBook.getContract("Withdraw");
   });
 
   const createInitialState = async (data: string): Promise<{ state: WithdrawState; balance: Balance }> => {
@@ -56,7 +55,7 @@ describe("Withdraw", () => {
   const createTransfer = async (balance: Balance, initialState: WithdrawState): Promise<boolean> => {
     const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
     const encodedBalance = encodeBalance(balance);
-    const ret = (await definition.functions.create(encodedBalance, encodedState))[0];
+    const ret = (await transfer.functions.create(encodedBalance, encodedState))[0];
     return ret;
   };
 
@@ -68,7 +67,7 @@ describe("Withdraw", () => {
     const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
     const encodedResolver = encodeTransferResolver(resolver, WithdrawResolverEncoding);
     const encodedBalance = encodeBalance(balance);
-    const ret = (await definition.functions.resolve(encodedBalance, encodedState, encodedResolver))[0];
+    const ret = (await transfer.functions.resolve(encodedBalance, encodedState, encodedResolver))[0];
     return keyify(balance, ret);
   };
 
@@ -90,7 +89,7 @@ describe("Withdraw", () => {
   };
 
   it("should deploy", async () => {
-    expect(definition.address).to.be.a("string");
+    expect(transfer.address).to.be.a("string");
   });
 
   it.skip("should return the registry information", async () => {});

@@ -1,31 +1,41 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, BigNumber } from "ethers";
 import pino from "pino";
 
+import { deployContracts } from "../actions";
+import { AddressBook } from "../addressBook";
 import { ChannelMastercopy, Proxy } from "../artifacts";
 import { VectorChainReader } from "../services";
 
 import { alice, bob, provider } from "./constants";
-import { createTestChannel, createTestChannelFactory, createTestChannelMastercopy } from "./utils";
+import { createTestChannel, getTestAddressBook } from "./utils";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
+  let addressBook: AddressBook;
+  let chainId: number;
+  let chainReader: VectorChainReader;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
-  let chainReader: VectorChainReader;
-  let chainId: number;
 
   beforeEach(async () => {
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [
+      ["ChannelMastercopy", []],
+      ["ChannelFactory", ["ChannelMastercopy"]],
+    ]);
+    channelMastercopy = addressBook.getContract("ChannelMastercopy");
+    channelFactory = addressBook.getContract("ChannelFactory");
     chainId = (await provider.getNetwork()).chainId;
-
-    channelMastercopy = await createTestChannelMastercopy();
-    channelFactory = await createTestChannelFactory(channelMastercopy);
-
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
-    chainReader = new VectorChainReader(chainProviders, pino().child({ module: "VectorChainReader" }));
+    chainReader = new VectorChainReader(
+      chainProviders,
+      pino().child({ module: "VectorChainReader" }),
+    );
   });
 
   it("should deploy", async () => {
@@ -43,7 +53,7 @@ describe("ChannelFactory", () => {
   it.skip("should return the correctly calculated channel address", async () => {});
 
   it("should create a channel", async () => {
-    const channel = await createTestChannel(channelFactory);
+    const channel = await createTestChannel(addressBook);
     const computedAddr = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,

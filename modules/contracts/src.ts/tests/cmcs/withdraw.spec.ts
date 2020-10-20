@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+
 describe("CMCWithdraw.sol", () => {
   it.skip("should work", async () => {
     // should increase the total transferred amount

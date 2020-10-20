@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+
 describe("AssetTransfer.sol", () => {
   it.skip("should successfully transfer eth", async () => {});
   it.skip("should successfully transfer erc20", async () => {});

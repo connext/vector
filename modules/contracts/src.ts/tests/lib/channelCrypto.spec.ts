@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+
 describe("LibChannelCrypto.sol", () => {
   describe("verifyChannelMessage", () => {
     it.skip("should work", async () => {});

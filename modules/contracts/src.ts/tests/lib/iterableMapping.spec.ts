@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+
 describe("LibIterableMapping.sol", () => {
   describe("stringEqual", () => {
     it.skip("should work", async () => {});

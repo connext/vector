@@ -1,8 +1,9 @@
 import { expect } from "@connext/vector-utils";
-import { Contract, ContractFactory } from "ethers";
+import { Contract } from "ethers";
 
+import { deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
-import { ChannelMastercopy, ChannelFactory, VectorChannel, TransferRegistry, Withdraw } from "../artifacts";
+import { VectorChannel } from "../artifacts";
 
 import { addressBookPath, alice, bob, provider } from "./constants";
 
@@ -13,27 +14,13 @@ export const getTestAddressBook = async (): Promise<AddressBook> => getAddressBo
   alice,
 );
 
-export const createTestChannelFactory = async (deployedChannelMastercopy?: Contract): Promise<Contract> => {
-  const channelMastercopy = deployedChannelMastercopy ?? (await createTestChannelMastercopy());
-  const channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, alice).deploy(
-    channelMastercopy.address,
-  );
-  await channelFactory.deployed();
-  return new Contract(channelFactory.address, ChannelFactory.abi, alice);
-};
-
-export const createTestChannelMastercopy = async (): Promise<Contract> => {
-  const channelMastercopy = await new ContractFactory(
-    ChannelMastercopy.abi,
-    ChannelMastercopy.bytecode,
-    alice,
-  ).deploy();
-  await channelMastercopy.deployed();
-  return new Contract(channelMastercopy.address, ChannelMastercopy.abi, alice);
-};
-
-export const createTestChannel = async (deployedChannelFactory?: Contract): Promise<Contract> => {
-  const channelFactory = deployedChannelFactory ?? (await createTestChannelFactory());
+export const createTestChannel = async (_addressBook?: AddressBook): Promise<Contract> => {
+  const addressBook = _addressBook || await getTestAddressBook();
+  await deployContracts(alice, addressBook, [
+    ["ChannelMastercopy", []],
+    ["ChannelFactory", ["ChannelMastercopy"]],
+  ]);
+  const channelFactory = addressBook.getContract("ChannelFactory");
   const doneBeingCreated: Promise<string> = new Promise(res => {
     channelFactory.once(channelFactory.filters.ChannelCreation(), res);
   });
@@ -44,25 +31,4 @@ export const createTestChannel = async (deployedChannelFactory?: Contract): Prom
   const channelAddress = await doneBeingCreated;
   expect(channelAddress).to.be.a("string");
   return new Contract(channelAddress, VectorChannel.abi, alice);
-};
-
-export const createTestWithdraw = async (): Promise<Contract> => {
-  const withdraw = await new ContractFactory(Withdraw.abi, Withdraw.bytecode, alice).deploy();
-  await withdraw.deployed();
-
-  return new Contract(withdraw.address, Withdraw.abi, alice);
-};
-
-export const createTestTransferRegistry = async (): Promise<Contract> => {
-  const transferRegistry = await new ContractFactory(TransferRegistry.abi, TransferRegistry.bytecode, alice).deploy();
-  await transferRegistry.deployed();
-
-  // add transfer to registry
-  const withdraw = await createTestWithdraw();
-  const deployed = new Contract(transferRegistry.address, TransferRegistry.abi, alice);
-
-  const response = await deployed.addTransferDefinition(await withdraw.getRegistryInformation());
-  await response.wait();
-
-  return deployed;
 };

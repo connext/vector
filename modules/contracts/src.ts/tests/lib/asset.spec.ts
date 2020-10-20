@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+
 describe("LibAsset.sol", () => {
   describe("isEther", () => {
     it.skip("should return true IFF asset is address(0)", async () => {});

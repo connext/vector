@@ -1,4 +1,7 @@
+import pino from "pino";
 import { Options } from "yargs";
+
+export const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 export const defaults = {
   mnemonic: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",

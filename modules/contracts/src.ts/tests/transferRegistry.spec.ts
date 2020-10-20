@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+
 describe("TransferRegistry.sol", () => {
   describe("addTransferDefinition", () => {
     it.skip("should work", async () => {});
