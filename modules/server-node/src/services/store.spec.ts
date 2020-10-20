@@ -1,4 +1,12 @@
-import { Balance, EngineEvent, EngineEvents, StoredTransactionStatus, TransactionReason } from "@connext/vector-types";
+import {
+  Balance,
+  EngineEvent,
+  EngineEvents,
+  FullTransferState,
+  ResolveUpdateDetails,
+  StoredTransactionStatus,
+  TransactionReason,
+} from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
   createTestChannelState,
@@ -12,6 +20,7 @@ import {
   mkAddress,
   mkPublicIdentifier,
 } from "@connext/vector-utils";
+import { constants } from "ethers";
 
 import { config } from "../config";
 
@@ -25,11 +34,7 @@ describe("store", () => {
   });
 
   beforeEach(async () => {
-    await store.prisma.balance.deleteMany({});
-    await store.prisma.onchainTransaction.deleteMany({});
-    await store.prisma.channel.deleteMany({});
-    await store.prisma.update.deleteMany({});
-    await store.prisma.transfer.deleteMany({});
+    await store.clear();
   });
 
   after(async () => {
@@ -191,6 +196,48 @@ describe("store", () => {
 
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(resolveState);
+  });
+
+  it("should update transfer resolver", async () => {
+    const transferId = mkBytes32("0xabcde");
+    const transfer: FullTransferState = createTestFullHashlockTransferState({
+      transferId,
+      preImage: constants.HashZero,
+    });
+    const createState = createTestChannelState("create", {
+      latestUpdate: { details: { transferId } },
+    });
+    await store.saveChannelState(
+      createState,
+      {
+        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
+        chainId: createState.networkContext.chainId,
+        aliceSignature: createState.latestUpdate.aliceSignature,
+        bobSignature: createState.latestUpdate.bobSignature,
+        state: createState,
+      },
+      transfer,
+    );
+    let transferFromStore = await store.getTransferState(transfer.transferId);
+    expect(transferFromStore).to.deep.eq(transfer);
+
+    const resolveState = createTestChannelState("resolve", {
+      latestUpdate: { details: { transferId } },
+    });
+    await store.saveChannelState(resolveState, {
+      channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,
+      chainId: resolveState.networkContext.chainId,
+      aliceSignature: resolveState.latestUpdate.aliceSignature,
+      bobSignature: resolveState.latestUpdate.bobSignature,
+      state: resolveState,
+    });
+    const fromStore = await store.getChannelState(resolveState.channelAddress);
+    expect(fromStore).to.deep.eq(resolveState);
+
+    transferFromStore = await store.getTransferState(transfer.transferId);
+    expect(transferFromStore.transferResolver).to.deep.eq(
+      (resolveState.latestUpdate.details as ResolveUpdateDetails).transferResolver,
+    );
   });
 
   it("should create multiple active transfers", async () => {
