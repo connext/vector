@@ -1,4 +1,3 @@
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, BigNumber } from "ethers";
@@ -65,7 +64,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDepositA(alice.address, bob.address, chainId, AddressZero, value, { value });
+      .createChannelAndDepositAlice(alice.address, bob.address, chainId, AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -85,7 +84,7 @@ describe("ChannelFactory", () => {
     const code = await provider.getCode(channelAddress);
     expect(code).to.not.be.eq("0x");
 
-    const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).totalDepositedA(
+    const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).getTotalDepositsAlice(
       AddressZero,
     );
     expect(totalDepositedA).to.be.eq(value);

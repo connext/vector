@@ -169,7 +169,7 @@ export class EthereumChainReader implements IVectorChainReader {
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let totalDepositedA: BigNumber;
     try {
-      totalDepositedA = await channelContract.totalDepositedA(assetId);
+      totalDepositedA = await channelContract.getTotalDepositsAlice(assetId);
     } catch (e) {
       // TODO: check for reason?
       // Channel contract was not deployed, use 0 value
@@ -191,7 +191,7 @@ export class EthereumChainReader implements IVectorChainReader {
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
     let totalDepositedB: BigNumber;
     try {
-      totalDepositedB = await channelContract.totalDepositedB(assetId);
+      totalDepositedB = await channelContract.getTotalDepositsBob(assetId);
     } catch (e) {
       // TODO: check for reason?
       // Channel contract was not deployed, use onchain value

@@ -4,17 +4,14 @@ pragma experimental ABIEncoderV2;
 
 import "./Types.sol";
 
-
 interface ICMCDeposit {
+  function getTotalDepositsAlice(address assetId) external view returns (uint256);
 
-    function totalDepositedA(address assetId) external view returns (uint256);
+  function getTotalDepositsBob(address assetId) external view returns (uint256);
 
-    function totalDepositedB(address assetId) external view returns (uint256);
-
-    function depositA(
-        address assetId,
-        uint256 amount
-        // bytes memory signature
-    ) external payable;
-
+  function depositAlice(
+    address assetId,
+    uint256 amount
+    // bytes memory signature
+  ) external payable;
 }

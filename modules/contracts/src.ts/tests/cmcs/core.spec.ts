@@ -1,14 +1,13 @@
 import { expect } from "chai";
 import { Contract } from "ethers";
 
-import { createTestChannelFactory, createTestChannel, alice, bob } from "..";
+import { createTestChannel, alice, bob } from "..";
 
 describe("CMCCore.sol", () => {
-  let channelFactory: Contract;
+  let channel: Contract;
 
   beforeEach(async () => {
-    const deployRes = await createTestChannelFactory();
-    channelFactory = deployRes.channelFactory;
+    channel = await createTestChannel();
   });
 
   describe("setup", async () => {
@@ -19,12 +18,11 @@ describe("CMCCore.sol", () => {
     it.skip("should fail if alice == bob", async () => {});
   });
 
-  describe("getParticipants", async () => {
-    it("should get the participants from a deployed channel", async () => {
-      const channel = await createTestChannel(channelFactory);
-      const participants = await channel.getParticipants();
-      expect(participants[0]).to.equal(alice.address);
-      expect(participants[1]).to.equal(bob.address);
+  describe("getters", async () => {
+    it("should work", async () => {
+      expect(await channel.getMastercopy()).to.be.a("string");
+      expect(await channel.getAlice()).to.equal(alice.address);
+      expect(await channel.getBob()).to.equal(bob.address);
     });
   });
 });

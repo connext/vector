@@ -26,9 +26,11 @@ describe("ChannelMastercopy", () => {
 
   it("all public methods should revert bc it's the mastercopy", async () => {
     for (const method of [
-      { name: "getParticipants", args: [] },
+      { name: "getAlice", args: [] },
+      { name: "getBob", args: [] },
+      { name: "getMastercopy", args: [] },
       { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, HashZero, HashZero] },
-      { name: "depositA", args: [AddressZero, Zero] },
+      { name: "depositAlice", args: [AddressZero, Zero] },
     ]) {
       await expect(mastercopy[method.name](...method.args)).to.be.revertedWith("This contract is the mastercopy");
     }

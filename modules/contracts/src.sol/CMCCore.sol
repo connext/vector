@@ -7,10 +7,10 @@ import "./interfaces/ICMCCore.sol";
 contract CMCCore is ICMCCore {
   // mastercopy needs to be first declared variable
   // in order to ensure storage alignment with the proxy
-  address public mastercopy;
+  address private mastercopy;
 
-  address public alice;
-  address public bob;
+  address private alice;
+  address private bob;
 
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {
@@ -29,9 +29,21 @@ contract CMCCore is ICMCCore {
     bob = _bob;
   }
 
-  /// @notice A getter function for the participants of the multisig
-  /// @return An array of addresses representing the participants
-  function getParticipants() external override view onlyOnProxy returns (address[2] memory) {
-    return [alice, bob];
+  /// @notice A getter function for the mastercopy of the multisig
+  /// @return The mastercopy address the channel was created with
+  function getMastercopy() public override view onlyOnProxy returns (address) {
+    return mastercopy;
+  }
+
+  /// @notice A getter function for the bob of the multisig
+  /// @return Bob's signer address
+  function getAlice() public override view onlyOnProxy returns (address) {
+    return alice;
+  }
+
+  /// @notice A getter function for the bob of the multisig
+  /// @return Alice's signer address
+  function getBob() public override view onlyOnProxy returns (address) {
+    return bob;
   }
 }

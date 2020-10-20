@@ -5,5 +5,9 @@ pragma experimental ABIEncoderV2;
 interface ICMCCore {
   function setup(address _alice, address _bob) external;
 
-  function getParticipants() external view returns (address[2] memory);
+  function getAlice() external view returns (address);
+
+  function getBob() external view returns (address);
+
+  function getMastercopy() external view returns (address);
 }

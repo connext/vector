@@ -74,7 +74,7 @@ describe(testName, () => {
     await bobSigner.sendTransaction({ value: depositAmount.div(4), to: preDepositChannel.channelAddress });
 
     const channel = new Contract(preDepositChannel.channelAddress, VectorChannel.abi, aliceSigner);
-    const tx = await channel.depositA(assetId, depositAmount.div(4), { value: depositAmount.div(4) });
+    const tx = await channel.depositAlice(assetId, depositAmount.div(4), { value: depositAmount.div(4) });
     await tx.wait();
 
     // Get the predeposit values

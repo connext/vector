@@ -74,7 +74,7 @@ contract ChannelFactory is IChannelFactory {
 
     /// @dev Allows us to create a new channel contract and fund it in one transaction
     /// @param bob address of the other channel participant
-    function createChannelAndDepositA(
+    function createChannelAndDepositAlice(
         address alice,
         address bob,
         uint256 chainId,
@@ -99,7 +99,7 @@ contract ChannelFactory is IChannelFactory {
                 "ChannelFactory: token approve failed"
             );
         }
-        channel.depositA{value: msg.value}(assetId, amount);
+        channel.depositAlice{value: msg.value}(assetId, amount);
     }
 
     ////////////////////////////////////////

@@ -15,19 +15,19 @@ describe("CMCDeposit.sol", () => {
   });
 
   it("should only increase totalDepositedA after receiving a direct deposit", async () => {
-    const aliceDeposits = await channel.totalDepositedA(AddressZero);
-    const bobDeposits = await channel.totalDepositedB(AddressZero);
+    const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
+    const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
     await expect(bob.sendTransaction({ to: channel.address, value })).to.be.fulfilled;
-    expect(await channel.totalDepositedA(AddressZero)).to.equal(aliceDeposits);
-    expect(await channel.totalDepositedB(AddressZero)).to.equal(bobDeposits.add(value));
+    expect(await channel.getTotalDepositsAlice(AddressZero)).to.equal(aliceDeposits);
+    expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits.add(value));
   });
 
   it("should only increase totalDepositedB after recieving a deposit via method call", async () => {
-    const aliceDeposits = await channel.totalDepositedA(AddressZero);
-    const bobDeposits = await channel.totalDepositedB(AddressZero);
-    await expect(channel.connect(alice).depositA(AddressZero, value, { value })).to.be.fulfilled;
-    expect(await channel.totalDepositedA(AddressZero)).to.equal(aliceDeposits.add(value));
-    expect(await channel.totalDepositedB(AddressZero)).to.equal(bobDeposits);
+    const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
+    const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
+    await expect(channel.connect(alice).depositAlice(AddressZero, value, { value })).to.be.fulfilled;
+    expect(await channel.getTotalDepositsAlice(AddressZero)).to.equal(aliceDeposits.add(value));
+    expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits);
   });
 
   it.skip("depositA should fail if the amount doesnt match the value", async () => {});

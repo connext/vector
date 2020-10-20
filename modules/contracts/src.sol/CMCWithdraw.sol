@@ -8,9 +8,7 @@ import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
 
-
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
-
   using LibChannelCrypto for bytes32;
 
   mapping(bytes32 => bool) isExecuted;
@@ -34,17 +32,13 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     isExecuted[withdrawHash] = true;
 
     // Validate signatures
-    require(alice == withdrawHash.verifyChannelMessage(aliceSignature), "CMCWithdraw: Invalid alice signature");
-    require(bob == withdrawHash.verifyChannelMessage(bobSignature), "CMCWithdraw: Invalid bob signature");
+    require(getAlice() == withdrawHash.verifyChannelMessage(aliceSignature), "CMCWithdraw: Invalid alice signature");
+    require(getBob() == withdrawHash.verifyChannelMessage(bobSignature), "CMCWithdraw: Invalid bob signature");
 
     // Add to totalWithdrawn
     registerTransfer(assetId, amount);
 
     // Execute the withdraw
-    require(
-      LibAsset.transfer(assetId, recipient, amount),
-      "CMCWithdraw: Transfer failed"
-    );
+    require(LibAsset.transfer(assetId, recipient, amount), "CMCWithdraw: Transfer failed");
   }
-
 }
