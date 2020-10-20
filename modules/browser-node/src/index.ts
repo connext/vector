@@ -25,7 +25,9 @@ import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 
 export type BrowserNodeConfig = {
-  messagingUrl: string;
+  natsUrl?: string;
+  authUrl?: string;
+  messagingUrl?: string;
   logger: BaseLogger;
   signer: IChannelSigner;
   chainProviders: ChainProviders;
@@ -40,6 +42,8 @@ export class BrowserNode implements INodeService {
     const messaging = new NatsMessagingService({
       logger: config.logger.child({ module: "MessagingService" }),
       messagingUrl: config.messagingUrl,
+      natsUrl: config.natsUrl,
+      authUrl: config.authUrl,
       signer: config.signer,
     });
     await messaging.connect();
@@ -103,11 +107,11 @@ export class BrowserNode implements INodeService {
     }
   }
 
-  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>> {
+  async getStateChannels(): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_getChannelStates>(rpc);
-      return Result.ok(res);
+      return Result.ok(res.map(chan => chan.channelAddress));
     } catch (e) {
       return Result.fail(e);
     }
@@ -162,7 +166,7 @@ export class BrowserNode implements INodeService {
   }
 
   async requestSetup(
-    params: OptionalPublicIdentifier<ServerNodeParams.RequestSetup>,
+    params: Omit<ServerNodeParams.RequestSetup, "bobIdentifier"> & { bobIdentifier?: string },
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
     try {
       const setupPromise = this.engine.waitFor(
@@ -201,6 +205,18 @@ export class BrowserNode implements INodeService {
     try {
       const res = await this.engine.request<typeof ChannelRpcMethods.chan_deposit>(rpc);
       return Result.ok({ channelAddress: res.channelAddress });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async requestCollateral(
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestCollateral>,
+  ): Promise<Result<ServerNodeResponses.RequestCollateral, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, params);
+    try {
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_requestCollateral>(rpc);
+      return Result.ok({ channelAddress: params.channelAddress });
     } catch (e) {
       return Result.fail(e);
     }
