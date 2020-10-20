@@ -8,7 +8,11 @@ project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
-args="${*:---help}"
+args=("$@");
+
+if [[ "${#@}" == "0" ]]
+then args=(--help);
+fi
 
 ethprovider_image="${project}_ethprovider:latest";
 bash "$root/ops/pull-images.sh" "$ethprovider_image" > /dev/null
@@ -22,4 +26,4 @@ docker run \
   --tmpfs="/tmp" \
   --tty \
   --volume="$root/address-book.json:/data/address-book.json" \
-  "$ethprovider_image" dist/cli.js migrate --address-book=/data/address-book.json "$args"
+  "$ethprovider_image" dist/cli.js migrate --address-book=/data/address-book.json "${args[@]}"
