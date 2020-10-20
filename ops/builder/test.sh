@@ -12,9 +12,10 @@ test_cmd="$(jq '.scripts.test' package.json | tr -d '\n\r"' | cut -d " " -f 1)"
 if [[ "$test_cmd" == *mocha* ]]
 then
   if [[ "$VECTOR_PROD" == "true" ]]
-  then opts="--color --forbid-only"
-  else opts="--color --bail"
+  then opts=(--color --forbid-only)
+  else opts=(--color --bail)
   fi
+else opts=();
 fi
 
 if [[ "${cmd##*-}" == "test" ]]
@@ -22,10 +23,10 @@ then
   set -o pipefail
   echo "Starting $unit tester"
   if [[ -n "$(which pino-pretty)" ]]
-  # then exec npm run test -- "$opts" | pino-pretty --colorize
-  # else exec npm run test -- "$opts"
-  then exec npm run test | pino-pretty --colorize
-  else exec npm run test
+  then exec npm run test -- "${opts[@]}" | pino-pretty --colorize
+  else exec npm run test -- "${opts[@]}"
+  # then exec npm run test | pino-pretty --colorize
+  # else exec npm run test
   fi
 
 elif [[ "${cmd##*-}" == "watch" ]]
@@ -64,8 +65,8 @@ then
 
       prev_checksum="$(find "$src" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
       if [[ -n "$(which pino-pretty)" ]]
-      then (npm run test -- "$opts" | pino-pretty --colorize &)
-      else (npm run test -- "$opts" &)
+      then (npm run test -- "${opts[@]}" | pino-pretty --colorize &)
+      else (npm run test -- "${opts[@]}" &)
       fi
 
     # If no changes, do nothing
