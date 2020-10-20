@@ -75,7 +75,7 @@ function App() {
       setMnemonic(mnemonic);
       client.on(EngineEvents.DEPOSIT_RECONCILED, async data => {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
-        await updateChannel(client);
+        await updateChannel(client, data.channelAddress);
       });
     } catch (e) {
       console.error("Error connecting node: ", e);
@@ -85,11 +85,8 @@ function App() {
     }
   };
 
-  const updateChannel = async (node: BrowserNode) => {
-    if (!channel) {
-      return;
-    }
-    const res = await node.getStateChannel({ channelAddress: channel.channelAddress });
+  const updateChannel = async (node: BrowserNode, channelAddress: string) => {
+    const res = await node.getStateChannel({ channelAddress });
     if (res.isError) {
       console.error("Error getting state channel", res.getError());
     } else {
@@ -325,6 +322,7 @@ function App() {
               </Col>
             )}
           </Row>
+          <div style={{ paddingTop: 24 }} />
           <Row gutter={16}>
             <Col span={24}>
               <Form layout="horizontal" name="deposit" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
