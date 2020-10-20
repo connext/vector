@@ -11,10 +11,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  */
 contract TestToken is ERC20 {
 
-    // TODO: just hardcode name & symbol??
-    constructor (string memory name, string memory symbol)
-        ERC20(name, symbol)
-        {}
+    constructor () ERC20("Test Token", "TEST") {
+      _mint(msg.sender, 1000000 ether);
+    }
 
     function mint(address account, uint256 amount) external {
         _mint(account, amount);

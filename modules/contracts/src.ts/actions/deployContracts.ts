@@ -8,11 +8,12 @@ const { formatEther, keccak256, parseUnits } = utils;
 
 const hash = (input: string): string => keccak256(`0x${input.replace(/^0x/, "")}`);
 
-
+// 3rd arg is: [ContractName, [ConstructorArgs]][]
+// If a ContractName is given as a ConstructorArg, it will be replaced by that contract's address
 export const deployContracts = async (
   wallet: Wallet,
   addressBook: AddressBook,
-  schema: [string, string[]][], // [ContractName, [ConstructorArgs]][]
+  schema: [string, string[]][],
   silent = false,
 ): Promise<void> => {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -57,7 +58,7 @@ export const deployContracts = async (
     }
 
     const savedAddress = addressBook.getEntry(name).address;
-    if (isContractDeployed(name, savedAddress)) {
+    if (await isContractDeployed(name, savedAddress)) {
       log(`${name} is up to date, no action required. Address: ${savedAddress}`);
       continue;
     }

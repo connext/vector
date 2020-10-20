@@ -1,61 +1,52 @@
 import { RegisteredTransfer, tidy } from "@connext/vector-types";
 import { getEthProvider } from "@connext/vector-utils";
-import { Contract, Wallet } from "ethers";
+import { Wallet } from "ethers";
 import { Argv } from "yargs";
 
-import { getAddressBook } from "../addressBook";
-import { TransferDefinition, TransferRegistry } from "../artifacts";
+import { AddressBook, getAddressBook } from "../addressBook";
 import { cliOpts } from "../constants";
 
 export const registerTransfer = async (
   transferName: string,
   wallet: Wallet,
-  addressBookPath: string,
+  addressBook: AddressBook,
   silent = false,
 ): Promise<void> => {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   const log = silent ? () => {} : console.log;
 
-  ////////////////////////////////////////
-  // Environment Setup
-
-  const chainId = process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId;
-
-  log(`\nPreparing to add ${transferName} to registry on chainId: ${chainId}`);
-  log(`Sender address=${wallet.address}`);
-
-  const addressBook = getAddressBook(addressBookPath, chainId.toString());
+  log(`\nPreparing to add ${transferName} to registry (Sender=${wallet.address})`);
 
   ////////////////////////////////////////
   // Add transfer
-  const registry = new Contract(addressBook.getEntry("TransferRegistry").address, TransferRegistry.abi, wallet);
-  const transferEntry = addressBook.getEntry(transferName);
-  if (!transferEntry) {
-    throw new Error(`No transfer found in address-book, cannot add`);
-  }
+
+  const registry = addressBook.getContract("TransferRegistry");
+  const registered = await registry.getTransferDefinitions();
+
+  const transfer = addressBook.getContract(transferName);
+  const transferInfo = await transfer.getRegistryInformation();
 
   // Check if transfer is already in registry
-  const registered = await registry.getTransferDefinitions();
   const entry = registered.find((info: RegisteredTransfer) => info.name === transferName);
   if (entry) {
-    log(`Transfer ${transferName} already registered on ${chainId} at ${entry.definition}, doing nothing`);
+    log(`Transfer ${transferName} has already been registered`);
     return;
   }
 
-  log(`Getting registry information for ${transferName} at ${transferEntry.address}`);
-  const transfer = await new Contract(transferEntry.address, TransferDefinition.abi, wallet).getRegistryInformation();
+  log(`Getting registry information for ${transferName} at ${transfer.address}`);
+
   // Sanity-check: tidy return value
   const cleaned = {
-    name: transfer.name,
-    definition: transfer.definition,
-    resolverEncoding: tidy(transfer.resolverEncoding),
-    stateEncoding: tidy(transfer.stateEncoding),
+    name: transferInfo.name,
+    definition: transferInfo.definition,
+    resolverEncoding: tidy(transferInfo.resolverEncoding),
+    stateEncoding: tidy(transferInfo.stateEncoding),
   };
-  log(`Adding transfer to registry ${JSON.stringify(cleaned)}`);
+  log(`Adding transfer to registry ${JSON.stringify(cleaned, null, 2)}`);
   const response = await registry.addTransferDefinition(cleaned);
   log(`Added: ${response.hash}`);
   await response.wait();
-  log(`Tx mined, successfully added ${cleaned.name} on ${chainId} at ${cleaned.definition}`);
+  log(`Tx mined, successfully added ${cleaned.name} on ${cleaned.definition}`);
 };
 
 export const registerTransferCommand = {
@@ -70,11 +61,11 @@ export const registerTransferCommand = {
       .option("s", cliOpts.silent);
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
-    await registerTransfer(
-      argv.transferName,
-      Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider)),
+    const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
+    const addressBook = getAddressBook(
       argv.addressBook,
-      argv.silent,
+      process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId.toString(),
     );
+    await registerTransfer(argv.transferName, wallet, addressBook, argv.silent);
   },
 };
