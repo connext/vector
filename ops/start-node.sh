@@ -12,7 +12,6 @@ docker network create --attachable --driver overlay "$project" 2> /dev/null || t
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
 then echo "A $stack stack is already running" && exit 0
-else echo
 fi
 
 ####################

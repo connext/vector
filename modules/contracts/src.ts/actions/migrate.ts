@@ -36,13 +36,12 @@ export const migrate = async (
   ////////////////////////////////////////
   // Run the migration
 
-  // Don't migrate to mainnet until disputes are safe & stuff has at least a rubber stamp audit
+  // Don't migrate to mainnet until disputes are working & major vulnerabilities are mitigated
   if (chainId === "1") {
     throw new Error(`Contract migration for chain ${chainId} is not supported yet`);
 
   // Default: run testnet migration
   } else {
-
     await deployContracts(wallet, addressBook, [
       ["TestToken", []],
       ["ChannelMastercopy", []],
@@ -51,10 +50,8 @@ export const migrate = async (
       ["Withdraw", []],
       ["TransferRegistry", []],
     ]);
-
     await registerTransfer("Withdraw", wallet, addressBook, log);
     await registerTransfer("HashlockTransfer", wallet, addressBook, log);
-
   }
 
   ////////////////////////////////////////
