@@ -20,7 +20,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
   modifier validateChannel(CoreChannelState calldata ccs) {
     require(
-      ccs.channelAddress == address(this) && ccs.alice == getAlice() && ccs.bob == getBob(),
+      ccs.channelAddress == address(this) && ccs.alice == alice && ccs.bob == bob,
       "CMCAdjudicator: Mismatch between given core channel state and channel we are at"
     );
     _;
@@ -112,8 +112,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       Balance memory balance = ccs.balances[i];
 
       // Add unprocessed deposits to amounts
-      balance.amount[0] += getTotalDepositsAlice(assetId) - ccs.processedDepositsA[i];
-      balance.amount[1] += getTotalDepositsBob(assetId) - ccs.processedDepositsB[i];
+      balance.amount[0] += _getTotalDepositsAlice(assetId) - ccs.processedDepositsA[i];
+      balance.amount[1] += _getTotalDepositsBob(assetId) - ccs.processedDepositsB[i];
 
       // Transfer funds; this will never revert or fail otherwise,
       // i.e. if the underlying "real" asset transfer fails,

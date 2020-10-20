@@ -9,8 +9,8 @@ contract CMCCore is ICMCCore {
   // in order to ensure storage alignment with the proxy
   address private mastercopy;
 
-  address private alice;
-  address private bob;
+  address internal alice;
+  address internal bob;
 
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {

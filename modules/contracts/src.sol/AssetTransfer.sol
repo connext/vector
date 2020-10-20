@@ -17,7 +17,7 @@ contract AssetTransfer {
     uint256 private constant ERC20_TRANSFER_GAS_LIMIT = 100000;
     uint256 private constant ERC20_BALANCE_GAS_LIMIT = 5000;
 
-    mapping(address => uint256) private totalTransferred;
+    mapping(address => uint256) internal totalTransferred;
     mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
 
     modifier onlySelf() {
