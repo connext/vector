@@ -6,7 +6,7 @@ import { Argv } from "yargs";
 import { cliOpts } from "../constants";
 import { getAddressBook } from "../addressBook";
 
-import { deployContracts } from "./contracts";
+import { deployContracts } from "./deployContracts";
 
 const initialSupply = utils.parseEther("100000000");
 

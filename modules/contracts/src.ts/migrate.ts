@@ -3,11 +3,9 @@ import { EtherSymbol, Zero } from "@ethersproject/constants";
 import { providers, utils, Wallet } from "ethers";
 import { Argv } from "yargs";
 
-import { getAddressBook } from "../addressBook";
-import { cliOpts } from "../constants";
-
-import { deployContracts } from "./contracts";
-import { registerTransfer } from "./registerTransfer";
+import { deployContracts, registerTransfer } from "./actions";
+import { getAddressBook } from "./addressBook";
+import { cliOpts } from "./constants";
 
 const { formatEther } = utils;
 

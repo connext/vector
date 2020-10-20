@@ -13,36 +13,38 @@ export const deployContracts = async (
   wallet: Wallet,
   addressBook: AddressBook,
   schema: [string, string[]][], // [ContractName, [ConstructorArgs]][]
+  silent = false,
 ): Promise<void> => {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const log = silent ? () => {} : console.log;
 
   // Simple sanity checks to make sure contracts from our address book have been deployed
   const isContractDeployed = async (
     name: string,
     address: string | undefined,
   ): Promise<boolean> => {
-    console.log(`Checking for valid ${name} contract...`);
+    log(`Checking for valid ${name} contract...`);
     if (!address || address === "" || address === AddressZero) {
-      console.log("This contract is not in our address book.");
+      log("This contract is not in our address book.");
       return false;
     }
 
     const savedCreationCodeHash = addressBook.getEntry(name).creationCodeHash;
-    console.log(`Artifacts: ${JSON.stringify(artifacts[name])}`);
     const creationCodeHash = hash(artifacts[name].bytecode || "0x00");
     if (!savedCreationCodeHash || savedCreationCodeHash !== creationCodeHash) {
-      console.log(`creationCodeHash in our address book doen't match ${name} artifacts`);
+      log(`creationCodeHash in our address book doen't match ${name} artifacts`);
       return false;
     }
 
     const savedRuntimeCodeHash = addressBook.getEntry(name).runtimeCodeHash;
     const runtimeCodeHash = hash(await wallet.provider.getCode(address));
     if (runtimeCodeHash === hash("0x00") || runtimeCodeHash === hash("0x")) {
-      console.log("No runtimeCode exists at the address in our address book");
+      log("No runtimeCode exists at the address in our address book");
       return false;
     }
 
     if (savedRuntimeCodeHash !== runtimeCodeHash) {
-      console.log(`runtimeCodeHash for ${address} does not match what's in our address book`);
+      log(`runtimeCodeHash for ${address} does not match what's in our address book`);
       return false;
     }
 
@@ -56,7 +58,7 @@ export const deployContracts = async (
 
     const savedAddress = addressBook.getEntry(name).address;
     if (isContractDeployed(name, savedAddress)) {
-      console.log(`${name} is up to date, no action required. Address: ${savedAddress}`);
+      log(`${name} is up to date, no action required. Address: ${savedAddress}`);
       continue;
     }
 
@@ -65,16 +67,16 @@ export const deployContracts = async (
       return entry.address !== AddressZero ? entry.address : arg;
     });
 
-    console.log(`Deploying ${name} with args [${processedArgs.join(", ")}]`);
+    log(`Deploying ${name} with args [${processedArgs.join(", ")}]`);
     const factory = ContractFactory.fromSolidity(artifacts[name]).connect(wallet);
     const deployTx = factory.getDeployTransaction(...processedArgs);
     const tx = await wallet.sendTransaction({ ...deployTx, gasPrice: parseUnits("100", 9) });
 
-    console.log(`Sent transaction to deploy ${name}, txHash: ${tx.hash}`);
+    log(`Sent transaction to deploy ${name}, txHash: ${tx.hash}`);
     const receipt = await tx.wait();
     const address = Contract.getContractAddress(tx);
 
-    console.log(`Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(receipt.gasUsed.mul(tx.gasPrice))} deploying ${name} to address: ${address}`);
+    log(`Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(receipt.gasUsed.mul(tx.gasPrice))} deploying ${name} to address: ${address}`);
     const runtimeCodeHash = hash(await wallet.provider.getCode(address));
     const creationCodeHash = hash(artifacts[name].bytecode);
     addressBook.setEntry(name, {
