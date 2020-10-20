@@ -4,7 +4,7 @@ import { providers, utils, Wallet } from "ethers";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
-import { cliOpts } from "../constants";
+import { cliOpts, logger } from "../constants";
 
 import { deployContracts } from "./deployContracts";
 import { registerTransfer } from "./registerTransfer";
@@ -14,14 +14,9 @@ const { formatEther } = utils;
 export const migrate = async (
   wallet: Wallet,
   addressBook: AddressBook,
-  silent = false,
+  log = logger.child({}),
 ): Promise<void> => {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  const log = silent ? () => {} : console.log;
-
-  ////////////////////////////////////////
   // Setup env & log initial state
-
   const chainId = (
     process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId
   ).toString();
@@ -29,8 +24,8 @@ export const migrate = async (
   const nonce = await wallet.getTransactionCount();
   const providerUrl = (wallet.provider as providers.JsonRpcProvider).connection.url;
 
-  log(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
-  log(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);
+  log.info(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
+  log.info(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);
 
   if (balance.eq(Zero)) {
     throw new Error(
@@ -57,18 +52,17 @@ export const migrate = async (
       ["TransferRegistry", []],
     ]);
 
-    await registerTransfer("Withdraw", wallet, addressBook, silent);
-    await registerTransfer("HashlockTransfer", wallet, addressBook, silent);
+    await registerTransfer("Withdraw", wallet, addressBook, log);
+    await registerTransfer("HashlockTransfer", wallet, addressBook, log);
 
   }
 
   ////////////////////////////////////////
   // Print summary
-
-  log("\nAll done!");
+  log.info("\nAll done!");
   const spent = formatEther(balance.sub(await wallet.getBalance()));
   const nTx = (await wallet.getTransactionCount()) - nonce;
-  log(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);
+  log.info(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);
 };
 
 export const migrateCommand = {
@@ -87,6 +81,7 @@ export const migrateCommand = {
       argv.addressBook,
       process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId.toString(),
     );
-    await migrate(wallet, addressBook, argv.silent);
+    const level = argv.silent ? "silent" : "info";
+    await migrate(wallet, addressBook, logger.child({ level }));
   },
 };

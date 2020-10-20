@@ -4,18 +4,16 @@ import { Wallet } from "ethers";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
-import { cliOpts } from "../constants";
+import { cliOpts, logger } from "../constants";
 
 export const registerTransfer = async (
   transferName: string,
   wallet: Wallet,
   addressBook: AddressBook,
-  silent = false,
+  log = logger.child({}),
 ): Promise<void> => {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  const log = silent ? () => {} : console.log;
 
-  log(`\nPreparing to add ${transferName} to registry (Sender=${wallet.address})`);
+  log.info(`\nPreparing to add ${transferName} to registry (Sender=${wallet.address})`);
 
   ////////////////////////////////////////
   // Add transfer
@@ -29,11 +27,11 @@ export const registerTransfer = async (
   // Check if transfer is already in registry
   const entry = registered.find((info: RegisteredTransfer) => info.name === transferName);
   if (entry) {
-    log(`Transfer ${transferName} has already been registered`);
+    log.info(`Transfer ${transferName} has already been registered`);
     return;
   }
 
-  log(`Getting registry information for ${transferName} at ${transfer.address}`);
+  log.info(`Getting registry information for ${transferName} at ${transfer.address}`);
 
   // Sanity-check: tidy return value
   const cleaned = {
@@ -42,11 +40,11 @@ export const registerTransfer = async (
     resolverEncoding: tidy(transferInfo.resolverEncoding),
     stateEncoding: tidy(transferInfo.stateEncoding),
   };
-  log(`Adding transfer to registry ${JSON.stringify(cleaned, null, 2)}`);
+  log.info(`Adding transfer to registry ${JSON.stringify(cleaned, null, 2)}`);
   const response = await registry.addTransferDefinition(cleaned);
-  log(`Added: ${response.hash}`);
+  log.info(`Added: ${response.hash}`);
   await response.wait();
-  log(`Tx mined, successfully added ${cleaned.name} on ${cleaned.definition}`);
+  log.info(`Tx mined, successfully added ${cleaned.name} on ${cleaned.definition}`);
 };
 
 export const registerTransferCommand = {
@@ -66,6 +64,7 @@ export const registerTransferCommand = {
       argv.addressBook,
       process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId.toString(),
     );
-    await registerTransfer(argv.transferName, wallet, addressBook, argv.silent);
+    const level = argv.silent ? "silent" : "info";
+    await registerTransfer(argv.transferName, wallet, addressBook, logger.child({ level }));
   },
 };

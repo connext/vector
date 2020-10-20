@@ -1,7 +1,8 @@
 import pino from "pino";
 import { Options } from "yargs";
 
-export const logger = pino({ level: process.env.LOG_LEVEL || "info" });
+// While debugging tests, you can change this to be "info" or "debug"
+export const logger = pino({ level: process.env.LOG_LEVEL || "silent" });
 
 export const defaults = {
   mnemonic: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",

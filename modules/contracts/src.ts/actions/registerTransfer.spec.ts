@@ -24,7 +24,7 @@ describe("registerTransfer", () => {
   it("should registry a new transfer", async () => {
     expect(registry.address).to.be.a("string");
     await expect(
-      registerTransfer(TransferNames.HashlockTransfer, alice, addressBook, false),
+      registerTransfer(TransferNames.HashlockTransfer, alice, addressBook),
     ).to.be.fulfilled;
   });
 

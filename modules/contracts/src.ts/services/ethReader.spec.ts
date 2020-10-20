@@ -49,8 +49,10 @@ describe("EthereumChainReader", () => {
   });
 
   it("getTotalDepositedA", async () => {
-    const res = (await chainReader.getTotalDepositedA(channel.address, chainId, assetId)).getValue();
-    expect(res).to.be.ok;
+    const res = await chainReader.getTotalDepositedA(channel.address, chainId, assetId);
+    expect(res.isError).to.be.false;
+    const val = res.getValue();
+    expect(val).to.be.ok;
   });
 
   it("getTotalDepositedB", async () => {
