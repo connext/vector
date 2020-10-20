@@ -41,7 +41,7 @@ export async function outbound(
     OutboundChannelUpdateError
   >
 > {
-  const method = "outboud";
+  const method = "outbound";
   // Before doing anything, run the validation
   // If this passes, it is safe to force-unwrap various things that may
   // be undefined. While we may still handle the error here, it should be

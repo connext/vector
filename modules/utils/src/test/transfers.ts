@@ -58,6 +58,7 @@ type TestHashlockTransferOptions = {
   channelFactoryAddress: string;
   chainId: number;
 } & CoreTransferState;
+
 export function createTestFullHashlockTransferState(
   overrides: Partial<TestHashlockTransferOptions> = {},
 ): FullTransferState {
