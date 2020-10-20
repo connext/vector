@@ -2,13 +2,14 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./interfaces/IAssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
-contract AssetTransfer {
+contract AssetTransfer is IAssetTransfer {
 
     using SafeMath for uint256;
 
@@ -111,6 +112,7 @@ contract AssetTransfer {
 
     function getTotalTransferred(address assetId)
         external
+        override
         view
         returns (uint256)
     {
@@ -119,6 +121,7 @@ contract AssetTransfer {
 
     function getEmergencyWithdrawableAmount(address assetId, address owner)
         external
+        override
         view
         returns (uint256)
     {
@@ -127,6 +130,7 @@ contract AssetTransfer {
 
     function emergencyWithdraw(address assetId, address owner, address payable recipient)
         external
+        override
     {
         require(
             msg.sender == owner || owner == recipient,
