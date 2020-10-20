@@ -33,8 +33,7 @@ describe("HashlockTransfer", () => {
     transfer = addressBook.getContract("HashlockTransfer");
   });
 
-  const createlockHash = (preImage: string): string =>
-    utils.soliditySha256(["bytes32"], [preImage]);
+  const createlockHash = (preImage: string): string => utils.soliditySha256(["bytes32"], [preImage]);
 
   const createInitialState = async (preImage: string): Promise<{ state: HashlockTransferState; balance: Balance }> => {
     const senderAddr = getRandomAddress();
@@ -96,7 +95,13 @@ describe("HashlockTransfer", () => {
     expect(transfer.address).to.be.a("string");
   });
 
-  it.skip("should return the registry information", async () => {});
+  it("should return the registry information", async () => {
+    const registry = await transfer.getRegistryInformation();
+    expect(registry.name).to.be.eq("HashlockTransfer");
+    expect(registry.stateEncoding).to.be.eq("tuple(bytes32 lockHash, uint256 expiry)");
+    expect(registry.resolverEncoding).to.be.eq("tuple(bytes32 preImage)");
+    expect(registry.definition).to.be.eq(transfer.address);
+  });
 
   describe("Create", () => {
     it("should create successfully", async () => {
@@ -177,6 +182,15 @@ describe("HashlockTransfer", () => {
       const incorrectPreImage = getRandomBytes32();
       await expect(resolveTransfer(balance, state, { preImage: incorrectPreImage })).revertedWith(
         "Hash generated from preimage does not match hash in state",
+      );
+    });
+
+    it("should fail if cancelling with a non-zero preimage", async () => {
+      const preImage = getRandomBytes32();
+      const { state, balance } = await createInitialState(preImage);
+      state.expiry = "1";
+      await expect(resolveTransfer(balance, state, { preImage: getRandomBytes32() })).revertedWith(
+        `Must provide empty hash to cancel payment`,
       );
     });
   });
