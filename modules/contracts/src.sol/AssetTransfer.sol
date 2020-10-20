@@ -3,13 +3,14 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IAssetTransfer.sol";
+import "./CMCCore.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
-contract AssetTransfer is IAssetTransfer {
+contract AssetTransfer is CMCCore, IAssetTransfer {
 
     using SafeMath for uint256;
 
