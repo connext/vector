@@ -19,7 +19,7 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
 
   // Calculated using invariant onchain properties. Note we DONT use safemath here
   function getTotalDepositsBob(address assetId) public override view returns (uint256) {
-    return LibAsset.getOwnBalance(assetId) + totalTransferred(assetId) - depositsAlice[assetId];
+    return LibAsset.getOwnBalance(assetId) + getTotalTransferred(assetId) - depositsAlice[assetId];
   }
 
   function depositAlice(address assetId, uint256 amount) external override payable onlyOnProxy {
