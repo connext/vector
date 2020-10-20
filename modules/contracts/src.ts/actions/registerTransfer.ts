@@ -15,13 +15,10 @@ export const registerTransfer = async (
 
   log.info(`\nPreparing to add ${transferName} to registry (Sender=${wallet.address})`);
 
-  ////////////////////////////////////////
-  // Add transfer
+  const registry = addressBook.getContract("TransferRegistry").connect(wallet);
+  const transfer = addressBook.getContract(transferName).connect(wallet);
 
-  const registry = addressBook.getContract("TransferRegistry");
   const registered = await registry.getTransferDefinitions();
-
-  const transfer = addressBook.getContract(transferName);
   const transferInfo = await transfer.getRegistryInformation();
 
   // Check if transfer is already in registry

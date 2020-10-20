@@ -4,14 +4,14 @@ import { AddressZero, One } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
 import { alice, bob } from "../constants";
-import { createTestChannel } from "../utils";
+import { getTestChannel } from "../utils";
 
 describe("CMCDeposit.sol", () => {
   const value = One;
   let channel: Contract;
 
   beforeEach(async () => {
-    channel = await createTestChannel();
+    channel = await getTestChannel();
   });
 
   it("should only increase totalDepositsAlice after receiving a direct deposit", async () => {

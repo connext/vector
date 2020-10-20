@@ -4,13 +4,13 @@ import { AddressZero } from "@ethersproject/constants";
 import { Contract, BigNumber } from "ethers";
 import pino from "pino";
 
-import { deployContracts } from "../actions";
+import { createChannel, deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
 import { ChannelMastercopy, Proxy } from "../artifacts";
 import { VectorChainReader } from "../services";
 
-import { alice, bob, provider } from "./constants";
-import { createTestChannel, getTestAddressBook } from "./utils";
+import { alice, bob, chainIdReq, provider } from "./constants";
+import { getTestAddressBook } from "./utils";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
@@ -29,7 +29,7 @@ describe("ChannelFactory", () => {
     ]);
     channelMastercopy = addressBook.getContract("ChannelMastercopy");
     channelFactory = addressBook.getContract("ChannelFactory");
-    chainId = (await provider.getNetwork()).chainId;
+    chainId = await chainIdReq;
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
     chainReader = new VectorChainReader(
@@ -53,7 +53,7 @@ describe("ChannelFactory", () => {
   it.skip("should return the correctly calculated channel address", async () => {});
 
   it("should create a channel", async () => {
-    const channel = await createTestChannel(addressBook);
+    const channel = await createChannel(bob.address, alice, addressBook);
     const computedAddr = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,

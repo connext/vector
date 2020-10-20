@@ -17,6 +17,11 @@ export const cliOpts = {
     type: "string",
     default: defaults.addressBookPath,
   },
+  bobAddress: {
+    alias: "bob",
+    description: "The counterparty to create a channel with",
+    type: "string",
+  },
   amount: {
     alias: "amount",
     description: "The amount of tokens or ETH to send",

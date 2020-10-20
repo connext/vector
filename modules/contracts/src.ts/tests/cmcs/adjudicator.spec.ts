@@ -12,24 +12,22 @@ import { AddressZero, HashZero, Two } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
 import { bob, alice, provider } from "../constants";
-import { createTestChannel } from "../utils";
+import { getTestChannel } from "../utils";
 
 describe("CMCAdjudicator.sol", () => {
   let channel: Contract;
 
   beforeEach(async () => {
-    channel = (await createTestChannel()).connect(alice);
+    channel = (await getTestChannel()).connect(alice);
   });
 
   describe("Channel Disputes", () => {
-    let channel: Contract;
     let channelState: CoreChannelState;
     let hashedState: string;
     let aliceSignature: string;
     let bobSignature: string;
 
     beforeEach(async () => {
-      channel = (await createTestChannel()).connect(alice);
       channelState = {
         assetIds: [AddressZero],
         balances: [{ amount: ["0", "1"], to: [alice.address, bob.address] }],

@@ -2,13 +2,13 @@
 import { expect } from "chai";
 import { Contract } from "ethers";
 
-import { createTestChannel, alice, bob } from "..";
+import { getTestChannel, alice, bob } from "..";
 
 describe("CMCCore.sol", () => {
   let channel: Contract;
 
   beforeEach(async () => {
-    channel = await createTestChannel();
+    channel = await getTestChannel();
   });
 
   describe("setup", async () => {

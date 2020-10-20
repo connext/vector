@@ -3,7 +3,7 @@ import { BigNumber, constants, Contract, utils } from "ethers";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
-import { bob, alice, createTestChannel, getTestAddressBook, provider } from "../tests";
+import { bob, alice, getTestChannel, getTestAddressBook, provider } from "../tests";
 
 import { WithdrawCommitment } from "./withdraw";
 
@@ -19,7 +19,7 @@ describe("withdrawCommitment", () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["TestToken", []]]);
     token = addressBook.getContract("TestToken");
-    channel = await createTestChannel(addressBook);
+    channel = await getTestChannel(addressBook);
     await (await alice.sendTransaction({
       to: channel.address,
       value: BigNumber.from(amount).mul(2),
