@@ -110,7 +110,7 @@ contract AssetTransfer {
     }
 
     function getTotalTransferred(address assetId)
-        public
+        external
         view
         returns (uint256)
     {
@@ -118,7 +118,7 @@ contract AssetTransfer {
     }
 
     function getEmergencyWithdrawableAmount(address assetId, address owner)
-        public
+        external
         view
         returns (uint256)
     {

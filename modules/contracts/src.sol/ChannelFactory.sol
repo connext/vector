@@ -26,7 +26,7 @@ contract ChannelFactory is IChannelFactory {
     // Public Methods
 
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
-    function getMastercopy() public override view returns(address) {
+    function getMastercopy() external override view returns(address) {
       return mastercopy;
     }
 
@@ -63,7 +63,7 @@ contract ChannelFactory is IChannelFactory {
         address bob,
         uint256 chainId
     )
-        public
+        external
         override
         returns (IVectorChannel channel)
     {
