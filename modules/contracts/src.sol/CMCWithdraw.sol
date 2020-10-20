@@ -32,8 +32,8 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     isExecuted[withdrawHash] = true;
 
     // Validate signatures
-    require(withdrawHash.checkSignature(aliceSignature, getAlice()), "CMCWithdraw: Invalid alice signature");
-    require(withdrawHash.checkSignature(bobSignature, getBob()), "CMCWithdraw: Invalid bob signature");
+    require(withdrawHash.checkSignature(aliceSignature, alice), "CMCWithdraw: Invalid alice signature");
+    require(withdrawHash.checkSignature(bobSignature, bob), "CMCWithdraw: Invalid bob signature");
 
     // Add to totalWithdrawn
     registerTransfer(assetId, amount);
@@ -47,7 +47,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     address assetId,
     uint256 amount,
     uint256 nonce
-  ) public override view returns (bool) {
+  ) external override view onlyOnProxy returns (bool) {
     bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
     return isExecuted[withdrawHash];
   }

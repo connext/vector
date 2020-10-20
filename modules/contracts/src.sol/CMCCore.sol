@@ -9,8 +9,8 @@ contract CMCCore is ICMCCore {
   // in order to ensure storage alignment with the proxy
   address private mastercopy;
 
-  address private alice;
-  address private bob;
+  address internal alice;
+  address internal bob;
 
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {
@@ -31,19 +31,19 @@ contract CMCCore is ICMCCore {
 
   /// @notice A getter function for the mastercopy of the multisig
   /// @return The mastercopy address the channel was created with
-  function getMastercopy() public override view onlyOnProxy returns (address) {
+  function getMastercopy() external override view onlyOnProxy returns (address) {
     return mastercopy;
   }
 
   /// @notice A getter function for the bob of the multisig
   /// @return Bob's signer address
-  function getAlice() public override view onlyOnProxy returns (address) {
+  function getAlice() external override view onlyOnProxy returns (address) {
     return alice;
   }
 
   /// @notice A getter function for the bob of the multisig
   /// @return Alice's signer address
-  function getBob() public override view onlyOnProxy returns (address) {
+  function getBob() external override view onlyOnProxy returns (address) {
     return bob;
   }
 }

@@ -2,13 +2,15 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./interfaces/IAssetTransfer.sol";
+import "./CMCCore.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
-contract AssetTransfer {
+contract AssetTransfer is CMCCore, IAssetTransfer {
 
     using SafeMath for uint256;
 
@@ -17,7 +19,7 @@ contract AssetTransfer {
     uint256 private constant ERC20_TRANSFER_GAS_LIMIT = 100000;
     uint256 private constant ERC20_BALANCE_GAS_LIMIT = 5000;
 
-    mapping(address => uint256) private totalTransferred;
+    mapping(address => uint256) internal totalTransferred;
     mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
 
     modifier onlySelf() {
@@ -110,16 +112,20 @@ contract AssetTransfer {
     }
 
     function getTotalTransferred(address assetId)
-        public
+        external
+        override
         view
+        onlyOnProxy
         returns (uint256)
     {
         return totalTransferred[assetId];
     }
 
     function getEmergencyWithdrawableAmount(address assetId, address owner)
-        public
+        external
+        override
         view
+        onlyOnProxy
         returns (uint256)
     {
         return emergencyWithdrawableAmount[assetId][owner];
@@ -127,6 +133,8 @@ contract AssetTransfer {
 
     function emergencyWithdraw(address assetId, address owner, address payable recipient)
         external
+        override
+        onlyOnProxy
     {
         require(
             msg.sender == owner || owner == recipient,

@@ -26,7 +26,7 @@ contract ChannelFactory is IChannelFactory {
     // Public Methods
 
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
-    function getMastercopy() public override view returns(address) {
+    function getMastercopy() external override view returns(address) {
       return mastercopy;
     }
 
@@ -63,13 +63,11 @@ contract ChannelFactory is IChannelFactory {
         address bob,
         uint256 chainId
     )
-        public
+        external
         override
         returns (IVectorChannel channel)
     {
-        channel = deployChannelProxy(alice, bob, chainId);
-        channel.setup(alice, bob);
-        emit ChannelCreation(channel);
+        return _createChannel(alice, bob, chainId);
     }
 
     /// @dev Allows us to create a new channel contract and fund it in one transaction
@@ -86,7 +84,7 @@ contract ChannelFactory is IChannelFactory {
         override
         returns (IVectorChannel channel)
     {
-        channel = createChannel(alice, bob, chainId);
+        channel = _createChannel(alice, bob, chainId);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
         if (!LibAsset.isEther(assetId)) {
@@ -104,6 +102,19 @@ contract ChannelFactory is IChannelFactory {
 
     ////////////////////////////////////////
     // Internal Methods
+
+    function _createChannel(
+        address alice,
+        address bob,
+        uint256 chainId
+    )
+        internal
+        returns (IVectorChannel channel)
+    {
+        channel = deployChannelProxy(alice, bob, chainId);
+        channel.setup(alice, bob);
+        emit ChannelCreation(channel);
+    }
 
     /// @dev Allows us to create new channel contact using CREATE2
     /// @dev This method is only meant as an utility to be called from other methods
