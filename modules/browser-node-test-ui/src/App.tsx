@@ -3,7 +3,7 @@ import { ChannelSigner, getBalanceForAssetId, getRandomBytes32 } from "@connext/
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select } from "antd";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List, Collapse } from "antd";
 
 import "./App.css";
 import { EngineEvents, FullChannelState } from "@connext/vector-types";
@@ -65,11 +65,14 @@ function App() {
         return;
       }
       const _channel = channelsRes.getValue()[0];
-      const channelRes = await client.getStateChannel({ channelAddress: _channel });
-      console.log("channel: ", channelRes.getValue());
-      setChannel(channelRes.getValue());
+      if (_channel) {
+        const channelRes = await client.getStateChannel({ channelAddress: _channel });
+        console.log("Channel found in store:", channelRes.getValue());
+        setChannel(channelRes.getValue());
+      }
       setNode(client);
       localStorage.setItem("mnemonic", mnemonic);
+      setMnemonic(mnemonic);
       client.on(EngineEvents.DEPOSIT_RECONCILED, async data => {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client);
@@ -172,12 +175,37 @@ function App() {
       <Row gutter={16}>
         {node?.publicIdentifier ? (
           <>
-            <Row>
-              <Statistic title="Public Identifier" value={node!.publicIdentifier} />
-            </Row>{" "}
-            <Row>
-              <Statistic title="Signer Address" value={node!.signerAddress} />
-            </Row>
+            <Col span={16}>
+              <List
+                itemLayout="horizontal"
+                dataSource={[
+                  { title: "Public Identifier", description: node!.publicIdentifier },
+                  { title: "Signer Address", description: node!.signerAddress },
+                ]}
+                renderItem={item => (
+                  <List.Item>
+                    <List.Item.Meta title={item.title} description={item.description} />
+                  </List.Item>
+                )}
+              />
+              <Collapse>
+                <Collapse.Panel header="Show Mnemonic" key="1">
+                  <p>{mnemonic}</p>
+                </Collapse.Panel>
+              </Collapse>
+            </Col>
+            <Col span={8}>
+              <Button
+                danger
+                onClick={() => {
+                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+              >
+                Clear Store
+              </Button>
+            </Col>
           </>
         ) : connectError ? (
           <Statistic title="Error Connecting Node" value={connectError} />
@@ -330,7 +358,7 @@ function App() {
                 labelCol={{ span: 6 }}
                 wrapperCol={{ span: 18 }}
                 name="transfer"
-                initialValues={{ assetId: channel?.assetIds[0], preImage: getRandomBytes32() }}
+                initialValues={{ assetId: channel?.assetIds && channel?.assetIds[0], preImage: getRandomBytes32() }}
                 onFinish={values => transfer(values.assetId, values.amount, values.recipient)}
                 onFinishFailed={onFinishFailed}
                 form={transferForm}
