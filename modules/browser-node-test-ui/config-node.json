@@ -2,7 +2,6 @@
   "adminToken": "cxt1234",
   "authUrl": "http://localhost:5040",
   "logLevel": "info",
-  "mnemonic": "dial accuse that borrow dinosaur arrange erode dilemma want citizen nuclear hurt",
   "chainAddresses": {
     "1337": {
       "channelFactoryAddress": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",

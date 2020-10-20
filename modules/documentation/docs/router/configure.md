@@ -7,17 +7,17 @@ This guide will take you through the e2e process of configuring and deploying a 
 Lets say you want to deploy a vector node + router to `https://vector.example.com` (we'll call this url `$DOMAINNAME`).
 
 !!! Info 
-  If you're planning to launch an instance on your local machine or to a non-Ubuntu OS, you can skip this section and instead install the following dependencies yourself:
-  - `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
-  - `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
-  - `docker`: See the [docker website](https://www.docker.com/) for installation instructions.
+    If you're planning to launch an instance on your local machine or to a non-Ubuntu OS, you can skip this section and instead install the following dependencies yourself:
+    - `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
+    - `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
+    - `docker`: See the [docker website](https://www.docker.com/) for installation instructions.
 
 First step: get a server via AWS or DigitalOcean or setup some hardware at home. For best results, use the most recent LTS version of Ubuntu & make sure it has at least 32GB of disk space. Note this new server's IP address (we'll call this `$SERVER_IP`). Make sure it's able to connect to the internet via ports 80, 443, 4221, and 4222 (no action required on DigitalOcean, Security Group config needs to be setup properly on AWS).
 
 Set up DNS so that `$DOMAINNAME` points to `$SERVER_IP`. If you're using CloudFlare name servers, turn on CloudFlare's built-in SSL support & make sure it's set to "Full (strict)".
 
 !!! Info
-  If you're just testing things out, you're welcome to skip registering a domain name & instead deploy to a raw IP address. This is a quicker way to get started but isn't recommended for production. In this case, don't turn on CloudFlare's built-in SSL support.
+    If you're just testing things out, you're welcome to skip registering a domain name & instead deploy to a raw IP address. This is a quicker way to get started but isn't recommended for production. In this case, don't turn on CloudFlare's built-in SSL support.
 
 We won't need to ssh into this server right away, most of the setup will be done locally. Start by cloning the repo to your local machine if you haven't already and `cd` into it.
 
@@ -38,7 +38,7 @@ SSH_KEY=$HOME/.ssh/id_rsa bash ops/server-setup.sh $SERVER_IP
 ```
 
 !!! Info
-  `$HOME/.ssh/id_rsa` is the default `SSH_KEY`, if this is the key you'll use to access `$SERVER_IP` then you don't need to supply it explicitly
+    `$HOME/.ssh/id_rsa` is the default `SSH_KEY`, if this is the key you'll use to access `$SERVER_IP` then you don't need to supply it explicitly
 
 The script should automatically do the following tasks to set up the environment:
 
@@ -73,12 +73,12 @@ bash ops/deploy-contracts.sh --ethProvider="$ethProvider" --mnemonic="$mnemonic"
 ```
 
 !!! Warning
-  Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument
+    Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument
 
 In the above command, `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. an Infura url including an API key). Any newly deployed contracts will have their addresses added to the project root's `address-book.json`. Make sure your address-book is stored somewhere safe. The best option would be to submit a PR to our repo so that these addresses are backed up for you and so that they're readily available for everyone else to use too!
 
 !!! Info
-  The account that deploys the contracts does not need to be the same one as your vector node's hot wallet.
+    The account that deploys the contracts does not need to be the same one as your vector node's hot wallet.
 
 ## Configuring the Router
 
@@ -219,7 +219,7 @@ Now that we have our configuration complete, we can spin up the router!
 This part is pretty easy - in the root of the vector repo, do:
 
 ```
-make restart-rerouter
+make restart-router
 ```
 
 !!! Tip

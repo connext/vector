@@ -6,7 +6,11 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 
 
 library LibChannelCrypto {
-    function verifyChannelMessage(bytes32 hash, bytes memory signature) internal pure returns (address) {
+    function checkSignature(bytes32 hash, bytes memory signature, address allegedSigner) internal pure returns (bool) {
+        return recoverChannelMessageSigner(hash, signature) == allegedSigner;
+    }
+
+    function recoverChannelMessageSigner(bytes32 hash, bytes memory signature) internal pure returns (address) {
         bytes32 digest = toChannelSignedMessage(hash);
         return ECDSA.recover(digest, signature);
     }

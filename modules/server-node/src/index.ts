@@ -269,8 +269,12 @@ server.post<{ Body: ServerNodeParams.RequestSetup }>(
         meta: request.body.meta,
         publicIdentifier: request.body.aliceIdentifier,
       } as ServerNodeParams.Setup);
-      const setup = await setupPromise;
-      return reply.status(200).send({ channelAddress: setup.channelAddress } as ServerNodeResponses.RequestSetup);
+      try {
+        const setup = await setupPromise;
+        return reply.status(200).send({ channelAddress: setup.channelAddress } as ServerNodeResponses.RequestSetup);
+      } catch (e) {
+        return reply.status(400).send({ message: "Could not reach counterparty", context: e.message });
+      }
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
