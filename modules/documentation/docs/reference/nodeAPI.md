@@ -10,7 +10,44 @@ There is one consolidated API across both the `server-node` and `browser-node`. 
 
 Creates a new node engine (i.e. a new `signer` + `publicIdentifier`) at the given index.
 
-// TODO complete createNode doc
+!!! example
+    === "TS" 
+
+        ``` typescript
+        const result = await node.createNode({
+            index: 0
+        });
+        ```
+
+    === "HTTP"
+
+        ``` http
+        ##############
+        ### CREATE NODE
+        POST {{bobUrl}}/node
+        Content-Type: application/json
+
+        {
+            "index": 0
+        }
+        ```
+
+#### Params
+
+`ServerNodeParams.CreateNode` object. Contains:
+
+- `index`: `number` - used as part of the path along which a new key will be derived. This key is then used to create a new signer/public identifier/node engine. 
+
+#### Returns
+
+EITHER `ServerNodeResponses.CreateNode` object. Contains:
+
+- `publicIdentifier`: Unique Connext-specific identifier for the node.
+- `signerAddress`: Address of the key that is used to to sign messages in the channel. This is linked 1:1 with the `publicIdentifier`.
+- `index`: Derivation index, same as what was passed in as a param.
+
+OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/error.ts#L177)
+
 
 ### setup
 
