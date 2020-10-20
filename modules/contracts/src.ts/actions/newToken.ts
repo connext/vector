@@ -1,9 +1,12 @@
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { getEthProvider } from "@connext/vector-utils";
 import { Wallet, utils } from "ethers";
 import { Argv } from "yargs";
 
 import { cliOpts } from "../constants";
-import { getAddressBook, isContractDeployed, deployContract } from "../utils";
+import { getAddressBook } from "../addressBook";
+
+import { deployContracts } from "./contracts";
 
 const initialSupply = utils.parseEther("100000000");
 
@@ -24,19 +27,24 @@ export const newToken = async (
     return;
   }
   const addressBook = getAddressBook(addressBookPath, chainId.toString());
-  const savedAddress = addressBook.getEntry(name).address;
-  if (force || !(await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))) {
-    log(`Preparing to deploy new token to chain w id: ${chainId}\n`);
-    const token = await deployContract(name, [ "TEST", name ], wallet, addressBook, silent);
-    log(`Success!`);
+
+  if (force) {
+    // Remove old token entry so that deployContracts knows to deploy a new one
+    addressBook.setEntry(name, { address: AddressZero });
+  }
+
+  await deployContracts(wallet, addressBook, [
+    [name, [ "TEST", name ]],
+  ]);
+
+  const token = addressBook.getContract(name);
+  if (token.balanceOf(wallet.address).eq(Zero)) {
     await token.mint(wallet.address, initialSupply);
     log(
       `Minted ${utils.formatEther(initialSupply)} tokens & gave them all to ${wallet.address}`,
     );
-  } else {
-    log(`Token is up to date, no action required`);
-    log(`Address: ${savedAddress}`);
   }
+
 };
 
 export const newTokenCommand = {

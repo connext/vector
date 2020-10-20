@@ -1,9 +1,17 @@
 import { expect } from "@connext/vector-utils";
 import { Contract, ContractFactory } from "ethers";
 
+import { AddressBook, getAddressBook } from "../addressBook";
 import { ChannelMastercopy, ChannelFactory, VectorChannel, TransferRegistry, Withdraw } from "../artifacts";
 
-import { alice, bob, provider } from "./constants";
+import { addressBookPath, alice, bob, provider } from "./constants";
+
+// Returns a different address book every time
+export const getTestAddressBook = async (): Promise<AddressBook> => getAddressBook(
+  addressBookPath.replace(".json", `.${Date.now()}.json`),
+  (await provider.getNetwork()).chainId.toString(),
+  alice,
+);
 
 export const createTestChannelFactory = async (deployedChannelMastercopy?: Contract): Promise<Contract> => {
   const channelMastercopy = deployedChannelMastercopy ?? (await createTestChannelMastercopy());

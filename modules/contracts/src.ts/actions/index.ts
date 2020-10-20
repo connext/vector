@@ -1,4 +1,5 @@
-export { registerTransfer, registerTransferCommand } from "./registerTransfer";
+export { deployContracts } from "./contracts";
 export { fund, fundCommand } from "./fund";
 export { migrate, migrateCommand } from "./migrate";
 export { newToken, newTokenCommand } from "./newToken";
+export { registerTransfer, registerTransferCommand } from "./registerTransfer";

@@ -1,12 +1,12 @@
 import { getEthProvider } from "@connext/vector-utils";
 import { EtherSymbol, Zero } from "@ethersproject/constants";
-import { Contract, providers, utils, Wallet } from "ethers";
+import { providers, utils, Wallet } from "ethers";
 import { Argv } from "yargs";
 
-import { artifacts } from "../artifacts";
+import { getAddressBook } from "../addressBook";
 import { cliOpts } from "../constants";
-import { getAddressBook, isContractDeployed, deployContract } from "../utils";
 
+import { deployContracts } from "./contracts";
 import { registerTransfer } from "./registerTransfer";
 
 const { formatEther } = utils;
@@ -35,25 +35,17 @@ export const migrate = async (wallet: Wallet, addressBookPath: string, silent = 
   ////////////////////////////////////////
   // Deploy contracts
 
-  const deployHelper = async (name: string, args: string[]): Promise<Contract> => {
-    const savedAddress = addressBook.getEntry(name)["address"];
-    if (savedAddress && (await isContractDeployed(name, savedAddress, addressBook, wallet.provider, silent))) {
-      log(`${name} is up to date, no action required. Address: ${savedAddress}`);
-      return new Contract(savedAddress, artifacts[name].abi, wallet);
-    } else {
-      return await deployContract(name, args || [], wallet, addressBook, silent);
-    }
-  };
+  // 3rd arg is: [ContractName, [ConstructorArgs]][]
+  // If a ContractName is given as a ConstructorArg, it will be replaced by that contract's address
+  await deployContracts(wallet, addressBook, [
+    ["ChannelMastercopy", []],
+    ["ChannelFactory", ["ChannelMastercopy"]],
+    ["HashlockTransfer", []],
+    ["Withdraw", []],
+    ["TransferRegistry", []],
+  ]);
 
-  const mastercopy = await deployHelper("ChannelMastercopy", []);
-  await deployHelper("ChannelFactory", [mastercopy.address]);
-
-  // Deploy Transfers
-  await deployHelper("HashlockTransfer", []);
-  await deployHelper("Withdraw", []);
-
-  // Deploy registry & register defaults
-  await deployHelper("TransferRegistry", []);
+  // Register default transfers
   log("\nRegistering Withdraw and HashlockTransfer");
   await registerTransfer("Withdraw", wallet, addressBookPath, silent);
   await registerTransfer("HashlockTransfer", wallet, addressBookPath, silent);

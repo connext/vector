@@ -1,25 +1,24 @@
 import { AddressZero, EtherSymbol } from "@ethersproject/constants";
-import { Contract, ContractFactory, Wallet, providers, utils } from "ethers";
+import { Contract, ContractFactory, Wallet, utils } from "ethers";
 
-import { AddressBook, AddressBookEntry } from "../utils";
+import { AddressBook, AddressBookEntry } from "../addressBook";
 import { artifacts } from "../artifacts";
 
 const { formatEther, keccak256, parseUnits } = utils;
 
 const hash = (input: string): string => keccak256(`0x${input.replace(/^0x/, "")}`);
 
+
 export const deployContracts = async (
   wallet: Wallet,
   addressBook: AddressBook,
-  schema: [string, string[]][],
+  schema: [string, string[]][], // [ContractName, [ConstructorArgs]][]
 ): Promise<void> => {
 
   // Simple sanity checks to make sure contracts from our address book have been deployed
   const isContractDeployed = async (
     name: string,
     address: string | undefined,
-    addressBook: AddressBook,
-    provider: providers.Provider,
   ): Promise<boolean> => {
     console.log(`Checking for valid ${name} contract...`);
     if (!address || address === "" || address === AddressZero) {
@@ -36,7 +35,7 @@ export const deployContracts = async (
     }
 
     const savedRuntimeCodeHash = addressBook.getEntry(name).runtimeCodeHash;
-    const runtimeCodeHash = hash(await provider.getCode(address));
+    const runtimeCodeHash = hash(await wallet.provider.getCode(address));
     if (runtimeCodeHash === hash("0x00") || runtimeCodeHash === hash("0x")) {
       console.log("No runtimeCode exists at the address in our address book");
       return false;
@@ -56,7 +55,7 @@ export const deployContracts = async (
     }
 
     const savedAddress = addressBook.getEntry(name).address;
-    if (isContractDeployed(name, savedAddress, addressBook, wallet.provider)) {
+    if (isContractDeployed(name, savedAddress)) {
       console.log(`${name} is up to date, no action required. Address: ${savedAddress}`);
       continue;
     }

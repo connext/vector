@@ -3,9 +3,9 @@ import { getEthProvider } from "@connext/vector-utils";
 import { Contract, Wallet } from "ethers";
 import { Argv } from "yargs";
 
+import { getAddressBook } from "../addressBook";
 import { TransferDefinition, TransferRegistry } from "../artifacts";
 import { cliOpts } from "../constants";
-import { getAddressBook } from "../utils";
 
 export const registerTransfer = async (
   transferName: string,
