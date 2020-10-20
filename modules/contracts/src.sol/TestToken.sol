@@ -5,7 +5,7 @@ pragma solidity ^0.7.1;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 
-/* This token is only useful for testing
+/* This token is ONLY useful for testing
  * Anybody can mint as many tokens as they like
  * Anybody can burn anyone else's tokens
  */

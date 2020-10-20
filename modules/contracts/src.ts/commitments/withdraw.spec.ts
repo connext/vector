@@ -1,25 +1,30 @@
 import { signChannelMessage, expect } from "@connext/vector-utils";
-import { BigNumber, constants, Contract, ContractFactory } from "ethers";
+import { BigNumber, constants, Contract, utils } from "ethers";
 
-import { TestToken } from "../artifacts";
-import { bob, alice, createTestChannel, provider } from "../tests";
+import { deployContracts } from "../actions";
+import { AddressBook } from "../addressBook";
+import { bob, alice, createTestChannel, getTestAddressBook, provider } from "../tests";
 
 import { WithdrawCommitment } from "./withdraw";
 
-describe("withdrawCommitment", () => {
+const { parseEther } = utils;
+
+describe.only("withdrawCommitment", () => {
+  let addressBook: AddressBook;
   let channel: Contract;
   let token: Contract;
   const amount = "50";
 
   beforeEach(async () => {
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [["TestToken", []]]);
+    token = addressBook.getContract("TestToken");
     channel = await createTestChannel();
-    const tx = await alice.sendTransaction({
+    await (await alice.sendTransaction({
       to: channel.address,
       value: BigNumber.from(amount).mul(2),
-    });
-    await tx.wait();
-    token = await new ContractFactory(TestToken.abi, TestToken.bytecode, alice).deploy("Test", "TST");
-    await token.mint(channel.address, BigNumber.from(amount).mul(2));
+    })).wait();
+    await (await token.transfer(channel.address, parseEther(amount))).wait();
   });
 
   it("can successfully withdraw Eth", async () => {

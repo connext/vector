@@ -49,7 +49,7 @@ export const migrate = async (
   } else {
 
     await deployContracts(wallet, addressBook, [
-      ["TestToken", [ "TEST", "Test Token" ]],
+      ["TestToken", []],
       ["ChannelMastercopy", []],
       ["ChannelFactory", ["ChannelMastercopy"]],
       ["HashlockTransfer", []],
