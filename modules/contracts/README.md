@@ -123,7 +123,7 @@ As mentioned above, funding a channel is asymmetric. The initiator of a channel 
 Calling `depositAlice` increments the `totalDepositsAlice` by the amount that Alice deposits for a given assetId. We can get this value offchain or in the adjudicator by calling the `totalDepositsAlice` getter. We can also get `totalDepositsBob` the same way -- the contract calculates using the following identity:
 
 ```
-getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedA[assetId]
+getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedAlice[assetId]
 ```
 
 Note that because this is an identity, we **do not** use SafeMath. _We explicitly want these values to wrap around in the event of an over/undeflow_.
