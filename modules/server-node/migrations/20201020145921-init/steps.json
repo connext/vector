@@ -1086,15 +1086,11 @@
       "arity": "Required"
     },
     {
-      "tag": "CreateDirective",
-      "location": {
-        "path": {
-          "tag": "Field",
-          "model": "EventSubscription",
-          "field": "event"
-        },
-        "directive": "unique"
-      }
+      "tag": "CreateField",
+      "model": "EventSubscription",
+      "field": "publicIdentifier",
+      "type": "String",
+      "arity": "Required"
     },
     {
       "tag": "CreateField",
@@ -1125,6 +1121,22 @@
       },
       "argument": "name",
       "value": "\"event-subscription\""
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "EventSubscription",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[publicIdentifier, event]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
     },
     {
       "tag": "CreateModel",
