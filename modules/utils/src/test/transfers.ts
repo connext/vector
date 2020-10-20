@@ -57,6 +57,10 @@ type TestHashlockTransferOptions = {
   meta: any;
   channelFactoryAddress: string;
   chainId: number;
+  transferEncodings: string[];
+  transferResolver: any;
+  transferTimeout: string;
+  transferState: any;
 } & CoreTransferState;
 
 export function createTestFullHashlockTransferState(

@@ -1,9 +1,11 @@
 import {
   Balance,
+  FullChannelState,
   FullTransferState,
   ResolveUpdateDetails,
   StoredTransactionStatus,
   TransactionReason,
+  UpdateType,
 } from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
@@ -15,6 +17,7 @@ import {
   getRandomIdentifier,
   getSignerAddressFromPublicIdentifier,
   createTestTxResponse,
+  mkPublicIdentifier,
 } from "@connext/vector-utils";
 import { constants } from "ethers";
 import indexedDB from "fake-indexeddb";
@@ -197,12 +200,27 @@ describe("store", () => {
 
   it("should update transfer resolver", async () => {
     const transferId = mkBytes32("0xabcde");
+    const alice = mkPublicIdentifier("indraA");
+    const bob = mkPublicIdentifier("indraB");
+    const meta = { hello: "world" };
+    const createState = createTestChannelState("create", {
+      aliceIdentifier: alice,
+      bobIdentifier: bob,
+      latestUpdate: { details: { transferId, meta }, fromIdentifier: alice, toIdentifier: bob },
+    });
     const transfer: FullTransferState = createTestFullHashlockTransferState({
       transferId,
       preImage: constants.HashZero,
-    });
-    const createState = createTestChannelState("create", {
-      latestUpdate: { details: { transferId } },
+      channelAddress: createState.channelAddress,
+      channelFactoryAddress: createState.networkContext.channelFactoryAddress,
+      chainId: createState.networkContext.chainId,
+      initiator: createState.alice,
+      responder: createState.bob,
+      meta,
+      transferEncodings: createState.latestUpdate.details.transferEncodings,
+      transferResolver: undefined,
+      transferTimeout: createState.latestUpdate.details.transferTimeout,
+      transferState: createState.latestUpdate.details.transferInitialState,
     });
     await store.saveChannelState(
       createState,
@@ -218,9 +236,18 @@ describe("store", () => {
     let transferFromStore = await store.getTransferState(transfer.transferId);
     expect(transferFromStore).to.deep.eq(transfer);
 
-    const resolveState = createTestChannelState("resolve", {
-      latestUpdate: { details: { transferId } },
-    });
+    const resolveState: FullChannelState = createState;
+    resolveState.latestUpdate.details = {
+      transferId,
+      transferDefinition: transfer.transferDefinition,
+      transferResolver: { preImage: mkBytes32("0xaabbcc") },
+      merkleRoot: mkHash("0xbbbeee"),
+    } as ResolveUpdateDetails;
+    resolveState.latestUpdate.details.transferResolver = { preImage: mkBytes32("0xaabbcc") };
+    resolveState.latestUpdate.type = UpdateType.resolve;
+    resolveState.nonce = createState.nonce + 1;
+    resolveState.latestUpdate.nonce = createState.latestUpdate.nonce + 1;
+
     await store.saveChannelState(resolveState, {
       channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,
       chainId: resolveState.networkContext.chainId,
