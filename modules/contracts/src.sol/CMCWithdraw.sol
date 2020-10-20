@@ -47,7 +47,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     address assetId,
     uint256 amount,
     uint256 nonce
-  ) external override view returns (bool) {
+  ) external override view onlyOnProxy returns (bool) {
     bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
     return isExecuted[withdrawHash];
   }

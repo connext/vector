@@ -114,6 +114,7 @@ contract AssetTransfer is IAssetTransfer {
         external
         override
         view
+        onlyOnProxy
         returns (uint256)
     {
         return totalTransferred[assetId];
@@ -123,6 +124,7 @@ contract AssetTransfer is IAssetTransfer {
         external
         override
         view
+        onlyOnProxy
         returns (uint256)
     {
         return emergencyWithdrawableAmount[assetId][owner];
@@ -131,6 +133,7 @@ contract AssetTransfer is IAssetTransfer {
     function emergencyWithdraw(address assetId, address owner, address payable recipient)
         external
         override
+        onlyOnProxy
     {
         require(
             msg.sender == owner || owner == recipient,

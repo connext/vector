@@ -13,7 +13,7 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
 
   receive() external payable onlyOnProxy {}
 
-  function getTotalDepositsAlice(address assetId) external override view returns (uint256) {
+  function getTotalDepositsAlice(address assetId) external override view onlyOnProxy returns (uint256) {
     return _getTotalDepositsAlice(assetId);
   }
 
@@ -21,7 +21,7 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
     return depositsAlice[assetId];
   }
 
-  function getTotalDepositsBob(address assetId) external override view returns (uint256) {
+  function getTotalDepositsBob(address assetId) external override view onlyOnProxy returns (uint256) {
     return _getTotalDepositsBob(assetId);
   }
 
