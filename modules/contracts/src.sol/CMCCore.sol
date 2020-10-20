@@ -3,12 +3,9 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCCore.sol";
+import "./ProxyData.sol";
 
-contract CMCCore is ICMCCore {
-  // mastercopy needs to be first declared variable
-  // in order to ensure storage alignment with the proxy
-  address private mastercopy;
-
+contract CMCCore is ProxyData(address(0)), ICMCCore {
   address internal alice;
   address internal bob;
 
