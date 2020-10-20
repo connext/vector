@@ -58,3 +58,5 @@ nav:
       # - router/managingCollateral.md
   - API Reference:
       - reference/nodeAPI.md
+  - Changelog:
+      - changelog.md
