@@ -69,7 +69,7 @@ We have a global [address-book](https://github.com/connext/vector/blob/master/ad
 To deploy contracts, you can use our helper script. (A CLI usable via npx is coming soon!)
 
 ```bash
-bash ops/deploy-contracts.sh --ethProvider="$ethProvider" --mnemonic="$mnemonic"
+bash ops/deploy-contracts.sh --eth-provider="$ethProvider" --mnemonic="$mnemonic"
 ```
 
 !!! Warning
