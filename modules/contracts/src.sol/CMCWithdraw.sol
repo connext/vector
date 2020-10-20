@@ -11,7 +11,7 @@ import "./lib/LibChannelCrypto.sol";
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   using LibChannelCrypto for bytes32;
 
-  mapping(bytes32 => bool) isExecuted;
+  mapping(bytes32 => bool) private isExecuted;
 
   /// @param recipient The address to which we're withdrawing funds to
   /// @param assetId The token address of the asset we're withdrawing (address(0)=eth)
@@ -40,5 +40,15 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
 
     // Execute the withdraw
     require(LibAsset.transfer(assetId, recipient, amount), "CMCWithdraw: Transfer failed");
+  }
+
+  function getWithdrawalTransactionRecord(
+    address recipient,
+    address assetId,
+    uint256 amount,
+    uint256 nonce
+  ) public override view returns (bool) {
+    bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
+    return isExecuted[withdrawHash];
   }
 }
