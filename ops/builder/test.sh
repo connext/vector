@@ -33,19 +33,19 @@ elif [[ "${cmd##*-}" == "watch" ]]
 then
   echo "Starting $unit watcher"
 
-  src=""
+  src=()
   for dir in src src.ts src.sol
   do
     if [[ -d "$dir" ]]
-    then src+="$dir "
+    then src+=("$dir")
     fi
   done
-  echo "Watching src folders: $src"
+  echo "Watching src folders: ${src[*]}"
 
   prev_checksum=""
   while true
   do
-    checksum="$(find "$src" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
+    checksum="$(find "${src[@]}" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
     if [[ "$checksum" != "$prev_checksum" ]]
     then
       echo
@@ -63,7 +63,7 @@ then
       sleep 2
       echo "Re-running tests..."
 
-      prev_checksum="$(find "$src" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
+      prev_checksum="$(find "${src[@]}" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
       if [[ -n "$(which pino-pretty)" ]]
       then (npm run test -- "${opts[@]}" | pino-pretty --colorize &)
       else (npm run test -- "${opts[@]}" &)
