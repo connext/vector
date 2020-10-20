@@ -156,10 +156,10 @@ export const depositInChannel = async (
     // Call deposit on the multisig
     try {
       const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const totalDepositedA = await channel.getTotalDepositsAlice(assetId);
+      const totalDepositsAlice = await channel.getTotalDepositsAlice(assetId);
       const tx = await channel.depositAlice(assetId, value, { value });
       await tx.wait();
-      expect(await channel.getTotalDepositsAlice(assetId)).to.equal(totalDepositedA.add(value));
+      expect(await channel.getTotalDepositsAlice(assetId)).to.equal(totalDepositsAlice.add(value));
     } catch (e) {
       // Assume this happened because it wasn't deployed
       await depositorSigner.connectProvider(provider);
@@ -190,19 +190,19 @@ export const depositInChannel = async (
       const deployedAddr = await created;
       expect(deployedAddr).to.be.eq(channelAddress);
       // Verify onchain values updated
-      const totalDepositedA = await new Contract(
+      const totalDepositsAlice = await new Contract(
         channelAddress,
         VectorChannel.abi,
         depositorSigner,
       ).getTotalDepositsAlice(assetId);
-      expect(totalDepositedA).to.be.eq(value);
+      expect(totalDepositsAlice).to.be.eq(value);
       expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
     }
   } else {
     try {
       // This call will fail if the channel isn't created
       const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const totalDepositedB = await channel.getTotalDepositsBob(assetId);
+      const totalDepositsBob = await channel.getTotalDepositsBob(assetId);
       // Deposit onchain
       const tx =
         assetId === constants.AddressZero
@@ -210,7 +210,7 @@ export const depositInChannel = async (
           : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
       await tx.wait();
       // Verify onchain values updated
-      expect(await channel.getTotalDepositsBob(assetId)).to.be.eq(totalDepositedB.add(value));
+      expect(await channel.getTotalDepositsBob(assetId)).to.be.eq(totalDepositsBob.add(value));
     } catch (e) {
       if (e.message.includes("Expected")) {
         throw e;
@@ -240,10 +240,10 @@ export const depositInChannel = async (
           : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(deployedAddr, value);
       await tx.wait();
       // Verify onchain values updated
-      const totalDepositedB = await new Contract(deployedAddr, VectorChannel.abi, depositorSigner).getTotalDepositsBob(
+      const totalDepositsBob = await new Contract(deployedAddr, VectorChannel.abi, depositorSigner).getTotalDepositsBob(
         assetId,
       );
-      expect(totalDepositedB).to.be.eq(value);
+      expect(totalDepositsBob).to.be.eq(value);
       expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
     }
   }

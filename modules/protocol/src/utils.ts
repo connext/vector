@@ -221,24 +221,24 @@ export const reconcileDeposit = async (
   processedDepositB: string,
   assetId: string,
   chainReader: IVectorChainReader,
-): Promise<Result<{ balance: Balance; totalDepositedA: string; totalDepositedB: string }, Error>> => {
-  // First get totalDepositedA and totalDepositedB
+): Promise<Result<{ balance: Balance; totalDepositsAlice: string; totalDepositsBob: string }, Error>> => {
+  // First get totalDepositsAlice and totalDepositsBob
   const totalDepositedARes = await chainReader.getTotalDepositedA(channelAddress, chainId, assetId);
   if (totalDepositedARes.isError) {
     return Result.fail(totalDepositedARes.getError()!);
   }
-  const totalDepositedA = totalDepositedARes.getValue();
+  const totalDepositsAlice = totalDepositedARes.getValue();
 
   const totalDepositedBRes = await chainReader.getTotalDepositedB(channelAddress, chainId, assetId);
   if (totalDepositedBRes.isError) {
     return Result.fail(totalDepositedBRes.getError()!);
   }
-  const totalDepositedB = totalDepositedBRes.getValue();
+  const totalDepositsBob = totalDepositedBRes.getValue();
 
   // Now calculate the amount deposited that has not yet been reconciled
   const depositsToReconcile = [
-    BigNumber.from(totalDepositedA).sub(processedDepositA),
-    BigNumber.from(totalDepositedB).sub(processedDepositB),
+    BigNumber.from(totalDepositsAlice).sub(processedDepositA),
+    BigNumber.from(totalDepositsBob).sub(processedDepositB),
   ];
 
   // Lastly, calculate the new balance
@@ -257,7 +257,7 @@ export const reconcileDeposit = async (
 
   return Result.ok({
     balance,
-    totalDepositedA: totalDepositedA.toString(),
-    totalDepositedB: totalDepositedB.toString(),
+    totalDepositsAlice: totalDepositsAlice.toString(),
+    totalDepositsBob: totalDepositsBob.toString(),
   });
 };

@@ -28,7 +28,7 @@ type ReconcileDepositTest = {
   aliceDeposit: BigNumberish; // depositA deposit
   bobDeposit: BigNumberish; // user deposit
   stubs: Partial<MockOnchainStubType>;
-  expected: Omit<Balance, "to"> & { totalDepositedA: string; totalDepositedB: string };
+  expected: Omit<Balance, "to"> & { totalDepositsAlice: string; totalDepositsBob: string };
   error: Error;
 };
 
@@ -272,7 +272,7 @@ describe("utils", () => {
         initialBalance: { amount: ["3", "9"] },
         processedDepositsA: ["10"],
         processedDepositsB: ["9"],
-        expected: { amount: ["18", "9"], totalDepositedA: "25", totalDepositedB: "9" },
+        expected: { amount: ["18", "9"], totalDepositsAlice: "25", totalDepositsBob: "9" },
       },
       {
         name: "should work for Alice Token deposit when onchain deposit was successful",
@@ -281,7 +281,7 @@ describe("utils", () => {
         processedDepositsA: ["10"],
         processedDepositsB: ["9"],
         assetId: mkAddress("0xdddd"),
-        expected: { amount: ["18", "9"], totalDepositedA: "25", totalDepositedB: "9" },
+        expected: { amount: ["18", "9"], totalDepositsAlice: "25", totalDepositsBob: "9" },
       },
       {
         name: "should work for Bob Eth deposit when onchain deposit was successful",
@@ -289,7 +289,7 @@ describe("utils", () => {
         initialBalance: { amount: ["3", "9"] },
         processedDepositsA: ["10"],
         processedDepositsB: ["9"],
-        expected: { amount: ["3", "16"], totalDepositedA: "10", totalDepositedB: "16" },
+        expected: { amount: ["3", "16"], totalDepositsAlice: "10", totalDepositsBob: "16" },
       },
       {
         name: "should work for Bob Token deposit when onchain deposit was successful",
@@ -298,7 +298,7 @@ describe("utils", () => {
         assetId: mkAddress("0xdddd"),
         processedDepositsA: ["10"],
         processedDepositsB: ["9"],
-        expected: { amount: ["3", "16"], totalDepositedA: "10", totalDepositedB: "16" },
+        expected: { amount: ["3", "16"], totalDepositsAlice: "10", totalDepositsBob: "16" },
       },
       {
         name: "should work for both Eth deposit when onchain deposits were successful",
@@ -307,7 +307,7 @@ describe("utils", () => {
         initialBalance: { amount: ["3", "9"] },
         processedDepositsA: ["10"],
         processedDepositsB: ["9"],
-        expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
+        expected: { amount: ["18", "16"], totalDepositsAlice: "25", totalDepositsBob: "16" },
       },
       {
         name: "should work for both token deposit when onchain deposits were successful",
@@ -317,7 +317,7 @@ describe("utils", () => {
         processedDepositsA: ["10"],
         processedDepositsB: ["9"],
         assetId: mkAddress("0xdddd"),
-        expected: { amount: ["18", "16"], totalDepositedA: "25", totalDepositedB: "16" },
+        expected: { amount: ["18", "16"], totalDepositsAlice: "25", totalDepositsBob: "16" },
       },
     ];
 
@@ -345,8 +345,8 @@ describe("utils", () => {
           const returned = result.getValue()!;
           expect(returned).to.containSubset({
             balance: { amount: expected.amount, to },
-            totalDepositedA: expected.totalDepositedA,
-            totalDepositedB: expected.totalDepositedB,
+            totalDepositsAlice: expected.totalDepositsAlice,
+            totalDepositsBob: expected.totalDepositsBob,
           });
         }
       });

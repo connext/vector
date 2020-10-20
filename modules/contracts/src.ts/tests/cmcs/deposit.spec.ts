@@ -14,7 +14,7 @@ describe("CMCDeposit.sol", () => {
     channel = await createTestChannel();
   });
 
-  it("should only increase totalDepositedA after receiving a direct deposit", async () => {
+  it("should only increase totalDepositsAlice after receiving a direct deposit", async () => {
     const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
     const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
     await expect(bob.sendTransaction({ to: channel.address, value })).to.be.fulfilled;
@@ -22,7 +22,7 @@ describe("CMCDeposit.sol", () => {
     expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits.add(value));
   });
 
-  it("should only increase totalDepositedB after recieving a deposit via method call", async () => {
+  it("should only increase totalDepositsBob after recieving a deposit via method call", async () => {
     const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
     const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
     await expect(channel.connect(alice).depositAlice(AddressZero, value, { value })).to.be.fulfilled;

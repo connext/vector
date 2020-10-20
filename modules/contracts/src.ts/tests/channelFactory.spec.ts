@@ -84,9 +84,9 @@ describe("ChannelFactory", () => {
     const code = await provider.getCode(channelAddress);
     expect(code).to.not.be.eq("0x");
 
-    const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).getTotalDepositsAlice(
+    const totalDepositsAlice = await new Contract(channelAddress, ChannelMastercopy.abi, alice).getTotalDepositsAlice(
       AddressZero,
     );
-    expect(totalDepositedA).to.be.eq(value);
+    expect(totalDepositsAlice).to.be.eq(value);
   });
 });

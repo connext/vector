@@ -119,8 +119,8 @@ const convertChannelEntityToFullChannelState = (
         break;
       case "deposit":
         details = {
-          totalDepositedA: channelEntity.latestUpdate.totalDepositedA,
-          totalDepositedB: channelEntity.latestUpdate.totalDepositedB,
+          totalDepositsAlice: channelEntity.latestUpdate.totalDepositsAlice,
+          totalDepositsBob: channelEntity.latestUpdate.totalDepositsBob,
         } as DepositUpdateDetails;
         break;
       case "create":
@@ -529,8 +529,8 @@ export class PrismaStore implements IServerNodeStore {
 
         // details
         // deposit
-        totalDepositedA: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositedA,
-        totalDepositedB: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositedB,
+        totalDepositsAlice: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsAlice,
+        totalDepositsBob: (channelState.latestUpdate!.details as DepositUpdateDetails).totalDepositsBob,
 
         // create transfer
         transferInitialState: (channelState.latestUpdate!.details as CreateUpdateDetails).transferInitialState

@@ -508,7 +508,7 @@
     {
       "tag": "CreateField",
       "model": "Update",
-      "field": "totalDepositedB",
+      "field": "totalDepositsBob",
       "type": "String",
       "arity": "Optional"
     },

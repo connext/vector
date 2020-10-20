@@ -71,8 +71,8 @@ model Update {
 
   // DETAILS
   // deposit details
-  totalDepositedA String?
-  totalDepositedB String?
+  totalDepositsAlice String?
+  totalDepositsBob String?
 
   // create details
   transferAmountA      String?

@@ -82,8 +82,8 @@ export const TSetupUpdateDetails = Type.Object({
 
 // Deposit update details
 export const TDepositUpdateDetails = Type.Object({
-  totalDepositedA: TIntegerString,
-  totalDepositedB: TIntegerString,
+  totalDepositsAlice: TIntegerString,
+  totalDepositsBob: TIntegerString,
 });
 
 // Create update details

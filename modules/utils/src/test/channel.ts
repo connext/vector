@@ -137,8 +137,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
       break;
     case UpdateType.deposit:
       details = {
-        totalDepositedA: "10",
-        totalDepositedB: "5",
+        totalDepositsAlice: "10",
+        totalDepositsBob: "5",
       } as DepositUpdateDetails;
       break;
     case UpdateType.create:

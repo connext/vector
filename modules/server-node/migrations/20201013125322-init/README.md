@@ -50,8 +50,8 @@ CREATE TABLE "update" (
     "assetId" TEXT NOT NULL,
     "signatureA" TEXT,
     "signatureB" TEXT,
-    "totalDepositedA" TEXT,
-    "totalDepositedB" TEXT,
+    "totalDepositsAlice" TEXT,
+    "totalDepositsBob" TEXT,
     "transferAmountA" TEXT,
     "transferAmountB" TEXT,
     "transferToA" TEXT,
@@ -244,8 +244,8 @@ migration ..20201013125322-init
 +
 +  // DETAILS
 +  // deposit details
-+  totalDepositedA String?
-+  totalDepositedB String?
++  totalDepositsAlice String?
++  totalDepositsBob String?
 +
 +  // create details
 +  transferAmountA      String?
@@ -365,5 +365,3 @@ migration ..20201013125322-init
 +  @@map(name: "node_index")
 +}
 ```
-
-
