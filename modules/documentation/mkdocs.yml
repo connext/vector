@@ -23,6 +23,9 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed
   - pymdownx.highlight
+  - toc:
+      toc_depth: 3
+      permalink: true
 
 extra:
   social:
