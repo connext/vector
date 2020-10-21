@@ -187,6 +187,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
         encodedInitialTransferState,
         encodedTransferResolver
       );
+      // Verify that returned balances don't exceed initial balances
+      require(
+        balance.amount[0].add(balance.amount[1]) <= cts.balance.amount[0].add(cts.balance.amount[1]),
+        "CMCAdjudicator defundTransfer: resolved balances exceed initial balances"
+      );
     } else {
       // After dispute expiry, if the responder hasn't resolved, we defund the initial balance
       balance = cts.balance;
