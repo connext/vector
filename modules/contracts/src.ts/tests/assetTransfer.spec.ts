@@ -11,7 +11,7 @@ import { alice, bob } from "./constants";
 import { getTestAddressBook, getTestChannel } from "./utils";
 
 // TODO: best way to test this?
-describe.only("AssetTransfer.sol", () => {
+describe("AssetTransfer.sol", () => {
   let addressBook: AddressBook;
   let assetTransfer: Contract;
   let channel: Contract;
