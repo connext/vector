@@ -209,14 +209,14 @@ jobs:
           CMD: '
             git checkout --force master;
             git reset --hard $GITHUB_SHA;
-            make config
-            rm -f router.config.json.backup
-            mv router.config.json router.config.json.backup
+            make config;
+            rm -f router.config.json.backup;
+            mv router.config.json router.config.json.backup;
             jq '"'"'
               .production = true |
               .domainName = "'"$DOMAINNAME"'" |
               .messagingUrl = "'"$MESSAGING_URL"'"
-            '"'"' router.config.json.backup > router.config.json
+            '"'"' router.config.json.backup > router.config.json;
             make restart;
             docker container prune -f;
             docker image ls -q | xargs docker image rm || true;
