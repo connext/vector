@@ -30,7 +30,7 @@ fi
 # Thanks to: https://stackoverflow.com/a/6339869
 set +e # temporarily handle errors manually
 git checkout prod > /dev/null 2>&1
-if git merge --no-commit --no-ff main
+if ! git merge --no-commit --no-ff main
 then
   git merge --abort && git checkout main > /dev/null 2>&1
   echo "Merge aborted & rolled back, your repo is clean again"
