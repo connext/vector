@@ -19,6 +19,19 @@ jobs:
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - run: make push
 
+  test:
+    env:
+      DOMAINNAME: testnet-vector.connext.network
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: test connection to testnet server
+        uses: ./ops/ssh-action/
+        with:
+          HOST: ubuntu@${{ env.DOMAINNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          CMD: 'echo "Successfully connected to $DOMAINNAME: `hostname`";'
+
   docs:
     runs-on: ubuntu-latest
     steps:
@@ -179,3 +192,32 @@ jobs:
       - name: Print logs
         if: failure()
         run: docker service ls && docker service logs --tail 200 node_node
+
+  deploy-testnet:
+    env:
+      DOMAINNAME: testnet-vector.connext.network
+      MESSAGING_URL: https://messaging.connext.network
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, global, duet, trio, node, routing-node, global-prod, node-prod, routing-node-prod]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: deploy testnet node to prod server
+        uses: ./ops/ssh-action/
+        with:
+          HOST: ubuntu@${{ env.DOMAINNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          CMD: '
+            git checkout --force master;
+            git reset --hard $GITHUB_SHA;
+            make config
+            rm -f router.config.json.backup
+            mv router.config.json router.config.json.backup
+            jq '"'"'
+              .production = true |
+              .domainName = "'"$DOMAINNAME"'" |
+              .messagingUrl = "'"$MESSAGING_URL"'"
+            '"'"' router.config.json.backup > router.config.json
+            make restart;
+            docker container prune -f;
+            docker image ls -q | xargs docker image rm || true;
+          '
