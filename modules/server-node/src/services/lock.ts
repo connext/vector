@@ -1,30 +1,22 @@
 import { ILockService, IMessagingService, LockError, LockInformation, Result } from "@connext/vector-types";
-import Redis from "ioredis";
+import { MemoryLockService } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
-import { MemoLock } from "./memo-lock";
-
 export class LockService implements ILockService {
-  private memoLock: MemoLock;
-
   private constructor(
+    private readonly memoryLockService: MemoryLockService,
     private readonly publicIdentifier: string,
     private readonly messagingService: IMessagingService,
-    redisUrl: string,
     private readonly log: BaseLogger,
-  ) {
-    const redis = new Redis(redisUrl);
-    this.memoLock = new MemoLock(redis);
-  }
+  ) {}
 
   static async connect(
+    memoryLockService: MemoryLockService,
     publicIdentifier: string,
     messagingService: IMessagingService,
-    redisUrl: string,
     log: BaseLogger,
   ): Promise<LockService> {
-    const lock = new LockService(publicIdentifier, messagingService, redisUrl, log);
-    await lock.memoLock.setupSubs();
+    const lock = new LockService(memoryLockService, publicIdentifier, messagingService, log);
     await lock.setupPeerListeners();
     return lock;
   }
@@ -84,7 +76,7 @@ export class LockService implements ILockService {
 
   public async acquireLock(lockName: string, isAlice = true, counterpartyPublicIdentifier?: string): Promise<string> {
     if (isAlice) {
-      return this.memoLock.acquireLock(lockName);
+      return this.memoryLockService.acquireLock(lockName);
     } else {
       const res = await this.messagingService.sendLockMessage(
         { type: "acquire", lockName },
@@ -110,7 +102,7 @@ export class LockService implements ILockService {
     counterpartyPublicIdentifier?: string,
   ): Promise<void> {
     if (isAlice) {
-      return this.memoLock.releaseLock(lockName, lockValue);
+      return this.memoryLockService.releaseLock(lockName, lockValue);
     } else {
       const result = await this.messagingService.sendLockMessage(
         { type: "release", lockName, lockValue },
