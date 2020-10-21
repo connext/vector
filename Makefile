@@ -386,3 +386,9 @@ router-proxy: $(shell find ops/proxy $(find_options))
 	docker build $(image_cache) --tag $(project)_router_proxy ops/proxy/router
 	docker tag $(project)_router_proxy $(project)_router_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+ssh-action: $(shell find ops/ssh-action $(find_options))
+	$(log_start)
+	docker build --file ops/ssh-action/Dockerfile --tag $(project)_ssh_action ops/ssh-action
+	docker tag $(project)_ssh_action $(project)_ssh_action:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
