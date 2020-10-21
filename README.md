@@ -1,4 +1,4 @@
-![production](https://github.com/connext/vector/workflows/Production/badge.svg)
+![production](https://github.com/connext/vector/workflows/Production/badge.svg) [![](https://img.shields.io/discord/454734546869551114)](https://discord.gg/m93Sqf4) [![](https://img.shields.io/twitter/follow/ConnextNetwork?style=social)](https://twitter.com/ConnextNetwork)
 
 # ↗️ Vector
 
