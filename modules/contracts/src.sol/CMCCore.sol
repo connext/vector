@@ -3,12 +3,10 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCCore.sol";
+import "./ProxyData.sol";
+import "./ReentrancyGuard.sol";
 
-contract CMCCore is ICMCCore {
-  // mastercopy needs to be first declared variable
-  // in order to ensure storage alignment with the proxy
-  address private mastercopy;
-
+contract CMCCore is ProxyData(address(0)), ReentrancyGuard, ICMCCore {
   address internal alice;
   address internal bob;
 
@@ -22,6 +20,7 @@ contract CMCCore is ICMCCore {
   /// @param _alice: Address representing user with function deposit
   /// @param _bob: Address representing user with multisig deposit
   function setup(address _alice, address _bob) external override onlyOnProxy {
+    ReentrancyGuard.setup();
     require(alice == address(0), "Channel has already been setup");
     require(_alice != address(0) && _bob != address(0), "Address zero not allowed as channel participant");
     require(_alice != _bob, "Channel participants must be different from each other");
