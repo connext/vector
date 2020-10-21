@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import {
   Balance,
   HashlockTransferResolverEncoding,
@@ -15,24 +16,24 @@ import {
   encodeBalance,
 } from "@connext/vector-utils";
 import { HashZero, Zero } from "@ethersproject/constants";
-import { Contract, ContractFactory, Wallet, utils, BigNumber } from "ethers";
+import { Contract, utils, BigNumber } from "ethers";
 
-import { HashlockTransfer } from "../../artifacts";
-import { provider } from "../constants";
+import { deployContracts } from "../../actions";
+import { AddressBook } from "../../addressBook";
+import { alice, provider } from "../constants";
+import { getTestAddressBook } from "../utils";
 
 describe("HashlockTransfer", () => {
-  let deployer: Wallet;
-  let definition: Contract;
-
-  const createlockHash = (preImage: string): string => {
-    return utils.soliditySha256(["bytes32"], [preImage]);
-  };
+  let addressBook: AddressBook;
+  let transfer: Contract;
 
   beforeEach(async () => {
-    deployer = provider.getWallets()[0];
-    definition = await new ContractFactory(HashlockTransfer.abi, HashlockTransfer.bytecode, deployer).deploy();
-    await definition.deployed();
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [["HashlockTransfer", []]]);
+    transfer = addressBook.getContract("HashlockTransfer");
   });
+
+  const createlockHash = (preImage: string): string => utils.soliditySha256(["bytes32"], [preImage]);
 
   const createInitialState = async (preImage: string): Promise<{ state: HashlockTransferState; balance: Balance }> => {
     const senderAddr = getRandomAddress();
@@ -52,7 +53,7 @@ describe("HashlockTransfer", () => {
   const createTransfer = async (balance: Balance, initialState: HashlockTransferState): Promise<boolean> => {
     const encodedState = encodeTransferState(initialState, HashlockTransferStateEncoding);
     const encodedBalance = encodeBalance(balance);
-    return definition.functions.create(encodedBalance, encodedState);
+    return transfer.functions.create(encodedBalance, encodedState);
   };
 
   const resolveTransfer = async (
@@ -63,7 +64,8 @@ describe("HashlockTransfer", () => {
     const encodedState = encodeTransferState(initialState, HashlockTransferStateEncoding);
     const encodedResolver = encodeTransferResolver(resolver, HashlockTransferResolverEncoding);
     const encodedBalance = encodeBalance(balance);
-    const ret = (await definition.functions.resolve(encodedBalance, encodedState, encodedResolver))[0];
+    const res = await transfer.functions.resolve(encodedBalance, encodedState, encodedResolver);
+    const ret = res[0];
     return keyify(balance, ret);
   };
 
@@ -90,7 +92,15 @@ describe("HashlockTransfer", () => {
   };
 
   it("should deploy", async () => {
-    expect(definition.address).to.be.a("string");
+    expect(transfer.address).to.be.a("string");
+  });
+
+  it("should return the registry information", async () => {
+    const registry = await transfer.getRegistryInformation();
+    expect(registry.name).to.be.eq("HashlockTransfer");
+    expect(registry.stateEncoding).to.be.eq("tuple(bytes32 lockHash, uint256 expiry)");
+    expect(registry.resolverEncoding).to.be.eq("tuple(bytes32 preImage)");
+    expect(registry.definition).to.be.eq(transfer.address);
   });
 
   describe("Create", () => {
@@ -172,6 +182,15 @@ describe("HashlockTransfer", () => {
       const incorrectPreImage = getRandomBytes32();
       await expect(resolveTransfer(balance, state, { preImage: incorrectPreImage })).revertedWith(
         "Hash generated from preimage does not match hash in state",
+      );
+    });
+
+    it("should fail if cancelling with a non-zero preimage", async () => {
+      const preImage = getRandomBytes32();
+      const { state, balance } = await createInitialState(preImage);
+      state.expiry = "1";
+      await expect(resolveTransfer(balance, state, { preImage: getRandomBytes32() })).revertedWith(
+        `Must provide empty hash to cancel payment`,
       );
     });
   });

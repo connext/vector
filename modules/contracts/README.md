@@ -120,15 +120,15 @@ The dispute flow works as follows:
 
 As mentioned above, funding a channel is asymmetric. The initiator of a channel (as determined by `participants[]`), _must_ deposit using the `depositA` function in the channel contract. The responder of a channel can deposit simply by sending funds to the channel address.
 
-Calling `depositA` increments the `totalDepositedA` by the amount that Alice deposits for a given assetId. We can get this value offchain or in the adjudicator by calling the `totalDepositedA` getter. We can also get `totalDepositedB` the same way -- the contract calculates using the following identity:
+Calling `depositAlice` increments the `totalDepositsAlice` by the amount that Alice deposits for a given assetId. We can get this value offchain or in the adjudicator by calling the `totalDepositsAlice` getter. We can also get `totalDepositsBob` the same way -- the contract calculates using the following identity:
 
 ```
-getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedA[assetId]
+getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedAlice[assetId]
 ```
 
 Note that because this is an identity, we **do not** use SafeMath. _We explicitly want these values to wrap around in the event of an over/undeflow_.
 
-Offchain, we track the `processedDepositsA` and `processedDepositsB`. Thus, we can calculate any pending deposits (that need to be reconciled with the offchain balance) as `totalDepositedA.sub(processedDepositsA)`. We do the same onchain in the event of a dispute when calling `defundChannel()`.
+Offchain, we track the `processedDepositsA` and `processedDepositsB`. Thus, we can calculate any pending deposits (that need to be reconciled with the offchain balance) as `totalDepositsAlice.sub(processedDepositsA)`. We do the same onchain in the event of a dispute when calling `defundChannel()`.
 
 The above pattern has a few _highly_ desireable UX consequences:
 

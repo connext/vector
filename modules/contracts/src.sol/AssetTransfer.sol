@@ -2,13 +2,15 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./interfaces/IAssetTransfer.sol";
+import "./CMCCore.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
-contract AssetTransfer {
+contract AssetTransfer is CMCCore, IAssetTransfer {
 
     using SafeMath for uint256;
 
@@ -17,8 +19,8 @@ contract AssetTransfer {
     uint256 private constant ERC20_TRANSFER_GAS_LIMIT = 100000;
     uint256 private constant ERC20_BALANCE_GAS_LIMIT = 5000;
 
-    mapping(address => uint256) private _totalTransferred;
-    mapping(address => mapping(address => uint256)) private _emergencyWithdrawableAmount;
+    mapping(address => uint256) internal totalTransferred;
+    mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
 
     modifier onlySelf() {
         require(
@@ -85,13 +87,13 @@ contract AssetTransfer {
     function registerTransfer(address assetId, uint256 amount)
         internal
     {
-        _totalTransferred[assetId] += amount;
+        totalTransferred[assetId] += amount;
     }
 
     function addToEmergencyWithdrawableAmount(address assetId, address owner, uint256 amount)
         internal
     {
-        _emergencyWithdrawableAmount[assetId][owner] += amount;
+        emergencyWithdrawableAmount[assetId][owner] += amount;
     }
 
     function transferAsset(address assetId, address payable recipient, uint256 maxAmount)
@@ -109,35 +111,41 @@ contract AssetTransfer {
         return success;
     }
 
-    function totalTransferred(address assetId)
-        public
+    function getTotalTransferred(address assetId)
+        external
+        override
         view
+        onlyOnProxy
         returns (uint256)
     {
-        return _totalTransferred[assetId];
+        return totalTransferred[assetId];
     }
 
-    function emergencyWithdrawableAmount(address assetId, address owner)
-        public
+    function getEmergencyWithdrawableAmount(address assetId, address owner)
+        external
+        override
         view
+        onlyOnProxy
         returns (uint256)
     {
-        return _emergencyWithdrawableAmount[assetId][owner];
+        return emergencyWithdrawableAmount[assetId][owner];
     }
 
     function emergencyWithdraw(address assetId, address owner, address payable recipient)
         external
+        override
+        onlyOnProxy
     {
         require(
             msg.sender == owner || owner == recipient,
             "AssetTransfer: Either msg.sender or recipient of funds must be the owner of an emergency withdraw"
         );
 
-        uint256 maxAmount = _emergencyWithdrawableAmount[assetId][owner];
+        uint256 maxAmount = emergencyWithdrawableAmount[assetId][owner];
         uint256 balance = LibAsset.getOwnBalance(assetId);
         uint256 amount = LibUtils.min(maxAmount, balance);
 
-        _emergencyWithdrawableAmount[assetId][owner] = _emergencyWithdrawableAmount[assetId][owner].sub(amount);
+        emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
         registerTransfer(assetId, maxAmount);
         require(
             LibAsset.transfer(assetId, recipient, amount),

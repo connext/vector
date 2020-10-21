@@ -15,5 +15,5 @@ export const mkBytes32 = (prefix = "0xa"): string => {
 };
 
 export const mkSig = (prefix = "0xa"): string => {
-  return prefix.padEnd(130, "0");
+  return prefix.padEnd(132, "0");
 };

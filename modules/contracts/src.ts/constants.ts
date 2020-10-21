@@ -1,4 +1,8 @@
+import pino from "pino";
 import { Options } from "yargs";
+
+// While debugging tests, you can change this to be "info" or "debug"
+export const logger = pino({ level: process.env.LOG_LEVEL || "silent" });
 
 export const defaults = {
   mnemonic: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
@@ -12,6 +16,11 @@ export const cliOpts = {
     description: "The path to your address book file",
     type: "string",
     default: defaults.addressBookPath,
+  },
+  bobAddress: {
+    alias: "bob",
+    description: "The counterparty to create a channel with",
+    type: "string",
   },
   amount: {
     alias: "amount",

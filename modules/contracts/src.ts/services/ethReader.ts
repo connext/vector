@@ -167,15 +167,15 @@ export class EthereumChainReader implements IVectorChainReader {
     }
 
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    let totalDepositedA: BigNumber;
+    let totalDepositsAlice: BigNumber;
     try {
-      totalDepositedA = await channelContract.totalDepositedA(assetId);
+      totalDepositsAlice = await channelContract.getTotalDepositsAlice(assetId);
     } catch (e) {
       // TODO: check for reason?
       // Channel contract was not deployed, use 0 value
-      totalDepositedA = BigNumber.from(0);
+      totalDepositsAlice = BigNumber.from(0);
     }
-    return Result.ok(totalDepositedA);
+    return Result.ok(totalDepositsAlice);
   }
 
   async getTotalDepositedB(
@@ -189,9 +189,9 @@ export class EthereumChainReader implements IVectorChainReader {
     }
 
     const channelContract = new Contract(channelAddress, ChannelMastercopy.abi, provider);
-    let totalDepositedB: BigNumber;
+    let totalDepositsBob: BigNumber;
     try {
-      totalDepositedB = await channelContract.totalDepositedB(assetId);
+      totalDepositsBob = await channelContract.getTotalDepositsBob(assetId);
     } catch (e) {
       // TODO: check for reason?
       // Channel contract was not deployed, use onchain value
@@ -199,9 +199,9 @@ export class EthereumChainReader implements IVectorChainReader {
       if (deposited.isError) {
         return deposited;
       }
-      totalDepositedB = deposited.getValue();
+      totalDepositsBob = deposited.getValue();
     }
-    return Result.ok(totalDepositedB);
+    return Result.ok(totalDepositsBob);
   }
 
   async create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>> {

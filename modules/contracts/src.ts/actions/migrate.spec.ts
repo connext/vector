@@ -1,11 +1,11 @@
 import { expect } from "@connext/vector-utils";
 
-import { addressBookPath, alice } from "../tests";
+import { alice, getTestAddressBook } from "../tests";
 
 import { migrate } from "./migrate";
 
-describe("migrate()", () => {
+describe("migrate", () => {
   it("should run without error", async () => {
-    await expect(migrate(alice, addressBookPath, false)).to.be.fulfilled;
+    await expect(migrate(alice, await getTestAddressBook())).to.be.fulfilled;
   });
 });

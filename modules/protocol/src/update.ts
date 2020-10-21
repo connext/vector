@@ -99,14 +99,14 @@ export async function applyUpdate<T extends UpdateType>(
       });
     }
     case UpdateType.deposit: {
-      const { totalDepositedA, totalDepositedB } = details as DepositUpdateDetails;
+      const { totalDepositsAlice, totalDepositsBob } = details as DepositUpdateDetails;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
       const { processedDepositsA, processedDepositsB } = reconcileProcessedDepositsWithExisting(
         previousState!.processedDepositsA,
         previousState!.processedDepositsB,
-        totalDepositedA,
-        totalDepositedB,
+        totalDepositsAlice,
+        totalDepositsBob,
         assetId,
         previousState!.assetIds,
       );
@@ -396,7 +396,7 @@ async function generateDepositUpdate(
   // while the remaining fields are consistent
 
   // Initiating a deposit update should happen *after* money is
-  // sent to the multisig. This means that the `totalDepositedA`
+  // sent to the multisig. This means that the `totalDepositsAlice`
   // will include the latest amount deposited
 
   // Determine the locked value and existing balance using the
@@ -421,15 +421,15 @@ async function generateDepositUpdate(
     return Result.fail(reconcileRes.getError()!);
   }
 
-  const { balance, totalDepositedA, totalDepositedB } = reconcileRes.getValue();
+  const { balance, totalDepositsAlice, totalDepositsBob } = reconcileRes.getValue();
 
   const unsigned = {
     ...generateBaseUpdate(state, params, signer),
     balance,
-    processedDepositsA: totalDepositedA,
-    processedDepositsB: totalDepositedB,
+    processedDepositsA: totalDepositsAlice,
+    processedDepositsB: totalDepositsBob,
     assetId,
-    details: { totalDepositedA, totalDepositedB },
+    details: { totalDepositsAlice, totalDepositsBob },
   };
   return Result.ok(unsigned);
 }

@@ -8,12 +8,10 @@ import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
 
-
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
-
   using LibChannelCrypto for bytes32;
 
-  mapping(bytes32 => bool) isExecuted;
+  mapping(bytes32 => bool) private isExecuted;
 
   /// @param recipient The address to which we're withdrawing funds to
   /// @param assetId The token address of the asset we're withdrawing (address(0)=eth)
@@ -34,23 +32,23 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     isExecuted[withdrawHash] = true;
 
     // Validate signatures
-    require(
-      withdrawHash.checkSignature(aliceSignature, alice),
-      "CMCWithdraw: Invalid alice signature"
-    );
-    require(
-      withdrawHash.checkSignature(bobSignature, bob),
-      "CMCWithdraw: Invalid bob signature"
-    );
+    require(withdrawHash.checkSignature(aliceSignature, alice), "CMCWithdraw: Invalid alice signature");
+    require(withdrawHash.checkSignature(bobSignature, bob), "CMCWithdraw: Invalid bob signature");
 
     // Add to totalWithdrawn
     registerTransfer(assetId, amount);
 
     // Execute the withdraw
-    require(
-      LibAsset.transfer(assetId, recipient, amount),
-      "CMCWithdraw: Transfer failed"
-    );
+    require(LibAsset.transfer(assetId, recipient, amount), "CMCWithdraw: Transfer failed");
   }
 
+  function getWithdrawalTransactionRecord(
+    address recipient,
+    address assetId,
+    uint256 amount,
+    uint256 nonce
+  ) external override view onlyOnProxy returns (bool) {
+    bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
+    return isExecuted[withdrawHash];
+  }
 }

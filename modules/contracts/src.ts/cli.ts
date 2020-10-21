@@ -1,14 +1,9 @@
 import yargs from "yargs";
 
-import {
-  fundCommand,
-  migrateCommand,
-  newTokenCommand,
-} from "./actions";
+import { migrateCommand, registerTransferCommand } from "./actions";
 
 yargs
-  .command(fundCommand)
   .command(migrateCommand)
-  .command(newTokenCommand)
+  .command(registerTransferCommand)
   .demandCommand(1, "Choose a command from the above list")
   .help().argv;
