@@ -8,7 +8,7 @@ describe("MemoLock", () => {
     const TTL = 5000;
 
     beforeEach(async () => {
-      module = new MemoryLockService(5, TTL);
+      module = new MemoryLockService(TTL);
     });
 
     it("should not allow locks to simultaneously access resources", async function() {
@@ -83,7 +83,7 @@ describe("MemoLock", () => {
 
   // TODO: skipped because the lock service does not use order
   it.skip("should expire locks in TTL order", async function() {
-    const customModule = new MemoryLockService(5, 1000);
+    const customModule = new MemoryLockService(1000);
 
     await customModule.acquireLock("foo");
     let err: Error;

@@ -11,11 +11,12 @@ export class LockService implements ILockService {
   ) {}
 
   static async connect(
-    memoryLockService: MemoryLockService,
     publicIdentifier: string,
     messagingService: IMessagingService,
     log: BaseLogger,
+    lockTTL?: number,
   ): Promise<LockService> {
+    const memoryLockService = new MemoryLockService(lockTTL);
     const lock = new LockService(memoryLockService, publicIdentifier, messagingService, log);
     await lock.setupPeerListeners();
     return lock;

@@ -13,7 +13,7 @@ type InternalLock = {
 export class MemoryLockService implements ILockService {
   public readonly locks: Map<string, InternalLock> = new Map();
 
-  constructor(private readonly queueLen: number = 50, private readonly ttl: number = 30000) {}
+  constructor(private readonly ttl: number = 30000) {}
 
   async acquireLock(lockName: string): Promise<string> {
     let lock = this.locks.get(lockName)?.lock;
