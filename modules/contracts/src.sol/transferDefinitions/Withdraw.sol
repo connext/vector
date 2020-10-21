@@ -46,8 +46,10 @@ contract Withdraw is ITransferDefinition {
     Balance memory balance = abi.decode(encodedBalance, (Balance));
 
     require(balance.amount[1] == 0, "Cannot create withdraw with nonzero recipient balance");
-    // TODO
-    // require(state.initiatorSignature != bytes(0), "Cannot create withdraw with no initiator signature");
+    require(
+      state.data.checkSignature(state.initiatorSignature, state.initiator),
+      "Cannot create withdraw with invalid initiator signature"
+    );
     require(
       state.initiator != address(0) && state.responder != address(0),
       "Cannot create withdraw with empty signers"
@@ -67,13 +69,19 @@ contract Withdraw is ITransferDefinition {
     TransferResolver memory resolver = abi.decode(encodedResolver, (TransferResolver));
     Balance memory balance = abi.decode(encodedBalance, (Balance));
 
-    require(
-      state.data.checkSignature(state.initiatorSignature, state.initiator),
-      "invalid withdrawer signature"
-    );
+    // TODO: This is checked in `create`, do we need it here?
+    // require(state.data.checkSignature(state.initiatorSignature, state.initiator), "invalid withdrawer signature");
 
-    // Allow for a withdrawal to be canceled if an incorrect signature is passed in
-    if (state.data.checkSignature(resolver.responderSignature, state.responder)) {
+    // Allow for a withdrawal to be canceled if an empty signature is passed in
+    // TODO: How to pass in the right responder signature value?
+    // Should have *specific* cancellation action, not just any invalid sig
+    if (keccak256(resolver.responderSignature) == keccak256(bytes("0"))) {
+      // Withdraw should be cancelled, no state manipulation needed
+    } else {
+      require(
+        state.data.checkSignature(resolver.responderSignature, state.responder),
+        "Cannot withdraw with invalid responder signature"
+      );
       // Reduce withdraw amount by optional fee -- note that it's up to the offchain validators to ensure
       // That the withdraw commitment takes this fee into account
       balance.amount[1] = state.fee;
