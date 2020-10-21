@@ -28,8 +28,7 @@ fi
 
 # Create patch to check for conflicts
 # Thanks to: https://stackoverflow.com/a/6339869
-# temporarily handle errors manually
-set +e
+set +e # temporarily handle errors manually
 git checkout prod > /dev/null 2>&1
 if git merge --no-commit --no-ff main
 then
@@ -38,9 +37,9 @@ then
   echo
   echo "Error: merging main into prod would result in the above merge conflicts."
   echo "To deploy:"
-  echo " - Merge prod into main ie: git checkout main && git merge prod"
-  echo " - Take care of any merge conflicts & do post-merge testing if needed"
-  echo " - Re-run this script"
+  echo " 1. Merge prod into main ie: git checkout main && git merge prod"
+  echo " 2. Take care of any merge conflicts & do post-merge testing if needed"
+  echo " 3. Re-run this script"
   echo
   exit 0
 fi
@@ -73,21 +72,16 @@ if [[ ! "$REPLY" =~ ^[Yy]$ ]]
 then echo "Aborting by user request" && exit 1 # abort!
 fi
 
-echo "Let's go"
+tag=$project-$version
+echo "Let's go, deploying: $tag"
 
 git checkout prod
-git merge --no-ff main -m "Deploy $project-$version"
+git merge --no-ff main -m "Deploy $tag"
 
 # edit package.json to set new version number
 mv package.json .package.json
 sed 's/"version": ".*"/"version": "'"$version"'"/' < .package.json > package.json
 rm .package.json
-
-cd modules/node
-mv package.json .package.json
-sed 's/"version": ".*"/"version": "'"$version"'"/' < .package.json > package.json
-rm .package.json
-cd ../..
 
 # Push a new commit to prod
 git add .
@@ -95,8 +89,8 @@ git commit --amend --no-edit
 git push origin prod --no-verify
 
 # Push a new semver tag
-git tag "$project-$version"
-git push origin "$project-$version" --no-verify
+git tag "$tag"
+git push origin "$tag" --no-verify
 
 # Bring main up-to-date w prod for a cleaner git history
 git checkout main
