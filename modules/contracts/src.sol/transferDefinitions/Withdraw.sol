@@ -44,19 +44,18 @@ contract Withdraw is ITransferDefinition {
   function create(bytes calldata encodedBalance, bytes calldata encodedState) external override pure returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
     Balance memory balance = abi.decode(encodedBalance, (Balance));
-
-    require(balance.amount[1] == 0, "Cannot create withdraw with nonzero recipient balance");
-    require(
-      state.data.checkSignature(state.initiatorSignature, state.initiator),
-      "Cannot create withdraw with invalid initiator signature"
-    );
+    require(balance.amount[1] == 0, "Withdraw: NONZERO_RECIPIENT_BALANCE");
     require(
       state.initiator != address(0) && state.responder != address(0),
-      "Cannot create withdraw with empty signers"
+      "Withdraw: EMPTY_SIGNERS"
     );
-    require(state.data != bytes32(0), "Cannot create withdraw with empty commitment data");
-    require(state.nonce != uint256(0), "Cannot create withdraw with empty nonce");
-    require(state.fee <= balance.amount[0], "Cannot create withdraw with fee greater than amount in balance");
+    require(state.data != bytes32(0), "Withdraw: EMPTY_DATA");
+    require(state.nonce != uint256(0), "Withdraw: EMPTY_NONCE");
+    require(state.fee <= balance.amount[0], "Withdraw: INSUFFICIENT_BALANCE");
+    require(
+      state.data.checkSignature(state.initiatorSignature, state.initiator),
+      "Withdraw: INVALID_INITIATOR_SIG"
+    );
     return true;
   }
 
@@ -69,9 +68,6 @@ contract Withdraw is ITransferDefinition {
     TransferResolver memory resolver = abi.decode(encodedResolver, (TransferResolver));
     Balance memory balance = abi.decode(encodedBalance, (Balance));
 
-    // TODO: This is checked in `create`, do we need it here?
-    // require(state.data.checkSignature(state.initiatorSignature, state.initiator), "invalid withdrawer signature");
-
     // Allow for a withdrawal to be canceled if an empty signature is passed in
     // TODO: How to pass in the right responder signature value?
     // Should have *specific* cancellation action, not just any invalid sig
@@ -80,10 +76,10 @@ contract Withdraw is ITransferDefinition {
     } else {
       require(
         state.data.checkSignature(resolver.responderSignature, state.responder),
-        "Cannot withdraw with invalid responder signature"
+        "Withdraw.resolve: INVALID_RESPONDER_SIG"
       );
-      // Reduce withdraw amount by optional fee -- note that it's up to the offchain validators to ensure
-      // That the withdraw commitment takes this fee into account
+      // Reduce withdraw amount by optional fee
+      // It's up to the offchain validators to ensure that the withdraw commitment takes this fee into account
       balance.amount[1] = state.fee;
       balance.amount[0] = 0;
     }

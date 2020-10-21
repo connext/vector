@@ -28,12 +28,12 @@ import { getTestAddressBook } from "../utils";
 
 describe("Withdraw", () => {
   let addressBook: AddressBook;
-  let transfer: Contract;
+  let withdraw: Contract;
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["Withdraw", []]]);
-    transfer = addressBook.getContract("Withdraw");
+    withdraw = addressBook.getContract("Withdraw");
   });
 
   const createInitialState = async (
@@ -61,7 +61,7 @@ describe("Withdraw", () => {
   const createTransfer = async (balance: Balance, initialState: WithdrawState): Promise<boolean> => {
     const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
     const encodedBalance = encodeBalance(balance);
-    const ret = (await transfer.functions.create(encodedBalance, encodedState))[0];
+    const ret = (await withdraw.functions.create(encodedBalance, encodedState))[0];
     return ret;
   };
 
@@ -73,7 +73,7 @@ describe("Withdraw", () => {
     const encodedState = encodeTransferState(initialState, WithdrawStateEncoding);
     const encodedResolver = encodeTransferResolver(resolver, WithdrawResolverEncoding);
     const encodedBalance = encodeBalance(balance);
-    const ret = (await transfer.functions.resolve(encodedBalance, encodedState, encodedResolver))[0];
+    const ret = (await withdraw.functions.resolve(encodedBalance, encodedState, encodedResolver))[0];
     return keyify(balance, ret);
   };
 
@@ -95,17 +95,17 @@ describe("Withdraw", () => {
   };
 
   it("should deploy", async () => {
-    expect(transfer.address).to.be.a("string");
+    expect(withdraw.address).to.be.a("string");
   });
 
   it("should return the registry information", async () => {
-    const registry = await transfer.getRegistryInformation();
+    const registry = await withdraw.getRegistryInformation();
     expect(registry.name).to.be.eq("Withdraw");
     expect(registry.stateEncoding).to.be.eq(
       "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)",
     );
     expect(registry.resolverEncoding).to.be.eq("tuple(bytes responderSignature)");
-    expect(registry.definition).to.be.eq(transfer.address);
+    expect(registry.definition).to.be.eq(withdraw.address);
   });
 
   describe("Create", () => {
@@ -117,55 +117,49 @@ describe("Withdraw", () => {
 
     it("should fail if recipient has nonzero balance", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32(), { balance: { amount: ["0", "5"] } });
-      await expect(createTransfer(balance, state)).revertedWith(
-        "Cannot create withdraw with nonzero recipient balance",
-      );
+      await expect(createTransfer(balance, state)).revertedWith("Withdraw: NONZERO_RECIPIENT_BALANCE");
     });
 
     it("should fail if there is no responder", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32(), {
         state: { responder: AddressZero },
       });
-      await expect(createTransfer(balance, state)).revertedWith("Cannot create withdraw with empty signers");
+      await expect(createTransfer(balance, state)).revertedWith("Withdraw: EMPTY_SIGNERS");
     });
 
     it("should fail if there is no initiator", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32(), {
         state: { initiator: AddressZero },
       });
-      await expect(createTransfer(balance, state)).revertedWith("Cannot create withdraw with empty signers");
+      await expect(createTransfer(balance, state)).revertedWith("Withdraw: EMPTY_SIGNERS");
     });
 
     it("should fail if there is no data", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32(), {
         state: { data: HashZero },
       });
-      await expect(createTransfer(balance, state)).revertedWith("Cannot create withdraw with empty commitment data");
+      await expect(createTransfer(balance, state)).revertedWith("Withdraw: EMPTY_DATA");
     });
 
     it("should fail if the nonce is 0", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32(), {
         state: { nonce: "0" },
       });
-      await expect(createTransfer(balance, state)).revertedWith("Cannot create withdraw with empty nonce");
+      await expect(createTransfer(balance, state)).revertedWith("Withdraw: EMPTY_NONCE");
     });
 
-    it("should fail if the fee is greater than the withdrawal amount", async () => {
+    it("Withdraw: INSUFFICIENT_BALANCE", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32(), {
         state: { fee: BigNumber.from("10000000").toString() },
       });
-      await expect(createTransfer(balance, state)).revertedWith(
-        "Cannot create withdraw with fee greater than amount in balance",
-      );
+      await expect(createTransfer(balance, state)).revertedWith("Withdraw: INSUFFICIENT_BALANCE");
     });
 
     it("should fail if the initiators signature is incorrect", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32(), {
         state: { initiatorSignature: await signChannelMessage(getRandomBytes32(), alice.privateKey) },
       });
-      await expect(createTransfer(balance, state)).revertedWith(
-        "Cannot create withdraw with invalid initiator signature",
-      );
+      await expect(createTransfer(balance, state)).revertedWith("Withdraw: INVALID_INITIATOR_SIG");
     });
   });
 
@@ -186,14 +180,11 @@ describe("Withdraw", () => {
       await validateResult(balance, state, { responderSignature }, result);
     });
 
-    // TODO: Do we need this?
-    it.skip("should fail if the initiators signature is invalid", async () => {});
-
     it("should fail if the responder signature is invalid", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32());
       const responderSignature = await signChannelMessage(getRandomBytes32(), bob.privateKey);
       await expect(resolveTransfer(balance, state, { responderSignature })).revertedWith(
-        "Cannot cancel withdraw without empty responder signature",
+        "Withdraw.resolve: INVALID_RESPONDER_SIG",
       );
     });
 
