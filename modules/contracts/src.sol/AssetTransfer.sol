@@ -116,6 +116,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
         override
         view
         onlyOnProxy
+        nonReentrantView
         returns (uint256)
     {
         return totalTransferred[assetId];
@@ -126,6 +127,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
         override
         view
         onlyOnProxy
+        nonReentrantView
         returns (uint256)
     {
         return emergencyWithdrawableAmount[assetId][owner];
@@ -135,6 +137,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
         external
         override
         onlyOnProxy
+        nonReentrant
     {
         require(
             msg.sender == owner || owner == recipient,
