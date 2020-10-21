@@ -12,7 +12,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// @title CMCAdjudicator - Dispute logic for ONE channel
 contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
-
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
@@ -21,9 +20,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
   modifier validateChannel(CoreChannelState calldata ccs) {
     require(
-      ccs.channelAddress == address(this) &&
-      ccs.alice == alice &&
-      ccs.bob == bob,
+      ccs.channelAddress == address(this) && ccs.alice == alice && ccs.bob == bob,
       "CMCAdjudicator: Mismatch between given core channel state and channel we are at"
     );
     _;
@@ -49,12 +46,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreChannelState calldata ccs,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
-  )
-    external
-    override
-    onlyOnProxy
-    validateChannel(ccs)
-  {
+  ) external override onlyOnProxy validateChannel(ccs) {
     // Verify Alice's and Bob's signature on the channel state
     verifySignatures(ccs, aliceSignature, bobSignature);
 
@@ -74,8 +66,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       channelDispute.channelStateHash = hashChannelState(ccs);
       channelDispute.nonce = ccs.nonce;
       channelDispute.merkleRoot = ccs.merkleRoot;
-
-    } else { // We are not already in a dispute
+    } else {
+      // We are not already in a dispute
       // Only Alice or Bob may start a dispute
       verifyMsgSenderisAliceOrBob(ccs);
 
@@ -92,14 +84,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     }
   }
 
-  function defundChannel(
-    CoreChannelState calldata ccs
-  )
-    external
-    override
-    onlyOnProxy
-    validateChannel(ccs)
-  {
+  function defundChannel(CoreChannelState calldata ccs) external override onlyOnProxy validateChannel(ccs) {
     // Only Alice or Bob can defund their channel
     verifyMsgSenderisAliceOrBob(ccs);
 
@@ -127,8 +112,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       Balance memory balance = ccs.balances[i];
 
       // Add unprocessed deposits to amounts
-      balance.amount[0] += totalDepositedA(assetId) - ccs.processedDepositsA[i];
-      balance.amount[1] += totalDepositedB(assetId) - ccs.processedDepositsB[i];
+      balance.amount[0] += _getTotalDepositsAlice(assetId) - ccs.processedDepositsA[i];
+      balance.amount[1] += _getTotalDepositsBob(assetId) - ccs.processedDepositsB[i];
 
       // Transfer funds; this will never revert or fail otherwise,
       // i.e. if the underlying "real" asset transfer fails,
@@ -137,10 +122,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     }
   }
 
-  function disputeTransfer(
-    CoreTransferState calldata cts,
-    bytes32[] calldata merkleProofData
-  )
+  function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData)
     external
     override
     onlyOnProxy
@@ -172,12 +154,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreTransferState calldata cts,
     bytes calldata encodedInitialTransferState,
     bytes calldata encodedTransferResolver
-  )
-    external
-    override
-    onlyOnProxy
-    validateTransfer(cts)
-  {
+  ) external override onlyOnProxy validateTransfer(cts) {
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
@@ -197,7 +174,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     Balance memory balance;
 
     if (block.number < transferDispute.transferDisputeExpiry) {
-
       // Before dispute expiry, responder can resolve
       verifyMsgSenderIsResponder(cts);
       require(
@@ -210,8 +186,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
         encodedInitialTransferState,
         encodedTransferResolver
       );
-
-    } else { // After dispute expiry, if the responder hasn't resolved, we defund the initial balance
+    } else {
+      // After dispute expiry, if the responder hasn't resolved, we defund the initial balance
       balance = cts.balance;
     }
 
@@ -227,7 +203,10 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   function verifyMsgSenderIsInitiatorOrResponder(CoreTransferState calldata cts) internal view {
-    require(msg.sender == cts.initiator || msg.sender == cts.responder, "CMCAdjudicator: msg.sender is neither transfer initiator nor responder");
+    require(
+      msg.sender == cts.initiator || msg.sender == cts.responder,
+      "CMCAdjudicator: msg.sender is neither transfer initiator nor responder"
+    );
   }
 
   function verifyMsgSenderIsResponder(CoreTransferState calldata cts) internal view {
@@ -240,14 +219,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     bytes calldata bobSignature
   ) internal pure {
     bytes32 ccsHash = hashChannelState(ccs);
-    require(
-      ccsHash.checkSignature(aliceSignature, ccs.alice),
-      "CMCAdjudicator: Invalid alice signature"
-    );
-    require(
-      ccsHash.checkSignature(bobSignature, ccs.bob),
-      "CMCAdjudicator: Invalid bob signature"
-    );
+    require(ccsHash.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: Invalid alice signature");
+    require(ccsHash.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: Invalid bob signature");
   }
 
   function verifyMerkleProof(
@@ -255,10 +228,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     bytes32 root,
     bytes32 leaf
   ) internal pure {
-    require(
-      MerkleProof.verify(proof, root, leaf),
-      "CMCAdjudicator: Merkle proof verification failed"
-    );
+    require(MerkleProof.verify(proof, root, leaf), "CMCAdjudicator: Merkle proof verification failed");
   }
 
   function inConsensusPhase() internal view returns (bool) {

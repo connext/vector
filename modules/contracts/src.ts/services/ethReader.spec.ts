@@ -4,14 +4,9 @@ import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "ethers";
 import pino from "pino";
 
-import {
-  alice,
-  bob,
-  createTestChannel,
-  createTestChannelFactory,
-  createTestTransferRegistry,
-  provider,
-} from "../tests";
+import { deployContracts, registerTransfer } from "../actions";
+import { AddressBook } from "../addressBook";
+import { alice, bob, chainIdReq, getTestAddressBook, getTestChannel, provider } from "../tests";
 
 import { EthereumChainReader } from "./ethReader";
 
@@ -19,6 +14,7 @@ import { EthereumChainReader } from "./ethReader";
 describe("EthereumChainReader", () => {
   const assetId = AddressZero;
   const transfer = {} as any; // TODO
+  let addressBook: AddressBook;
   let chainId: number;
   let chainReader: EthereumChainReader;
   let channel: Contract;
@@ -26,10 +22,18 @@ describe("EthereumChainReader", () => {
   let transferRegistry: Contract;
 
   beforeEach(async () => {
-    transferRegistry = await createTestTransferRegistry();
-    factory = await createTestChannelFactory();
-    channel = await createTestChannel();
-    chainId = (await provider.getNetwork()).chainId;
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [
+      ["ChannelMastercopy", []],
+      ["ChannelFactory", ["ChannelMastercopy"]],
+      ["TransferRegistry", []],
+      ["Withdraw", []],
+    ]);
+    transferRegistry = addressBook.getContract("TransferRegistry");
+    factory = addressBook.getContract("ChannelFactory");
+    await registerTransfer("Withdraw", alice, addressBook);
+    channel = (await getTestChannel()).connect(alice);
+    chainId = await chainIdReq;
     chainReader = new EthereumChainReader({ [chainId]: provider }, pino());
   });
 
@@ -39,8 +43,10 @@ describe("EthereumChainReader", () => {
   });
 
   it("getTotalDepositedA", async () => {
-    const res = (await chainReader.getTotalDepositedA(channel.address, chainId, assetId)).getValue();
-    expect(res).to.be.ok;
+    const res = await chainReader.getTotalDepositedA(channel.address, chainId, assetId);
+    expect(res.isError).to.be.false;
+    const val = res.getValue();
+    expect(val).to.be.ok;
   });
 
   it("getTotalDepositedB", async () => {

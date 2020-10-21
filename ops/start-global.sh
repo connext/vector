@@ -12,7 +12,6 @@ docker network create --attachable --driver overlay "$project" 2> /dev/null || t
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
 then echo "A $stack stack is already running" && exit 0
-else echo
 fi
 
 ####################
@@ -41,9 +40,9 @@ public_port=$(getConfig port)
 node_config=$root/node.config.json
 if [[ -f "$node_config" ]]
 then
-  given_providers=$(echo "$node_config" | jq '.chainProviders' | tr -d '\n\r ')
+  given_providers=$(jq '.chainProviders' "$node_config" | tr -d '\n\r ')
   default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
-  if [[ "$default_providers" != "$given_providers" ]]
+  if [[ "$default_providers" == "$given_providers" ]]
   then use_local_evms="true";
   else
     echo "Node config contains custom ethproviders, using those instead of spinning up local evms"

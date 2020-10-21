@@ -3,14 +3,12 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCCore.sol";
+import "./ProxyData.sol";
+import "./ReentrancyGuard.sol";
 
-contract CMCCore is ICMCCore {
-  // mastercopy needs to be first declared variable
-  // in order to ensure storage alignment with the proxy
-  address public mastercopy;
-
-  address public alice;
-  address public bob;
+contract CMCCore is ProxyData(address(0)), ReentrancyGuard, ICMCCore {
+  address internal alice;
+  address internal bob;
 
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {
@@ -22,6 +20,7 @@ contract CMCCore is ICMCCore {
   /// @param _alice: Address representing user with function deposit
   /// @param _bob: Address representing user with multisig deposit
   function setup(address _alice, address _bob) external override onlyOnProxy {
+    ReentrancyGuard.setup();
     require(alice == address(0), "Channel has already been setup");
     require(_alice != address(0) && _bob != address(0), "Address zero not allowed as channel participant");
     require(_alice != _bob, "Channel participants must be different from each other");
@@ -29,9 +28,21 @@ contract CMCCore is ICMCCore {
     bob = _bob;
   }
 
-  /// @notice A getter function for the participants of the multisig
-  /// @return An array of addresses representing the participants
-  function getParticipants() external override view onlyOnProxy returns (address[2] memory) {
-    return [alice, bob];
+  /// @notice A getter function for the mastercopy of the multisig
+  /// @return The mastercopy address the channel was created with
+  function getMastercopy() external override view onlyOnProxy returns (address) {
+    return mastercopy;
+  }
+
+  /// @notice A getter function for the bob of the multisig
+  /// @return Bob's signer address
+  function getAlice() external override view onlyOnProxy returns (address) {
+    return alice;
+  }
+
+  /// @notice A getter function for the bob of the multisig
+  /// @return Alice's signer address
+  function getBob() external override view onlyOnProxy returns (address) {
+    return bob;
   }
 }

@@ -64,6 +64,11 @@ contract HashlockTransfer is ITransferDefinition {
       // Update state
       balance.amount[1] = balance.amount[0];
       balance.amount[0] = 0;
+    } else {
+      // To cancel, the preImage must be empty (not simply incorrect)
+      require(resolver.preImage == bytes32(0), "Must provide empty hash to cancel payment");
+
+      // There are no additional state mutations
     }
 
     return balance;

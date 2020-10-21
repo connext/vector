@@ -203,8 +203,8 @@ export type ResolveUpdateDetails = {
 };
 
 export type DepositUpdateDetails = {
-  totalDepositedA: string;
-  totalDepositedB: string;
+  totalDepositsAlice: string;
+  totalDepositsBob: string;
 };
 
 export type SetupUpdateDetails = {

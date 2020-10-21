@@ -8,7 +8,9 @@ import * as packageJson from "./package.json";
 
 // create accounts with the default balance of MAX_INT / 2
 // and use them to fund accounts in the test as needed
-const MAX_INT = BigNumber.from(2).pow(256).sub(1);
+const MAX_INT = BigNumber.from(2)
+  .pow(256)
+  .sub(1);
 
 usePlugin("@nomiclabs/buidler-waffle");
 

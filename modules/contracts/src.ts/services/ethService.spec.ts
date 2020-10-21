@@ -2,21 +2,19 @@ import { expect, MemoryStoreService } from "@connext/vector-utils";
 import { Contract } from "ethers";
 import pino from "pino";
 
-import { alice, createTestChannel, provider } from "../tests";
+import { alice, chainIdReq, getTestChannel, provider } from "../tests";
 
 import { EthereumChainService } from "./ethService";
 
 describe("EthereumChainService", () => {
   let channel: Contract;
-  let chainId: number;
   let chainService: EthereumChainService;
 
   beforeEach(async () => {
-    channel = await createTestChannel();
-    chainId = (await provider.getNetwork()).chainId;
+    channel = await getTestChannel();
     chainService = new EthereumChainService(
       new MemoryStoreService(),
-      { [chainId]: provider },
+      { [await chainIdReq]: provider },
       alice.privateKey,
       pino(),
     );

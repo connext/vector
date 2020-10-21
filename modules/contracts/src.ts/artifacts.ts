@@ -1,6 +1,7 @@
 import { HexString } from "@connext/vector-types";
 import { utils } from "ethers";
 
+import * as AssetTransfer from "../artifacts/AssetTransfer.json";
 import * as ChannelFactory from "../artifacts/ChannelFactory.json";
 import * as ChannelMastercopy from "../artifacts/ChannelMastercopy.json";
 import * as HashlockTransfer from "../artifacts/HashlockTransfer.json";
@@ -23,6 +24,7 @@ type Artifact = {
 type Artifacts = { [contractName: string]: Artifact };
 
 export const artifacts: Artifacts = {
+  AssetTransfer,
   ChannelFactory,
   ChannelMastercopy,
   HashlockTransfer,
@@ -35,6 +37,7 @@ export const artifacts: Artifacts = {
 } as any;
 
 export {
+  AssetTransfer,
   ChannelFactory,
   ChannelMastercopy,
   HashlockTransfer,

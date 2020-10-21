@@ -1,16 +1,31 @@
 import { TransferNames } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
+import { Contract } from "ethers";
 
-import { addressBookPath, alice } from "../tests";
+import { AddressBook } from "../addressBook";
+import { alice, getTestAddressBook } from "../tests";
 
-import { migrate } from "./migrate";
+import { deployContracts } from "./deployContracts";
 import { registerTransfer } from "./registerTransfer";
 
-describe("registerTransfer()", () => {
+describe("registerTransfer", () => {
+  let addressBook: AddressBook;
+  let registry: Contract;
+
   beforeEach(async () => {
-    await expect(migrate(alice, addressBookPath, true)).to.be.fulfilled;
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [
+      ["HashlockTransfer", []],
+      ["TransferRegistry", []],
+    ]);
+    registry = addressBook.getContract("TransferRegistry");
   });
-  it("should run without error", async () => {
-    await expect(registerTransfer(TransferNames.HashlockTransfer, alice, addressBookPath, false)).to.be.fulfilled;
+
+  it("should registry a new transfer", async () => {
+    expect(registry.address).to.be.a("string");
+    await expect(
+      registerTransfer(TransferNames.HashlockTransfer, alice, addressBook),
+    ).to.be.fulfilled;
   });
+
 });

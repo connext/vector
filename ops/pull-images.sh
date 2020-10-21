@@ -4,9 +4,8 @@ set -e
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep '"name":' "$root/package.json" | head -n 1 | cut -d '"' -f 4)
 registry=$(grep '"registry":' "$root/package.json" | head -n 1 | cut -d '"' -f 4)
-
+release=$(grep -m 1 '"version":' "$root/package.json" | cut -d '"' -f 4)
 commit=$(git rev-parse HEAD | head -c 8)
-semver=$(grep '"version":' package.json | head -n 1 | cut -d '"' -f 4)
 
 default_images=$(
   echo 'auth builder database ethprovider global_proxy nats node node_proxy router router_proxy test_runner' |\
@@ -22,7 +21,7 @@ then
 
 # Else parse first arg as versions and second as image names
 else
-  versions="${1:-latest $commit $semver}"
+  versions="${1:-latest $commit $release}"
   images="${2:-$default_images}"
 fi
 

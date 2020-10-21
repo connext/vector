@@ -12,9 +12,10 @@ test_cmd="$(jq '.scripts.test' package.json | tr -d '\n\r"' | cut -d " " -f 1)"
 if [[ "$test_cmd" == *mocha* ]]
 then
   if [[ "$VECTOR_PROD" == "true" ]]
-  then opts="--color --forbid-only"
-  else opts="--color --bail"
+  then opts=(--color --forbid-only)
+  else opts=(--color --bail)
   fi
+else opts=();
 fi
 
 if [[ "${cmd##*-}" == "test" ]]
@@ -22,33 +23,33 @@ then
   set -o pipefail
   echo "Starting $unit tester"
   if [[ -n "$(which pino-pretty)" ]]
-  then exec npm run test -- "$opts" | pino-pretty --colorize
-  else exec npm run test -- "$opts"
+  then exec npm run test -- "${opts[@]}" | pino-pretty --colorize
+  else exec npm run test -- "${opts[@]}"
   fi
 
 elif [[ "${cmd##*-}" == "watch" ]]
 then
   echo "Starting $unit watcher"
 
-  src=""
+  src=()
   for dir in src src.ts src.sol
   do
     if [[ -d "$dir" ]]
-    then src+="$dir "
+    then src+=("$dir")
     fi
   done
-  echo "Watching src folders: $src"
+  echo "Watching src folders: ${src[*]}"
 
   prev_checksum=""
   while true
   do
-    checksum="$(find "$src" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
+    checksum="$(find "${src[@]}" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
     if [[ "$checksum" != "$prev_checksum" ]]
     then
       echo
       echo "Changes detected!"
 
-      test_pids="$(pgrep "$test_cmd" | tr '\n\r' ' ')"
+      test_pids="$(pgrep -f "$test_cmd" | tr '\n\r' ' ')"
       if [[ -n "$test_pids" ]]
       then
         echo "Stopping all ${test_cmd} processes w pids: ${test_pids}"
@@ -60,10 +61,10 @@ then
       sleep 2
       echo "Re-running tests..."
 
-      prev_checksum="$(find "$src" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
+      prev_checksum="$(find "${src[@]}" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
       if [[ -n "$(which pino-pretty)" ]]
-      then (npm run test -- "$opts" | pino-pretty --colorize &)
-      else (npm run test -- "$opts" &)
+      then (npm run test -- "${opts[@]}" | pino-pretty --colorize &)
+      else (npm run test -- "${opts[@]}" &)
       fi
 
     # If no changes, do nothing

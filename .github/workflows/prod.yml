@@ -1,9 +1,9 @@
-name: Master
+name: Production
 
 on:
   push:
     branches:
-      - master
+      - prod
 
 jobs:
   build:
@@ -18,6 +18,19 @@ jobs:
       - run: bash ops/build-report.sh
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - run: make push
+
+  ssh:
+    env:
+      DOMAINNAME: testnet-vector.connext.network
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: test connection to testnet server
+        uses: ./ops/ssh-action/
+        with:
+          HOST: ubuntu@${{ env.DOMAINNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          CMD: 'echo "Successfully connected to $DOMAINNAME: `hostname`";'
 
   docs:
     runs-on: ubuntu-latest
@@ -39,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: make test-utils
+      - run: make test-contracts
 
   protocol:
     runs-on: ubuntu-latest
@@ -179,3 +192,24 @@ jobs:
       - name: Print logs
         if: failure()
         run: docker service ls && docker service logs --tail 200 node_node
+
+  deploy-testnet:
+    env:
+      DOMAINNAME: testnet-vector.connext.network
+      MESSAGING_URL: https://messaging.connext.network
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, global, duet, trio, node, routing-node, global-prod, node-prod, routing-node-prod]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: deploy testnet node to prod server
+        uses: ./ops/ssh-action/
+        with:
+          HOST: ubuntu@${{ env.DOMAINNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          CMD: '
+            git checkout --force prod;
+            git reset --hard $GITHUB_SHA;
+            make restart;
+            docker container prune -f;
+            docker image ls -q | xargs docker image rm || true;
+          '

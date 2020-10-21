@@ -117,7 +117,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
 
       const tx = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositA, () =>
-        channelFactory.createChannelAndDepositA(
+        channelFactory.createChannelAndDepositAlice(
           channelState.alice,
           channelState.bob,
           channelState.networkContext.chainId,
@@ -347,11 +347,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
       this.log.info({ txHash: approveTx?.hash, method: "sendDepositATx", assetId }, "Token approval confirmed");
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositA, () =>
-        vectorChannel.depositA(assetId, amount),
+        vectorChannel.depositAlice(assetId, amount),
       );
     }
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositA, () =>
-      vectorChannel.depositA(assetId, amount, { value: amount }),
+      vectorChannel.depositAlice(assetId, amount, { value: amount }),
     );
   }
 

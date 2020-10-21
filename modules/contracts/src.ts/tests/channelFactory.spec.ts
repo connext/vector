@@ -1,39 +1,41 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract, ContractFactory, BigNumber } from "ethers";
+import { Contract, BigNumber } from "ethers";
 import pino from "pino";
 
-import { ChannelMastercopy, ChannelFactory, Proxy } from "../artifacts";
+import { createChannel, deployContracts } from "../actions";
+import { AddressBook } from "../addressBook";
+import { ChannelMastercopy, Proxy } from "../artifacts";
 import { VectorChainReader } from "../services";
 
-import { alice, bob, provider } from "./constants";
+import { alice, bob, chainIdReq, provider } from "./constants";
+import { getTestAddressBook } from "./utils";
 
 describe("ChannelFactory", () => {
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
+  let addressBook: AddressBook;
+  let chainId: number;
+  let chainReader: VectorChainReader;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
-  let chainReader: VectorChainReader;
-  let chainId: number;
 
   beforeEach(async () => {
-    chainId = (await provider.getNetwork()).chainId;
-
-    channelMastercopy = await new ContractFactory(ChannelMastercopy.abi, ChannelMastercopy.bytecode, alice).deploy();
-    await channelMastercopy.deployed();
-
-    channelFactory = await new ContractFactory(ChannelFactory.abi, ChannelFactory.bytecode, alice).deploy(
-      channelMastercopy.address,
-    );
-    await channelFactory.deployed();
-
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [
+      ["ChannelMastercopy", []],
+      ["ChannelFactory", ["ChannelMastercopy"]],
+    ]);
+    channelMastercopy = addressBook.getContract("ChannelMastercopy");
+    channelFactory = addressBook.getContract("ChannelFactory");
+    chainId = await chainIdReq;
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
     chainReader = new VectorChainReader(
       chainProviders,
       pino().child({ module: "VectorChainReader" }),
     );
-
   });
 
   it("should deploy", async () => {
@@ -48,14 +50,10 @@ describe("ChannelFactory", () => {
     expect(await channelFactory.proxyCreationCode()).to.equal(Proxy.bytecode);
   });
 
+  it.skip("should return the correctly calculated channel address", async () => {});
+
   it("should create a channel", async () => {
-    const created = new Promise(res => {
-      channelFactory.once(channelFactory.filters.ChannelCreation(), res);
-    });
-    const tx = await channelFactory.createChannel(alice.address, bob.address, chainId);
-    expect(tx.hash).to.be.a("string");
-    await tx.wait();
-    const channelAddress = await created;
+    const channel = await createChannel(bob.address, alice, addressBook);
     const computedAddr = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,
@@ -63,8 +61,7 @@ describe("ChannelFactory", () => {
       channelFactory.address,
       chainReader,
     );
-    expect(channelAddress).to.be.a("string");
-    expect(channelAddress).to.be.eq(computedAddr.getValue());
+    expect(channel.address).to.be.eq(computedAddr.getValue());
   });
 
   it("should create a channel with a deposit", async () => {
@@ -77,7 +74,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDepositA(alice.address, bob.address, chainId, AddressZero, value, { value });
+      .createChannelAndDepositAlice(alice.address, bob.address, chainId, AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;
@@ -97,9 +94,9 @@ describe("ChannelFactory", () => {
     const code = await provider.getCode(channelAddress);
     expect(code).to.not.be.eq("0x");
 
-    const totalDepositedA = await new Contract(channelAddress, ChannelMastercopy.abi, alice).totalDepositedA(
+    const totalDepositsAlice = await new Contract(channelAddress, ChannelMastercopy.abi, alice).getTotalDepositsAlice(
       AddressZero,
     );
-    expect(totalDepositedA).to.be.eq(value);
+    expect(totalDepositsAlice).to.be.eq(value);
   });
 });

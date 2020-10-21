@@ -67,10 +67,8 @@ wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
 # Because stupid ganache hardcoded it's chainId, prefer this env var over ethProvider.getNetwork()
 export REAL_CHAIN_ID=$chain_id
 
-echo "Deploying contracts.."
+echo "Migrating contracts.."
 node "$cwd/dist/cli.js" migrate --address-book "$address_book" --mnemonic "$mnemonic"
-
-node "$cwd/dist/cli.js" new-token --address-book "$address_book" --mnemonic "$mnemonic"
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
 function fromAddressBook {
