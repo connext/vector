@@ -19,7 +19,7 @@ jobs:
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - run: make push
 
-  test:
+  ssh:
     env:
       DOMAINNAME: testnet-vector.connext.network
     runs-on: ubuntu-latest
