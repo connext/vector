@@ -1,6 +1,59 @@
 # Node API Reference
 There is one consolidated API across both the `server-node` and `browser-node`. Server nodes expose that interface via HTTP and gRPC (coming soon), and we additionally have [an example TS "client"](./modules/utils/src/serverNode.ts) which wraps the HTTP methods. The browser node exposes a TS interface only.
 
+## Base Objects
+
+### Balance
+
+`Balance`: `object` - contains:
+
+- `to`: `string[]` - Signing keys of channel participants ordered by channel `[initiator, responder]`.
+- `amount`: `string[]` - Amount of balance for the given assetId, ordered by channel `[initiator, responder]`.
+
+### Full Channel State
+
+`FullChannelState`: `object` - contains:
+
+-   `assetIds`: `string[]` - Array of assetIds for assets that are managed by this channel. 
+-   `balances`: `object[]` - Array of [Balance](#balance) objects indexed by the above `assetIds` array.
+-   `channelAddress`: `string` - Unique onchain address of the channel.
+-   `alice`: `string` - Signing key of channel initiator, i.e. the party that first called `setup`.
+-   `bob`: `string` - Signing key of channel responder, i.e. the party who responded to `setup`.
+-   `merkleRoot`: `string` - Root hash containing merkelized data from active transfers and balances. Used by the onchain contracts as part of disputing.
+-   `nonce`: `number` - Monotonically increasing number which is incremented for every update to the channel. Used by the onchain contracts as part of disputing.
+-   `processedDepositsA`: `string[]` - Offchain tracker of total amount of deposits reconciled into the channel balance for the channel initiator, indexed by `assetIds` array above. used by onchain contracts as part of disputing.
+-   `processedDepositsB`: `string[]` - Offchain tracker of total amount of deposits reconciled into the channel balance for the channel responder, indexed by `assetIds` array above. used by onchain contracts as part of disputing.
+-   `timeout`: `string` - Timeout within which onchain disputes are settled designated as number of blocks.
+-   `aliceIdentifier`: `string` - Public identifier of the channel initiator.
+-   `bobIdentifier`: `string` - Public identifier of the channel responder.
+-   `latestUpdate`: `object` - Latest update that was mutually agreed on in the channel by both parties.
+-   `networkContext`: `object` - Chain specific data used for disputing. Includes:
+    -   `channelFactoryAddress`: `string` - Address of `ChannelFactory.sol` contract for the chain that this channel is on.
+    -   `channelMastercopyAddress`: `string` - Address of `ChannelMastercopy.sol` contract for the chain that this channel is on.
+    -   `transferRegistryAddress`: `string` - Address of `TransferRegistry.sol` contract for the chain that this channel is on.
+    -   `chainId`: `number` - [Chainid](https://chainid.network) of the chain that this channel is on.
+    -   `providerUrl`: `string` - Chain provider that this node instance was initiated with (associated with this chainId).
+
+### Full Transfer State
+
+`FullTransferState`: `object` - contains:
+
+- `balance`: `object` - [Balance](#balance) object.
+- `assetId`: `string` - Id of the asset that is being sent as part of this transfer.
+- `channelAddress`: `string` - Unique onchain address of the channel.
+- `transferId`: `string` - Unique identifier associated with this transfer.
+- `transferDefinition`: `string` - Onchain address of the contract logic that will be used to govern this transfer.
+- `transferTimeout`: `string` - Transfer-specific dispute timeout within which the transfer state must be settled onchain.
+- `initialStateHash`: `string` - Hash of the initial state of the transfer as defined in the `transferDefinition` contract.
+- `initiator`: `string` - Signing key of the initiator of the transfer (the peer that calls `conditionalTransfer`).
+- `responder`: `string` - Signing key of the responder of the transfer (the peer that calls `resolveTransfer`).
+- `channelFactoryAddress`: `string` - Address of the `ChannelFactory.sol` contract.
+- `chainId`: `number` - Unique id of the chain that this channel is on.
+- `transferEncodings`: `string[]` - [ABIEncoderV2] encodings for `[transferState, transferResolver]`.
+- `transferState`: Initial state of the transfer as defined in the `transferDefinition` contract.
+- `transferResolver`: Data needed to resolve the transfer as defined in the `transferDefinition` contract.
+- `meta`: `object` - User-defined object for optional metadata sent along with the transfer (e.g. Invoice number, messages, etc.)
+
 ## Core Methods
 
 ### createNode
@@ -24,7 +77,7 @@ Creates a new node engine (i.e. a new `signer` + `publicIdentifier`) at the give
         ``` http
         ##############
         ### CREATE NODE
-        POST {{bobUrl}}/node
+        POST {{nodeUrl}}/node
         Content-Type: application/json
 
         {
@@ -51,7 +104,7 @@ OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/e
 
 ### setup
 
-// TODO setup must be merged with `requestSetup`
+// TODO setup is being with `requestSetup`, what are the latest params?
 
 Creates a channel with a given counterparty.
 
@@ -320,7 +373,51 @@ OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/e
 
 ### publicIdentifier
 
+Unique identifier associated with your identity - 1:1 mapped with your signing key.
+
+!!! example
+    === "TS"
+
+        ``` typescript
+        const result = node.publicIdentifier;
+        ```
+
+    === "HTTP"
+        ``` http
+        ## TODO
+        ```
+
+#### Params
+
+None
+
+#### Returns
+
+- `publicIdentifier`: `string`
+
 ### signerAddress
+
+Public address of your signing key - 1:1 mapped with your public identifier.
+
+!!! example
+    === "TS"
+
+        ``` typescript
+        const result = node.signerAddress;
+        ```
+
+    === "HTTP"
+        ``` http
+        ## TODO
+        ```
+
+#### Params
+
+None
+
+#### Returns
+
+- `signerAddress`: `string`
 
 ### getStateChannelByParticipants
 
@@ -336,13 +433,13 @@ Gets a channel given the participant public identifiers of that channel.
             chainId: 1 // Ethereum
         });
         ```
-    === "Http"
 
-        ```http
+    === "HTTP"
+
+        ``` http
         ##############
         ### getChannelByParticipants
         GET {{nodeUrl}}/indra123MyId.../channels/counterparty/indra456TheirId.../chain-id/1
-
         ```
 
 #### Params
@@ -355,7 +452,9 @@ Gets a channel given the participant public identifiers of that channel.
 
 #### Returns
 
-// TODO
+`ServerNodeResponses.GetChannelStateByParticipants` object. Contains:
+
+- `FullChannelState`: `object` - [Channel state](#full-channel-state).
 
 ### getStateChannels
 
@@ -367,7 +466,8 @@ Gets all state channels in your store associated with your signer/public identif
         ``` typescript
         const result = await node.getStateChannels();
         ```
-    === "Http"
+
+    === "HTTP"
 
         ```http
         ##############
@@ -381,7 +481,9 @@ None
 
 #### Returns
 
-// TODO
+`ServerNodeResponses.GetChannelStates` object. Contains:
+
+- `FullChannelState[]`: `object[]` - Array of [channel states](#full-channel-state).
 
 ### getStateChannel
 
@@ -395,7 +497,8 @@ Gets a channel given its `channelAddress`.
             channelAddress: "0xABC123..."
         });
         ```
-    === "Http"
+
+    === "HTTP"
 
         ```http
         ##############
@@ -413,7 +516,7 @@ Gets a channel given its `channelAddress`.
 
 EITHER `ServerNodeResponses.GetChannelState` object. Contains:
 
-- `any` // TODO
+- `FullChannelState`: `object` - [Channel state](#full-channel-state).
 
 OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/error.ts#L177)
 
@@ -429,7 +532,8 @@ Gets a transfer given its `transferId`.
             transferId: "0xtransferId..."
         });
         ```
-    === "Http"
+
+    === "HTTP"
 
         ```http
         ##############
@@ -447,7 +551,7 @@ Gets a transfer given its `transferId`.
 
 EITHER `ServerNodeResponses.GetTransferState` object. Contains:
 
-- `any` // TODO
+- `FullTransferState`: `object` - [Transfer state](#full-transfer-state).
 
 OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/error.ts#L177)
 
@@ -464,7 +568,8 @@ Gets all active transfers for a given channel address.
             channelAddress: "0xABC123..."
         });
         ```
-    === "Http"
+
+    === "HTTP"
 
         ```http
         ## TODO
@@ -473,16 +578,123 @@ Gets all active transfers for a given channel address.
 
 `ServerNodeParams.GetActiveTransfersByChannelAddress` object. Contains:
 
-- `channelAddress`: `string` - Unique onchain address of your channel
+- `channelAddress`: `string` - Unique onchain address of your channel.
 
 #### Returns
 
 EITHER `ServerNodeResponses.GetActiveTransfersByChannelAddress` object. Contains:
 
-- `any` // TODO
+- `FullTransferState[]`: `object[]` - Array of [transfer states](#full-transfer-state).
 
 OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/error.ts#L177)
 
-## Event Handlers
+## Event Handler Methods
 
-## Event Types
+## Event Types and Payloads
+
+### Setup
+
+`"SETUP"` - Emitted on channel setup.
+
+#### Payload
+
+`SetupPayload` object. Contains:
+
+- `channelAddress`: `string` - Unique onchain address of your channel.
+- `aliceIdentifier`: `string` - Connext-specific identifier associated with the initiator of the channel (i.e. the peer that called `setup`).
+- `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
+- `chainId`: `number` - [Chainid](https://chainid.network) that the channel has been set up on.
+
+### Conditiona Transfer Created
+
+`"CONDITIONAL_TRANSFER_CREATED"` - Emitted on creation of a conditional transfer.
+
+#### Payload
+
+`ConditionalTransferCreatedPayload` object. Contains:
+
+- `aliceIdentifier`: `string` - Connext-specific identifier associated with the initiator of the channel (i.e. the peer that called `setup`).
+- `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
+- `channelAddress`: `string` - Unique onchain address of your channel.
+- `transfer`: `FullTransferState` - [Full transfer state](#full-transfer-state).
+- `channelBalance`: `Balance` - [Balance](#balance).
+- `conditionType`: `string` - Either of a hardcoded `TransferName` for a transfer supported by default in connext OR a `transferDefinition` address for a custom transfer.
+
+### Conditional Transfer Resolved
+
+`"CONDITIONAL_TRANSFER_RESOLVED"` - Emitted on resolve of a conditional transfer.
+
+#### Payload
+
+`ConditionalTransferResolvedPayload` object. Contains:
+
+- `aliceIdentifier`: `string` - Connext-specific identifier associated with the initiator of the channel (i.e. the peer that called `setup`).
+- `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
+- `channelAddress`: `string` - Unique onchain address of your channel.
+- `transfer`: `FullTransferState` - [Full transfer state](#full-transfer-state).
+- `channelBalance`: `Balance` - [Balance](#balance).
+- `conditionType`: `string` - Either of a hardcoded `TransferName` for a transfer supported by default in connext OR a `transferDefinition` address for a custom transfer.
+
+### Deposit Reconciled
+
+`"DEPOSIT_RECONCILED"` - Emitted after a channel party reconciles a deposit.
+
+#### Payload
+
+`DepositReconciledPayload` object. Contains:
+
+- `aliceIdentifier`: `string` - Connext-specific identifier associated with the initiator of the channel (i.e. the peer that called `setup`).
+- `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
+- `channelAddress`: `string` - Unique onchain address of your channel.
+- `channelBalance`: `Balance` - [Balance](#balance).
+- `assetId`: `string` - Address of the asset onchain. E.g. ERC20 token address. We use `0x0` for the base asset of the chain ($ETH on Ethereum).
+
+### Withdrawal Created
+
+`"WITHDRAWAL_CREATED"` - Emitted after a withdraw is initiated with a counterparty.
+
+#### Payload
+
+`WithdrawalCreatedPayload` object. Contains:
+
+- `aliceIdentifier`: `string` - Connext-specific identifier associated with the initiator of the channel (i.e. the peer that called `setup`).
+- `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
+- `channelAddress`: `string` - Unique onchain address of your channel.
+- `transfer`: `FullTransferState` - [Full Transfer State](#full-transfer-state)
+- `fee`: `string` - Fee submitted by withdraw initiator.
+- `assetId`: `string` - Address of the asset onchain. E.g. ERC20 token address. We use `0x0` for the base asset of the chain ($ETH on Ethereum).
+- `amount`: `string` - Amount to be withdrawn in decimal-free units. E.g. wei for $ETH
+- `recipient`: `string` - Onchain address that the withdrawn amount will be sent to.
+- `channelBalance`: `Balance` - Updated [balance](#balance) for the above assetId.
+
+### Withdrawal Resolved
+
+`"WITHDRAWAL_RESOLVED"` - Emitted after a withdraw has been completed and a signed commitment to sent funds onchain has been successfully generated.
+
+#### Payload
+
+`WithdrawalResolvedPayload` object. Contains:
+
+- `aliceIdentifier`: `string` - Connext-specific identifier associated with the initiator of the channel (i.e. the peer that called `setup`).
+- `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
+- `channelAddress`: `string` - Unique onchain address of your channel.
+- `transfer`: `FullTransferState` - [Full Transfer State](#full-transfer-state)
+- `fee`: `string` - Fee submitted by withdraw initiator.
+- `assetId`: `string` - Address of the asset onchain. E.g. ERC20 token address. We use `0x0` for the base asset of the chain ($ETH on Ethereum).
+- `amount`: `string` - Amount to be withdrawn in decimal-free units. E.g. wei for $ETH
+- `recipient`: `string` - Onchain address that the withdrawn amount will be sent to.
+- `channelBalance`: `Balance` - Updated [balance](#balance) for the above assetId.
+
+### Withdrawal Reconciled
+
+`"WITHDRAWAL_RECONCILED"` - Emitted after a withdraw commitment has been successfully sent to chain.
+
+#### Payload
+
+`WithdrawalReconciledPayload` object. Contains:
+
+- `aliceIdentifier`: `string` - Connext-specific identifier associated with the initiator of the channel (i.e. the peer that called `setup`).
+- `bobIdentifier`: `string` - Connext-specific identifier associated with the responded of the channel (i.e. the peer that responded to `setup`).
+- `channelAddress`: `string` - Unique onchain address of your channel.
+- `transactionHash`: `string` - Onchain transaction hash of submitted withdraw tx.
+- `transferId`: `string` - Unique id associated with this withdraw.
