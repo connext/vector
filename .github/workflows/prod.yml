@@ -1,9 +1,9 @@
-name: Master
+name: Production
 
 on:
   push:
     branches:
-      - master
+      - prod
 
 jobs:
   build:
@@ -19,7 +19,7 @@ jobs:
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - run: make push
 
-  test:
+  ssh:
     env:
       DOMAINNAME: testnet-vector.connext.network
     runs-on: ubuntu-latest
@@ -207,16 +207,8 @@ jobs:
           HOST: ubuntu@${{ env.DOMAINNAME }}
           SSH_KEY: ${{ secrets.SSH_KEY }}
           CMD: '
-            git checkout --force master;
+            git checkout --force prod;
             git reset --hard $GITHUB_SHA;
-            make config;
-            rm -f router.config.json.backup;
-            mv router.config.json router.config.json.backup;
-            jq '"'"'
-              .production = true |
-              .domainName = "'"$DOMAINNAME"'" |
-              .messagingUrl = "'"$MESSAGING_URL"'"
-            '"'"' router.config.json.backup > router.config.json;
             make restart;
             docker container prune -f;
             docker image ls -q | xargs docker image rm || true;
