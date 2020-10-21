@@ -242,7 +242,7 @@ async function handleConditionalTransferCreation(
   );
   let conditionType: string;
   if (registryInfo.isError) {
-    logger.warn({ error: registryInfo.getError()!.message }, "Faild to get registry info");
+    logger.warn({ error: registryInfo.getError()!.message }, "Failed to get registry info");
     conditionType = transferDefinition;
   } else {
     conditionType = registryInfo.getValue().name;

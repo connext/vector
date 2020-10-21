@@ -37,7 +37,7 @@ class VectorIndexedDBDatabase extends Dexie {
     super("VectorIndexedDBDatabase", options);
     this.version(1).stores({
       channels: "channelAddress,[participantA+participantB+chainId]",
-      transfers: "transferId,[routingId+channelAddress],createUpdateNonce,resolveUpdateNonce",
+      transfers: "transferId,[routingId+channelAddress],createUpdateNonce,resolveUpdateNonce,transferResolver",
       transactions: "transactionHash",
       withdrawCommitment: "transferId",
       values: "key",
@@ -110,7 +110,8 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       } else if (channelState.latestUpdate.type === UpdateType.resolve) {
         await this.db.transfers.update((channelState.latestUpdate.details as ResolveUpdateDetails).transferId, {
           resolveUpdateNonce: channelState.latestUpdate.nonce,
-        });
+          transferResolver: (channelState.latestUpdate.details as ResolveUpdateDetails).transferResolver,
+        } as Partial<StoredTransfer>);
       }
     });
   }

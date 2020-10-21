@@ -707,7 +707,6 @@ export class PrismaStore implements IServerNodeStore {
           ),
         },
       },
-      include: { balances: true, latestUpdate: true },
     });
   }
 
@@ -827,11 +826,11 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async clear(): Promise<void> {
-    await this.prisma.channel.deleteMany({});
     await this.prisma.balance.deleteMany({});
-    await this.prisma.update.deleteMany({});
-    await this.prisma.transfer.deleteMany({});
     await this.prisma.onchainTransaction.deleteMany({});
+    await this.prisma.transfer.deleteMany({});
+    await this.prisma.channel.deleteMany({});
+    await this.prisma.update.deleteMany({});
     await this.prisma.configuration.deleteMany({});
     await this.prisma.nodeIndex.deleteMany({});
   }
