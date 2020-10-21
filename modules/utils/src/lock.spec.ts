@@ -40,6 +40,7 @@ describe("MemoLock", () => {
       await module.releaseLock("foo", nextLock);
     });
 
+    // TODO: skipped because MemoryLockService doesnt use queue size
     it.skip("should enforce the queue size", async function() {
       await module.acquireLock("foo");
       for (let i = 0; i < 4; i++) {
@@ -63,14 +64,14 @@ describe("MemoLock", () => {
       await module.releaseLock("foo", lock);
     });
 
-    it.only("should handle concurrent locking", async function() {
+    it("should handle concurrent locking", async function() {
       this.timeout(60_000);
       const start = Date.now();
       const array = [1, 2, 3, 4];
       await Promise.all(
         array.map(async i => {
           // TODO: THIS IS NOT ACTUALLY CONCURRENT
-          await delay(i);
+          // await delay(i);
           const lock = await module.acquireLock("foo");
           await delay(800);
           await module.releaseLock("foo", lock);
@@ -80,6 +81,7 @@ describe("MemoLock", () => {
     });
   });
 
+  // TODO: skipped because the lock service does not use order
   it.skip("should expire locks in TTL order", async function() {
     const customModule = new MemoryLockService(5, 1000);
 

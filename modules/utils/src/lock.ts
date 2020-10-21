@@ -19,6 +19,7 @@ export class MemoryLockService implements ILockService {
     let lock = this.locks.get(lockName)?.lock;
     if (!lock) {
       lock = new Mutex();
+      this.locks.set(lockName, { lock, releaser: undefined, timer: undefined, secret: undefined });
     }
 
     const releaser = await lock.acquire();
