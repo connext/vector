@@ -49,9 +49,6 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     (success, ) = address(this).call{gas: ERC20_TRANSFER_GAS_LIMIT}(
       abi.encodeWithSignature("_transferERC20(address,address,uint256)", assetId, recipient, amount)
     );
-    if (!success) {
-      return (false, 0);
-    }
     return (success, success ? amount : 0);
   }
 
@@ -106,7 +103,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     return success;
   }
 
-  function getTotalTransferred(address assetId) external override view onlyOnProxy returns (uint256) {
+  function getTotalTransferred(address assetId) external override view onlyOnProxy nonReentrantView returns (uint256) {
     return totalTransferred[assetId];
   }
 
@@ -115,6 +112,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     override
     view
     onlyOnProxy
+    nonReentrantView
     returns (uint256)
   {
     return emergencyWithdrawableAmount[assetId][owner];
@@ -124,7 +122,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address assetId,
     address owner,
     address payable recipient
-  ) external override onlyOnProxy {
+  ) external override onlyOnProxy nonReentrant {
     require(
       msg.sender == owner || owner == recipient,
       "AssetTransfer: Either msg.sender or recipient of funds must be the owner of an emergency withdraw"
