@@ -203,7 +203,12 @@ export class RestServerNodeService implements INodeService {
   async internalSetup(
     params: OptionalPublicIdentifier<ServerNodeParams.Setup>,
   ): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
-    return this.executeHttpRequest<ServerNodeResponses.Setup>("setup", "post", params, ServerNodeParams.SetupSchema);
+    return this.executeHttpRequest<ServerNodeResponses.Setup>(
+      "internal-setup",
+      "post",
+      params,
+      ServerNodeParams.SetupSchema,
+    );
   }
 
   async sendDepositTx(
