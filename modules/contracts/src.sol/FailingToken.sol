@@ -30,4 +30,8 @@ contract FailingToken is ERC20 {
       require(false, "Failing token never transfers");
     }
 
+    function succeedingTransfer(address recipient, uint256 amount) public returns (bool) {
+      return super.transfer(recipient, amount);
+    }
+
 }
