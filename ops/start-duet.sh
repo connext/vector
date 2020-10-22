@@ -42,27 +42,19 @@ config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] 
 database_image="${project}_database:$version"
 bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 
-pg_port="5432"
-
-database_env="environment:
-      POSTGRES_DB: '$project'
-      POSTGRES_PASSWORD: '$project'
-      POSTGRES_USER: '$project'"
-
 ########################################
 ## Node config
 
 internal_node_port="8000"
+internal_prisma_port="5555"
 
 alice_port="8003"
-alice_database="database_a"
-alice_database_port="5432"
+alice_prisma="5553"
 alice_mnemonic="avoid post vessel voyage trigger real side ribbon pattern neither essence shine"
 echo "$stack.alice will be exposed on *:$alice_port"
 
 bob_port="8004"
-bob_database="database_b"
-bob_database_port="5433"
+bob_prisma="5554"
 bob_mnemonic="negative stamp rule dizzy embark worth ill popular hip ready truth abandon"
 echo "$stack.bob will be exposed on *:$bob_port"
 
@@ -74,11 +66,7 @@ node_image="image: '${project}_builder'
       - '$root:/root'"
 
 node_env="environment:
-      VECTOR_CONFIG: '$config'
-      VECTOR_PG_DATABASE: '$project'
-      VECTOR_PG_PASSWORD: '$project'
-      VECTOR_PG_PORT: '$pg_port'
-      VECTOR_PG_USERNAME: '$project'"
+      VECTOR_CONFIG: '$config'"
 
 ####################
 # Launch stack
@@ -98,33 +86,21 @@ services:
     $common
     $node_image
     $node_env
-      VECTOR_PG_HOST: '$alice_database'
       VECTOR_MNEMONIC: '$alice_mnemonic'
     ports:
       - '$alice_port:$internal_node_port'
+      - '$alice_prisma:$internal_prisma_port'
+    tmpfs: /tmp
 
   bob:
     $common
     $node_image
     $node_env
-      VECTOR_PG_HOST: '$bob_database'
       VECTOR_MNEMONIC: '$bob_mnemonic'
     ports:
       - '$bob_port:$internal_node_port'
-
-  $alice_database:
-    $common
-    image: '$database_image'
-    $database_env
-    ports:
-      - '$alice_database_port:5432'
-
-  $bob_database:
-    $common
-    image: '$database_image'
-    $database_env
-    ports:
-      - '$bob_database_port:5432'
+      - '$bob_prisma:$internal_prisma_port'
+    tmpfs: /tmp
 
 EOF
 
