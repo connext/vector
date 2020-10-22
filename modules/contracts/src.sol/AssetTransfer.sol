@@ -15,7 +15,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
   // TODO: These are ad hoc values. Confirm or find more suitable ones.
   uint256 private constant ETHER_TRANSFER_GAS_LIMIT = 10000;
   uint256 private constant ERC20_TRANSFER_GAS_LIMIT = 100000;
-  uint256 private constant ERC20_BALANCE_GAS_LIMIT = 5000;
+  uint256 private constant ERC20_BALANCE_GAS_LIMIT = 10000;
 
   mapping(address => uint256) internal totalTransferred;
   mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
