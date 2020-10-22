@@ -97,23 +97,15 @@ describe("AssetTransfer.sol", () => {
     });
   });
 
-  describe.skip("emergencyWithdraw", () => {
-    // TODO: why fail :(
-    it("should allow eth to be withdrawable if transfer fails", async () => {
+  describe("emergencyWithdraw", () => {
+    it("should allow ERC20 token to be withdrawable if transfer fails", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await failingToken.balanceOf(bob.address);
       const tx = await channel.assetTransfer(failingToken.address, bob.address, value);
       await tx.wait();
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer);
-      console.log("**** Verified transfer failed");
-      console.log(
-        "***** withdrawable",
-        (await channel.getEmergencyWithdrawableAmount(failingToken.address, bob.address)).toString(),
-      );
       expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(BigNumber.from(0));
-      console.log("**** Verified total transferred");
       expect(await channel.getEmergencyWithdrawableAmount(failingToken.address, bob.address)).to.be.eq(value);
-      console.log("**** Verified withdrawable amount");
     });
   });
 });
