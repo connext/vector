@@ -8,10 +8,8 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
   ResolveUpdateDetails,
-  EngineEvents,
   CreateUpdateDetails,
 } from "@connext/vector-types";
-import Axios from "axios";
 import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
 
@@ -20,7 +18,7 @@ import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 
 export const logger = pino();
-const server = fastify({ logger });
+const server = fastify({ logger, pluginTimeout: 120_000 });
 server.register(fastifyCors, {
   origin: "*",
   methods: ["GET", "PUT", "POST", "OPTIONS"],
@@ -256,13 +254,13 @@ server.post<{ Body: ServerNodeParams.RequestSetup }>(
     if (!engine) {
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
-    const rpc = constructRpcRequest(ChannelRpcMethods.chan_setup, {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestSetup, {
       chainId: request.body.chainId,
       counterpartyIdentifier: request.body.counterpartyIdentifier,
       timeout: request.body.timeout,
     });
     try {
-      const res = await engine.request<"chan_setup">(rpc);
+      const res = await engine.request<"chan_requestSetup">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });

@@ -59,6 +59,8 @@ describe(testName, () => {
       channelAddress: channel.channelAddress,
       publicIdentifier: bobIdentifier,
     });
+    expect(aliceChannel.getValue().aliceIdentifier).to.eq(aliceIdentifier);
+    expect(aliceChannel.getValue().bobIdentifier).to.eq(bobIdentifier);
     expect(aliceChannel.getValue()).to.deep.eq(bobChannel.getValue());
   });
 

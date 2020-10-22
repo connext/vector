@@ -110,7 +110,7 @@ export class VectorEngine implements IVectorEngine {
       this.store,
       this.chainAddresses,
       this.logger,
-      this.setup,
+      this.setup.bind(this),
     );
   }
 
