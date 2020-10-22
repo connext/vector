@@ -26,7 +26,6 @@ describe(testName, () => {
   let rogerService: INodeService;
   let rogerIdentifier: string;
   let roger: string;
-  console.log();
   before(async () => {
     const randomIndex = getRandomIndex();
     carolService = await RestServerNodeService.connect(
