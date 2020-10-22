@@ -74,7 +74,7 @@ describe("AssetTransfer.sol", () => {
       const tokenTx = await token.connect(bob).transfer(channel.address, BigNumber.from(10000));
       await tokenTx.wait();
 
-      const failingTx = await failingToken.connect(bob).transfer(channel.address, BigNumber.from(10000));
+      const failingTx = await failingToken.connect(bob).succeedingTransfer(channel.address, BigNumber.from(10000));
       await failingTx.wait();
     });
 
