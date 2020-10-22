@@ -63,7 +63,6 @@ export const createNode = async (index: number, store: IServerNodeStore, mnemoni
   const lockService = await LockService.connect(
     signer.publicIdentifier,
     messaging,
-    config.redisUrl,
     logger.child({ module: "LockService" }),
   );
   logger.info({ method }, "Connected LockService");
