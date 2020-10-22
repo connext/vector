@@ -19,7 +19,6 @@ Any of these values can be overwritten by providing the same key with a new valu
 - `messagingUrl` (type: `string`): The url used to access the messaging service
 - `mnemonic` (type: `string`): Optional. If provided, the node will use this mnemonic. If not provided, the node will use a hard coded mnemonic with testnet funds in dev-mode (production=false). If not provided in prod, docker secrets will be used to manage the mnemonic; this is a much safer place to store a mnemonic that eg holds mainnet funds.
 - `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
-- `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
 
 ### Prod Configuration API
 
