@@ -47,7 +47,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     uint256 balance = abi.decode(encodedReturnValue, (uint256));
     uint256 amount = LibUtils.min(maxAmount, balance);
     (success, ) = address(this).call{gas: ERC20_TRANSFER_GAS_LIMIT}(
-      abi.encodeWithSignature("_transferERC20(address,address,uint256)", assetId, recipient, amount)
+      abi.encodeWithSignature("transferERC20(address,address,uint256)", assetId, recipient, amount)
     );
     return (success, success ? amount : 0);
   }
