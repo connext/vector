@@ -238,7 +238,9 @@ describe(testName, () => {
 
       // Begin the test
       // Setup the listeners
-      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log);
+      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log, () =>
+        Promise.resolve(Result.ok({} as any)),
+      );
 
       // Create a promise that will resolve once the event is emitted
       // + some time for the handler to complete
@@ -343,7 +345,9 @@ describe(testName, () => {
 
       // Begin the test
       // Setup the listeners
-      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log);
+      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log, () =>
+        Promise.resolve(Result.ok({} as any)),
+      );
 
       // Create a promise that will resolve once the event is emitted
       // + some time for the handler to complete

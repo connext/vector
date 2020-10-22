@@ -160,14 +160,7 @@ const PostSetupBodySchema = Type.Intersect([
 const PostSetupResponseSchema = BasicChannelServerResponseSchema;
 
 // POST REQUEST SETUP
-const PostRequestSetupBodySchema = Type.Object({
-  aliceIdentifier: TPublicIdentifier,
-  bobIdentifier: TPublicIdentifier,
-  aliceUrl: Type.String({ format: "uri" }),
-  chainId: TChainId,
-  timeout: TIntegerString,
-  meta: TBasicMeta,
-});
+const PostRequestSetupBodySchema = PostSetupBodySchema;
 
 const PostRequestSetupResponseSchema = BasicChannelServerResponseSchema;
 

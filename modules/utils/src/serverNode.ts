@@ -189,18 +189,18 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
-  async requestSetup(
-    params: Omit<ServerNodeParams.RequestSetup, "bobIdentifier"> & { bobIdentifier?: string },
+  async setup(
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestSetup>,
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.RequestSetup>(
-      "request-setup",
+      "setup",
       "post",
       params,
       ServerNodeParams.RequestSetupSchema,
     );
   }
 
-  async setup(
+  async internalSetup(
     params: OptionalPublicIdentifier<ServerNodeParams.Setup>,
   ): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
     return this.executeHttpRequest<ServerNodeResponses.Setup>("setup", "post", params, ServerNodeParams.SetupSchema);

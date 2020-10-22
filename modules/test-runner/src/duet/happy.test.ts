@@ -43,10 +43,8 @@ describe(testName, () => {
   });
 
   it("alice & bob should setup a channel", async () => {
-    const channelRes = await bobService.requestSetup({
-      aliceUrl: env.aliceUrl,
-      aliceIdentifier,
-      bobIdentifier,
+    const channelRes = await bobService.setup({
+      counterpartyIdentifier: aliceIdentifier,
       chainId,
       timeout: "360000",
     });

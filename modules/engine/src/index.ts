@@ -19,8 +19,6 @@ import {
   WITHDRAWAL_RECONCILED_EVENT,
   ChannelRpcMethods,
   IExternalValidation,
-  REQUEST_COLLATERAL_EVENT,
-  RequestCollateralPayload,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -35,7 +33,7 @@ import {
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
 
-const ajv = new Ajv();
+export const ajv = new Ajv();
 
 export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventMap[K]> };
 
@@ -112,6 +110,7 @@ export class VectorEngine implements IVectorEngine {
       this.store,
       this.chainAddresses,
       this.logger,
+      this.setup,
     );
   }
 
@@ -244,6 +243,27 @@ export class VectorEngine implements IVectorEngine {
         providerUrl: chainProviders.getValue()[params.chainId],
       },
     });
+  }
+
+  private async requestSetup(
+    params: EngineParams.Setup,
+  ): Promise<Result<{ channelAddress: string }, OutboundChannelUpdateError | Error>> {
+    const validate = ajv.compile(EngineParams.SetupSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+
+    const chainProviders = this.chainService.getChainProviders();
+    if (chainProviders.isError) {
+      return Result.fail(new Error(chainProviders.getError()!.message));
+    }
+
+    return this.messaging.sendSetupMessage(
+      { chainId: params.chainId, timeout: params.timeout },
+      params.counterpartyIdentifier,
+      this.publicIdentifier,
+    );
   }
 
   private async deposit(

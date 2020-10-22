@@ -46,12 +46,12 @@ export interface INodeService {
   createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>>;
 
   setup(
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestSetup>,
+  ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>>;
+
+  internalSetup(
     params: OptionalPublicIdentifier<ServerNodeParams.Setup>,
   ): Promise<Result<ServerNodeResponses.Setup, NodeError>>;
-
-  requestSetup(
-    params: Omit<ServerNodeParams.RequestSetup, "bobIdentifier"> & { bobIdentifier?: string },
-  ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>>;
 
   sendDepositTx(
     params: OptionalPublicIdentifier<ServerNodeParams.SendDepositTx>,

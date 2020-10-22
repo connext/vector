@@ -226,7 +226,7 @@ server.get(
 );
 
 server.post<{ Body: ServerNodeParams.Setup }>(
-  "/setup",
+  "/internal-setup",
   { schema: { body: ServerNodeParams.SetupSchema, response: ServerNodeResponses.SetupSchema } },
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
@@ -249,32 +249,21 @@ server.post<{ Body: ServerNodeParams.Setup }>(
 );
 
 server.post<{ Body: ServerNodeParams.RequestSetup }>(
-  "/request-setup",
+  "/setup",
   { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
   async (request, reply) => {
-    const engine = getNode(request.body.bobIdentifier);
+    const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.bobIdentifier });
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_setup, {
+      chainId: request.body.chainId,
+      counterpartyIdentifier: request.body.counterpartyIdentifier,
+      timeout: request.body.timeout,
+    });
     try {
-      const setupPromise = engine.waitFor(
-        EngineEvents.SETUP,
-        10_000,
-        data => data.bobIdentifier === engine.publicIdentifier && data.chainId === request.body.chainId,
-      );
-      await Axios.post(`${request.body.aliceUrl}/setup`, {
-        chainId: request.body.chainId,
-        counterpartyIdentifier: engine.publicIdentifier,
-        timeout: request.body.timeout,
-        meta: request.body.meta,
-        publicIdentifier: request.body.aliceIdentifier,
-      } as ServerNodeParams.Setup);
-      try {
-        const setup = await setupPromise;
-        return reply.status(200).send({ channelAddress: setup.channelAddress } as ServerNodeResponses.RequestSetup);
-      } catch (e) {
-        return reply.status(400).send({ message: "Could not reach counterparty", context: e.message });
-      }
+      const res = await engine.request<"chan_setup">(rpc);
+      return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

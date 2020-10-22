@@ -1,5 +1,5 @@
 import { ChannelUpdate } from "./channel";
-import { InboundChannelUpdateError, LockError, OutboundChannelUpdateError, Result } from "./error";
+import { InboundChannelUpdateError, LockError, MessagingError, OutboundChannelUpdateError, Result } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -45,6 +45,23 @@ export interface IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void>;
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
+
+  sendSetupMessage(
+    setupInfo: { chainId: number; timeout: string },
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channelAddress: string }, MessagingError>>;
+  onReceiveSetupMessage(
+    publicIdentifier: string,
+    callback: (
+      setupInfo: Result<{ chainId: number; timeout: string }, MessagingError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void>;
+  respondToSetupMessage(inbox: string, params: { message?: string; error?: string }): Promise<void>;
 
   sendRequestCollateralMessage(
     requestCollateralParams: EngineParams.RequestCollateral,

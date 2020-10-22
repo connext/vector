@@ -8,6 +8,7 @@ import {
   OutboundChannelUpdateError,
   Result,
   EngineParams,
+  MessagingError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -238,8 +239,77 @@ export class NatsMessagingService implements IMessagingService {
   }
   ////////////
 
-  // REQUEST COLLATERAL METHODS
+  // SETUP METHODS
+  async sendSetupMessage(
+    setupInfo: { chainId: number; timeout: string },
+    to: string,
+    from: string,
+    timeout = 30_000,
+    numRetries = 0,
+  ): Promise<Result<{ channelAddress: string }, MessagingError>> {
+    this.assertConnected();
+    const method = "sendSetupMessage";
+    try {
+      const subject = `${to}.${from}.setup`;
+      const msgBody = JSON.stringify({ setupInfo });
+      this.log.debug({ method, msgBody }, "Sending message");
+      const msg = await this.connection!.request(subject, timeout, msgBody);
+      this.log.debug({ method, msg }, "Received response");
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        return Result.fail(new MessagingError(MessagingError.reasons.Response, { error: parsedMsg.data.error }));
+      }
+      return Result.ok({ channelAddress: parsedMsg.data.message });
+    } catch (e) {
+      return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }));
+    }
+  }
 
+  async onReceiveSetupMessage(
+    publicIdentifier: string,
+    callback: (
+      setupInfo: Result<{ chainId: number; timeout: string }, MessagingError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    const method = "onReceiveSetupMessage";
+    const subscriptionSubject = `${publicIdentifier}.*.setup`;
+    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method, msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      if (err) {
+        callback(Result.fail(new MessagingError(err)), from, msg.reply);
+        return;
+      }
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      // TODO: validate msg structure
+      if (!parsedMsg.reply) {
+        return;
+      }
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        callback(Result.fail(parsedMsg.data.error), from, msg.reply);
+        return;
+      }
+      callback(Result.ok(parsedMsg.data.setupInfo), from, msg.reply);
+    });
+    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+  }
+
+  async respondToSetupMessage(inbox: string, params: { message?: string; error?: string } = {}): Promise<void> {
+    this.assertConnected();
+    const subject = inbox;
+    this.log.debug({ method: "respondToSetupMessage", subject }, `Sending response`);
+    await this.connection!.publish(subject, JSON.stringify(params));
+  }
+  ////////////
+
+  // REQUEST COLLATERAL METHODS
   async sendRequestCollateralMessage(
     requestCollateralParams: EngineParams.RequestCollateral,
     to: string,
@@ -297,13 +367,15 @@ export class NatsMessagingService implements IMessagingService {
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
 
-  async respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
+  async respondToRequestCollateralMessage(
+    inbox: string,
+    params: { message?: string; error?: string } = {},
+  ): Promise<void> {
     this.assertConnected();
     const subject = inbox;
     this.log.debug({ method: "respondToLockMessage", subject, params }, `Sending lock response`);
     await this.connection!.publish(subject, JSON.stringify(params));
   }
-
   ////////////
 
   // LOCK METHODS
