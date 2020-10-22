@@ -6,17 +6,14 @@ import { AddressBook, getAddressBook } from "../addressBook";
 import { alice, bob, provider } from "./constants";
 
 // Returns a different address book every time
-export const getTestAddressBook = async (): Promise<AddressBook> => getAddressBook(
-  `/tmp/address-book.${Date.now()}.json`,
-  (await provider.getNetwork()).chainId.toString(),
-  alice,
-);
+export const getTestAddressBook = async (): Promise<AddressBook> =>
+  getAddressBook(`/tmp/address-book.${Date.now()}.json`, (await provider.getNetwork()).chainId.toString(), alice);
 
 export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contract> => {
-  const addressBook = _addressBook || await getTestAddressBook();
+  const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
-    ["ChannelMastercopy", []],
-    ["ChannelFactory", ["ChannelMastercopy"]],
+    ["TestChannel", []],
+    ["ChannelFactory", ["TestChannel"]],
   ]);
-  return createChannel(bob.address, alice, addressBook);
+  return createChannel(bob.address, alice, addressBook, undefined, true);
 };
