@@ -63,12 +63,10 @@ describe(testName, () => {
   });
 
   it("roger should setup channels with carol and dave", async () => {
-    let channelRes = await carolService.requestSetup({
-      aliceUrl: env.rogerUrl,
-      aliceIdentifier: rogerIdentifier,
-      bobIdentifier: carolIdentifier,
+    let channelRes = await carolService.setup({
+      counterpartyIdentifier: rogerIdentifier,
       chainId,
-      timeout: "10000",
+      timeout: "360000",
     });
     let channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
@@ -82,12 +80,10 @@ describe(testName, () => {
     });
     expect(carolChannel.getValue()).to.deep.eq(rogerChannel.getValue());
 
-    channelRes = await daveService.requestSetup({
-      aliceUrl: env.rogerUrl,
-      aliceIdentifier: rogerIdentifier,
-      bobIdentifier: daveIdentifier,
+    channelRes = await daveService.setup({
+      counterpartyIdentifier: rogerIdentifier,
       chainId,
-      timeout: "10000",
+      timeout: "360000",
     });
     channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;

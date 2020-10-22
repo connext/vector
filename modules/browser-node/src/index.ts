@@ -165,31 +165,20 @@ export class BrowserNode implements INodeService {
     }
   }
 
-  async requestSetup(
-    params: Omit<ServerNodeParams.RequestSetup, "bobIdentifier"> & { bobIdentifier?: string },
+  async setup(
+    params: OptionalPublicIdentifier<ServerNodeParams.RequestSetup>,
   ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestSetup, params);
     try {
-      const setupPromise = this.engine.waitFor(
-        EngineEvents.SETUP,
-        10_000,
-        data => data.bobIdentifier === this.engine.publicIdentifier && data.chainId === params.chainId,
-      );
-      await Axios.post(`${params.aliceUrl}/setup`, {
-        chainId: params.chainId,
-        counterpartyIdentifier: this.engine.publicIdentifier,
-        timeout: params.timeout,
-        meta: params.meta,
-        publicIdentifier: params.aliceIdentifier,
-      } as ServerNodeParams.Setup);
-      const setup = await setupPromise;
-      return Result.ok({ channelAddress: setup.channelAddress });
+      const res = await this.engine.request<typeof ChannelRpcMethods.chan_requestSetup>(rpc);
+      return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
     }
   }
 
   // OK to leave unimplemented since browser node will never be Alice
-  async setup(): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
+  async internalSetup(): Promise<Result<ServerNodeResponses.Setup, NodeError>> {
     throw new Error("Method not implemented");
   }
 

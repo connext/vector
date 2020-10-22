@@ -52,6 +52,7 @@ export abstract class VectorError extends Error {
     RouterError: "RouterError",
     NodeError: "NodeError",
     LockError: "LockError",
+    MessagingError: "MessagingError",
     // etc.
   } as const;
 
@@ -190,6 +191,23 @@ export class NodeError extends VectorError {
 
   constructor(
     public readonly message: Values<typeof NodeError.reasons>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context?: any,
+  ) {
+    super(message, context);
+  }
+}
+
+export class MessagingError extends VectorError {
+  readonly type = VectorError.errors.MessagingError;
+
+  static readonly reasons = {
+    Response: "Error received in response",
+    Unknown: "Unknown messaging error",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof MessagingError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
