@@ -450,14 +450,18 @@ server.post<{ Body: ServerNodeParams.RegisterListener }>(
   },
   async (request, reply) => {
     try {
-      await Promise.all(
-        Object.entries(request.body.events).map(([eventName, url]) => {
-          return store.registerSubscription(request.body.publicIdentifier, eventName as EngineEvent, url as string);
-        }),
-      );
+      for (const [eventName, url] of Object.entries(request.body.events)) {
+        try {
+          await store.registerSubscription(request.body.publicIdentifier, eventName as EngineEvent, url as string);
+        } catch (e) {
+          logger.error({ eventName, url, e }, "Error setting up subscription");
+          throw e;
+        }
+      }
       logger.info({ endpoint: "/event/subscribe", body: request.body }, "Successfully set up subscriptions");
       return reply.status(200).send({ message: "success" });
     } catch (e) {
+      logger.error(e);
       return reply.status(500).send({ message: e.message });
     }
   },

@@ -22,9 +22,11 @@ fi
 
 if [[ -n $VECTOR_PG_HOST ]]
 then
+  echo "Using configured Postgres store at $VECTOR_PG_HOST"
   export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
 else
   sqlite_file=${VECTOR_SQLITE_FILE:-/tmp/store.sqlite}
+  echo "Using SQLite store at $sqlite_file"
   touch "$sqlite_file"
   export VECTOR_DATABASE_URL="sqlite://$sqlite_file"
 fi
