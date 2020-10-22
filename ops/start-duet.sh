@@ -63,7 +63,8 @@ public_url="http://localhost:$alice_port"
 node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
-      - '$root:/root'"
+      - '$root:/root'
+    tmpfs: /tmp"
 
 node_env="environment:
       VECTOR_CONFIG: '$config'"
@@ -90,7 +91,6 @@ services:
     ports:
       - '$alice_port:$internal_node_port'
       - '$alice_prisma:$internal_prisma_port'
-    tmpfs: /tmp
 
   bob:
     $common
@@ -100,7 +100,6 @@ services:
     ports:
       - '$bob_port:$internal_node_port'
       - '$bob_prisma:$internal_prisma_port'
-    tmpfs: /tmp
 
 EOF
 
