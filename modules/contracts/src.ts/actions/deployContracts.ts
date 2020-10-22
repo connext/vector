@@ -18,10 +18,7 @@ export const deployContracts = async (
   log = logger.child({}),
 ): Promise<void> => {
   // Simple sanity checks to make sure contracts from our address book have been deployed
-  const isContractDeployed = async (
-    name: string,
-    address: string | undefined,
-  ): Promise<boolean> => {
+  const isContractDeployed = async (name: string, address: string | undefined): Promise<boolean> => {
     log.info(`Checking for valid ${name} contract...`);
     if (!address || address === "" || address === AddressZero) {
       log.info("This contract is not in our address book.");
@@ -75,7 +72,11 @@ export const deployContracts = async (
     const receipt = await tx.wait();
     const address = Contract.getContractAddress(tx);
 
-    log.info(`Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(receipt.gasUsed.mul(tx.gasPrice))} deploying ${name} to address: ${address}`);
+    log.info(
+      `Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(
+        receipt.gasUsed.mul(tx.gasPrice),
+      )} deploying ${name} to address: ${address}`,
+    );
     const runtimeCodeHash = hash(await wallet.provider.getCode(address));
     const creationCodeHash = hash(artifacts[name].bytecode);
     addressBook.setEntry(name, {
@@ -85,6 +86,5 @@ export const deployContracts = async (
       runtimeCodeHash,
       txHash: tx.hash,
     } as AddressBookEntry);
-
   }
 };
