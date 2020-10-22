@@ -78,19 +78,6 @@ common="networks:
           max-size: '100m'"
 
 ####################
-# Redis config (Used by duet & trio)
-
-if [[ "$production" = "true" ]]
-then redis_service=""
-else
-  redis_image="redis:5-alpine";
-  bash "$root/ops/pull-images.sh" "$redis_image" > /dev/null
-  redis_service="redis:
-    $common
-    image: '$redis_image'"
-fi
-
-####################
 # Nats config
 
 nats_image="${project}_nats:$version";
@@ -270,8 +257,6 @@ services:
       - '4221:4221'
 
   $evm_services
-
-  $redis_service
 
 EOF
 
