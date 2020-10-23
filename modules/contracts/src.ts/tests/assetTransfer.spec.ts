@@ -82,6 +82,9 @@ describe("AssetTransfer.sol", () => {
 
       const tokenTx = await token.connect(bob).transfer(channel.address, BigNumber.from(10000));
       await tokenTx.wait();
+
+      const nonconforming = await nonconformingToken.connect(bob).transfer(channel.address, BigNumber.from(10000));
+      await nonconforming.wait();
     });
 
     it("should work for ETH transfers", async () => {
@@ -102,17 +105,19 @@ describe("AssetTransfer.sol", () => {
       expect(await channel.getEmergencyWithdrawableAmount(token.address, bob.address)).to.be.eq(BigNumber.from(0));
     });
 
-    // TODO: (1) is transfer def right? (2) why fail :(
     it.skip("should work for ERC20 token that does not return `bool` from transfer", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await nonconformingToken.balanceOf(bob.address);
-      const tx = await channel.assetTransfer(nonconformingToken.address, bob.address, value);
-      await tx.wait();
+      await channel.assetTransfer(nonconformingToken.address, bob.address, value);
+      console.log("*** assetTransfer called");
       expect(await nonconformingToken.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
+      console.log("*** balanceOf verified");
       expect(await channel.getTotalTransferred(nonconformingToken.address)).to.be.eq(value);
+      console.log("*** verified total transferred");
       expect(await channel.getEmergencyWithdrawableAmount(nonconformingToken.address, bob.address)).to.be.eq(
         BigNumber.from(0),
       );
+      console.log("*** verified emergency withdrawal");
     });
   });
 
