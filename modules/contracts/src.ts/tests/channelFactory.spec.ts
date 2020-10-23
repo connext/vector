@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
+import {
+  getCreate2MultisigAddress,
+  getPublicIdentifierFromPublicKey,
+  expect,
+  getSignerAddressFromPublicIdentifier,
+} from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, BigNumber } from "ethers";
 import pino from "pino";
@@ -32,10 +37,7 @@ describe("ChannelFactory", () => {
     chainId = await chainIdReq;
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
-    chainReader = new VectorChainReader(
-      chainProviders,
-      pino().child({ module: "VectorChainReader" }),
-    );
+    chainReader = new VectorChainReader(chainProviders, pino().child({ module: "VectorChainReader" }));
   });
 
   it("should deploy", async () => {
@@ -50,7 +52,21 @@ describe("ChannelFactory", () => {
     expect(await channelFactory.proxyCreationCode()).to.equal(Proxy.bytecode);
   });
 
-  it.skip("should return the correctly calculated channel address", async () => {});
+  // FIXME: computes the wrong address onchain
+  it.skip("should return the correctly calculated channel address", async () => {
+    const computedAddr = await getCreate2MultisigAddress(
+      alicePubId,
+      bobPubId,
+      chainId,
+      channelFactory.address,
+      chainReader,
+    );
+    expect(getSignerAddressFromPublicIdentifier(alicePubId)).to.be.eq(alice.address);
+    expect(getSignerAddressFromPublicIdentifier(bobPubId)).to.be.eq(bob.address);
+    expect(await channelFactory.getChannelAddress(alice.address, bob.address, chainId)).to.be.eq(
+      computedAddr.getValue(),
+    );
+  });
 
   it("should create a channel", async () => {
     const channel = await createChannel(bob.address, alice, addressBook);
