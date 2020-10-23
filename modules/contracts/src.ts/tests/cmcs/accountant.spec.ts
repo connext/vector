@@ -1,7 +1,7 @@
 import { Balance } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 import { expect } from "chai";
-import { Contract, Wallet } from "ethers";
+import { BigNumber, Contract, Wallet } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 
 import { getTestAddressBook, bob, getTestChannel } from "..";
@@ -27,10 +27,10 @@ describe("CMCAccountant.sol", () => {
       to: [Wallet.createRandom().address, Wallet.createRandom().address],
       amount: [value.toString(), value.toString()],
     };
-    const preTransfer = await Promise.all(balance.to.map(a => provider.getBalance(a)));
+    const preTransfer = await Promise.all<BigNumber>(balance.to.map((a: string) => provider.getBalance(a)));
     await channel.accountantBalanceTransfer(AddressZero, balance);
     await Promise.all(
-      balance.to.map(async (a, idx) => {
+      balance.to.map(async (a: string, idx: number) => {
         return expect(await provider.getBalance(a)).to.be.eq(preTransfer[idx].add(value));
       }),
     );
