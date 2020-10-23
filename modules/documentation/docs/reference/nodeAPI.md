@@ -104,8 +104,6 @@ OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/e
 
 ### setup
 
-// TODO setup is being with `requestSetup`, what are the latest params?
-
 Creates a channel with a given counterparty.
 
 !!! example
