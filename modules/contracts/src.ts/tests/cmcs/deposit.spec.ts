@@ -1,17 +1,25 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { expect } from "@connext/vector-utils";
 import { AddressZero, One } from "@ethersproject/constants";
-import { Contract } from "ethers";
+import { BigNumber, Contract } from "ethers";
+import { parseEther } from "ethers/lib/utils";
 
+import { deployContracts } from "../../actions";
 import { alice, bob } from "../constants";
-import { getTestChannel } from "../utils";
+import { getTestAddressBook, getTestChannel } from "../utils";
 
 describe("CMCDeposit.sol", () => {
   const value = One;
   let channel: Contract;
+  let failingToken: Contract;
 
   beforeEach(async () => {
-    channel = await getTestChannel();
+    const addressBook = await getTestAddressBook();
+    channel = await getTestChannel(addressBook);
+
+    await deployContracts(alice, addressBook, [["FailingToken", []]]);
+    failingToken = addressBook.getContract("FailingToken");
+    await failingToken.mint(alice.address, parseEther("0.001"));
   });
 
   it("should only increase totalDepositsAlice after receiving a direct deposit", async () => {
@@ -30,6 +38,16 @@ describe("CMCDeposit.sol", () => {
     expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits);
   });
 
-  it.skip("depositA should fail if the amount doesnt match the value", async () => {});
-  it.skip("should fail if the token transfer fails", async () => {});
+  it("depositAlice should fail if the amount doesnt match the value", async () => {
+    await expect(channel.depositAlice(AddressZero, value, { value: BigNumber.from(0) })).revertedWith(
+      "CMCDeposit: msg.value does not match the provided amount",
+    );
+    expect(await channel.getTotalDepositsAlice(AddressZero)).to.be.eq(0);
+  });
+
+  it("should fail if the token transfer fails", async () => {
+    expect(await failingToken.balanceOf(alice.address)).to.be.gt(value);
+    await expect(channel.depositAlice(failingToken.address, value)).revertedWith("FAIL: Failing token");
+    expect(await channel.getTotalDepositsAlice(failingToken.address)).to.be.eq(0);
+  });
 });
