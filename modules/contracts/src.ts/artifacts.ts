@@ -14,6 +14,7 @@ import * as TransferRegistry from "../artifacts/TransferRegistry.json";
 import * as VectorChannel from "../artifacts/IVectorChannel.json";
 import * as Withdraw from "../artifacts/Withdraw.json";
 import * as TestChannel from "../artifacts/TestChannel.json";
+import * as TestChannelFactory from "../artifacts/TestChannelFactory.json";
 
 type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
 
@@ -35,6 +36,7 @@ export const artifacts: Artifacts = {
   NonconformingToken,
   Proxy,
   TestChannel,
+  TestChannelFactory,
   TestToken,
   TransferDefinition,
   TransferRegistry,
@@ -51,6 +53,7 @@ export {
   NonconformingToken,
   Proxy,
   TestChannel,
+  TestChannelFactory,
   TestToken,
   TransferDefinition,
   TransferRegistry,

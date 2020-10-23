@@ -112,6 +112,7 @@ contract ChannelFactory is IChannelFactory {
         channel = deployChannelProxy(alice, bob, chainId);
         channel.setup(alice, bob);
         emit ChannelCreation(channel);
+        return channel;
     }
 
     /// @dev Allows us to create new channel contact using CREATE2
