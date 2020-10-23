@@ -9,7 +9,6 @@ import "./App.css";
 import { EngineEvents, FullChannelState } from "@connext/vector-types";
 
 import { config } from "./config";
-import Axios from "axios";
 
 const logger = pino();
 
@@ -19,7 +18,6 @@ function App() {
   const [node, setNode] = useState<BrowserNode>();
   const [channel, setChannel] = useState<FullChannelState>();
   const [mnemonic, setMnemonic] = useState<string>();
-  const [counterpartyConfig, setCounterpartyConfig] = useState<string>();
 
   const [setupLoading, setSetupLoading] = useState<boolean>(false);
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
@@ -95,10 +93,10 @@ function App() {
     }
   };
 
-  const setupChannel = async (aliceIdentifier: string, counterpartyUrl: string) => {
-    const setupRes = await node.requestSetup({
-      aliceIdentifier,
-      aliceUrl: counterpartyUrl,
+  const setupChannel = async (aliceIdentifier: string) => {
+    setSetupLoading(true);
+    const setupRes = await node.setup({
+      counterpartyIdentifier: aliceIdentifier,
       chainId: 1337,
       timeout: "100000",
     });
@@ -107,6 +105,7 @@ function App() {
     } else {
       setChannel(setupRes.getValue() as FullChannelState);
     }
+    setSetupLoading(false);
   };
 
   const reconcileDeposit = async (assetId: string) => {
@@ -234,54 +233,14 @@ function App() {
               {channel ? (
                 <Statistic title="Channel Address" value={channel.channelAddress} />
               ) : (
-                <Form
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 16 }}
-                  name="basic"
-                  initialValues={{}}
-                  onFinish={async (values: { counterpartyUrl: string; counterpartyIdentifier: string }) => {
-                    setSetupLoading(true);
-                    await setupChannel(values.counterpartyIdentifier, values.counterpartyUrl);
-                    setSetupLoading(false);
-                  }}
-                  onFinishFailed={onFinishFailed}
-                >
-                  <Form.Item
-                    label="Counterparty URL"
-                    name="counterpartyUrl"
-                    rules={[{ required: true, message: "Please enter counterparty URL" }]}
-                  >
+                <Form layout="horizontal" name="deposit" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
+                  <Form.Item label="Setup Channel">
                     <Input.Search
-                      onSearch={async value => {
-                        try {
-                          const config = await Axios.get(`${value}/config`);
-                          setCounterpartyConfig(JSON.stringify(config.data, null, 2));
-                        } catch (e) {
-                          console.error("Error getting config from counterparty:", e);
-                        }
-                      }}
-                      enterButton="Get Config"
+                      onSearch={async value => setupChannel(value)}
+                      placeholder="Counterparty Identifier"
+                      enterButton="Setup"
+                      loading={setupLoading}
                     />
-                  </Form.Item>
-
-                  {counterpartyConfig && (
-                    <Form.Item label="Counterparty Config">
-                      <Typography.Text code>{counterpartyConfig}</Typography.Text>
-                    </Form.Item>
-                  )}
-
-                  <Form.Item
-                    label="Counterparty Public Identifier"
-                    name="counterpartyIdentifier"
-                    rules={[{ required: true, message: "Please enter counterparty public identifier (i.e. indra...)" }]}
-                  >
-                    <Input />
-                  </Form.Item>
-
-                  <Form.Item wrapperCol={{ span: 6, offset: 6 }}>
-                    <Button type="primary" htmlType="submit" loading={setupLoading}>
-                      Setup
-                    </Button>
                   </Form.Item>
                 </Form>
               )}
@@ -363,7 +322,7 @@ function App() {
               >
                 <Form.Item label="Asset ID" name="assetId">
                   <Select>
-                    {channel?.assetIds.map(aid => {
+                    {channel?.assetIds?.map(aid => {
                       return (
                         <Select.Option key={aid} value={aid}>
                           {aid}
@@ -435,7 +394,7 @@ function App() {
                 labelCol={{ span: 6 }}
                 wrapperCol={{ span: 18 }}
                 name="withdraw"
-                initialValues={{ assetId: channel?.assetIds[0], recipient: channel?.bob }}
+                initialValues={{ assetId: (channel?.assetIds ?? [])[0], recipient: channel?.bob }}
                 onFinish={values => withdraw(values.assetId, values.amount, values.recipient)}
                 onFinishFailed={onFinishFailed}
                 form={withdrawForm}
