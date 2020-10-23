@@ -8,7 +8,7 @@ import { parseEther } from "ethers/lib/utils";
 import { deployContracts } from "..";
 import { AddressBook } from "../addressBook";
 
-import { bob } from "./constants";
+import { bob, rando } from "./constants";
 import { getTestAddressBook, getTestChannel } from "./utils";
 
 describe("AssetTransfer.sol", () => {
@@ -17,6 +17,7 @@ describe("AssetTransfer.sol", () => {
   let channel: Contract;
   let token: Contract;
   let failingToken: Contract;
+  let nonconformingToken: Contract;
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
@@ -24,16 +25,24 @@ describe("AssetTransfer.sol", () => {
       ["AssetTransfer", []],
       ["TestToken", []],
       ["FailingToken", []],
+      ["NonconformingToken", []],
     ]);
     assetTransfer = addressBook.getContract("AssetTransfer");
     // NOTE: safe to do because of inheritance pattern
     channel = await getTestChannel(addressBook);
+
+    // Fund with all tokens
     token = addressBook.getContract("TestToken");
     const mint = await token.mint(bob.address, parseEther("1"));
     await mint.wait();
+
     failingToken = addressBook.getContract("FailingToken");
-    const mintFailure = await token.mint(bob.address, parseEther("1"));
+    const mintFailure = await failingToken.mint(bob.address, parseEther("1"));
     await mintFailure.wait();
+
+    nonconformingToken = addressBook.getContract("NonconformingToken");
+    const mintNonconforming = await nonconformingToken.mint(bob.address, parseEther("1"));
+    await mintNonconforming.wait();
   });
 
   it("should deploy", async () => {
@@ -73,9 +82,6 @@ describe("AssetTransfer.sol", () => {
 
       const tokenTx = await token.connect(bob).transfer(channel.address, BigNumber.from(10000));
       await tokenTx.wait();
-
-      const failingTx = await failingToken.connect(bob).succeedingTransfer(channel.address, BigNumber.from(10000));
-      await failingTx.wait();
     });
 
     it("should work for ETH transfers", async () => {
@@ -95,17 +101,68 @@ describe("AssetTransfer.sol", () => {
       expect(await channel.getTotalTransferred(token.address)).to.be.eq(value);
       expect(await channel.getEmergencyWithdrawableAmount(token.address, bob.address)).to.be.eq(BigNumber.from(0));
     });
+
+    // TODO: (1) is transfer def right? (2) why fail :(
+    it.skip("should work for ERC20 token that does not return `bool` from transfer", async () => {
+      const value = BigNumber.from(1000);
+      const preTransfer = await nonconformingToken.balanceOf(bob.address);
+      const tx = await channel.assetTransfer(nonconformingToken.address, bob.address, value);
+      await tx.wait();
+      expect(await nonconformingToken.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
+      expect(await channel.getTotalTransferred(nonconformingToken.address)).to.be.eq(value);
+      expect(await channel.getEmergencyWithdrawableAmount(nonconformingToken.address, bob.address)).to.be.eq(
+        BigNumber.from(0),
+      );
+    });
   });
 
   describe("emergencyWithdraw", () => {
-    it("should allow ERC20 token to be withdrawable if transfer fails", async () => {
-      const value = BigNumber.from(1000);
+    const value = BigNumber.from(1000);
+
+    beforeEach(async () => {
+      // Fund the channel with tokens and eth
+      const ethFunding = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
+      await ethFunding.wait();
+
+      const tokenFunding = await failingToken.connect(bob).succeedingTransfer(channel.address, BigNumber.from(10000));
+      await tokenFunding.wait();
+
+      // Make failing transfer
       const preTransfer = await failingToken.balanceOf(bob.address);
       const tx = await channel.assetTransfer(failingToken.address, bob.address, value);
       await tx.wait();
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer);
       expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(BigNumber.from(0));
       expect(await channel.getEmergencyWithdrawableAmount(failingToken.address, bob.address)).to.be.eq(value);
+
+      // Make transfers pass
+      const succeeding = await failingToken.setTransferShouldFail(false);
+      await succeeding.wait();
+    });
+
+    it("should fail if owner is not msg.sender or recipient", async () => {
+      await expect(
+        channel.connect(rando).emergencyWithdraw(failingToken.address, bob.address, rando.address),
+      ).revertedWith("Either msg.sender or recipient of funds must be the owner of an emergency withdraw");
+    });
+
+    it("should fail if transfer fails", async () => {
+      // Make transfers pass
+      const failing = await failingToken.setTransferShouldFail(true);
+      await failing.wait();
+
+      await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
+        "AssetTransfer: Transfer failed",
+      );
+    });
+
+    it("should allow ERC20 token to be withdrawable if transfer fails", async () => {
+      const preTransfer = await failingToken.balanceOf(bob.address);
+
+      // Emergency withdraw
+      const withdraw = await channel.emergencyWithdraw(failingToken.address, bob.address, bob.address);
+      await withdraw.wait();
+      expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
     });
   });
 });

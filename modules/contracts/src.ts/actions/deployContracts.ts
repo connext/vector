@@ -14,7 +14,7 @@ const hash = (input: string): string => keccak256(`0x${input.replace(/^0x/, "")}
 export const deployContracts = async (
   wallet: Wallet,
   addressBook: AddressBook,
-  schema: [string, string[]][],
+  schema: [string, any[]][],
   log = logger.child({}),
 ): Promise<void> => {
   // Simple sanity checks to make sure contracts from our address book have been deployed
@@ -58,8 +58,8 @@ export const deployContracts = async (
       continue;
     }
 
-    const processedArgs = args.map((arg: string): string => {
-      const entry = addressBook.getEntry(arg);
+    const processedArgs = args.map((arg: any): any => {
+      const entry = typeof arg === "string" ? addressBook.getEntry(arg) : { address: AddressZero };
       return entry.address !== AddressZero ? entry.address : arg;
     });
 

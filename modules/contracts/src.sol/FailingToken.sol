@@ -1,5 +1,3 @@
-    
-    
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.7.1;
@@ -14,7 +12,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  */
 contract FailingToken is ERC20 {
 
+  bool public transferShouldFail;
+
     constructor () ERC20("Failing Token", "FAIL") {
+      transferShouldFail = true;
       _mint(msg.sender, 1000000 ether);
     }
 
@@ -27,7 +28,17 @@ contract FailingToken is ERC20 {
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-      require(false, "Failing token never transfers");
+      if (transferShouldFail) {
+        require(false, "FAIL: Failing token");
+        return false;
+      } else {
+        return super.transfer(recipient, amount);
+      }
+    }
+
+    function setTransferShouldFail(bool _transferShouldFail) public returns (bool) {
+      transferShouldFail = _transferShouldFail;
+      return transferShouldFail;
     }
 
     function succeedingTransfer(address recipient, uint256 amount) public returns (bool) {
