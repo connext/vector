@@ -394,14 +394,14 @@ function App() {
                 labelCol={{ span: 6 }}
                 wrapperCol={{ span: 18 }}
                 name="withdraw"
-                initialValues={{ assetId: (channel?.assetIds ?? [])[0], recipient: channel?.bob }}
+                initialValues={{ assetId: channel?.assetIds && channel?.assetIds[0], recipient: channel?.bob }}
                 onFinish={values => withdraw(values.assetId, values.amount, values.recipient)}
                 onFinishFailed={onFinishFailed}
                 form={withdrawForm}
               >
                 <Form.Item label="Asset ID" name="assetId">
                   <Select>
-                    {channel?.assetIds.map(aid => {
+                    {channel?.assetIds?.map(aid => {
                       return (
                         <Select.Option key={aid} value={aid}>
                           {aid}
