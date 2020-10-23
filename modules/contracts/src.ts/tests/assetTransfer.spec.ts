@@ -105,6 +105,7 @@ describe("AssetTransfer.sol", () => {
       expect(await channel.getEmergencyWithdrawableAmount(token.address, bob.address)).to.be.eq(BigNumber.from(0));
     });
 
+    // FIXME: does not return boolean from `safelyTransfer`
     it.skip("should work for ERC20 token that does not return `bool` from transfer", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await nonconformingToken.balanceOf(bob.address);
