@@ -14,6 +14,7 @@ import * as TransferDefinition from "../artifacts/src.sol/interfaces/ITransferDe
 import * as TransferRegistry from "../artifacts/src.sol/TransferRegistry.sol/TransferRegistry.json";
 import * as VectorChannel from "../artifacts/src.sol/interfaces/IVectorChannel.sol/IVectorChannel.json";
 import * as Withdraw from "../artifacts/src.sol/transferDefinitions/Withdraw.sol/Withdraw.json";
+import * as TestLibIterableMapping from "../artifacts/src.sol/testing/TestLibIterableMapping.sol/TestLibIterableMapping.json";
 
 type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
 
@@ -35,6 +36,7 @@ export const artifacts: Artifacts = {
   NonconformingToken,
   TestChannel,
   TestChannelFactory,
+  TestLibIterableMapping,
   TestToken,
   TransferDefinition,
   TransferRegistry,
@@ -51,6 +53,7 @@ export {
   NonconformingToken,
   TestChannel,
   TestChannelFactory,
+  TestLibIterableMapping,
   TestToken,
   TransferDefinition,
   TransferRegistry,
