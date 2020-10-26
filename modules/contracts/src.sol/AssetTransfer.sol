@@ -111,7 +111,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     return success;
   }
 
-  function getTotalTransferred(address assetId) external override view onlyOnProxy nonReentrantView returns (uint256) {
+  function getTotalTransferred(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
     return totalTransferred[assetId];
   }
 
@@ -119,7 +119,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     external
     override
     view
-    onlyOnProxy
+    onlyViaProxy
     nonReentrantView
     returns (uint256)
   {
@@ -130,7 +130,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address assetId,
     address owner,
     address payable recipient
-  ) external override onlyOnProxy nonReentrant {
+  ) external override onlyViaProxy nonReentrant {
     require(
       msg.sender == owner || owner == recipient,
       "AssetTransfer: Either msg.sender or recipient of funds must be the owner of an emergency withdraw"

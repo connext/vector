@@ -25,7 +25,7 @@ describe("ChannelMastercopy", () => {
   it("setup() should revert bc it's the mastercopy", async () => {
     await expect(
       mastercopy.setup(getRandomAddress(), getRandomAddress()),
-   ).to.be.revertedWith("This contract is the mastercopy");
+   ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
   });
 
   it("all public methods should revert bc it's the mastercopy", async () => {
@@ -60,13 +60,13 @@ describe("ChannelMastercopy", () => {
     ]) {
       await expect(
         mastercopy[method.name](...method.args),
-      ).to.be.revertedWith("This contract is the mastercopy");
+      ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
     }
   });
 
   it("should revert if sent eth bc it's the mastercopy", async () => {
     await expect(
       alice.sendTransaction({ to: mastercopy.address, value: Zero }),
-    ).to.be.revertedWith("This contract is the mastercopy");
+    ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
   });
 });

@@ -20,15 +20,15 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
   }
 
   // Prevents us from calling methods directly from the mastercopy contract
-  modifier onlyOnProxy {
-    require(alice != address(1), "Mastercopy: ONLY_ON_PROXY");
+  modifier onlyViaProxy {
+    require(alice != address(1), "Mastercopy: ONLY_VIA_PROXY");
     _;
   }
 
   /// @notice Contract constructor for Proxied copies
   /// @param _alice: Address representing user with function deposit
   /// @param _bob: Address representing user with multisig deposit
-  function setup(address _alice, address _bob) external override onlyOnProxy {
+  function setup(address _alice, address _bob) external override onlyViaProxy {
     ReentrancyGuard.setup();
     require(alice == address(0), "Channel has already been setup");
     require(_alice != address(0) && _bob != address(0), "Address zero not allowed as channel participant");
@@ -39,13 +39,13 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
 
   /// @notice A getter function for the bob of the multisig
   /// @return Bob's signer address
-  function getAlice() external override view onlyOnProxy nonReentrantView returns (address) {
+  function getAlice() external override view onlyViaProxy nonReentrantView returns (address) {
     return alice;
   }
 
   /// @notice A getter function for the bob of the multisig
   /// @return Alice's signer address
-  function getBob() external override view onlyOnProxy nonReentrantView returns (address) {
+  function getBob() external override view onlyViaProxy nonReentrantView returns (address) {
     return bob;
   }
 }
