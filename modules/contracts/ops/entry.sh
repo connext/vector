@@ -11,7 +11,7 @@ address_book="${ADDRESS_BOOK:-/data/address-book.json}"
 data_dir="${DATA_DIR:-/tmp}"
 chain_id="${CHAIN_ID:-1337}"
 mnemonic="${MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-evm="${EVM:-$(if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "buidler"; fi)}"
+evm="${EVM:-$(if [[ "$chain_id" == "1337" ]]; then echo "ganache"; else echo "hardhat"; fi)}"
 
 chain_addresses="$(dirname "$address_book")/chain-addresses.json"
 
@@ -20,13 +20,13 @@ mkdir -p "$data_dir" /data /tmp
 touch "$address_book"
 rm -f "$chain_addresses"
 
-if [[ "$evm" == "buidler" ]]
+if [[ "$evm" == "hardhat" ]]
 then
-  echo "Using buidler EVM"  
+  echo "Using hardhat EVM"  
   echo 'module.exports = {
-    defaultNetwork: "buidlerevm",
+    defaultNetwork: "hardhat",
     networks: {
-      buidlerevm: {
+      hardhat: {
         chainId: '"$chain_id"',
         loggingEnabled: false,
         accounts: [{
@@ -36,9 +36,9 @@ then
         gasPrice: 100000000000,
       },
     },
-  }' > /tmp/buidler.config.js
-  launch="buidler node --config /tmp/buidler.config.js --hostname 0.0.0.0 --port 8545"
-  cd /tmp # bc we need to run buidler node in same dir as buidler.config.js
+  }' > /tmp/hardhat.config.js
+  launch="hardhat node --config /tmp/hardhat.config.js --hostname 0.0.0.0 --port 8545"
+  cd /tmp # bc we need to run hardhat node in same dir as hardhat.config.js
 
 elif [[ "$evm" == "ganache" ]]
 then
@@ -53,7 +53,7 @@ then
     --port=8545"
 
 else
-  echo 'Expected EVM to be either "ganache" or "buidler"'
+  echo 'Expected EVM to be either "ganache" or "hardhat"'
   exit 1
 fi
 
