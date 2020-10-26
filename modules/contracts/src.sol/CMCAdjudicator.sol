@@ -15,6 +15,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
+  uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 12000;
+
   ChannelDispute private channelDispute;
   mapping(bytes32 => TransferDispute) private transferDisputes;
 
@@ -95,7 +97,18 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
       // Add unprocessed deposits to amounts
       balance.amount[0] += _getTotalDepositsAlice(assetId) - ccs.processedDepositsA[i];
-      balance.amount[1] += _getTotalDepositsBob(assetId) - ccs.processedDepositsB[i];
+
+      // If the following call fails, we were unable to query the channel's balance;
+      // this probably means the token is totally fucked up.
+      // Since we mustn't revert here (in order to prevent other assets from becoming frozen),
+      // we proceed anyway and assume there are no unprocessed deposits for Bob.
+      (bool success, bytes memory encodedReturnValue) = address(this).call{gas: QUERY_DEPOSITS_GAS_LIMIT}(
+        abi.encodeWithSignature("_depositsBob(address)", assetId)
+      );
+      if (success) {
+        uint256 depositsBob = abi.decode(encodedReturnValue, (uint256));
+        balance.amount[1] += depositsBob - ccs.processedDepositsB[i];
+      }
 
       // Transfer funds; this will never revert or fail otherwise,
       // i.e. if the underlying "real" asset transfer fails,
@@ -181,6 +194,14 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // i.e. if the underlying "real" asset transfer fails,
     // the funds are made available for emergency withdrawal
     transferBalance(cts.assetId, balance);
+  }
+
+  function _depositsBob(address assetId)
+    external
+    onlySelf
+    returns (uint256)
+  {
+    return _getTotalDepositsBob(assetId);
   }
 
   function verifySignatures(
