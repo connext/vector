@@ -1,4 +1,4 @@
-import { BuidlerConfig, usePlugin } from "@nomiclabs/buidler/config";
+import { HardhatUserConfig } from "hardhat/types";
 import { BigNumber } from "ethers";
 
 import * as packageJson from "./package.json";
@@ -8,32 +8,32 @@ import * as packageJson from "./package.json";
 
 // create accounts with the default balance of MAX_INT / 2
 // and use them to fund accounts in the test as needed
-const MAX_INT = BigNumber.from(2)
-  .pow(256)
-  .sub(1);
+const MAX_INT = BigNumber.from(2).pow(256).sub(1);
 
-usePlugin("@nomiclabs/buidler-waffle");
+import "@nomiclabs/hardhat-waffle";
 
-const config: BuidlerConfig = {
+const config: HardhatUserConfig = {
   paths: {
     sources: "./src.sol",
     tests: "./src.ts",
     artifacts: "./artifacts",
   },
-  solc: {
+  solidity: {
     version: packageJson.devDependencies.solc,
-    optimizer: {
-      enabled: true,
-      runs: 200,
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
     },
   },
-  defaultNetwork: "buidlerevm",
+  defaultNetwork: "hardhat",
   networks: {
     ganache: {
       chainId: 1337,
       url: "http://localhost:8545",
     },
-    buidlerevm: {
+    hardhat: {
       chainId: 1338,
       loggingEnabled: false,
       accounts: [
