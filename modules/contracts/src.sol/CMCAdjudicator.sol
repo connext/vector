@@ -57,8 +57,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     require(channelDispute.nonce < ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
 
     if (!inConsensusPhase()) { // We are not already in a dispute
-      // Only Alice or Bob may start a dispute
-      verifyMsgSenderisAliceOrBob(ccs);
       // Set expiries
       // TODO: offchain-ensure that there can't be an overflow
       channelDispute.consensusExpiry = block.number.add(ccs.timeout);
@@ -72,9 +70,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   function defundChannel(CoreChannelState calldata ccs) external override onlyOnProxy nonReentrant validateChannel(ccs) {
-    // Only Alice or Bob can defund their channel
-    verifyMsgSenderisAliceOrBob(ccs);
-
     // Verify that the given channel state matches the stored one
     require(
       hashChannelState(ccs) == channelDispute.channelStateHash,
@@ -116,9 +111,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     nonReentrant
     validateTransfer(cts)
   {
-    // Only initiator or responder of the transfer may start a dispute
-    verifyMsgSenderIsInitiatorOrResponder(cts);
-
     // Verify that the given transfer state is included in the "finalized" channel state
     bytes32 transferStateHash = hashTransferState(cts);
     verifyMerkleProof(merkleProofData, channelDispute.merkleRoot, transferStateHash);
@@ -163,7 +155,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
     if (block.number < transferDispute.transferDisputeExpiry) {
       // Before dispute expiry, responder can resolve
-      verifyMsgSenderIsResponder(cts);
+      require(msg.sender == cts.responder, "CMCAdjudicator: msg.sender is not transfer responder");
       require(
         keccak256(encodedInitialTransferState) == cts.initialStateHash,
         "CMCAdjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
@@ -189,21 +181,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // i.e. if the underlying "real" asset transfer fails,
     // the funds are made available for emergency withdrawal
     transferBalance(cts.assetId, balance);
-  }
-
-  function verifyMsgSenderisAliceOrBob(CoreChannelState calldata ccs) internal view {
-    require(msg.sender == ccs.alice || msg.sender == ccs.bob, "CMCAdjudicator: msg.sender is neither alice nor bob");
-  }
-
-  function verifyMsgSenderIsInitiatorOrResponder(CoreTransferState calldata cts) internal view {
-    require(
-      msg.sender == cts.initiator || msg.sender == cts.responder,
-      "CMCAdjudicator: msg.sender is neither transfer initiator nor responder"
-    );
-  }
-
-  function verifyMsgSenderIsResponder(CoreTransferState calldata cts) internal view {
-    require(msg.sender == cts.responder, "CMCAdjudicator: msg.sender is not transfer responder");
   }
 
   function verifySignatures(
