@@ -47,7 +47,7 @@ module.exports = {
       {
         test: /\.wasm$/,
         type: "javascript/auto",
-        loaders: ["wasm-loader"],
+        use: "wasm-loader",
       },
     ],
   },
