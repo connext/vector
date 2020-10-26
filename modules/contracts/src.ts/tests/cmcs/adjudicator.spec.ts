@@ -1,100 +1,186 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { CoreChannelState, CoreTransferState } from "@connext/vector-types";
+import { FullChannelState } from "@connext/vector-types";
 import {
-  getRandomBytes32,
-  hashCoreTransferState,
-  toBN,
+  ChannelSigner,
+  createTestChannelStateWithSigners,
   expect,
+  getRandomAddress,
+  getRandomBytes32,
   hashCoreChannelState,
-  signChannelMessage,
 } from "@connext/vector-utils";
-import { AddressZero, HashZero, Two } from "@ethersproject/constants";
-import { Contract } from "ethers";
+import { AddressZero, HashZero } from "@ethersproject/constants";
+import { BigNumber, Contract } from "ethers";
 
 import { bob, alice, provider } from "../constants";
-import { getTestChannel } from "../utils";
+import { getTestChannel, mineBlock } from "../utils";
 
-describe("CMCAdjudicator.sol", () => {
+describe.only("CMCAdjudicator.sol", () => {
   let channel: Contract;
+  let channelState: FullChannelState;
+  let aliceSignature: string;
+  let bobSignature: string;
+
+  const aliceSigner = new ChannelSigner(alice.privateKey, provider);
+  const bobSigner = new ChannelSigner(bob.privateKey, provider);
 
   beforeEach(async () => {
     channel = (await getTestChannel()).connect(alice);
   });
 
-  describe("Channel Disputes", () => {
-    let channelState: CoreChannelState;
-    let hashedState: string;
-    let aliceSignature: string;
-    let bobSignature: string;
+  // Helper to verify the channel dispute
+  const verifyDispute = async (ccs: FullChannelState, disputeBlockNumber: number) => {
+    console.log("submitted block", disputeBlockNumber);
+    const dispute = await channel.getChannelDispute();
+    expect(dispute.channelStateHash).to.be.eq(hashCoreChannelState(ccs));
+    expect(dispute.nonce).to.be.eq(ccs.nonce);
+    expect(dispute.merkleRoot).to.be.eq(ccs.merkleRoot);
+    expect(dispute.consensusExpiry).to.be.eq(BigNumber.from(ccs.timeout).add(disputeBlockNumber));
+    console.log("consensus expiry", dispute.consensusExpiry.toNumber());
+    console.log("defund expiry", dispute.defundExpiry.toNumber());
+    expect(dispute.defundExpiry).to.be.eq(
+      BigNumber.from(ccs.timeout)
+        .mul(2)
+        .add(disputeBlockNumber),
+    );
+    expect(dispute.defundNonce).to.be.eq(BigNumber.from(ccs.defundNonce).sub(1));
+  };
 
+  describe.only("disputeChannel", () => {
     beforeEach(async () => {
-      channelState = {
-        assetIds: [AddressZero],
-        balances: [{ amount: ["0", "1"], to: [alice.address, bob.address] }],
+      channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "deposit", {
         channelAddress: channel.address,
+        assetIds: [AddressZero],
+        balances: [{ to: [alice.address, bob.address], amount: ["17", "45"] }],
+        processedDepositsA: ["20"],
+        processedDepositsB: ["42"],
+        timeout: "2",
+        nonce: 3,
         merkleRoot: HashZero,
-        nonce: 1,
-        alice: alice.address,
-        bob: bob.address,
-        processedDepositsA: [],
-        processedDepositsB: [],
-        timeout: "1",
-        defundNonce: "1",
-      };
-      hashedState = hashCoreChannelState(channelState);
-      aliceSignature = await signChannelMessage(hashedState, alice.privateKey);
-      bobSignature = await signChannelMessage(hashedState, bob.privateKey);
+      });
+      const channelHash = hashCoreChannelState(channelState);
+      aliceSignature = await aliceSigner.signMessage(channelHash);
+      bobSignature = await bobSigner.signMessage(channelHash);
     });
 
-    it("should validate & store a new channel dispute", async () => {
+    it("should fail if state.alice is incorrect", async () => {
+      await expect(
+        channel.disputeChannel({ ...channelState, alice: getRandomAddress() }, aliceSignature, bobSignature),
+      ).revertedWith("CMCAdjudicator: Mismatch between given core channel state and channel we are at");
+    });
+
+    it("should fail if state.bob is incorrect", async () => {
+      await expect(
+        channel.disputeChannel({ ...channelState, bob: getRandomAddress() }, aliceSignature, bobSignature),
+      ).revertedWith("CMCAdjudicator: Mismatch between given core channel state and channel we are at");
+    });
+
+    it("should fail if state.channelAddress is incorrect", async () => {
+      await expect(
+        channel.disputeChannel({ ...channelState, channelAddress: getRandomAddress() }, aliceSignature, bobSignature),
+      ).revertedWith("CMCAdjudicator: Mismatch between given core channel state and channel we are at");
+    });
+
+    it("should fail if alices signature is invalid", async () => {
+      await expect(
+        channel.disputeChannel(channelState, await aliceSigner.signMessage(getRandomBytes32()), bobSignature),
+      ).revertedWith("Invalid alice signature");
+    });
+
+    it("should fail if bobs signature is invalid", async () => {
+      await expect(
+        channel.disputeChannel(channelState, aliceSignature, await bobSigner.signMessage(getRandomBytes32())),
+      ).revertedWith("Invalid bob signature");
+    });
+
+    it.only("should fail if channel is not in defund phase", async () => {
+      const shortTimeout = { ...channelState, timeout: "1" };
+      const hash = hashCoreChannelState(shortTimeout);
+      const tx = await channel.disputeChannel(
+        shortTimeout,
+        await aliceSigner.signMessage(hash),
+        await bobSigner.signMessage(hash),
+      );
+      const { blockNumber } = await tx.wait();
+      await verifyDispute(shortTimeout, blockNumber);
+
+      // advance blocks
+      console.log("current block", await provider.getBlockNumber());
+      await mineBlock();
+      // await mineBlock();
+      // await mineBlock();
+      console.log("final block", await provider.getBlockNumber());
+
+      const nextState = { ...shortTimeout, nonce: channelState.nonce + 1 };
+      const hash2 = hashCoreChannelState(nextState);
+      await expect(
+        channel.disputeChannel(nextState, await aliceSigner.signMessage(hash2), await bobSigner.signMessage(hash2)),
+      ).revertedWith("merp");
+    });
+
+    it("should fail if nonce is lte stored nonce", async () => {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
-      await tx.wait();
-      const txReciept = await provider.getTransactionReceipt(tx.hash);
-      const start = toBN(txReciept.blockNumber);
-      const channelDispute = await channel.getChannelDispute();
-      expect(channelDispute.channelStateHash).to.equal(hashedState);
-      expect(channelDispute.nonce).to.equal(channelState.nonce);
-      expect(channelDispute.merkleRoot).to.equal(channelState.merkleRoot);
-      expect(channelDispute.consensusExpiry).to.equal(start.add(toBN(channelState.timeout)));
-      expect(channelDispute.defundExpiry).to.equal(start.add(toBN(channelState.timeout).mul(Two)));
-      expect(channelDispute.isDefunded).to.be.false;
+      const { blockNumber } = await tx.wait();
+      await verifyDispute(channelState, blockNumber);
+
+      await expect(channel.disputeChannel(channelState, aliceSignature, bobSignature)).revertedWith(
+        "CMCAdjudicator disputeChannel: New nonce smaller than stored one",
+      );
     });
 
-    it.skip("should accept an update to an existing channel dispute", async () => {});
+    it("should work for a newly initiated dispute (and store expiries)", async () => {
+      const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
+      const { blockNumber } = await tx.wait();
+      // Verify dispute
+      await verifyDispute(channelState, blockNumber);
+    });
+
+    it("should work when advancing dispute (does not update expiries)", async () => {
+      const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
+      const { blockNumber } = await tx.wait();
+      await verifyDispute(channelState, blockNumber);
+      // Submit a new, higher nonced state
+      const newState = { ...channelState, nonce: channelState.nonce + 1 };
+      const hash = hashCoreChannelState(newState);
+      const tx2 = await channel.disputeChannel(
+        newState,
+        await aliceSigner.signMessage(hash),
+        await bobSigner.signMessage(hash),
+      );
+      await tx2.wait();
+      // safe because timeout does not change
+      await verifyDispute(newState, blockNumber);
+    });
   });
 
-  describe("Transfer Disputes", () => {
-    let transferState: CoreTransferState;
-    let hashedState: string;
-    let merkleProof: string[];
+  describe.skip("defundChannel", () => {
+    it("should fail if state.alice is incorrect", async () => {});
+    it("should fail if state.bob is incorrect", async () => {});
+    it("should fail if state.channelAddress is incorrect", async () => {});
+    it("should fail if channel state supplied does not match channels state stored", async () => {});
+    it("should fail if defund nonce does not increment", async () => {});
+    it("should work with multiple assets", async () => {});
+    it("should work with unprocessed deposits", async () => {});
+    it("should work (simple case)", async () => {});
+  });
 
-    beforeEach(async () => {
-      transferState = {
-        balance: { amount: ["0", "1"], to: [alice.address, bob.address] },
-        assetId: AddressZero,
-        channelAddress: channel.address,
-        transferId: getRandomBytes32(),
-        transferDefinition: AddressZero,
-        transferTimeout: "1",
-        initialStateHash: HashZero,
-        initiator: alice.address,
-        responder: bob.address,
-      };
-      merkleProof = [HashZero];
-      hashedState = hashCoreTransferState(transferState);
-    });
+  describe.skip("disputeTransfer", () => {
+    it("should fail if state.channelAddress is incorrect", async () => {});
+    it("should fail if merkle proof is invalid", async () => {});
+    it("should fail if channel is not in defund phase", async () => {});
+    it("should fail if transfer has already been disputed", async () => {});
+    it("should work", async () => {});
+  });
 
-    it.skip("should validate & store a new transfer dispute", async () => {
-      const tx = await channel.disputeTransfer(transferState, merkleProof);
-      await tx.wait();
-      const txReciept = await provider.getTransactionReceipt(tx.hash);
-      const start = toBN(txReciept.blockNumber);
-      const transferDispute = await channel.getLatestTransferDispute();
-      expect(transferDispute.transferDisputeExpiry).to.equal(start.add(toBN(transferState.transferTimeout)));
-      expect(transferDispute.transferStateHash).to.equal(hashedState);
-      expect(transferDispute.isDefunded).to.be.false;
-    });
-
-    it.skip("should accept an update to an existing transfer dispute", async () => {});
+  describe.skip("defundTransfer", () => {
+    it("should fail if state.channelAddress is incorrect", async () => {});
+    it("should fail if the transfer does not match whats stored", async () => {});
+    it("should fail if transfer hasnt been disputed", async () => {});
+    it("should fail if transfer has been defunded", async () => {});
+    it("should fail if the responder is not the defunder and the transfer is still in dispute", async () => {});
+    it("should fail if the initial state hash doesnt match and the transfer is still in dispute", async () => {});
+    it("should fail if the initial state hash doesnt match", async () => {});
+    it("should correctly resolve + defund transfer if transfer is still in dispute (cancelling resolve)", async () => {});
+    it("should correctly resolve + defund transfer if transfer is still in dispute (successful resolve)", async () => {});
+    it("should correctly defund transfer when transfer is not in dispute phase", async () => {});
   });
 });
