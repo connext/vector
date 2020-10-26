@@ -39,6 +39,7 @@ model Channel {
   chainId                  Int
   providerUrl              String
   latestUpdate             Update
+  defundNonce              String
 
   activeTransfers Transfer[]
 
