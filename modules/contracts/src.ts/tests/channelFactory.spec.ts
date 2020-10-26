@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import {
   getCreate2MultisigAddress,
+  getMinimalProxyInitCode,
   getPublicIdentifierFromPublicKey,
   expect,
   getSignerAddressFromPublicIdentifier,
@@ -11,7 +12,7 @@ import pino from "pino";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
-import { ChannelMastercopy, Proxy } from "../artifacts";
+import { ChannelMastercopy } from "../artifacts";
 import { VectorChainReader } from "../services";
 
 import { alice, bob, chainIdReq, provider } from "./constants";
@@ -37,7 +38,10 @@ describe("ChannelFactory", () => {
     chainId = await chainIdReq;
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
-    chainReader = new VectorChainReader(chainProviders, pino().child({ module: "VectorChainReader" }));
+    chainReader = new VectorChainReader(
+      chainProviders,
+      pino().child({ module: "VectorChainReader" }),
+    );
   });
 
   it("should deploy", async () => {
@@ -49,7 +53,9 @@ describe("ChannelFactory", () => {
   });
 
   it("should provide the proxy bytecode", async () => {
-    expect(await channelFactory.proxyCreationCode()).to.equal(Proxy.bytecode);
+    expect(
+      await channelFactory.proxyCreationCode(),
+    ).to.equal(getMinimalProxyInitCode(channelMastercopy.address));
   });
 
   // FIXME: computes the wrong address onchain

@@ -48,7 +48,6 @@ describe("ChannelMastercopy", () => {
     for (const method of [
       { name: "getAlice", args: [] },
       { name: "getBob", args: [] },
-      { name: "getMastercopy", args: [] },
       { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, HashZero, HashZero] },
       { name: "depositAlice", args: [AddressZero, Zero] },
       { name: "getChannelDispute", args: [] },

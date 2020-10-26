@@ -21,7 +21,7 @@ describe("EthereumChainReader", () => {
   let factory: Contract;
   let transferRegistry: Contract;
 
-  beforeEach(async () => {
+  before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [
       ["ChannelMastercopy", []],
