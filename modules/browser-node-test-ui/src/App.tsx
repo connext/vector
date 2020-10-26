@@ -204,7 +204,23 @@ function App() {
             </Col>
           </>
         ) : connectError ? (
-          <Statistic title="Error Connecting Node" value={connectError} />
+          <>
+            <Col span={16}>
+              <Statistic title="Error Connecting Node" value={connectError} />
+            </Col>
+            <Col span={8}>
+              <Button
+                danger
+                onClick={() => {
+                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+              >
+                Clear Store
+              </Button>
+            </Col>
+          </>
         ) : (
           <>
             <Col span={16}>

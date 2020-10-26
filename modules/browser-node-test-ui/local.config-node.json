@@ -1,6 +1,7 @@
 {
   "adminToken": "cxt1234",
-  "messagingUrl": "https://messaging.connext.network",
+  "authUrl": "http://localhost:5040",
+  "natsUrl": "ws://localhost:4221",
   "logLevel": "info",
   "chainAddresses": {
     "1337": {
@@ -18,17 +19,9 @@
       "hashlockTransferAddress": "0xf25186B5081Ff5cE73482AD761DB0eB0d25abfBF",
       "withdrawAddress": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F",
       "transferRegistryAddress": "0x9FBDa871d559710256a2502A2517b794B482Db40"
-    },
-    "4": {
-      "channelMastercopyAddress": "0x048D978cEa968a6D27Ef1C792Cb1bA83A9A5bBc9",
-      "channelFactoryAddress": "0x70b3673264E9D56Cc8e53597bF3105eF281a5a0c",
-      "hashlockTransferAddress": "0xd69ABEf7eF08957F47d5B060B63D0b71Ee8d4621",
-      "withdrawAddress": "0xc5E4115B8fB081c828Fe65763e1038152FAA3213",
-      "transferRegistryAddress": "0x268ee7145a1c717d36dAfcF402b51ac4BAdD6388"
     }
   },
   "chainProviders": {
-    "4": "https://rinkeby.infura.io/v3/",
     "1337": "http://localhost:8545",
     "1338": "http://localhost:8546"
   },

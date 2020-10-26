@@ -7,7 +7,6 @@ import {
   CreateUpdateDetails,
   EngineEvent,
   EngineEventMap,
-  EngineEvents,
   IChannelSigner,
   INodeService,
   IVectorEngine,
@@ -18,7 +17,6 @@ import {
   ServerNodeResponses,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
-import Axios from "axios";
 import { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
@@ -204,7 +202,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<ServerNodeResponses.RequestCollateral, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, params);
     try {
-      const res = await this.engine.request<typeof ChannelRpcMethods.chan_requestCollateral>(rpc);
+      await this.engine.request<typeof ChannelRpcMethods.chan_requestCollateral>(rpc);
       return Result.ok({ channelAddress: params.channelAddress });
     } catch (e) {
       return Result.fail(e);
