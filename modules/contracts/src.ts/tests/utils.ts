@@ -43,3 +43,10 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
 
   return new Contract(channelAddress, TestChannel.abi, alice);
 };
+
+export const mineBlock = (): Promise<void> => {
+  return new Promise(async resolve => {
+    provider.once("block", () => resolve());
+    await provider.send("evm_mine", []);
+  });
+};
