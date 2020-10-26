@@ -7,7 +7,6 @@ import * as ChannelMastercopy from "../artifacts/ChannelMastercopy.json";
 import * as FailingToken from "../artifacts/FailingToken.json";
 import * as HashlockTransfer from "../artifacts/HashlockTransfer.json";
 import * as NonconformingToken from "../artifacts/NonconformingToken.json";
-import * as Proxy from "../artifacts/Proxy.json";
 import * as TestToken from "../artifacts/TestToken.json";
 import * as TransferDefinition from "../artifacts/ITransferDefinition.json";
 import * as TransferRegistry from "../artifacts/TransferRegistry.json";
@@ -34,7 +33,6 @@ export const artifacts: Artifacts = {
   FailingToken,
   HashlockTransfer,
   NonconformingToken,
-  Proxy,
   TestChannel,
   TestChannelFactory,
   TestToken,
@@ -51,7 +49,6 @@ export {
   FailingToken,
   HashlockTransfer,
   NonconformingToken,
-  Proxy,
   TestChannel,
   TestChannelFactory,
   TestToken,

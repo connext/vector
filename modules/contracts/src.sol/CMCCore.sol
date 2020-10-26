@@ -3,7 +3,6 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCCore.sol";
-import "./ProxyData.sol";
 import "./ReentrancyGuard.sol";
 
 contract CMCCore is ReentrancyGuard, ICMCCore {
