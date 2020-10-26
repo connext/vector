@@ -8,7 +8,7 @@ import { deployContracts } from "../../actions";
 import { alice } from "../constants";
 import { getTestAddressBook } from "../utils";
 
-describe.only("LibIterableMapping.sol", () => {
+describe("LibIterableMapping.sol", () => {
   let mapping: Contract;
   let transferDefs: Contract[];
 
