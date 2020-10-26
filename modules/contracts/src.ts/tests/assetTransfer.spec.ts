@@ -52,7 +52,7 @@ describe("AssetTransfer.sol", () => {
 
   describe("getTotalTransferred", () => {
     it("should fail if called directly", async () => {
-      await expect(assetTransfer.getTotalTransferred(AddressZero)).revertedWith("This contract is the mastercopy");
+      await expect(assetTransfer.getTotalTransferred(AddressZero)).revertedWith("Mastercopy: ONLY_VIA_PROXY");
     });
 
     it("should work when nothing has been transferred", async () => {
@@ -64,7 +64,7 @@ describe("AssetTransfer.sol", () => {
   describe("getEmergencyWithdrawableAmount", () => {
     it("should fail if called directly", async () => {
       await expect(assetTransfer.getEmergencyWithdrawableAmount(AddressZero, bob.address)).revertedWith(
-        "This contract is the mastercopy",
+        "Mastercopy: ONLY_VIA_PROXY",
       );
     });
 

@@ -2,20 +2,16 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IChannelFactory.sol";
-import "./interfaces/IVectorChannel.sol";
-import "./Proxy.sol";
-import "./lib/LibAsset.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import "./interfaces/IChannelFactory.sol";
+import "./interfaces/IVectorChannel.sol";
+import "./lib/LibAsset.sol";
+import "./lib/MinimalProxyFactory.sol";
 
 /// @title Channel Factory - Allows us to create new channel proxy contract
-contract ChannelFactory is IChannelFactory {
-
-    bytes public constant override proxyCreationCode = type(Proxy).creationCode;
-
-    bytes32 private constant domainSalt = keccak256("vector");
-
+/// @author Connext & Friends <hello@connext.network>
+contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     address private immutable mastercopy;
 
     constructor(address _mastercopy) {
@@ -28,6 +24,10 @@ contract ChannelFactory is IChannelFactory {
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
     function getMastercopy() external override view returns(address) {
       return mastercopy;
+    }
+
+    function proxyCreationCode() external override view returns (bytes memory) {
+      return _generateMinimalProxyInitCode(mastercopy);
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
@@ -43,14 +43,10 @@ contract ChannelFactory is IChannelFactory {
         view
         returns (address)
     {
-        return address(uint256(
-            keccak256(abi.encodePacked(
-                byte(0xff),
-                address(this),
-                generateSalt(alice, bob, chainId),
-                keccak256(abi.encodePacked(proxyCreationCode, uint256(mastercopy)))
-            ))
-        ));
+        return _calculateMinimalProxyDeploymentAddress(
+            mastercopy,
+            generateSalt(alice, bob, chainId)
+        );
     }
 
     /// @dev Allows us to create new channel contract and get it all set up in one transaction
@@ -63,7 +59,7 @@ contract ChannelFactory is IChannelFactory {
     )
         external
         override
-        returns (IVectorChannel channel)
+        returns (address channel)
     {
         return _createChannel(alice, bob, chainId);
     }
@@ -80,7 +76,7 @@ contract ChannelFactory is IChannelFactory {
         external
         payable
         override
-        returns (IVectorChannel channel)
+        returns (address channel)
     {
         channel = _createChannel(alice, bob, chainId);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
@@ -95,7 +91,7 @@ contract ChannelFactory is IChannelFactory {
                 "ChannelFactory: token approve failed"
             );
         }
-        channel.depositAlice{value: msg.value}(assetId, amount);
+        IVectorChannel(channel).depositAlice{value: msg.value}(assetId, amount);
     }
 
     ////////////////////////////////////////
@@ -107,10 +103,10 @@ contract ChannelFactory is IChannelFactory {
         uint256 chainId
     )
         internal
-        returns (IVectorChannel channel)
+        returns (address channel)
     {
         channel = deployChannelProxy(alice, bob, chainId);
-        channel.setup(alice, bob);
+        IVectorChannel(channel).setup(alice, bob);
         emit ChannelCreation(channel);
         return channel;
     }
@@ -125,11 +121,9 @@ contract ChannelFactory is IChannelFactory {
         uint256 chainId
     )
         internal
-        returns (IVectorChannel)
+        returns (address)
     {
-        bytes32 salt = generateSalt(alice, bob, chainId);
-        Proxy proxy = new Proxy{salt: salt}(mastercopy);
-        return IVectorChannel(address(proxy));
+        return _deployMinimalProxy(mastercopy, generateSalt(alice, bob, chainId));
     }
 
     function generateSalt(
@@ -141,14 +135,7 @@ contract ChannelFactory is IChannelFactory {
         pure
         returns (bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                alice,
-                bob,
-                chainId,
-                domainSalt
-            )
-        );
+        return keccak256(abi.encodePacked(alice, bob, chainId));
     }
 
 }

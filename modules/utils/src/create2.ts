@@ -3,6 +3,12 @@ import { utils } from "ethers";
 
 import { getSignerAddressFromPublicIdentifier } from "./identifiers";
 
+// Prefix & suffix come from..?
+export const getMinimalProxyInitCode = (mastercopyAddress: string): string =>
+  `0x3d602d80600a3d3981f3363d3d373d3d3d363d73${
+    mastercopyAddress.toLowerCase().replace(/^0x/, "")
+  }5af43d82803e903d91602b57fd5bf3`;
+
 export const getCreate2MultisigAddress = async (
   initiatorIdentifier: PublicIdentifier,
   responderIdentifier: PublicIdentifier,
@@ -32,17 +38,16 @@ export const getCreate2MultisigAddress = async (
               channelFactoryAddress,
               // salt
               utils.solidityKeccak256(
-                ["address", "address", "uint256", "bytes32"],
+                ["address", "address", "uint256"],
                 [
                   getSignerAddressFromPublicIdentifier(initiatorIdentifier),
                   getSignerAddressFromPublicIdentifier(responderIdentifier),
                   chainId,
-                  utils.keccak256(utils.toUtf8Bytes("vector")),
                 ],
               ),
               utils.solidityKeccak256(
-                ["bytes", "uint256"],
-                [`0x${proxyRes.getValue().replace(/^0x/, "")}`, mastercopyRes.getValue()],
+                ["bytes"],
+                [getMinimalProxyInitCode(mastercopyRes.getValue())],
               ),
             ],
           )

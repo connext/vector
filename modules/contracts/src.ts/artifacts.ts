@@ -4,17 +4,16 @@ import { utils } from "ethers";
 import * as AssetTransfer from "../artifacts/src.sol/AssetTransfer.sol/AssetTransfer.json";
 import * as ChannelFactory from "../artifacts/src.sol/ChannelFactory.sol/ChannelFactory.json";
 import * as ChannelMastercopy from "../artifacts/src.sol/ChannelMastercopy.sol/ChannelMastercopy.json";
-import * as FailingToken from "../artifacts/src.sol/FailingToken.sol/FailingToken.json";
+import * as FailingToken from "../artifacts/src.sol/testing/FailingToken.sol/FailingToken.json";
 import * as HashlockTransfer from "../artifacts/src.sol/transferDefinitions/HashlockTransfer.sol/HashlockTransfer.json";
-import * as NonconformingToken from "../artifacts/src.sol/NonconformingToken.sol/NonconformingToken.json";
-import * as Proxy from "../artifacts/src.sol/Proxy.sol/Proxy.json";
-import * as TestToken from "../artifacts/src.sol/TestToken.sol/TestToken.json";
+import * as NonconformingToken from "../artifacts/src.sol/testing/NonconformingToken.sol/NonconformingToken.json";
+import * as TestChannel from "../artifacts/src.sol/testing/TestChannel.sol/TestChannel.json";
+import * as TestChannelFactory from "../artifacts/src.sol/testing/TestChannelFactory.sol/TestChannelFactory.json";
+import * as TestToken from "../artifacts/src.sol/testing/TestToken.sol/TestToken.json";
 import * as TransferDefinition from "../artifacts/src.sol/interfaces/ITransferDefinition.sol/ITransferDefinition.json";
 import * as TransferRegistry from "../artifacts/src.sol/TransferRegistry.sol/TransferRegistry.json";
 import * as VectorChannel from "../artifacts/src.sol/interfaces/IVectorChannel.sol/IVectorChannel.json";
 import * as Withdraw from "../artifacts/src.sol/transferDefinitions/Withdraw.sol/Withdraw.json";
-import * as TestChannel from "../artifacts/src.sol/TestChannel.sol/TestChannel.json";
-import * as TestChannelFactory from "../artifacts/src.sol/TestChannelFactory.sol/TestChannelFactory.json";
 
 type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
 
@@ -34,7 +33,6 @@ export const artifacts: Artifacts = {
   FailingToken,
   HashlockTransfer,
   NonconformingToken,
-  Proxy,
   TestChannel,
   TestChannelFactory,
   TestToken,
@@ -51,7 +49,6 @@ export {
   FailingToken,
   HashlockTransfer,
   NonconformingToken,
-  Proxy,
   TestChannel,
   TestChannelFactory,
   TestToken,
