@@ -95,6 +95,7 @@ export async function applyUpdate<T extends UpdateType>(
           networkContext,
           aliceIdentifier: fromIdentifier,
           bobIdentifier: toIdentifier,
+          defundNonce: "1",
         },
       });
     }

@@ -282,6 +282,7 @@ export async function inbound(
       bobIdentifier: signer.publicIdentifier,
       timeout,
       latestUpdate: {} as any, // There is no latest update on setup
+      defundNonce: "1",
     };
   }
 

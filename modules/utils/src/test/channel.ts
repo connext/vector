@@ -236,6 +236,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     aliceIdentifier: publicIdentifiers[0],
     bobIdentifier: publicIdentifiers[1],
     timeout: "1",
+    defundNonce: "1",
     ...rest,
   };
 }

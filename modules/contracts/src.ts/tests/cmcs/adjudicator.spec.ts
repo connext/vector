@@ -39,6 +39,7 @@ describe("CMCAdjudicator.sol", () => {
         processedDepositsA: [],
         processedDepositsB: [],
         timeout: "1",
+        defundNonce: "1",
       };
       hashedState = hashCoreChannelState(channelState);
       aliceSignature = await signChannelMessage(hashedState, alice.privateKey);
