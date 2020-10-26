@@ -12,6 +12,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract AssetTransfer is CMCCore, IAssetTransfer {
   using SafeMath for uint256;
 
+  string private constant BALANCE_SIG = "_getOwnERC20Balance(address)";
+  string private constant TRANSFER_SIG = "_transferERC20(address,address,uint256)";
+
   // TODO: These are ad hoc values. Confirm or find more suitable ones.
   uint256 private constant ETHER_TRANSFER_GAS_LIMIT = 10000;
   uint256 private constant ERC20_TRANSFER_GAS_LIMIT = 100000;
@@ -38,7 +41,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     uint256 maxAmount
   ) private returns (bool, uint256) {
     (bool success, bytes memory encodedReturnValue) = address(this).call{gas: ERC20_BALANCE_GAS_LIMIT}(
-      abi.encodeWithSignature("_getOwnERC20Balance(address)", assetId)
+      abi.encodeWithSignature(BALANCE_SIG, assetId)
     );
     if (!success) {
       return (false, 0);
@@ -47,7 +50,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     uint256 balance = abi.decode(encodedReturnValue, (uint256));
     uint256 amount = LibUtils.min(maxAmount, balance);
     (success, encodedReturnValue) = address(this).call{gas: ERC20_TRANSFER_GAS_LIMIT}(
-      abi.encodeWithSignature("_transferERC20(address,address,uint256)", assetId, recipient, amount)
+      abi.encodeWithSignature(TRANSFER_SIG, assetId, recipient, amount)
     );
     if (!success) {
       return (false, 0);

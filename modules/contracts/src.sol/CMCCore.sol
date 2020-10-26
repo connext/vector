@@ -6,13 +6,22 @@ import "./interfaces/ICMCCore.sol";
 import "./ProxyData.sol";
 import "./ReentrancyGuard.sol";
 
-contract CMCCore is ProxyData(address(0)), ReentrancyGuard, ICMCCore {
+contract CMCCore is ReentrancyGuard, ICMCCore {
+  address constant invalidParticipant = address(1);
+
   address internal alice;
   address internal bob;
 
+  /// @notice Set invalid participants to block the mastercopy from being used directly
+  ///         Nonzero address also prevents the mastercopy from being setup
+  ///         Only setting alice is sufficient, setting bob too wouldn't change anything
+  constructor () {
+      alice = invalidParticipant;
+  }
+
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyOnProxy {
-    require(mastercopy != address(0), "This contract is the mastercopy");
+    require(alice != address(1), "Mastercopy: ONLY_ON_PROXY");
     _;
   }
 
@@ -26,12 +35,6 @@ contract CMCCore is ProxyData(address(0)), ReentrancyGuard, ICMCCore {
     require(_alice != _bob, "Channel participants must be different from each other");
     alice = _alice;
     bob = _bob;
-  }
-
-  /// @notice A getter function for the mastercopy of the multisig
-  /// @return The mastercopy address the channel was created with
-  function getMastercopy() external override view onlyOnProxy nonReentrantView returns (address) {
-    return mastercopy;
   }
 
   /// @notice A getter function for the bob of the multisig
