@@ -3,16 +3,16 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 struct Balance {
-  uint256[2] amount;
-  address payable[2] to;
+  uint256[2] amount; // [alice, bob] in channel, [initiator, responder] in transfer
+  address payable[2] to; // [alice, bob] in channel, [initiator, responder] in transfer
 }
 
 struct CoreChannelState {
-  Balance[] balances; // TODO index by assetId? // alice, bob
-  address[] assetIds;
   address channelAddress;
   address alice;
   address bob;
+  address[] assetIds;
+  Balance[] balances; // indexed by assetId
   uint256[] processedDepositsA; // indexed by assetId
   uint256[] processedDepositsB; // indexed by assetId
   uint256 timeout;
@@ -22,15 +22,15 @@ struct CoreChannelState {
 }
 
 struct CoreTransferState {
-  Balance balance;
-  address assetId;
   address channelAddress;
   bytes32 transferId;
   address transferDefinition;
-  uint256 transferTimeout;
-  bytes32 initialStateHash;
   address initiator;
   address responder;
+  address assetId;
+  Balance balance;
+  uint256 transferTimeout;
+  bytes32 initialStateHash;
 }
 
 struct ChannelDispute {
