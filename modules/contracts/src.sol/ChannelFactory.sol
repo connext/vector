@@ -43,14 +43,12 @@ contract ChannelFactory is IChannelFactory {
         view
         returns (address)
     {
-        bytes32 salt = generateSalt(alice, bob, chainId);
-        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, mastercopy));
         return address(uint256(
             keccak256(abi.encodePacked(
                 byte(0xff),
                 address(this),
-                salt,
-                initCodeHash
+                generateSalt(alice, bob, chainId),
+                keccak256(abi.encodePacked(proxyCreationCode, mastercopy))
             ))
         ));
     }
@@ -114,6 +112,7 @@ contract ChannelFactory is IChannelFactory {
         channel = deployChannelProxy(alice, bob, chainId);
         channel.setup(alice, bob);
         emit ChannelCreation(channel);
+        return channel;
     }
 
     /// @dev Allows us to create new channel contact using CREATE2

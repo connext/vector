@@ -14,14 +14,11 @@ const hash = (input: string): string => keccak256(`0x${input.replace(/^0x/, "")}
 export const deployContracts = async (
   wallet: Wallet,
   addressBook: AddressBook,
-  schema: [string, string[]][],
+  schema: [string, any[]][],
   log = logger.child({}),
 ): Promise<void> => {
   // Simple sanity checks to make sure contracts from our address book have been deployed
-  const isContractDeployed = async (
-    name: string,
-    address: string | undefined,
-  ): Promise<boolean> => {
+  const isContractDeployed = async (name: string, address: string | undefined): Promise<boolean> => {
     log.info(`Checking for valid ${name} contract...`);
     if (!address || address === "" || address === AddressZero) {
       log.info("This contract is not in our address book.");
@@ -61,8 +58,8 @@ export const deployContracts = async (
       continue;
     }
 
-    const processedArgs = args.map((arg: string): string => {
-      const entry = addressBook.getEntry(arg);
+    const processedArgs = args.map((arg: any): any => {
+      const entry = typeof arg === "string" ? addressBook.getEntry(arg) : { address: AddressZero };
       return entry.address !== AddressZero ? entry.address : arg;
     });
 
@@ -75,7 +72,11 @@ export const deployContracts = async (
     const receipt = await tx.wait();
     const address = Contract.getContractAddress(tx);
 
-    log.info(`Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(receipt.gasUsed.mul(tx.gasPrice))} deploying ${name} to address: ${address}`);
+    log.info(
+      `Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(
+        receipt.gasUsed.mul(tx.gasPrice),
+      )} deploying ${name} to address: ${address}`,
+    );
     const runtimeCodeHash = hash(await wallet.provider.getCode(address));
     const creationCodeHash = hash(artifacts[name].bytecode);
     addressBook.setEntry(name, {
@@ -85,6 +86,5 @@ export const deployContracts = async (
       runtimeCodeHash,
       txHash: tx.hash,
     } as AddressBookEntry);
-
   }
 };

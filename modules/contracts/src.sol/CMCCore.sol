@@ -30,19 +30,19 @@ contract CMCCore is ProxyData(address(0)), ReentrancyGuard, ICMCCore {
 
   /// @notice A getter function for the mastercopy of the multisig
   /// @return The mastercopy address the channel was created with
-  function getMastercopy() external override view onlyOnProxy returns (address) {
+  function getMastercopy() external override view onlyOnProxy nonReentrantView returns (address) {
     return mastercopy;
   }
 
   /// @notice A getter function for the bob of the multisig
   /// @return Bob's signer address
-  function getAlice() external override view onlyOnProxy returns (address) {
+  function getAlice() external override view onlyOnProxy nonReentrantView returns (address) {
     return alice;
   }
 
   /// @notice A getter function for the bob of the multisig
   /// @return Alice's signer address
-  function getBob() external override view onlyOnProxy returns (address) {
+  function getBob() external override view onlyOnProxy nonReentrantView returns (address) {
     return bob;
   }
 }

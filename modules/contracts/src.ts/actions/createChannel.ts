@@ -3,7 +3,7 @@ import { Contract, Wallet } from "ethers";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
-import { VectorChannel } from "../artifacts";
+import { TestChannel, VectorChannel } from "../artifacts";
 import { cliOpts, logger } from "../constants";
 
 export const createChannel = async (
@@ -11,6 +11,7 @@ export const createChannel = async (
   alice: Wallet,
   addressBook: AddressBook,
   log = logger.child({}),
+  test = false,
 ): Promise<Contract> => {
   log.info(`\nPreparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
   const channelFactory = addressBook.getContract("ChannelFactory");
@@ -24,15 +25,14 @@ export const createChannel = async (
   const channelAddress = await doneBeingCreated;
   log.info(`Successfully created a channel at ${channelAddress}`);
   // Save this channel address in case we need it later
-  addressBook.setEntry(
-    `VectorChannel-${alice.address.substring(2, 6)}-${bobAddress.substring(2, 6)}`,
-    {
-      address: channelAddress,
-      args: [alice.address, bobAddress, chainId],
-      txHash: tx.hash,
-    },
-  );
-  return new Contract(channelAddress, VectorChannel.abi, alice);
+  addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bobAddress.substring(2, 6)}`, {
+    address: channelAddress,
+    args: [alice.address, bobAddress, chainId],
+    txHash: tx.hash,
+  });
+  return test
+    ? new Contract(channelAddress, TestChannel.abi, alice)
+    : new Contract(channelAddress, VectorChannel.abi, alice);
 };
 
 export const createChannelCommand = {

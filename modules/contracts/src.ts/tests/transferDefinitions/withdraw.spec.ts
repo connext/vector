@@ -10,7 +10,6 @@ import {
   getRandomAddress,
   getRandomBytes32,
   signChannelMessage,
-  recoverAddressFromChannelMessage,
   keyify,
   expect,
   encodeTransferState,
@@ -83,14 +82,16 @@ describe("Withdraw", () => {
     resolver: WithdrawResolver,
     result: Balance,
   ): Promise<void> => {
-    if (await recoverAddressFromChannelMessage(initialState.data, resolver.responderSignature)) {
+    if (resolver.responderSignature !== mkSig("0x0")) {
       // Withdraw completed
       expect(result.to).to.deep.equal(initialBalance.to);
       expect(result.amount[0].toString()).to.eq("0");
       expect(result.amount[1].toString()).to.eq(initialState.fee.toString());
     } else {
-      // Payment reverted
-      expect(result).to.deep.equal(initialBalance);
+      // Payment cancelled
+      expect(result.amount[0].toString()).to.eq(initialBalance.amount[0]);
+      expect(result.amount[1].toString()).to.eq(initialBalance.amount[1]);
+      expect(result.to).to.deep.equal(initialBalance.to);
     }
   };
 
@@ -188,11 +189,10 @@ describe("Withdraw", () => {
       );
     });
 
-    // TODO: What is the correct cancelling action here?
-    it.skip("should cancel if the responder gives empty signature", async () => {
+    it("should cancel if the responder gives empty signature", async () => {
       const { balance, state } = await createInitialState(getRandomBytes32());
       const result = await resolveTransfer(balance, state, { responderSignature: mkSig("0x0") });
-      await validateResult(balance, state, { responderSignature: HashZero }, result);
+      await validateResult(balance, state, { responderSignature: mkSig("0x0") }, result);
     });
   });
 });
