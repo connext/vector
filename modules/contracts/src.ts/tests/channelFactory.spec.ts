@@ -52,9 +52,10 @@ describe("ChannelFactory", () => {
     expect(await channelFactory.proxyCreationCode()).to.equal(Proxy.bytecode);
   });
 
-  // FIXME: computes the wrong address onchain
-  it.skip("should return the correctly calculated channel address", async () => {
-    const computedAddr = await getCreate2MultisigAddress(
+  it("should create a channel and calculated addresses should match actual one", async () => {
+    const channel = await createChannel(bob.address, alice, addressBook);
+    const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address, chainId);
+    const computedAddr2 = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,
       chainId,
@@ -63,21 +64,8 @@ describe("ChannelFactory", () => {
     );
     expect(getSignerAddressFromPublicIdentifier(alicePubId)).to.be.eq(alice.address);
     expect(getSignerAddressFromPublicIdentifier(bobPubId)).to.be.eq(bob.address);
-    expect(await channelFactory.getChannelAddress(alice.address, bob.address, chainId)).to.be.eq(
-      computedAddr.getValue(),
-    );
-  });
-
-  it("should create a channel", async () => {
-    const channel = await createChannel(bob.address, alice, addressBook);
-    const computedAddr = await getCreate2MultisigAddress(
-      alicePubId,
-      bobPubId,
-      chainId,
-      channelFactory.address,
-      chainReader,
-    );
-    expect(channel.address).to.be.eq(computedAddr.getValue());
+    expect(channel.address).to.be.eq(computedAddr1);
+    expect(channel.address).to.be.eq(computedAddr2.getValue());
   });
 
   it("should create a channel with a deposit", async () => {
