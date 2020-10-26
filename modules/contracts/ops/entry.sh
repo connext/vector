@@ -38,7 +38,7 @@ then
     },
   }' > /tmp/hardhat.config.js
   launch="hardhat node --config /tmp/hardhat.config.js --hostname 0.0.0.0 --port 8545"
-  cd /tmp # bc we need to run hardhat node in same dir as hardhat.config.js
+  # cd /tmp # bc we need to run hardhat node in same dir as hardhat.config.js
 
 elif [[ "$evm" == "ganache" ]]
 then
