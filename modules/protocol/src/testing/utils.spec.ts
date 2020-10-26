@@ -120,7 +120,9 @@ describe("utils", () => {
           channelFactoryAddress: networkContext.channelFactoryAddress,
         };
         // Run the test
-        const result = await generateSignedChannelCommitment(state, signer, update.aliceSignature, update.bobSignature);
+        const result = (
+          await generateSignedChannelCommitment(state, signer, update.aliceSignature, update.bobSignature)
+        ).getValue();
 
         const aliceSignature =
           expected.aliceSignature === "sig"
