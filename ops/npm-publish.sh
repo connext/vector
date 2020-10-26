@@ -8,7 +8,7 @@ default_packages="types,utils,contracts,protocol,engine,browser-node"
 packages="${1:-$default_packages}"
 
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
-project=$(grep '"name":' "$root/package.json" | head -n 1 | cut -d '"' -f 4)
+project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 ########################################
 ## Helper functions

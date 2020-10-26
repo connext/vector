@@ -24,7 +24,14 @@ import {
   WithdrawState,
   IVectorChainReader,
   REQUEST_COLLATERAL_EVENT,
+  IVectorEngine,
+  ChannelRpcMethods,
+  EngineParams,
+  ChannelRpcMethodsResponsesMap,
+  OutboundChannelUpdateError,
+  Result,
 } from "@connext/vector-types";
+import { constructRpcRequest } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Pino from "pino";
 
@@ -39,8 +46,13 @@ export async function setupEngineListeners(
   store: IEngineStore,
   chainAddresses: ChainAddresses,
   logger: Pino.BaseLogger,
+  setup: (
+    params: EngineParams.Setup,
+  ) => Promise<
+    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
+  >,
 ): Promise<void> {
-  // Set up listener for channel setu[]
+  // Set up listener for channel setup
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
     async event => await handleSetup(event, signer, vector, evts, logger),
@@ -131,13 +143,11 @@ export async function setupEngineListeners(
   // indefinitely?
 
   await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {
+    const method = "onReceiveSetupMessage";
     if (params.isError) {
-      logger.error(
-        { error: params.getError()?.message, method: "onReceiveRequestCollateralMessage" },
-        "Error received",
-      );
+      logger.error({ error: params.getError()?.message, method }, "Error received");
     }
-    logger.info({ params: params.getValue() }, "Handling request collateral message");
+    logger.info({ params: params.getValue(), method }, "Handling message");
 
     evts[REQUEST_COLLATERAL_EVENT].post({
       ...params.getValue(),
@@ -146,6 +156,27 @@ export async function setupEngineListeners(
     });
 
     await messaging.respondToRequestCollateralMessage(inbox, { message: "Successfully requested collateral" });
+  });
+
+  await messaging.onReceiveSetupMessage(signer.publicIdentifier, async (params, from, inbox) => {
+    const method = "onReceiveSetupMessage";
+    if (params.isError) {
+      logger.error({ error: params.getError()?.message, method }, "Error received");
+    }
+    const setupInfo = params.getValue();
+    logger.info({ params: setupInfo, method }, "Handling message");
+    let payload: { message?: string | undefined; error?: any };
+    const res = await setup({
+      chainId: setupInfo.chainId,
+      counterpartyIdentifier: from,
+      timeout: setupInfo.timeout,
+    });
+    if (res.isError) {
+      payload = { error: res.getError()?.message };
+    } else {
+      payload = { message: res.getValue().channelAddress };
+    }
+    await messaging.respondToSetupMessage(inbox, payload);
   });
 }
 

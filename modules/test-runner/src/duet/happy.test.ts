@@ -43,10 +43,8 @@ describe(testName, () => {
   });
 
   it("alice & bob should setup a channel", async () => {
-    const channelRes = await bobService.requestSetup({
-      aliceUrl: env.aliceUrl,
-      aliceIdentifier,
-      bobIdentifier,
+    const channelRes = await bobService.setup({
+      counterpartyIdentifier: aliceIdentifier,
       chainId,
       timeout: "360000",
     });
@@ -61,6 +59,8 @@ describe(testName, () => {
       channelAddress: channel.channelAddress,
       publicIdentifier: bobIdentifier,
     });
+    expect(aliceChannel.getValue().aliceIdentifier).to.eq(aliceIdentifier);
+    expect(aliceChannel.getValue().bobIdentifier).to.eq(bobIdentifier);
     expect(aliceChannel.getValue()).to.deep.eq(bobChannel.getValue());
   });
 

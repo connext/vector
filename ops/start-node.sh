@@ -65,9 +65,6 @@ fi
 builder_image="${project}_builder:$version";
 bash "$root/ops/pull-images.sh" "$builder_image" > /dev/null
 
-redis_image="redis:5-alpine";
-bash "$root/ops/pull-images.sh" "$redis_image" > /dev/null
-
 common="networks:
       - '$project'
     logging:
@@ -280,10 +277,6 @@ services:
       POSTGRES_USER: '$pg_user'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PROD: '$production'
-
-  redis:
-    $common
-    image: '$redis_image'
 
 EOF
 

@@ -21,7 +21,7 @@ loading_pid="$!"
 # Define service hostnames & ports we depend on
 
 echo "waiting for $VECTOR_NODE_URL..."
-wait-for -q -t 60 "$VECTOR_NODE_UR" 2>&1 | sed '/nc: bad address/d'
+wait-for -q -t 60 "$VECTOR_NODE_URL" 2>&1 | sed '/nc: bad address/d'
 while ! curl -s "$VECTOR_NODE_URL" > /dev/null
 do sleep 2
 done

@@ -1,0 +1,17 @@
+name: 'SSH Action'
+description: 'Run a command on a remote server via SSH'
+inputs:
+  SSH_KEY:
+    description: 'SSH private key'
+    required: true
+  HOST:
+    description: 'user@domainname:port of server to connect to'
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.HOST }}
+    - ${{ inputs.SSH_KEY }}
+    - ${{ inputs.CMD }}
+
