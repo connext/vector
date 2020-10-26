@@ -2,8 +2,8 @@
 pragma solidity ^0.7.1;
 pragma experimental "ABIEncoderV2";
 
-import "./ChannelMastercopy.sol";
-import "./interfaces/ITestChannel.sol";
+import "../ChannelMastercopy.sol";
+import "../interfaces/ITestChannel.sol";
 
 /// @title TestChannel
 /// @author Layne Haber <layne@connext.network>

@@ -2,8 +2,8 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IVectorChannel.sol";
-import "./ChannelFactory.sol";
+import "../interfaces/IVectorChannel.sol";
+import "../ChannelFactory.sol";
 
 /// @title TestChannelFactory
 /// @author Layne Haber <layne@connext.network>
