@@ -53,35 +53,22 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // We cannot dispute a channel in its defund phase
     require(!inDefundPhase(), "CMCAdjudicator disputeChannel: Not allowed in defund phase");
 
-    // New nonce mustn't be smaller than the stored one
-    require(channelDispute.nonce <= ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
+    // New nonce must be strictly greater than the stored one
+    require(channelDispute.nonce < ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
 
-    if (inConsensusPhase()) {
-      // In the consensus phase the nonce must even be strictly greater than the stored one,
-      // i.e. we have newer state -- which is then stored
-      require(
-        channelDispute.nonce < ccs.nonce,
-        "CMCAdjudicator disputeChannel: Same nonce not allowed in consensus phase"
-      );
-      channelDispute.channelStateHash = hashChannelState(ccs);
-      channelDispute.nonce = ccs.nonce;
-      channelDispute.merkleRoot = ccs.merkleRoot;
-    } else {
-      // We are not already in a dispute
+    if (!inConsensusPhase()) { // We are not already in a dispute
       // Only Alice or Bob may start a dispute
       verifyMsgSenderisAliceOrBob(ccs);
-
-      // Store the given state and set the expiries
-      // For nonce equality, skip updates without effect and only set new expiries
-      if (channelDispute.nonce < ccs.nonce) {
-        channelDispute.channelStateHash = hashChannelState(ccs);
-        channelDispute.nonce = ccs.nonce;
-        channelDispute.merkleRoot = ccs.merkleRoot;
-      }
+      // Set expiries
       // TODO: offchain-ensure that there can't be an overflow
       channelDispute.consensusExpiry = block.number.add(ccs.timeout);
       channelDispute.defundExpiry = block.number.add(ccs.timeout.mul(2));
     }
+
+    // Store newer state
+    channelDispute.channelStateHash = hashChannelState(ccs);
+    channelDispute.nonce = ccs.nonce;
+    channelDispute.merkleRoot = ccs.merkleRoot;
   }
 
   function defundChannel(CoreChannelState calldata ccs) external override onlyOnProxy nonReentrant validateChannel(ccs) {
