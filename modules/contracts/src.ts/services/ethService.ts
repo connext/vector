@@ -7,6 +7,7 @@ import {
   ERC20Abi,
   IChainServiceStore,
   TransactionReason,
+  FullTransferState,
 } from "@connext/vector-types";
 import { delay } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Signer, Wallet } from "ethers";
@@ -36,8 +37,27 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  sendDisputeTransferTx(
+    channelState: FullChannelState,
+    transferState: FullTransferState,
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+  sendDefundTransferTx(
+    channelState: FullChannelState,
+    transferState: FullTransferState,
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    throw new Error("Method not implemented.");
+  }
+
   public async sendWithdrawTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);

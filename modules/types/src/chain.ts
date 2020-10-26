@@ -110,6 +110,7 @@ export interface IVectorChainReader {
 }
 
 export interface IVectorChainService extends IVectorChainReader {
+  // Happy case methods
   sendDepositTx(
     channelState: FullChannelState,
     sender: string,
@@ -119,5 +120,17 @@ export interface IVectorChainService extends IVectorChainReader {
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+
+  // Dispute methods
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDisputeTransferTx(
+    channelState: FullChannelState,
+    transferState: FullTransferState,
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDefundTransferTx(
+    channelState: FullChannelState,
+    transferState: FullTransferState,
   ): Promise<Result<providers.TransactionResponse, ChainError>>;
 }
