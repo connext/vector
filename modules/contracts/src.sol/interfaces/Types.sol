@@ -18,6 +18,7 @@ struct CoreChannelState {
   uint256 timeout;
   uint256 nonce;
   bytes32 merkleRoot;
+  uint256 defundNonce;
 }
 
 struct CoreTransferState {
@@ -38,7 +39,7 @@ struct ChannelDispute {
   bytes32 merkleRoot;
   uint256 consensusExpiry;
   uint256 defundExpiry;
-  bool isDefunded;
+  uint256 defundNonce;
 }
 
 struct TransferDispute {

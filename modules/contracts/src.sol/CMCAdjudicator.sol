@@ -79,9 +79,9 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // We need to be in defund phase for that
     require(inDefundPhase(), "CMCAdjudicator defundChannel: Not in defund phase");
 
-    // We can't defund twice
-    require(!channelDispute.isDefunded, "CMCAdjudicator defundChannel: channel already defunded");
-    channelDispute.isDefunded = true;
+    // We can't defund twice at the same defund nonce
+    require(channelDispute.defundNonce < ccs.defundNonce, "CMCAdjudicator defundChannel: channel already defunded");
+    channelDispute.defundNonce = ccs.defundNonce;
 
     // TODO SECURITY: Beware of reentrancy
     // TODO: offchain-ensure that all arrays have the same length:
