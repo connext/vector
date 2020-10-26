@@ -48,7 +48,7 @@ contract ChannelFactory is IChannelFactory {
                 byte(0xff),
                 address(this),
                 generateSalt(alice, bob, chainId),
-                keccak256(abi.encodePacked(proxyCreationCode, mastercopy))
+                keccak256(abi.encodePacked(proxyCreationCode, uint256(mastercopy)))
             ))
         ));
     }
