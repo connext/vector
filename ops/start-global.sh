@@ -254,7 +254,6 @@ services:
       - '$jwt_public_key_secret'
     ports:
       - '4222:4222'
-      - '4221:4221'
 
   $evm_services
 
