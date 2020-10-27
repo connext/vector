@@ -36,8 +36,8 @@ library LibIterableMapping {
     view
     returns (RegisteredTransfer memory)
   {
-    require(!isEmptyString(name));
-    require(nameExists(self, name));
+    require(!isEmptyString(name), "LibIterableMapping: empty name");
+    require(nameExists(self, name), "LibIterableMapping: name not found");
     return self.transfers[name].transfer;
   }
 
@@ -46,7 +46,7 @@ library LibIterableMapping {
     view
     returns (RegisteredTransfer memory)
   {
-    require(index < self.names.length);
+    require(index < self.names.length, "LibIterableMapping: invalid index");
     return self.transfers[self.names[index]].transfer;
   }
 
@@ -61,15 +61,15 @@ library LibIterableMapping {
 
   function addTransferDefinition(IterableMapping storage self, RegisteredTransfer memory transfer) internal {
     string memory name = transfer.name;
-    require(!isEmptyString(name));
-    require(!nameExists(self, name));
+    require(!isEmptyString(name), "LibIterableMapping: empty name");
+    require(!nameExists(self, name), "LibIterableMapping: name not found");
     self.transfers[name] = TransferDefinitionWithIndex({transfer: transfer, index: self.names.length});
     self.names.push(name);
   }
 
   function removeTransferDefinition(IterableMapping storage self, string memory name) internal {
-    require(!isEmptyString(name));
-    require(nameExists(self, name));
+    require(!isEmptyString(name), "LibIterableMapping: empty name");
+    require(nameExists(self, name), "LibIterableMapping: name not found");
     uint256 index = self.transfers[name].index;
     string memory lastName = self.names[self.names.length - 1];
     self.transfers[lastName].index = index;
