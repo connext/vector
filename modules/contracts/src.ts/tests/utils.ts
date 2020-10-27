@@ -1,4 +1,6 @@
-import { Contract } from "ethers";
+import { ERC20Abi } from "@connext/vector-types";
+import { AddressZero } from "@ethersproject/constants";
+import { BigNumber, Contract } from "ethers";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
@@ -49,4 +51,10 @@ export const mineBlock = (): Promise<void> => {
     provider.once("block", () => resolve());
     await provider.send("evm_mine", []);
   });
+};
+
+export const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {
+  return assetId === AddressZero
+    ? provider.getBalance(address)
+    : new Contract(address, ERC20Abi, provider).balanceOf(address);
 };

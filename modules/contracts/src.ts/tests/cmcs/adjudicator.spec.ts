@@ -9,10 +9,10 @@ import {
   hashCoreChannelState,
 } from "@connext/vector-utils";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { BigNumber, Contract } from "ethers";
+import { BigNumber, BigNumberish, Contract } from "ethers";
 
 import { bob, alice, provider, rando } from "../constants";
-import { getTestChannel, mineBlock } from "../utils";
+import { getOnchainBalance, getTestChannel, mineBlock } from "../utils";
 
 describe.only("CMCAdjudicator.sol", () => {
   let channel: Contract;
@@ -55,6 +55,35 @@ describe.only("CMCAdjudicator.sol", () => {
       const aliceTx = await channel.connect(alice).depositAlice(assetId, depositsA);
       await aliceTx.wait();
     }
+  };
+
+  // Helper to defund channels and verify transfers
+  const defundAndVerify = async (
+    ccs: FullChannelState = channelState,
+    unprocessedAlice: BigNumberish[] = [],
+    unprocessedBob: BigNumberish[] = [],
+  ) => {
+    // Get pre-defund balances for signers
+    const preDefundAlice = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, alice.address)));
+    const preDefundBob = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, bob.address)));
+
+    // Defund channel
+    const tx = await channel.defundChannel(ccs);
+    await tx.wait();
+
+    // Get post-defund balances
+    const postDefundAlice = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, alice.address)));
+    const postDefundBob = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, bob.address)));
+
+    // Verify change in balances
+    await Promise.all(
+      ccs.assetIds.map(async (assetId, idx) => {
+        const diffAlice = postDefundAlice[idx].sub(preDefundAlice[idx]);
+        const diffBob = postDefundBob[idx].sub(preDefundBob[idx]);
+        expect(diffAlice).to.be.eq(BigNumber.from(ccs.balances[idx].amount[0]).add(unprocessedAlice[idx] ?? "0"));
+        expect(diffBob).to.be.eq(BigNumber.from(ccs.balances[idx].amount[1]).add(unprocessedBob[idx] ?? "0"));
+      }),
+    );
   };
 
   beforeEach(async () => {
@@ -240,33 +269,13 @@ describe.only("CMCAdjudicator.sol", () => {
       await bobTx.wait();
 
       // Dispute + defund channel
-      const [preDisputeAlice, preDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
       await disputeChannel();
-      const tx = await channel.defundChannel(channelState);
-      await tx.wait();
-
-      // Verify transfer
-      const [postDisputeAlice, postDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
-      const assetIdx = channelState.assetIds.findIndex(a => a === AddressZero);
-      const diffAlice = postDisputeAlice.sub(preDisputeAlice);
-      const diffBob = postDisputeBob.sub(preDisputeBob);
-      expect(diffAlice).to.be.eq(channelState.balances[assetIdx].amount[0]);
-      expect(diffBob).to.be.eq(unprocessed.add(channelState.balances[assetIdx].amount[1]));
+      await defundAndVerify(channelState, [], [unprocessed]);
     });
 
     it("should work (simple case)", async () => {
-      const [preDisputeAlice, preDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
       await disputeChannel();
-      const tx = await channel.defundChannel(channelState);
-      await tx.wait();
-
-      // Verify transfer
-      const [postDisputeAlice, postDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
-      const assetIdx = channelState.assetIds.findIndex(a => a === AddressZero);
-      const diffAlice = postDisputeAlice.sub(preDisputeAlice);
-      const diffBob = postDisputeBob.sub(preDisputeBob);
-      expect(diffAlice).to.be.eq(channelState.balances[assetIdx].amount[0]);
-      expect(diffBob).to.be.eq(channelState.balances[assetIdx].amount[1]);
+      await defundAndVerify();
     });
   });
 
