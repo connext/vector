@@ -1,16 +1,22 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { FullChannelState } from "@connext/vector-types";
+import { FullChannelState, FullTransferState, HashlockTransferStateEncoding } from "@connext/vector-types";
 import {
+  bufferify,
   ChannelSigner,
+  createlockHash,
   createTestChannelStateWithSigners,
+  createTestFullHashlockTransferState,
   expect,
   getRandomAddress,
   getRandomBytes32,
   hashCoreChannelState,
+  hashCoreTransferState,
+  hashTransferState,
 } from "@connext/vector-utils";
-import { AddressZero, HashZero } from "@ethersproject/constants";
-import { BigNumber, BigNumberish, Contract } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
+import { BigNumber, BigNumberish, Contract, utils } from "ethers";
 import { parseEther } from "ethers/lib/utils";
+import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
@@ -20,8 +26,10 @@ import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from
 describe.only("CMCAdjudicator.sol", () => {
   let channel: Contract;
   let token: Contract;
+  let transferDefinition: Contract;
   let addressBook: AddressBook;
   let channelState: FullChannelState;
+  let transferState: FullTransferState;
   let aliceSignature: string;
   let bobSignature: string;
 
@@ -29,7 +37,7 @@ describe.only("CMCAdjudicator.sol", () => {
   const bobSigner = new ChannelSigner(bob.privateKey, provider);
 
   // Helper to verify the channel dispute
-  const verifyDispute = async (ccs: FullChannelState, disputeBlockNumber: number) => {
+  const verifyChannelDispute = async (ccs: FullChannelState, disputeBlockNumber: number) => {
     const dispute = await channel.getChannelDispute();
     expect(dispute.channelStateHash).to.be.eq(hashCoreChannelState(ccs));
     expect(dispute.nonce).to.be.eq(ccs.nonce);
@@ -43,8 +51,16 @@ describe.only("CMCAdjudicator.sol", () => {
     expect(dispute.defundNonce).to.be.eq(BigNumber.from(ccs.defundNonce).sub(1));
   };
 
+  const verifyTransferDispute = async (cts: FullTransferState, disputeBlockNumber: number) => {
+    const hash = hashCoreTransferState(cts);
+    const transferDispute = await channel.getTransferDispute(cts.transferId);
+    expect(transferDispute.transferStateHash).to.be.eq(hash);
+    expect(transferDispute.isDefunded).to.be.false;
+    expect(transferDispute.transferDisputeExpiry).to.be.eq(BigNumber.from(disputeBlockNumber).add(cts.transferTimeout));
+  };
+
   // Helper to send funds to channel address
-  const fundChannel = async (ccs: FullChannelState) => {
+  const fundChannel = async (ccs: FullChannelState = channelState) => {
     for (const assetId of ccs.assetIds) {
       // Fund channel for bob
       const idx = ccs.assetIds.findIndex(a => a === assetId);
@@ -65,8 +81,45 @@ describe.only("CMCAdjudicator.sol", () => {
     }
   };
 
+  // Create a helper to dispute channel + bring to defund phase
+  const disputeChannel = async (ccs: FullChannelState = channelState) => {
+    const hash = hashCoreChannelState(ccs);
+    const tx = await channel.disputeChannel(
+      ccs,
+      await aliceSigner.signMessage(hash),
+      await bobSigner.signMessage(hash),
+    );
+    const { blockNumber: disputeBlock } = await tx.wait();
+    // Bring to defund phase
+    const toMine = BigNumber.from(ccs.timeout).toNumber();
+    for (const _ of Array(toMine).fill(0)) {
+      await mineBlock();
+    }
+    const currBlock = await provider.getBlockNumber();
+    expect(currBlock).to.be.at.least(BigNumber.from(disputeBlock).add(ccs.timeout));
+    const defundTimeout = BigNumber.from(ccs.timeout).mul(2);
+    expect(defundTimeout.add(disputeBlock).gt(currBlock)).to.be.true;
+  };
+
+  // Get merkle proof of transfer
+  const getMerkleProof = (cts: FullTransferState = transferState) => {
+    const hash = hashCoreTransferState(cts);
+    const merkle = new MerkleTree([hash], utils.keccak256);
+    return merkle.getHexProof(bufferify(hash));
+  };
+
+  // Helper to dispute transfers + bring to defund phase
+  const disputeTransfer = async (cts: FullTransferState = transferState) => {
+    const tx = await channel.disputeTransfer(cts, getMerkleProof(cts));
+    await tx.wait();
+    const toMine = BigNumber.from(cts.transferTimeout).toNumber();
+    for (const _ of Array(toMine).fill(0)) {
+      await mineBlock();
+    }
+  };
+
   // Helper to defund channels and verify transfers
-  const defundAndVerify = async (
+  const defundChannelAndVerify = async (
     ccs: FullChannelState = channelState,
     unprocessedAlice: BigNumberish[] = [],
     unprocessedBob: BigNumberish[] = [],
@@ -94,22 +147,40 @@ describe.only("CMCAdjudicator.sol", () => {
     );
   };
 
-  // Setup that only needs to run once for
-  // test suite
-  before(async () => {
+  beforeEach(async () => {
     addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["TestToken", []]]);
+    await deployContracts(alice, addressBook, [
+      ["TestToken", []],
+      ["HashlockTransfer", []],
+    ]);
     token = addressBook.getContract("TestToken");
+    transferDefinition = addressBook.getContract("HashlockTransfer");
     // mint token to alice/bob
     const aliceMint = await token.mint(alice.address, parseEther("1"));
     await aliceMint.wait();
     const bobMint = await token.mint(bob.address, parseEther("1"));
     await bobMint.wait();
-  });
-
-  beforeEach(async () => {
     channel = await getTestChannel(addressBook);
-    channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "deposit", {
+    const preImage = getRandomBytes32();
+    const state = {
+      lockHash: createlockHash(preImage),
+      expiry: "0",
+    };
+    transferState = createTestFullHashlockTransferState({
+      initiator: alice.address,
+      responder: bob.address,
+      transferDefinition: transferDefinition.address,
+      assetId: AddressZero,
+      channelAddress: channel.address,
+      balance: { to: [alice.address, bob.address], amount: ["7", "0"] },
+      transferState: state,
+      transferResolver: { preImage },
+      transferTimeout: "1",
+      initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
+    });
+    const hash = hashCoreTransferState(transferState);
+    const merkle = new MerkleTree([hash], utils.keccak256);
+    channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
       balances: [{ to: [alice.address, bob.address], amount: ["17", "45"] }],
@@ -117,7 +188,7 @@ describe.only("CMCAdjudicator.sol", () => {
       processedDepositsB: ["62"],
       timeout: "2",
       nonce: 3,
-      merkleRoot: HashZero,
+      merkleRoot: merkle.getHexRoot(),
     });
     const channelHash = hashCoreChannelState(channelState);
     aliceSignature = await aliceSigner.signMessage(channelHash);
@@ -166,7 +237,7 @@ describe.only("CMCAdjudicator.sol", () => {
         await bobSigner.signMessage(hash),
       );
       const { blockNumber } = await tx.wait();
-      await verifyDispute(shortTimeout, blockNumber);
+      await verifyChannelDispute(shortTimeout, blockNumber);
 
       // advance blocks
       await mineBlock();
@@ -181,7 +252,7 @@ describe.only("CMCAdjudicator.sol", () => {
     it("should fail if nonce is lte stored nonce", async () => {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       const { blockNumber } = await tx.wait();
-      await verifyDispute(channelState, blockNumber);
+      await verifyChannelDispute(channelState, blockNumber);
 
       await expect(channel.disputeChannel(channelState, aliceSignature, bobSignature)).revertedWith(
         "CMCAdjudicator disputeChannel: New nonce smaller than stored one",
@@ -192,13 +263,13 @@ describe.only("CMCAdjudicator.sol", () => {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       const { blockNumber } = await tx.wait();
       // Verify dispute
-      await verifyDispute(channelState, blockNumber);
+      await verifyChannelDispute(channelState, blockNumber);
     });
 
     it("should work when advancing dispute (does not update expiries)", async () => {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       const { blockNumber } = await tx.wait();
-      await verifyDispute(channelState, blockNumber);
+      await verifyChannelDispute(channelState, blockNumber);
       // Submit a new, higher nonced state
       const newState = { ...channelState, nonce: channelState.nonce + 1 };
       const hash = hashCoreChannelState(newState);
@@ -209,31 +280,11 @@ describe.only("CMCAdjudicator.sol", () => {
       );
       await tx2.wait();
       // safe because timeout does not change
-      await verifyDispute(newState, blockNumber);
+      await verifyChannelDispute(newState, blockNumber);
     });
   });
 
   describe("defundChannel", () => {
-    // Create a helper to dispute channel
-    const disputeChannel = async (ccs: FullChannelState = channelState) => {
-      const hash = hashCoreChannelState(ccs);
-      const tx = await channel.disputeChannel(
-        ccs,
-        await aliceSigner.signMessage(hash),
-        await bobSigner.signMessage(hash),
-      );
-      const { blockNumber: disputeBlock } = await tx.wait();
-      // Bring to defund phase
-      const toMine = BigNumber.from(ccs.timeout).toNumber();
-      for (const _ of Array(toMine).fill(0)) {
-        await mineBlock();
-      }
-      const currBlock = await provider.getBlockNumber();
-      expect(currBlock).to.be.at.least(BigNumber.from(disputeBlock).add(ccs.timeout));
-      const defundTimeout = BigNumber.from(ccs.timeout).mul(2);
-      expect(defundTimeout.add(disputeBlock).gt(currBlock)).to.be.true;
-    };
-
     it("should fail if state.alice is incorrect", async () => {
       await disputeChannel();
       await expect(channel.defundChannel({ ...channelState, alice: getRandomAddress() })).revertedWith(
@@ -265,7 +316,7 @@ describe.only("CMCAdjudicator.sol", () => {
     it("should fail if it is not in the defund phase", async () => {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       const { blockNumber } = await tx.wait();
-      await verifyDispute(channelState, blockNumber);
+      await verifyChannelDispute(channelState, blockNumber);
       await expect(channel.defundChannel(channelState)).revertedWith(
         "CMCAdjudicator defundChannel: Not in defund phase",
       );
@@ -277,6 +328,13 @@ describe.only("CMCAdjudicator.sol", () => {
       await expect(channel.defundChannel(toDispute)).revertedWith(
         "CMCAdjudicator defundChannel: channel already defunded",
       );
+    });
+
+    it("should work (simple case)", async () => {
+      // Deposit all funds into channel
+      await fundChannel(channelState);
+      await disputeChannel();
+      await defundChannelAndVerify();
     });
 
     it("should work with multiple assets", async () => {
@@ -293,7 +351,7 @@ describe.only("CMCAdjudicator.sol", () => {
       // Deposit all funds into channel
       await fundChannel(multiAsset);
       await disputeChannel(multiAsset);
-      await defundAndVerify(multiAsset);
+      await defundChannelAndVerify(multiAsset);
     });
 
     it("should work with unprocessed deposits", async () => {
@@ -306,23 +364,51 @@ describe.only("CMCAdjudicator.sol", () => {
 
       // Dispute + defund channel
       await disputeChannel();
-      await defundAndVerify(channelState, [], [unprocessed]);
-    });
-
-    it("should work (simple case)", async () => {
-      // Deposit all funds into channel
-      await fundChannel(channelState);
-      await disputeChannel();
-      await defundAndVerify();
+      await defundChannelAndVerify(channelState, [], [unprocessed]);
     });
   });
 
-  describe.skip("disputeTransfer", () => {
-    it("should fail if state.channelAddress is incorrect", async () => {});
-    it("should fail if merkle proof is invalid", async () => {});
-    it("should fail if channel is not in defund phase", async () => {});
-    it("should fail if transfer has already been disputed", async () => {});
-    it("should work", async () => {});
+  describe("disputeTransfer", () => {
+    it("should fail if state.channelAddress is incorrect", async () => {
+      await disputeChannel();
+      await expect(
+        channel.disputeTransfer({ ...transferState, channelAddress: getRandomAddress() }, getMerkleProof()),
+      ).revertedWith("CMCAdjudicator: Mismatch between given core transfer state and channel we are at");
+    });
+
+    it("should fail if merkle proof is invalid", async () => {
+      await disputeChannel();
+      await expect(
+        channel.disputeTransfer({ ...transferState, transferId: getRandomBytes32() }, getMerkleProof()),
+      ).revertedWith("CMCAdjudicator: Merkle proof verification failed");
+    });
+
+    it("should fail if channel is not in defund phase", async () => {
+      // Don't use helper here because will automatically bring into
+      // the defund phase
+      const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
+      await tx.wait();
+      await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
+        "CMCAdjudicator disputeTransfer: Not in defund phase",
+      );
+    });
+
+    it("should fail if transfer has already been disputed", async () => {
+      const longerTimeout = { ...channelState, timeout: "4" };
+      await disputeChannel(longerTimeout);
+      const tx = await channel.disputeTransfer(transferState, getMerkleProof());
+      await tx.wait();
+      await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
+        "CMCAdjudicator disputeTransfer: transfer already disputed",
+      );
+    });
+
+    it("should work", async () => {
+      await disputeChannel();
+      const tx = await channel.disputeTransfer(transferState, getMerkleProof());
+      const { blockNumber } = await tx.wait();
+      await verifyTransferDispute(transferState, blockNumber);
+    });
   });
 
   describe.skip("defundTransfer", () => {
