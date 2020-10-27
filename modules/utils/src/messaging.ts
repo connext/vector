@@ -16,6 +16,8 @@ import { INatsService, natsServiceFactory } from "ts-natsutil";
 
 import { isNode } from "./env";
 
+export { AuthService } from "ts-natsutil";
+
 export type MessagingConfig = {
   messagingUrl?: string;
   authUrl?: string;
@@ -54,7 +56,7 @@ export class NatsMessagingService implements IMessagingService {
       if (isNode()) {
         this.natsUrl = `nats://${
           // Remove protocol prefix and port+path suffix
-          config.messagingUrl.replace(/^.*:\/\//, "").replace(/\//).replace(/:[0-9]+/, "")
+          config.messagingUrl.replace(/^.*:\/\//, "").replace(/\//, "").replace(/:[0-9]+/, "")
         }:4222`;
       } else { // Browser env
         this.natsUrl = `${
@@ -62,7 +64,7 @@ export class NatsMessagingService implements IMessagingService {
           config.messagingUrl.replace(/:\/\/.*/, "").replace("http", "ws")
         }://${
           // Remove protocol prefix & path suffix from messaging Url
-          config.messagingUrl.replace(/^.*:\/\//, "").replace(/\//)
+          config.messagingUrl.replace(/^.*:\/\//, "").replace(/\//, "")
         }/ws-nats`;
       }
       this.log.info(`Derived natsUrl=${this.natsUrl} from messagingUrl=${config.messagingUrl}`);
