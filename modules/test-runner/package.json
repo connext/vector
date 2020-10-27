@@ -13,9 +13,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@connext/vector-contracts": "0.0.1-beta.6",
-    "@connext/vector-types": "0.0.1-beta.6",
-    "@connext/vector-utils": "0.0.1-beta.6",
+    "@connext/vector-contracts": "0.0.3-beta.2",
+    "@connext/vector-types": "0.0.3-beta.2",
+    "@connext/vector-utils": "0.0.3-beta.2",
     "@ethereum-waffle/chai": "3.1.1",
     "@types/chai": "4.2.14",
     "@types/chai-as-promised": "7.1.3",
@@ -33,7 +33,7 @@
     "ts-node": "9.0.0",
     "typescript": "4.0.3",
     "webpack": "4.44.2",
-    "webpack-cli": "3.3.12"
+    "webpack-cli": "4.1.0"
   },
   "devDependencies": {
     "pino-pretty": "4.3.0"

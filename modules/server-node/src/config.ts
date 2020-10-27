@@ -18,7 +18,6 @@ try {
 }
 
 // Set defaults
-vectorConfig.redisUrl = vectorConfig.redisUrl || "redis://redis:6379";
 vectorConfig.messagingUrl = vectorConfig.messagingUrl || "http://messaging";
 
 const validate = ajv.compile(VectorNodeConfigSchema);

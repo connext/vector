@@ -11,9 +11,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
   mapping(address => uint256) private depositsAlice;
 
-  receive() external payable onlyOnProxy {}
+  receive() external payable onlyViaProxy nonReentrant {}
 
-  function getTotalDepositsAlice(address assetId) external override view onlyOnProxy returns (uint256) {
+  function getTotalDepositsAlice(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
     return _getTotalDepositsAlice(assetId);
   }
 
@@ -21,7 +21,7 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
     return depositsAlice[assetId];
   }
 
-  function getTotalDepositsBob(address assetId) external override view onlyOnProxy returns (uint256) {
+  function getTotalDepositsBob(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
     return _getTotalDepositsBob(assetId);
   }
 
@@ -30,7 +30,7 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
     return LibAsset.getOwnBalance(assetId) + totalTransferred[assetId] - depositsAlice[assetId];
   }
 
-  function depositAlice(address assetId, uint256 amount) external override payable onlyOnProxy {
+  function depositAlice(address assetId, uint256 amount) external override payable onlyViaProxy nonReentrant {
     if (LibAsset.isEther(assetId)) {
       require(msg.value == amount, "CMCDeposit: msg.value does not match the provided amount");
     } else {

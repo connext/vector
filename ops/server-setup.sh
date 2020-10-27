@@ -133,7 +133,8 @@ usermod -aG docker $user
 systemctl enable docker
 
 echo;
-docker swarm init "--advertise-addr=eth0" || true
+public_ip=\`ip addr show eth0 | grep "inet " | awk '{print \$2}' | sort | head -n1 | sed 's|/.*||'\`
+docker swarm init "--advertise-addr=\$public_ip" || true
 sleep 3
 echo;
 

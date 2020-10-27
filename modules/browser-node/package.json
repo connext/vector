@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-browser-node",
-  "version": "0.0.1-beta.6",
+  "version": "0.0.3-beta.2",
   "author": "",
   "license": "ISC",
   "description": "",
@@ -17,10 +17,10 @@
     "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.0.1-beta.6",
-    "@connext/vector-engine": "0.0.1-beta.6",
-    "@connext/vector-types": "0.0.1-beta.6",
-    "@connext/vector-utils": "0.0.1-beta.6",
+    "@connext/vector-contracts": "0.0.3-beta.2",
+    "@connext/vector-engine": "0.0.3-beta.2",
+    "@connext/vector-types": "0.0.3-beta.2",
+    "@connext/vector-utils": "0.0.3-beta.2",
     "@sinclair/typebox": "0.11.0",
     "ajv": "6.12.6",
     "axios": "0.20.0",
@@ -32,7 +32,6 @@
   "devDependencies": {
     "@types/chai": "4.2.14",
     "@types/chai-as-promised": "7.1.3",
-    "@types/ioredis": "4.17.5",
     "@types/mocha": "8.0.3",
     "@types/node": "14.11.8",
     "babel-loader": "8.1.0",
@@ -47,6 +46,6 @@
     "ts-node": "9.0.0",
     "typescript": "4.0.3",
     "webpack": "4.44.2",
-    "webpack-cli": "3.3.12"
+    "webpack-cli": "4.1.0"
   }
 }

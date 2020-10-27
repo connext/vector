@@ -60,18 +60,20 @@ database_env="environment:
 ## Node config
 
 internal_node_port="8000"
+internal_prisma_port="5555"
 
 carol_node_port="8005"
-carol_database="database_c"
+carol_prisma="5555"
 carol_mnemonic="owner warrior discover outer physical intact secret goose all photo napkin fall"
 echo "$stack.carol will be exposed on *:$carol_node_port"
 
 dave_node_port="8006"
-dave_database="database_d"
+dave_prisma="5556"
 dave_mnemonic="woman benefit lawn ignore glove marriage crumble roast tool area cool payment"
 echo "$stack.dave will be exposed on *:$dave_node_port"
 
 roger_node_port="8007"
+roger_prisma="5557"
 roger_database="database_r"
 roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
 echo "$stack.roger will be exposed on *:$roger_node_port"
@@ -83,14 +85,11 @@ public_url="http://localhost:$roger_node_port"
 node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
-      - '$root:/root'"
+      - '$root:/root'
+    tmpfs: /tmp"
 
 node_env="environment:
-      VECTOR_CONFIG: '$config'
-      VECTOR_PG_DATABASE: '$project'
-      VECTOR_PG_PASSWORD: '$project'
-      VECTOR_PG_PORT: '$pg_port'
-      VECTOR_PG_USERNAME: '$project'"
+      VECTOR_CONFIG: '$config'"
 
 ########################################
 ## Router config
@@ -170,28 +169,33 @@ services:
     $common
     $node_image
     $node_env
-      VECTOR_PG_HOST: '$carol_database'
       VECTOR_MNEMONIC: '$carol_mnemonic'
     ports:
       - '$carol_node_port:$internal_node_port'
+      - '$carol_prisma:$internal_prisma_port'
 
   dave:
     $common
     $node_image
     $node_env
-      VECTOR_PG_HOST: '$dave_database'
       VECTOR_MNEMONIC: '$dave_mnemonic'
     ports:
       - '$dave_node_port:$internal_node_port'
+      - '$dave_prisma:$internal_prisma_port'
 
   roger:
     $common
     $node_image
     $node_env
       VECTOR_PG_HOST: '$roger_database'
+      VECTOR_PG_DATABASE: '$project'
+      VECTOR_PG_PASSWORD: '$project'
+      VECTOR_PG_PORT: '$pg_port'
+      VECTOR_PG_USERNAME: '$project'
       VECTOR_MNEMONIC: '$roger_mnemonic'
     ports:
       - '$roger_node_port:$internal_node_port'
+      - '$roger_prisma:$internal_prisma_port'
 
   router:
     $common
@@ -205,16 +209,6 @@ services:
       VECTOR_PG_PORT: '$pg_port'
       VECTOR_PG_USERNAME: '$project'
       VECTOR_PORT: '$router_port'
-
-  $carol_database:
-    $common
-    image: '$database_image'
-    $database_env
-
-  $dave_database:
-    $common
-    image: '$database_image'
-    $database_env
 
   $roger_database:
     $common

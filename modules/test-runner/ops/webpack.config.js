@@ -26,7 +26,7 @@ module.exports = {
 
   resolve: {
     mainFields: ["main", "module"],
-    extensions: [".js", ".wasm", ".ts", ".json"],
+    extensions: [".js", ".ts", ".json"],
     symlinks: false,
   },
 
@@ -57,24 +57,8 @@ module.exports = {
           },
         },
       },
-      {
-        test: /\.wasm$/,
-        type: "javascript/auto",
-        loaders: ["wasm-loader"],
-      },
     ],
   },
-
-  plugins: [
-    new CopyPlugin({
-      patterns: [
-        {
-          from: path.join(__dirname, "../../../node_modules/@connext/pure-evm-wasm/pure-evm_bg.wasm"),
-          to: path.join(__dirname, "../dist/pure-evm_bg.wasm"),
-        },
-      ],
-    }),
-  ],
 
   stats: { warnings: false },
 };

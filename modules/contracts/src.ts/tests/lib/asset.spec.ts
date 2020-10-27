@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 
+// NOTE: this is tested via the tests of asset, probably does not need to
+// be tested separately
 describe("LibAsset.sol", () => {
   describe("isEther", () => {
     it.skip("should return true IFF asset is address(0)", async () => {});

@@ -1,12 +1,18 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { getCreate2MultisigAddress, getPublicIdentifierFromPublicKey, expect } from "@connext/vector-utils";
+import {
+  getCreate2MultisigAddress,
+  getMinimalProxyInitCode,
+  getPublicIdentifierFromPublicKey,
+  expect,
+  getSignerAddressFromPublicIdentifier,
+} from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, BigNumber } from "ethers";
 import pino from "pino";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
-import { ChannelMastercopy, Proxy } from "../artifacts";
+import { ChannelMastercopy } from "../artifacts";
 import { VectorChainReader } from "../services";
 
 import { alice, bob, chainIdReq, provider } from "./constants";
@@ -47,21 +53,25 @@ describe("ChannelFactory", () => {
   });
 
   it("should provide the proxy bytecode", async () => {
-    expect(await channelFactory.proxyCreationCode()).to.equal(Proxy.bytecode);
+    expect(
+      await channelFactory.proxyCreationCode(),
+    ).to.equal(getMinimalProxyInitCode(channelMastercopy.address));
   });
 
-  it.skip("should return the correctly calculated channel address", async () => {});
-
-  it("should create a channel", async () => {
+  it("should create a channel and calculated addresses should match actual one", async () => {
     const channel = await createChannel(bob.address, alice, addressBook);
-    const computedAddr = await getCreate2MultisigAddress(
+    const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address, chainId);
+    const computedAddr2 = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,
       chainId,
       channelFactory.address,
       chainReader,
     );
-    expect(channel.address).to.be.eq(computedAddr.getValue());
+    expect(getSignerAddressFromPublicIdentifier(alicePubId)).to.be.eq(alice.address);
+    expect(getSignerAddressFromPublicIdentifier(bobPubId)).to.be.eq(bob.address);
+    expect(channel.address).to.be.eq(computedAddr1);
+    expect(channel.address).to.be.eq(computedAddr2.getValue());
   });
 
   it("should create a channel with a deposit", async () => {

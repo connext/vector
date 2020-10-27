@@ -1,50 +1,172 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 
+import { RegisteredTransfer } from "@connext/vector-types";
+import { expect } from "chai";
+import { BigNumber, Contract } from "ethers";
+
+import { deployContracts } from "../../actions";
+import { alice } from "../constants";
+import { getTestAddressBook } from "../utils";
+
 describe("LibIterableMapping.sol", () => {
+  let mapping: Contract;
+  let transferDefs: Contract[];
+
+  // Helper function to load data into registry
+  const loadMapping = async () => {
+    // Load some data into the library
+    for (const transfer of transferDefs) {
+      const info = await transfer.getRegistryInformation();
+      await mapping.addTransferDefinition(info);
+    }
+  };
+
+  beforeEach(async () => {
+    const addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [
+      ["TestLibIterableMapping", []],
+      ["HashlockTransfer", []],
+      ["Withdraw", []],
+    ]);
+    mapping = addressBook.getContract("TestLibIterableMapping");
+    expect(mapping.address).to.be.a("string");
+    transferDefs = [addressBook.getContract("HashlockTransfer"), addressBook.getContract("Withdraw")];
+  });
+
   describe("stringEqual", () => {
-    it.skip("should work", async () => {});
+    it("should work", async () => {
+      expect(await mapping.stringEqual("test", "test")).to.be.true;
+      expect(await mapping.stringEqual("test", "fails")).to.be.false;
+    });
   });
 
   describe("isEmptyString", () => {
-    it.skip("should work", async () => {});
+    it("should work", async () => {
+      expect(await mapping.isEmptyString("")).to.be.true;
+      expect(await mapping.isEmptyString("test")).to.be.false;
+    });
   });
 
   describe("nameExists", () => {
-    it.skip("should work", async () => {});
-    it.skip("should return false if name is empty", async () => {});
-    it.skip("should return false if contract.names is empty", async () => {});
-    it.skip("should return false if name is not in contract.names", async () => {});
+    it("should work", async () => {
+      await loadMapping();
+      expect(await mapping.nameExists("HashlockTransfer")).to.be.true;
+    });
+
+    it("should return false if name is empty", async () => {
+      await loadMapping();
+      expect(await mapping.nameExists("")).to.be.false;
+    });
+
+    it("should return false if contract.names is empty", async () => {
+      expect(await mapping.nameExists("HashlockTransfer")).to.be.false;
+    });
+
+    it("should return false if name is not in contract.names", async () => {
+      expect(await mapping.nameExists("Fail")).to.be.false;
+    });
   });
 
   describe("length", () => {
-    it.skip("should work", async () => {});
+    it("should work", async () => {
+      expect(await mapping.length()).to.be.eq(0);
+      await loadMapping();
+      expect(await mapping.length()).to.be.eq(transferDefs.length);
+    });
   });
 
   describe("getTransferDefinitionByName", () => {
-    it.skip("should work", async () => {});
-    it.skip("should fail if name is an empty string", async () => {});
-    it.skip("should fail if name is not in contract.names", async () => {});
+    beforeEach(async () => await loadMapping());
+
+    it("should work", async () => {
+      const hashlockRegistry = await transferDefs[0].getRegistryInformation();
+      expect(await mapping.getTransferDefinitionByName("HashlockTransfer")).to.be.deep.eq(hashlockRegistry);
+    });
+
+    it("should fail if name is an empty string", async () => {
+      await expect(mapping.getTransferDefinitionByName("")).revertedWith("LibIterableMapping: empty name");
+    });
+
+    it("should fail if name is not in contract.names", async () => {
+      await expect(mapping.getTransferDefinitionByName("Test")).revertedWith("LibIterableMapping: name not found");
+    });
   });
 
   describe("getTransferDefinitionByIndex", () => {
-    it.skip("should work", async () => {});
-    // FIXME: should this be 0-indexed?
-    it.skip("should fail if index > self.names.length", async () => {});
+    beforeEach(async () => await loadMapping());
+
+    it("should work", async () => {
+      for (const transfer of transferDefs) {
+        const idx = transferDefs.findIndex(t => t.address === transfer.address);
+        const registry = await transferDefs[idx].getRegistryInformation();
+        expect(await mapping.getTransferDefinitionByIndex(BigNumber.from(idx))).to.be.deep.eq(registry);
+      }
+    });
+
+    it("should fail if index > self.names.length", async () => {
+      await expect(mapping.getTransferDefinitionByIndex(BigNumber.from(2))).revertedWith(
+        "LibIterableMapping: invalid index",
+      );
+    });
   });
 
   describe("getTransferDefinitions", () => {
-    it.skip("should work", async () => {});
+    beforeEach(async () => await loadMapping());
+
+    it("should work", async () => {
+      const info = await Promise.all(transferDefs.map(t => t.getRegistryInformation()));
+      expect(await mapping.getTransferDefinitions()).to.be.deep.eq(info);
+    });
   });
 
   describe("addTransferDefinition", () => {
-    it.skip("should work", async () => {});
-    it.skip("should fail if name is an empty string", async () => {});
-    it.skip("should fail if name is in contract.names", async () => {});
+    let info: RegisteredTransfer[];
+    beforeEach(async () => {
+      info = await Promise.all(transferDefs.map(t => t.getRegistryInformation()));
+    });
+    it("should work", async () => {
+      await loadMapping();
+      expect(await mapping.length()).to.be.eq(BigNumber.from(2));
+      expect(await mapping.getTransferDefinitions()).to.be.deep.eq(info);
+    });
+
+    it("should fail if name is an empty string", async () => {
+      await expect(mapping.addTransferDefinition({ ...info[0], name: "" })).revertedWith(
+        "LibIterableMapping: empty name",
+      );
+    });
+
+    it("should fail if name is in contract.names", async () => {
+      await loadMapping();
+      await expect(mapping.addTransferDefinition(info[0])).revertedWith("LibIterableMapping: name not found");
+    });
   });
 
   describe("removeTransferDefinition", () => {
-    it.skip("should work", async () => {});
-    it.skip("should fail if name is an empty string", async () => {});
-    it.skip("should fail if name is not in contract.names", async () => {});
+    let info: RegisteredTransfer[];
+    beforeEach(async () => {
+      info = await Promise.all(transferDefs.map(t => t.getRegistryInformation()));
+      await loadMapping();
+    });
+
+    it("should work with the last element", async () => {
+      await mapping.removeTransferDefinition(info[1].name);
+      expect(await mapping.length()).to.be.eq(info.length - 1);
+      expect(await mapping.nameExists(info[1].name)).to.be.false;
+    });
+
+    it("should work with another element than the last", async () => {
+      await mapping.removeTransferDefinition(info[0].name);
+      expect(await mapping.length()).to.be.eq(info.length - 1);
+      expect(await mapping.nameExists(info[0].name)).to.be.false;
+    });
+
+    it("should fail if name is an empty string", async () => {
+      await expect(mapping.removeTransferDefinition("")).revertedWith("LibIterableMapping: empty name");
+    });
+
+    it("should fail if name is not in contract.names", async () => {
+      await expect(mapping.removeTransferDefinition("Test")).revertedWith("LibIterableMapping: name not found");
+    });
   });
 });

@@ -34,11 +34,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     _;
   }
 
-  function getChannelDispute() external override view onlyOnProxy returns (ChannelDispute memory) {
+  function getChannelDispute() external override view onlyViaProxy nonReentrantView returns (ChannelDispute memory) {
     return channelDispute;
   }
 
-  function getTransferDispute(bytes32 transferId) external override view onlyOnProxy returns (TransferDispute memory) {
+  function getTransferDispute(bytes32 transferId) external override view onlyViaProxy nonReentrantView returns (TransferDispute memory) {
     return transferDisputes[transferId];
   }
 
@@ -46,7 +46,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreChannelState calldata ccs,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
-  ) external override onlyOnProxy validateChannel(ccs) {
+  ) external override onlyViaProxy nonReentrant validateChannel(ccs) {
     // Verify Alice's and Bob's signature on the channel state
     verifySignatures(ccs, aliceSignature, bobSignature);
 
@@ -84,7 +84,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     }
   }
 
-  function defundChannel(CoreChannelState calldata ccs) external override onlyOnProxy validateChannel(ccs) {
+  function defundChannel(CoreChannelState calldata ccs) external override onlyViaProxy nonReentrant validateChannel(ccs) {
     // Only Alice or Bob can defund their channel
     verifyMsgSenderisAliceOrBob(ccs);
 
@@ -125,7 +125,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData)
     external
     override
-    onlyOnProxy
+    onlyViaProxy
+    nonReentrant
     validateTransfer(cts)
   {
     // Only initiator or responder of the transfer may start a dispute
@@ -154,7 +155,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreTransferState calldata cts,
     bytes calldata encodedInitialTransferState,
     bytes calldata encodedTransferResolver
-  ) external override onlyOnProxy validateTransfer(cts) {
+  ) external override onlyViaProxy nonReentrant validateTransfer(cts) {
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
@@ -185,6 +186,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
         abi.encode(cts.balance),
         encodedInitialTransferState,
         encodedTransferResolver
+      );
+      // Verify that returned balances don't exceed initial balances
+      require(
+        balance.amount[0].add(balance.amount[1]) <= cts.balance.amount[0].add(cts.balance.amount[1]),
+        "CMCAdjudicator defundTransfer: resolved balances exceed initial balances"
       );
     } else {
       // After dispute expiry, if the responder hasn't resolved, we defund the initial balance
