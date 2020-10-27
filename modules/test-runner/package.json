@@ -13,9 +13,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@connext/vector-contracts": "0.0.3-beta.2",
-    "@connext/vector-types": "0.0.3-beta.2",
-    "@connext/vector-utils": "0.0.3-beta.2",
+    "@connext/vector-contracts": "0.0.3-beta.3",
+    "@connext/vector-types": "0.0.3-beta.3",
+    "@connext/vector-utils": "0.0.3-beta.3",
     "@ethereum-waffle/chai": "3.1.1",
     "@types/chai": "4.2.14",
     "@types/chai-as-promised": "7.1.3",
