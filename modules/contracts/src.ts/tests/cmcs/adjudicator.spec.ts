@@ -29,14 +29,11 @@ describe.only("CMCAdjudicator.sol", () => {
 
   // Helper to verify the channel dispute
   const verifyDispute = async (ccs: FullChannelState, disputeBlockNumber: number) => {
-    console.log("submitted block", disputeBlockNumber);
     const dispute = await channel.getChannelDispute();
     expect(dispute.channelStateHash).to.be.eq(hashCoreChannelState(ccs));
     expect(dispute.nonce).to.be.eq(ccs.nonce);
     expect(dispute.merkleRoot).to.be.eq(ccs.merkleRoot);
     expect(dispute.consensusExpiry).to.be.eq(BigNumber.from(ccs.timeout).add(disputeBlockNumber));
-    console.log("consensus expiry", dispute.consensusExpiry.toNumber());
-    console.log("defund expiry", dispute.defundExpiry.toNumber());
     expect(dispute.defundExpiry).to.be.eq(
       BigNumber.from(ccs.timeout)
         .mul(2)
@@ -45,7 +42,7 @@ describe.only("CMCAdjudicator.sol", () => {
     expect(dispute.defundNonce).to.be.eq(BigNumber.from(ccs.defundNonce).sub(1));
   };
 
-  describe.only("disputeChannel", () => {
+  describe("disputeChannel", () => {
     beforeEach(async () => {
       channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "deposit", {
         channelAddress: channel.address,
@@ -92,8 +89,8 @@ describe.only("CMCAdjudicator.sol", () => {
       ).revertedWith("Invalid bob signature");
     });
 
-    it.only("should fail if channel is not in defund phase", async () => {
-      const shortTimeout = { ...channelState, timeout: "1" };
+    it("should fail if channel is not in defund phase", async () => {
+      const shortTimeout = { ...channelState, timeout: "2" };
       const hash = hashCoreChannelState(shortTimeout);
       const tx = await channel.disputeChannel(
         shortTimeout,
@@ -104,17 +101,13 @@ describe.only("CMCAdjudicator.sol", () => {
       await verifyDispute(shortTimeout, blockNumber);
 
       // advance blocks
-      console.log("current block", await provider.getBlockNumber());
       await mineBlock();
-      // await mineBlock();
-      // await mineBlock();
-      console.log("final block", await provider.getBlockNumber());
 
       const nextState = { ...shortTimeout, nonce: channelState.nonce + 1 };
       const hash2 = hashCoreChannelState(nextState);
       await expect(
         channel.disputeChannel(nextState, await aliceSigner.signMessage(hash2), await bobSigner.signMessage(hash2)),
-      ).revertedWith("merp");
+      ).revertedWith("CMCAdjudicator disputeChannel: Not allowed in defund phase");
     });
 
     it("should fail if nonce is lte stored nonce", async () => {
