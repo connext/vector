@@ -1,7 +1,6 @@
 {
   "adminToken": "cxt1234",
-  "authUrl": "https://messaging.connext.network",
-  "natsUrl": "ws://messaging.connext.network:4221",
+  "messagingUrl": "https://messaging.connext.network",
   "logLevel": "info",
   "chainAddresses": {
     "4": {
