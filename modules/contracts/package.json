@@ -4,15 +4,14 @@
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "license": "ISC",
   "files": [
-    "address-book.json",
     "artifacts",
     "dist",
-    "contracts",
-    "src"
+    "src.sol",
+    "src.ts"
   ],
   "main": "./dist/src.ts/index.js",
   "bin": {
-    "vector-contracts": "./dist/cli.js"
+    "vector-contracts": "./dist/src.ts/cli.js"
   },
   "keywords": [
     "ethereum",
