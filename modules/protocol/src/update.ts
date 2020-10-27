@@ -12,7 +12,6 @@ import {
   UpdateParams,
   Balance,
   IChannelSigner,
-  CoreTransferState,
   Result,
   FullTransferState,
   IVectorChainReader,
