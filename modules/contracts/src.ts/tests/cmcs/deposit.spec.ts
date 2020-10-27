@@ -22,7 +22,7 @@ describe("CMCDeposit.sol", () => {
     await failingToken.mint(alice.address, parseEther("0.001"));
   });
 
-  it("should only increase totalDepositsAlice after receiving a direct deposit", async () => {
+  it("should only increase totalDepositsBob after receiving a direct deposit", async () => {
     const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
     const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
     await expect(bob.sendTransaction({ to: channel.address, value })).to.be.fulfilled;
