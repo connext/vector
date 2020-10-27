@@ -1,5 +1,6 @@
 # Config & sensitive data
 *.config.json
+modules/browser-node-test-ui/config-node.json
 
 # Build Output
 **/*.0x

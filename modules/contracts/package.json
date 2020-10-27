@@ -1,18 +1,17 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.0.3-beta.0",
+  "version": "0.0.3-beta.4",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "license": "ISC",
   "files": [
-    "address-book.json",
     "artifacts",
     "dist",
-    "contracts",
-    "src"
+    "src.sol",
+    "src.ts"
   ],
   "main": "./dist/src.ts/index.js",
   "bin": {
-    "connext-contracts": "./dist/src.ts/cli.js"
+    "vector-contracts": "./dist/src.ts/cli.js"
   },
   "keywords": [
     "ethereum",
@@ -28,8 +27,8 @@
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.0.3-beta.0",
-    "@connext/vector-utils": "0.0.3-beta.0",
+    "@connext/vector-types": "0.0.3-beta.4",
+    "@connext/vector-utils": "0.0.3-beta.4",
     "@ethersproject/constants": "5.0.5",
     "@openzeppelin/contracts": "3.2.1-solc-0.7",
     "ethers": "5.0.17",
@@ -64,7 +63,7 @@
     "ts-node": "9.0.0",
     "typechain": "3.0.0",
     "typescript": "4.0.3",
-    "webpack": "5.2.0",
+    "webpack": "4.44.2",
     "webpack-cli": "4.1.0"
   }
 }
