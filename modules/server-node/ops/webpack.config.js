@@ -13,7 +13,7 @@ module.exports = {
     ".prisma/client": "commonjs2 .prisma/client",
     "@prisma/client": "commonjs2 @prisma/client",
     "pg-native": "commonjs2 pg-native",
-    "sqlite3": "commonjs2 sqlite3",
+    sqlite3: "commonjs2 sqlite3",
   },
 
   node: {
@@ -57,7 +57,7 @@ module.exports = {
       {
         test: /\.wasm$/,
         type: "javascript/auto",
-        loaders: ["wasm-loader"],
+        use: "wasm-loader",
       },
     ],
   },
