@@ -2,8 +2,8 @@
   "name": "ethprovider",
   "description": "This is only used to install a few large packages into the ethprovider docker container. Ganache takes a long time to install, by keeping it separate the central node_module installation will go more quickly.",
   "dependencies": {
-    "@nomiclabs/buidler": "1.4.7",
-    "ethers": "5.0.14",
+    "hardhat": "2.0.1",
+    "ethers": "5.0.17",
     "ganache-cli": "6.11.0"
   }
 }

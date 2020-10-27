@@ -36,11 +36,18 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     _;
   }
 
-  function getChannelDispute() external override view onlyOnProxy nonReentrantView returns (ChannelDispute memory) {
+  function getChannelDispute() external override view onlyViaProxy nonReentrantView returns (ChannelDispute memory) {
     return channelDispute;
   }
 
-  function getTransferDispute(bytes32 transferId) external override view onlyOnProxy nonReentrantView returns (TransferDispute memory) {
+  function getTransferDispute(bytes32 transferId)
+    external
+    override
+    view
+    onlyViaProxy
+    nonReentrantView
+    returns (TransferDispute memory)
+  {
     return transferDisputes[transferId];
   }
 
@@ -48,7 +55,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreChannelState calldata ccs,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
-  ) external override onlyOnProxy nonReentrant validateChannel(ccs) {
+  ) external override onlyViaProxy nonReentrant validateChannel(ccs) {
     // Verify Alice's and Bob's signature on the channel state
     verifySignatures(ccs, aliceSignature, bobSignature);
 
@@ -58,7 +65,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // New nonce must be strictly greater than the stored one
     require(channelDispute.nonce < ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
 
-    if (!inConsensusPhase()) { // We are not already in a dispute
+    if (!inConsensusPhase()) {
+      // We are not already in a dispute
       // Set expiries
       // TODO: offchain-ensure that there can't be an overflow
       channelDispute.consensusExpiry = block.number.add(ccs.timeout);
@@ -71,7 +79,13 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     channelDispute.merkleRoot = ccs.merkleRoot;
   }
 
-  function defundChannel(CoreChannelState calldata ccs) external override onlyOnProxy nonReentrant validateChannel(ccs) {
+  function defundChannel(CoreChannelState calldata ccs)
+    external
+    override
+    onlyOnProxy
+    nonReentrant
+    validateChannel(ccs)
+  {
     // Verify that the given channel state matches the stored one
     require(
       hashChannelState(ccs) == channelDispute.channelStateHash,
@@ -120,7 +134,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData)
     external
     override
-    onlyOnProxy
+    onlyViaProxy
     nonReentrant
     validateTransfer(cts)
   {
@@ -147,7 +161,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreTransferState calldata cts,
     bytes calldata encodedInitialTransferState,
     bytes calldata encodedTransferResolver
-  ) external override onlyOnProxy nonReentrant validateTransfer(cts) {
+  ) external override onlyViaProxy nonReentrant validateTransfer(cts) {
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
@@ -196,11 +210,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     transferBalance(cts.assetId, balance);
   }
 
-  function _depositsBob(address assetId)
-    external
-    onlySelf
-    returns (uint256)
-  {
+  function _depositsBob(address assetId) external onlySelf returns (uint256) {
     return _getTotalDepositsBob(assetId);
   }
 

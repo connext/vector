@@ -8,6 +8,4 @@ interface ICMCCore {
   function getAlice() external view returns (address);
 
   function getBob() external view returns (address);
-
-  function getMastercopy() external view returns (address);
 }

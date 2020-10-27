@@ -17,7 +17,7 @@ config-prod.json
 
 # Cache
 **/.bot-store
-**/.buidler
+**/.hardhat
 **/.cache
 **/.config
 **/.connext-store/**

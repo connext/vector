@@ -25,7 +25,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     uint256 nonce,
     bytes memory aliceSignature,
     bytes memory bobSignature
-  ) external override onlyOnProxy nonReentrant {
+  ) external override onlyViaProxy nonReentrant {
     // Replay protection
     bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
     require(!isExecuted[withdrawHash], "CMCWithdraw: Transaction has already been executed");
@@ -47,7 +47,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     address assetId,
     uint256 amount,
     uint256 nonce
-  ) external override view onlyOnProxy nonReentrantView returns (bool) {
+  ) external override view onlyViaProxy nonReentrantView returns (bool) {
     bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
     return isExecuted[withdrawHash];
   }

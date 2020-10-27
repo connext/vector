@@ -32,7 +32,6 @@ The contracts are structured as follows:
 
 - **ChannelMastercopy** is the primary contract used by Vector channels. It contains logic to handle depositing/withdrawing as well as to adjudicate a channel dispute. To save on the gas cost of repeatedly deploying the contract, we structure this contract as a singleton "Mastercopy" and deploy proxies per-channel.
 - **ChannelFactory** is a factory contract that deploys channel proxies to deterministically-generated addresses using the CREATE2 Ethereum opcode.
-- **Proxy** is a generic proxy that points to the above ChannelMastercopy contract.
 - **TransferDefinitions** are conditional-transfer-specific logic that are used by both the offchain protocol and the onchain adjudicator to determine the outcome of a given transfer.
 
 ## Principles and Assumptions

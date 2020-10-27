@@ -45,7 +45,7 @@ then
     --detach \
     --entrypoint bash \
     --env "CHAIN_ID=$chain_id" \
-    --env "EVM=buidler" \
+    --env "EVM=hardhat" \
     --env "MNEMONIC=$eth_mnemonic" \
     --mount "type=bind,source=$chain_data,target=/data" \
     --mount "type=bind,source=$root,target=/root" \

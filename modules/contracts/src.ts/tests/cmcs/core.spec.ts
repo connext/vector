@@ -56,7 +56,6 @@ describe("CMCCore.sol", () => {
     });
 
     it("should work", async () => {
-      expect(await channel.getMastercopy()).to.be.a("string");
       expect(await channel.getAlice()).to.equal(alice.address);
       expect(await channel.getBob()).to.equal(bob.address);
     });

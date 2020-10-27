@@ -10,7 +10,7 @@ describe("EthereumChainService", () => {
   let channel: Contract;
   let chainService: EthereumChainService;
 
-  beforeEach(async () => {
+  before(async () => {
     channel = await getTestChannel();
     chainService = new EthereumChainService(
       new MemoryStoreService(),

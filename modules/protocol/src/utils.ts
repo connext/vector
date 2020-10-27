@@ -114,7 +114,7 @@ export async function generateSignedChannelCommitment(
   signer: IChannelSigner,
   aliceSignature?: string,
   bobSignature?: string,
-): Promise<ChannelCommitmentData> {
+): Promise<Result<ChannelCommitmentData, Error>> {
   const { networkContext, ...core } = newState;
 
   const unsigned = {
@@ -124,22 +124,25 @@ export async function generateSignedChannelCommitment(
   };
   if (aliceSignature && bobSignature) {
     // No need to sign, we have already signed
-    return {
+    return Result.ok({
       ...unsigned,
       aliceSignature,
       bobSignature,
-    };
+    });
   }
 
   // Only counterparty has signed
-  const sig = await signer.signMessage(hashChannelCommitment(unsigned));
-  const isAlice = signer.address === newState.alice;
-  const signed = {
-    ...unsigned,
-    aliceSignature: isAlice ? sig : aliceSignature,
-    bobSignature: isAlice ? bobSignature : sig,
-  };
-  return signed;
+  try {
+    const sig = await signer.signMessage(hashChannelCommitment(unsigned));
+    const isAlice = signer.address === newState.alice;
+    return Result.ok({
+      ...unsigned,
+      aliceSignature: isAlice ? sig : aliceSignature,
+      bobSignature: isAlice ? bobSignature : sig,
+    });
+  } catch (e) {
+    return Result.fail(e);
+  }
 }
 
 export async function validateChannelUpdateSignatures(
