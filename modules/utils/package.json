@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-utils",
-  "version": "0.0.1-beta.6",
+  "version": "0.0.3-beta.0",
   "description": "Crypto & other utils for vector state channels",
   "main": "dist/index.js",
   "files": [
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@ethereum-waffle/chai": "3.1.1",
-    "@connext/vector-types": "0.0.1-beta.6",
+    "@connext/vector-types": "0.0.3-beta.0",
     "async-mutex": "0.2.4",
     "axios": "0.20.0",
     "bs58check": "2.1.2",
