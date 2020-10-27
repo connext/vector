@@ -11,21 +11,18 @@ import {
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber, Contract } from "ethers";
 
-import { bob, alice, provider } from "../constants";
+import { bob, alice, provider, rando } from "../constants";
 import { getTestChannel, mineBlock } from "../utils";
 
 describe.only("CMCAdjudicator.sol", () => {
   let channel: Contract;
+  let token: Contract;
   let channelState: FullChannelState;
   let aliceSignature: string;
   let bobSignature: string;
 
   const aliceSigner = new ChannelSigner(alice.privateKey, provider);
   const bobSigner = new ChannelSigner(bob.privateKey, provider);
-
-  beforeEach(async () => {
-    channel = (await getTestChannel()).connect(alice);
-  });
 
   // Helper to verify the channel dispute
   const verifyDispute = async (ccs: FullChannelState, disputeBlockNumber: number) => {
@@ -42,23 +39,46 @@ describe.only("CMCAdjudicator.sol", () => {
     expect(dispute.defundNonce).to.be.eq(BigNumber.from(ccs.defundNonce).sub(1));
   };
 
-  describe("disputeChannel", () => {
-    beforeEach(async () => {
-      channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "deposit", {
-        channelAddress: channel.address,
-        assetIds: [AddressZero],
-        balances: [{ to: [alice.address, bob.address], amount: ["17", "45"] }],
-        processedDepositsA: ["20"],
-        processedDepositsB: ["42"],
-        timeout: "2",
-        nonce: 3,
-        merkleRoot: HashZero,
-      });
-      const channelHash = hashCoreChannelState(channelState);
-      aliceSignature = await aliceSigner.signMessage(channelHash);
-      bobSignature = await bobSigner.signMessage(channelHash);
-    });
+  // Helper to send funds to channel address
+  const fundChannel = async (ccs: FullChannelState) => {
+    for (const assetId of ccs.assetIds) {
+      // Fund channel for bob
+      const idx = ccs.assetIds.findIndex(a => a === assetId);
+      const depositsB = BigNumber.from(ccs.processedDepositsB[idx]);
+      const bobTx =
+        assetId === AddressZero
+          ? await bob.sendTransaction({ to: channel.address, value: depositsB })
+          : await token.connect(bob).transfer(channel.address, depositsB);
+      await bobTx.wait();
 
+      const depositsA = BigNumber.from(ccs.processedDepositsA[idx]);
+      const aliceTx = await channel.connect(alice).depositAlice(assetId, depositsA);
+      await aliceTx.wait();
+    }
+  };
+
+  beforeEach(async () => {
+    channel = await getTestChannel();
+    channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "deposit", {
+      channelAddress: channel.address,
+      assetIds: [AddressZero],
+      balances: [{ to: [alice.address, bob.address], amount: ["17", "45"] }],
+      processedDepositsA: ["0"],
+      processedDepositsB: ["62"],
+      timeout: "2",
+      nonce: 3,
+      merkleRoot: HashZero,
+    });
+    // Deposit all funds into channel
+    await fundChannel(channelState);
+    const channelHash = hashCoreChannelState(channelState);
+    aliceSignature = await aliceSigner.signMessage(channelHash);
+    bobSignature = await bobSigner.signMessage(channelHash);
+    // make sure channel is connected to rando
+    channel = channel.connect(rando);
+  });
+
+  describe("disputeChannel", () => {
     it("should fail if state.alice is incorrect", async () => {
       await expect(
         channel.disputeChannel({ ...channelState, alice: getRandomAddress() }, aliceSignature, bobSignature),
@@ -145,15 +165,109 @@ describe.only("CMCAdjudicator.sol", () => {
     });
   });
 
-  describe.skip("defundChannel", () => {
-    it("should fail if state.alice is incorrect", async () => {});
-    it("should fail if state.bob is incorrect", async () => {});
-    it("should fail if state.channelAddress is incorrect", async () => {});
-    it("should fail if channel state supplied does not match channels state stored", async () => {});
-    it("should fail if defund nonce does not increment", async () => {});
-    it("should work with multiple assets", async () => {});
-    it("should work with unprocessed deposits", async () => {});
-    it("should work (simple case)", async () => {});
+  describe("defundChannel", () => {
+    // Create a helper to dispute channel
+    const disputeChannel = async (ccs: FullChannelState = channelState) => {
+      const hash = hashCoreChannelState(ccs);
+      const tx = await channel.disputeChannel(
+        ccs,
+        await aliceSigner.signMessage(hash),
+        await bobSigner.signMessage(hash),
+      );
+      const { blockNumber: disputeBlock } = await tx.wait();
+      // Bring to defund phase
+      const toMine = BigNumber.from(ccs.timeout).toNumber();
+      for (const _ of Array(toMine).fill(0)) {
+        await mineBlock();
+      }
+      const currBlock = await provider.getBlockNumber();
+      expect(currBlock).to.be.at.least(BigNumber.from(disputeBlock).add(ccs.timeout));
+      const defundTimeout = BigNumber.from(ccs.timeout).mul(2);
+      expect(defundTimeout.add(disputeBlock).gt(currBlock)).to.be.true;
+    };
+
+    it("should fail if state.alice is incorrect", async () => {
+      await disputeChannel();
+      await expect(channel.defundChannel({ ...channelState, alice: getRandomAddress() })).revertedWith(
+        "CMCAdjudicator: Mismatch between given core channel state and channel we are at",
+      );
+    });
+
+    it("should fail if state.bob is incorrect", async () => {
+      await disputeChannel();
+      await expect(channel.defundChannel({ ...channelState, bob: getRandomAddress() })).revertedWith(
+        "CMCAdjudicator: Mismatch between given core channel state and channel we are at",
+      );
+    });
+
+    it("should fail if state.channelAddress is incorrect", async () => {
+      await disputeChannel();
+      await expect(channel.defundChannel({ ...channelState, channelAddress: getRandomAddress() })).revertedWith(
+        "CMCAdjudicator: Mismatch between given core channel state and channel we are at",
+      );
+    });
+
+    it("should fail if channel state supplied does not match channels state stored", async () => {
+      await disputeChannel();
+      await expect(channel.defundChannel({ ...channelState, nonce: 652 })).revertedWith(
+        "CMCAdjudicator defundChannel: Hash of core channel state does not match stored hash",
+      );
+    });
+
+    it("should fail if it is not in the defund phase", async () => {
+      const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
+      const { blockNumber } = await tx.wait();
+      await verifyDispute(channelState, blockNumber);
+      await expect(channel.defundChannel(channelState)).revertedWith(
+        "CMCAdjudicator defundChannel: Not in defund phase",
+      );
+    });
+
+    it("should fail if defund nonce does not increment", async () => {
+      const toDispute = { ...channelState, defundNonce: "0" };
+      await disputeChannel(toDispute);
+      await expect(channel.defundChannel(toDispute)).revertedWith(
+        "CMCAdjudicator defundChannel: channel already defunded",
+      );
+    });
+
+    it.skip("should work with multiple assets", async () => {});
+
+    it("should work with unprocessed deposits", async () => {
+      // Send funds to multisig without reconciling offchain state
+      const unprocessed = BigNumber.from(18);
+      const bobTx = await bob.sendTransaction({ to: channel.address, value: unprocessed });
+      await bobTx.wait();
+
+      // Dispute + defund channel
+      const [preDisputeAlice, preDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
+      await disputeChannel();
+      const tx = await channel.defundChannel(channelState);
+      await tx.wait();
+
+      // Verify transfer
+      const [postDisputeAlice, postDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
+      const assetIdx = channelState.assetIds.findIndex(a => a === AddressZero);
+      const diffAlice = postDisputeAlice.sub(preDisputeAlice);
+      const diffBob = postDisputeBob.sub(preDisputeBob);
+      expect(diffAlice).to.be.eq(channelState.balances[assetIdx].amount[0]);
+      expect(diffBob).to.be.eq(unprocessed.add(channelState.balances[assetIdx].amount[1]));
+    });
+
+    it("should work (simple case)", async () => {
+      const [preDisputeAlice, preDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
+      await disputeChannel();
+      const tx = await channel.defundChannel(channelState);
+      await tx.wait();
+
+      // Verify transfer
+      const [postDisputeAlice, postDisputeBob] = await Promise.all([aliceSigner.getBalance(), bobSigner.getBalance()]);
+      const assetIdx = channelState.assetIds.findIndex(a => a === AddressZero);
+      const diffAlice = postDisputeAlice.sub(preDisputeAlice);
+      const diffBob = postDisputeBob.sub(preDisputeBob);
+      expect(diffAlice).to.be.eq(channelState.balances[assetIdx].amount[0]);
+      expect(diffBob).to.be.eq(channelState.balances[assetIdx].amount[1]);
+    });
   });
 
   describe.skip("disputeTransfer", () => {
