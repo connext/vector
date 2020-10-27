@@ -12,7 +12,7 @@
   ],
   "main": "./dist/src.ts/index.js",
   "bin": {
-    "connext-contracts": "./dist/src.ts/cli.js"
+    "vector-contracts": "./dist/cli.js"
   },
   "keywords": [
     "ethereum",
