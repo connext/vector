@@ -49,7 +49,7 @@ nav:
   - Node Guides:
       - node/basics.md
       - node/configure.md
-      - node/depositAndWithdraw.md
+      # - node/depositAndWithdraw.md
       - node/transfers.md
       - node/events.md
   - Router Guides:
