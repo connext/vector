@@ -82,7 +82,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   function defundChannel(CoreChannelState calldata ccs)
     external
     override
-    onlyOnProxy
+    onlyViaProxy
     nonReentrant
     validateChannel(ccs)
   {
