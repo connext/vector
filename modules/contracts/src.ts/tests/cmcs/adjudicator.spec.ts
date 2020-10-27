@@ -10,13 +10,17 @@ import {
 } from "@connext/vector-utils";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber, BigNumberish, Contract } from "ethers";
+import { parseEther } from "ethers/lib/utils";
 
+import { deployContracts } from "../../actions";
+import { AddressBook } from "../../addressBook";
 import { bob, alice, provider, rando } from "../constants";
-import { getOnchainBalance, getTestChannel, mineBlock } from "../utils";
+import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
 
 describe.only("CMCAdjudicator.sol", () => {
   let channel: Contract;
   let token: Contract;
+  let addressBook: AddressBook;
   let channelState: FullChannelState;
   let aliceSignature: string;
   let bobSignature: string;
@@ -45,15 +49,19 @@ describe.only("CMCAdjudicator.sol", () => {
       // Fund channel for bob
       const idx = ccs.assetIds.findIndex(a => a === assetId);
       const depositsB = BigNumber.from(ccs.processedDepositsB[idx]);
-      const bobTx =
-        assetId === AddressZero
-          ? await bob.sendTransaction({ to: channel.address, value: depositsB })
-          : await token.connect(bob).transfer(channel.address, depositsB);
-      await bobTx.wait();
+      if (!depositsB.isZero()) {
+        const bobTx =
+          assetId === AddressZero
+            ? await bob.sendTransaction({ to: channel.address, value: depositsB })
+            : await token.connect(bob).transfer(channel.address, depositsB);
+        await bobTx.wait();
+      }
 
       const depositsA = BigNumber.from(ccs.processedDepositsA[idx]);
-      const aliceTx = await channel.connect(alice).depositAlice(assetId, depositsA);
-      await aliceTx.wait();
+      if (!depositsA.isZero()) {
+        const aliceTx = await channel.connect(alice).depositAlice(assetId, depositsA);
+        await aliceTx.wait();
+      }
     }
   };
 
@@ -86,8 +94,21 @@ describe.only("CMCAdjudicator.sol", () => {
     );
   };
 
+  // Setup that only needs to run once for
+  // test suite
+  before(async () => {
+    addressBook = await getTestAddressBook();
+    await deployContracts(alice, addressBook, [["TestToken", []]]);
+    token = addressBook.getContract("TestToken");
+    // mint token to alice/bob
+    const aliceMint = await token.mint(alice.address, parseEther("1"));
+    await aliceMint.wait();
+    const bobMint = await token.mint(bob.address, parseEther("1"));
+    await bobMint.wait();
+  });
+
   beforeEach(async () => {
-    channel = await getTestChannel();
+    channel = await getTestChannel(addressBook);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "deposit", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -98,8 +119,6 @@ describe.only("CMCAdjudicator.sol", () => {
       nonce: 3,
       merkleRoot: HashZero,
     });
-    // Deposit all funds into channel
-    await fundChannel(channelState);
     const channelHash = hashCoreChannelState(channelState);
     aliceSignature = await aliceSigner.signMessage(channelHash);
     bobSignature = await bobSigner.signMessage(channelHash);
@@ -260,9 +279,26 @@ describe.only("CMCAdjudicator.sol", () => {
       );
     });
 
-    it.skip("should work with multiple assets", async () => {});
+    it("should work with multiple assets", async () => {
+      const multiAsset = {
+        ...channelState,
+        assetIds: [AddressZero, token.address],
+        balances: [
+          { to: [alice.address, bob.address], amount: ["17", "26"] },
+          { to: [alice.address, bob.address], amount: ["10", "8"] },
+        ],
+        processedDepositsA: ["0", "0"],
+        processedDepositsB: ["43", "18"],
+      };
+      // Deposit all funds into channel
+      await fundChannel(multiAsset);
+      await disputeChannel(multiAsset);
+      await defundAndVerify(multiAsset);
+    });
 
     it("should work with unprocessed deposits", async () => {
+      // Deposit all funds into channel
+      await fundChannel(channelState);
       // Send funds to multisig without reconciling offchain state
       const unprocessed = BigNumber.from(18);
       const bobTx = await bob.sendTransaction({ to: channel.address, value: unprocessed });
@@ -274,6 +310,8 @@ describe.only("CMCAdjudicator.sol", () => {
     });
 
     it("should work (simple case)", async () => {
+      // Deposit all funds into channel
+      await fundChannel(channelState);
       await disputeChannel();
       await defundAndVerify();
     });

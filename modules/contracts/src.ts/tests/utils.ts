@@ -1,10 +1,9 @@
-import { ERC20Abi } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 import { BigNumber, Contract } from "ethers";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
-import { TestChannel } from "../artifacts";
+import { TestChannel, TestToken } from "../artifacts";
 
 import { alice, bob, provider } from "./constants";
 
@@ -56,5 +55,5 @@ export const mineBlock = (): Promise<void> => {
 export const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {
   return assetId === AddressZero
     ? provider.getBalance(address)
-    : new Contract(address, ERC20Abi, provider).balanceOf(address);
+    : new Contract(assetId, TestToken.abi, provider).balanceOf(address);
 };
