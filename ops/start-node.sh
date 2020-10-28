@@ -112,15 +112,17 @@ if [[ $production == "true" ]]
 then
   node_image_name="${project}_node"
   bash "$root/ops/pull-images.sh" "$version" "$node_image_name" > /dev/null
-  node_image="image: '$node_image_name:$version'"
+  node_image="image: '$node_image_name:$version'
+    volumes:
+      - 'database:/database'"
 else
   node_image="image: '${project}_builder'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
+    ports:
+      - '$node_dev_port:$node_internal_port'
     volumes:
       - '$root:/root'
-      - 'database:/database'
-    ports:
-      - '$node_dev_port:$node_internal_port'"
+    tmpfs: /database'"
   echo "$stack.node configured to be exposed on *:$node_dev_port"
 fi
 
