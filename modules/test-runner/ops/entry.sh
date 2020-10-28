@@ -53,7 +53,7 @@ fi
 ########################################
 # Launch tests
 
-if [[ "$VECTOR_PROD" == "true" ]]
+if [[ "$VECTOR_PROD" == "true" || "$CI" == "true" ]]
 then opts="--forbid-only"
 else opts="--bail"
 fi

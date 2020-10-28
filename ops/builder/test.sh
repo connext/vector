@@ -11,7 +11,7 @@ test_cmd="$(jq '.scripts.test' package.json | tr -d '\n\r"' | cut -d " " -f 1)"
 
 if [[ "$test_cmd" == *mocha* ]]
 then
-  if [[ "$VECTOR_PROD" == "true" ]]
+  if [[ "$VECTOR_PROD" == "true" || "$CI" == "true" ]]
   then opts=(--color --forbid-only)
   else opts=(--color --bail)
   fi
