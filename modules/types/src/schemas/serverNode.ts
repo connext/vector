@@ -12,7 +12,6 @@ import {
   TFullTransferState,
   TFullChannelState,
   TChainId,
-  TBasicMeta,
 } from "./basic";
 
 ////////////////////////////////////////
@@ -253,6 +252,58 @@ const PostAdminResponseSchema = {
   }),
 };
 
+// DISPUTE CHANNEL
+const PostSendDisputeChannelTxBodySchema = Type.Object({
+  channelAddress: TAddress,
+  publicIdentifier: TPublicIdentifier,
+});
+
+const PostSendDisputeChannelTxResponseSchema = {
+  200: Type.Object({
+    txHash: TBytes32,
+  }),
+};
+
+//////////////////
+/// Dispute Methods
+
+// TODO: should these methods be on the engine?
+// DEFUND CHANNEL
+const PostSendDefundChannelTxBodySchema = Type.Object({
+  channelAddress: TAddress,
+  publicIdentifier: TPublicIdentifier,
+});
+
+const PostSendDefundChannelTxResponseSchema = {
+  200: Type.Object({
+    txHash: TBytes32,
+  }),
+};
+
+// DISPUTE TRANSFER
+const PostSendDisputeTransferTxBodySchema = Type.Object({
+  transferId: TBytes32,
+  publicIdentifier: TPublicIdentifier,
+});
+
+const PostSendDisputeTransferTxResponseSchema = {
+  200: Type.Object({
+    txHash: TBytes32,
+  }),
+};
+
+// DEFUND TRANSFER
+const PostSendDefundTransferTxBodySchema = Type.Object({
+  transferId: TBytes32,
+  publicIdentifier: TPublicIdentifier,
+});
+
+const PostSendDefundTransferTxResponseSchema = {
+  200: Type.Object({
+    txHash: TBytes32,
+  }),
+};
+
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ServerNodeParams {
@@ -318,6 +369,18 @@ export namespace ServerNodeParams {
 
   export const CreateNodeSchema = PostCreateNodeBodySchema;
   export type CreateNode = Static<typeof CreateNodeSchema>;
+
+  export const SendDisputeChannelTxSchema = PostSendDisputeChannelTxBodySchema;
+  export type SendDisputeChannelTx = Static<typeof SendDisputeChannelTxSchema>;
+
+  export const SendDefundChannelTxSchema = PostSendDefundChannelTxBodySchema;
+  export type SendDefundChannelTx = Static<typeof SendDefundChannelTxSchema>;
+
+  export const SendDisputeTransferTxSchema = PostSendDisputeTransferTxBodySchema;
+  export type SendDisputeTransferTx = Static<typeof SendDisputeTransferTxSchema>;
+
+  export const SendDefundTransferTxSchema = PostSendDefundTransferTxBodySchema;
+  export type SendDefundTransferTx = Static<typeof SendDefundTransferTxSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -386,4 +449,16 @@ export namespace ServerNodeResponses {
 
   export const CreateNodeSchema = PostCreateNodeResponseSchema;
   export type CreateNode = Static<typeof CreateNodeSchema["200"]>;
+
+  export const SendDisputeChannelTxSchema = PostSendDisputeChannelTxResponseSchema;
+  export type SendDisputeChannelTx = Static<typeof PostSendDisputeChannelTxResponseSchema["200"]>;
+
+  export const SendDefundChannelTxSchema = PostSendDefundChannelTxResponseSchema;
+  export type SendDefundChannelTx = Static<typeof PostSendDefundChannelTxResponseSchema["200"]>;
+
+  export const SendDisputeTransferTxSchema = PostSendDisputeTransferTxResponseSchema;
+  export type SendDisputeTransferTx = Static<typeof PostSendDisputeTransferTxResponseSchema["200"]>;
+
+  export const SendDefundTransferTxSchema = PostSendDefundTransferTxResponseSchema;
+  export type SendDefundTransferTx = Static<typeof PostSendDefundTransferTxResponseSchema["200"]>;
 }

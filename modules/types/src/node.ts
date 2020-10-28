@@ -73,6 +73,23 @@ export interface INodeService {
     params: OptionalPublicIdentifier<ServerNodeParams.ResolveTransfer>,
   ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>>;
 
+  // Dispute methods
+  sendDisputeChannelTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeChannelTx>,
+  ): Promise<Result<ServerNodeResponses.SendDisputeChannelTx, NodeError>>;
+
+  sendDefundChannelTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundChannelTx>,
+  ): Promise<Result<ServerNodeResponses.SendDefundChannelTx, NodeError>>;
+
+  sendDisputeTransferTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeTransferTx>,
+  ): Promise<Result<ServerNodeResponses.SendDisputeTransferTx, NodeError>>;
+
+  sendDefundTransferTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundTransferTx>,
+  ): Promise<Result<ServerNodeResponses.SendDefundTransferTx, NodeError>>;
+
   withdraw(
     params: OptionalPublicIdentifier<ServerNodeParams.Withdraw>,
   ): Promise<Result<ServerNodeResponses.Withdraw, NodeError>>;
