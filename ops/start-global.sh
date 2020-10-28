@@ -57,21 +57,18 @@ fi
 
 echo "Preparing to launch $stack stack (prod=$production)"
 
-########################################
-## Docker registry & image version config
+####################
+# Misc Config
 
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$production" == "true" ]]
 then
-  if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
+  # If we're on the prod branch then use the release semvar, otherwise use the commit hash
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
   then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
   else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
-
-####################
-# Misc Config
 
 common="networks:
       - '$project'

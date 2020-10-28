@@ -57,26 +57,22 @@ common=(
   "--tmpfs=/tmp"
 )
 
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$production" == "true" ]]
 then
-  git_tag=$(git tag --points-at HEAD | grep "vector-" | head -n 1)
-  if [[ -z "$version" ]]
-  then
-    if [[ -n "$git_tag" ]]
-    then version="${git_tag#vector-}"
-    else version=$(git rev-parse HEAD | head -c 8)
-    fi
+  # If we're on the prod branch then use the release semvar, otherwise use the commit hash
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
+  then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
+  else version=$(git rev-parse HEAD | head -c 8)
   fi
   image=${project}_test_runner:$version
   echo "Executing $cmd w image $image"
   docker run "${common[@]}" "$image" "$cmd" "$stack"
 
 else
-  echo "Executing $cmd w image ${project}_builder"
+  echo "Executing $cmd w image ${project}_builder:latest"
   docker run \
     "${common[@]}" \
     --entrypoint=bash \
     --volume="$root:/root" \
-    "${project}_builder" -c "bash modules/test-runner/ops/entry.sh $cmd $stack"
+    "${project}_builder:latest" -c "bash modules/test-runner/ops/entry.sh $cmd $stack"
 fi
