@@ -173,6 +173,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     );
 
     // Verify that a dispute for this transfer has already been started
+    // NOTE: there is no way to get to here without also failing previous
+    // require
     require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator defundTransfer: transfer not yet disputed");
 
     // We can't defund twice

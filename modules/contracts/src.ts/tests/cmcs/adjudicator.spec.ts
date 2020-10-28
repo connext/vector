@@ -6,6 +6,8 @@ import {
   createlockHash,
   createTestChannelStateWithSigners,
   createTestFullHashlockTransferState,
+  encodeTransferResolver,
+  encodeTransferState,
   expect,
   getRandomAddress,
   getRandomBytes32,
@@ -13,7 +15,7 @@ import {
   hashCoreTransferState,
   hashTransferState,
 } from "@connext/vector-utils";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber, BigNumberish, Contract, utils } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { MerkleTree } from "merkletreejs";
@@ -23,7 +25,7 @@ import { AddressBook } from "../../addressBook";
 import { bob, alice, provider, rando } from "../constants";
 import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
 
-describe.only("CMCAdjudicator.sol", () => {
+describe("CMCAdjudicator.sol", () => {
   let channel: Contract;
   let token: Contract;
   let transferDefinition: Contract;
@@ -112,10 +114,6 @@ describe.only("CMCAdjudicator.sol", () => {
   const disputeTransfer = async (cts: FullTransferState = transferState) => {
     const tx = await channel.disputeTransfer(cts, getMerkleProof(cts));
     await tx.wait();
-    const toMine = BigNumber.from(cts.transferTimeout).toNumber();
-    for (const _ of Array(toMine).fill(0)) {
-      await mineBlock();
-    }
   };
 
   // Helper to defund channels and verify transfers
@@ -172,10 +170,11 @@ describe.only("CMCAdjudicator.sol", () => {
       transferDefinition: transferDefinition.address,
       assetId: AddressZero,
       channelAddress: channel.address,
-      balance: { to: [alice.address, bob.address], amount: ["7", "0"] },
+      // use random receiver addr to verify transfer when bob must dispute
+      balance: { to: [alice.address, getRandomAddress()], amount: ["7", "0"] },
       transferState: state,
       transferResolver: { preImage },
-      transferTimeout: "1",
+      transferTimeout: "3",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
     const hash = hashCoreTransferState(transferState);
@@ -411,16 +410,162 @@ describe.only("CMCAdjudicator.sol", () => {
     });
   });
 
-  describe.skip("defundTransfer", () => {
-    it("should fail if state.channelAddress is incorrect", async () => {});
-    it("should fail if the transfer does not match whats stored", async () => {});
-    it("should fail if transfer hasnt been disputed", async () => {});
-    it("should fail if transfer has been defunded", async () => {});
-    it("should fail if the responder is not the defunder and the transfer is still in dispute", async () => {});
-    it("should fail if the initial state hash doesnt match and the transfer is still in dispute", async () => {});
-    it("should fail if the initial state hash doesnt match", async () => {});
-    it("should correctly resolve + defund transfer if transfer is still in dispute (cancelling resolve)", async () => {});
-    it("should correctly resolve + defund transfer if transfer is still in dispute (successful resolve)", async () => {});
-    it("should correctly defund transfer when transfer is not in dispute phase", async () => {});
+  describe("defundTransfer", () => {
+    const prepTransferForDefund = async (
+      ccs: FullChannelState = channelState,
+      cts: FullTransferState = transferState,
+    ) => {
+      await fundChannel(ccs);
+      await disputeChannel(ccs);
+      await disputeTransfer(cts);
+    };
+
+    it("should fail if state.channelAddress is incorrect", async () => {
+      await prepTransferForDefund();
+      await expect(
+        channel.defundTransfer(
+          { ...transferState, channelAddress: getRandomAddress() },
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+        ),
+      ).revertedWith("CMCAdjudicator: Mismatch between given core transfer state and channel we are at");
+    });
+
+    it("should fail if the transfer does not match whats stored", async () => {
+      await prepTransferForDefund();
+      await expect(
+        channel.defundTransfer(
+          { ...transferState, transferId: getRandomBytes32() },
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+        ),
+      ).revertedWith("CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash");
+    });
+
+    // TODO: there is no way to get to here without also failing previous
+    // require
+    it.skip("should fail if transfer hasnt been disputed", async () => {
+      await fundChannel();
+      await disputeChannel();
+      await expect(
+        channel.defundTransfer(
+          transferState,
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+        ),
+      ).revertedWith("merp");
+    });
+
+    it("should fail if transfer has been defunded", async () => {
+      await prepTransferForDefund();
+      const tx = await channel
+        .connect(bob)
+        .defundTransfer(
+          transferState,
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+        );
+      await tx.wait();
+      await expect(
+        channel
+          .connect(bob)
+          .defundTransfer(
+            transferState,
+            encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+            encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+          ),
+      ).revertedWith("CMCAdjudicator defundTransfer: transfer already defunded");
+    });
+
+    // NOTE: this means no watchtowers can dispute transfers where receiver
+    // is owed funds
+    it("should fail if the responder is not the defunder and the transfer is still in dispute", async () => {
+      await prepTransferForDefund();
+      await expect(
+        channel
+          .connect(rando)
+          .defundTransfer(
+            transferState,
+            encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+            encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+          ),
+      ).revertedWith("CMCAdjudicator: msg.sender is not transfer responder");
+    });
+
+    it("should fail if the initial state hash doesnt match and the transfer is still in dispute", async () => {
+      await prepTransferForDefund();
+      await expect(
+        channel
+          .connect(bob)
+          .defundTransfer(
+            transferState,
+            encodeTransferState(
+              { ...transferState.transferState, lockHash: getRandomBytes32() },
+              transferState.transferEncodings[0],
+            ),
+            encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
+          ),
+      ).revertedWith(
+        "CMCAdjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash",
+      );
+    });
+
+    // TODO: need to write a transfer def for this
+    it.skip("should fail if the resolved balances are > initial balances", async () => {});
+
+    it("should correctly resolve + defund transfer if transfer is still in dispute (cancelling resolve)", async () => {
+      await prepTransferForDefund();
+      const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      const tx = await channel
+        .connect(bob)
+        .defundTransfer(
+          transferState,
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
+        );
+      await tx.wait();
+      expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(
+        preDefundAlice.add(transferState.balance.amount[0]),
+      );
+      expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(0);
+    });
+
+    it("should correctly resolve + defund transfer if transfer is still in dispute (successful resolve)", async () => {
+      await prepTransferForDefund();
+      const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      const tx = await channel
+        .connect(bob)
+        .defundTransfer(
+          transferState,
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+        );
+      await tx.wait();
+      const postDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      expect(postDefundAlice).to.be.eq(preDefundAlice);
+      expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(
+        transferState.balance.amount[0],
+      );
+    });
+
+    it("should correctly defund transfer when transfer is not in dispute phase", async function() {
+      this.timeout(120_000);
+      await prepTransferForDefund();
+      const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      for (const _ of Array(BigNumber.from(transferState.transferTimeout).toNumber()).fill(0)) {
+        await mineBlock();
+      }
+      const tx = await channel
+        .connect(bob)
+        .defundTransfer(
+          transferState,
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+        );
+      await tx.wait();
+      const postDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      expect(postDefundAlice).to.be.eq(preDefundAlice.add(transferState.balance.amount[0]));
+      expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(0);
+    });
   });
 });
