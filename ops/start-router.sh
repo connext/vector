@@ -73,9 +73,6 @@ then
 else version="latest"
 fi
 
-builder_image="${project}_builder:$version";
-bash "$root/ops/pull-images.sh" "$builder_image" > /dev/null
-
 common="networks:
       - '$project'
     logging:
@@ -165,11 +162,11 @@ node_internal_port="8000"
 node_dev_port="8002"
 if [[ $production == "true" ]]
 then
-  node_image_name="${project}_node"
-  bash "$root/ops/pull-images.sh" "$version" "$node_image_name" > /dev/null
+  node_image_name="${project}_node:$version"
   node_image="image: '$node_image_name:$version'"
 else
-  node_image="image: '${project}_builder'
+  node_image_name="${project}_builder:$version";
+  node_image="image: '$node_image_name'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
       - '$root:/root'
@@ -177,6 +174,7 @@ else
       - '$node_dev_port:$node_internal_port'"
   echo "$stack.node configured to be exposed on *:$node_dev_port"
 fi
+bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
 
 # Add whichever secrets we're using to the node's service config
 if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
@@ -201,11 +199,11 @@ router_dev_port="9000"
 
 if [[ $production == "true" ]]
 then
-  router_image_name="${project}_router"
-  bash "$root/ops/pull-images.sh" "$version" "$router_image_name" > /dev/null
-  router_image="image: '$router_image_name:$version'"
+  router_image_name="${project}_router:$version"
+  router_image="image: '$router_image_name'"
 else
-  router_image="image: '${project}_builder'
+  router_image_name="${project}_builder:$version";
+  router_image="image: '$router_image_name'
     entrypoint: 'bash modules/router/ops/entry.sh'
     volumes:
       - '$root:/root'
@@ -213,6 +211,7 @@ else
       - '$router_dev_port:$router_internal_port'"
   echo "$stack.router configured to be exposed on *:$router_dev_port"
 fi
+bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
 
 # Add whichever secrets we're using to the router's service config
 if [[ -n "$db_secret" ]]

@@ -113,8 +113,8 @@ auth_port="5040"
 if [[ "$production" == "true" ]]
 then
   auth_image_name="${project}_auth:$version";
-  auth_image="image: '$auth_image_name'"
   bash "$root/ops/pull-images.sh" "$auth_image_name" > /dev/null
+  auth_image="image: '$auth_image_name'"
 
 else
   auth_image_name="${project}_builder:latest";
@@ -149,9 +149,9 @@ then
   mkdir -p "$chain_data_1" "$chain_data_2"
 
   evm_image_name="${project}_ethprovider:$version";
+  bash "$root/ops/pull-images.sh" "$evm_image_name" > /dev/null
   evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
-  bash "$root/ops/pull-images.sh" "$evm_image_name" > /dev/null
 
   evm_services="evm_$chain_id_1:
     $common
