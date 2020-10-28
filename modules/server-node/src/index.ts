@@ -200,17 +200,13 @@ server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
     }
   },
 );
-server.get(
+server.get<{ Params: ServerNodeParams.GetChannelStates }>(
   "/:publicIdentifier/channels",
   { schema: { params: ServerNodeParams.GetChannelStatesSchema, response: ServerNodeResponses.GetChannelStatesSchema } },
   async (request, reply) => {
-    const engines = getNodes();
-    if (engines.length > 1) {
-      return reply.status(400).send({ message: "More than one node exists and publicIdentifier was not specified" });
-    }
-    const engine = engines[0]?.node;
+    const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
-      return reply.status(400).send({ message: "Node not found" });
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
     try {
