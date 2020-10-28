@@ -116,6 +116,8 @@ contract ParameterizedPayments is ITransferDefinition {
 
     // Signature check
     bytes32 hashedData = keccak256(abi.encode(data));
+
+    // solhint-disable-next-line
     require(state.receiver == LibChannelCrypto.verifyChannelMessage(hashedData, resolver.payeeSignature), "Receiver signature did not match.");
 
     // State & resolver UUID should match
