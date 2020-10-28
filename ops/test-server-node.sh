@@ -64,6 +64,7 @@ echo "Starting server node unit tests"
 docker run \
   "${interactive[@]}" \
   --entrypoint="bash" \
+  --env="CI=$CI" \
   --env="VECTOR_CONFIG=$config" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@$postgres_host:5432/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \

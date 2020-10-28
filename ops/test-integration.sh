@@ -36,6 +36,7 @@ fi
 tester_name=${project}_${stack}_test_runner
 common=(
   ${interactive[@]}
+  "--env=CI=$CI"
   "--env=NODE_TLS_REJECT_UNAUTHORIZED=0"
   "--env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN"
   "--env=VECTOR_ALICE_URL=http://alice:8000"
