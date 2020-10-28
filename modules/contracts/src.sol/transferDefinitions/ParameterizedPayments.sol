@@ -53,12 +53,12 @@ contract ParameterizedPayments is ITransferDefinition {
   string StateEncoding = 
     "tuple(address receiver, uint256 start, uint256 expiration, bytes32 UUID, "
     .concat(RateEncoding)
-    .concat(")");
+    .concat(" rate)");
   string ResolverDataEncoding = "tuple(bytes32 UUID, uint256 paymentAmountTaken)";
   string ResolverEncoding = 
     "tuple("
     .concat(ResolverDataEncoding)
-    .concat(", bytes payeeSignature)");
+    .concat(" data, bytes payeeSignature)");
   string Name = "ParameterizedPayments";
 
   function getRegistryInformation() external override view returns (RegisteredTransfer memory) {
@@ -133,6 +133,7 @@ contract ParameterizedPayments is ITransferDefinition {
     require(averageRate <= allowedRate, "Payment rate exceeded.");
 
     // Transfer the payment amount
+    require(data.paymentAmountTaken <= balance.amount[0], "Cannot take more payment than originally allocated.");
     balance.amount[0] = balance.amount[0].sub(data.paymentAmountTaken);
     balance.amount[1] = balance.amount[1].add(data.paymentAmountTaken);
 

@@ -45,7 +45,7 @@ contract InsurancePayment is ITransferDefinition {
   string ResolverEncoding = 
     "tuple("
     .concat(ResolverDataEncoding)
-    .concat(", bytes signature)");
+    .concat(" data, bytes signature)");
   string Name = "InsurancePayment";
   /* solhint-enable */
 
@@ -115,6 +115,7 @@ contract InsurancePayment is ITransferDefinition {
     require(signer == state.mediator, "Signature did not verify!");
 
     // Guarantor forfeits the amount signed by the mediator
+    require(data.amount <= balance.amount[0], "Cannot transfer more than originally allocated.");
     balance.amount[0] = balance.amount[0].sub(data.amount);
     balance.amount[1] = balance.amount[1].add(data.amount);
 
