@@ -73,7 +73,7 @@ contract ParameterizedPayments is ITransferDefinition {
 
   /// @notice Creates a parameterized payment from the payer (creator) to the payee (resolver)
   /// @param encodedBalance balance the creator/payer is putting into the transfer
-  /// @param encodedState encoded transfer parameters, along with a signature of these parameters by the creator/payer
+  /// @param encodedState encoded transfer parameters
   /// @dev encoded parameter data contains the receiver address, the expiration, the UUID, and the rate
   function create(
     bytes calldata encodedBalance,
@@ -101,7 +101,7 @@ contract ParameterizedPayments is ITransferDefinition {
 
   /// @notice Resolves a parameterized payment from the payer (creator) to the payee (resolver)
   /// @param encodedBalance balance the creator/payer is putting into the transfer; same as in create
-  /// @param encodedState encoded transfer parameters; along with signature; same as in create
+  /// @param encodedState encoded transfer parameters
   /// @param encodedResolver contains the resolution data (UUID, payment amount) and a signature of said data
   function resolve(
     bytes calldata encodedBalance,
@@ -122,7 +122,6 @@ contract ParameterizedPayments is ITransferDefinition {
     require(state.UUID == data.UUID);
 
     // Expiration check
-    // @todo what happens / how do we cancel this payment if we're past the expiration?
     require(block.timestamp < state.expiration);
 
     // Rate should not be exceeded; multiply by large number to avoid precision errors
