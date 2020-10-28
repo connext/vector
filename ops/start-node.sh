@@ -151,7 +151,7 @@ node_dev_port="8001"
 if [[ $production == "true" ]]
 then
   node_image_name="${project}_node:$version"
-  node_image="image: '$node_image_name:$version'"
+  node_image="image: '$node_image_name'"
 else
   node_image_name="${project}_builder:$version";
   node_image="image: '$node_image_name'
