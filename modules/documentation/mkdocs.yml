@@ -41,15 +41,13 @@ extra:
 nav:
   - Intro:
       - index.md
-      # - intro/channelBasics.md
-      # - intro/faq.md
   - Quick Start:
       - quickStart/serverNode.md
       - quickStart/browserNode.md
   - Node Guides:
       - node/basics.md
       - node/configure.md
-      - node/depositAndWithdraw.md
+      # - node/depositAndWithdraw.md
       - node/transfers.md
       - node/events.md
   - Router Guides:

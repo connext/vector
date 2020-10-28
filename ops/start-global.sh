@@ -38,9 +38,12 @@ public_port=$(getConfig port)
 
 # Do we need to spin up local evms or will the node use external ones?
 node_config=$root/node.config.json
-if [[ -f "$node_config" ]]
+router_config=$root/router.config.json
+if [[ -f "$node_config" || -f "$router_config" ]]
 then
-  given_providers=$(jq '.chainProviders' "$node_config" | tr -d '\n\r ')
+  given_providers=$(
+    cat "$node_config" "$router_config" | jq -s '.[0] + .[1] | .chainProviders' | tr -d '\n\r '
+  )
   default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
   if [[ "$default_providers" == "$given_providers" ]]
   then use_local_evms="true";
