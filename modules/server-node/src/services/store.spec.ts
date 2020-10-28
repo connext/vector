@@ -28,7 +28,7 @@ import { config } from "../config";
 
 import { PrismaStore } from "./store";
 
-describe.only("store", () => {
+describe("store", () => {
   let store: PrismaStore;
 
   before(() => {

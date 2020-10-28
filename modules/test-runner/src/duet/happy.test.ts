@@ -42,7 +42,7 @@ describe(testName, () => {
     await bobTx.wait();
   });
 
-  it.only("alice & bob should setup a channel", async () => {
+  it("alice & bob should setup a channel", async () => {
     const channelRes = await bobService.setup({
       counterpartyIdentifier: aliceIdentifier,
       chainId,

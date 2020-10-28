@@ -11,7 +11,7 @@ import { AddressBook } from "../addressBook";
 import { bob, rando } from "./constants";
 import { getTestAddressBook, getTestChannel } from "./utils";
 
-describe.only("AssetTransfer.sol", () => {
+describe("AssetTransfer.sol", () => {
   let addressBook: AddressBook;
   let assetTransfer: Contract;
   let channel: Contract;
