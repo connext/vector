@@ -113,7 +113,7 @@ describe("store", () => {
     });
   });
 
-  it("should save and retrieve all update types and keep updating the channel", async () => {
+  it.only("should save and retrieve all update types and keep updating the channel", async () => {
     const setupState = createTestChannelState("setup");
     await store.saveChannelState(setupState, {
       channelFactoryAddress: setupState.networkContext.channelFactoryAddress,
@@ -129,6 +129,7 @@ describe("store", () => {
     const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
     const depositState = createTestChannelState("deposit", {
       nonce: setupState.nonce + 1,
+      defundNonce: (Number(setupState.defundNonce) + 1).toString(),
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
     });
     await store.saveChannelState(depositState, {
@@ -151,6 +152,7 @@ describe("store", () => {
       channelAddress: transfer.channelAddress,
       networkContext: { channelFactoryAddress: transfer.channelFactoryAddress, chainId: transfer.chainId },
       nonce: depositState.nonce + 1,
+      defundNonce: (Number(depositState.defundNonce) + 1).toString(),
       latestUpdate: {
         details: {
           balance: transfer.balance,
@@ -181,6 +183,7 @@ describe("store", () => {
 
     const resolveState = createTestChannelState("resolve", {
       nonce: createState.nonce + 1,
+      defundNonce: (Number(createState.defundNonce) + 1).toString(),
       latestUpdate: {
         nonce: createState.nonce + 1,
         details: {
