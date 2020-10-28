@@ -31,10 +31,7 @@ function getConfig {
   fi
 }
 
-admin_token=$(getConfig adminToken)
 messaging_url=$(getConfig messagingUrl)
-aws_access_id=$(getConfig awsAccessId)
-aws_access_key=$(getConfig awsAccessKey)
 domain_name=$(getConfig domainName)
 production=$(getConfig production)
 public_port=$(getConfig port)
@@ -107,46 +104,6 @@ else
 fi
 
 ########################################
-## Database config
-
-database_image="${project}_database:$version";
-bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
-
-# database connection settings
-pg_db="$project"
-pg_user="$project"
-pg_dev_port="5433"
-
-if [[ "$production" == "true" ]]
-then
-  # Use a secret to store the database password
-  db_secret="${project}_${stack}_database"
-  if ! grep -qs "$db_secret" <<<"$(docker secret ls --format '{{.Name}}')"
-  then bash "$root/ops/save-secret.sh" "$db_secret" "$(head -c 32 /dev/urandom | xxd -plain -c 32)"
-  fi
-  pg_password=""
-  pg_password_file="/run/secrets/$db_secret"
-  snapshots_dir="$root/.db-snapshots"
-  mkdir -p "$snapshots_dir"
-  database_image="image: '$database_image'
-    volumes:
-      - 'database:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
-    secrets:
-      - '$db_secret'"
-
-else
-  # Pass in a dummy password via env vars
-  db_secret=""
-  pg_password="$project"
-  pg_password_file=""
-  database_image="image: '$database_image'
-    ports:
-      - '$pg_dev_port:5432'"
-  echo "$stack.database will be exposed on *:$pg_dev_port"
-fi
-
-########################################
 ## Node config
 
 node_internal_port="8000"
@@ -161,24 +118,18 @@ else
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
       - '$root:/root'
+      - 'database:/database'
     ports:
       - '$node_dev_port:$node_internal_port'"
   echo "$stack.node configured to be exposed on *:$node_dev_port"
 fi
 
 # Add whichever secrets we're using to the node's service config
-if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
+if [[ -n "$mnemonic_secret" ]]
 then
   node_image="$node_image
-    secrets:"
-  if [[ -n "$db_secret" ]]
-  then node_image="$node_image
-      - '$db_secret'"
-  fi
-  if [[ -n "$mnemonic_secret" ]]
-  then node_image="$node_image
+    secrets:
       - '$mnemonic_secret'"
-  fi
 fi
 
 ####################
@@ -208,19 +159,11 @@ fi
 
 # Add secrets to the stack config
 stack_secrets=""
-if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
-then
-  stack_secrets="secrets:"
-  if [[ -n "$db_secret" ]]
-  then stack_secrets="$stack_secrets
-  $db_secret:
-    external: true"
-  fi
-  if [[ -n "$mnemonic_secret" ]]
-  then stack_secrets="$stack_secrets
+if [[ -n "$mnemonic_secret" ]]
+then 
+stack_secrets="$stack_secrets
   $mnemonic_secret:
     external: true"
-  fi
 fi
 
 docker_compose=$root/.$stack.docker-compose.yml
@@ -258,26 +201,7 @@ services:
       VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
-      VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: 'database'
-      VECTOR_PG_PASSWORD: '$pg_password'
-      VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
-      VECTOR_PG_PORT: '5432'
-      VECTOR_PG_USERNAME: '$pg_user'
-
-  database:
-    $common
-    $database_image
-    environment:
-      AWS_ACCESS_KEY_ID: '$aws_access_id'
-      AWS_SECRET_ACCESS_KEY: '$aws_access_key'
-      POSTGRES_DB: '$pg_db'
-      POSTGRES_PASSWORD: '$pg_password'
-      POSTGRES_PASSWORD_FILE: '$pg_password_file'
-      POSTGRES_USER: '$pg_user'
-      VECTOR_ADMIN_TOKEN: '$admin_token'
-      VECTOR_PROD: '$production'
-
+      VECTOR_SQLITE_FILE: '/database/store.db'
 EOF
 
 docker stack deploy -c "$docker_compose" "$stack"
