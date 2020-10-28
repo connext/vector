@@ -291,6 +291,13 @@
     {
       "tag": "CreateField",
       "model": "Channel",
+      "field": "defundNonce",
+      "type": "String",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateField",
+      "model": "Channel",
       "field": "activeTransfers",
       "type": "Transfer",
       "arity": "List"

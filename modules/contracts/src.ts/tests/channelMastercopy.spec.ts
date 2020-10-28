@@ -1,4 +1,4 @@
-import { getRandomAddress, expect } from "@connext/vector-utils";
+import { expect } from "@connext/vector-utils";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "ethers";
 
@@ -22,40 +22,64 @@ describe("ChannelMastercopy", () => {
     expect(mastercopy.address).to.be.a("string");
   });
 
-  it("setup() should revert bc it's the mastercopy", async () => {
-    await expect(
-      mastercopy.setup(getRandomAddress(), getRandomAddress()),
-   ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
-  });
-
   it("all public methods should revert bc it's the mastercopy", async () => {
     const BalanceZero = [
       [Zero, Zero],
       [AddressZero, AddressZero],
     ];
-    const CoreChannelStateZero = [[], [], AddressZero, AddressZero, AddressZero, [], [], Zero, Zero, HashZero];
-    const CoreTransferStateZero = [
-      BalanceZero,
+    const CoreChannelStateZero = [
       AddressZero,
       AddressZero,
-      HashZero,
       AddressZero,
+      [],
+      [],
+      [],
+      [],
+      Zero,
       Zero,
       HashZero,
+      Zero,
+    ];
+    const CoreTransferStateZero = [
+      AddressZero,
+      HashZero,
       AddressZero,
       AddressZero,
+      AddressZero,
+      AddressZero,
+      BalanceZero,
+      Zero,
+      HashZero,
     ];
     for (const method of [
+
+      // from ICMCCore
+      { name: "setup", args: [AddressZero, AddressZero] },
       { name: "getAlice", args: [] },
       { name: "getBob", args: [] },
+
+      // from IAssetTransfer
+      { name: "getTotalTransferred", args: [AddressZero] },
+      { name: "getEmergencyWithdrawableAmount", args: [AddressZero, AddressZero] },
+      { name: "emergencyWithdraw", args: [AddressZero, AddressZero, AddressZero] },
+
+      // from ICMCDeposit
+      { name: "getTotalDepositsAlice", args: [AddressZero] },
+      { name: "getTotalDepositsBob", args: [AddressZero] },
+      { name: "depositAlice", args: [AddressZero, Zero /*, HashZero */] },
+
+      // from ICMCWithdraw
+      { name: "getWithdrawalTransactionRecord", args: [AddressZero, AddressZero, Zero, Zero] },
       { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, HashZero, HashZero] },
-      { name: "depositAlice", args: [AddressZero, Zero] },
+
+      // from ICMCAdjudicator
       { name: "getChannelDispute", args: [] },
       { name: "getTransferDispute", args: [HashZero] },
-      { name: "disputeChannel", args: [CoreChannelStateZero, "0x", "0x"] },
+      { name: "disputeChannel", args: [CoreChannelStateZero, HashZero, HashZero] },
       { name: "defundChannel", args: [CoreChannelStateZero] },
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
-      { name: "defundTransfer", args: [CoreTransferStateZero, "0x", "0x"] },
+      { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero] },
+
     ]) {
       await expect(
         mastercopy[method.name](...method.args),

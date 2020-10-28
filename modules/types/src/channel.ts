@@ -73,29 +73,31 @@ export type Balance = {
 };
 
 export const CoreChannelStateEncoding = tidy(`tuple(
-  ${BalanceEncoding}[] balances,
-  address[] assetIds,
   address channelAddress,
   address alice,
   address bob,
+  address[] assetIds,
+  ${BalanceEncoding}[] balances,
   uint256[] processedDepositsA,
   uint256[] processedDepositsB,
   uint256 timeout,
   uint256 nonce,
-  bytes32 merkleRoot
+  bytes32 merkleRoot,
+  uint256 defundNonce
 )`);
 
 export interface CoreChannelState {
-  assetIds: Address[];
-  balances: Balance[]; // Indexed by assetId
   channelAddress: Address;
-  merkleRoot: string;
-  nonce: number;
   alice: Address;
   bob: Address;
+  assetIds: Address[];
+  balances: Balance[]; // Indexed by assetId
   processedDepositsA: string[]; // Indexed by assetId
   processedDepositsB: string[]; // Indexed by assetId
   timeout: string;
+  nonce: number;
+  merkleRoot: string;
+  defundNonce: string;
 }
 
 // Includes any additional info that doesn't need to be sent to chain
@@ -114,16 +116,27 @@ export interface ChannelCommitmentData {
   chainId: number;
 }
 
+export const CoreTransferStateEncoding = tidy(`tuple(
+  address channelAddress,
+  bytes32 transferId,
+  address transferDefinition,
+  address initiator,
+  address responder,
+  address assetId,
+  ${BalanceEncoding} balance,
+  uint256 transferTimeout,
+  bytes32 initialStateHash
+)`);
 export interface CoreTransferState {
-  balance: Balance;
-  assetId: Address;
   channelAddress: Address;
   transferId: string;
   transferDefinition: Address;
-  transferTimeout: string;
-  initialStateHash: string;
   initiator: Address; // either alice or bob
   responder: Address; // either alice or bob
+  assetId: Address;
+  balance: Balance;
+  transferTimeout: string;
+  initialStateHash: string;
 }
 
 export type FullTransferState<T extends TransferName = any> = CoreTransferState & {

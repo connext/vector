@@ -33,6 +33,9 @@ export class ChainError extends VectorError {
     NotEnoughFunds: "Not enough funds in wallet",
     FailedToSendTx: "Failed to send transaction to chain",
     TransferNotRegistered: "Transfer not in registry",
+    MissingSigs: "Channel state is not double signed",
+    ResolverNeeded: "Transfer resolver must be provided in dispute",
+    NotInitialState: "Transfer must be disputed with initial state",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -110,6 +113,7 @@ export interface IVectorChainReader {
 }
 
 export interface IVectorChainService extends IVectorChainReader {
+  // Happy case methods
   sendDepositTx(
     channelState: FullChannelState,
     sender: string,
@@ -120,4 +124,13 @@ export interface IVectorChainService extends IVectorChainReader {
     channelState: FullChannelState,
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, ChainError>>;
+
+  // Dispute methods
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDisputeTransferTx(
+    transferState: FullTransferState,
+    merkleProof: string[],
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<providers.TransactionResponse, ChainError>>;
 }

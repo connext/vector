@@ -7,8 +7,9 @@ import {
   ERC20Abi,
   IChainServiceStore,
   TransactionReason,
+  FullTransferState,
 } from "@connext/vector-types";
-import { delay } from "@connext/vector-utils";
+import { delay, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Signer, Wallet } from "ethers";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
@@ -36,8 +37,87 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
+  async sendDisputeChannelTx(
+    channelState: FullChannelState,
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    const signer = this.signers.get(channelState.networkContext.chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+
+    if (!channelState.latestUpdate.aliceSignature || !channelState.latestUpdate.bobSignature) {
+      return Result.fail(new ChainError(ChainError.reasons.MissingSigs));
+    }
+    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.disputeChannel, () => {
+      const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
+      return channel.disputeChannel(
+        channelState,
+        channelState.latestUpdate.aliceSignature,
+        channelState.latestUpdate.bobSignature,
+      );
+    });
+  }
+
+  async sendDefundChannelTx(
+    channelState: FullChannelState,
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    const signer = this.signers.get(channelState.networkContext.chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+
+    if (!channelState.latestUpdate.aliceSignature || !channelState.latestUpdate.bobSignature) {
+      return Result.fail(new ChainError(ChainError.reasons.MissingSigs));
+    }
+    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.defundChannel, () => {
+      const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
+      return channel.defundChannel(channelState);
+    });
+  }
+
+  async sendDisputeTransferTx(
+    transferState: FullTransferState,
+    merkleProof: string[],
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    const signer = this.signers.get(transferState.chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+
+    return this.sendTxWithRetries(transferState.channelAddress, TransactionReason.disputeTransfer, () => {
+      const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
+      return channel.disputeTransfer(transferState, merkleProof);
+    });
+  }
+
+  async sendDefundTransferTx(
+    transferState: FullTransferState,
+  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    const signer = this.signers.get(transferState.chainId);
+    if (!signer?._isSigner) {
+      return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
+    }
+
+    if (!transferState.transferResolver) {
+      return Result.fail(new ChainError(ChainError.reasons.ResolverNeeded));
+    }
+
+    // TODO: should this be checked? is there some other option?
+    if (transferState.balance.amount[1] !== "0") {
+      return Result.fail(new ChainError(ChainError.reasons.NotInitialState));
+    }
+
+    const encodedState = encodeTransferState(transferState.transferState, transferState.transferEncodings[0]);
+    const encodedResolver = encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]);
+
+    return this.sendTxWithRetries(transferState.channelAddress, TransactionReason.defundTransfer, () => {
+      const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
+      return channel.defundTransfer(transferState, encodedState, encodedResolver);
+    });
+  }
+
   public async sendWithdrawTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
