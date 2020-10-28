@@ -251,6 +251,7 @@ describe("store", () => {
     resolveState.latestUpdate.details.transferResolver = { preImage: mkBytes32("0xaabbcc") };
     resolveState.latestUpdate.type = UpdateType.resolve;
     resolveState.nonce = createState.nonce + 1;
+    resolveState.defundNonce = (Number(createState.defundNonce) + 1).toString(),
     resolveState.latestUpdate.nonce = createState.latestUpdate.nonce + 1;
 
     await store.saveChannelState(resolveState, {
@@ -328,6 +329,7 @@ describe("store", () => {
         nonce: createState.latestUpdate.nonce + 1,
       },
       nonce: createState.latestUpdate.nonce + 1,
+      defundNonce: (Number(createState.defundNonce) + 1).toString(),
     });
 
     await store.saveChannelState(
