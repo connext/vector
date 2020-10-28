@@ -22,7 +22,7 @@
   "scripts": {
     "build": "rm -rf dist && npx hardhat compile && tsc",
     "build-bundle": "webpack --config ops/webpack.config.js",
-    "test": "npx hardhat test"
+    "test": "mocha --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
