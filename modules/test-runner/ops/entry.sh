@@ -53,9 +53,9 @@ fi
 ########################################
 # Launch tests
 
-if [[ "$VECTOR_PROD" == "true" || "$CI" == "true" ]]
+if [[ "$CI" == "true" ]]
 then opts="--forbid-only"
-else opts="--bail"
+else opts=""
 fi
 
 if [[ "$cmd" == "watch" ]]
@@ -75,8 +75,7 @@ then
       mocha_pids="$(pgrep "mocha" | tr '\n\r' ' ')"
       if [[ -n "$mocha_pids" ]]
       then
-        echo "Stopping all mocha processes w pids: ${mocha_pids}"
-        echo "Stopping previous test run.."
+        echo "Stopping all mocha processes w pids: $mocha_pids"
         for pid in $mocha_pids
         do kill "$pid" 2> /dev/null
         done

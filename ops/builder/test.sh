@@ -7,9 +7,7 @@ if [[ -d "modules/$unit" ]]
 then cd "modules/$unit" || exit 1
 fi
 
-test_cmd="$(jq '.scripts.test' package.json | tr -d '\n\r"' | cut -d " " -f 1)"
-
-if [[ "$test_cmd" == *mocha && ( "$VECTOR_PROD" == "true" || "$CI" == "true" ) ]]
+if [[ "$CI" == "true" ]]
 then opts="--forbid-only"
 else opts=""
 fi
@@ -45,11 +43,11 @@ then
       echo
       echo "Changes detected!"
 
-      test_pids="$(pgrep -f "$test_cmd" | tr '\n\r' ' ')"
-      if [[ -n "$test_pids" ]]
+      mocha_pids="$(pgrep "mocha" | tr '\n\r' ' ')"
+      if [[ -n "$mocha_pids" ]]
       then
-        echo "Stopping all ${test_cmd} processes w pids: ${test_pids}"
-        for pid in $test_pids
+        echo "Stopping all mocha processes w pids: $mocha_pids"
+        for pid in $mocha_pids
         do kill "$pid" 2> /dev/null
         done
       fi
