@@ -20,8 +20,6 @@ fi
 
 config=$(cat "$root/ops/config/node.default.json")
 
-version="latest"
-
 common="networks:
       - '$project'
     logging:
@@ -38,12 +36,6 @@ then echo "Can't run $stack against external providers yet" && exit 1
 fi
 chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
 config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
-
-########################################
-## Database config
-
-database_image="${project}_database:$version"
-bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 
 ########################################
 ## Node config

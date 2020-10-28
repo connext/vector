@@ -49,18 +49,15 @@ echo "Preparing to launch $stack stack (prod=$production)"
 ####################
 # Misc Config
 
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$production" == "true" ]]
 then
-  if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
+  # If we're on the prod branch then use the release semvar, otherwise use the commit hash
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
   then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
   else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
-
-builder_image="${project}_builder:$version";
-bash "$root/ops/pull-images.sh" "$builder_image" > /dev/null
 
 common="networks:
       - '$project'
@@ -110,13 +107,13 @@ node_internal_port="8000"
 node_dev_port="8001"
 if [[ $production == "true" ]]
 then
-  node_image_name="${project}_node"
-  bash "$root/ops/pull-images.sh" "$version" "$node_image_name" > /dev/null
-  node_image="image: '$node_image_name:$version'
+  node_image_name="${project}_node:$version"
+  node_image="image: '$node_image_name'
     volumes:
       - 'database:/database'"
 else
-  node_image="image: '${project}_builder'
+  node_image_name="${project}_builder:$version";
+  node_image="image: '$node_image_name'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     ports:
       - '$node_dev_port:$node_internal_port'
@@ -125,6 +122,7 @@ else
     tmpfs: /database'"
   echo "$stack.node configured to be exposed on *:$node_dev_port"
 fi
+bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
 
 # Add whichever secrets we're using to the node's service config
 if [[ -n "$mnemonic_secret" ]]

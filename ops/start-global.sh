@@ -57,21 +57,18 @@ fi
 
 echo "Preparing to launch $stack stack (prod=$production)"
 
-########################################
-## Docker registry & image version config
+####################
+# Misc Config
 
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$production" == "true" ]]
 then
-  if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
+  # If we're on the prod branch then use the release semvar, otherwise use the commit hash
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
   then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
   else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
-
-####################
-# Misc Config
 
 common="networks:
       - '$project'
@@ -113,8 +110,8 @@ auth_port="5040"
 if [[ "$production" == "true" ]]
 then
   auth_image_name="${project}_auth:$version";
-  auth_image="image: '$auth_image_name'"
   bash "$root/ops/pull-images.sh" "$auth_image_name" > /dev/null
+  auth_image="image: '$auth_image_name'"
 
 else
   auth_image_name="${project}_builder:latest";
@@ -149,9 +146,9 @@ then
   mkdir -p "$chain_data_1" "$chain_data_2"
 
   evm_image_name="${project}_ethprovider:$version";
+  bash "$root/ops/pull-images.sh" "$evm_image_name" > /dev/null
   evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
-  bash "$root/ops/pull-images.sh" "$evm_image_name" > /dev/null
 
   evm_services="evm_$chain_id_1:
     $common

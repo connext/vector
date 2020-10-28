@@ -22,11 +22,6 @@ if [[ -n "$LOG_LEVEL" ]]
 then config=$(echo "$config" '{"logLevel":'"$LOG_LEVEL"'}' | jq -s '.[0] + .[1]')
 fi
 
-####################
-# Misc Config
-
-version="latest"
-
 ########################################
 # Global services / chain provider config
 
@@ -77,4 +72,4 @@ docker run \
   --rm \
   --tmpfs="/tmp" \
   --volume="$root:/root" \
-  "${project}_builder:$version" "/test.sh" "server-node" "$cmd"
+  "${project}_builder:latest" "/test.sh" "server-node" "$cmd"
