@@ -113,7 +113,7 @@ describe("store", () => {
     });
   });
 
-  it.only("should save and retrieve all update types and keep updating the channel", async () => {
+  it("should save and retrieve all update types and keep updating the channel", async () => {
     const setupState = createTestChannelState("setup");
     await store.saveChannelState(setupState, {
       channelFactoryAddress: setupState.networkContext.channelFactoryAddress,
