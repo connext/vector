@@ -101,10 +101,10 @@ contract InsurancePayment is ITransferDefinition {
     ResolverData memory data = resolver.data;
 
     // State & resolver UUID should match
-    require(state.UUID == data.UUID);
+    require(state.UUID == data.UUID, "UUID did not match!");
 
     // Expiration check
-    require(block.timestamp < state.expiration);
+    require(block.timestamp < state.expiration, "Insurance payment expired.");
 
     // Signature check - receiver signature cancels the insurance payment; mediator signature completes it
     bytes32 hashedData = keccak256(abi.encode(data));
@@ -112,7 +112,7 @@ contract InsurancePayment is ITransferDefinition {
     
     if (signer == state.receiver) return balance;
 
-    require(signer == state.mediator, "Signature did not very!");
+    require(signer == state.mediator, "Signature did not verify!");
 
     // Guarantor forfeits the amount signed by the mediator
     balance.amount[0] = balance.amount[0].sub(data.amount);

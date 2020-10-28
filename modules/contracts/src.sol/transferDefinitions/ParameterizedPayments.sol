@@ -116,19 +116,19 @@ contract ParameterizedPayments is ITransferDefinition {
 
     // Signature check
     bytes32 hashedData = keccak256(abi.encode(data));
-    require(state.receiver == LibChannelCrypto.verifyChannelMessage(hashedData, resolver.payeeSignature));
+    require(state.receiver == LibChannelCrypto.verifyChannelMessage(hashedData, resolver.payeeSignature), "Receiver signature did not match.");
 
     // State & resolver UUID should match
-    require(state.UUID == data.UUID);
+    require(state.UUID == data.UUID, "UUID did not match!");
 
     // Expiration check
-    require(block.timestamp < state.expiration);
+    require(block.timestamp < state.expiration, "Payment expired!");
 
     // Rate should not be exceeded; multiply by large number to avoid precision errors
     uint256 timeElapsed = block.timestamp.sub(state.start);
     uint256 averageRate = data.paymentAmountTaken.div(timeElapsed.multiply(2**64));
     uint256 allowedRate = state.rate.deltaAmount.div(state.rate.deltaTime.multiply(2**64));
-    require(averageRate <= allowedRate);
+    require(averageRate <= allowedRate, "Payment rate exceeded.");
 
     // Transfer the payment amount
     balance.amount[0] = balance.amount[0].sub(data.paymentAmountTaken);
