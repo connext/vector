@@ -22,11 +22,6 @@ if [[ -n "$LOG_LEVEL" ]]
 then config=$(echo "$config" '{"logLevel":'"$LOG_LEVEL"'}' | jq -s '.[0] + .[1]')
 fi
 
-####################
-# Misc Config
-
-version="latest"
-
 ########################################
 # Global services / chain provider config
 
@@ -69,6 +64,7 @@ echo "Starting server node unit tests"
 docker run \
   "${interactive[@]}" \
   --entrypoint="bash" \
+  --env="CI=$CI" \
   --env="VECTOR_CONFIG=$config" \
   --env="VECTOR_DATABASE_URL=postgresql://$project:$project@$postgres_host:5432/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \
@@ -77,4 +73,4 @@ docker run \
   --rm \
   --tmpfs="/tmp" \
   --volume="$root:/root" \
-  "${project}_builder:$version" "/test.sh" "server-node" "$cmd"
+  "${project}_builder:latest" "/test.sh" "server-node" "$cmd"

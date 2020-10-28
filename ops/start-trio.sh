@@ -16,17 +16,12 @@ else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Load Config
+# Misc Config
 
 config=$(
   cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" |\
   jq -s '.[0] + .[1]'
 )
-
-####################
-# Misc Config
-
-version="latest"
 
 common="networks:
       - '$project'
@@ -48,7 +43,7 @@ config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] 
 ########################################
 ## Database config
 
-database_image="${project}_database:$version"
+database_image="postgres:12.3-alpine"
 bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 
 pg_port="5432"
