@@ -265,6 +265,7 @@ prometheus_services="prometheus:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
   cadvisor:
     $common
     image: $cadvisor_image
@@ -290,6 +291,7 @@ grafana_service="grafana:
 # TODO we probably want to remove observability from dev env once it's working
 # bc these make indra take a log longer to wake up
 observability_services="$prometheus_services
+
   $grafana_service"
 
 ####################
