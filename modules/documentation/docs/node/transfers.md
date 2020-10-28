@@ -210,34 +210,42 @@ If the router that you're transferring over [supports it](../router/configure.md
     ```
 If `recipientChainId` or `recipientAssetId` are not provided, then the transfer will default to assuming it needs to be sent with the sender's `chainId` and the passed in `assetId` param respectively.
 
-## Writing Custom Transfer Definitions
+## Custom Transfer Logic
 
-One of the best things about a generalized system like Connext is the ability to specify your own custom conditional transfer logic. This lets you build new types of protocols on top of Connext that leverage our networked state channels in different ways.
+One of the best things about a generalized system like Connext is the ability to specify your own custom conditional transfer logic. This lets you build new protocols and ecosystems on top of Connext that leverage our networked state channels in different ways.
 
 Adding support for a custom conditional transfer is pretty simple! There are three core steps to doing this:
+
 1. Design the conditional transfer and write the `transferDefinition` solidity contract.
 2. Submit the new `transferDefinition` for review so that it can be added to our growing global registry of transfer types.
 3. Call the new transfer with the right params in your offchain code.
 
-### Writing the transferDefinion contract
+### Writing the Transfer Definition Contract
 
-0. In general, you don't need to be too concerned about the logistics of disputing onchain when writing a transfer. all onchain dispute logic (and the protocols that back this security) are pretty abstracted from the process of designing transfers.
-1. The general pattern for a transferDef is to set up some initial condition when creating the transfer and then check that that condition is met when resolving.
-2. First you should set up the `TransferState` and `TransferResolver` structs.
-    - We strongly recommend you keep these as simple as possible. Only include params which will actually be checked or manipulated in the contract, and try to avoid too many nested objects. Not doing so will increase the likelihood that you encounter bugs when writing either the transferEncoding/resolverEncoding or the offchain code when calling the `conditionalTransfer` and `resolveCondition` functions.
-3. Then write the `create()` function. A good strategy for doing this is to work your way down the `TransferState` struct and validate each param. The `create()` function is called when calling `conditionalTransfer()` and is **only** place where the object passed in to `details` is actually validated. So it's useful to do all the param validation you can here. E.g. check to see if inputs are zeroes/empty bytes, etc.
-4. The goal of the `resolve()` function, is to take in the initial `TransferState` + initial balance and the passed in `resolver` to output a final balance. First, you should param validate all of the parts of the `TransferResolver` (you dont need to re-validate the `TransferState`). Then you should check to see if the passed in `resolver` meets some conditions set up against the initial `TransferState` - if it does, you should update the balances and return them. If not, then you should either throw an error (i.e. fail a `require()`) or just return the balance with no changes.
-    - In some cases, we allow the transfer to be cooperatively cancelled by explicitly passing in an empty resolver. That way, there's a way to exit the transfer offchain if something goes wrong without needing to initiate an onchain dispute.
-5. Lastly, you want to write encodings for the transfers. Check out the ABIEncoderV2 docs.
+The only hard requirement for a Transfer Definition is that it adhere's to the [interface defined above](#transfer-definitions). The general pattern for doing this is to set up some initial condition when creating the transfer, and then checking to see if that condition is met before updating balances.
 
-### Submitting the transferDef to our registry
+!!! note
+    In general, you don't need to be too concerned about the logistics of disputing onchain when writing a transfer. all onchain dispute logic (and the protocols that back this security) are pretty abstracted from the process of designing transfers.
 
-We deploy and maintain an onchain registry of `transferDefinition`s
+First, you should determine what goes into your `TransferState` and `TransferResolver` structs. We allow for metadata to be passed as part of a transfer separately, so the only fields in these structs should be those that are validated or manipulated directly as part of the transfer logic. Be sure to write ABIEncoderV2 encodings for both of these structs as defined in the interface.
 
-1. The above is done to ensure that routers in the network only forwarding transfers that are secure and will not lose them money. Aside from validating that the transferDef is a part of the registry, routers do not directly validate state packets themselves (which removes the need for us to make modifications to routers to support new transfers)
-2. We're working on a more structured RFC process for new transfer standards. For now, if you want to add a new transferDefinition, just message us on discord so we can manualy audit your code and add it to the registry!
+!!! warning
+    To minimize time spent debugging Solidity, we strongly recommend you keep these structs and the core logic **as simple as possible**.
 
-### Calling the new transfer
+Next, write the `create()` function. A good strategy is to work your way down the `TransferState` struct and validate each param. The `create()` function is called when calling `conditionalTransfer()` and is **only** place where the object passed in to `details` is actually validated. So it's useful to do all the param validation you can here. E.g. check to see if inputs are zeroes/empty bytes, etc.
+
+Lastly, write the `resolve()` function. The goal of the `resolve()` function, is to take in the initial `TransferState`, initial balance, and the passed in `resolver` to output a final balance. First, you should param validate all of the parts of the `TransferResolver` (you dont need to re-validate the `TransferState`). Then you should check to see if the passed in `resolver` meets some conditions set up against the initial `TransferState` - if it does, you should update the balances and return them. If not, then you should either throw an error (i.e. fail a `require()`) or just return the balance with no changes.
+
+!!! tip 
+    In some cases, we allow the transfer to be cooperatively cancelled by explicitly passing in an empty resolver. That way, there's a way to exit the transfer offchain if something goes wrong without needing to initiate an onchain dispute.
+
+### Submitting the Definition to our Registry
+
+We deploy and maintain a global onchain registry of approved `transferDefinition`s. This makes it possible for routers in the network to safely forward transfer operations without needing to inspect the packets themselves, instead only needing to validate the definition addresses.
+
+We're working on a structured RFC process for supporting new transfer standards. For now, we recommend that you reach out to us directly so that we can manually audit your code and add it to the registry.
+
+### Calling the New Transfer Logic
 
 After you have written the new transferDef, deployed it, and submitted it to us for review, the next step is to call it from your offchain code.
 
