@@ -179,6 +179,7 @@ export class NodeError extends VectorError {
   readonly type = VectorError.errors.NodeError;
 
   static readonly reasons = {
+    ChannelNotFound: "Channel not found",
     InternalServerError: "Failed to send request",
     InvalidParams: "Request has invalid parameters",
     MultinodeProhibitted: "Not allowed to have multiple nodes",
@@ -187,6 +188,8 @@ export class NodeError extends VectorError {
     ProviderNotFound: "Provider not available for chain",
     Timeout: "Timeout",
     TransactionNotMined: "Failed to wait for transaction to be mined",
+    TransferNotActive: "Transfer not found in channel active transfers",
+    TransferNotFound: "Transfer not found",
   } as const;
 
   constructor(

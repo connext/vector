@@ -10,8 +10,10 @@ import {
   ResolveUpdateDetails,
   CreateUpdateDetails,
 } from "@connext/vector-types";
-import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
+import { bufferify, constructRpcRequest, hashCoreTransferState, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
+import { MerkleTree } from "merkletreejs";
+import { utils } from "ethers";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -297,6 +299,125 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
       return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });
+  },
+);
+
+server.post<{ Body: ServerNodeParams.SendDisputeChannelTx }>(
+  "/send-dispute-channel-tx",
+  {
+    schema: {
+      body: ServerNodeParams.SendDisputeChannelTxSchema,
+      response: ServerNodeResponses.SendDisputeChannelTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const chainService = getChainService(request.body.publicIdentifier);
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine || !chainService) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const channelState = await store.getChannelState(request.body.channelAddress);
+    if (!channelState) {
+      return reply.status(404).send({ message: "Channel not found" });
+    }
+    const disputeRes = await chainService.sendDisputeChannelTx(channelState);
+    if (disputeRes.isError) {
+      return reply.status(500).send({ message: disputeRes.getError()!.message.substring(0, 100) });
+    }
+    return reply.status(200).send({ txHash: disputeRes.getValue().hash });
+  },
+);
+
+server.post<{ Body: ServerNodeParams.SendDefundChannelTx }>(
+  "/send-defund-channel-tx",
+  {
+    schema: {
+      body: ServerNodeParams.SendDefundChannelTxSchema,
+      response: ServerNodeResponses.SendDefundChannelTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const chainService = getChainService(request.body.publicIdentifier);
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine || !chainService) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const channelState = await store.getChannelState(request.body.channelAddress);
+    if (!channelState) {
+      return reply.status(404).send({ message: "Channel not found" });
+    }
+    const defundRes = await chainService.sendDefundChannelTx(channelState);
+    if (defundRes.isError) {
+      return reply.status(500).send({ message: defundRes.getError()!.message.substring(0, 100) });
+    }
+    return reply.status(200).send({ txHash: defundRes.getValue().hash });
+  },
+);
+
+server.post<{ Body: ServerNodeParams.SendDisputeTransferTx }>(
+  "/send-dispute-transfer-tx",
+  {
+    schema: {
+      body: ServerNodeParams.SendDisputeTransferTxSchema,
+      response: ServerNodeResponses.SendDisputeTransferTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const chainService = getChainService(request.body.publicIdentifier);
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine || !chainService) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const transfer = await store.getTransferState(request.body.transferId);
+    if (!transfer) {
+      return reply.status(404).send({ message: "Transfer not found" });
+    }
+    const transfers = await store.getActiveTransfers(transfer.channelAddress);
+    // Make sure transfer is active
+    if (!transfers.find(t => t.transferId === transfer.transferId)) {
+      return reply.status(400).send({ message: "Transfer not active" });
+    }
+
+    // Generate merkle proof
+    const hashes = transfers.map(t => bufferify(hashCoreTransferState(t)));
+    const hash = bufferify(hashCoreTransferState(transfer));
+    const merkle = new MerkleTree(hashes, utils.keccak256);
+
+    const disputeRes = await chainService.sendDisputeTransferTx(transfer, merkle.getHexProof(hash));
+    if (disputeRes.isError) {
+      return reply.status(500).send({ message: disputeRes.getError()!.message.substring(0, 100) });
+    }
+    return reply.status(200).send({ txHash: disputeRes.getValue().hash });
+  },
+);
+
+server.post<{ Body: ServerNodeParams.SendDefundTransferTx }>(
+  "/send-defund-transfer-tx",
+  {
+    schema: {
+      body: ServerNodeParams.SendDefundTransferTxSchema,
+      response: ServerNodeResponses.SendDefundTransferTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const chainService = getChainService(request.body.publicIdentifier);
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine || !chainService) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const transfer = await store.getTransferState(request.body.transferId);
+    if (!transfer) {
+      return reply.status(404).send({ message: "Transfer not found" });
+    }
+    const defundRes = await chainService.sendDefundTransferTx(transfer);
+    if (defundRes.isError) {
+      return reply.status(500).send({ message: defundRes.getError()!.message.substring(0, 100) });
+    }
+    return reply.status(200).send({ txHash: defundRes.getValue().hash });
   },
 );
 

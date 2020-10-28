@@ -9,6 +9,7 @@ import {
   EngineEventMap,
   IChannelSigner,
   INodeService,
+  IVectorChainService,
   IVectorEngine,
   NodeError,
   OptionalPublicIdentifier,
@@ -16,11 +17,19 @@ import {
   ServerNodeParams,
   ServerNodeResponses,
 } from "@connext/vector-types";
-import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
+import {
+  bufferify,
+  constructRpcRequest,
+  hydrateProviders,
+  NatsMessagingService,
+  hashCoreTransferState,
+} from "@connext/vector-utils";
+import { MerkleTree } from "merkletreejs";
 import { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
+import { utils } from "ethers";
 
 export type BrowserNodeConfig = {
   natsUrl?: string;
@@ -33,7 +42,7 @@ export type BrowserNodeConfig = {
 };
 
 export class BrowserNode implements INodeService {
-  private constructor(private readonly engine: IVectorEngine) {}
+  private constructor(private readonly engine: IVectorEngine, private readonly chainService: IVectorChainService) {}
 
   static async connect(config: BrowserNodeConfig): Promise<BrowserNode> {
     const chainJsonProviders = hydrateProviders(config.chainProviders);
@@ -51,7 +60,12 @@ export class BrowserNode implements INodeService {
       messaging,
       config.logger.child({ module: "BrowserLockService" }),
     );
-    const chainService = new VectorChainService(store, chainJsonProviders, config.signer, config.logger);
+    const chainService = new VectorChainService(
+      store,
+      chainJsonProviders,
+      config.signer,
+      config.logger.child({ module: "VectorChainService" }),
+    );
     const engine = await VectorEngine.connect(
       messaging,
       lock,
@@ -61,7 +75,7 @@ export class BrowserNode implements INodeService {
       config.chainAddresses,
       config.logger.child({ module: "VectorEngine" }),
     );
-    const node = new BrowserNode(engine);
+    const node = new BrowserNode(engine, chainService);
     return node;
   }
 
@@ -255,6 +269,98 @@ export class BrowserNode implements INodeService {
     } catch (e) {
       return Result.fail(e);
     }
+  }
+
+  //////////////////////
+  /// DISPUTE METHODS
+  async sendDisputeChannelTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeChannelTx>,
+  ): Promise<Result<ServerNodeResponses.SendDisputeChannelTx, NodeError>> {
+    const channelRes = await this.getStateChannel(params);
+    if (!channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(new NodeError(NodeError.reasons.ChannelNotFound, params));
+    }
+    const disputeRes = await this.chainService.sendDisputeChannelTx(channel);
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()! as any);
+    }
+    return Result.ok({ txHash: disputeRes.getValue().hash });
+  }
+
+  async sendDefundChannelTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundChannelTx>,
+  ): Promise<Result<ServerNodeResponses.SendDefundChannelTx, NodeError>> {
+    const channelRes = await this.getStateChannel(params);
+    if (!channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
+    if (!channel) {
+      return Result.fail(new NodeError(NodeError.reasons.ChannelNotFound, params));
+    }
+    const defundRes = await this.chainService.sendDefundChannelTx(channel);
+    if (defundRes.isError) {
+      return Result.fail(defundRes.getError()! as any);
+    }
+    return Result.ok({ txHash: defundRes.getValue().hash });
+  }
+
+  async sendDisputeTransferTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeTransferTx>,
+  ): Promise<Result<ServerNodeResponses.SendDisputeTransferTx, NodeError>> {
+    const transferRes = await this.getTransfer(params);
+    if (!transferRes.isError) {
+      return Result.fail(transferRes.getError()!);
+    }
+    const transfer = transferRes.getValue();
+    if (!transfer) {
+      return Result.fail(new NodeError(NodeError.reasons.TransferNotFound, params));
+    }
+    const activeTransferRes = await this.getActiveTransfers({
+      channelAddress: transfer.chainAddress,
+      publicIdentifier: this.publicIdentifier,
+    });
+    if (activeTransferRes.isError) {
+      return Result.fail(activeTransferRes.getError()!);
+    }
+    const active = activeTransferRes.getValue();
+    if (!active.find(t => t.transferId === transfer.transferId)) {
+      return Result.fail(new NodeError(NodeError.reasons.TransferNotActive, params));
+    }
+
+    // Generate merkle proof
+    const hashes = active.map(t => bufferify(hashCoreTransferState(t)));
+    const hash = bufferify(hashCoreTransferState(transfer));
+    const merkle = new MerkleTree(hashes, utils.keccak256);
+
+    const disputeRes = await this.chainService.sendDisputeTransferTx(transfer, merkle.getHexProof(hash));
+
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()! as any);
+    }
+    return Result.ok({ txHash: disputeRes.getValue().hash });
+  }
+
+  async sendDefundTransferTx(
+    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundTransferTx>,
+  ): Promise<Result<ServerNodeResponses.SendDefundTransferTx, NodeError>> {
+    const transferRes = await this.getTransfer(params);
+    if (!transferRes.isError) {
+      return Result.fail(transferRes.getError()!);
+    }
+    const transfer = transferRes.getValue();
+    if (!transfer) {
+      return Result.fail(new NodeError(NodeError.reasons.TransferNotFound));
+    }
+    const defundRes = await this.chainService.sendDefundTransferTx(transfer);
+    if (defundRes.isError) {
+      return Result.fail(defundRes.getError()! as any);
+    }
+    return Result.ok({ txHash: defundRes.getValue().hash });
   }
 
   waitFor<T extends EngineEvent>(

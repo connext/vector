@@ -26,6 +26,7 @@
     "axios": "0.20.0",
     "dexie": "3.0.2",
     "ethers": "5.0.17",
+    "merkletreejs": "0.2.9",
     "pino": "6.7.0",
     "ts-nats": "1.2.15"
   },
