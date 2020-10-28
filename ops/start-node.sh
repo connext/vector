@@ -35,7 +35,6 @@ admin_token=$(getConfig adminToken)
 messaging_url=$(getConfig messagingUrl)
 aws_access_id=$(getConfig awsAccessId)
 aws_access_key=$(getConfig awsAccessKey)
-domain_name=$(getConfig domainName)
 production=$(getConfig production)
 public_port=$(getConfig port)
 mnemonic=$(getConfig mnemonic)
@@ -140,18 +139,21 @@ else
   database_image="image: '$database_image'
     ports:
       - '$pg_dev_port:5432'"
-  echo "$stack.database will be exposed on *:$pg_dev_port"
+  echo "${stack}_database will be exposed on *:$pg_dev_port"
 fi
 
 ########################################
 ## Node config
 
 node_internal_port="8000"
-node_dev_port="8001"
+node_public_port="${public_port:-8001}"
+public_url="http://127.0.0.1:$node_public_port/ping"
 if [[ $production == "true" ]]
 then
   node_image_name="${project}_node:$version"
-  node_image="image: '$node_image_name'"
+  node_image="image: '$node_image_name'
+    ports:
+      - '$node_public_port:$node_internal_port'"
 else
   node_image_name="${project}_builder:$version";
   node_image="image: '$node_image_name'
@@ -159,8 +161,8 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$node_dev_port:$node_internal_port'"
-  echo "$stack.node configured to be exposed on *:$node_dev_port"
+      - '$node_public_port:$node_internal_port'"
+  echo "${stack}_node will be exposed on *:$node_public_port"
 fi
 bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
 
@@ -177,28 +179,6 @@ then
   then node_image="$node_image
       - '$mnemonic_secret'"
   fi
-fi
-
-####################
-# Proxy config
-
-proxy_image="${project}_${stack}_proxy:$version";
-bash "$root/ops/pull-images.sh" "$proxy_image" > /dev/null
-
-if [[ -n "$domain_name" ]]
-then
-  public_url="https://127.0.0.1:443"
-  proxy_ports="ports:
-      - '80:80'
-      - '443:443'"
-  echo "$stack.proxy will be exposed on *:80 and *:443"
-
-else
-  public_port=${public_port:-3002}
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
 fi
 
 ####################
@@ -238,16 +218,6 @@ volumes:
 
 services:
 
-  proxy:
-    $common
-    image: '$proxy_image'
-    $proxy_ports
-    environment:
-      VECTOR_DOMAINNAME: '$domain_name'
-      VECTOR_NODE_URL: 'node:$node_internal_port'
-    volumes:
-      - 'certs:/etc/letsencrypt'
-
   node:
     $common
     $node_image
@@ -280,12 +250,12 @@ EOF
 
 docker stack deploy -c "$docker_compose" "$stack"
 
-echo "The $stack stack has been deployed, waiting for the $public_url to start responding.."
+echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
 timeout=$(( $(date +%s) + 60 ))
 while true
 do
   res=$(curl -k -m 5 -s "$public_url" || true)
-  if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
+  if [[ -z "$res" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]
     then echo "Timed out waiting for $public_url to respond.." && exit
