@@ -13,10 +13,10 @@
     "test": "ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@ethereum-waffle/chai": "3.1.1",
+    "@ethereum-waffle/chai": "3.1.2",
     "@connext/vector-types": "0.0.3-beta.5",
     "async-mutex": "0.2.4",
-    "axios": "0.20.0",
+    "axios": "0.21.0",
     "bs58check": "2.1.2",
     "caip": "0.9.2",
     "chai": "4.2.0",
@@ -26,7 +26,7 @@
     "eccrypto-js": "5.3.0",
     "eth-crypto": "1.8.0",
     "ethers": "5.0.19",
-    "evt": "1.8.10",
+    "evt": "1.9.2",
     "pino": "6.7.0",
     "pino-pretty": "4.3.0",
     "ts-natsutil": "1.1.1"
