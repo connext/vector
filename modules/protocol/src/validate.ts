@@ -91,6 +91,7 @@ export async function validateOutbound<T extends UpdateType = any>(
       networkContext,
       aliceIdentifier: signer.publicIdentifier,
       bobIdentifier: counterpartyIdentifier,
+      defundNonce: "1",
     };
   }
 
@@ -291,12 +292,16 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   }
 
   // Generate the cosigned commitment
-  const signed = await generateSignedChannelCommitment(
+  const signedRes = await generateSignedChannelCommitment(
     nextState,
     signer,
     validUpdate.aliceSignature,
     validUpdate.bobSignature,
   );
+  if (signedRes.isError) {
+    return Result.fail(new InboundChannelUpdateError(signedRes.getError()?.message as any, validUpdate, nextState));
+  }
+  const signed = signedRes.getValue();
 
   // Add the signature to the state
   const signedNextState = {

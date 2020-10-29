@@ -44,6 +44,10 @@ export type StoredTransactionStatus = keyof typeof StoredTransactionStatus;
 export const TransactionReason = {
   allowance: "allowance",
   approveTokens: "approveTokens",
+  disputeChannel: "disputeChannel",
+  disputeTransfer: "disputeTransfer",
+  defundChannel: "defundChannel",
+  defundTransfer: "defundTransfer",
   depositA: "depositA",
   depositB: "depositB",
   deployWithDepositA: "deployWithDepositA",

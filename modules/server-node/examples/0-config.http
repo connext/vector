@@ -41,7 +41,7 @@ Content-Type: application/json
 
 ##############
 ### CREATE NODE
-POST {{bobUrl}}/node
+POST {{aliceUrl}}/node
 Content-Type: application/json
 
 {

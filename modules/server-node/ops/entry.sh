@@ -20,16 +20,26 @@ then
   export VECTOR_MNEMONIC
 fi
 
-# TODO: if no *_PG_* env vars provided, spin up a sqlite instance locally & use that?
-export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+if [[ -n $VECTOR_PG_HOST ]]
+then
+  echo "Using configured Postgres store at $VECTOR_PG_HOST"
+  export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+else
+  sqlite_file=${VECTOR_SQLITE_FILE:-/tmp/store.sqlite}
+  echo "Using SQLite store at $sqlite_file"
+  touch "$sqlite_file"
+  export VECTOR_DATABASE_URL="sqlite://$sqlite_file"
+fi
 
 ########################################
 # Wait for dependencies to wake up
-
-db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
-echo "Waiting for database at $db"
-wait-for -q -t 60 "$db" 2>&1 | sed '/nc: bad address/d'
-echo "Database is available"
+if [[ -n $VECTOR_PG_HOST ]]
+then
+  db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
+  echo "Waiting for database at $db"
+  wait-for -q -t 60 "$db" 2>&1 | sed '/nc: bad address/d'
+  echo "Database is available"
+fi
 
 ########################################
 # Launch it
@@ -37,6 +47,10 @@ echo "Database is available"
 echo "Running database migration"
 prisma --version
 prisma migrate up --experimental
+
+# TODO: this doesn't work with single container mode
+# echo "Starting database UI"
+# prisma studio &
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then

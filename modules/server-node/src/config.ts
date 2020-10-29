@@ -3,7 +3,7 @@ import Ajv from "ajv";
 
 const ajv = new Ajv();
 
-console.log(`Starting node in env: ${JSON.stringify(process.env, null, 2)}`);
+// console.log(`Starting node in env: ${JSON.stringify(vectorEnv, null, 2)}`);
 
 const mnemonicEnv = process.env.VECTOR_MNEMONIC;
 const dbUrl = process.env.VECTOR_DATABASE_URL;
@@ -18,7 +18,6 @@ try {
 }
 
 // Set defaults
-vectorConfig.redisUrl = vectorConfig.redisUrl || "redis://redis:6379";
 vectorConfig.messagingUrl = vectorConfig.messagingUrl || "http://messaging";
 
 const validate = ajv.compile(VectorNodeConfigSchema);

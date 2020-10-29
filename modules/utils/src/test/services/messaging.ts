@@ -4,6 +4,7 @@ import {
   InboundChannelUpdateError,
   LockError,
   LockInformation,
+  MessagingError,
   OutboundChannelUpdateError,
   Result,
 } from "@connext/vector-types";
@@ -120,6 +121,31 @@ export class MemoryMessagingService implements IMessagingService {
       });
   }
 
+  sendSetupMessage(
+    setupInfo: { chainId: number; timeout: string },
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channelAddress: string }, MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+
+  onReceiveSetupMessage(
+    publicIdentifier: string,
+    callback: (
+      setupInfo: Result<{ chainId: number; timeout: string }, MessagingError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  respondToSetupMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   sendRequestCollateralMessage(
     requestCollateralParams: {} & { amount?: string } & { channelAddress: string; assetId: string },
     to: string,
@@ -129,6 +155,7 @@ export class MemoryMessagingService implements IMessagingService {
   ): Promise<Result<undefined, Error>> {
     throw new Error("Method not implemented.");
   }
+
   onReceiveRequestCollateralMessage(
     publicIdentifier: string,
     callback: (
@@ -139,6 +166,7 @@ export class MemoryMessagingService implements IMessagingService {
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
+
   respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
     throw new Error("Method not implemented.");
   }

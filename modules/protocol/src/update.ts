@@ -12,7 +12,6 @@ import {
   UpdateParams,
   Balance,
   IChannelSigner,
-  CoreTransferState,
   Result,
   FullTransferState,
   IVectorChainReader,
@@ -95,6 +94,7 @@ export async function applyUpdate<T extends UpdateType>(
           networkContext,
           aliceIdentifier: fromIdentifier,
           bobIdentifier: toIdentifier,
+          defundNonce: "1",
         },
       });
     }
@@ -318,7 +318,11 @@ export async function generateUpdate<T extends UpdateType>(
   }
 
   const { channel: updatedChannel, transfer: updatedTransfer } = result.getValue();
-  const commitment = await generateSignedChannelCommitment(updatedChannel, signer);
+  const commitmentRes = await generateSignedChannelCommitment(updatedChannel, signer);
+  if (commitmentRes.isError) {
+    return Result.fail(new OutboundChannelUpdateError(commitmentRes.getError()?.message as any, params, state));
+  }
+  const commitment = commitmentRes.getValue();
   logger.debug(
     {
       method: "generateUpdate",

@@ -53,16 +53,12 @@ common=(
   "--tmpfs=/tmp"
 )
 
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$VECTOR_PROD" == "true" ]]
 then
-  git_tag=$(git tag --points-at HEAD | grep "vector-" | head -n 1)
-  if [[ -z "$version" ]]
-  then
-    if [[ -n "$git_tag" ]]
-    then version="${git_tag#vector-}"
-    else version=$(git rev-parse HEAD | head -c 8)
-    fi
+  # If we're on the prod branch then use the release semvar, otherwise use the commit hash
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
+  then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
+  else version=$(git rev-parse HEAD | head -c 8)
   fi
   image=${project}_test_runner:$version
   echo "Executing $test_cmd w image $image"

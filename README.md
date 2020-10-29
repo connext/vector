@@ -1,4 +1,4 @@
-![master](https://github.com/connext/vector/workflows/Master/badge.svg)
+![production](https://github.com/connext/vector/workflows/Production/badge.svg) [![](https://img.shields.io/discord/454734546869551114?&logo=discord)](https://discord.gg/m93Sqf4) [![](https://img.shields.io/twitter/follow/ConnextNetwork?style=social)](https://twitter.com/ConnextNetwork)
 
 # ↗️ Vector
 
@@ -102,7 +102,6 @@ Any of these values can be overwritten by providing the same key with a new valu
 - `messagingUrl` (type: `string`): The url used to connect to the messaging service.
 - `mnemonic` (type: `string`): Optional. If provided, the node will use this mnemonic. If not provided, the node will use a hard coded mnemonic with testnet funds in dev-mode (production=false). If not provided in prod, docker secrets will be used to manage the mnemonic; this is a much safer place to store a mnemonic that eg holds mainnet funds.
 - `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
-- `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
 
 ### Router Configuration API
 

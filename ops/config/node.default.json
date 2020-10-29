@@ -18,7 +18,6 @@
     "1337": "http://evm_1337:8545",
     "1338": "http://evm_1338:8545"
   },
-  "domainName": "",
   "logLevel": "info",
   "messagingUrl": "",
   "production": false

@@ -223,12 +223,10 @@ export class Agent {
     }
 
     // Setup the channel, did not exist previously
-    const setup = await this.nodeService.requestSetup({
-      aliceUrl: env.rogerUrl,
+    const setup = await this.nodeService.setup({
+      counterpartyIdentifier: this.rogerIdentifier,
       chainId,
       timeout: "360000",
-      aliceIdentifier: this.rogerIdentifier,
-      bobIdentifier: this.publicIdentifier,
     });
     if (setup.isError) {
       throw setup.getError()!;

@@ -14,6 +14,7 @@ export * from "./fs";
 export * from "./hexStrings";
 export * from "./identifiers";
 export * from "./json";
+export * from "./lock";
 export * from "./math";
 export * from "./messaging";
 export * from "./rpc";

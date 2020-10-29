@@ -185,6 +185,7 @@ const convertChannelEntityToFullChannelState = (
       toIdentifier: channelEntity.latestUpdate.toIdentifier,
       type: channelEntity.latestUpdate.type,
     },
+    defundNonce: channelEntity.nonce.toString(),
   };
   return channel;
 };
@@ -469,7 +470,7 @@ export class PrismaStore implements IServerNodeStore {
     return convertChannelEntityToFullChannelState(channelEntity);
   }
 
-  async getChannelStates(): Promise<FullChannelState<any>[]> {
+  async getChannelStates(): Promise<FullChannelState[]> {
     const channelEntities = await this.prisma.channel.findMany({ include: { balances: true, latestUpdate: true } });
     return channelEntities.map(convertChannelEntityToFullChannelState);
   }
@@ -609,6 +610,7 @@ export class PrismaStore implements IServerNodeStore {
         publicIdentifierA: channelState.aliceIdentifier,
         publicIdentifierB: channelState.bobIdentifier,
         timeout: channelState.timeout,
+        defundNonce: channelState.defundNonce,
         balances: {
           create: channelState.assetIds.reduce(
             (create: BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {

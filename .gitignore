@@ -1,5 +1,7 @@
 # Config & sensitive data
 *.config.json
+modules/browser-node-test-ui/config-node.json
+.*.sqlite
 
 # Build Output
 **/*.0x
@@ -17,7 +19,7 @@ config-prod.json
 
 # Cache
 **/.bot-store
-**/.buidler
+**/.hardhat
 **/.cache
 **/.config
 **/.connext-store/**

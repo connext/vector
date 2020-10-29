@@ -21,7 +21,7 @@ module.exports = {
 
   resolve: {
     mainFields: ["main", "module"],
-    extensions: [".js", ".wasm", ".ts", ".json"],
+    extensions: [".js", ".ts", ".json"],
     symlinks: false,
   },
 
@@ -51,11 +51,6 @@ module.exports = {
             configFile: path.join(__dirname, "../tsconfig.json"),
           },
         },
-      },
-      {
-        test: /\.wasm$/,
-        type: "javascript/auto",
-        loaders: ["wasm-loader"],
       },
     ],
   },

@@ -19,7 +19,6 @@ Any of these values can be overwritten by providing the same key with a new valu
 - `messagingUrl` (type: `string`): The url used to access the messaging service
 - `mnemonic` (type: `string`): Optional. If provided, the node will use this mnemonic. If not provided, the node will use a hard coded mnemonic with testnet funds in dev-mode (production=false). If not provided in prod, docker secrets will be used to manage the mnemonic; this is a much safer place to store a mnemonic that eg holds mainnet funds.
 - `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
-- `redisUrl` (type: `string`): The URL of the redis instance used to negotiate channel-locks.
 
 ### Prod Configuration API
 
@@ -37,8 +36,25 @@ Be careful, changes to this file will be applied to both `node` & `router` stack
   - if `false`, the `global` stack will start up 2 local testnet evm.
   - Mnemonic handling is affected, see docs for the `mnemonic` key in node config.
 
-## Example Configurations
+## Single-Container Mode
 
-### Basic
+Using the `start` scripts in the Vector Makefile requires docker-compose. To run a `server-node` as a single container without docker-compose, do the following:
 
-### Multiple Chains
+* Create a config file using the above instructions.
+
+* Pull the Docker image from the repo:
+```shell
+$ docker pull connextproject/vector_node
+```
+* Create a volume for the persisted database (can also use a bind-mounted file here):
+```shell
+$ docker volume create vector_node_store
+```
+* Run the node container with the proper env vars (Note: Replace `latest` tag with a released version number in prod!):
+```shell
+$ docker run --env VECTOR_CONFIG="$(cat node.config.json)" --env VECTOR_PROD=true --env VECTOR_SQLITE_FILE="/database/store.db" -p "8000:8000" --mount type=volume,source=vector_node_store,destination=/database --name vector_node --rm connextproject/vector_node:latest
+...
+
+$ curl http://localhost:8000/ping
+pong
+```

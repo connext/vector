@@ -46,7 +46,6 @@ admin_token=$(getConfig adminToken)
 messaging_url=$(getConfig messagingUrl)
 aws_access_id=$(getConfig awsAccessId)
 aws_access_key=$(getConfig awsAccessKey)
-domain_name=$(getConfig domainName)
 production=$(getConfig production)
 public_port=$(getConfig port)
 mnemonic=$(getConfig mnemonic)
@@ -63,21 +62,15 @@ echo "Preparing to launch $stack stack (prod=$production)"
 ####################
 # Misc Config
 
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$production" == "true" ]]
 then
-  if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
+  # If we're on the prod branch then use the release semvar, otherwise use the commit hash
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
   then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
   else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
-
-builder_image="${project}_builder:$version";
-bash "$root/ops/pull-images.sh" "$builder_image" > /dev/null
-
-redis_image="redis:5-alpine";
-bash "$root/ops/pull-images.sh" "$redis_image" > /dev/null
 
 common="networks:
       - '$project'
@@ -158,28 +151,32 @@ else
   database_image="image: '$database_image'
     ports:
       - '$pg_dev_port:5432'"
-  echo "$stack.database will be exposed on *:$pg_dev_port"
+  echo "${stack}_database will be exposed on *:$pg_dev_port"
 fi
 
 ########################################
 ## Node config
 
 node_internal_port="8000"
-node_dev_port="8002"
+node_public_port="${public_port:-8002}"
+public_url="http://127.0.0.1:$node_public_port/ping"
 if [[ $production == "true" ]]
 then
-  node_image_name="${project}_node"
-  bash "$root/ops/pull-images.sh" "$version" "$node_image_name" > /dev/null
-  node_image="image: '$node_image_name:$version'"
+  node_image_name="${project}_node:$version"
+  node_image="image: '$node_image_name'
+    ports:
+      - '$node_public_port:$node_internal_port'"
 else
-  node_image="image: '${project}_builder'
+  node_image_name="${project}_builder:$version";
+  node_image="image: '$node_image_name'
     entrypoint: 'bash modules/server-node/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
-      - '$node_dev_port:$node_internal_port'"
-  echo "$stack.node configured to be exposed on *:$node_dev_port"
+      - '$node_public_port:$node_internal_port'"
+  echo "${stack}_node will be exposed on *:$node_public_port"
 fi
+bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
 
 # Add whichever secrets we're using to the node's service config
 if [[ -n "$db_secret" || -n "$mnemonic_secret" ]]
@@ -204,18 +201,19 @@ router_dev_port="9000"
 
 if [[ $production == "true" ]]
 then
-  router_image_name="${project}_router"
-  bash "$root/ops/pull-images.sh" "$version" "$router_image_name" > /dev/null
-  router_image="image: '$router_image_name:$version'"
+  router_image_name="${project}_router:$version"
+  router_image="image: '$router_image_name'"
 else
-  router_image="image: '${project}_builder'
+  router_image_name="${project}_builder:$version";
+  router_image="image: '$router_image_name'
     entrypoint: 'bash modules/router/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
       - '$router_dev_port:$router_internal_port'"
-  echo "$stack.router configured to be exposed on *:$router_dev_port"
+  echo "${stack}_router will be exposed on *:$router_dev_port"
 fi
+bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
 
 # Add whichever secrets we're using to the router's service config
 if [[ -n "$db_secret" ]]
@@ -223,28 +221,6 @@ then
   router_image="$router_image
     secrets:
       - '$db_secret'"
-fi
-
-####################
-# Proxy config
-
-proxy_image="${project}_${stack}_proxy:$version";
-bash "$root/ops/pull-images.sh" "$proxy_image" > /dev/null
-
-if [[ -n "$domain_name" ]]
-then
-  public_url="https://127.0.0.1:443"
-  proxy_ports="ports:
-      - '80:80'
-      - '443:443'"
-  echo "$stack.proxy will be exposed on *:80 and *:443"
-
-else
-  public_port=${public_port:-3003}
-  public_url="http://127.0.0.1:$public_port"
-  proxy_ports="ports:
-      - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
 fi
 
 ####################
@@ -268,6 +244,7 @@ prometheus_services="prometheus:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
   cadvisor:
     $common
     image: $cadvisor_image
@@ -293,6 +270,7 @@ grafana_service="grafana:
 # TODO we probably want to remove observability from dev env once it's working
 # bc these make indra take a log longer to wake up
 observability_services="$prometheus_services
+
   $grafana_service"
 
 ####################
@@ -331,17 +309,6 @@ volumes:
   database:
 
 services:
-
-  proxy:
-    $common
-    image: '$proxy_image'
-    $proxy_ports
-    environment:
-      VECTOR_DOMAINNAME: '$domain_name'
-      VECTOR_NODE_URL: 'node:$node_internal_port'
-      VECTOR_ROUTER_URL: 'router:$router_internal_port'
-    volumes:
-      - 'certs:/etc/letsencrypt'
 
   node:
     $common
@@ -385,28 +352,23 @@ services:
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PROD: '$production'
 
-  redis:
-    $common
-    image: '$redis_image'
-
   $observability_services
 
 EOF
 
 docker stack deploy -c "$docker_compose" "$stack"
 
-echo "The $stack stack has been deployed, waiting for the proxy to start responding.."
+echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
 timeout=$(( $(date +%s) + 60 ))
 while true
 do
   res=$(curl -k -m 5 -s "$public_url" || true)
-  if [[ -z "$res" || "$res" == "Waiting for proxy to wake up" ]]
+  if [[ -z "$res" || "$res" == "Waiting for node to wake up" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]
-    then echo "Timed out waiting for proxy to respond.." && exit
+    then echo "Timed out waiting for $public_url to respond.." && exit
     else sleep 2
     fi
   else echo "Good Morning!" && exit;
   fi
 done
-

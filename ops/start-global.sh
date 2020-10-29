@@ -38,9 +38,12 @@ public_port=$(getConfig port)
 
 # Do we need to spin up local evms or will the node use external ones?
 node_config=$root/node.config.json
-if [[ -f "$node_config" ]]
+router_config=$root/router.config.json
+if [[ -f "$node_config" || -f "$router_config" ]]
 then
-  given_providers=$(jq '.chainProviders' "$node_config" | tr -d '\n\r ')
+  given_providers=$(
+    cat "$node_config" "$router_config" | jq -s '.[0] + .[1] | .chainProviders' | tr -d '\n\r '
+  )
   default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
   if [[ "$default_providers" == "$given_providers" ]]
   then use_local_evms="true";
@@ -54,21 +57,18 @@ fi
 
 echo "Preparing to launch $stack stack (prod=$production)"
 
-########################################
-## Docker registry & image version config
+####################
+# Misc Config
 
-# prod version: if we're on a tagged commit then use the tagged semvar, otherwise use the hash
 if [[ "$production" == "true" ]]
 then
-  if [[ -n "$(git tag --points-at HEAD | grep "vector-" | head -n 1)" ]]
+  # If we're on the prod branch then use the release semvar, otherwise use the commit hash
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
   then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
   else version=$(git rev-parse HEAD | head -c 8)
   fi
 else version="latest"
 fi
-
-####################
-# Misc Config
 
 common="networks:
       - '$project'
@@ -76,19 +76,6 @@ common="networks:
       driver: 'json-file'
       options:
           max-size: '100m'"
-
-####################
-# Redis config (Used by duet & trio)
-
-if [[ "$production" = "true" ]]
-then redis_service=""
-else
-  redis_image="redis:5-alpine";
-  bash "$root/ops/pull-images.sh" "$redis_image" > /dev/null
-  redis_service="redis:
-    $common
-    image: '$redis_image'"
-fi
 
 ####################
 # Nats config
@@ -123,8 +110,8 @@ auth_port="5040"
 if [[ "$production" == "true" ]]
 then
   auth_image_name="${project}_auth:$version";
-  auth_image="image: '$auth_image_name'"
   bash "$root/ops/pull-images.sh" "$auth_image_name" > /dev/null
+  auth_image="image: '$auth_image_name'"
 
 else
   auth_image_name="${project}_builder:latest";
@@ -135,7 +122,7 @@ else
       - '$auth_port:$auth_port'
     volumes:
       - '$root:/root'"
-  echo "$stack.auth configured to be exposed on *:$auth_port"
+  echo "${stack}_auth will be exposed on *:$auth_port"
 fi
 
 ####################
@@ -150,7 +137,7 @@ then
 
   evm_port_1="8545"
   evm_port_2="8546"
-  echo "$stack.evms are configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
+  echo "${stack}_evms will be exposed on *:$evm_port_1 and *:$evm_port_2"
 
   chain_data="$root/.chaindata"
   rm -rf "$chain_data"
@@ -159,9 +146,9 @@ then
   mkdir -p "$chain_data_1" "$chain_data_2"
 
   evm_image_name="${project}_ethprovider:$version";
+  bash "$root/ops/pull-images.sh" "$evm_image_name" > /dev/null
   evm_image="image: '$evm_image_name'
     tmpfs: /tmp"
-  bash "$root/ops/pull-images.sh" "$evm_image_name" > /dev/null
 
   evm_services="evm_$chain_id_1:
     $common
@@ -196,18 +183,18 @@ bash "$root/ops/pull-images.sh" "$proxy_image" > /dev/null
 
 if [[ -n "$domain_name" ]]
 then
-  public_url="https://127.0.0.1:443/ping"
+  public_url="https://$domain_name/ping"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
-  echo "$stack.proxy will be exposed on *:80 and *:443"
+  echo "${stack}_proxy will be exposed on *:80 and *:443"
 
 else
   public_port=${public_port:-3001}
   public_url="http://127.0.0.1:$public_port/ping"
   proxy_ports="ports:
       - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
+  echo "${stack}_proxy will be exposed on *:$public_port"
 fi
 
 ####################
@@ -267,11 +254,8 @@ services:
       - '$jwt_public_key_secret'
     ports:
       - '4222:4222'
-      - '4221:4221'
 
   $evm_services
-
-  $redis_service
 
 EOF
 
