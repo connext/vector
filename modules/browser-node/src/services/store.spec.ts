@@ -113,7 +113,6 @@ describe("store", () => {
         }),
       );
       const retrieved = await store.getChannelStates();
-      console.log("*** retrieved", retrieved);
       expect(retrieved.sort()).to.be.deep.eq([c1, c2].sort());
       expect(retrieved.length).to.be.eq(2);
     });
