@@ -41,32 +41,12 @@ fi
 ########################################
 # Launch stack
 
-function cleanup {
-  echo "Tests finished, stopping database.."
-  docker container stop "$postgres_host" 2> /dev/null || true
-}
-trap cleanup EXIT SIGINT SIGTERM
-
-postgres_host="${project}_database_test_$unit"
-echo "Starting postgres w url postgresql://$project:$project@${project}_database:5432/$project"
-docker run \
-  --detach \
-  --env="POSTGRES_DB=$project" \
-  --env="POSTGRES_PASSWORD=$project" \
-  --env="POSTGRES_USER=$project" \
-  --name="$postgres_host" \
-  --network="$project" \
-  --rm \
-  --tmpfs="/var/lib/postgresql/data" \
-  postgres:12-alpine
-
 echo "Starting server node unit tests"
 docker run \
   "${interactive[@]}" \
   --entrypoint="bash" \
   --env="CI=$CI" \
   --env="VECTOR_CONFIG=$config" \
-  --env="VECTOR_DATABASE_URL=postgresql://$project:$project@$postgres_host:5432/$project" \
   --env="VECTOR_MNEMONIC=$alice_mnemonic" \
   --name="${project}_test_$unit" \
   --network "$project" \
