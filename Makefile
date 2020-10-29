@@ -183,9 +183,9 @@ watch-engine: contracts-bundle protocol
 	bash ops/test-unit.sh engine watch 1341
 
 test-server-node: server-node-js
-	bash ops/test-server-node.sh test
+	bash ops/test-unit.sh server-node test
 watch-server-node: engine
-	bash ops/test-server-node.sh watch
+	bash ops/test-unit.sh server-node watch
 
 test-browser-node: browser-node
 	bash ops/test-unit.sh browser-node test
