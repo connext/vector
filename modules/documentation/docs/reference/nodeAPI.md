@@ -481,7 +481,7 @@ None
 
 `ServerNodeResponses.GetChannelStates` object. Contains:
 
-- `FullChannelState[]`: `object[]` - Array of [channel states](#full-channel-state).
+- `string[]`: Array of all `channelAddresses` found in store
 
 ### getStateChannel
 
@@ -514,7 +514,7 @@ Gets a channel given its `channelAddress`.
 
 EITHER `ServerNodeResponses.GetChannelState` object. Contains:
 
-- `FullChannelState`: `object` - [Channel state](#full-channel-state).
+- `string[]`: Array of all `channelAddresses` found in store
 
 OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/error.ts#L177)
 
