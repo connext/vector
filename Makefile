@@ -92,8 +92,8 @@ restart-global: stop-global
 stop-global:
 	@bash ops/stop.sh global
 
-start-browser-node-test-ui: browser-node
-	@bash ops/start-browser-node-test-ui.sh
+start-test-ui: browser-node
+	@bash ops/start-test-ui.sh
 
 stop-all:
 	@bash ops/stop.sh trio

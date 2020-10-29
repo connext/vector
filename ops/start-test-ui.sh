@@ -14,7 +14,7 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-node_config=$(cat "$root/modules/browser-node-test-ui/config-node.json")
+node_config=$(cat "$root/modules/test-ui/config-node.json")
 
 function getConfig { echo "$node_config" | jq ".$1" | tr -d '"'; }
 
@@ -31,4 +31,4 @@ docker run \
   --rm \
   --tmpfs="/tmp" \
   --volume="$root:/root" \
-  "${project}_builder" -c "cd ./modules/browser-node-test-ui && npm start"
+  "${project}_builder" -c "cd ./modules/test-ui && npm start"

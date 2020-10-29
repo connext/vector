@@ -1,5 +1,5 @@
 {
-  "name": "@connext/vector-browser-node-test-ui",
+  "name": "@connext/vector-test-ui",
   "version": "0.0.1",
   "private": true,
   "dependencies": {
