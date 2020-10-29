@@ -98,7 +98,7 @@ describe("store", () => {
   });
 
   describe("getChannelStates", () => {
-    it.only("should return all channel states", async () => {
+    it("should return all channel states", async () => {
       const c1 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc1111") });
       const c2 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc2222") });
       await Promise.all(
