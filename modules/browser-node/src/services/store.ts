@@ -100,9 +100,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   ): Promise<void> {
     await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
       await this.db.channels.put(channelState);
-      if (!transfer) {
-        return;
-      }
       if (channelState.latestUpdate.type === UpdateType.create) {
         await this.db.transfers.put({
           ...transfer!,
