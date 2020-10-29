@@ -41,7 +41,7 @@ all: dev prod browser-node
 global: auth-js ethprovider global-proxy nats
 global-prod: auth-img global-proxy nats
 
-node: global database server-node-js
+node: global server-node-img
 node-prod: global-prod database server-node-img
 
 router: node router-js
