@@ -31,7 +31,7 @@
     "@ethersproject/constants": "5.0.5",
     "@openzeppelin/contracts": "3.2.1-solc-0.7",
     "ethers": "5.0.19",
-    "hardhat": "2.0.1",
+    "hardhat": "2.0.2",
     "keccak": "3.0.1",
     "merkletreejs": "0.2.9",
     "p-queue": "6.6.2",
