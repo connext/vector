@@ -54,7 +54,7 @@ echo "Preparing to launch $stack stack (prod=$production)"
 if [[ "$production" == "true" ]]
 then
   # If we're on the prod branch then use the release semvar, otherwise use the commit hash
-  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
+  if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" || "${GITHUB_REF##*/}" == "prod" ]]
   then version=$(grep -m 1 '"version":' package.json | cut -d '"' -f 4)
   else version=$(git rev-parse HEAD | head -c 8)
   fi
