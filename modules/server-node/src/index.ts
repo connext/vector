@@ -5,8 +5,8 @@ import {
   ChannelRpcMethods,
   EngineEvent,
   ChainError,
-  ServerNodeParams,
-  ServerNodeResponses,
+  NodeParams,
+  NodeResponses,
   ResolveUpdateDetails,
   CreateUpdateDetails,
 } from "@connext/vector-types";
@@ -49,7 +49,7 @@ server.get("/ping", async () => {
   return "pong\n";
 });
 
-server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema } }, async (request, reply) => {
+server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, async (request, reply) => {
   const nodes = getNodes();
   return reply.status(200).send(
     nodes.map(node => {
@@ -62,9 +62,9 @@ server.get("/config", { schema: { response: ServerNodeResponses.GetConfigSchema 
   );
 });
 
-server.get<{ Params: ServerNodeParams.GetChannelState }>(
+server.get<{ Params: NodeParams.GetChannelState }>(
   "/:publicIdentifier/channels/:channelAddress",
-  { schema: { params: ServerNodeParams.GetChannelStateSchema } },
+  { schema: { params: NodeParams.GetChannelStateSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -85,9 +85,9 @@ server.get<{ Params: ServerNodeParams.GetChannelState }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
+server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
   "/:publicIdentifier/channels/counterparty/:counterparty/chain-id/:chainId",
-  { schema: { params: ServerNodeParams.GetChannelStateByParticipantsSchema } },
+  { schema: { params: NodeParams.GetChannelStateByParticipantsSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -111,9 +111,9 @@ server.get<{ Params: ServerNodeParams.GetChannelStateByParticipants }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetTransferState }>(
+server.get<{ Params: NodeParams.GetTransferState }>(
   "/:publicIdentifier/transfers/:transferId",
-  { schema: { params: ServerNodeParams.GetTransferStateSchema } },
+  { schema: { params: NodeParams.GetTransferStateSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -135,9 +135,9 @@ server.get<{ Params: ServerNodeParams.GetTransferState }>(
 
 // find transfers with same routingId across multiple channels
 // i.e. to forward transfer resolution
-server.get<{ Params: ServerNodeParams.GetTransferStatesByRoutingId }>(
+server.get<{ Params: NodeParams.GetTransferStatesByRoutingId }>(
   "/:publicIdentifier/transfers/routing-id/:routingId",
-  { schema: { params: ServerNodeParams.GetTransferStatesByRoutingIdSchema } },
+  { schema: { params: NodeParams.GetTransferStatesByRoutingIdSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -157,9 +157,9 @@ server.get<{ Params: ServerNodeParams.GetTransferStatesByRoutingId }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
+server.get<{ Params: NodeParams.GetTransferStateByRoutingId }>(
   "/:publicIdentifier/channels/:channelAddress/transfers/routing-id/:routingId",
-  { schema: { params: ServerNodeParams.GetTransferStateByRoutingIdSchema } },
+  { schema: { params: NodeParams.GetTransferStateByRoutingIdSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -179,9 +179,9 @@ server.get<{ Params: ServerNodeParams.GetTransferStateByRoutingId }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
+server.get<{ Params: NodeParams.GetActiveTransfersByChannelAddress }>(
   "/:publicIdentifier/channels/:channelAddress/active-transfers",
-  { schema: { params: ServerNodeParams.GetActiveTransfersByChannelAddressSchema } },
+  { schema: { params: NodeParams.GetActiveTransfersByChannelAddressSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -200,9 +200,10 @@ server.get<{ Params: ServerNodeParams.GetActiveTransfersByChannelAddress }>(
     }
   },
 );
-server.get<{ Params: ServerNodeParams.GetChannelStates }>(
+
+server.get<{ Params: NodeParams.GetChannelStates }>(
   "/:publicIdentifier/channels",
-  { schema: { params: ServerNodeParams.GetChannelStatesSchema, response: ServerNodeResponses.GetChannelStatesSchema } },
+  { schema: { params: NodeParams.GetChannelStatesSchema, response: NodeResponses.GetChannelStatesSchema } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {
@@ -211,7 +212,13 @@ server.get<{ Params: ServerNodeParams.GetChannelStates }>(
     const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
     try {
       const res = await engine.request<"chan_getChannelStates">(params);
-      return reply.status(200).send(res.map(chan => chan.channelAddress));
+      // OPTIMIZATION: use db query instead of filter
+      const filtered = res.filter(
+        chan =>
+          chan.aliceIdentifier === request.params.publicIdentifier ||
+          chan.bobIdentifier === request.params.publicIdentifier,
+      );
+      return reply.status(200).send(filtered.map(chan => chan.channelAddress));
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -219,9 +226,9 @@ server.get<{ Params: ServerNodeParams.GetChannelStates }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.Setup }>(
+server.post<{ Body: NodeParams.Setup }>(
   "/internal-setup",
-  { schema: { body: ServerNodeParams.SetupSchema, response: ServerNodeResponses.SetupSchema } },
+  { schema: { body: NodeParams.SetupSchema, response: NodeResponses.SetupSchema } },
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
@@ -242,9 +249,9 @@ server.post<{ Body: ServerNodeParams.Setup }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.RequestSetup }>(
+server.post<{ Body: NodeParams.RequestSetup }>(
   "/setup",
-  { schema: { body: ServerNodeParams.RequestSetupSchema, response: ServerNodeResponses.RequestSetupSchema } },
+  { schema: { body: NodeParams.RequestSetupSchema, response: NodeResponses.RequestSetupSchema } },
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
@@ -265,9 +272,9 @@ server.post<{ Body: ServerNodeParams.RequestSetup }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.SendDepositTx }>(
+server.post<{ Body: NodeParams.SendDepositTx }>(
   "/send-deposit-tx",
-  { schema: { body: ServerNodeParams.SendDepositTxSchema, response: ServerNodeResponses.SendDepositTxSchema } },
+  { schema: { body: NodeParams.SendDepositTxSchema, response: NodeResponses.SendDepositTxSchema } },
   async (request, reply) => {
     const chainService = getChainService(request.body.publicIdentifier);
     const engine = getNode(request.body.publicIdentifier);
@@ -296,9 +303,9 @@ server.post<{ Body: ServerNodeParams.SendDepositTx }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.Deposit }>(
+server.post<{ Body: NodeParams.Deposit }>(
   "/deposit",
-  { schema: { body: ServerNodeParams.DepositSchema, response: ServerNodeResponses.DepositSchema } },
+  { schema: { body: NodeParams.DepositSchema, response: NodeResponses.DepositSchema } },
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
@@ -319,9 +326,9 @@ server.post<{ Body: ServerNodeParams.Deposit }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.RequestCollateral }>(
+server.post<{ Body: NodeParams.RequestCollateral }>(
   "/request-collateral",
-  { schema: { body: ServerNodeParams.RequestCollateralSchema, response: ServerNodeResponses.RequestCollateralSchema } },
+  { schema: { body: NodeParams.RequestCollateralSchema, response: NodeResponses.RequestCollateralSchema } },
   async (request, reply) => {
     const engine = getNode(request.body.publicIdentifier);
     if (!engine) {
@@ -339,12 +346,12 @@ server.post<{ Body: ServerNodeParams.RequestCollateral }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
+server.post<{ Body: NodeParams.ConditionalTransfer }>(
   "/transfers/create",
   {
     schema: {
-      body: ServerNodeParams.ConditionalTransferSchema,
-      response: ServerNodeResponses.ConditionalTransferSchema,
+      body: NodeParams.ConditionalTransferSchema,
+      response: NodeResponses.ConditionalTransferSchema,
     },
   },
   async (request, reply) => {
@@ -360,7 +367,7 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
-      } as ServerNodeResponses.ConditionalTransfer);
+      } as NodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -368,12 +375,12 @@ server.post<{ Body: ServerNodeParams.ConditionalTransfer }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
+server.post<{ Body: NodeParams.ResolveTransfer }>(
   "/transfers/resolve",
   {
     schema: {
-      body: ServerNodeParams.ResolveTransferSchema,
-      response: ServerNodeResponses.ResolveTransferSchema,
+      body: NodeParams.ResolveTransferSchema,
+      response: NodeResponses.ResolveTransferSchema,
     },
   },
   async (request, reply) => {
@@ -387,7 +394,7 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
       return reply.status(200).send({
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
-      } as ServerNodeResponses.ResolveTransfer);
+      } as NodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -395,12 +402,12 @@ server.post<{ Body: ServerNodeParams.ResolveTransfer }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.Withdraw }>(
+server.post<{ Body: NodeParams.Withdraw }>(
   "/withdraw",
   {
     schema: {
-      body: ServerNodeParams.WithdrawSchema,
-      response: ServerNodeResponses.WithdrawSchema,
+      body: NodeParams.WithdrawSchema,
+      response: NodeResponses.WithdrawSchema,
     },
   },
   async (request, reply) => {
@@ -415,7 +422,7 @@ server.post<{ Body: ServerNodeParams.Withdraw }>(
         channelAddress: channel.channelAddress,
         transferId: (channel.latestUpdate.details as ResolveUpdateDetails).transferId,
         transactionHash,
-      } as ServerNodeResponses.Withdraw);
+      } as NodeResponses.Withdraw);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -423,12 +430,12 @@ server.post<{ Body: ServerNodeParams.Withdraw }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.RegisterListener }>(
+server.post<{ Body: NodeParams.RegisterListener }>(
   "/event/subscribe",
   {
     schema: {
-      body: ServerNodeParams.RegisterListenerSchema,
-      response: ServerNodeResponses.RegisterListenerSchema,
+      body: NodeParams.RegisterListenerSchema,
+      response: NodeResponses.RegisterListenerSchema,
     },
   },
   async (request, reply) => {
@@ -450,12 +457,12 @@ server.post<{ Body: ServerNodeParams.RegisterListener }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetListener }>(
+server.get<{ Params: NodeParams.GetListener }>(
   "/:publicIdentifier/event/:eventName",
   {
     schema: {
-      params: ServerNodeParams.GetListenerSchema,
-      response: ServerNodeResponses.GetListenerSchema,
+      params: NodeParams.GetListenerSchema,
+      response: NodeResponses.GetListenerSchema,
     },
   },
   async (request, reply) => {
@@ -467,12 +474,12 @@ server.get<{ Params: ServerNodeParams.GetListener }>(
   },
 );
 
-server.get<{ Params: ServerNodeParams.GetListeners }>(
+server.get<{ Params: NodeParams.GetListeners }>(
   "/:publicIdentifier/event",
   {
     schema: {
-      params: ServerNodeParams.GetListenersSchema,
-      response: ServerNodeResponses.GetListenersSchema,
+      params: NodeParams.GetListenersSchema,
+      response: NodeResponses.GetListenersSchema,
     },
   },
   async (request, reply) => {
@@ -481,9 +488,9 @@ server.get<{ Params: ServerNodeParams.GetListeners }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.Admin }>(
+server.post<{ Body: NodeParams.Admin }>(
   "/clear-store",
-  { schema: { body: ServerNodeParams.AdminSchema, response: ServerNodeResponses.AdminSchema } },
+  { schema: { body: NodeParams.AdminSchema, response: NodeResponses.AdminSchema } },
   async (request, reply) => {
     if (request.body.adminToken !== config.adminToken) {
       return reply.status(401).send({ message: "Unauthorized" });
@@ -497,9 +504,9 @@ server.post<{ Body: ServerNodeParams.Admin }>(
   },
 );
 
-server.post<{ Body: ServerNodeParams.CreateNode }>(
+server.post<{ Body: NodeParams.CreateNode }>(
   "/node",
-  { schema: { body: ServerNodeParams.CreateNodeSchema, response: ServerNodeResponses.CreateNodeSchema } },
+  { schema: { body: NodeParams.CreateNodeSchema, response: NodeResponses.CreateNodeSchema } },
   async (request, reply) => {
     try {
       let storedMnemonic = await store.getMnemonic();
@@ -515,7 +522,7 @@ server.post<{ Body: ServerNodeParams.CreateNode }>(
         index: request.body.index,
         publicIdentifier: newNode.publicIdentifier,
         signerAddress: newNode.signerAddress,
-      } as ServerNodeResponses.CreateNode);
+      } as NodeResponses.CreateNode);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
       return reply.status(500).send({ message: e.message });

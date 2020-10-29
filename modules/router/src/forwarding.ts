@@ -2,11 +2,11 @@ import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   Result,
-  ServerNodeResponses,
+  NodeResponses,
   Values,
   VectorError,
   RouterSchemas,
-  ServerNodeParams,
+  NodeParams,
   TRANSFER_DECREMENT,
   INodeService,
   NodeError,
@@ -15,7 +15,6 @@ import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
 
 import { getSwappedAmount } from "./services/swap";
-import { getRebalanceProfile } from "./services/rebalance";
 import { IRouterStore } from "./services/store";
 import { ChainJsonProviders } from "./listener";
 import { requestCollateral } from "./collateral";
@@ -261,7 +260,7 @@ export async function forwardTransferResolution(
   service: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
-): Promise<Result<undefined | ServerNodeResponses.ResolveTransfer, ForwardResolutionError>> {
+): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardResolutionError>> {
   const method = "forwardTransferResolution";
   logger.info(
     { data, method, node: { signerAddress, publicIdentifier } },
@@ -296,7 +295,7 @@ export async function forwardTransferResolution(
   }
 
   // Resolve the sender transfer
-  const resolveParams: ServerNodeParams.ResolveTransfer = {
+  const resolveParams: NodeParams.ResolveTransfer = {
     channelAddress: incomingTransfer.channelAddress,
     transferId: incomingTransfer.transferId,
     meta: {},
