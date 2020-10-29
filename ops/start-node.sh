@@ -131,10 +131,8 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-docker run \
-  "$entrypoint" \
-  "$mount_db" \
-  "$mount_root" \
+# shellcheck disable=SC2086
+docker run $entrypoint $mount_db $mount_root \
   "${interactive[@]}" \
   --detach \
   --env="VECTOR_CONFIG=$(echo "$config" | tr -d '\n\r')" \
