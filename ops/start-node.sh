@@ -8,6 +8,10 @@ project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
+if grep -qs "${project}_node\>" <<<"$(docker container ls --filter 'status=running' --format '{{.ID}} {{.Names}}')"
+then echo "A vector node is already running" && exit 0;
+fi
+
 ####################
 # Load config
 
@@ -86,6 +90,19 @@ node_public_port="${public_port:-8001}"
 public_url="http://127.0.0.1:$node_public_port/ping"
 echo "node will be exposed on *:$node_public_port"
 
+if [[ "$production" == "true" ]]
+then
+  node_image_name="${project}_node:$version"
+  mount_root=""
+  entrypoint=""
+  arg=""
+else
+  node_image_name="${project}_builder:$version"
+  mount_root="--volume=$root:/root"
+  entrypoint="--entrypoint=bash"
+  arg="modules/server-node/ops/entry.sh"
+fi
+
 node_image_name="${project}_node:$version"
 bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
 
@@ -96,11 +113,13 @@ bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
 # If we're using local evms, the node shouldn't perist data either
 if [[ "$use_local_evms" == "true" ]]
 then
-  db_file="/data/store.sqlite"
-  mount="--mount=$root/.node.sqlite:/data/store.sqlite"
+  local_db_file="$root/.node.sqlite"
+  internal_db_file="/data/store.sqlite"
+  touch "$local_db_file"
+  mount_db="--volume=$local_db_file:$internal_db_file"
 else
-  db_file="/tmp/store.sqlite"
-  mount=""
+  internal_db_file="/tmp/store.sqlite"
+  mount_db=""
 fi
 
 ####################
@@ -113,16 +132,21 @@ else echo "Running in non-interactive mode"
 fi
 
 docker run \
-  "$mount" \
+  "$entrypoint" \
+  "$mount_db" \
+  "$mount_root" \
   "${interactive[@]}" \
-  --network="$project" \
+  --detach \
   --env="VECTOR_CONFIG=$(echo "$config" | tr -d '\n\r')" \
-  --env="VECTOR_DATABASE_URL=sqlite://$db_file" \
+  --env="VECTOR_DATABASE_URL=sqlite://$internal_db_file" \
   --env="VECTOR_MNEMONIC=$eth_mnemonic" \
   --env="VECTOR_PROD=$production" \
+  --name="${project}_node" \
+  --network="$project" \
   --publish="$node_public_port:$node_internal_port" \
+  --rm \
   --tmpfs="/tmp" \
-  "${project}_node:$version"
+  "$node_image_name" "$arg"
 
 echo "The node has been deployed, waiting for $public_url to start responding.."
 timeout=$(( $(date +%s) + 60 ))
