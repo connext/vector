@@ -470,7 +470,7 @@ export class PrismaStore implements IServerNodeStore {
     return convertChannelEntityToFullChannelState(channelEntity);
   }
 
-  async getChannelStates(): Promise<FullChannelState<any>[]> {
+  async getChannelStates(): Promise<FullChannelState[]> {
     const channelEntities = await this.prisma.channel.findMany({ include: { balances: true, latestUpdate: true } });
     return channelEntities.map(convertChannelEntityToFullChannelState);
   }
