@@ -10,7 +10,7 @@ commit=$(git rev-parse HEAD | head -c 8)
 images="auth builder database ethprovider global_proxy nats node node_proxy router router_proxy test_runner"
 
 # Also push a semver-tagged image if we're on prod
-if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" ]]
+if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" || "${GITHUB_REF##*/}" == "prod" ]]
 then semver="$release"
 else semver=""
 fi
