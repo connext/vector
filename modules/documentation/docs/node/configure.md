@@ -52,7 +52,7 @@ $ docker volume create vector_node_store
 ```
 * Run the node container with the proper env vars (Note: Replace `latest` tag with a released version number in prod!):
 ```shell
-$ docker run --env VECTOR_CONFIG="$(cat node.config.json)" --env VECTOR_PROD=true --env VECTOR_SQLITE_FILE="/database/store.db" -p "8000:8000" --mount type=volume,source=vector_node_store,destination=/database --name vector_node --rm vector_node:latest
+$ docker run --env VECTOR_CONFIG="$(cat node.config.json)" --env VECTOR_PROD=true --env VECTOR_SQLITE_FILE="/database/store.db" -p "8000:8000" --mount type=volume,source=vector_node_store,destination=/database --name vector_node --rm connextproject/vector_node:latest
 ...
 
 $ curl http://localhost:8000/ping

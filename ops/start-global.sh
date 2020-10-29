@@ -122,7 +122,7 @@ else
       - '$auth_port:$auth_port'
     volumes:
       - '$root:/root'"
-  echo "$stack.auth configured to be exposed on *:$auth_port"
+  echo "${stack}_auth will be exposed on *:$auth_port"
 fi
 
 ####################
@@ -137,7 +137,7 @@ then
 
   evm_port_1="8545"
   evm_port_2="8546"
-  echo "$stack.evms are configured to be exposed on *:$evm_port_1 and *:$evm_port_2"
+  echo "${stack}_evms will be exposed on *:$evm_port_1 and *:$evm_port_2"
 
   chain_data="$root/.chaindata"
   rm -rf "$chain_data"
@@ -183,18 +183,18 @@ bash "$root/ops/pull-images.sh" "$proxy_image" > /dev/null
 
 if [[ -n "$domain_name" ]]
 then
-  public_url="https://127.0.0.1:443/ping"
+  public_url="https://$domain_name/ping"
   proxy_ports="ports:
       - '80:80'
       - '443:443'"
-  echo "$stack.proxy will be exposed on *:80 and *:443"
+  echo "${stack}_proxy will be exposed on *:80 and *:443"
 
 else
   public_port=${public_port:-3001}
   public_url="http://127.0.0.1:$public_port/ping"
   proxy_ports="ports:
       - '$public_port:80'"
-  echo "$stack.proxy will be exposed on *:$public_port"
+  echo "${stack}_proxy will be exposed on *:$public_port"
 fi
 
 ####################

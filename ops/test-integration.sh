@@ -47,6 +47,7 @@ common=(
   "--env=VECTOR_DAVE_URL=http://dave:8000"
   "--env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error}"
   "--env=VECTOR_MESSAGING_URL=http://messaging"
+  "--env=VECTOR_NODE_CONTAINER_URL=http://vector_node:8000"
   "--env=VECTOR_NODE_URL=http://node:8000"
   "--env=VECTOR_PROD=${production}"
   "--env=VECTOR_ROGER_URL=http://roger:8000"

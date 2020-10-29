@@ -9,6 +9,7 @@ export const env = {
   daveUrl: process.env.VECTOR_DAVE_URL || "http://dave:8000",
   logLevel: process.env.VECTOR_LOG_LEVEL || "error",
   nodeUrl: process.env.VECTOR_NODE_URL || "http://node:8000",
+  nodeContainerUrl: process.env.VECTOR_NODE_CONTAINER_URL || "http://vector_node:8000",
   rogerUrl: process.env.VECTOR_ROGER_URL || "http://roger:8000",
   routerUrl: process.env.VECTOR_ROUTER_URL || "http://router:8008",
   sugarDaddy: process.env.SUGAR_DADDY || "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",

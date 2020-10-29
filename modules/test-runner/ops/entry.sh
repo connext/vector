@@ -35,7 +35,7 @@ then
 
 elif [[ "$stack" == "node" ]]
 then
-  wait_for "node" "$VECTOR_NODE_URL"
+  wait_for "node" "$VECTOR_NODE_CONTAINER_URL"
 
 elif [[ "$stack" == "duet" ]]
 then
