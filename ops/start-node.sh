@@ -113,13 +113,13 @@ bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
 # If we're using local evms, the node shouldn't perist data either
 if [[ "$use_local_evms" == "true" ]]
 then
+  internal_db_file="/tmp/store.sqlite"
+  mount_db=""
+else
   local_db_file="$root/.node.sqlite"
   internal_db_file="/data/store.sqlite"
   touch "$local_db_file"
   mount_db="--volume=$local_db_file:$internal_db_file"
-else
-  internal_db_file="/tmp/store.sqlite"
-  mount_db=""
 fi
 
 ####################
