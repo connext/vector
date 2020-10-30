@@ -92,6 +92,7 @@ export async function validateOutbound<T extends UpdateType = any>(
       aliceIdentifier: signer.publicIdentifier,
       bobIdentifier: counterpartyIdentifier,
       defundNonce: "1",
+      inDispute: false,
     };
   }
 

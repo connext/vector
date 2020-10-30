@@ -186,6 +186,7 @@ const convertChannelEntityToFullChannelState = (
       type: channelEntity.latestUpdate.type,
     },
     defundNonce: channelEntity.nonce.toString(),
+    inDispute: channelEntity.inDispute,
   };
   return channel;
 };
@@ -194,6 +195,7 @@ const convertTransferEntityToFullTransferState = (
   transfer: Transfer & { channel: Channel | null; createUpdate: Update | null; resolveUpdate: Update | null },
 ) => {
   const fullTransfer: FullTransferState = {
+    inDispute: transfer.inDispute,
     channelFactoryAddress: transfer.channel!.channelFactoryAddress,
     assetId: transfer.createUpdate!.assetId,
     chainId: transfer.channel!.chainId,
@@ -483,6 +485,7 @@ export class PrismaStore implements IServerNodeStore {
     const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
+            inDispute: false,
             channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
             routingId: transfer!.meta.routingId ?? getRandomBytes32(),
@@ -592,6 +595,7 @@ export class PrismaStore implements IServerNodeStore {
     await this.prisma.channel.upsert({
       where: { channelAddress: channelState.channelAddress },
       create: {
+        inDispute: false,
         assetIds,
         activeTransfers: {
           ...activeTransfers,

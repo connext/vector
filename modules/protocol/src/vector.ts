@@ -220,6 +220,8 @@ export class Vector implements IVectorProtocol {
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
+    // setup listeners to halt signing if channel is in dispute
+
     await Promise.all(
       channels.map(channel =>
         sync
