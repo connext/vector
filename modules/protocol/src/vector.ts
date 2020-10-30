@@ -1,3 +1,4 @@
+import { VectorChannel } from "@connext/vector-contracts";
 import {
   IVectorStore,
   UpdateParams,
@@ -17,13 +18,16 @@ import {
   ProtocolParams,
   IExternalValidation,
   ChannelUpdate,
+  Contract,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import Ajv from "ajv";
+import { BigNumber, constants } from "ethers";
 import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
+import { provider } from "./testing/constants";
 import { getParamsFromUpdate } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
@@ -220,8 +224,67 @@ export class Vector implements IVectorProtocol {
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
-    // setup listeners to halt signing if channel is in dispute
 
+    // Handle disputes
+    // First check on current dispute status of all channels onchain
+    // Since we have no way of knowing the last time the protocol
+    // connected, we must check this on startup
+    const currBlock = await provider.getBlockNumber();
+    // TODO: is there a better way to do this?
+    await Promise.all(
+      channels.map(async channel => {
+        const disputeRes = await this.chainReader.getChannelDispute(
+          channel.channelAddress,
+          channel.networkContext.chainId,
+        );
+        if (disputeRes.isError) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
+            "Could not get dispute",
+          );
+          return;
+        }
+        const dispute = disputeRes.getValue();
+        if (!dispute) {
+          return;
+        }
+        try {
+          // if the dispute has expired, save that the channel is no
+          // longer in dispute
+          if (BigNumber.from(currBlock).lte(dispute.defundExpiry)) {
+            // make store call IFF needed
+            if (channel.inDispute) {
+              await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, dispute);
+            }
+            return;
+          }
+          // otherwise, save dispute record
+          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
+        } catch (e) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: e.message },
+            "Failed to update dispute on startup",
+          );
+        }
+
+        // Register listeners to update all disputes while the protocol is
+        // online and actively connected
+        const contract = new Contract(channel.channelAddress, VectorChannel.abi, this.signer);
+        contract.on(contract.filters.ChannelDisputed(), async event => {
+          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, event.dispute);
+        });
+        contract.on(contract.filters.ChannelDefunded(), async event => {
+          await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, event.dispute);
+        });
+        contract.on(contract.filters.TransferDisputed(), async event => {
+          await this.storeService.saveChannelDispute(
+            { ...channel, inDispute: true },
+            { ...event.dispute, transferId: event.transferId },
+          );
+        });
+        // TODO: properly handle transfer defunding
+      }),
+    );
     await Promise.all(
       channels.map(channel =>
         sync
