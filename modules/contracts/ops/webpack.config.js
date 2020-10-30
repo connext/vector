@@ -4,7 +4,7 @@ module.exports = {
   mode: "development",
   target: "node",
 
-  entry: path.join(__dirname, "../src.ts/cli.ts"),
+  entry: [path.join(__dirname, "../src.ts/cli.ts"), path.join(__dirname, "../src.ts/index.ts")],
 
   node: {
     __filename: false,
@@ -43,6 +43,10 @@ module.exports = {
             configFile: path.join(__dirname, "../tsconfig.json"),
           },
         },
+      },
+      {
+        test: /\.json$/,
+        exclude: /package.json/,
       },
     ],
   },
