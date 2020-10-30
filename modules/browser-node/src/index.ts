@@ -26,10 +26,10 @@ import {
 } from "@connext/vector-utils";
 import { MerkleTree } from "merkletreejs";
 import { BaseLogger } from "pino";
+import { utils } from "ethers";
 
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
-import { utils } from "ethers";
 
 export type BrowserNodeConfig = {
   natsUrl?: string;
@@ -274,8 +274,8 @@ export class BrowserNode implements INodeService {
   //////////////////////
   /// DISPUTE METHODS
   async sendDisputeChannelTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeChannelTx>,
-  ): Promise<Result<ServerNodeResponses.SendDisputeChannelTx, NodeError>> {
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>> {
     const channelRes = await this.getStateChannel(params);
     if (!channelRes.isError) {
       return Result.fail(channelRes.getError()!);
@@ -292,8 +292,8 @@ export class BrowserNode implements INodeService {
   }
 
   async sendDefundChannelTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundChannelTx>,
-  ): Promise<Result<ServerNodeResponses.SendDefundChannelTx, NodeError>> {
+    params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>> {
     const channelRes = await this.getStateChannel(params);
     if (!channelRes.isError) {
       return Result.fail(channelRes.getError()!);
@@ -310,8 +310,8 @@ export class BrowserNode implements INodeService {
   }
 
   async sendDisputeTransferTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeTransferTx>,
-  ): Promise<Result<ServerNodeResponses.SendDisputeTransferTx, NodeError>> {
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>> {
     const transferRes = await this.getTransfer(params);
     if (!transferRes.isError) {
       return Result.fail(transferRes.getError()!);
@@ -346,8 +346,8 @@ export class BrowserNode implements INodeService {
   }
 
   async sendDefundTransferTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundTransferTx>,
-  ): Promise<Result<ServerNodeResponses.SendDefundTransferTx, NodeError>> {
+    params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>> {
     const transferRes = await this.getTransfer(params);
     if (!transferRes.isError) {
       return Result.fail(transferRes.getError()!);
