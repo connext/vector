@@ -306,7 +306,7 @@ const PostSendDefundTransferTxResponseSchema = {
 
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace ServerNodeParams {
+export namespace NodeParams {
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
 
@@ -384,7 +384,7 @@ export namespace ServerNodeParams {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace ServerNodeResponses {
+export namespace NodeResponses {
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdResponseSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdResponseSchema["200"]>;
 

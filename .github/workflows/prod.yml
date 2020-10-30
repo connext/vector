@@ -165,20 +165,6 @@ jobs:
         if: failure()
         run: docker service ls && docker service logs --tail 200 global_auth
 
-  node-prod:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v1
-      - run: make pull
-      - run: jq '.production = true' ops/config/global.default.json > global.config.json
-      - run: jq '.production = true' ops/config/node.default.json > node.config.json
-      - run: make restart-node
-      - run: bash ops/test-integration.sh node
-      - name: Print logs
-        if: failure()
-        run: docker service ls && docker service logs --tail 200 node_node
-
   routing-node-prod:
     runs-on: ubuntu-latest
     needs: [build]
@@ -197,7 +183,7 @@ jobs:
     env:
       DOMAINNAME: testnet-vector.connext.network
       MESSAGING_URL: https://messaging.connext.network
-    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, global, duet, trio, node, routing-node, global-prod, node-prod, routing-node-prod]
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, global, duet, trio, node, routing-node, global-prod, routing-node-prod]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1

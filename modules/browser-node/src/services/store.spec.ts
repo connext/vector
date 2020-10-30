@@ -18,6 +18,7 @@ import {
   getSignerAddressFromPublicIdentifier,
   createTestTxResponse,
   mkPublicIdentifier,
+  mkAddress,
 } from "@connext/vector-utils";
 import { constants } from "ethers";
 import indexedDB from "fake-indexeddb";
@@ -40,6 +41,81 @@ describe("store", () => {
 
   after(async () => {
     await store.disconnect();
+  });
+
+  describe("getChannelStateByParticipants", () => {
+    it("should work (regardless of order)", async () => {
+      const channel = createTestChannelState("deposit");
+      await store.saveChannelState(channel, {
+        channelFactoryAddress: channel.networkContext.channelFactoryAddress,
+        chainId: channel.networkContext.chainId,
+        aliceSignature: channel.latestUpdate.aliceSignature,
+        bobSignature: channel.latestUpdate.bobSignature,
+        state: channel,
+      });
+
+      expect(
+        await store.getChannelStateByParticipants(
+          channel.aliceIdentifier,
+          channel.bobIdentifier,
+          channel.networkContext.chainId,
+        ),
+      ).to.be.deep.eq(channel);
+
+      expect(
+        await store.getChannelStateByParticipants(
+          channel.bobIdentifier,
+          channel.aliceIdentifier,
+          channel.networkContext.chainId,
+        ),
+      ).to.be.deep.eq(channel);
+    });
+  });
+
+  describe("getTransferByRoutingId", () => {
+    it("should work", async () => {
+      const channel = createTestChannelState("create");
+      const transfer = createTestFullHashlockTransferState({
+        channelAddress: channel.channelAddress,
+        meta: { routingId: getRandomBytes32() },
+      });
+      await store.saveChannelState(
+        channel,
+        {
+          channelFactoryAddress: channel.networkContext.channelFactoryAddress,
+          chainId: channel.networkContext.chainId,
+          aliceSignature: channel.latestUpdate.aliceSignature,
+          bobSignature: channel.latestUpdate.bobSignature,
+          state: channel,
+        },
+        transfer,
+      );
+
+      expect(await store.getTransferByRoutingId(channel.channelAddress, transfer.meta!.routingId)).to.be.deep.eq(
+        transfer,
+      );
+    });
+  });
+
+  describe("getChannelStates", () => {
+    it("should return all channel states", async () => {
+      const c1 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc1111") });
+      const c2 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc2222") });
+      await Promise.all(
+        [c1, c2].map(c => {
+          return store.saveChannelState(c, {
+            channelFactoryAddress: c.networkContext.channelFactoryAddress,
+            chainId: c.networkContext.chainId,
+            aliceSignature: c.latestUpdate.aliceSignature,
+            bobSignature: c.latestUpdate.bobSignature,
+            state: c,
+          });
+        }),
+      );
+      const retrieved = await store.getChannelStates();
+      expect(retrieved.sort()).to.be.deep.eq([c1, c2].sort());
+      expect(retrieved.length).to.be.eq(2);
+    });
   });
 
   it("should save transaction responses and receipts", async () => {

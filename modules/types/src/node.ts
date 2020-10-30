@@ -1,6 +1,6 @@
 import { EngineEvent, EngineEventMap } from "./engine";
 import { NodeError, Result } from "./error";
-import { ServerNodeParams, ServerNodeResponses } from "./schemas";
+import { NodeParams, NodeResponses } from "./schemas";
 
 // NOTE: This interface will also wrap server nodes that support a default
 // publicIdentifier (i.e. use a default index). This means that the interface
@@ -16,83 +16,79 @@ export interface INodeService {
   signerAddress: string;
 
   getStateChannelByParticipants(
-    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelStateByParticipants>,
-  ): Promise<Result<ServerNodeResponses.GetChannelStateByParticipants, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
+  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>>;
 
   getStateChannels(
-    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelStates>,
-  ): Promise<Result<ServerNodeResponses.GetChannelStates, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.GetChannelStates>,
+  ): Promise<Result<NodeResponses.GetChannelStates, NodeError>>;
 
   getStateChannel(
-    params: OptionalPublicIdentifier<ServerNodeParams.GetChannelState>,
-  ): Promise<Result<ServerNodeResponses.GetChannelState, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
+  ): Promise<Result<NodeResponses.GetChannelState, NodeError>>;
 
   getTransferByRoutingId(
-    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferStateByRoutingId>,
-  ): Promise<Result<ServerNodeResponses.GetTransferStateByRoutingId, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
+  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, NodeError>>;
 
   getTransfersByRoutingId(
-    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferStatesByRoutingId>,
-  ): Promise<Result<ServerNodeResponses.GetTransferStatesByRoutingId, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.GetTransferStatesByRoutingId>,
+  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, NodeError>>;
 
   getTransfer(
-    params: OptionalPublicIdentifier<ServerNodeParams.GetTransferState>,
-  ): Promise<Result<ServerNodeResponses.GetTransferState, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.GetTransferState>,
+  ): Promise<Result<NodeResponses.GetTransferState, NodeError>>;
 
   getActiveTransfers(
-    params: OptionalPublicIdentifier<ServerNodeParams.GetActiveTransfersByChannelAddress>,
-  ): Promise<Result<ServerNodeResponses.GetActiveTransfersByChannelAddress, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
+  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>>;
 
-  createNode(params: ServerNodeParams.CreateNode): Promise<Result<ServerNodeResponses.CreateNode, NodeError>>;
+  createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>>;
 
   setup(
-    params: OptionalPublicIdentifier<ServerNodeParams.RequestSetup>,
-  ): Promise<Result<ServerNodeResponses.RequestSetup, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
+  ): Promise<Result<NodeResponses.RequestSetup, NodeError>>;
 
-  internalSetup(
-    params: OptionalPublicIdentifier<ServerNodeParams.Setup>,
-  ): Promise<Result<ServerNodeResponses.Setup, NodeError>>;
+  internalSetup(params: OptionalPublicIdentifier<NodeParams.Setup>): Promise<Result<NodeResponses.Setup, NodeError>>;
 
   sendDepositTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDepositTx>,
-  ): Promise<Result<ServerNodeResponses.SendDepositTx, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.SendDepositTx>,
+  ): Promise<Result<NodeResponses.SendDepositTx, NodeError>>;
 
   reconcileDeposit(
-    params: OptionalPublicIdentifier<ServerNodeParams.Deposit>,
-  ): Promise<Result<ServerNodeResponses.Deposit, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.Deposit>,
+  ): Promise<Result<NodeResponses.Deposit, NodeError>>;
 
   requestCollateral(
-    params: OptionalPublicIdentifier<ServerNodeParams.RequestCollateral>,
-  ): Promise<Result<ServerNodeResponses.RequestCollateral, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.RequestCollateral>,
+  ): Promise<Result<NodeResponses.RequestCollateral, NodeError>>;
 
   conditionalTransfer(
-    params: OptionalPublicIdentifier<ServerNodeParams.ConditionalTransfer>,
-  ): Promise<Result<ServerNodeResponses.ConditionalTransfer, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.ConditionalTransfer>,
+  ): Promise<Result<NodeResponses.ConditionalTransfer, NodeError>>;
 
   resolveTransfer(
-    params: OptionalPublicIdentifier<ServerNodeParams.ResolveTransfer>,
-  ): Promise<Result<ServerNodeResponses.ResolveTransfer, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.ResolveTransfer>,
+  ): Promise<Result<NodeResponses.ResolveTransfer, NodeError>>;
 
   // Dispute methods
   sendDisputeChannelTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeChannelTx>,
-  ): Promise<Result<ServerNodeResponses.SendDisputeChannelTx, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>>;
 
   sendDefundChannelTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundChannelTx>,
-  ): Promise<Result<ServerNodeResponses.SendDefundChannelTx, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>>;
 
   sendDisputeTransferTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDisputeTransferTx>,
-  ): Promise<Result<ServerNodeResponses.SendDisputeTransferTx, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>>;
 
   sendDefundTransferTx(
-    params: OptionalPublicIdentifier<ServerNodeParams.SendDefundTransferTx>,
-  ): Promise<Result<ServerNodeResponses.SendDefundTransferTx, NodeError>>;
+    params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
 
-  withdraw(
-    params: OptionalPublicIdentifier<ServerNodeParams.Withdraw>,
-  ): Promise<Result<ServerNodeResponses.Withdraw, NodeError>>;
+  withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
 
   once<T extends EngineEvent>(
     event: T,

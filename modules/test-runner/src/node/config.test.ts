@@ -5,7 +5,7 @@ import { env } from "../utils";
 
 describe("Node Config", () => {
   it("should ping when we pong", async () => {
-    const res = await axios.get(`${env.nodeUrl}/ping`);
+    const res = await axios.get(`${env.nodeContainerUrl}/ping`);
     expect(res.data).to.equal("pong\n");
   });
 });

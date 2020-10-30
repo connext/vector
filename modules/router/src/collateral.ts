@@ -1,11 +1,4 @@
-import {
-  FullChannelState,
-  INodeService,
-  Result,
-  ServerNodeResponses,
-  Values,
-  VectorError,
-} from "@connext/vector-types";
+import { FullChannelState, INodeService, Result, NodeResponses, Values, VectorError } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import { BaseLogger } from "pino";
@@ -43,7 +36,7 @@ export const requestCollateral = async (
   logger: BaseLogger,
   requestedAmount?: string,
   transferAmount?: string, // used when called internally
-): Promise<Result<undefined | ServerNodeResponses.Deposit, RequestCollateralError>> => {
+): Promise<Result<undefined | NodeResponses.Deposit, RequestCollateralError>> => {
   const profileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
@@ -133,5 +126,5 @@ export const requestCollateral = async (
     );
   }
 
-  return depositRes as Result<ServerNodeResponses.Deposit>;
+  return depositRes as Result<NodeResponses.Deposit>;
 };

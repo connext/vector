@@ -16,17 +16,12 @@ else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Load Config
+# Misc Config
 
 config=$(
   cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" |\
   jq -s '.[0] + .[1]'
 )
-
-####################
-# Misc Config
-
-version="latest"
 
 common="networks:
       - '$project'
@@ -39,14 +34,16 @@ common="networks:
 # Global services / chain provider config
 
 bash "$root/ops/start-global.sh"
-
+if [[ ! -f "$root/.chaindata/chain-addresses.json" ]]
+then echo "Can't run $stack against external providers yet" && exit 1
+fi
 chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
 config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
 
 ########################################
 ## Database config
 
-database_image="${project}_database:$version"
+database_image="postgres:12.3-alpine"
 bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 
 pg_port="5432"
@@ -95,15 +92,15 @@ node_env="environment:
 ## Router config
 
 router_port="8000"
-router_exposed_port="8009"
-echo "$stack.router will be exposed on *:$router_exposed_port"
+router_public_port="8009"
+echo "$stack.router will be exposed on *:$router_public_port"
 
 router_image="image: '${project}_builder'
     entrypoint: 'bash modules/router/ops/entry.sh'
     volumes:
       - '$root:/root'
     ports:
-      - '$router_exposed_port:$router_port'"
+      - '$router_public_port:$router_port'"
 
 ####################
 # Observability tools config

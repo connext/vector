@@ -30,7 +30,7 @@ do
   for version in $versions
   do
     name="$image:$version"
-    if grep -qs "$version" <<<"$(docker image ls | grep "$image")"
+    if grep -qs "$version" <<<"$(docker image ls | grep "$image\>")"
     then echo "Image $name already exists locally"
     else
 

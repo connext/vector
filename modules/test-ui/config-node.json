@@ -1,0 +1,17 @@
+{
+  "adminToken": "cxt1234",
+  "messagingUrl": "https://messaging.connext.network",
+  "logLevel": "info",
+  "chainAddresses": {
+    "4": {
+      "channelFactoryAddress": "0x70b3673264E9D56Cc8e53597bF3105eF281a5a0c",
+      "hashlockTransferAddress": "0xd69ABEf7eF08957F47d5B060B63D0b71Ee8d4621",
+      "withdrawAddress": "0xc5E4115B8fB081c828Fe65763e1038152FAA3213",
+      "transferRegistryAddress": "0x268ee7145a1c717d36dAfcF402b51ac4BAdD6388"
+    }
+  },
+  "chainProviders": {
+    "4": "https://eth-rinkeby.alchemyapi.io/jsonrpc/bCywUgYiEekiGcXSY8v8IwKBKy3Kj1wy"
+  },
+  "port": 3333
+}

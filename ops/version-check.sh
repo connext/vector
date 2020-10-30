@@ -5,8 +5,6 @@ root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
 # Packages that we should never report as being out-of-date:
-# - We don't want contract addresses to change so no more solidity-related upgrades
-# - Newest react-scripts version breaks daicard, don't use it
 do_not_upgrade='@connext/'
 
 # Format string describing how each line looks
@@ -25,7 +23,7 @@ echo "===== Package: $project/package.json"
 npm outdated -D | tail -n +2 | awk '$3 != $4' | format | sed "$filter_cmd"
 echo
 
-for package in package.json modules/*/package.json modules/*/ops/package.json
+for package in modules/*/package.json modules/*/ops/package.json
 do
   cd "$(dirname "$package")" || exit 1
   echo "===== Package: $project/$(dirname "$package")/package.json"
