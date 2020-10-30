@@ -80,6 +80,7 @@ export class ValidationError extends VectorError {
     TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
     ExternalValidationFailed: "Failed external validation",
+    InDispute: "Channel currently in dispute",
   } as const;
 
   constructor(

@@ -101,6 +101,10 @@ export async function validateOutbound<T extends UpdateType = any>(
     return returnError(ValidationError.reasons.ChannelNotFound);
   }
 
+  if (state.inDispute) {
+    return returnError(ValidationError.reasons.InDispute);
+  }
+
   // Get the active transfers for applying the update
   const activeTransfers = await storeService.getActiveTransfers(params.channelAddress);
 
@@ -357,6 +361,10 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       ),
     );
   };
+
+  if (previousState.inDispute) {
+    return returnError(ValidationError.reasons.InDispute);
+  }
 
   const { channelAddress, fromIdentifier, toIdentifier, type, nonce, balance, assetId, details } = counterpartyUpdate;
   // Get the active transfers for the channel
