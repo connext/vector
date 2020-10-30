@@ -273,16 +273,15 @@ export class Vector implements IVectorProtocol {
         contract.on(contract.filters.ChannelDisputed(), async event => {
           await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, event.dispute);
         });
-        contract.on(contract.filters.ChannelDefunded(), async event => {
-          await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, event.dispute);
-        });
+        // contract.on(contract.filters.ChannelDefunded(), async event => {
+        //   await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, event.dispute);
+        // });
         contract.on(contract.filters.TransferDisputed(), async event => {
           await this.storeService.saveChannelDispute(
             { ...channel, inDispute: true },
             { ...event.dispute, transferId: event.transferId },
           );
         });
-        // TODO: properly handle transfer defunding
       }),
     );
     await Promise.all(
