@@ -2,7 +2,7 @@
 
 ## Next Release
 
-## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.3
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
 
 - Fix webpack configs for browser node.
 
