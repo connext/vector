@@ -11,6 +11,7 @@ import {
   INodeService,
   NodeError,
 } from "@connext/vector-types";
+import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 import { BigNumber } from "ethers";
 
@@ -59,7 +60,7 @@ export class ForwardResolutionError extends VectorError {
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
-  publicIdentifier: string,
+  routerPublicIdentifier: string,
   signerAddress: string,
   nodeService: INodeService,
   store: IRouterStore,
@@ -68,7 +69,7 @@ export async function forwardTransferCreation(
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.error(
-    { data, method, node: { signerAddress, publicIdentifier } },
+    { data, method, node: { signerAddress, routerPublicIdentifier } },
     "Received transfer event, starting forwarding",
   );
 
@@ -114,7 +115,7 @@ export async function forwardTransferCreation(
 
   const senderChannelRes = await nodeService.getStateChannel({
     channelAddress: senderChannelAddress,
-    publicIdentifier,
+    publicIdentifier: routerPublicIdentifier,
   });
   if (senderChannelRes.isError) {
     return Result.fail(
@@ -164,7 +165,7 @@ export async function forwardTransferCreation(
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
-    publicIdentifier,
+    publicIdentifier: routerPublicIdentifier,
     counterparty: recipientIdentifier,
     chainId: recipientChainId,
   });
@@ -180,29 +181,38 @@ export async function forwardTransferCreation(
   if (!recipientChannel) {
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.RecipientChannelNotFound, {
-        participants: [publicIdentifier, recipientIdentifier],
+        participants: [routerPublicIdentifier, recipientIdentifier],
         chainId: recipientChainId,
       }),
     );
   }
 
-  const requestCollateralRes = await requestCollateral(
+  const routerBalance = getBalanceForAssetId(
     recipientChannel,
     recipientAssetId,
-    publicIdentifier,
-    nodeService,
-    chainProviders,
-    logger,
-    undefined,
-    recipientAmount,
+    routerPublicIdentifier === recipientChannel.aliceIdentifier ? "alice" : "bob",
   );
-  if (requestCollateralRes.isError) {
-    return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-        message: requestCollateralRes.getError()?.message,
-        context: requestCollateralRes.getError()?.context,
-      }),
+
+  if (BigNumber.from(routerBalance).lt(recipientAmount)) {
+    logger.info({ routerBalance, recipientAmount }, "Requesting collateral to cover transfer");
+    const requestCollateralRes = await requestCollateral(
+      recipientChannel,
+      recipientAssetId,
+      routerPublicIdentifier,
+      nodeService,
+      chainProviders,
+      logger,
+      undefined,
+      recipientAmount,
     );
+    if (requestCollateralRes.isError) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+          message: requestCollateralRes.getError()?.message,
+          context: requestCollateralRes.getError()?.context,
+        }),
+      );
+    }
   }
 
   // If the above is not the case, we can make the transfer!
@@ -219,7 +229,7 @@ export async function forwardTransferCreation(
       .sub(TRANSFER_DECREMENT)
       .toString(),
     type: transferDefinition,
-    publicIdentifier,
+    publicIdentifier: routerPublicIdentifier,
     details,
     meta: {
       // Node is never the initiator, that is always payment sender

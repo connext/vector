@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.0.3-beta.5",
+  "version": "0.0.5",
   "license": "ISC",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "keywords": [
@@ -21,13 +21,13 @@
   ],
   "scripts": {
     "build": "rm -rf dist && npx hardhat compile && tsc",
-    "build-bundle": "webpack --config ops/webpack.config.js",
+    "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
     "test": "mocha --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.0.3-beta.5",
-    "@connext/vector-utils": "0.0.3-beta.5",
+    "@connext/vector-types": "0.0.5",
+    "@connext/vector-utils": "0.0.5",
     "@ethersproject/constants": "5.0.5",
     "@openzeppelin/contracts": "3.2.1-solc-0.7",
     "ethers": "5.0.19",
