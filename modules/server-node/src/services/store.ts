@@ -14,6 +14,8 @@ import {
   StoredTransaction,
   TransactionReason,
   StoredTransactionStatus,
+  ChannelDispute,
+  TransferDispute,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
@@ -231,6 +233,23 @@ export class PrismaStore implements IServerNodeStore {
 
   constructor(private readonly dbUrl?: string) {
     this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+  }
+
+  async saveChannelDispute(
+    channel: FullChannelState<any>,
+    channelDispute: ChannelDispute,
+    transferDispute?: TransferDispute,
+  ): Promise<void> {
+    await this.prisma.channel.update({
+      where: { channelAddress: channel.channelAddress },
+      data: { inDispute: channel.inDispute },
+    });
+    if (transferDispute) {
+      await this.prisma.transfer.update({
+        where: { transferId: transferDispute.transferId },
+        data: { inDispute: true },
+      });
+    }
   }
 
   async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
