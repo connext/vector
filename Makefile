@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_global_proxy:latest,$(project)_node_proxy:latest,$(project)_router_proxy:latest"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_global_proxy:latest"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -41,11 +41,11 @@ all: dev prod browser-node
 global: auth-js ethprovider global-proxy nats
 global-prod: auth-img global-proxy nats
 
-node: global database node-proxy server-node-js
-node-prod: global-prod database node-proxy server-node-img
+node: global server-node-img
+node-prod: global-prod database server-node-img
 
-router: node router-js router-proxy
-router-prod: node-prod router-img router-proxy
+router: node router-js
+router-prod: node-prod router-img
 
 duet: global server-node-js
 trio: global server-node-js router-js
@@ -92,8 +92,8 @@ restart-global: stop-global
 stop-global:
 	@bash ops/stop.sh global
 
-start-browser-node-test-ui: browser-node
-	@bash ops/start-browser-node-test-ui.sh
+start-test-ui: browser-node
+	@bash ops/start-test-ui.sh
 
 stop-all:
 	@bash ops/stop.sh trio
@@ -148,6 +148,11 @@ config:
 	cp -n ops/config/node.default.json node.config.json
 	cp -n ops/config/router.default.json router.config.json
 
+reset-config:
+	cp -f ops/config/global.default.json global.config.json
+	cp -f ops/config/node.default.json node.config.json
+	cp -f ops/config/router.default.json router.config.json
+
 ########################################
 # Test Commands
 
@@ -178,9 +183,11 @@ watch-engine: contracts-bundle protocol
 	bash ops/test-unit.sh engine watch 1341
 
 test-server-node: server-node-js
-	bash ops/test-server-node.sh test
+	bash ops/start-global.sh
+	bash ops/test-unit.sh server-node test
 watch-server-node: engine
-	bash ops/test-server-node.sh watch
+	bash ops/start-global.sh
+	bash ops/test-unit.sh server-node watch
 
 test-browser-node: browser-node
 	bash ops/test-unit.sh browser-node test
@@ -373,18 +380,6 @@ global-proxy: $(shell find ops/proxy $(find_options))
 	$(log_start)
 	docker build $(image_cache) --tag $(project)_global_proxy ops/proxy/global
 	docker tag $(project)_global_proxy $(project)_global_proxy:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-node-proxy: $(shell find ops/proxy $(find_options))
-	$(log_start)
-	docker build $(image_cache) --tag $(project)_node_proxy ops/proxy/node
-	docker tag $(project)_node_proxy $(project)_node_proxy:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-
-router-proxy: $(shell find ops/proxy $(find_options))
-	$(log_start)
-	docker build $(image_cache) --tag $(project)_router_proxy ops/proxy/router
-	docker tag $(project)_router_proxy $(project)_router_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ssh-action: $(shell find ops/ssh-action $(find_options))

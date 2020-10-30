@@ -53,15 +53,3 @@ export type RegisteredTransfer<T extends TransferName = any> = {
   definition: Address;
   name: T;
 };
-
-export const CoreTransferStateEncoding = tidy(`tuple(
-  ${BalanceEncoding} balance,
-  address assetId,
-  address channelAddress,
-  bytes32 transferId,
-  address transferDefinition,
-  uint256 transferTimeout,
-  bytes32 initialStateHash,
-  address initiator,
-  address responder
-)`);

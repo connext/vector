@@ -52,26 +52,24 @@ Content-Type: application/json
 Then, set up your channels from Carol -> Roger and Roger -> Carol (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)). Note `aliceUrl` is the internal URL that Carol has access to on the Docker network. In these examples, Carol and Dave are requesting Roger to set up the channel with them so that they can be the "Bob" within the channel, which lets them deposit by transferrring directly into the channel address.:
 
 ```
-### Node -> Carol
-POST {{carolUrl}}/request-setup
+### Carol -> Node
+POST {{carolUrl}}/setup
 Content-Type: application/json
 
 {
-  "aliceUrl": "{{rogerUrl}}",
-  "aliceIdentifier": "{{rogerPublicIdentifier}}",
-  "bobIdentifier": "{{carolPublicIdentifier}}",
+  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
   "chainId": "{{chainId}}",
   "timeout": "36000"
 }
 
-### Node -> Dave
-POST {{daveUrl}}/request-setup
+### Dave -> Node
+POST {{daveUrl}}/setup
 Content-Type: application/json
 
 {
-  "aliceUrl": "{{rogerUrl}}",
-  "aliceIdentifier": "{{rogerPublicIdentifier}}",
-  "bobIdentifier": "{{davePublicIdentifier}}",
+  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{davePublicIdentifier}}",
   "chainId": "{{chainId}}",
   "timeout": "36000"
 }

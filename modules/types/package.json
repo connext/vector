@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-types",
-  "version": "0.0.3-beta.4",
+  "version": "0.0.5",
   "description": "TypeScript typings for common Connext types",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -16,12 +16,12 @@
   },
   "dependencies": {
     "@sinclair/typebox": "0.11.0",
-    "ethers": "5.0.17",
-    "evt": "1.8.10"
+    "ethers": "5.0.19",
+    "evt": "1.9.2"
   },
   "devDependencies": {
-    "rollup": "2.29.0",
-    "rollup-plugin-typescript2": "0.27.3",
-    "typescript": "4.0.3"
+    "rollup": "2.32.1",
+    "rollup-plugin-typescript2": "0.28.0",
+    "typescript": "4.0.5"
   }
 }

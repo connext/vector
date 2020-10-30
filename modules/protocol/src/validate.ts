@@ -91,6 +91,7 @@ export async function validateOutbound<T extends UpdateType = any>(
       networkContext,
       aliceIdentifier: signer.publicIdentifier,
       bobIdentifier: counterpartyIdentifier,
+      defundNonce: "1",
     };
   }
 

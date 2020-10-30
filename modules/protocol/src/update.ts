@@ -12,7 +12,6 @@ import {
   UpdateParams,
   Balance,
   IChannelSigner,
-  CoreTransferState,
   Result,
   FullTransferState,
   IVectorChainReader,
@@ -95,6 +94,7 @@ export async function applyUpdate<T extends UpdateType>(
           networkContext,
           aliceIdentifier: fromIdentifier,
           bobIdentifier: toIdentifier,
+          defundNonce: "1",
         },
       });
     }

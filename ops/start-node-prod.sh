@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-stack="router"
+stack="node"
 
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
@@ -11,7 +11,7 @@ docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
-then echo "A $stack stack is already running" && exit 0;
+then echo "A $stack stack is already running" && exit 0
 fi
 
 ####################
@@ -20,19 +20,8 @@ fi
 if [[ ! -f "$root/${stack}.config.json" ]]
 then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
 fi
-router_config=$(
-  cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]'
-)
 
-# Router inherits from node config
-if [[ ! -f "$root/node.config.json" ]]
-then cp "$root/ops/config/node.default.json" "$root/node.config.json"
-fi
-node_config=$(
-  cat "$root/ops/config/node.default.json" "$root/node.config.json" | jq -s '.[0] + .[1]'
-)
-
-config=$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')
+config=$(cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]')
 
 function getConfig {
   value=$(echo "$config" | jq ".$1" | tr -d '"')
@@ -81,7 +70,6 @@ common="networks:
 
 ########################################
 # Global services / chain provider config
-# If no global service urls provided, spin up local ones & use those
 
 # If no messaging url or custom ethproviders are given, spin up a global stack
 if [[ -z "$messaging_url" || "$use_local_evms" == "true" ]]
@@ -123,7 +111,7 @@ bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 # database connection settings
 pg_db="$project"
 pg_user="$project"
-pg_dev_port="5434"
+pg_dev_port="5433"
 
 if [[ "$production" == "true" ]]
 then
@@ -158,7 +146,7 @@ fi
 ## Node config
 
 node_internal_port="8000"
-node_public_port="${public_port:-8002}"
+node_public_port="${public_port:-8001}"
 public_url="http://127.0.0.1:$node_public_port/ping"
 if [[ $production == "true" ]]
 then
@@ -192,86 +180,6 @@ then
       - '$mnemonic_secret'"
   fi
 fi
-
-########################################
-## Router config
-
-router_internal_port="8000"
-router_dev_port="9000"
-
-if [[ $production == "true" ]]
-then
-  router_image_name="${project}_router:$version"
-  router_image="image: '$router_image_name'"
-else
-  router_image_name="${project}_builder:$version";
-  router_image="image: '$router_image_name'
-    entrypoint: 'bash modules/router/ops/entry.sh'
-    volumes:
-      - '$root:/root'
-    ports:
-      - '$router_dev_port:$router_internal_port'"
-  echo "${stack}_router will be exposed on *:$router_dev_port"
-fi
-bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
-
-# Add whichever secrets we're using to the router's service config
-if [[ -n "$db_secret" ]]
-then
-  router_image="$router_image
-    secrets:
-      - '$db_secret'"
-fi
-
-####################
-# Observability tools config
-
-grafana_image="grafana/grafana:latest"
-bash "$root/ops/pull-images.sh" "$grafana_image" > /dev/null
-
-prometheus_image="prom/prometheus:latest"
-bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
-
-cadvisor_image="gcr.io/google-containers/cadvisor:latest"
-bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
-
-prometheus_services="prometheus:
-    image: $prometheus_image
-    $common
-    ports:
-      - 9090:9090
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-    volumes:
-      - $root/ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-
-  cadvisor:
-    $common
-    image: $cadvisor_image
-    ports:
-      - 8081:8080
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro"
-
-grafana_service="grafana:
-    image: '$grafana_image'
-    $common
-    networks:
-      - '$project'
-    ports:
-      - '3008:3000'
-    volumes:
-      - '$root/ops/grafana/grafana:/etc/grafana'
-      - '$root/ops/grafana/dashboards:/etc/dashboards'"
-
-# TODO we probably want to remove observability from dev env once it's working
-# bc these make indra take a log longer to wake up
-observability_services="$prometheus_services
-
-  $grafana_service"
 
 ####################
 # Launch stack
@@ -319,40 +227,24 @@ services:
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: 'database'
+      VECTOR_PG_HOST: 'database_node'
       VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
 
-  router:
-    $common
-    $router_image
-    environment:
-      VECTOR_CONFIG: '$(echo "$config" | tr -d '\n\r')'
-      VECTOR_PROD: '$production'
-      VECTOR_NODE_URL: 'http://node:$node_internal_port'
-      VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: 'database'
-      VECTOR_PG_PASSWORD: '$pg_password'
-      VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
-      VECTOR_PG_PORT: '5432'
-      VECTOR_PG_USERNAME: '$pg_user'
-
-  database:
+  database_node:
     $common
     $database_image
     environment:
       AWS_ACCESS_KEY_ID: '$aws_access_id'
       AWS_SECRET_ACCESS_KEY: '$aws_access_key'
-      POSTGRES_DB: '$project'
+      POSTGRES_DB: '$pg_db'
       POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
-      POSTGRES_USER: '$project'
+      POSTGRES_USER: '$pg_user'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PROD: '$production'
-
-  $observability_services
 
 EOF
 
@@ -363,7 +255,7 @@ timeout=$(( $(date +%s) + 60 ))
 while true
 do
   res=$(curl -k -m 5 -s "$public_url" || true)
-  if [[ -z "$res" || "$res" == "Waiting for node to wake up" ]]
+  if [[ -z "$res" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]
     then echo "Timed out waiting for $public_url to respond.." && exit

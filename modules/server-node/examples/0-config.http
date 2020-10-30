@@ -20,11 +20,11 @@ GET {{carolUrl}}/config
 
 ##############
 ### GET CHANNELS
-GET {{aliceUrl}}/{{alicePublicIdentifier}}/channel
+GET {{aliceUrl}}/{{alicePublicIdentifier}}/channels
 
 ##############
 ### GET CHANNEL
-GET {{aliceUrl}}/{{alicePublicIdentifier}}/channel/{{aliceBobChannel}}
+GET {{aliceUrl}}/{{alicePublicIdentifier}}/channels/{{aliceBobChannel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS

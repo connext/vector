@@ -15,6 +15,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
+  uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 12000;
+
   ChannelDispute private channelDispute;
   mapping(bytes32 => TransferDispute) private transferDisputes;
 
@@ -38,7 +40,14 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     return channelDispute;
   }
 
-  function getTransferDispute(bytes32 transferId) external override view onlyViaProxy nonReentrantView returns (TransferDispute memory) {
+  function getTransferDispute(bytes32 transferId)
+    external
+    override
+    view
+    onlyViaProxy
+    nonReentrantView
+    returns (TransferDispute memory)
+  {
     return transferDisputes[transferId];
   }
 
@@ -53,41 +62,30 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // We cannot dispute a channel in its defund phase
     require(!inDefundPhase(), "CMCAdjudicator disputeChannel: Not allowed in defund phase");
 
-    // New nonce mustn't be smaller than the stored one
-    require(channelDispute.nonce <= ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
+    // New nonce must be strictly greater than the stored one
+    require(channelDispute.nonce < ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
 
-    if (inConsensusPhase()) {
-      // In the consensus phase the nonce must even be strictly greater than the stored one,
-      // i.e. we have newer state -- which is then stored
-      require(
-        channelDispute.nonce < ccs.nonce,
-        "CMCAdjudicator disputeChannel: Same nonce not allowed in consensus phase"
-      );
-      channelDispute.channelStateHash = hashChannelState(ccs);
-      channelDispute.nonce = ccs.nonce;
-      channelDispute.merkleRoot = ccs.merkleRoot;
-    } else {
+    if (!inConsensusPhase()) {
       // We are not already in a dispute
-      // Only Alice or Bob may start a dispute
-      verifyMsgSenderisAliceOrBob(ccs);
-
-      // Store the given state and set the expiries
-      // For nonce equality, skip updates without effect and only set new expiries
-      if (channelDispute.nonce < ccs.nonce) {
-        channelDispute.channelStateHash = hashChannelState(ccs);
-        channelDispute.nonce = ccs.nonce;
-        channelDispute.merkleRoot = ccs.merkleRoot;
-      }
+      // Set expiries
       // TODO: offchain-ensure that there can't be an overflow
       channelDispute.consensusExpiry = block.number.add(ccs.timeout);
       channelDispute.defundExpiry = block.number.add(ccs.timeout.mul(2));
     }
+
+    // Store newer state
+    channelDispute.channelStateHash = hashChannelState(ccs);
+    channelDispute.nonce = ccs.nonce;
+    channelDispute.merkleRoot = ccs.merkleRoot;
   }
 
-  function defundChannel(CoreChannelState calldata ccs) external override onlyViaProxy nonReentrant validateChannel(ccs) {
-    // Only Alice or Bob can defund their channel
-    verifyMsgSenderisAliceOrBob(ccs);
-
+  function defundChannel(CoreChannelState calldata ccs)
+    external
+    override
+    onlyViaProxy
+    nonReentrant
+    validateChannel(ccs)
+  {
     // Verify that the given channel state matches the stored one
     require(
       hashChannelState(ccs) == channelDispute.channelStateHash,
@@ -97,9 +95,10 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // We need to be in defund phase for that
     require(inDefundPhase(), "CMCAdjudicator defundChannel: Not in defund phase");
 
-    // We can't defund twice
-    require(!channelDispute.isDefunded, "CMCAdjudicator defundChannel: channel already defunded");
-    channelDispute.isDefunded = true;
+    // We can't defund twice at the same defund nonce
+    // TODO: should this be checked in the `disputeChannel`?
+    require(channelDispute.defundNonce < ccs.defundNonce, "CMCAdjudicator defundChannel: channel already defunded");
+    channelDispute.defundNonce = ccs.defundNonce;
 
     // TODO SECURITY: Beware of reentrancy
     // TODO: offchain-ensure that all arrays have the same length:
@@ -113,7 +112,18 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
       // Add unprocessed deposits to amounts
       balance.amount[0] += _getTotalDepositsAlice(assetId) - ccs.processedDepositsA[i];
-      balance.amount[1] += _getTotalDepositsBob(assetId) - ccs.processedDepositsB[i];
+
+      // If the following call fails, we were unable to query the channel's balance;
+      // this probably means the token is totally fucked up.
+      // Since we mustn't revert here (in order to prevent other assets from becoming frozen),
+      // we proceed anyway and assume there are no unprocessed deposits for Bob.
+      (bool success, bytes memory encodedReturnValue) = address(this).call{gas: QUERY_DEPOSITS_GAS_LIMIT}(
+        abi.encodeWithSignature("_depositsBob(address)", assetId)
+      );
+      if (success) {
+        uint256 depositsBob = abi.decode(encodedReturnValue, (uint256));
+        balance.amount[1] += depositsBob - ccs.processedDepositsB[i];
+      }
 
       // Transfer funds; this will never revert or fail otherwise,
       // i.e. if the underlying "real" asset transfer fails,
@@ -129,9 +139,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     nonReentrant
     validateTransfer(cts)
   {
-    // Only initiator or responder of the transfer may start a dispute
-    verifyMsgSenderIsInitiatorOrResponder(cts);
-
     // Verify that the given transfer state is included in the "finalized" channel state
     bytes32 transferStateHash = hashTransferState(cts);
     verifyMerkleProof(merkleProofData, channelDispute.merkleRoot, transferStateHash);
@@ -166,6 +173,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     );
 
     // Verify that a dispute for this transfer has already been started
+    // NOTE: there is no way to get to here without also failing previous
+    // require
     require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator defundTransfer: transfer not yet disputed");
 
     // We can't defund twice
@@ -176,7 +185,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
     if (block.number < transferDispute.transferDisputeExpiry) {
       // Before dispute expiry, responder can resolve
-      verifyMsgSenderIsResponder(cts);
+      require(msg.sender == cts.responder, "CMCAdjudicator: msg.sender is not transfer responder");
       require(
         keccak256(encodedInitialTransferState) == cts.initialStateHash,
         "CMCAdjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
@@ -204,19 +213,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     transferBalance(cts.assetId, balance);
   }
 
-  function verifyMsgSenderisAliceOrBob(CoreChannelState calldata ccs) internal view {
-    require(msg.sender == ccs.alice || msg.sender == ccs.bob, "CMCAdjudicator: msg.sender is neither alice nor bob");
-  }
-
-  function verifyMsgSenderIsInitiatorOrResponder(CoreTransferState calldata cts) internal view {
-    require(
-      msg.sender == cts.initiator || msg.sender == cts.responder,
-      "CMCAdjudicator: msg.sender is neither transfer initiator nor responder"
-    );
-  }
-
-  function verifyMsgSenderIsResponder(CoreTransferState calldata cts) internal view {
-    require(msg.sender == cts.responder, "CMCAdjudicator: msg.sender is not transfer responder");
+  function _depositsBob(address assetId) external onlySelf returns (uint256) {
+    return _getTotalDepositsBob(assetId);
   }
 
   function verifySignatures(

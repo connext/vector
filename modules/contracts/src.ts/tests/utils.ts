@@ -1,8 +1,9 @@
-import { Contract } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
+import { BigNumber, Contract } from "ethers";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
-import { TestChannel } from "../artifacts";
+import { TestChannel, TestToken } from "../artifacts";
 
 import { alice, bob, provider } from "./constants";
 
@@ -42,4 +43,17 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
   });
 
   return new Contract(channelAddress, TestChannel.abi, alice);
+};
+
+export const mineBlock = (): Promise<void> => {
+  return new Promise(async resolve => {
+    provider.once("block", () => resolve());
+    await provider.send("evm_mine", []);
+  });
+};
+
+export const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {
+  return assetId === AddressZero
+    ? provider.getBalance(address)
+    : new Contract(assetId, TestToken.abi, provider).balanceOf(address);
 };
