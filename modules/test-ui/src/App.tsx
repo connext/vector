@@ -1,12 +1,12 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { ChannelSigner, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { ChannelSigner, createlockHash, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List, Collapse } from "antd";
 
 import "./App.css";
-import { EngineEvents, FullChannelState } from "@connext/vector-types";
+import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import { config } from "./config";
 
@@ -43,7 +43,7 @@ function App() {
   }, []);
 
   const connectNode = async (mnemonic: string) => {
-    console.log(config);
+    console.log("creating node with config", config);
     try {
       setConnectLoading(true);
       const wallet = Wallet.fromMnemonic(mnemonic);
@@ -132,16 +132,22 @@ function App() {
     setRequestCollateralLoading(false);
   };
 
-  const transfer = async (assetId: string, amount: string, recipient: string) => {
+  const transfer = async (assetId: string, amount: string, recipient: string, preImage: string) => {
     setTransferLoading(true);
-    const requestRes = await node.withdraw({
+    const requestRes = await node.conditionalTransfer({
+      type: TransferNames.HashlockTransfer,
       channelAddress: channel.channelAddress,
       assetId,
       amount,
       recipient,
+      details: {
+        lockHash: createlockHash(preImage),
+        expiry: "0",
+      },
+      meta: {},
     });
     if (requestRes.isError) {
-      console.error("Error withdrawing", requestRes.getError());
+      console.error("Error transferring", requestRes.getError());
     }
     setTransferLoading(false);
   };
@@ -332,7 +338,7 @@ function App() {
                 wrapperCol={{ span: 18 }}
                 name="transfer"
                 initialValues={{ assetId: channel?.assetIds && channel?.assetIds[0], preImage: getRandomBytes32() }}
-                onFinish={values => transfer(values.assetId, values.amount, values.recipient)}
+                onFinish={values => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
                 onFinishFailed={onFinishFailed}
                 form={transferForm}
               >
