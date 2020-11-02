@@ -129,7 +129,7 @@ describe("store", () => {
     const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
     const depositState = createTestChannelState("deposit", {
       nonce: setupState.nonce + 1,
-      defundNonce: (Number(setupState.defundNonce) + 1).toString(),
+      defundNonce: setupState.defundNonce,
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
     });
     await store.saveChannelState(depositState, {
@@ -152,7 +152,7 @@ describe("store", () => {
       channelAddress: transfer.channelAddress,
       networkContext: { channelFactoryAddress: transfer.channelFactoryAddress, chainId: transfer.chainId },
       nonce: depositState.nonce + 1,
-      defundNonce: (Number(depositState.defundNonce) + 1).toString(),
+      defundNonce: setupState.defundNonce,
       latestUpdate: {
         details: {
           balance: transfer.balance,
@@ -183,7 +183,7 @@ describe("store", () => {
 
     const resolveState = createTestChannelState("resolve", {
       nonce: createState.nonce + 1,
-      defundNonce: (Number(createState.defundNonce) + 1).toString(),
+      defundNonce: setupState.defundNonce,
       latestUpdate: {
         nonce: createState.nonce + 1,
         details: {
@@ -251,8 +251,8 @@ describe("store", () => {
     resolveState.latestUpdate.details.transferResolver = { preImage: mkBytes32("0xaabbcc") };
     resolveState.latestUpdate.type = UpdateType.resolve;
     resolveState.nonce = createState.nonce + 1;
-    resolveState.defundNonce = (Number(createState.defundNonce) + 1).toString(),
-    resolveState.latestUpdate.nonce = createState.latestUpdate.nonce + 1;
+    (resolveState.defundNonce = createState.defundNonce),
+      (resolveState.latestUpdate.nonce = createState.latestUpdate.nonce + 1);
 
     await store.saveChannelState(resolveState, {
       channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,
@@ -329,7 +329,7 @@ describe("store", () => {
         nonce: createState.latestUpdate.nonce + 1,
       },
       nonce: createState.latestUpdate.nonce + 1,
-      defundNonce: (Number(createState.defundNonce) + 1).toString(),
+      defundNonce: createState.defundNonce,
     });
 
     await store.saveChannelState(

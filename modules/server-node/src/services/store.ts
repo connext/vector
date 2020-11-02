@@ -187,7 +187,7 @@ const convertChannelEntityToFullChannelState = (
       toIdentifier: channelEntity.latestUpdate.toIdentifier,
       type: channelEntity.latestUpdate.type,
     },
-    defundNonce: channelEntity.nonce.toString(),
+    defundNonce: channelEntity.defundNonce.toString(),
     inDispute: channelEntity.inDispute,
   };
   return channel;
