@@ -89,7 +89,6 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       chainId,
       providerUrl: Object.values(env.chainProviders)[0] as string,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
       transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
   };
