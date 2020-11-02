@@ -22,12 +22,11 @@ import {
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import Ajv from "ajv";
-import { BigNumber, constants } from "ethers";
+import { BigNumber } from "ethers";
 import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
-import { provider } from "./testing/constants";
 import { getParamsFromUpdate } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
@@ -229,10 +228,10 @@ export class Vector implements IVectorProtocol {
     // First check on current dispute status of all channels onchain
     // Since we have no way of knowing the last time the protocol
     // connected, we must check this on startup
-    const currBlock = await provider.getBlockNumber();
     // TODO: is there a better way to do this?
     await Promise.all(
       channels.map(async channel => {
+        const currBlock = await this.chainReader.getBlockNumber(channel.networkContext.chainId);
         const disputeRes = await this.chainReader.getChannelDispute(
           channel.channelAddress,
           channel.networkContext.chainId,
