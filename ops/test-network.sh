@@ -15,12 +15,16 @@ else echo "Running in non-interactive mode"
 fi
 
 evm="${1:-hardhat}"
+chain_providers="${2}"
 cmd="npx hardhat test --network $evm"
 
 ########################################
 # If we need a chain for these tests, start the evm & stop it when we're done
 
-eth_mnemonic="${2:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
+eth_mnemonic="${3:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
+
+# Build necessary packages
+make contracts
 
 # TODO: should just start chains here as well
 if [ "$evm" == "hardhat" ] || [ "$evm" == "ganahce" ]
@@ -33,6 +37,7 @@ docker run \
   --entrypoint="bash" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
+  --env="CHAIN_PROVIDERS=$chain_providers" \
   --name="${project}_test_${evm}" \
   --network "$project" \
   --rm \
