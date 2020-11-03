@@ -166,16 +166,14 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
+    // Verify that a dispute for this transfer has already been started
+    require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator defundTransfer: transfer not yet disputed");
+
     // Verify that the given transfer state matches the stored one
     require(
       hashTransferState(cts) == transferDispute.transferStateHash,
       "CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash"
     );
-
-    // Verify that a dispute for this transfer has already been started
-    // NOTE: there is no way to get to here without also failing previous
-    // require
-    require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator defundTransfer: transfer not yet disputed");
 
     // We can't defund twice
     require(!transferDispute.isDefunded, "CMCAdjudicator defundTransfer: transfer already defunded");
@@ -213,7 +211,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     transferBalance(cts.assetId, balance);
   }
 
-  function _depositsBob(address assetId) external onlySelf returns (uint256) {
+  function _depositsBob(address assetId) external view onlySelf returns (uint256) {
     return _getTotalDepositsBob(assetId);
   }
 
