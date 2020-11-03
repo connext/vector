@@ -17,8 +17,16 @@ then
   set -o pipefail
   echo "Starting $unit tester"
   if [[ -n "$(which pino-pretty)" ]]
-  then exec npm run test -- "$opts" | pino-pretty --colorize
-  else exec npm run test -- "$opts"
+  then
+    if [[ "$opts" == "" ]]
+      then exec npm run test | pino-pretty --colorize
+      else exec npm run test -- "$opts" | pino-pretty --colorize
+    fi
+  else 
+    if [[ "$opts" == "" ]]
+      then exec npm run test
+      else exec npm run test -- "$opts"
+    fi
   fi
 
 elif [[ "${cmd##*-}" == "watch" ]]
@@ -57,8 +65,16 @@ then
 
       prev_checksum="$(find "${src[@]}" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
       if [[ -n "$(which pino-pretty)" ]]
+        if [[ "$opts" == "" ]]
+        then (npm run test | pino-pretty --colorize &)
+        else (npm run test -- "$opts" | pino-pretty --colorize &)
+        fi
       then (npm run test -- "$opts" | pino-pretty --colorize &)
-      else (npm run test -- "$opts" &)
+      else 
+        if [[ "$opts" == "" ]]
+        then (npm run test &)
+        else (npm run test -- "$opts" &)
+        fi
       fi
 
     # If no changes, do nothing
