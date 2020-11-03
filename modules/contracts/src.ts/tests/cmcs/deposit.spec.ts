@@ -20,21 +20,24 @@ describe("CMCDeposit.sol", function() {
 
     await deployContracts(alice, addressBook, [["FailingToken", []]]);
     failingToken = addressBook.getContract("FailingToken");
-    await failingToken.mint(alice.address, parseEther("0.001"));
+    const tx = await failingToken.mint(alice.address, parseEther("0.001"));
+    await tx.wait();
   });
 
   it("should only increase totalDepositsBob after receiving a direct deposit", async () => {
     const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
     const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
-    await expect(bob.sendTransaction({ to: channel.address, value })).to.be.fulfilled;
+    const tx = await bob.sendTransaction({ to: channel.address, value });
+    await tx.wait();
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.equal(aliceDeposits);
     expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits.add(value));
   });
 
-  it("should only increase totalDepositsBob after recieving a deposit via method call", async () => {
+  it("should only increase totalDepositsAlice after recieving a deposit via method call", async () => {
     const aliceDeposits = await channel.getTotalDepositsAlice(AddressZero);
     const bobDeposits = await channel.getTotalDepositsBob(AddressZero);
-    await expect(channel.connect(alice).depositAlice(AddressZero, value, { value })).to.be.fulfilled;
+    const tx = await channel.connect(alice).depositAlice(AddressZero, value, { value });
+    await tx.wait();
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.equal(aliceDeposits.add(value));
     expect(await channel.getTotalDepositsBob(AddressZero)).to.equal(bobDeposits);
   });

@@ -18,7 +18,8 @@ describe("LibIterableMapping.sol", function() {
     // Load some data into the library
     for (const transfer of transferDefs) {
       const info = await transfer.getRegistryInformation();
-      await mapping.addTransferDefinition(info);
+      const tx = await mapping.addTransferDefinition(info);
+      await tx.wait();
     }
   };
 
@@ -151,13 +152,15 @@ describe("LibIterableMapping.sol", function() {
     });
 
     it("should work with the last element", async () => {
-      await mapping.removeTransferDefinition(info[1].name);
+      const tx = await mapping.removeTransferDefinition(info[1].name);
+      await tx.wait();
       expect(await mapping.length()).to.be.eq(info.length - 1);
       expect(await mapping.nameExists(info[1].name)).to.be.false;
     });
 
     it("should work with another element than the last", async () => {
-      await mapping.removeTransferDefinition(info[0].name);
+      const tx = await mapping.removeTransferDefinition(info[0].name);
+      await tx.wait();
       expect(await mapping.length()).to.be.eq(info.length - 1);
       expect(await mapping.nameExists(info[0].name)).to.be.false;
     });

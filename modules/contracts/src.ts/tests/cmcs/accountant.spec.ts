@@ -30,7 +30,8 @@ describe("CMCAccountant.sol", function() {
       amount: [value.toString(), value.toString()],
     };
     const preTransfer = await Promise.all<BigNumber>(balance.to.map((a: string) => provider.getBalance(a)));
-    await channel.accountantBalanceTransfer(AddressZero, balance);
+    const tx = await channel.accountantBalanceTransfer(AddressZero, balance);
+    await tx.wait();
     await Promise.all(
       balance.to.map(async (a: string, idx: number) => {
         return expect(await provider.getBalance(a)).to.be.eq(preTransfer[idx].add(value));
