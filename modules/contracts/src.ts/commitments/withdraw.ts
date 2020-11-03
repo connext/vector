@@ -1,10 +1,12 @@
-import { MinimalTransaction, WithdrawCommitmentJson } from "@connext/vector-types";
+import { MinimalTransaction, WithdrawCommitmentJson, WithdrawDataEncoding } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { utils } from "ethers";
+import { BigNumber, constants, utils } from "ethers";
 
 import { ChannelMastercopy } from "../artifacts";
+import * as ERC20 from "@openzeppelin/contracts/build/contracts/IERC20.json";
 
-const { Interface, keccak256, solidityPack } = utils;
+const { defaultAbiCoder, Interface, keccak256 } = utils;
+
 
 export class WithdrawCommitment {
   private aliceSignature?: string;
@@ -61,29 +63,63 @@ export class WithdrawCommitment {
     return commitment;
   }
 
+  public createCallData() {
+    return this.assetId === constants.AddressZero
+      ? {
+        to: this.recipient,
+        value: this.amount,
+        data: "0x",
+      }
+      : {
+        to: this.assetId,
+        value: constants.Zero,
+        data: new Interface(ERC20.abi).encodeFunctionData("transfer", [this.recipient, BigNumber.from(this.amount)]),
+      };
+  }
+
   public hashToSign(): string {
-    return keccak256(
-      solidityPack(
-        ["address", "address", "uint256", "uint256"],
-        [this.recipient, this.assetId, this.amount, this.nonce],
-      ),
+    const callData = this.createCallData();
+    const encodedWithdrawData = defaultAbiCoder.encode(
+      [WithdrawDataEncoding],
+      [
+        [
+          this.channelAddress,
+          this.assetId,
+          this.recipient,
+          this.amount,
+          this.nonce,
+          callData.to,
+          callData.value,
+          callData.data,
+        ]
+      ]
     );
+    // TODO: include commitment type
+    return keccak256(encodedWithdrawData);
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {
     if (!this.signatures || this.signatures.length === 0) {
       throw new Error(`No signatures detected`);
     }
-    const txData = new Interface(ChannelMastercopy.abi).encodeFunctionData("withdraw", [
-      this.recipient,
-      this.assetId,
-      this.amount,
-      this.nonce,
+    const callData = this.createCallData();
+    const data = new Interface(ChannelMastercopy.abi).encodeFunctionData("withdraw", [
+      [
+        this.channelAddress,
+        this.assetId,
+        this.recipient,
+        this.amount,
+        this.nonce,
+        callData.to,
+        callData.value,
+        callData.data,
+      ],
       this.aliceSignature,
       this.bobSignature,
     ]);
-    return { to: this.channelAddress, value: 0, data: txData };
+    return { to: this.channelAddress, value: 0, data: data };
   }
+
   public async addSignatures(signature1?: string, signature2?: string): Promise<void> {
     const hash = this.hashToSign();
     for (const sig of [signature1, signature2]) {
