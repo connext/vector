@@ -4,6 +4,7 @@ export * from "./channel";
 export * from "./constants";
 export * from "./contracts";
 export * from "./crypto";
+export * from "./dispute";
 export * from "./engine";
 export * from "./error";
 export * from "./event";

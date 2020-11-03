@@ -11,12 +11,13 @@ import {
   ChainProviders,
   RegisteredTransfer,
   TransferName,
+  ChannelDispute,
 } from "@connext/vector-types";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers } from "ethers";
 import pino from "pino";
 
-import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry } from "../artifacts";
+import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -38,6 +39,33 @@ export class EthereumChainReader implements IVectorChainReader {
       ret[parseInt(name)] = value.connection.url;
     });
     return Result.ok(ret);
+  }
+
+  async getChannelDispute(
+    channelAddress: string,
+    chainId: number,
+  ): Promise<Result<ChannelDispute | undefined, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+
+    try {
+      const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
+      if (dispute.channelStateHash === constants.HashZero) {
+        return Result.ok(undefined);
+      }
+      return Result.ok({
+        channelStateHash: dispute.channelStateHash,
+        nonce: dispute.nonce.toString(),
+        merkleRoot: dispute.merkleRoot,
+        consensusExpiry: dispute.consensusExpiry.toString(),
+        defundExpiry: dispute.defundExpiry.toString(),
+        defundNonce: dispute.defundNonce.toString(),
+      });
+    } catch (e) {
+      return Result.fail(e as any);
+    }
   }
 
   async getRegisteredTransferByDefinition(
