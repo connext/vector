@@ -16,6 +16,9 @@ import {
   Result,
   NodeParams,
   NodeResponses,
+  ChannelRpcMethod,
+  ChannelRpcMethodsPayloadMap,
+  ChannelRpcMethodsResponsesMap,
 } from "@connext/vector-types";
 import {
   bufferify,
@@ -269,6 +272,15 @@ export class BrowserNode implements INodeService {
     } catch (e) {
       return Result.fail(e);
     }
+  }
+
+  async send<T extends ChannelRpcMethod>(
+    method: T,
+    params: ChannelRpcMethodsPayloadMap[T],
+  ): Promise<ChannelRpcMethodsResponsesMap[T]> {
+    const rpc = constructRpcRequest(method, params);
+    const res = await this.engine.request<typeof ChannelRpcMethods.chan_withdraw>(rpc);
+    return res as ChannelRpcMethodsResponsesMap[T];
   }
 
   //////////////////////
