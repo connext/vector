@@ -1,11 +1,14 @@
-import { expect } from "chai";
-import { utils, Wallet } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { utils, Wallet, providers } from "ethers";
 import * as hardhat from "hardhat";
 
-const MIN_BALANCE = parseEther("0.1");
-export const provider = hardhat.waffle.provider;
-const hdNode = utils.HDNode.fromMnemonic(process.env.SUGAR_DADDY!).derivePath("m/44'/60'/0'/0");
+// Get defaults from env
+const chainProviders = JSON.parse(process.env.CHAIN_PROVIDERS ?? "{}");
+const chainId = Object.keys(chainProviders)[0];
+const url = Object.values(chainProviders)[0];
+const mnemonic = process.env.SUGAR_DADDY!;
+
+export const provider = url ? new providers.JsonRpcProvider(url as string, parseInt(chainId)) : hardhat.waffle.provider;
+const hdNode = utils.HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
 export const wallets: Wallet[] = Array(20)
   .fill(0)
   .map((_, idx) => {
@@ -17,21 +20,3 @@ export const chainIdReq = provider.getNetwork().then(net => net.chainId);
 export const alice = wallets[0];
 export const bob = wallets[1];
 export const rando = wallets[2];
-
-before(async () => {
-  let balance = await provider.getBalance(alice.address);
-  expect(balance).to.be.gte(
-    MIN_BALANCE,
-    `Expected ${alice.address} to have at least ${MIN_BALANCE.toString()} (current balance: ${balance.toString()})`,
-  );
-  balance = await provider.getBalance(bob.address);
-  expect(balance).to.be.gte(
-    MIN_BALANCE,
-    `Expected ${bob.address} to have at least ${MIN_BALANCE.toString()} (current balance: ${balance.toString()})`,
-  );
-  balance = await provider.getBalance(rando.address);
-  expect(balance).to.be.gte(
-    MIN_BALANCE,
-    `Expected ${rando.address} to have at least ${MIN_BALANCE.toString()} (current balance: ${balance.toString()})`,
-  );
-});
