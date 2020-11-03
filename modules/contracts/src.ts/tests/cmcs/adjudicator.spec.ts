@@ -17,13 +17,14 @@ import {
 } from "@connext/vector-utils";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber, BigNumberish, Contract, utils } from "ethers";
-import { parseEther } from "ethers/lib/utils";
 import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
 import { bob, alice, provider, rando } from "../constants";
 import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
+
+const { parseEther } = utils;
 
 describe("CMCAdjudicator.sol", () => {
   let channel: Contract;

@@ -1,12 +1,13 @@
 import { Balance } from "@connext/vector-types";
-import { AddressZero } from "@ethersproject/constants";
 import { expect } from "chai";
-import { BigNumber, Contract, Wallet } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { BigNumber, Contract, Wallet, utils, constants } from "ethers";
 
 import { getTestAddressBook, bob, getTestChannel } from "..";
 import { AddressBook } from "../../addressBook";
 import { provider } from "../constants";
+
+const { parseEther } = utils;
+const { AddressZero } = constants;
 
 describe("CMCAccountant.sol", () => {
   let addressBook: AddressBook;
