@@ -9,6 +9,7 @@ import "./App.css";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import { config } from "./config";
+import { Crypto, Identifiers } from "./utils";
 
 const logger = pino();
 
@@ -134,6 +135,14 @@ function App() {
 
   const transfer = async (assetId: string, amount: string, recipient: string, preImage: string) => {
     setTransferLoading(true);
+
+    const submittedMeta: { encryptedPreImage?: any } = {};
+    if (recipient) {
+      const recipientPublicKey = await Identifiers.getPublicKeyFromPublicIdentifier(recipient);
+      const encryptedPreImage = await Crypto.encrypt(preImage, recipientPublicKey);
+      submittedMeta.encryptedPreImage = encryptedPreImage;
+    }
+
     const requestRes = await node.conditionalTransfer({
       type: TransferNames.HashlockTransfer,
       channelAddress: channel.channelAddress,
@@ -144,7 +153,7 @@ function App() {
         lockHash: createlockHash(preImage),
         expiry: "0",
       },
-      meta: {},
+      meta: submittedMeta,
     });
     if (requestRes.isError) {
       console.error("Error transferring", requestRes.getError());
