@@ -12,7 +12,10 @@ const MAX_INT = BigNumber.from(2)
   .pow(256)
   .sub(1);
 
-const DEFAULT_MNEMONIC = "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
+const mnemonic =
+  process.env.SUGAR_DADDY ??
+  process.env.MNEMONIC ??
+  "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
 import "@nomiclabs/hardhat-waffle";
 
@@ -41,14 +44,14 @@ const config: HardhatUserConfig = {
       chainId: 1338,
       loggingEnabled: false,
       accounts: {
-        mnemonic: process.env.SUGAR_DADDY ?? process.env.mnemonic ?? DEFAULT_MNEMONIC,
+        mnemonic,
         accountsBalance: MAX_INT.div(2).toString(),
       },
     },
     matic: {
       chainId: 80001,
       url: "https://rpc-mumbai.matic.today",
-      accounts: { mnemonic: process.env.SUGAR_DADDY ?? process.env.mnemonic ?? DEFAULT_MNEMONIC },
+      accounts: { mnemonic },
     },
   },
 };
