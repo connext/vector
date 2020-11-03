@@ -2,6 +2,7 @@ import { BigNumber, BigNumberish, providers } from "ethers";
 
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
+import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
 import { ChainProviders } from "./network";
 import { RegisteredTransfer, TransferName } from "./transferDefinitions";
@@ -110,6 +111,8 @@ export interface IVectorChainReader {
   getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
+
+  getChannelDispute(channelAddress: string, chainId: number): Promise<Result<ChannelDispute | undefined, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

@@ -3,7 +3,8 @@ import { utils } from "ethers";
 
 import { getSignerAddressFromPublicIdentifier } from "./identifiers";
 
-// Prefix & suffix come from..?
+// Prefix & suffix come from
+// https://github.com/solidstate-network/solidstate-contracts/blob/1681e931a68391a4a1c11de0268b2278fd52bb23/contracts/architecture/factory/MinimalProxyFactory.sol
 export const getMinimalProxyInitCode = (mastercopyAddress: string): string =>
   `0x3d602d80600a3d3981f3363d3d373d3d3d363d73${
     mastercopyAddress.toLowerCase().replace(/^0x/, "")

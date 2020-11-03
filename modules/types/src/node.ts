@@ -71,6 +71,23 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.ResolveTransfer>,
   ): Promise<Result<NodeResponses.ResolveTransfer, NodeError>>;
 
+  // Dispute methods
+  sendDisputeChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>>;
+
+  sendDefundChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>>;
+
+  sendDisputeTransferTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>>;
+
+  sendDefundTransferTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
+
   withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
 
   once<T extends EngineEvent>(
