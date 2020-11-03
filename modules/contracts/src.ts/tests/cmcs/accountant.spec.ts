@@ -9,7 +9,8 @@ import { provider } from "../constants";
 const { parseEther } = utils;
 const { AddressZero } = constants;
 
-describe("CMCAccountant.sol", () => {
+describe("CMCAccountant.sol", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let channel: Contract;
 

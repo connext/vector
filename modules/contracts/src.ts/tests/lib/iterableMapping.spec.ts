@@ -8,7 +8,8 @@ import { deployContracts } from "../../actions";
 import { alice } from "../constants";
 import { getTestAddressBook } from "../utils";
 
-describe("LibIterableMapping.sol", () => {
+describe("LibIterableMapping.sol", function() {
+  this.timeout(120_000);
   let mapping: Contract;
   let transferDefs: Contract[];
 

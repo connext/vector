@@ -18,7 +18,8 @@ import { VectorChainReader } from "../services";
 import { alice, bob, chainIdReq, provider } from "./constants";
 import { getTestAddressBook } from "./utils";
 
-describe("ChannelFactory", () => {
+describe("ChannelFactory", function() {
+  this.timeout(120_000);
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
   let addressBook: AddressBook;

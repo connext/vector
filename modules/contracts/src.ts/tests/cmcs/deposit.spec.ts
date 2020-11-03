@@ -8,7 +8,8 @@ import { deployContracts } from "../../actions";
 import { alice, bob } from "../constants";
 import { getTestAddressBook, getTestChannel } from "../utils";
 
-describe("CMCDeposit.sol", () => {
+describe("CMCDeposit.sol", function() {
+  this.timeout(120_000);
   const value = One;
   let channel: Contract;
   let failingToken: Contract;

@@ -8,7 +8,8 @@ import { getTestAddressBook, getTestChannel, alice } from "..";
 import { deployContracts, WithdrawCommitment } from "../..";
 import { bob, provider } from "../constants";
 
-describe("CMCWithdraw.sol", () => {
+describe("CMCWithdraw.sol", function() {
+  this.timeout(120_000);
   const recipient = Wallet.createRandom().address;
 
   let channel: Contract;

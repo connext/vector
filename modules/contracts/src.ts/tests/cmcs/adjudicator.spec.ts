@@ -26,7 +26,9 @@ import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from
 
 const { parseEther } = utils;
 
-describe("CMCAdjudicator.sol", () => {
+describe("CMCAdjudicator.sol", function() {
+  this.timeout(120_000);
+
   let channel: Contract;
   let token: Contract;
   let transferDefinition: Contract;
