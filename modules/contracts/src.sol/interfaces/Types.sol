@@ -7,6 +7,17 @@ struct Balance {
   address payable[2] to; // [alice, bob] in channel, [initiator, responder] in transfer
 }
 
+struct WithdrawData {
+  address channelAddress;
+  address assetId;
+  address payable recipient;
+  uint256 amount;
+  uint256 nonce;
+  address callTo;
+  uint256 callValue;
+  bytes callData;
+}
+
 struct CoreChannelState {
   address channelAddress;
   address alice;
