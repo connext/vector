@@ -2,6 +2,8 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./Types.sol";
+
 interface ICMCWithdraw {
   function getWithdrawalTransactionRecord(
     address recipient,
@@ -11,11 +13,8 @@ interface ICMCWithdraw {
   ) external view returns (bool);
 
   function withdraw(
-    address payable recipient,
-    address assetId,
-    uint256 amount,
-    uint256 nonce,
-    bytes memory aliceSignature,
-    bytes memory bobSignature
+    WithdrawData calldata wd,
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
   ) external;
 }

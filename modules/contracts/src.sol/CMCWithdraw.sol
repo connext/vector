@@ -3,43 +3,71 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCWithdraw.sol";
+import "./interfaces/Types.sol";
 import "./CMCCore.sol";
 import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+
 
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   using LibChannelCrypto for bytes32;
 
   mapping(bytes32 => bool) private isExecuted;
 
-  /// @param recipient The address to which we're withdrawing funds to
-  /// @param assetId The token address of the asset we're withdrawing (address(0)=eth)
-  /// @param amount The number of units of asset we're withdrawing
+  modifier validateWithdrawData(WithdrawData calldata wd) {
+    require(
+      wd.channelAddress == address(this),
+      "CMCWithdraw: Mismatch between withdraw data and channel"
+    );
+    _;
+  }
+
+  /// @param wd The withdraw data consisting of
+  /// "semantic information", i.e. assetId, recipient, and amount;
+  /// "execution information", i.e. address to make the call to, value, and data for the call; and
+  /// "additional information", i.e. channel address and nonce.
   /// @param aliceSignature Signature of owner a
   /// @param bobSignature Signature of owner b
   function withdraw(
-    address payable recipient,
-    address assetId,
-    uint256 amount,
-    uint256 nonce,
-    bytes memory aliceSignature,
-    bytes memory bobSignature
-  ) external override onlyViaProxy nonReentrant {
-    // Replay protection
-    bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
-    require(!isExecuted[withdrawHash], "CMCWithdraw: Transaction has already been executed");
-    isExecuted[withdrawHash] = true;
+    WithdrawData calldata wd,
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
+  )
+    external
+    override
+    onlyViaProxy
+    nonReentrant
+    validateWithdrawData(wd)
+  {
+    // Generate hash
+    bytes32 wdHash = hashWithdrawData(wd);
 
-    // Validate signatures
-    require(withdrawHash.checkSignature(aliceSignature, alice), "CMCWithdraw: Invalid alice signature");
-    require(withdrawHash.checkSignature(bobSignature, bob), "CMCWithdraw: Invalid bob signature");
+    // Verify Alice's and Bob's signature on the withdraw data
+    verifySignatures(wdHash, aliceSignature, bobSignature);
+
+    // Replay protection
+    require(!isExecuted[wdHash], "CMCWithdraw: Transaction has already been executed");
+    isExecuted[wdHash] = true;
 
     // Add to totalWithdrawn
-    registerTransfer(assetId, amount);
+    registerTransfer(wd.assetId, wd.amount);
 
     // Execute the withdraw
-    require(LibAsset.transfer(assetId, recipient, amount), "CMCWithdraw: Transfer failed");
+    (bool success, bytes memory encodedReturnValue) = wd.callTo.call{value: wd.callValue}(wd.callData);
+
+    // Check success:
+    // For plain Ether transfers (i.e. empty data), we just check whether the call was successful;
+    // for non-empty data, in addition to a successful call, we require that the called address
+    // has code and we accept empty return data or the Boolean value `true`.
+    // This is compatible with the ERC20 standard, as well as with tokens that exhibit the
+    // missing-return-value bug. Custom contracts as call targets must follow this convention.
+    require(success, "CMCWithdraw: Call failed");
+    if (wd.callData.length > 0) {
+      require(Address.isContract(wd.callTo), "CMCWithdraw: Called address has no code");
+      require(encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool)), "CMCWithdraw: Transfer failed");
+    }
   }
 
   function getWithdrawalTransactionRecord(
@@ -51,4 +79,25 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
     return isExecuted[withdrawHash];
   }
+
+  function verifySignatures(
+    bytes32 wdHash,
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
+  ) internal view {
+    require(
+      wdHash.checkSignature(aliceSignature, alice),
+      "CMCWithdraw: Invalid alice signature"
+    );
+    require(
+      wdHash.checkSignature(bobSignature, bob),
+      "CMCWithdraw: Invalid bob signature"
+    );
+  }
+
+  function hashWithdrawData(WithdrawData calldata wd) internal pure returns (bytes32) {
+    // TODO: include commitment type
+    return keccak256(abi.encode(wd));
+  }
+
 }
