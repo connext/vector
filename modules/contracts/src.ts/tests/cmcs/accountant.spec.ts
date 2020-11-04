@@ -1,12 +1,11 @@
 import { Balance } from "@connext/vector-types";
 import { expect } from "chai";
-import { BigNumber, Contract, Wallet, utils, constants } from "ethers";
+import { BigNumber, Contract, Wallet, constants } from "ethers";
 
 import { getTestAddressBook, bob, getTestChannel } from "..";
 import { AddressBook } from "../../addressBook";
 import { provider } from "../constants";
 
-const { parseEther } = utils;
 const { AddressZero } = constants;
 
 describe("CMCAccountant.sol", function() {
@@ -19,12 +18,12 @@ describe("CMCAccountant.sol", function() {
     channel = await getTestChannel(addressBook);
 
     // Fund channel with eth
-    const eth = await bob.sendTransaction({ to: channel.address, value: "10000" });
+    const eth = await bob.sendTransaction({ to: channel.address, value: BigNumber.from("10000") });
     await eth.wait();
   });
 
   it("should properly transfer balance", async () => {
-    const value = "1000";
+    const value = BigNumber.from("1000");
     const balance: Balance = {
       to: [Wallet.createRandom().address, Wallet.createRandom().address],
       amount: [value.toString(), value.toString()],
