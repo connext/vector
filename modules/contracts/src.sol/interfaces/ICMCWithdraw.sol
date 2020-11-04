@@ -6,10 +6,7 @@ import "./Types.sol";
 
 interface ICMCWithdraw {
   function getWithdrawalTransactionRecord(
-    address recipient,
-    address assetId,
-    uint256 amount,
-    uint256 nonce
+    WithdrawData calldata wd
   ) external view returns (bool);
 
   function withdraw(
