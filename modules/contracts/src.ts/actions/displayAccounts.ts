@@ -20,8 +20,8 @@ export const displayAccounts = async (mnemonic: string, log = logger.child({})):
   logger.info({ rando: wallets[2].address, recommended: "0.1 ETH" }, "Rando");
 };
 
-export const migrateCommand = {
-  command: "display",
+export const displayCommand = {
+  command: "display-accounts",
   describe: "Display contract test accounts",
   builder: (yargs: Argv): Argv => {
     return yargs.option("m", cliOpts.mnemonic);
