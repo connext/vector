@@ -54,18 +54,22 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     // Add to totalWithdrawn
     registerTransfer(wd.assetId, wd.amount);
 
+    // Unless this is a plain Ether transfer, verify that the target address has code
+    if (wd.callData.length > 0) {
+      require(Address.isContract(wd.callTo), "CMCWithdraw: Called address has no code");
+    }
+
     // Execute the withdraw
     (bool success, bytes memory encodedReturnValue) = wd.callTo.call{value: wd.callValue}(wd.callData);
 
     // Check success:
     // For plain Ether transfers (i.e. empty data), we just check whether the call was successful;
     // for non-empty data, in addition to a successful call, we require that the called address
-    // has code and we accept empty return data or the Boolean value `true`.
+    // has code (already done above) and we accept empty return data or the Boolean value `true`.
     // This is compatible with the ERC20 standard, as well as with tokens that exhibit the
     // missing-return-value bug. Custom contracts as call targets must follow this convention.
     require(success, "CMCWithdraw: Call failed");
     if (wd.callData.length > 0) {
-      require(Address.isContract(wd.callTo), "CMCWithdraw: Called address has no code");
       require(encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool)), "CMCWithdraw: Transfer failed");
     }
   }
