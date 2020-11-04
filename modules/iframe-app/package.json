@@ -1,6 +1,6 @@
 {
-  "name": "@connext/vector-test-ui",
-  "version": "0.0.1",
+  "name": "iframe-app",
+  "version": "0.1.0",
   "private": true,
   "dependencies": {
     "@connext/vector-browser-node": "0.0.6-beta.0",
@@ -9,9 +9,6 @@
     "@types/node": "14.14.6",
     "@types/react": "16.9.53",
     "@types/react-dom": "16.9.8",
-    "antd": "4.7.2",
-    "axios": "0.21.0",
-    "ethers": "5.0.19",
     "pino": "6.7.0",
     "react": "17.0.1",
     "react-dom": "17.0.1",
@@ -25,7 +22,9 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": [
+      "react-app"
+    ]
   },
   "browserslist": {
     "production": [
@@ -38,5 +37,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/pino": "6.3.3"
   }
 }
