@@ -1,7 +1,9 @@
-import { HexString, PublicKey } from "@connext/vector-types";
+import { HexString, PublicKey, PrivateKey } from "@connext/vector-types";
 import { utils } from "ethers";
 import {
   arrayToBuffer,
+  decrypt as libDecrypt,
+  deserialize,
   encrypt as libEncrypt,
   hexToBuffer,
   serialize,
@@ -10,7 +12,7 @@ import {
 
 import { isValidHexString } from "./hexStrings";
 
-const { arrayify, hexlify } = utils;
+const { arrayify, hexlify, toUtf8String } = utils;
 
 export const INDRA_SIGN_PREFIX = "\x15Indra Signed Message:\n";
 
@@ -22,6 +24,9 @@ export const bufferify = (input: Uint8Array | Buffer | string): Buffer =>
     : !Buffer.isBuffer(input)
     ? arrayToBuffer(arrayify(input))
     : input;
-    
+
 export const encrypt = async (message: string, publicKey: PublicKey): Promise<HexString> =>
   hexlify(serialize(await libEncrypt(bufferify(publicKey), utf8ToBuffer(message))));
+
+export const decrypt = async (encrypted: HexString, privateKey: PrivateKey): Promise<HexString> =>
+  toUtf8String(await libDecrypt(bufferify(privateKey), deserialize(bufferify(`0x${encrypted.replace(/^0x/, "")}`))));
