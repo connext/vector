@@ -117,7 +117,7 @@ describe("AssetTransfer.sol", () => {
     });
   });
 
-  describe.only("emergencyWithdraw", () => {
+  describe("emergencyWithdraw", () => {
     const value = BigNumber.from(1000);
 
     beforeEach(async () => {
