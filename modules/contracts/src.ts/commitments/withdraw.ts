@@ -63,7 +63,7 @@ export class WithdrawCommitment {
     return commitment;
   }
 
-  public createCallData() {
+  public getCallData() {
     return this.assetId === constants.AddressZero
       ? {
         to: this.recipient,
@@ -77,22 +77,25 @@ export class WithdrawCommitment {
       };
   }
 
+  public getWithdrawData() {
+    const callData = this.getCallData();
+    return [
+      this.channelAddress,
+      this.assetId,
+      this.recipient,
+      this.amount,
+      this.nonce,
+      callData.to,
+      callData.value,
+      callData.data,
+    ];
+  }
+
   public hashToSign(): string {
-    const callData = this.createCallData();
+    const withdrawData = this.getWithdrawData();
     const encodedWithdrawData = defaultAbiCoder.encode(
       [WithdrawDataEncoding],
-      [
-        [
-          this.channelAddress,
-          this.assetId,
-          this.recipient,
-          this.amount,
-          this.nonce,
-          callData.to,
-          callData.value,
-          callData.data,
-        ]
-      ]
+      [withdrawData],
     );
     // TODO: include commitment type
     return keccak256(encodedWithdrawData);
@@ -102,7 +105,7 @@ export class WithdrawCommitment {
     if (!this.signatures || this.signatures.length === 0) {
       throw new Error(`No signatures detected`);
     }
-    const callData = this.createCallData();
+    const callData = this.getCallData();
     const data = new Interface(ChannelMastercopy.abi).encodeFunctionData("withdraw", [
       [
         this.channelAddress,
