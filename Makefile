@@ -95,6 +95,9 @@ stop-global:
 start-test-ui: browser-node
 	@bash ops/start-test-ui.sh
 
+start-iframe-app: browser-node
+	@bash ops/start-iframe-app.sh
+
 stop-all:
 	@bash ops/stop.sh trio
 	@bash ops/stop.sh router
