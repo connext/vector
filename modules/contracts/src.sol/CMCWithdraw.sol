@@ -68,9 +68,9 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     // has code (already done above) and we accept empty return data or the Boolean value `true`.
     // This is compatible with the ERC20 standard, as well as with tokens that exhibit the
     // missing-return-value bug. Custom contracts as call targets must follow this convention.
-    require(success, "CMCWithdraw: Call failed");
+    require(success, "CMCWithdraw: Call reverted");
     if (wd.callData.length > 0) {
-      require(encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool)), "CMCWithdraw: Transfer failed");
+      require(encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool)), "CMCWithdraw: Call failed");
     }
   }
 
