@@ -15,10 +15,8 @@ describe("CMCAccountant.sol", () => {
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     channel = await getTestChannel(addressBook);
-
     // Fund channel with eth
-    const eth = await bob.sendTransaction({ to: channel.address, value: parseEther("0.001") });
-    await eth.wait();
+    await (await bob.sendTransaction({ to: channel.address, value: parseEther("0.001") })).wait();
   });
 
   it("should properly transfer balance", async () => {

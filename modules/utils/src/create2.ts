@@ -1,5 +1,6 @@
+import { getAddress } from "@ethersproject/address";
+import { keccak256 } from "@ethersproject/solidity";
 import { PublicIdentifier, IVectorChainReader, Result } from "@connext/vector-types";
-import { utils } from "ethers";
 
 import { getSignerAddressFromPublicIdentifier } from "./identifiers";
 
@@ -18,42 +19,37 @@ export const getCreate2MultisigAddress = async (
   chainReader: IVectorChainReader,
 ): Promise<Result<string, Error>> => {
 
-  const proxyRes = await chainReader.getChannelFactoryBytecode(channelFactoryAddress, chainId);
-  if (proxyRes.isError) {
-    return proxyRes;
-  }
+  const mastercopyRes = await chainReader.getChannelMastercopyAddress(
+    channelFactoryAddress,
+    chainId,
+  );
 
-  const mastercopyRes = await chainReader.getChannelMastercopyAddress(channelFactoryAddress, chainId);
   if (mastercopyRes.isError) {
     return mastercopyRes;
   }
 
   try {
     return Result.ok(
-      utils.getAddress(
-        utils
-          .solidityKeccak256(
-            ["bytes1", "address", "uint256", "bytes32"],
+      getAddress(keccak256(
+        ["bytes1", "address", "uint256", "bytes32"],
+        [
+          "0xff",
+          channelFactoryAddress,
+          // salt
+          keccak256(
+            ["address", "address", "uint256"],
             [
-              "0xff",
-              channelFactoryAddress,
-              // salt
-              utils.solidityKeccak256(
-                ["address", "address", "uint256"],
-                [
-                  getSignerAddressFromPublicIdentifier(initiatorIdentifier),
-                  getSignerAddressFromPublicIdentifier(responderIdentifier),
-                  chainId,
-                ],
-              ),
-              utils.solidityKeccak256(
-                ["bytes"],
-                [getMinimalProxyInitCode(mastercopyRes.getValue())],
-              ),
+              getSignerAddressFromPublicIdentifier(initiatorIdentifier),
+              getSignerAddressFromPublicIdentifier(responderIdentifier),
+              chainId,
             ],
-          )
-          .slice(-40),
-      ),
+          ),
+          keccak256(
+            ["bytes"],
+            [getMinimalProxyInitCode(mastercopyRes.getValue())],
+          ),
+        ],
+      ).slice(-40)),
     );
   } catch (e) {
     return Result.fail(e);
