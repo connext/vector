@@ -30,7 +30,7 @@ describe("Withdraw", function() {
   let addressBook: AddressBook;
   let withdraw: Contract;
 
-  beforeEach(async () => {
+  before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["Withdraw", []]]);
     withdraw = addressBook.getContract("Withdraw");

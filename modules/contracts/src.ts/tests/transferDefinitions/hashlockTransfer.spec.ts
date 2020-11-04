@@ -28,7 +28,7 @@ describe("HashlockTransfer", function() {
   let addressBook: AddressBook;
   let transfer: Contract;
 
-  beforeEach(async () => {
+  before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["HashlockTransfer", []]]);
     transfer = addressBook.getContract("HashlockTransfer");

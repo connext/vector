@@ -19,12 +19,12 @@ describe("CMCAccountant.sol", function() {
     channel = await getTestChannel(addressBook);
 
     // Fund channel with eth
-    const eth = await bob.sendTransaction({ to: channel.address, value: parseEther("0.001") });
+    const eth = await bob.sendTransaction({ to: channel.address, value: "10000" });
     await eth.wait();
   });
 
   it("should properly transfer balance", async () => {
-    const value = parseEther("0.0001");
+    const value = "1000";
     const balance: Balance = {
       to: [Wallet.createRandom().address, Wallet.createRandom().address],
       amount: [value.toString(), value.toString()],
