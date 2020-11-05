@@ -1,9 +1,14 @@
-import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector-utils";
+import {
+  getRandomBytes32,
+  RestServerNodeService,
+  expect,
+  getSignerAddressFromPublicIdentifier,
+} from "@connext/vector-utils";
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 import { EngineEvents, INodeService, TransferNames } from "@connext/vector-types";
 
-import { env, fundIfBelow, getRandomIndex } from "../utils";
+import { env, fundIfBelow, getOnchainBalance, getRandomIndex } from "../utils";
 
 import { carolEvts, daveEvts } from "./setup";
 
@@ -14,7 +19,7 @@ const wallet = Wallet.fromMnemonic(env.sugarDaddy!).connect(provider);
 const logger = pino({ level: env.logLevel });
 const testName = "Trio Happy";
 
-describe(testName, () => {
+describe.only(testName, () => {
   let carolService: INodeService;
   let carolIdentifier: string;
   let carol: string;
@@ -223,5 +228,129 @@ describe(testName, () => {
     daveAssetIdx = channelAfterResolve.assetIds.findIndex(_assetId => _assetId === assetId);
     const daveAfterResolve = channelAfterResolve.balances[daveAssetIdx].amount[1];
     expect(daveAfterResolve).to.be.eq(BigNumber.from(daveBefore).add(transferAmt));
+  });
+
+  it("carol should be able to withdraw to her signing address", async () => {
+    // Get test constants
+    const assetId = constants.AddressZero;
+    const withdrawAmt = utils.parseEther("0.005");
+    const withdrawRecipient = carol;
+    console.log("funds going to", withdrawRecipient);
+    const carolChannelRes = await carolService.getStateChannelByParticipants({
+      counterparty: rogerIdentifier,
+      chainId,
+      publicIdentifier: carolIdentifier,
+    });
+    const carolChannel = carolChannelRes.getValue()!;
+    console.log("channel address", carolChannel.channelAddress);
+
+    // Get pre-withdraw channel balances
+    const assetIdx = carolChannel.assetIds.findIndex(a => a === assetId);
+    const [preWithdrawRoger, preWithdrawCarol] = carolChannel.balances[assetIdx].amount;
+    const preWithdrawMultisig = await getOnchainBalance(assetId, carolChannel.channelAddress);
+    const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
+
+    // Perform withdrawal
+    const withdrawalRes = await carolService.withdraw({
+      publicIdentifier: carolIdentifier,
+      channelAddress: carolChannel.channelAddress,
+      amount: withdrawAmt.toString(),
+      assetId,
+      recipient: withdrawRecipient,
+      fee: "0",
+      meta: { reason: "Carol withdrawing" },
+    });
+    expect(withdrawalRes.getError()).to.be.undefined;
+    const { transactionHash } = withdrawalRes.getValue()!;
+    expect(transactionHash).to.be.ok;
+    console.log("transactionHash", transactionHash);
+    const receipt = await provider.waitForTransaction(transactionHash!);
+    console.log("receipt", receipt);
+
+    // Get post-withraw balances
+    const carolChannelPostWithdrawRes = await carolService.getStateChannelByParticipants({
+      counterparty: rogerIdentifier,
+      chainId,
+      publicIdentifier: carolIdentifier,
+    });
+    const carolChannelPostWithdraw = carolChannelPostWithdrawRes.getValue()!;
+    const [postWithdrawRoger, postWithdrawCarol] = carolChannelPostWithdraw.balances[assetIdx].amount;
+    const postWithdrawMultisig = await getOnchainBalance(assetId, carolChannel.channelAddress);
+    const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
+
+    console.log("postWithdrawMultisig", utils.formatEther(postWithdrawMultisig));
+    console.log("preWithdrawMultisig", utils.formatEther(preWithdrawMultisig));
+    console.log("postWithdrawRecipient", utils.formatEther(postWithdrawRecipient));
+    console.log("preWithdrawRecipient", utils.formatEther(preWithdrawRecipient));
+    console.log("withdrawAmt", utils.formatEther(withdrawAmt));
+
+    // Verify balance changes
+    console.log("verifying roger no change");
+    expect(postWithdrawRoger).to.be.eq(preWithdrawRoger);
+    console.log("verifying channel balance decrease");
+    expect(BigNumber.from(preWithdrawCarol).sub(withdrawAmt)).to.be.eq(postWithdrawCarol);
+    console.log("verifying recipient balance increase");
+    expect(postWithdrawRecipient).to.be.eq(withdrawAmt.add(preWithdrawRecipient));
+    console.log("verifying multisig balance decrease");
+    expect(postWithdrawMultisig).to.be.eq(preWithdrawMultisig.sub(withdrawAmt));
+  });
+
+  it("dave should be able to withdraw to a delegated recipient", async () => {
+    const assetId = constants.AddressZero;
+    const withdrawAmt = utils.parseEther("0.005");
+    const withdrawRecipient = Wallet.createRandom().address;
+    const daveChannelRes = await daveService.getStateChannelByParticipants({
+      counterparty: rogerIdentifier,
+      chainId,
+      publicIdentifier: daveIdentifier,
+    });
+    const daveChannel = daveChannelRes.getValue()!;
+
+    // Get pre-withdraw channel balances
+    const assetIdx = daveChannel.assetIds.findIndex(a => a === assetId);
+    expect(assetIdx).to.be.greaterThan(-1);
+    console.log("daveChannel.assetIds", daveChannel.assetIds);
+    console.log("daveChannel.balances", daveChannel.balances);
+    const [preWithdrawRoger, preWithdrawDave] = daveChannel.balances[assetIdx].amount;
+    const preWithdrawMultisig = await getOnchainBalance(assetId, daveChannel.channelAddress);
+    const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
+
+    // Perform withdrawal
+    const withdrawalRes = await daveService.withdraw({
+      publicIdentifier: daveIdentifier,
+      channelAddress: daveChannel.channelAddress,
+      amount: withdrawAmt.toString(),
+      assetId,
+      recipient: withdrawRecipient,
+      fee: "0",
+      meta: { reason: "Dave withdrawing" },
+    });
+    expect(withdrawalRes.getError()).to.be.undefined;
+    const { transactionHash } = withdrawalRes.getValue()!;
+    expect(transactionHash).to.be.ok;
+    await provider.waitForTransaction(transactionHash!);
+
+    // Get post-withraw balances
+    const daveChannelPostWithdrawRes = await daveService.getStateChannelByParticipants({
+      counterparty: rogerIdentifier,
+      chainId,
+      publicIdentifier: daveIdentifier,
+    });
+    const daveChannelPostWithdraw = daveChannelPostWithdrawRes.getValue()!;
+    const [postWithdrawRoger, postWithdrawDave] = daveChannelPostWithdraw.balances[assetIdx].amount;
+    const postWithdrawMultisig = await getOnchainBalance(assetId, daveChannel.channelAddress);
+    const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
+
+    console.log("postWithdrawMultisig", utils.formatEther(postWithdrawMultisig));
+    console.log("preWithdrawMultisig", utils.formatEther(preWithdrawMultisig));
+    console.log("postWithdrawRecipient", utils.formatEther(postWithdrawRecipient));
+    console.log("preWithdrawRecipient", utils.formatEther(preWithdrawRecipient));
+    console.log("withdrawAmt", utils.formatEther(withdrawAmt));
+
+    // Verify balance changes
+    expect(postWithdrawRoger).to.be.eq(preWithdrawRoger);
+    expect(BigNumber.from(preWithdrawDave).sub(withdrawAmt)).to.be.eq(postWithdrawDave);
+    expect(postWithdrawMultisig).to.be.eq(BigNumber.from(preWithdrawMultisig).sub(withdrawAmt));
+    expect(postWithdrawRecipient).to.be.eq(withdrawAmt.add(preWithdrawRecipient));
   });
 });
