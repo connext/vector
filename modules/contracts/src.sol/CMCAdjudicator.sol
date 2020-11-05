@@ -15,6 +15,21 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
+  event ChannelDisputed(address disputer, address channelAddress, ChannelDispute dispute);
+
+  event ChannelDefunded(address defunder, address channelAddress, ChannelDispute dispute);
+
+  event TransferDisputed(address disputer, address channelAddress, bytes32 transferId, TransferDispute dispute);
+
+  event TransferDefunded(
+    address defunder,
+    address channelAddress,
+    TransferDispute dispute,
+    bytes encodedInitialState,
+    bytes encodedResolver,
+    Balance balance
+  );
+
   uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 12000;
 
   ChannelDispute private channelDispute;
@@ -77,6 +92,9 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     channelDispute.channelStateHash = hashChannelState(ccs);
     channelDispute.nonce = ccs.nonce;
     channelDispute.merkleRoot = ccs.merkleRoot;
+
+    // Emit event
+    emit ChannelDisputed(msg.sender, address(this), channelDispute);
   }
 
   function defundChannel(CoreChannelState calldata ccs)
@@ -130,6 +148,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       // the funds are made available for emergency withdrawal
       transferBalance(assetId, balance);
     }
+
+    emit ChannelDefunded(msg.sender, address(this), channelDispute);
   }
 
   function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData)
@@ -156,6 +176,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     transferDispute.transferStateHash = transferStateHash;
     // TODO: offchain-ensure that there can't be an overflow
     transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout);
+
+    emit TransferDisputed(msg.sender, address(this), cts.transferId, transferDispute);
   }
 
   function defundTransfer(
@@ -209,6 +231,16 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // i.e. if the underlying "real" asset transfer fails,
     // the funds are made available for emergency withdrawal
     transferBalance(cts.assetId, balance);
+
+    // Emit event
+    emit TransferDefunded(
+      msg.sender,
+      address(this),
+      transferDispute,
+      encodedInitialTransferState,
+      encodedTransferResolver,
+      balance
+    );
   }
 
   function _depositsBob(address assetId) external view onlySelf returns (uint256) {

@@ -238,6 +238,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     bobIdentifier: publicIdentifiers[1],
     timeout: "1",
     defundNonce,
+    inDispute: false,
     ...rest,
   };
 }

@@ -173,6 +173,7 @@ describe(testName, () => {
         transferState: initialState,
         transferResolver: undefined,
         meta: { test: "meta" },
+        inDispute: false,
         ...createCoreTransferState({
           balance,
           assetId: commitment.assetId,

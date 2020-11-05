@@ -283,6 +283,7 @@ export async function inbound(
       timeout,
       latestUpdate: {} as any, // There is no latest update on setup
       defundNonce: "1",
+      inDispute: false,
     };
   }
 

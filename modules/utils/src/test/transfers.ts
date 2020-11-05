@@ -94,6 +94,7 @@ export function createTestFullHashlockTransferState(
     transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     initiator: overrides.balance?.to[0] ?? mkAddress("0x111"),
     responder: overrides.balance?.to[1] ?? mkAddress("0x222"),
+    inDispute: false,
   };
 
   return {

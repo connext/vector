@@ -106,7 +106,7 @@ describe("CMCAdjudicator.sol", () => {
   // Get merkle proof of transfer
   const getMerkleProof = (cts: FullTransferState = transferState) => {
     const hash = hashCoreTransferState(cts);
-    const merkle = new MerkleTree([hash], utils.keccak256);
+    const merkle = new MerkleTree([bufferify(hash)], utils.keccak256);
     return merkle.getHexProof(bufferify(hash));
   };
 
