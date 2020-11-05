@@ -104,18 +104,8 @@ export class WithdrawCommitment {
     if (!this.signatures || this.signatures.length === 0) {
       throw new Error(`No signatures detected`);
     }
-    const callData = this.getCallData();
     const data = new Interface(ChannelMastercopy.abi).encodeFunctionData("withdraw", [
-      [
-        this.channelAddress,
-        this.assetId,
-        this.recipient,
-        this.amount,
-        this.nonce,
-        callData.to,
-        callData.value,
-        callData.data,
-      ],
+      this.getWithdrawData(),
       this.aliceSignature,
       this.bobSignature,
     ]);
