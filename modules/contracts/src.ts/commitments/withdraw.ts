@@ -1,6 +1,7 @@
 import { MinimalTransaction, WithdrawCommitmentJson, WithdrawDataEncoding } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { BigNumber, constants, utils } from "ethers";
+import { BigNumber, utils } from "ethers";
+import { AddressZero, Zero } from "@ethersproject/constants";
 
 import { ChannelMastercopy } from "../artifacts";
 import * as ERC20 from "@openzeppelin/contracts/build/contracts/IERC20.json";
@@ -64,7 +65,7 @@ export class WithdrawCommitment {
   }
 
   public getCallData() {
-    return this.assetId === constants.AddressZero
+    return this.assetId === AddressZero
       ? {
         to: this.recipient,
         value: this.amount,
@@ -72,7 +73,7 @@ export class WithdrawCommitment {
       }
       : {
         to: this.assetId,
-        value: constants.Zero,
+        value: Zero,
         data: new Interface(ERC20.abi).encodeFunctionData("transfer", [this.recipient, BigNumber.from(this.amount)]),
       };
   }
