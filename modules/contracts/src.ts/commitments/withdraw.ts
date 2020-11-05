@@ -98,7 +98,6 @@ export class WithdrawCommitment {
       [WithdrawDataEncoding],
       [withdrawData],
     );
-    // TODO: include commitment type
     return keccak256(encodedWithdrawData);
   }
 
@@ -124,6 +123,7 @@ export class WithdrawCommitment {
     return { to: this.channelAddress, value: 0, data: data };
   }
 
+  // TODO: include commitment type
   public async addSignatures(signature1?: string, signature2?: string): Promise<void> {
     const hash = this.hashToSign();
     for (const sig of [signature1, signature2]) {
