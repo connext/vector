@@ -2,17 +2,23 @@
 
 ## Requirements
 
-### Opcode Support
+### Chain Requirements
 
-The contracts use the following op-codes:
+To integrate with connext your chain must have:
 
-TODO
+- evm compatability
+- `ABIEncoderV2` support
+- `EC_RECOVER` support
+- `keccak256` support
+- same math quirks as solidity (i.e. must underflow and overflow in the same way if your contract is NOT using safe math)
+- blocktime/timestamp support
+- solidity v7 support
 
-Additionally, the `CMCDeposit.sol` contract makes use of the overflow quirks in soldiity to correctly calculate the deposit amounts. The over-/underflow behavior of soldiity without using `SafeMath` must be retained.
+If your chain meets some, but not all, of these requirements, reach out to the Connext team for more detailed integration tests.
 
-### Testing Contracts
+### Contract Testing
 
-If there is any concern about whether your chain supports the required behavior, it is possible to run the contract tests against your chain. To run the test suite against a different chain:
+If there is any concern about whether your chain supports the required behavior, it is possible to run the full contract test suite against your chain:
 
 1. Add the network information to the `hardhat.config.ts`. Specifically, include:
 
@@ -29,7 +35,7 @@ $ bash ops/test-network.sh <NETWORK_NAME> <CHAIN_PROVIDERS> <FUNDED_MNEMONIC>
 # bash ops/test-network.sh "matic" '{ "80001" : "https://rpc-mumbai.matic.today" }' "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 ```
 
-It is important to note that these tests are expensive to run, and should be done against some type of testnet.
+**NOTE** These tests are _expensive_ to run, and should be done against a testnet.
 
 ### Integration Testing
 
@@ -40,7 +46,7 @@ To test a local trio setup against a remote chain:
 ```sh
 bash ops/deploy-contracts.sh -p <PROVIDER_URL> -m <FUNDED_MNEMONIC> -a <ADDRESS_BOOK_PATH>
 
-# the cli inputs are all optional, and if not provided use the following defaults:
+# the cli inputs are all optional, and if not provided will use the following defaults:
 # m: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 # p: "http://localhost:8545"
 # a: "./address-book.json"
