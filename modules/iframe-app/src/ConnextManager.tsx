@@ -3,6 +3,7 @@ import { BrowserNode } from "@connext/vector-browser-node";
 import { JsonRpcRequest, ChannelRpcMethod } from "@connext/vector-types";
 import { ChannelSigner } from "@connext/vector-utils";
 import pino from "pino";
+import { config } from "./config";
 
 export function payloadId(): number {
   const date = new Date().getTime() * Math.pow(10, 3);
@@ -14,7 +15,6 @@ export default class ConnextManager {
   private parentOrigin: string;
   private privateKey: string | undefined;
   private browserNode: BrowserNode | undefined;
-  private channelAddress: string | undefined;
 
   constructor() {
     this.parentOrigin = new URL(document.referrer).origin;
@@ -28,11 +28,7 @@ export default class ConnextManager {
     }
   }
 
-  private async initChannel(
-    ethProviderUrl: string,
-    nodePublicIdentifier: string,
-    signature: string,
-  ): Promise<BrowserNode> {
+  private async initChannel(nodePublicIdentifier: string, signature: string): Promise<BrowserNode> {
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
     const mnemonic = utils.entropyToMnemonic(utils.keccak256(signature));
@@ -40,10 +36,12 @@ export default class ConnextManager {
     const chainId = 1337; // TODO: get from ethProvider
     this.browserNode = await BrowserNode.connect({
       signer: new ChannelSigner(this.privateKey),
-      chainAddresses: {},
-      chainProviders: { [chainId]: ethProviderUrl },
+      chainAddresses: config.chainAddresses,
+      chainProviders: config.chainProviders,
       logger: pino(),
-      messagingUrl: "https://messaging.connext.network",
+      messagingUrl: config.messagingUrl,
+      authUrl: config.authUrl,
+      natsUrl: config.natsUrl,
     });
     const channel = await this.browserNode.setup({
       chainId,
@@ -53,7 +51,6 @@ export default class ConnextManager {
     if (channel.isError) {
       throw channel.getError();
     }
-    this.channelAddress = channel.getValue().channelAddress;
     return this.browserNode;
   }
 
@@ -73,7 +70,7 @@ export default class ConnextManager {
 
   private async handleRequest(request: JsonRpcRequest) {
     if (request.method === "connext_authenticate") {
-      await this.initChannel(request.params.ethProviderUrl, request.params.nodeUrl, request.params.signature);
+      await this.initChannel(request.params.nodeUrl, request.params.signature);
       return { success: true };
     }
     if (typeof this.browserNode === "undefined") {

@@ -50,7 +50,6 @@ function App() {
         iframeSrc: "http://localhost:3333",
         logger: pino(),
       });
-      console.log("client: ", client);
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
         setConnectError(channelsRes.getError().message);

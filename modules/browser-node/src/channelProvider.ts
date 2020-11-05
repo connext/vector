@@ -5,9 +5,8 @@ import {
   ChannelRpcMethods,
   EngineEvents,
   EngineEventMap,
-  ChannelRpcMethodsPayloadMap,
-  ChannelRpcMethodsResponsesMap,
   IVectorEngine,
+  EngineParams,
 } from "@connext/vector-types";
 import { constructRpcRequest } from "@connext/vector-utils";
 
@@ -32,10 +31,7 @@ export function payloadId(): number {
 
 export interface IRpcChannelProvider {
   connected: boolean;
-  send<T extends ChannelRpcMethod>(
-    method: T,
-    params: ChannelRpcMethodsPayloadMap[T],
-  ): Promise<ChannelRpcMethodsResponsesMap[T]>;
+  send(payload: EngineParams.RpcRequest): Promise<any>;
   open(): Promise<void>;
   close(): Promise<void>;
   on<T extends EngineEvent>(
@@ -78,10 +74,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     throw new Error("Method not implemented.");
   }
 
-  public send<T extends ChannelRpcMethod>(
-    method: T,
-    params: ChannelRpcMethodsPayloadMap[T],
-  ): Promise<ChannelRpcMethodsResponsesMap[T]> {
+  public send(rpc: EngineParams.RpcRequest): Promise<any> {
     return new Promise((resolve, reject) => {
       if (typeof this.iframe === "undefined") {
         throw new Error("iframe is not rendered!");
@@ -89,7 +82,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       if (this.iframe.contentWindow === null) {
         throw new Error("iframe inner page not loaded!");
       }
-      const rpc = constructRpcRequest(method, params);
       this.events.on(`${rpc.id}`, response => {
         if (response?.result) {
           resolve(response?.result);
@@ -107,7 +99,16 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public on = (event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any => {
     if (isEventName(event) || isMethodName(event)) {
-      return this.send("chan_subscribe" as any, { event, once: false }).then(id => {
+      const rpc: EngineParams.RpcRequest = {
+        id: Date.now(),
+        jsonrpc: "2.0",
+        method: "chan_subscribe",
+        params: {
+          event,
+          once: false,
+        },
+      };
+      return this.send(rpc).then(id => {
         this.events.on(id, listener);
       });
     }
@@ -116,7 +117,13 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public once = (event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any => {
     if (isEventName(event) || isMethodName(event)) {
-      return this.send("chan_subscribe" as any, { event, once: true }).then(id => {
+      const rpc: EngineParams.RpcRequest = {
+        id: Date.now(),
+        jsonrpc: "2.0",
+        method: "chan_subscribe",
+        params: { event, once: true },
+      };
+      return this.send(rpc).then(id => {
         this.events.once(id, listener);
       });
     }
@@ -125,7 +132,13 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public removeAllListeners = (): any => {
     this.events.removeAllListeners();
-    return this.send("chan_unsubscribeAll" as any, undefined);
+    const rpc: EngineParams.RpcRequest = {
+      id: Date.now(),
+      jsonrpc: "2.0",
+      method: "chan_unsubscribeAll",
+      params: undefined,
+    };
+    return this.send(rpc);
   };
 
   public async unrender(): Promise<void> {
@@ -192,13 +205,10 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 export class DirectProvider implements IRpcChannelProvider {
   public connected = false;
   constructor(private readonly engine: IVectorEngine) {}
-  async send<T extends ChannelRpcMethod>(
-    method: T,
-    params: ChannelRpcMethodsPayloadMap[T],
-  ): Promise<ChannelRpcMethodsResponsesMap[T]> {
-    const rpc = constructRpcRequest(method, params);
-    const res = await this.engine.request<typeof ChannelRpcMethods.chan_withdraw>(rpc);
-    return res as ChannelRpcMethodsResponsesMap[T];
+  async send(payload: EngineParams.RpcRequest): Promise<any> {
+    const rpc = constructRpcRequest(payload.method as any, payload.params);
+    const res = await this.engine.request(rpc);
+    return res;
   }
 
   open(): Promise<void> {
