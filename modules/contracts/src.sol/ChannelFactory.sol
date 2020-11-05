@@ -2,11 +2,10 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./lib/LibAsset.sol";
+import "./lib/LibERC20.sol";
 import "./lib/MinimalProxyFactory.sol";
 
 /// @title Channel Factory - Allows us to create new channel proxy contract
@@ -83,11 +82,11 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         // Do we want to keep it this way?
         if (!LibAsset.isEther(assetId)) {
             require(
-                IERC20(assetId).transferFrom(msg.sender, address(this), amount),
+                LibERC20.transferFrom(assetId, msg.sender, address(this), amount),
                 "ChannelFactory: token transferFrom failed"
             );
             require(
-                IERC20(assetId).approve(address(channel), amount),
+                LibERC20.approve(assetId, address(channel), amount),
                 "ChannelFactory: token approve failed"
             );
         }

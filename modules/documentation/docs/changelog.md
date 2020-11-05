@@ -5,6 +5,7 @@
 - fix `defundNonce` in server node store
 - expose nats 4221 by default
 - support trio and contract testing across remote chains
+- improve asset handling
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
 

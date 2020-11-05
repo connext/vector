@@ -141,6 +141,6 @@ describe("CMCWithdraw.sol", function() {
 
     await expect(
       channel.withdraw(recipient, failingToken.address, withdrawAmount, nonce, aliceSig, bobSig),
-    ).revertedWith("CMCWithdraw: Transfer failed");
+    ).revertedWith("FAIL: Failing token");
   });
 });
