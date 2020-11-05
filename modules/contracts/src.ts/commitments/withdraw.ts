@@ -8,7 +8,6 @@ import * as ERC20 from "@openzeppelin/contracts/build/contracts/IERC20.json";
 
 const { defaultAbiCoder, Interface, keccak256 } = utils;
 
-
 export class WithdrawCommitment {
   private aliceSignature?: string;
   private bobSignature?: string;
