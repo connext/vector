@@ -25,7 +25,7 @@ docker run \
   --entrypoint="bash" \
   --env="REACT_APP_VECTOR_CONFIG=$node_config" \
   --env="SKIP_PREFLIGHT_CHECK=true" \
-  --name="${project}_browser_node" \
+  --name="${project}_iframe_app" \
   --publish="$public_port:3030" \
   --network "$project" \
   --rm \

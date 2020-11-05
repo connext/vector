@@ -46,17 +46,11 @@ function App() {
     console.log("creating node with config", config);
     try {
       setConnectLoading(true);
-      const wallet = Wallet.fromMnemonic(mnemonic);
-      const signer = new ChannelSigner(wallet.privateKey);
       const client = await BrowserNode.connect({
-        chainAddresses: config.chainAddresses,
-        chainProviders: config.chainProviders,
-        logger,
-        authUrl: config.authUrl, // optional, only for local setups
-        natsUrl: config.natsUrl, // optional, only for local setups
-        messagingUrl: config.messagingUrl, // used in place of authUrl + natsUrl in prod setups
-        signer,
+        iframeSrc: "http://localhost:3333",
+        logger: pino(),
       });
+      console.log("client: ", client);
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
         setConnectError(channelsRes.getError().message);

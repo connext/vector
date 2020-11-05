@@ -13,5 +13,5 @@
   "chainProviders": {
     "4": "https://eth-rinkeby.alchemyapi.io/jsonrpc/bCywUgYiEekiGcXSY8v8IwKBKy3Kj1wy"
   },
-  "port": 3333
+  "port": 3000
 }
