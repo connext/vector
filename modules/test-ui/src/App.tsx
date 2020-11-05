@@ -1,5 +1,5 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { ChannelSigner, createlockHash, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { createlockHash, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants } from "ethers";
@@ -9,8 +9,6 @@ import "./App.css";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import { config } from "./config";
-
-const logger = pino();
 
 const storedMnemonic = localStorage.getItem("mnemonic");
 
@@ -40,6 +38,7 @@ function App() {
       await connectNode(storedMnemonic);
     };
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const connectNode = async (mnemonic: string) => {

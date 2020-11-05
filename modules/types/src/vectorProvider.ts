@@ -18,6 +18,7 @@ export const ChannelRpcMethods = {
   chan_withdraw: "chan_withdraw",
   chan_subscribe: "chan_subscribe",
   chan_unsubscribeAll: "chan_unsubscribeAll",
+  connext_authenticate: "connext_authenticate",
 } as const;
 export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
@@ -38,6 +39,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
   [ChannelRpcMethods.chan_unsubscribeAll]: undefined;
+  [ChannelRpcMethods.connext_authenticate]: { signature: string };
 };
 
 export type ChannelRpcMethodsResponsesMap = {
@@ -57,4 +59,5 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
+  [ChannelRpcMethods.connext_authenticate]: { publicIdentifier: string; signerAddress: string };
 };

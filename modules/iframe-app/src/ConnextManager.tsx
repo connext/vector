@@ -1,6 +1,6 @@
 import { Wallet, utils } from "ethers";
 import { BrowserNode } from "@connext/vector-browser-node";
-import { JsonRpcRequest, ChannelRpcMethod } from "@connext/vector-types";
+import { JsonRpcRequest, ChannelRpcMethod, EngineParams } from "@connext/vector-types";
 import { ChannelSigner } from "@connext/vector-utils";
 import pino from "pino";
 import { config } from "./config";
@@ -28,12 +28,11 @@ export default class ConnextManager {
     }
   }
 
-  private async initChannel(nodePublicIdentifier: string, signature: string): Promise<BrowserNode> {
+  private async initChannel(signature: string): Promise<BrowserNode> {
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
     const mnemonic = utils.entropyToMnemonic(utils.keccak256(signature));
     this.privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
-    const chainId = 1337; // TODO: get from ethProvider
     this.browserNode = await BrowserNode.connect({
       signer: new ChannelSigner(this.privateKey),
       chainAddresses: config.chainAddresses,
@@ -43,14 +42,6 @@ export default class ConnextManager {
       authUrl: config.authUrl,
       natsUrl: config.natsUrl,
     });
-    const channel = await this.browserNode.setup({
-      chainId,
-      counterpartyIdentifier: nodePublicIdentifier,
-      timeout: "86400",
-    });
-    if (channel.isError) {
-      throw channel.getError();
-    }
     return this.browserNode;
   }
 
@@ -68,9 +59,9 @@ export default class ConnextManager {
     window.parent.postMessage(JSON.stringify(response), this.parentOrigin);
   }
 
-  private async handleRequest(request: JsonRpcRequest) {
+  private async handleRequest(request: EngineParams.RpcRequest) {
     if (request.method === "connext_authenticate") {
-      await this.initChannel(request.params.nodeUrl, request.params.signature);
+      await this.initChannel(request.params.signature);
       return { success: true };
     }
     if (typeof this.browserNode === "undefined") {
@@ -103,6 +94,6 @@ export default class ConnextManager {
       // this.browserNode.removeAllListeners();
       return true;
     }
-    return await this.browserNode.send(request.method as ChannelRpcMethod, request.params);
+    return await this.browserNode.send(request);
   }
 }
