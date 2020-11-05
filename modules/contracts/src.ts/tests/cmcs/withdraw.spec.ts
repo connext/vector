@@ -133,29 +133,6 @@ describe("CMCWithdraw.sol", () => {
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.true;
   });
 
-  it("should fail if the tx has already been executed", async () => {
-    const withdrawAmount = BigNumber.from(1000);
-    const nonce = BigNumber.from(1);
-    const commitment = new WithdrawCommitment(
-      channel.address,
-      alice.address,
-      bob.address,
-      recipient,
-      AddressZero,
-      withdrawAmount.toString(),
-      nonce.toString(),
-    );
-
-    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
-    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
-
-    const withdrawData = commitment.getWithdrawData();
-    await channel.withdraw(withdrawData, aliceSig, bobSig);
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Transaction has already been executed",
-    );
-  });
-
   it("should fail if alice signature is invalid", async () => {
     const withdrawAmount = BigNumber.from(1000);
     const nonce = BigNumber.from(1);
@@ -197,6 +174,29 @@ describe("CMCWithdraw.sol", () => {
     const withdrawData = commitment.getWithdrawData();
     await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
       "CMCWithdraw: Invalid bob signature",
+    );
+  });
+
+  it("should fail if the tx has already been executed", async () => {
+    const withdrawAmount = BigNumber.from(1000);
+    const nonce = BigNumber.from(1);
+    const commitment = new WithdrawCommitment(
+      channel.address,
+      alice.address,
+      bob.address,
+      recipient,
+      AddressZero,
+      withdrawAmount.toString(),
+      nonce.toString(),
+    );
+
+    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
+    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
+
+    const withdrawData = commitment.getWithdrawData();
+    await channel.withdraw(withdrawData, aliceSig, bobSig);
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
+      "CMCWithdraw: Transaction has already been executed",
     );
   });
 
