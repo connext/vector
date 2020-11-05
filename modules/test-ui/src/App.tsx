@@ -1,5 +1,5 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { ChannelSigner, createlockHash, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { getPublicKeyFromPublicIdentifier, decrypt , encrypt, ChannelSigner, createlockHash, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants } from "ethers";
@@ -9,7 +9,6 @@ import "./App.css";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import { config } from "./config";
-import { Crypto, Identifiers } from "./utils";
 
 const logger = pino();
 
@@ -83,7 +82,7 @@ function App() {
           return;
         }
         console.log(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-        const decryptedPreImage = await Crypto.decrypt(data.transfer.meta.encryptedPreImage, wallet.privateKey);
+        const decryptedPreImage = await decrypt(data.transfer.meta.encryptedPreImage, wallet.privateKey);
         console.log(decryptedPreImage);
 
         const requestRes = await client.resolveTransfer({
@@ -158,10 +157,10 @@ function App() {
   const transfer = async (assetId: string, amount: string, recipient: string, preImage: string) => {
     setTransferLoading(true);
 
-    const submittedMeta: { encryptedPreImage?: any } = {};
+    const submittedMeta: { encryptedPreImage?: string } = {};
     if (recipient) {
-      const recipientPublicKey = await Identifiers.getPublicKeyFromPublicIdentifier(recipient);
-      const encryptedPreImage = await Crypto.encrypt(preImage, recipientPublicKey);
+      const recipientPublicKey = await getPublicKeyFromPublicIdentifier(recipient);
+      const encryptedPreImage = await encrypt(preImage, recipientPublicKey);
       submittedMeta.encryptedPreImage = encryptedPreImage;
     }
 
