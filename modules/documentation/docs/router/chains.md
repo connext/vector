@@ -1,0 +1,65 @@
+# Adding a Chain
+
+## Requirements
+
+### Opcode Support
+
+The contracts use the following op-codes:
+
+TODO
+
+Additionally, the `CMCDeposit.sol` contract makes use of the overflow quirks in soldiity to correctly calculate the deposit amounts. The over-/underflow behavior of soldiity without using `SafeMath` must be retained.
+
+### Testing Contracts
+
+If there is any concern about whether your chain supports the required behavior, it is possible to run the contract tests against your chain. To run the test suite against a different chain:
+
+1. Add the network information to the `hardhat.config.ts`. Specifically, include:
+
+- a funded mnemonic
+- a chainId
+- a provider url
+
+2. Run the test suite using:
+
+```sh
+$ bash ops/test-network.sh <NETWORK_NAME> <CHAIN_PROVIDERS> <FUNDED_MNEMONIC>
+
+# i.e. for running against matic:
+# bash ops/test-network.sh "matic" '{ "80001" : "https://rpc-mumbai.matic.today" }' "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+```
+
+It is important to note that these tests are expensive to run, and should be done against some type of testnet.
+
+### Integration Testing
+
+To test a local trio setup against a remote chain:
+
+1. Deploy the contracts to your chain
+
+```sh
+bash ops/deploy-contracts.sh -p <PROVIDER_URL> -m <FUNDED_MNEMONIC> -a <ADDRESS_BOOK_PATH>
+
+# the cli inputs are all optional, and if not provided use the following defaults:
+# m: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+# p: "http://localhost:8545"
+# a: "./address-book.json"
+```
+
+2. Make sure there is a `node.config.json` and a `router.config.json` in the root of your `vector` directory. If one does not exist run:
+
+```sh
+make config
+```
+
+to create files with the preconfigured defaults for a local setup.
+
+3. Update the `chainProviders` and `chainAddresses` fields in the `node.config.json` to include the providers and deployed contract addresses for your network, respectively. Make sure to keep the formatting consistent. See the node [configuration](../node/configure.md) section for more information.
+
+4. Update the `rebalanceProfiles` field in `router.config.json` to include an entry for the chain with appropriate collateralization values for the native asset. See the router [configuration](./configure.md) section for more information.
+
+5. Run the trio happy case tests with:
+
+```sh
+make test-trio
+```
