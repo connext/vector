@@ -78,18 +78,18 @@ function App() {
       });
       client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
         console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
-        if(data.transfer.meta.path[0].recipient !== client.publicIdentifier){
-          console.log("We are the sender")
+        if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
+          console.log("We are the sender");
           return;
         }
         console.log(data.transfer.meta.encryptedPreImage, wallet.privateKey);
         const decryptedPreImage = await Crypto.decrypt(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-        console.log(decryptedPreImage)
+        console.log(decryptedPreImage);
 
         const requestRes = await client.resolveTransfer({
           channelAddress: data.transfer.channelAddress,
           transferResolver: {
-            decryptedPreImage,
+            preImage: decryptedPreImage,
           },
           transferId: data.transfer.transferId,
         });
