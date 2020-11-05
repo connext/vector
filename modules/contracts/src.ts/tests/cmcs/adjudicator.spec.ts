@@ -431,20 +431,7 @@ describe("CMCAdjudicator.sol", () => {
       ).revertedWith("CMCAdjudicator: Mismatch between given core transfer state and channel we are at");
     });
 
-    it("should fail if the transfer does not match whats stored", async () => {
-      await prepTransferForDefund();
-      await expect(
-        channel.defundTransfer(
-          { ...transferState, transferId: getRandomBytes32() },
-          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
-          encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
-        ),
-      ).revertedWith("CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash");
-    });
-
-    // TODO: there is no way to get to here without also failing previous
-    // require
-    it.skip("should fail if transfer hasnt been disputed", async () => {
+    it("should fail if transfer hasnt been disputed", async () => {
       await fundChannel();
       await disputeChannel();
       await expect(
@@ -453,7 +440,18 @@ describe("CMCAdjudicator.sol", () => {
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
         ),
-      ).revertedWith("merp");
+      ).revertedWith("CMCAdjudicator defundTransfer: transfer not yet disputed");
+    });
+
+    it("should fail if the transfer does not match whats stored", async () => {
+      await prepTransferForDefund();
+      await expect(
+        channel.defundTransfer(
+          { ...transferState, initialStateHash: getRandomBytes32() },
+          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+          encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+        ),
+      ).revertedWith("CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash");
     });
 
     it("should fail if transfer has been defunded", async () => {
