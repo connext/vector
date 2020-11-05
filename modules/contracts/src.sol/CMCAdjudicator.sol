@@ -249,6 +249,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     return _getTotalDepositsBob(assetId);
   }
 
+  // TODO: include commitment type
   function verifySignatures(
     CoreChannelState calldata ccs,
     bytes calldata aliceSignature,

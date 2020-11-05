@@ -80,6 +80,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     return isExecuted[hashWithdrawData(wd)];
   }
 
+  // TODO: include commitment type
   function verifySignatures(
     bytes32 wdHash,
     bytes calldata aliceSignature,
@@ -96,7 +97,6 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   }
 
   function hashWithdrawData(WithdrawData calldata wd) internal pure returns (bytes32) {
-    // TODO: include commitment type
     return keccak256(abi.encode(wd));
   }
 
