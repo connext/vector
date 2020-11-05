@@ -211,6 +211,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           {
             method: "sendDepositTx",
             error: tx.getError()?.message,
+            channel: channelState.channelAddress,
+            chainId: channelState.networkContext.chainId,
           },
           "Error creating channel",
         );
