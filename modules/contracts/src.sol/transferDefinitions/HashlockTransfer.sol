@@ -2,14 +2,14 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "../interfaces/ITransferDefinition.sol";
+import "./TransferDefinition.sol";
 
 /// @title Hashlock Transfer
 /// @notice This contract allows users to claim a payment locked in
 ///         the application if they provide the correct preImage. The payment is
 ///         reverted if not unlocked by the timelock if one is provided.
 
-contract HashlockTransfer is ITransferDefinition {
+contract HashlockTransfer is TransferDefinition {
   struct TransferState {
     bytes32 lockHash;
     uint256 expiry; // If 0, then no timelock is enforced
@@ -19,21 +19,9 @@ contract HashlockTransfer is ITransferDefinition {
     bytes32 preImage;
   }
 
-  string StateEncoding = "tuple(bytes32 lockHash, uint256 expiry)";
-
-  string ResolverEncoding = "tuple(bytes32 preImage)";
-
-  string Name = "HashlockTransfer";
-
-  function getRegistryInformation() external override view returns (RegisteredTransfer memory) {
-    RegisteredTransfer memory info = RegisteredTransfer({
-      name: Name,
-      stateEncoding: StateEncoding,
-      resolverEncoding: ResolverEncoding,
-      definition: address(this)
-    });
-    return info;
-  }
+  string public constant override Name = "HashlockTransfer";
+  string public constant override StateEncoding = "tuple(bytes32 lockHash, uint256 expiry)";
+  string public constant override ResolverEncoding = "tuple(bytes32 preImage)";
 
   function create(bytes calldata encodedBalance, bytes calldata encodedState) external override view returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));

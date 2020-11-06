@@ -2,14 +2,14 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "../interfaces/ITransferDefinition.sol";
+import "./TransferDefinition.sol";
 import "../lib/LibChannelCrypto.sol";
 
 /// @title Withdraw
 /// @notice This contract burns the initiator's funds if a mutually signed
 ///         withdraw commitment can be generated
 
-contract Withdraw is ITransferDefinition {
+contract Withdraw is TransferDefinition {
   using LibChannelCrypto for bytes32;
 
   struct TransferState {
@@ -25,21 +25,9 @@ contract Withdraw is ITransferDefinition {
     bytes responderSignature;
   }
 
-  string StateEncoding = "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
-
-  string ResolverEncoding = "tuple(bytes responderSignature)";
-
-  string Name = "Withdraw";
-
-  function getRegistryInformation() external override view returns (RegisteredTransfer memory) {
-    RegisteredTransfer memory info = RegisteredTransfer({
-      name: Name,
-      stateEncoding: StateEncoding,
-      resolverEncoding: ResolverEncoding,
-      definition: address(this)
-    });
-    return info;
-  }
+  string public constant override Name = "Withdraw";
+  string public constant override StateEncoding = "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
+  string public constant override ResolverEncoding = "tuple(bytes responderSignature)";
 
   function create(bytes calldata encodedBalance, bytes calldata encodedState) external override pure returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
