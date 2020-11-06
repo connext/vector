@@ -36,7 +36,7 @@ describe("TransferRegistry.sol", () => {
 
     it("should fail IFF not called by the owner", async () => {
       await expect(registry.connect(rando).addTransferDefinition(registryInfo)).revertedWith(
-        "Only owner can call function",
+        "Ownable: caller is not the owner",
       );
     });
   });
@@ -52,7 +52,7 @@ describe("TransferRegistry.sol", () => {
 
     it("should fail IFF not called by the owner", async () => {
       await expect(registry.connect(rando).removeTransferDefinition(transfer.address)).revertedWith(
-        "Only owner can call function",
+        "Ownable: caller is not the owner",
       );
     });
   });
