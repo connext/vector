@@ -105,7 +105,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
           }
         }
       });
-      this.iframe.contentWindow.postMessage(JSON.stringify(rpc), this.iframe.src);
+      this.iframe.contentWindow.postMessage(JSON.stringify(rpc), "*");
     });
   }
 
@@ -189,7 +189,9 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   public handleIncomingMessages(e: MessageEvent): void {
+    console.log("e: ", e);
     const iframeOrigin = new URL(this.opts.src).origin;
+    console.log("iframeOrigin: ", iframeOrigin);
     if (e.origin === iframeOrigin) {
       if (typeof e.data !== "string") {
         throw new Error(`Invalid incoming message data:${e.data}`);

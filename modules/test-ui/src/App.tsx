@@ -52,6 +52,7 @@ function App() {
         method: "connext_authenticate",
         params: {},
       };
+      console.log("SENDING AUTH");
       const auth = await client.send(rpc);
       console.log("auth: ", auth);
       const channelsRes = await client.getStateChannels();
