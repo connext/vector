@@ -1,6 +1,6 @@
 import { Wallet, utils } from "ethers";
 import { BrowserNode } from "@connext/vector-browser-node";
-import { JsonRpcRequest, ChannelRpcMethod, EngineParams } from "@connext/vector-types";
+import { JsonRpcRequest, EngineParams } from "@connext/vector-types";
 import { ChannelSigner } from "@connext/vector-utils";
 import pino from "pino";
 import { config } from "./config";
@@ -61,7 +61,11 @@ export default class ConnextManager {
 
   private async handleRequest(request: EngineParams.RpcRequest) {
     if (request.method === "connext_authenticate") {
-      await this.initChannel(request.params.signature);
+      let sig = request.params.signature;
+      if (!sig) {
+        sig = utils.hexlify(utils.randomBytes(65));
+      }
+      await this.initChannel(sig);
       return { success: true };
     }
     if (typeof this.browserNode === "undefined") {

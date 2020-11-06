@@ -103,11 +103,11 @@ export class BrowserNode implements INodeService {
       );
       node = new BrowserNode({ engine, chainService });
     } else {
-      config.logger.info({ method: "connect" }, "Connecting with iframe provider");
       let iframeSrc = config.iframeSrc;
       if (!config.iframeSrc) {
         iframeSrc = "https://wallet.connext.network";
       }
+      config.logger.info({ method: "connect", iframeSrc }, "Connecting with iframe provider");
       node = new BrowserNode({ iframeSrc });
     }
     return node;

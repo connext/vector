@@ -39,7 +39,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
   [ChannelRpcMethods.chan_unsubscribeAll]: undefined;
-  [ChannelRpcMethods.connext_authenticate]: { signature: string };
+  [ChannelRpcMethods.connext_authenticate]: { signature?: string };
 };
 
 export type ChannelRpcMethodsResponsesMap = {

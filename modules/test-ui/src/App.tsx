@@ -4,11 +4,9 @@ import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List, Collapse } from "antd";
+import { EngineEvents, EngineParams, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
-import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
-
-import { config } from "./config";
 
 const storedMnemonic = localStorage.getItem("mnemonic");
 
@@ -42,13 +40,20 @@ function App() {
   }, []);
 
   const connectNode = async (mnemonic: string) => {
-    console.log("creating node with config", config);
     try {
       setConnectLoading(true);
       const client = await BrowserNode.connect({
-        iframeSrc: "http://localhost:3333",
+        iframeSrc: "http://localhost:3030",
         logger: pino(),
       });
+      const rpc: EngineParams.RpcRequest = {
+        id: Date.now(),
+        jsonrpc: "2.0",
+        method: "connext_authenticate",
+        params: {},
+      };
+      const auth = await client.send(rpc);
+      console.log("auth: ", auth);
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
         setConnectError(channelsRes.getError().message);

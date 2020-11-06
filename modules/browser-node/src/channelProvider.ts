@@ -29,6 +29,15 @@ export function payloadId(): number {
   return date + extra;
 }
 
+export function renderElement(name: string, attr: any, target: HTMLElement): HTMLElement {
+  const elm = document.createElement(name);
+  Object.keys(attr).forEach(key => {
+    elm[key] = attr[key];
+  });
+  target.appendChild(elm);
+  return elm;
+}
+
 export interface IRpcChannelProvider {
   connected: boolean;
   send(payload: EngineParams.RpcRequest): Promise<any>;
@@ -66,12 +75,15 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     }
   }
 
-  open(): Promise<void> {
-    throw new Error("Method not implemented.");
+  async open(): Promise<void> {
+    this.subscribe();
+    await this.render();
   }
 
-  close(): Promise<void> {
-    throw new Error("Method not implemented.");
+  async close(): Promise<void> {
+    this.unsubscribe();
+    await this.unrender();
+    this.onDisconnect();
   }
 
   public send(rpc: EngineParams.RpcRequest): Promise<any> {
@@ -140,6 +152,30 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     };
     return this.send(rpc);
   };
+
+  public render(): Promise<void> {
+    if (this.iframe) {
+      return Promise.resolve(); // already rendered
+    }
+    if (window.document.getElementById(this.opts.id)) {
+      return Promise.resolve(); // already exists
+    }
+    return new Promise(resolve => {
+      this.events.on("iframe-initialized", () => {
+        this.onConnect();
+        resolve();
+      });
+      this.iframe = renderElement(
+        "iframe",
+        {
+          id: this.opts.id,
+          src: this.opts.src,
+          style: "width:0;height:0;border:0;border:none;display:block",
+        },
+        window.document.body,
+      ) as HTMLIFrameElement;
+    });
+  }
 
   public async unrender(): Promise<void> {
     if (typeof this.iframe === "undefined") {
