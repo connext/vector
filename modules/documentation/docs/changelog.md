@@ -5,6 +5,7 @@
 - fix `defundNonce` in server node store
 - expose nats 4221 by default
 - improve asset handling
+- minor changes in transfer definitions and transfer registry
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
 
