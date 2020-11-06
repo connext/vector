@@ -120,6 +120,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     channelState: FullChannelState,
     minTx: MinimalTransaction,
   ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    const method = "sendWithdrawTx";
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -130,6 +131,47 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       return Result.fail(new ChainError(ChainError.reasons.SenderNotInChannel));
     }
 
+    // check if multisig must be deployed
+    const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+
+    if (multisigRes.isError) {
+      return Result.fail(multisigRes.getError()!);
+    }
+
+    if (multisigRes.getValue() === `0x`) {
+      // Deploy multisig tx
+      this.log.info({ channelAddress: channelState.channelAddress, sender, method }, "Deploying channel");
+      const channelFactory = new Contract(
+        channelState.networkContext.channelFactoryAddress,
+        ChannelFactory.abi,
+        signer,
+      );
+      const deployCompleted = new Promise(resolve =>
+        channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
+          this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
+          resolve();
+        }),
+      );
+      const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () =>
+        channelFactory.createChannel(channelState.alice, channelState.bob, channelState.networkContext.chainId),
+      );
+      if (txRes.isError) {
+        return Result.fail(
+          new ChainError(ChainError.reasons.FailedToDeploy, {
+            method,
+            error: txRes.getError()!.message,
+            channel: channelState.channelAddress,
+            chainId: channelState.networkContext.chainId,
+          }),
+        );
+      }
+      const deployTx = txRes.getValue();
+      this.log.info({ method, deployTx: deployTx.hash }, "Deploy tx broadcast");
+      await deployCompleted;
+      this.log.debug({ method }, "Deploy tx mined");
+    }
+
+    this.log.info({ sender, method, channel: channelState.channelAddress }, "Sending withdraw tx to chain");
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.withdraw, () =>
       signer.sendTransaction(minTx),
     );
@@ -215,6 +257,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             chainId: channelState.networkContext.chainId,
           },
           "Error creating channel",
+        );
+        return Result.fail(
+          new ChainError(ChainError.reasons.FailedToDeploy, {
+            error: tx.getError()!.message,
+            channel: channelState.channelAddress,
+            chainId: channelState.networkContext.chainId,
+          }),
         );
       }
 

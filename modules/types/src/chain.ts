@@ -32,6 +32,7 @@ export class ChainError extends VectorError {
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
+    FailedToDeploy: "Could not deploy vector channel",
     FailedToSendTx: "Failed to send transaction to chain",
     TransferNotRegistered: "Transfer not in registry",
     MissingSigs: "Channel state is not double signed",
