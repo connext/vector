@@ -4,6 +4,7 @@
 
 - fix `defundNonce` in server node store
 - expose nats 4221 by default
+- improve asset handling
 - implement generalized withdrawals
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4

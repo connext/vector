@@ -8,8 +8,8 @@ import "./CMCCore.sol";
 import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
+import "./lib/LibUtils.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-
 
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   using LibChannelCrypto for bytes32;
@@ -54,6 +54,10 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     // Determine actually transferable amount
     uint256 balance = LibAsset.getOwnBalance(wd.assetId);
     uint256 amount = LibUtils.min(wd.amount, balance);
+
+    // Determine actually transferable amount
+    uint256 balance = LibAsset.getOwnBalance(assetId);
+    uint256 amount = LibUtils.min(maxAmount, balance);
 
     // Add to totalWithdrawn
     registerTransfer(wd.assetId, amount);
