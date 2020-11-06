@@ -236,7 +236,7 @@ describe(testName, () => {
 
     // Get pre-withdraw channel balances
     const assetIdx = carolChannel.assetIds.findIndex(a => a === assetId);
-    const [_, preWithdrawCarol] = carolChannel.balances[assetIdx].amount;
+    const [, preWithdrawCarol] = carolChannel.balances[assetIdx].amount;
     const preWithdrawMultisig = await getOnchainBalance(assetId, carolChannel.channelAddress);
     const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
 
@@ -262,7 +262,7 @@ describe(testName, () => {
       publicIdentifier: carolIdentifier,
     });
     const carolChannelPostWithdraw = carolChannelPostWithdrawRes.getValue()!;
-    const [_, postWithdrawCarol] = carolChannelPostWithdraw.balances[assetIdx].amount;
+    const [, postWithdrawCarol] = carolChannelPostWithdraw.balances[assetIdx].amount;
     const postWithdrawMultisig = await getOnchainBalance(assetId, carolChannel.channelAddress);
     const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
 
