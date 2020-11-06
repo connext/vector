@@ -51,26 +51,32 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     require(!isExecuted[wdHash], "CMCWithdraw: Transaction has already been executed");
     isExecuted[wdHash] = true;
 
+    // Determine actually transferable amount
+    uint256 balance = LibAsset.getOwnBalance(wd.assetId);
+    uint256 amount = LibUtils.min(wd.amount, balance);
+
     // Add to totalWithdrawn
-    registerTransfer(wd.assetId, wd.amount);
+    registerTransfer(wd.assetId, amount);
 
-    // Unless this is a plain Ether transfer, verify that the target address has code
-    if (wd.callData.length > 0) {
+    // Execute the transfer
+    require(LibAsset.transfer(wd.assetId, wd.recipient, amount), "CMCWithdraw: Transfer failed");
+
+    // Do we have to make a call in addition to the actual transfer?
+    if (wd.callTo != address(0)) {
+
+      // Verify that call data is not empty;
+      // offchain code must already ensure that
+      require(wd.callData.length > 0, "CMCWithdraw: Empty call data");
+
+      // Verify that called address has code;
+      // offchain code must already ensure that
       require(Address.isContract(wd.callTo), "CMCWithdraw: Called address has no code");
-    }
 
-    // Execute the withdraw
-    (bool success, bytes memory encodedReturnValue) = wd.callTo.call{value: wd.callValue}(wd.callData);
+      // Execute the call
+      (bool success, ) = wd.callTo.call(wd.callData);
 
-    // Check success:
-    // For plain Ether transfers (i.e. empty data), we just check whether the call was successful;
-    // for non-empty data, in addition to a successful call, we require that the called address
-    // has code (already done above) and we accept empty return data or the Boolean value `true`.
-    // This is compatible with the ERC20 standard, as well as with tokens that exhibit the
-    // missing-return-value bug. Custom contracts as call targets must follow this convention.
-    require(success, "CMCWithdraw: Call reverted");
-    if (wd.callData.length > 0) {
-      require(encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool)), "CMCWithdraw: Call failed");
+      // Check success
+      require(success, "CMCWithdraw: Call reverted");
     }
   }
 

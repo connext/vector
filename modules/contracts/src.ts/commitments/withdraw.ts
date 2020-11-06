@@ -64,17 +64,7 @@ export class WithdrawCommitment {
   }
 
   public getCallData() {
-    return this.assetId === AddressZero
-      ? {
-        to: this.recipient,
-        value: this.amount,
-        data: "0x",
-      }
-      : {
-        to: this.assetId,
-        value: Zero,
-        data: new Interface(ERC20.abi).encodeFunctionData("transfer", [this.recipient, BigNumber.from(this.amount)]),
-      };
+    return { to: AddressZero, data: "0x" };
   }
 
   public getWithdrawData() {
@@ -86,7 +76,6 @@ export class WithdrawCommitment {
       this.amount,
       this.nonce,
       callData.to,
-      callData.value,
       callData.data,
     ];
   }

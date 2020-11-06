@@ -200,78 +200,12 @@ describe("CMCWithdraw.sol", () => {
     );
   });
 
-  it("should fail if address without code is called with non-empty data", async () => {
-    const withdrawAmount = BigNumber.from(1000);
-    const nonce = BigNumber.from(1);
-    const randomAddress = getRandomAddress();
-    const commitment = new WithdrawCommitment(
-      channel.address,
-      alice.address,
-      bob.address,
-      recipient,
-      randomAddress,
-      withdrawAmount.toString(),
-      nonce.toString(),
-    );
-
-    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
-    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
-
-    const withdrawData = commitment.getWithdrawData();
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Called address has no code",
-    );
+  it.skip("should fail for call with empty call data", async () => {
   });
 
-  it("should fail if transfer reverts", async () => {
-    const withdrawAmount = BigNumber.from(1000);
-    const nonce = BigNumber.from(1);
-    const commitment = new WithdrawCommitment(
-      channel.address,
-      alice.address,
-      bob.address,
-      recipient,
-      failingToken.address,
-      withdrawAmount.toString(),
-      nonce.toString(),
-    );
-
-    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
-    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
-
-    // Make transfers revert
-    const reverting = await failingToken.setTransferShouldRevert(true);
-    await reverting.wait();
-
-    const withdrawData = commitment.getWithdrawData();
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Call reverted",
-    );
+  it.skip("should fail for call to address without code", async () => {
   });
 
-  it("should fail if transfer fails", async () => {
-    const withdrawAmount = BigNumber.from(1000);
-    const nonce = BigNumber.from(1);
-    const commitment = new WithdrawCommitment(
-      channel.address,
-      alice.address,
-      bob.address,
-      recipient,
-      failingToken.address,
-      withdrawAmount.toString(),
-      nonce.toString(),
-    );
-
-    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
-    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
-
-    // Make transfers fail
-    const failing = await failingToken.setTransferShouldFail(true);
-    await failing.wait();
-
-    const withdrawData = commitment.getWithdrawData();
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Call failed",
-    );
+  it.skip("should fail if call reverts", async () => {
   });
 });

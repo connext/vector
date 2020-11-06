@@ -14,7 +14,6 @@ struct WithdrawData {
   uint256 amount;
   uint256 nonce;
   address callTo;
-  uint256 callValue;
   bytes callData;
 }
 
