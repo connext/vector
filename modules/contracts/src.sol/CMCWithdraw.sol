@@ -25,9 +25,10 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   }
 
   /// @param wd The withdraw data consisting of
-  /// "semantic information", i.e. assetId, recipient, and amount;
-  /// "execution information", i.e. address to make the call to, value, and data for the call; and
-  /// "additional information", i.e. channel address and nonce.
+  /// semantic withdraw information, i.e. assetId, recipient, and amount;
+  /// information to make an optional call in addition to the actual transfer,
+  /// i.e. target address for the call and call payload;
+  /// additional information, i.e. channel address and nonce.
   /// @param aliceSignature Signature of owner a
   /// @param bobSignature Signature of owner b
   function withdraw(
