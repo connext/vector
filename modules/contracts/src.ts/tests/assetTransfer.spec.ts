@@ -155,7 +155,7 @@ describe("AssetTransfer.sol", () => {
       await failing.wait();
 
       await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
-        "FAIL: Failing token",
+        "AssetTransfer: Transfer failed",
       );
     });
 
@@ -165,7 +165,7 @@ describe("AssetTransfer.sol", () => {
       await reverting.wait();
 
       await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
-        "AssetTransfer: Transfer failed",
+        "FAIL: Failing token",
       );
     });
 
