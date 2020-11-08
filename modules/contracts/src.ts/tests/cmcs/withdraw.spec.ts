@@ -8,7 +8,8 @@ import { getTestAddressBook, getTestChannel, alice } from "..";
 import { deployContracts, WithdrawCommitment } from "../..";
 import { bob, provider } from "../constants";
 
-describe("CMCWithdraw.sol", () => {
+describe("CMCWithdraw.sol", function() {
+  this.timeout(120_000);
   const recipient = Wallet.createRandom().address;
 
   let channel: Contract;
@@ -49,7 +50,8 @@ describe("CMCWithdraw.sol", () => {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
     expect(await channel.getWithdrawalTransactionRecord(recipient, AddressZero, withdrawAmount, nonce)).to.be.false;
 
-    await channel.withdraw(recipient, AddressZero, withdrawAmount, nonce, aliceSig, bobSig);
+    const tx = await channel.withdraw(recipient, AddressZero, withdrawAmount, nonce, aliceSig, bobSig);
+    await tx.wait();
 
     expect(await provider.getBalance(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await provider.getBalance(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));

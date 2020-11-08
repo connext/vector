@@ -9,7 +9,8 @@ import { WithdrawCommitment } from "./withdraw";
 
 const { parseEther } = utils;
 
-describe("withdrawCommitment", () => {
+describe("withdrawCommitment", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let channel: Contract;
   let token: Contract;
@@ -20,10 +21,12 @@ describe("withdrawCommitment", () => {
     await deployContracts(alice, addressBook, [["TestToken", []]]);
     token = addressBook.getContract("TestToken");
     channel = await getTestChannel(addressBook);
-    await (await alice.sendTransaction({
-      to: channel.address,
-      value: BigNumber.from(amount).mul(2),
-    })).wait();
+    await (
+      await alice.sendTransaction({
+        to: channel.address,
+        value: BigNumber.from(amount).mul(2),
+      })
+    ).wait();
     await (await token.transfer(channel.address, parseEther(amount))).wait();
   });
 

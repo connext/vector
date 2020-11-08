@@ -136,9 +136,9 @@ export async function forwardTransferCreation(
   const senderChainId = senderChannel.networkContext.chainId;
 
   // Defaults
-  const recipientAssetId = path.recipientAssetId ? path.recipientAssetId : senderAssetId;
+  const recipientAssetId = path.recipientAssetId ?? senderAssetId;
   const requireOnline = meta.requireOnline ?? false;
-  const recipientChainId = path.recipientChainId ? path.recipientChainId : senderChainId;
+  const recipientChainId = path.recipientChainId ?? senderChainId;
 
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
