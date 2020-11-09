@@ -38,14 +38,14 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address recipient,
     uint256 maxAmount
   ) private returns (bool, uint256) {
-    (bool success, bytes memory encodedReturnValue) = address(this).staticcall(
+    (bool success, bytes memory returnData) = address(this).staticcall(
       abi.encodeWithSignature("_getOwnERC20Balance(address)", assetId)
     );
     if (!success) {
       return (false, 0);
     }
 
-    uint256 balance = abi.decode(encodedReturnValue, (uint256));
+    uint256 balance = abi.decode(returnData, (uint256));
     uint256 amount = LibUtils.min(maxAmount, balance);
     (success, ) = address(this).call(
       abi.encodeWithSignature("_transferERC20(address,address,uint256)", assetId, recipient, amount)

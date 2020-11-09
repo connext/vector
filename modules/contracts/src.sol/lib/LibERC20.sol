@@ -7,17 +7,17 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 library LibERC20 {
 
-    function checkResult(bool success, bytes memory encodedReturnValue)
+    function checkResult(bool success, bytes memory returnData)
         internal
         pure
         returns (bool)
     {
         if (!success) {
             assembly {
-                revert(add(encodedReturnValue, 0x20), mload(encodedReturnValue))
+                revert(add(returnData, 0x20), mload(returnData))
             }
         }
-        return encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool));
+        return returnData.length == 0 || abi.decode(returnData, (bool));
     }
 
     function wrapCall(address assetId, bytes memory callData)
@@ -32,8 +32,8 @@ library LibERC20 {
         returns (bool)
     {
         require(Address.isContract(assetId));
-        (bool success, bytes memory encodedReturnValue) = assetId.call{gas: gas}(callData);
-        return checkResult(success, encodedReturnValue);
+        (bool success, bytes memory returnData) = assetId.call{gas: gas}(callData);
+        return checkResult(success, returnData);
     }
 
     function approve(address assetId, address spender, uint256 amount)
