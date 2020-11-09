@@ -133,6 +133,28 @@ describe("CMCWithdraw.sol", () => {
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.true;
   });
 
+  it("should fail for wrong channel address", async () => {
+    const withdrawAmount = BigNumber.from(1000);
+    const nonce = BigNumber.from(1);
+    const commitment = new WithdrawCommitment(
+      getRandomAddress(),
+      alice.address,
+      bob.address,
+      recipient,
+      AddressZero,
+      withdrawAmount.toString(),
+      nonce.toString(),
+    );
+
+    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
+    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
+
+    const withdrawData = commitment.getWithdrawData();
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
+      "CMCWithdraw: Channel address mismatch",
+    );
+  });
+
   it("should fail if alice signature is invalid", async () => {
     const withdrawAmount = BigNumber.from(1000);
     const nonce = BigNumber.from(1);
