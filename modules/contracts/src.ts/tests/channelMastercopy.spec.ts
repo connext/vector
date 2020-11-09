@@ -8,7 +8,8 @@ import { AddressBook } from "../addressBook";
 import { alice } from "./constants";
 import { getTestAddressBook } from "./utils";
 
-describe("ChannelMastercopy", () => {
+describe("ChannelMastercopy", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let mastercopy: Contract;
 
@@ -37,19 +38,7 @@ describe("ChannelMastercopy", () => {
       Zero,
       "0x"
     ];
-    const CoreChannelStateZero = [
-      AddressZero,
-      AddressZero,
-      AddressZero,
-      [],
-      [],
-      [],
-      [],
-      Zero,
-      Zero,
-      HashZero,
-      Zero,
-    ];
+    const CoreChannelStateZero = [AddressZero, AddressZero, AddressZero, [], [], [], [], Zero, Zero, HashZero, Zero];
     const CoreTransferStateZero = [
       AddressZero,
       HashZero,
@@ -62,7 +51,6 @@ describe("ChannelMastercopy", () => {
       HashZero,
     ];
     for (const method of [
-
       // from ICMCCore
       { name: "setup", args: [AddressZero, AddressZero] },
       { name: "getAlice", args: [] },
@@ -89,17 +77,14 @@ describe("ChannelMastercopy", () => {
       { name: "defundChannel", args: [CoreChannelStateZero] },
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
       { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero] },
-
     ]) {
-      await expect(
-        mastercopy[method.name](...method.args),
-      ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
+      await expect(mastercopy[method.name](...method.args)).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
     }
   });
 
   it("should revert if sent eth bc it's the mastercopy", async () => {
-    await expect(
-      alice.sendTransaction({ to: mastercopy.address, value: Zero }),
-    ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
+    await expect(alice.sendTransaction({ to: mastercopy.address, value: Zero })).to.be.revertedWith(
+      "Mastercopy: ONLY_VIA_PROXY",
+    );
   });
 });

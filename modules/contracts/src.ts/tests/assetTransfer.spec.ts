@@ -11,7 +11,8 @@ import { AddressBook } from "../addressBook";
 import { bob, rando } from "./constants";
 import { getTestAddressBook, getTestChannel } from "./utils";
 
-describe("AssetTransfer.sol", () => {
+describe("AssetTransfer.sol", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let assetTransfer: Contract;
   let channel: Contract;

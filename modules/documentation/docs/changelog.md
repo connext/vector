@@ -4,6 +4,7 @@
 
 - fix `defundNonce` in server node store
 - expose nats 4221 by default
+- support trio and contract testing across remote chains
 - improve asset handling
 - implement generalized withdrawals
 

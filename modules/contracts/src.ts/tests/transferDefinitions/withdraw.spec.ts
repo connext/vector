@@ -25,11 +25,12 @@ import { AddressBook } from "../../addressBook";
 import { alice, bob } from "../constants";
 import { getTestAddressBook } from "../utils";
 
-describe("Withdraw", () => {
+describe("Withdraw", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let withdraw: Contract;
 
-  beforeEach(async () => {
+  before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["Withdraw", []]]);
     withdraw = addressBook.getContract("Withdraw");

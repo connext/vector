@@ -9,7 +9,8 @@ import { deployContracts, WithdrawCommitment } from "../..";
 import { AddressBook } from "../../addressBook";
 import { bob, provider } from "../constants";
 
-describe("CMCWithdraw.sol", () => {
+describe("CMCWithdraw.sol", function() {
+  this.timeout(120_000);
   const recipient = Wallet.createRandom().address;
 
   let channel: Contract;
@@ -61,7 +62,8 @@ describe("CMCWithdraw.sol", () => {
     const withdrawData = commitment.getWithdrawData();
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.false;
 
-    await channel.withdraw(withdrawData, aliceSig, bobSig);
+    const tx = await channel.withdraw(withdrawData, aliceSig, bobSig);
+    await tx.wait();
 
     expect(await provider.getBalance(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await provider.getBalance(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
@@ -90,7 +92,8 @@ describe("CMCWithdraw.sol", () => {
     const withdrawData = commitment.getWithdrawData();
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.false;
 
-    await channel.withdraw(withdrawData, aliceSig, bobSig);
+    const tx = await channel.withdraw(withdrawData, aliceSig, bobSig);
+    await tx.wait();
 
     expect(await failingToken.balanceOf(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await failingToken.balanceOf(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
@@ -127,7 +130,8 @@ describe("CMCWithdraw.sol", () => {
     const withdrawData = commitment.getWithdrawData();
     expect(await channel.getWithdrawalTransactionRecord(withdrawData)).to.be.false;
 
-    await channel.withdraw(withdrawData, aliceSig, bobSig);
+    const tx = await channel.withdraw(withdrawData, aliceSig, bobSig);
+    await tx.wait();
 
     expect(await nonconformingToken.balanceOf(recipient)).to.be.eq(preWithdrawRecipient.add(withdrawAmount));
     expect(await nonconformingToken.balanceOf(channel.address)).to.be.eq(preWithdrawChannel.sub(withdrawAmount));
