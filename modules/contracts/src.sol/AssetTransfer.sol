@@ -136,6 +136,8 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     uint256 balance = LibAsset.getOwnBalance(assetId);
     uint256 amount = LibUtils.min(maxAmount, balance);
 
+    // TODO: Should we revert if amount is 0?
+
     emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
     registerTransfer(assetId, amount);
     require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: Transfer failed");
