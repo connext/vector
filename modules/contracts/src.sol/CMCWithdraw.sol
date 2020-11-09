@@ -57,6 +57,8 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     uint256 balance = LibAsset.getOwnBalance(wd.assetId);
     uint256 amount = LibUtils.min(wd.amount, balance);
 
+    // TODO: Should we revert if amount is 0?
+
     // Add to totalWithdrawn
     registerTransfer(wd.assetId, amount);
 
