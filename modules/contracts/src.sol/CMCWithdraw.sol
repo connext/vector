@@ -19,7 +19,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   modifier validateWithdrawData(WithdrawData calldata wd) {
     require(
       wd.channelAddress == address(this),
-      "CMCWithdraw: Mismatch between withdraw data and channel"
+      "CMCWithdraw: Channel address mismatch"
     );
     _;
   }
