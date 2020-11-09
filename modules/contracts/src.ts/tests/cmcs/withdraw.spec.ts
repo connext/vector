@@ -248,7 +248,7 @@ describe("CMCWithdraw.sol", () => {
     const withdrawData = commitment.getWithdrawData();
 
     await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "Ether rejected" ,
+      "CMCWithdraw: Transfer failed",
     );
   });
 
