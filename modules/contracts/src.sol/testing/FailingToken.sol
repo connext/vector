@@ -14,10 +14,17 @@ contract FailingToken is ERC20 {
 
   bool public transferShouldRevert;
   bool public transferShouldFail;
+  bool public rejectEther;
 
     constructor () ERC20("Failing Token", "FAIL") {
       transferShouldRevert = true;
       _mint(msg.sender, 1000000 ether);
+    }
+
+    receive() external payable {
+        if (rejectEther) {
+          revert("Ether rejected");
+        }
     }
 
     function mint(address account, uint256 amount) external {
@@ -56,6 +63,11 @@ contract FailingToken is ERC20 {
     function setTransferShouldFail(bool _transferShouldFail) public returns (bool) {
       transferShouldFail = _transferShouldFail;
       return transferShouldFail;
+    }
+
+    function setRejectEther(bool _rejectEther) public returns (bool) {
+      rejectEther = _rejectEther;
+      return rejectEther;
     }
 
     function succeedingTransfer(address recipient, uint256 amount) public returns (bool) {
