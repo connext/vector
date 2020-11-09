@@ -17,7 +17,7 @@ import {
   ChannelDispute,
   TransferDispute,
 } from "@connext/vector-types";
-import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier, stringify } from "@connext/vector-utils";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
@@ -112,7 +112,7 @@ const convertChannelEntityToFullChannelState = (
       case "setup":
         details = {
           networkContext: {
-            chainId: channelEntity.chainId,
+            chainId: BigNumber.from(channelEntity.chainId).toNumber(),
             channelFactoryAddress: channelEntity.channelFactoryAddress,
             providerUrl: channelEntity.providerUrl,
           },
@@ -160,7 +160,7 @@ const convertChannelEntityToFullChannelState = (
     processedDepositsA,
     processedDepositsB,
     networkContext: {
-      chainId: channelEntity.chainId,
+      chainId: BigNumber.from(channelEntity.chainId).toNumber(),
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       channelMastercopyAddress: channelEntity.channelMastercopyAddress,
       transferRegistryAddress: channelEntity.transferRegistryAddress,
@@ -200,7 +200,7 @@ const convertTransferEntityToFullTransferState = (
     inDispute: transfer.inDispute,
     channelFactoryAddress: transfer.channel!.channelFactoryAddress,
     assetId: transfer.createUpdate!.assetId,
-    chainId: transfer.channel!.chainId,
+    chainId: BigNumber.from(transfer.channel!.chainId).toNumber(),
     channelAddress: transfer.channel!.channelAddress!,
     balance: {
       amount: [transfer.amountA, transfer.amountB],
@@ -473,12 +473,12 @@ export class PrismaStore implements IServerNodeStore {
           {
             participantA,
             participantB,
-            chainId,
+            chainId: chainId.toString(),
           },
           {
             participantA: participantB,
             participantB: participantA,
-            chainId,
+            chainId: chainId.toString(),
           },
         ],
       },
@@ -620,7 +620,7 @@ export class PrismaStore implements IServerNodeStore {
           ...activeTransfers,
           disconnect: undefined,
         } as any,
-        chainId: channelState.networkContext.chainId,
+        chainId: channelState.networkContext.chainId.toString(),
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
         channelMastercopyAddress: channelState.networkContext.channelMastercopyAddress,
