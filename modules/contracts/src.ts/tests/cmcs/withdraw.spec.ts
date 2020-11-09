@@ -222,12 +222,6 @@ describe("CMCWithdraw.sol", () => {
     );
   });
 
-  it.skip("should fail for call with empty call data", async () => {
-  });
-
-  it.skip("should fail for call to address without code", async () => {
-  });
-
-  it.skip("should fail if call reverts", async () => {
+  it.skip("should call helper contract if given non-zero address", async () => {
   });
 });

@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCWithdraw.sol";
 import "./interfaces/Types.sol";
+import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
 import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
@@ -64,20 +65,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
 
     // Do we have to make a call in addition to the actual transfer?
     if (wd.callTo != address(0)) {
-
-      // Verify that call data is not empty;
-      // offchain code must already ensure that
-      require(wd.callData.length > 0, "CMCWithdraw: Empty call data");
-
-      // Verify that called address has code;
-      // offchain code must already ensure that
-      require(Address.isContract(wd.callTo), "CMCWithdraw: Called address has no code");
-
-      // Execute the call
-      (bool success, ) = wd.callTo.call(wd.callData);
-
-      // Check success
-      require(success, "CMCWithdraw: Call reverted");
+      WithdrawHelper(wd.callTo).execute(wd, amount);
     }
   }
 
