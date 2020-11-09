@@ -36,6 +36,8 @@ describe("CMCWithdraw.sol", () => {
     await dontRevert.wait();
     const dontFail = await failingToken.setTransferShouldFail(false);
     await dontFail.wait();
+    const dontRejectEther = await failingToken.setRejectEther(false);
+    await dontRejectEther.wait();
   });
 
   it("should work for Ether", async () => {
@@ -219,6 +221,86 @@ describe("CMCWithdraw.sol", () => {
     await channel.withdraw(withdrawData, aliceSig, bobSig);
     await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
       "CMCWithdraw: Transaction has already been executed",
+    );
+  });
+
+  it("should fail if Ether transfer reverts", async () => {
+    const rejectEtherRecipient = failingToken.address;
+
+    // Make transfers fail
+    const rejectEther = await failingToken.setRejectEther(true);
+    await rejectEther.wait();
+
+    const withdrawAmount = BigNumber.from(1000);
+    const nonce = BigNumber.from(1);
+    const commitment = new WithdrawCommitment(
+      channel.address,
+      alice.address,
+      bob.address,
+      rejectEtherRecipient,
+      AddressZero,
+      withdrawAmount.toString(),
+      nonce.toString(),
+    );
+
+    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
+    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
+    const withdrawData = commitment.getWithdrawData();
+
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
+      "Ether rejected" ,
+    );
+  });
+
+  it("should fail if token transfer fails", async () => {
+    // Make transfers fail
+    const failing = await failingToken.setTransferShouldFail(true);
+    await failing.wait();
+
+    const withdrawAmount = BigNumber.from(1000);
+    const nonce = BigNumber.from(1);
+    const commitment = new WithdrawCommitment(
+      channel.address,
+      alice.address,
+      bob.address,
+      recipient,
+      failingToken.address,
+      withdrawAmount.toString(),
+      nonce.toString(),
+    );
+
+    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
+    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
+    const withdrawData = commitment.getWithdrawData();
+
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
+      "CMCWithdraw: Transfer failed",
+    );
+  });
+
+  it("should fail if token transfer reverts", async () => {
+    // Make transfers revert
+    const reverting = await failingToken.setTransferShouldRevert(true);
+    await reverting.wait();
+
+    const withdrawAmount = BigNumber.from(1000);
+    const nonce = BigNumber.from(1);
+    const commitment = new WithdrawCommitment(
+      channel.address,
+      alice.address,
+      bob.address,
+      recipient,
+      failingToken.address,
+      withdrawAmount.toString(),
+      nonce.toString(),
+    );
+
+    const aliceSig = await new ChannelSigner(alice.privateKey).signMessage(commitment.hashToSign());
+    const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
+    const withdrawData = commitment.getWithdrawData();
+
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
+      "FAIL: Failing token",
     );
   });
 
