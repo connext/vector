@@ -3,6 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./LibERC20.sol";
+import "./LibUtils.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
@@ -33,11 +34,7 @@ library LibAsset {
         returns (bool)
     {
         (bool success, bytes memory returnData) = recipient.call{value: amount}("");
-        if (!success) {
-            assembly {
-                revert(add(returnData, 0x20), mload(returnData))
-            }
-        }
+        LibUtils.revertIfCallFailed(success, returnData);
         return true;
     }
 

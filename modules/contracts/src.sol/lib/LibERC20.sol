@@ -2,6 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./LibUtils.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 
@@ -12,11 +13,7 @@ library LibERC20 {
         pure
         returns (bool)
     {
-        if (!success) {
-            assembly {
-                revert(add(returnData, 0x20), mload(returnData))
-            }
-        }
+        LibUtils.revertIfCallFailed(success, returnData);
         return returnData.length == 0 || abi.decode(returnData, (bool));
     }
 
