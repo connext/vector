@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = ["postgresql", "sqlite"]
-  url      = env("VECTOR_DATABASE_URL")
+  url = "***"
 }
 
 model Balance {
@@ -178,7 +178,8 @@ model OnchainTransaction {
   channelAddress String
   channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 
-  @@unique([transactionHash, chainId])
+  @@unique(transactionHash)
+  @@unique([from, nonce, chainId])
   @@map(name: "onchain_transaction")
 }
 

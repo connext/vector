@@ -1,0 +1,53 @@
+{
+  "version": "0.3.14-fixed",
+  "steps": [
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "OnchainTransaction",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[transactionHash, chainId]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "DeleteDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "OnchainTransaction",
+          "arguments": [
+            {
+              "name": "",
+              "value": "transactionHash"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
+    },
+    {
+      "tag": "DeleteDirective",
+      "location": {
+        "path": {
+          "tag": "Model",
+          "model": "OnchainTransaction",
+          "arguments": [
+            {
+              "name": "",
+              "value": "[from, nonce, chainId]"
+            }
+          ]
+        },
+        "directive": "unique"
+      }
+    }
+  ]
+}
