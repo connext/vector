@@ -19,7 +19,7 @@ library LibERC20 {
         internal
         returns (bool)
     {
-        require(Address.isContract(assetId));
+        require(Address.isContract(assetId), "LibERC20: No code at address");
         (bool success, bytes memory returnData) = assetId.call{gas: gas}(callData);
         LibUtils.revertIfCallFailed(success, returnData);
         return returnData.length == 0 || abi.decode(returnData, (bool));
