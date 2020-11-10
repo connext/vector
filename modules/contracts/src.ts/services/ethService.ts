@@ -152,9 +152,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           resolve();
         }),
       );
-      const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () =>
-        channelFactory.createChannel(channelState.alice, channelState.bob, channelState.networkContext.chainId),
-      );
+      const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
+        return channelFactory.createChannel(
+          channelState.alice,
+          channelState.bob,
+          BigNumber.from(channelState.networkContext.chainId),
+        );
+      });
       if (txRes.isError) {
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
@@ -167,7 +171,31 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       }
       const deployTx = txRes.getValue();
       this.log.info({ method, deployTx: deployTx.hash }, "Deploy tx broadcast");
-      await deployCompleted;
+      try {
+        await deployTx.wait();
+        this.log.debug("Waiting for event to be emitted");
+        await Promise.race([
+          deployCompleted,
+          new Promise(resolve =>
+            setTimeout(() => {
+              this.log.warn(
+                { deployTx: deployTx.hash, channel: channelState.channelAddress },
+                "Did not see event within 15s after tx was mined",
+              );
+              resolve();
+            }, 15_000),
+          ),
+        ]);
+      } catch (e) {
+        return Result.fail(
+          new ChainError(ChainError.reasons.FailedToDeploy, {
+            error: e.message,
+            deployTx: deployTx.hash,
+            channel: channelState.channelAddress,
+            chainId: channelState.networkContext.chainId,
+          }),
+        );
+      }
       this.log.debug({ method }, "Deploy tx mined");
     }
 
