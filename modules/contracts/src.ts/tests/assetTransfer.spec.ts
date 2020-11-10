@@ -11,7 +11,8 @@ import { AddressBook } from "../addressBook";
 import { bob, rando } from "./constants";
 import { getTestAddressBook, getTestChannel } from "./utils";
 
-describe("AssetTransfer.sol", () => {
+describe("AssetTransfer.sol", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let assetTransfer: Contract;
   let channel: Contract;
@@ -153,7 +154,7 @@ describe("AssetTransfer.sol", () => {
       await failing.wait();
 
       await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
-        "AssetTransfer: Transfer failed",
+        "FAIL: Failing token",
       );
     });
 

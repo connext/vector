@@ -17,8 +17,8 @@ then
   set -o pipefail
   echo "Starting $unit tester"
   if [[ -n "$(which pino-pretty)" ]]
-  then exec npm run test -- "$opts" | pino-pretty --colorize
-  else exec npm run test -- "$opts"
+  then exec npm run test -- $opts | pino-pretty --colorize
+  else exec npm run test -- $opts
   fi
 
 elif [[ "${cmd##*-}" == "watch" ]]
@@ -43,11 +43,11 @@ then
       echo
       echo "Changes detected!"
 
-      mocha_pids="$(pgrep "mocha" | tr '\n\r' ' ')"
-      if [[ -n "$mocha_pids" ]]
+      npm_pids="$(pgrep "npm" | tr '\n\r' ' ')"
+      if [[ -n "$npm_pids" ]]
       then
-        echo "Stopping all mocha processes w pids: $mocha_pids"
-        for pid in $mocha_pids
+        echo "Stopping all npm processes w pids: $npm_pids"
+        for pid in $npm_pids
         do kill "$pid" 2> /dev/null
         done
       fi
@@ -57,8 +57,8 @@ then
 
       prev_checksum="$(find "${src[@]}" -type f -not -name "*.swp" -exec sha256sum {} \; | sha256sum)"
       if [[ -n "$(which pino-pretty)" ]]
-      then (npm run test -- "$opts" | pino-pretty --colorize &)
-      else (npm run test -- "$opts" &)
+      then (npm run test -- $opts | pino-pretty --colorize &)
+      else (npm run test -- $opts &)
       fi
 
     # If no changes, do nothing

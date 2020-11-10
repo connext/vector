@@ -214,7 +214,7 @@ test-duet: test-runner-js duet
 watch-duet: test-runner-js duet
 	bash ops/test-integration.sh duet watch
 
-test-trio: test-runner-js trio
+test-trio: test-runner trio
 	bash ops/test-integration.sh trio test
 watch-trio: test-runner-js trio
 	bash ops/test-integration.sh trio watch

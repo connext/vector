@@ -24,14 +24,13 @@ import {
   WithdrawState,
   IVectorChainReader,
   REQUEST_COLLATERAL_EVENT,
-  IVectorEngine,
   ChannelRpcMethods,
   EngineParams,
   ChannelRpcMethodsResponsesMap,
   OutboundChannelUpdateError,
   Result,
 } from "@connext/vector-types";
-import { constructRpcRequest } from "@connext/vector-utils";
+import { stringify } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Pino from "pino";
 

@@ -278,7 +278,7 @@ function abort {
   exit 1
 }
 
-timeout=$(( $(date +%s) + 60 ))
+timeout=$(( $(date +%s) + 300 ))
 echo "Waiting for $public_url to wake up.."
 while [[ "$(curl -k -m 5 -s "$public_url" || true)" != "pong"* ]]
 do

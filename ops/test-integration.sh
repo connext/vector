@@ -10,7 +10,6 @@ docker network create --attachable --driver overlay "$project" 2> /dev/null || t
 
 stack="${1:-node}"
 cmd="${2:-test}"
-
 bash "$root/ops/start-$stack.sh"
 
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
@@ -20,14 +19,37 @@ else echo "Running in non-interactive mode"
 fi
 
 # If this stack can be tested in prod-mode..
-if [[ "$stack" == "global" || "$stack" == "node" || "$stack" == "router" ]]
+if [[ "$stack" == "global" || "$stack" == "node" || "$stack" == "router" || "$stack" == "trio" ]]
 then
-  if [[ ! -f "$root/${stack}.config.json" ]]
+  if [ ! -f "$root/${stack}.config.json" ] && [ "$stack" != "trio" ]
   then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
   fi
-  production=$(jq '.production' "$root/$stack.config.json" | tr -d '"')
+
+  # set config, check for trio special case
+  if [[ "$stack" == "trio" ]]
+  then
+    config=$(
+      cat "$root/node.config.json" "$root/router.config.json" |\
+      jq -s '.[0] + .[1]'
+    )
+  else
+    config=$(
+      cat "$root/$stack.config.json" |\
+      jq -s '.[0] + .[1]'
+    )
+  fi
+
+  production=$(echo "$config" | jq '.production' | tr -d '"')
+  chain_addresses=$(
+    echo "$config" | jq -s '.[0] + .[1] | .chainAddresses' | tr -d '\n\r '
+  )
+  chain_providers=$(
+    echo "$config" | jq -s '.[0] + .[1] | .chainProviders' | tr -d '\n\r '
+  )
 else
   production="false"
+  chain_addresses=$(tr -d ' \n' < "$root/.chaindata/chain-addresses.json")
+  chain_providers=$(tr -d ' \n' < "$root/.chaindata/chain-providers.json")
 fi
 
 ########################################
@@ -42,8 +64,8 @@ common=(
   "--env=VECTOR_ALICE_URL=http://alice:8000"
   "--env=VECTOR_BOB_URL=http://bob:8000"
   "--env=VECTOR_CAROL_URL=http://carol:8000"
-  "--env=VECTOR_CHAIN_ADDRESSES=$(tr -d ' \n' < "$root/.chaindata/chain-addresses.json")"
-  "--env=VECTOR_CHAIN_PROVIDERS=$(tr -d ' \n' < "$root/.chaindata/chain-providers.json")"
+  "--env=VECTOR_CHAIN_ADDRESSES=$chain_addresses"
+  "--env=VECTOR_CHAIN_PROVIDERS=$chain_providers"
   "--env=VECTOR_DAVE_URL=http://dave:8000"
   "--env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error}"
   "--env=VECTOR_MESSAGING_URL=http://messaging"

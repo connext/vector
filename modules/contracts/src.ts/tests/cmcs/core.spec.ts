@@ -8,7 +8,8 @@ import { getTestChannel, alice, bob, getUnsetupChannel } from "..";
 // NOTE: This will use a channel deployed by the `TestChannelFactory` that
 // has not been setup on deploy. Otherwise, the
 
-describe("CMCCore.sol", () => {
+describe("CMCCore.sol", function() {
+  this.timeout(120_000);
   let channel: Contract;
 
   describe("setup", async () => {
