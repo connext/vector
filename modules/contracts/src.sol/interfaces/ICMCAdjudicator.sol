@@ -48,6 +48,21 @@ interface ICMCAdjudicator {
       bool isDefunded;
     }
 
+    event ChannelDisputed(address disputer, address channelAddress, ChannelDispute dispute);
+
+    event ChannelDefunded(address defunder, address channelAddress, ChannelDispute dispute);
+
+    event TransferDisputed(address disputer, address channelAddress, bytes32 transferId, TransferDispute dispute);
+
+    event TransferDefunded(
+      address defunder,
+      address channelAddress,
+      TransferDispute dispute,
+      bytes encodedInitialState,
+      bytes encodedResolver,
+      Balance balance
+    );
+
     function getChannelDispute(
     ) external view returns (ChannelDispute memory);
 
