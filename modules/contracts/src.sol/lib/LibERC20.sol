@@ -8,15 +8,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 library LibERC20 {
 
-    function checkResult(bool success, bytes memory returnData)
-        internal
-        pure
-        returns (bool)
-    {
-        LibUtils.revertIfCallFailed(success, returnData);
-        return returnData.length == 0 || abi.decode(returnData, (bool));
-    }
-
     function wrapCall(address assetId, bytes memory callData)
         internal
         returns (bool)
@@ -30,7 +21,8 @@ library LibERC20 {
     {
         require(Address.isContract(assetId));
         (bool success, bytes memory returnData) = assetId.call{gas: gas}(callData);
-        return checkResult(success, returnData);
+        LibUtils.revertIfCallFailed(success, returnData);
+        return returnData.length == 0 || abi.decode(returnData, (bool));
     }
 
     function approve(address assetId, address spender, uint256 amount)
