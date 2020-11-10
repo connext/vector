@@ -252,9 +252,12 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal pure {
-    bytes32 ccsHash = hashChannelState(ccs);
-    require(ccsHash.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: Invalid alice signature");
-    require(ccsHash.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: Invalid bob signature");
+    bytes32 commitment = keccak256(abi.encodePacked(
+      CommitmentType.ChannelState,
+      hashChannelState(ccs)
+    ));
+    require(commitment.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: Invalid alice signature");
+    require(commitment.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: Invalid bob signature");
   }
 
   function verifyMerkleProof(
@@ -274,7 +277,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   function hashChannelState(CoreChannelState calldata ccs) internal pure returns (bytes32) {
-    // TODO: include commitment type
     return keccak256(abi.encode(ccs));
   }
 
