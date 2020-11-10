@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
+import "./interfaces/Types.sol";
 import "./CMCCore.sol";
 import "./CMCAccountant.sol";
 import "./lib/LibChannelCrypto.sol";
