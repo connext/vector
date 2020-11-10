@@ -15,7 +15,13 @@
 /**
  * @type {Cypress.PluginConfig}
  */
+
 module.exports = (on, config) => {
-  // `on` is used to hook into various events Cypress emits
-  // `config` is the resolved Cypress config
+  // on('before:browser:launch', (browser, launchOptions) => {
+  //   // supply the absolute path to an unpacked extension's folder
+  //   // NOTE: extensions cannot be loaded in headless Chrome
+  //   launchOptions.extensions.push('./cypress/metamask_8.1.3_0')
+
+  //   return launchOptions
+  // })
 }
