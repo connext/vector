@@ -414,7 +414,7 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
     let transactionHash: string | undefined = undefined;
-    const timeout = 15_000;
+    const timeout = 90_000;
     try {
       const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
         timeout,
