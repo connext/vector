@@ -32,8 +32,13 @@ library LibAsset {
         internal
         returns (bool)
     {
-        (bool success, ) = recipient.call{value: amount}("");
-        return success;
+        (bool success, bytes memory returnData) = recipient.call{value: amount}("");
+        if (!success) {
+            assembly {
+                revert(add(returnData, 0x20), mload(returnData))
+            }
+        }
+        return true;
     }
 
     function transferERC20(address assetId, address recipient, uint256 amount)
