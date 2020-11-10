@@ -4,7 +4,7 @@ export const env = {
   messagingUrl: process.env.VECTOR_MESSAGING_URL || "http://messaging",
   bobUrl: process.env.VECTOR_BOB_URL || "http://bob:8000",
   carolUrl: process.env.VECTOR_CAROL_URL || "http://carol:8000",
-  chainProviders: JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS || "{}"),
+  chainProviders: JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS || "{https://rpc-mumbai.matic.today, https://rinkeby.infura.io/v3/16e44d78f7be49a7b22a70bdee1ea362}"),
   chainAddresses: JSON.parse(process.env.VECTOR_CHAIN_ADDRESSES || "{}"),
   daveUrl: process.env.VECTOR_DAVE_URL || "http://dave:8000",
   logLevel: process.env.VECTOR_LOG_LEVEL || "warn",
@@ -12,7 +12,7 @@ export const env = {
   nodeContainerUrl: process.env.VECTOR_NODE_CONTAINER_URL || "http://vector_node:8000",
   rogerUrl: process.env.VECTOR_ROGER_URL || "http://roger:8000",
   routerUrl: process.env.VECTOR_ROUTER_URL || "http://router:8008",
-  sugarDaddy: process.env.SUGAR_DADDY || "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
+  sugarDaddy: process.env.SUGAR_DADDY || "decade defense poverty plastic squeeze robust peace exact more parade brother argue",
   port: parseInt(process.env.VECTOR_PORT || "8888"),
   testerName: process.env.VECTOR_TESTER_NAME || "vector_trio_test_runner",
 };

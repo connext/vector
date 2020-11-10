@@ -1,5 +1,5 @@
-@ethNode = http://localhost:8545
-@sugarDaddy = 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
+@ethNode = https://rinkeby.infura.io/v3/16e44d78f7be49a7b22a70bdee1ea362
+@sugarDaddy = 0x97B2a23E52FaBFEb80943e927ba01F4D7f0b223C
 @alice = 0x119a11d0D1686C7330cA0650E26Fd6889Fbeb832
 @bob = 0x95B7e93A3aF19AcAE95aD120d4D8307bF1a6Be63
 @roger = 0x9CD130fE9aC1EF5173eEBE0C163C7a19f3E4ed2B
@@ -15,7 +15,7 @@ Content-Type: application/json
   "jsonrpc":"2.0",
   "method":"eth_sendTransaction",
   "params":[{
-    "from": "{{sugarDaddy}}",
+    "from": "0x97B2a23E52FaBFEb80943e927ba01F4D7f0b223C",
     "to": "{{roger}}",
     "value": "{{amount}}",
     "data": "0x0"

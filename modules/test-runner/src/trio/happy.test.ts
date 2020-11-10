@@ -2,9 +2,7 @@ import { getRandomBytes32, RestServerNodeService, expect } from "@connext/vector
 import { Wallet, utils, constants, providers, BigNumber } from "ethers";
 import pino from "pino";
 import { EngineEvents, FullChannelState, INodeService, TransferNames } from "@connext/vector-types";
-
 import { env, fundIfBelow, getOnchainBalance, getRandomIndex } from "../utils";
-
 import { carolEvts, daveEvts } from "./setup";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
@@ -53,27 +51,34 @@ describe(testName, () => {
       undefined,
       0,
     );
+    console.log(rogerService);
     rogerIdentifier = rogerService.publicIdentifier;
     roger = rogerService.signerAddress;
-    await fundIfBelow(roger, constants.AddressZero, min.mul(2), wallet);
+   // await fundIfBelow(roger, constants.AddressZero, min.mul(2), wallet);
+    await fundIfBelow(roger, constants.AddressZero, min.mul(10), wallet);
   });
 
   it("roger should setup channels with carol and dave", async () => {
+    console.log(rogerIdentifier);
+    console.log(chainId);
     let channelRes = await carolService.setup({
       counterpartyIdentifier: rogerIdentifier,
       chainId,
       timeout: "360000",
     });
+    console.log(channelRes);
     let channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
     const carolChannel = await carolService.getStateChannel({
       channelAddress: channel.channelAddress,
       publicIdentifier: carolIdentifier,
     });
+    console.log(carolChannel);
     let rogerChannel = await rogerService.getStateChannel({
       channelAddress: channel.channelAddress,
       publicIdentifier: rogerIdentifier,
     });
+    console.log(rogerChannel);
     expect(carolChannel.getValue()).to.deep.eq(rogerChannel.getValue());
 
     channelRes = await daveService.setup({
@@ -81,6 +86,7 @@ describe(testName, () => {
       chainId,
       timeout: "360000",
     });
+    console.log(channelRes);
     channel = channelRes.getValue();
     expect(channel.channelAddress).to.be.ok;
     const daveChannel = await daveService.getStateChannel({
@@ -102,6 +108,7 @@ describe(testName, () => {
       chainId,
       publicIdentifier: carolIdentifier,
     });
+    
     const channel = channelRes.getValue()!;
 
     let assetIdx = channel.assetIds.findIndex((_assetId: string) => _assetId === assetId);

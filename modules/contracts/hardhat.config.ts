@@ -15,7 +15,7 @@ const MAX_INT = BigNumber.from(2)
 const mnemonic =
   process.env.SUGAR_DADDY ??
   process.env.MNEMONIC ??
-  "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
+  "decade defense poverty plastic squeeze robust peace exact more parade brother argue";
 
 import "@nomiclabs/hardhat-waffle";
 

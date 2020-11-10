@@ -118,10 +118,10 @@
       "txHash": "0x018ee22482228af2d80638271031b7b97ad255106d84b6415eb82966be38b706"
     },
     "ChannelMastercopy": {
-      "address": "0x1660fc98fC5f8cd8dD3617fF1c0Cd5d7b602925D",
-      "creationCodeHash": "0x785d048493ff0cf45d000614037b69076f442ee2247e8bbd6ca0f474246d594f",
-      "runtimeCodeHash": "0xa4ba46da818d68d0158ff95110ddac8169e556f1e8e8cde0bdee88bb5590ae8f",
-      "txHash": "0xc154027ed1c19df6becc7a4c95600c50f8ab9831560b06a67d97de72bc50dc01"
+      "address": "0x011827F42B14Ddb758284241d234c65E82409B04",
+      "creationCodeHash": "0x9fed469feebf87bc01f1d4786c9be5b1605934c55cd79a71dd97596763b7c354",
+      "runtimeCodeHash": "0xe4df9c69b6b1e0aca5edcf0013c0b7a7366d46349190475f76b4dc60b3a2cc46",
+      "txHash": "0x06f25bc0e49b856967a1377ee114aca9f375d6f15b79f2eb54715e124ffc09f7"
     },
     "ChannelFactory": {
       "address": "0xd233f7db5E35e9F2182cA51607E8C1E204f2dFD3",
