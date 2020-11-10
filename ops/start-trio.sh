@@ -18,8 +18,17 @@ fi
 ####################
 # Misc Config
 
+# Load the config with defaults if it does not exist
+if [[ ! -f "$root/node.config.json" ]]
+then cp "$root/ops/config/node.default.json" "$root/node.config.json"
+fi
+
+if [[ ! -f "$root/router.config.json" ]]
+then cp "$root/ops/config/router.default.json" "$root/router.config.json"
+fi
+
 config=$(
-  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" |\
+  cat "$root/node.config.json" "$root/router.config.json" |\
   jq -s '.[0] + .[1]'
 )
 
@@ -34,10 +43,36 @@ common="networks:
 # Global services / chain provider config
 
 bash "$root/ops/start-global.sh"
-if [[ ! -f "$root/.chaindata/chain-addresses.json" ]]
-then echo "Can't run $stack against external providers yet" && exit 1
+
+# Do we need to spin up local evms or will the node use external ones?
+chain_addresses=$(
+  echo "$config" | jq -s '.[0] + .[1] | .chainAddresses' | tr -d '\n\r '
+)
+chain_providers=$(
+  echo "$config" | jq -s '.[0] + .[1] | .chainProviders' | tr -d '\n\r '
+)
+
+# If the providers are the default providers, override the addresses
+# with what exists in the `.chaindata` folder (in case default config
+# values are not correct)
+default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
+if [[ "$default_providers" == "$given_providers" ]]
+then
+  if [[ ! -f "$root/.chaindata/chain-addresses.json" ]]
+  then echo "No .chaindata configured for local chains" && exit 1
+  else
+    chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+  fi
 fi
-chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+
+# Sanity check: make sure there are addresses for each chain there
+# is a provider for
+chain_addresses_ids=$(echo $chain_addresses | jq 'keys')
+chain_providers_ids=$(echo $chain_providers | jq 'keys')
+if [[ "$chain_addresses_ids" != "$chain_providers_ids" ]]
+then echo "Addresses and providers have different supported chains" && exit 1;
+fi
+
 config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
 
 ########################################

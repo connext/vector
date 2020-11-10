@@ -7,10 +7,38 @@ import {
   WithdrawCommitmentJson,
   StoredTransaction,
   TransactionReason,
+  ChannelDispute,
+  TransferDispute,
 } from "@connext/vector-types";
 import { providers } from "ethers";
 
 export class MemoryStoreService implements IEngineStore {
+  saveChannelDispute(
+    channel: FullChannelState<any>,
+    channelDispute: ChannelDispute,
+    transferDispute?: TransferDispute,
+  ): Promise<void> {
+    this.channelDisputes.set(channel.channelAddress, channelDispute);
+    const existing = this.channelStates.get(channel.channelAddress);
+    if (existing) {
+      this.channelStates.set(channel.channelAddress, {
+        ...existing,
+        state: { ...existing.state, inDispute: channel.inDispute },
+      });
+    }
+    if (transferDispute && this.transfers.has(transferDispute.transferId)) {
+      this.transferDisputes.set(transferDispute.transferId, transferDispute);
+      const t = this.transfers.get(transferDispute.transferId);
+      this.transfers.set(t.transferId, { ...t, inDispute: true });
+    }
+    return Promise.resolve();
+  }
+  // getChannelDispute(channelAddress: string): Promise<ChannelDispute> {
+  //   return Promise.resolve(this.channelDisputes.get(channelAddress));
+  // }
+  // getTransferDispute(transferAddress: string): Promise<TransferDispute> {
+  //   return Promise.resolve(this.transferDisputes.get(transferAddress));
+  // }
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
     throw new Error("Method not implemented.");
   }
@@ -37,6 +65,9 @@ export class MemoryStoreService implements IEngineStore {
   private channelStates: Map<string, { state: FullChannelState; commitment: ChannelCommitmentData }> = new Map();
 
   private schemaVersion: number | undefined = undefined;
+
+  private transferDisputes: Map<string, TransferDispute> = new Map();
+  private channelDisputes: Map<string, ChannelDispute> = new Map();
 
   connect(): Promise<void> {
     return Promise.resolve();

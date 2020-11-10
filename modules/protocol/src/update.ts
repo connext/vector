@@ -95,6 +95,7 @@ export async function applyUpdate<T extends UpdateType>(
           aliceIdentifier: fromIdentifier,
           bobIdentifier: toIdentifier,
           defundNonce: "1",
+          inDispute: false,
         },
       });
     }
@@ -160,6 +161,7 @@ export async function applyUpdate<T extends UpdateType>(
         initiator,
         responder: initiator === previousState!.alice ? previousState!.bob : previousState!.alice,
         meta,
+        inDispute: false,
       };
       return Result.ok({ channel, transfer: createdTransfer, activeTransfers: [...activeTransfers, createdTransfer] });
     }
@@ -499,6 +501,7 @@ async function generateCreateUpdate(
     initiator: signer.address,
     responder: signer.address === state.alice ? state.bob : state.alice,
     meta,
+    inDispute: false,
   };
   const transferHash = hashCoreTransferState(transferState);
   const updatedTransfers = [...transfers, transferState];

@@ -92,12 +92,17 @@ export async function validateOutbound<T extends UpdateType = any>(
       aliceIdentifier: signer.publicIdentifier,
       bobIdentifier: counterpartyIdentifier,
       defundNonce: "1",
+      inDispute: false,
     };
   }
 
   // If the state is still undefined here, thow an error
   if (!state) {
     return returnError(ValidationError.reasons.ChannelNotFound);
+  }
+
+  if (state.inDispute) {
+    return returnError(ValidationError.reasons.InDispute);
   }
 
   // Get the active transfers for applying the update
@@ -356,6 +361,10 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       ),
     );
   };
+
+  if (previousState.inDispute) {
+    return returnError(ValidationError.reasons.InDispute);
+  }
 
   const { channelAddress, fromIdentifier, toIdentifier, type, nonce, balance, assetId, details } = counterpartyUpdate;
   // Get the active transfers for the channel

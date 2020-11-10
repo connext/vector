@@ -2,8 +2,13 @@
 
 ## Next Release
 
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.6-beta.1, @connext/{server-node}@0.0.8
+
 - fix `defundNonce` in server node store
 - expose nats 4221 by default
+- support trio and contract testing across remote chains
+- improve asset handling
+- minor changes in transfer definitions and transfer registry
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
 

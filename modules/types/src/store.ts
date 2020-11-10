@@ -3,6 +3,7 @@ import { providers } from "ethers";
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
 import { FullChannelState, ChannelCommitmentData, FullTransferState } from "./channel";
 import { Address } from "./basic";
+import { ChannelDispute, TransferDispute } from "./dispute";
 
 export interface IVectorStore {
   // Store management methods
@@ -32,6 +33,15 @@ export interface IVectorStore {
     commitment: ChannelCommitmentData,
     transfer?: FullTransferState,
   ): Promise<void>;
+
+  saveChannelDispute(
+    channel: FullChannelState,
+    channelDispute: ChannelDispute,
+    transferDispute?: TransferDispute,
+  ): Promise<void>;
+  // TODO: full disputes
+  // getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined>;
+  // getTransferDispute(transferAddress: string): Promise<TransferDispute | undefined>;
 }
 
 export const StoredTransactionStatus = {
@@ -50,6 +60,7 @@ export const TransactionReason = {
   defundTransfer: "defundTransfer",
   depositA: "depositA",
   depositB: "depositB",
+  deploy: "deploy",
   deployWithDepositA: "deployWithDepositA",
   transferTokens: "transferTokens",
   withdraw: "withdraw",

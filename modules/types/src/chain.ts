@@ -2,6 +2,7 @@ import { BigNumber, BigNumberish, providers } from "ethers";
 
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
+import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
 import { ChainProviders } from "./network";
 import { RegisteredTransfer, TransferName } from "./transferDefinitions";
@@ -31,6 +32,7 @@ export class ChainError extends VectorError {
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
+    FailedToDeploy: "Could not deploy vector channel",
     FailedToSendTx: "Failed to send transaction to chain",
     TransferNotRegistered: "Transfer not in registry",
     MissingSigs: "Channel state is not double signed",
@@ -110,6 +112,8 @@ export interface IVectorChainReader {
   getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
+
+  getChannelDispute(channelAddress: string, chainId: number): Promise<Result<ChannelDispute | undefined, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

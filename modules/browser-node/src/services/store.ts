@@ -1,5 +1,6 @@
 import {
   ChannelCommitmentData,
+  ChannelDispute,
   FullChannelState,
   FullTransferState,
   IChainServiceStore,
@@ -8,6 +9,7 @@ import {
   StoredTransaction,
   StoredTransactionStatus,
   TransactionReason,
+  TransferDispute,
   UpdateType,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
@@ -69,6 +71,17 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     idbKeyRange?: { bound: Function; lowerBound: Function; upperBound: Function },
   ) {
     this.db = new VectorIndexedDBDatabase(indexedDB, idbKeyRange);
+  }
+
+  async saveChannelDispute(
+    channel: FullChannelState<any>,
+    channelDispute: ChannelDispute,
+    transferDispute?: TransferDispute,
+  ): Promise<void> {
+    await this.db.channels.update(channel.channelAddress, { inDispute: channel.inDispute });
+    if (transferDispute) {
+      await this.db.transfers.update(transferDispute.transferId, { inDispute: true });
+    }
   }
 
   async connect(): Promise<void> {

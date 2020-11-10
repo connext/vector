@@ -13,10 +13,10 @@
     "migration:generate": "prisma migrate save --experimental"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.0.5",
-    "@connext/vector-engine": "0.0.5",
-    "@connext/vector-types": "0.0.5",
-    "@connext/vector-utils": "0.0.5",
+    "@connext/vector-contracts": "0.0.6-beta.1",
+    "@connext/vector-engine": "0.0.6-beta.1",
+    "@connext/vector-types": "0.0.6-beta.1",
+    "@connext/vector-utils": "0.0.6-beta.1",
     "@prisma/client": "2.10.0",
     "@sinclair/typebox": "0.11.0",
     "ajv": "6.12.6",
@@ -25,6 +25,7 @@
     "fastify": "3.7.0",
     "fastify-cors": "4.1.0",
     "fastify-oas": "3.0.3",
+    "merkletreejs": "0.2.9",
     "pino": "6.7.0",
     "ts-nats": "1.2.15"
   },

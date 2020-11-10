@@ -57,3 +57,23 @@ export const getOnchainBalance = async (assetId: string, address: string): Promi
     ? provider.getBalance(address)
     : new Contract(assetId, TestToken.abi, provider).balanceOf(address);
 };
+
+export const fundAddress = async (address: string, assetId: string, minimumAmt: BigNumber): Promise<void> => {
+  const balance = await getOnchainBalance(assetId, address);
+  if (balance.gte(minimumAmt)) {
+    return;
+  }
+  const funderBal = await getOnchainBalance(assetId, alice.address);
+  if (funderBal.lt(minimumAmt)) {
+    throw new Error(
+      `${
+        alice.address
+      } has insufficient funds to gift to ${address} (requested: ${minimumAmt.toString()}, balance: ${funderBal.toString()})`,
+    );
+  }
+  const tx =
+    assetId === AddressZero
+      ? await alice.sendTransaction({ to: address, value: minimumAmt })
+      : await new Contract(assetId, TestToken.abi, alice).transfer(address, minimumAmt);
+  await tx.wait();
+};

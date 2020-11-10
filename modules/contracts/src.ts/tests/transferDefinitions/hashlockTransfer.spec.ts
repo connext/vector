@@ -23,11 +23,12 @@ import { AddressBook } from "../../addressBook";
 import { alice, provider } from "../constants";
 import { getTestAddressBook } from "../utils";
 
-describe("HashlockTransfer", () => {
+describe("HashlockTransfer", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let transfer: Contract;
 
-  beforeEach(async () => {
+  before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["HashlockTransfer", []]]);
     transfer = addressBook.getContract("HashlockTransfer");

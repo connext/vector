@@ -106,6 +106,7 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   bobIdentifier: string;
   latestUpdate: ChannelUpdate<T>;
   networkContext: NetworkContext;
+  inDispute: boolean;
 };
 
 export interface ChannelCommitmentData {
@@ -146,6 +147,7 @@ export type FullTransferState<T extends TransferName = any> = CoreTransferState 
   transferState: TransferStateMap[T];
   transferResolver?: TransferResolverMap[T]; // undefined iff not resolved
   meta?: any;
+  inDispute: boolean;
 };
 
 export interface TransferCommitmentData {

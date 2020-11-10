@@ -10,7 +10,8 @@ import { rando } from "./constants";
 
 import { getTestAddressBook, alice } from ".";
 
-describe("TransferRegistry.sol", () => {
+describe("TransferRegistry.sol", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let transfer: Contract;
   let registry: Contract;
@@ -18,7 +19,6 @@ describe("TransferRegistry.sol", () => {
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
-
     await deployContracts(alice, addressBook, [
       ["HashlockTransfer", []],
       ["TransferRegistry", []],
@@ -30,29 +30,33 @@ describe("TransferRegistry.sol", () => {
 
   describe("addTransferDefinition", () => {
     it("should work", async () => {
-      await registry.addTransferDefinition(registryInfo);
+      const tx = await registry.addTransferDefinition(registryInfo);
+      await tx.wait();
       expect(await registry.getTransferDefinitions()).to.be.deep.eq([registryInfo]);
     });
 
     it("should fail IFF not called by the owner", async () => {
       await expect(registry.connect(rando).addTransferDefinition(registryInfo)).revertedWith(
-        "Only owner can call function",
+        "Ownable: caller is not the owner",
       );
     });
   });
 
   describe("removeTransferDefinition", () => {
     beforeEach(async () => {
-      await registry.addTransferDefinition(registryInfo);
+      const tx = await registry.addTransferDefinition(registryInfo);
+      await tx.wait();
     });
+
     it("should work", async () => {
-      await registry.removeTransferDefinition("HashlockTransfer");
+      const tx = await registry.removeTransferDefinition("HashlockTransfer");
+      await tx.wait();
       expect(await registry.getTransferDefinitions()).to.be.deep.eq([]);
     });
 
     it("should fail IFF not called by the owner", async () => {
       await expect(registry.connect(rando).removeTransferDefinition(transfer.address)).revertedWith(
-        "Only owner can call function",
+        "Ownable: caller is not the owner",
       );
     });
   });
