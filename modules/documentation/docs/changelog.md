@@ -7,6 +7,7 @@
 - support trio and contract testing across remote chains
 - improve asset handling
 - minor changes in transfer definitions and transfer registry
+- fix and minor improvements around asset transfers
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
 
