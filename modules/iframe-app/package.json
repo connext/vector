@@ -1,11 +1,11 @@
 {
   "name": "iframe-app",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@connext/vector-browser-node": "0.0.6-beta.0",
-    "@connext/vector-types": "0.0.6-beta.0",
-    "@connext/vector-utils": "0.0.6-beta.0",
+    "@connext/vector-browser-node": "0.0.6-beta.1",
+    "@connext/vector-types": "0.0.6-beta.1",
+    "@connext/vector-utils": "0.0.6-beta.1",
     "@types/node": "14.14.6",
     "@types/react": "16.9.53",
     "@types/react-dom": "16.9.8",
