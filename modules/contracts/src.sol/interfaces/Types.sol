@@ -54,3 +54,8 @@ struct RegisteredTransfer {
   string stateEncoding;
   string resolverEncoding;
 }
+
+enum CommitmentType {
+  ChannelState,
+  WithdrawData
+}
