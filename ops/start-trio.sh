@@ -246,6 +246,8 @@ services:
     $common
     image: '$database_image'
     $database_env
+    ports:
+      - '$pg_port:$pg_port'
 
   $observability_services
 
