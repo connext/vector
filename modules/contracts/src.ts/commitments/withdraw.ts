@@ -1,12 +1,10 @@
 import { MinimalTransaction, WithdrawCommitmentJson, WithdrawDataEncoding } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { BigNumber, utils } from "ethers";
-import { AddressZero, Zero } from "@ethersproject/constants";
+import { AddressZero } from "@ethersproject/constants";
+import { Interface, defaultAbiCoder } from "@ethersproject/abi";
+import { keccak256 } from "@ethersproject/solidity";
 
 import { ChannelMastercopy } from "../artifacts";
-import * as ERC20 from "@openzeppelin/contracts/build/contracts/IERC20.json";
-
-const { defaultAbiCoder, Interface, keccak256 } = utils;
 
 export class WithdrawCommitment {
   private aliceSignature?: string;
@@ -69,24 +67,13 @@ export class WithdrawCommitment {
 
   public getWithdrawData() {
     const callData = this.getCallData();
-    return [
-      this.channelAddress,
-      this.assetId,
-      this.recipient,
-      this.amount,
-      this.nonce,
-      callData.to,
-      callData.data,
-    ];
+    return [this.channelAddress, this.assetId, this.recipient, this.amount, this.nonce, callData.to, callData.data];
   }
 
   public hashToSign(): string {
     const withdrawData = this.getWithdrawData();
-    const encodedWithdrawData = defaultAbiCoder.encode(
-      [WithdrawDataEncoding],
-      [withdrawData],
-    );
-    return keccak256(encodedWithdrawData);
+    const encodedWithdrawData = defaultAbiCoder.encode([WithdrawDataEncoding], [withdrawData]);
+    return keccak256(["bytes"], [encodedWithdrawData]);
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {

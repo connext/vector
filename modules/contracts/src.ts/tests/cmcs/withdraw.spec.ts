@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { ChannelSigner, expect, getRandomAddress, getRandomBytes32 } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { BigNumber, Contract, Wallet } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
+import { Wallet } from "@ethersproject/wallet";
 
 import { getTestAddressBook, getTestChannel, alice } from "..";
 import { deployContracts, WithdrawCommitment } from "../..";
@@ -178,9 +180,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
 
     const withdrawData = commitment.getWithdrawData();
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Invalid alice signature",
-    );
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: Invalid alice signature");
   });
 
   it("should fail if bob signature is invalid", async () => {
@@ -200,9 +200,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(getRandomBytes32());
 
     const withdrawData = commitment.getWithdrawData();
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Invalid bob signature",
-    );
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: Invalid bob signature");
   });
 
   it("should fail if the tx has already been executed", async () => {
@@ -251,9 +249,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
     const withdrawData = commitment.getWithdrawData();
 
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Transfer failed",
-    );
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: Transfer failed");
   });
 
   it("should fail if token transfer fails", async () => {
@@ -277,9 +273,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
     const withdrawData = commitment.getWithdrawData();
 
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: Transfer failed",
-    );
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: Transfer failed");
   });
 
   it("should fail if token transfer reverts", async () => {
@@ -303,11 +297,8 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
     const withdrawData = commitment.getWithdrawData();
 
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "FAIL: Failing token",
-    );
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("FAIL: Failing token");
   });
 
-  it.skip("should call helper contract if given non-zero address", async () => {
-  });
+  it.skip("should call helper contract if given non-zero address", async () => {});
 });

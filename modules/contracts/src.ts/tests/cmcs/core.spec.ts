@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
-import { Contract } from "ethers";
 
 import { getTestChannel, alice, bob, getUnsetupChannel } from "..";
 

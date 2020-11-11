@@ -10,7 +10,7 @@ import {
   ChannelDispute,
   TransferDispute,
 } from "@connext/vector-types";
-import { providers } from "ethers";
+import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 export class MemoryStoreService implements IEngineStore {
   saveChannelDispute(
@@ -45,13 +45,13 @@ export class MemoryStoreService implements IEngineStore {
   saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void> {
+  saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
     throw new Error("Method not implemented.");
   }
   saveTransactionResponse(
     channelAddress: string,
     transactionReason: TransactionReason,
-    response: providers.TransactionResponse,
+    response: TransactionResponse,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }

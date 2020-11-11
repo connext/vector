@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { RegisteredTransfer } from "@connext/vector-types";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 
 import { deployContracts } from "..";
@@ -37,7 +37,7 @@ describe("TransferRegistry.sol", function() {
 
     it("should fail IFF not called by the owner", async () => {
       await expect(registry.connect(rando).addTransferDefinition(registryInfo)).revertedWith(
-        "Only owner can call function",
+        "Ownable: caller is not the owner",
       );
     });
   });
@@ -56,7 +56,7 @@ describe("TransferRegistry.sol", function() {
 
     it("should fail IFF not called by the owner", async () => {
       await expect(registry.connect(rando).removeTransferDefinition(transfer.address)).revertedWith(
-        "Only owner can call function",
+        "Ownable: caller is not the owner",
       );
     });
   });
