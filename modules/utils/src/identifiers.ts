@@ -1,13 +1,11 @@
 import { Address, AssetId, PublicKey, PublicIdentifier } from "@connext/vector-types";
+import { getAddress } from "@ethersproject/address";
 import bs58check from "bs58check";
-import { utils } from "ethers";
 import { hexToBuffer, bufferToHex, compress, decompress } from "eccrypto-js";
 
 import { getAddressError } from "./hexStrings";
 import { LimitedCache } from "./limitedCache";
 import { getRandomPublicKey, getAddressFromPublicKey } from "./crypto";
-
-const { getAddress } = utils;
 
 export const VECTOR_PUB_ID_PREFIX = "indra";
 

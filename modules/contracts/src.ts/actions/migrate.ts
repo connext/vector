@@ -1,6 +1,8 @@
 import { getEthProvider } from "@connext/vector-utils";
 import { EtherSymbol, Zero } from "@ethersproject/constants";
-import { providers, utils, Wallet } from "ethers";
+import { JsonRpcProvider } from "@ethersproject/providers";
+import { formatEther } from "@ethersproject/units";
+import { Wallet } from "@ethersproject/wallet";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
@@ -9,14 +11,12 @@ import { cliOpts, logger } from "../constants";
 import { deployContracts } from "./deployContracts";
 import { registerTransfer } from "./registerTransfer";
 
-const { formatEther } = utils;
-
 export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = logger.child({})): Promise<void> => {
   // Setup env & log initial state
   const chainId = (process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId).toString();
   const balance = await wallet.getBalance();
   const nonce = await wallet.getTransactionCount();
-  const providerUrl = (wallet.provider as providers.JsonRpcProvider).connection.url;
+  const providerUrl = (wallet.provider as JsonRpcProvider).connection.url;
 
   log.info(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
   log.info(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);

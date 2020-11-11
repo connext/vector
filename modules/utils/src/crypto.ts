@@ -1,5 +1,8 @@
 import { Address, Bytes32, HexString, PublicKey, PrivateKey, SignatureString } from "@connext/vector-types";
-import { utils } from "ethers";
+import { getAddress } from "@ethersproject/address";
+import { arrayify, hexlify } from "@ethersproject/bytes";
+import { randomBytes } from "@ethersproject/random";
+import { toUtf8String } from "@ethersproject/strings";
 import {
   arrayToBuffer,
   concatBuffers,
@@ -18,8 +21,6 @@ import {
 } from "eccrypto-js";
 
 import { getAddressError, getHexStringError, isValidHexString } from "./hexStrings";
-
-const { arrayify, getAddress, hexlify, randomBytes, toUtf8String } = utils;
 
 export const VECTOR_SIGN_PREFIX = "\x15Indra Signed Message:\n";
 

@@ -1,11 +1,13 @@
 import { AddressZero, EtherSymbol } from "@ethersproject/constants";
-import { Contract, ContractFactory, Wallet, utils, BigNumber } from "ethers";
+import { BigNumber } from "ethers";
+import { Contract, ContractFactory } from "@ethersproject/contracts";
+import { keccak256 } from "@ethersproject/keccak256";
+import { formatEther } from "@ethersproject/units";
+import { Wallet } from "@ethersproject/wallet";
 
 import { AddressBook, AddressBookEntry } from "../addressBook";
 import { artifacts } from "../artifacts";
 import { logger } from "../constants";
-
-const { formatEther, keccak256, parseUnits } = utils;
 
 const hash = (input: string): string => keccak256(`0x${input.replace(/^0x/, "")}`);
 

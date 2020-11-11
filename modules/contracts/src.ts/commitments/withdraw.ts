@@ -1,10 +1,9 @@
 import { MinimalTransaction, WithdrawCommitmentJson } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { utils } from "ethers";
+import { Interface } from "@ethersproject/abi";
+import { keccak256 } from "@ethersproject/solidity";
 
 import { ChannelMastercopy } from "../artifacts";
-
-const { Interface, keccak256, solidityPack } = utils;
 
 export class WithdrawCommitment {
   private aliceSignature?: string;
@@ -63,11 +62,9 @@ export class WithdrawCommitment {
 
   public hashToSign(): string {
     return keccak256(
-      solidityPack(
-        ["address", "address", "uint256", "uint256"],
-        [this.recipient, this.assetId, this.amount, this.nonce],
-      ),
-    );
+      ["address", "address", "uint256", "uint256"],
+      [this.recipient, this.assetId, this.amount, this.nonce],
+  );
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {

@@ -1,4 +1,4 @@
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { isBN, toBN } from "./bigNumbers";
 import { abbreviate } from "./strings";

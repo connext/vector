@@ -238,7 +238,6 @@ export class VectorEngine implements IVectorEngine {
       timeout: params.timeout,
       networkContext: {
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
-        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
         transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
         chainId: params.chainId,
         providerUrl: chainProviders.getValue()[params.chainId],

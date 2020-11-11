@@ -1,6 +1,6 @@
 import { TransferNames } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 
 import { AddressBook } from "../addressBook";
 import { alice, getTestAddressBook } from "../tests";

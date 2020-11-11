@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 import { FullChannelState, FullTransferState, HashlockTransferStateEncoding } from "@connext/vector-types";
 import {
   bufferify,
@@ -15,16 +14,17 @@ import {
   hashCoreTransferState,
   hashTransferState,
 } from "@connext/vector-utils";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { BigNumber, BigNumberish, Contract, utils } from "ethers";
+import { Contract } from "@ethersproject/contracts";
+import { keccak256 } from "@ethersproject/keccak256";
+import { parseEther } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
 import { bob, alice, provider, rando } from "../constants";
 import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
-
-const { parseEther } = utils;
 
 describe("CMCAdjudicator.sol", function() {
   this.timeout(120_000);
@@ -62,9 +62,8 @@ describe("CMCAdjudicator.sol", function() {
   };
 
   const verifyTransferDispute = async (cts: FullTransferState, disputeBlockNumber: number) => {
-    const hash = hashCoreTransferState(cts);
     const transferDispute = await channel.getTransferDispute(cts.transferId);
-    expect(transferDispute.transferStateHash).to.be.eq(hash);
+    expect(transferDispute.transferStateHash).to.be.eq(hashCoreTransferState(cts));
     expect(transferDispute.isDefunded).to.be.false;
     expect(transferDispute.transferDisputeExpiry).to.be.eq(BigNumber.from(disputeBlockNumber).add(cts.transferTimeout));
   };
@@ -102,6 +101,7 @@ describe("CMCAdjudicator.sol", function() {
     const { blockNumber: disputeBlock } = await tx.wait();
     // Bring to defund phase
     const toMine = BigNumber.from(ccs.timeout).toNumber();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const _ of Array(toMine).fill(0)) {
       await mineBlock();
     }
@@ -114,7 +114,7 @@ describe("CMCAdjudicator.sol", function() {
   // Get merkle proof of transfer
   const getMerkleProof = (cts: FullTransferState = transferState) => {
     const hash = hashCoreTransferState(cts);
-    const merkle = new MerkleTree([bufferify(hash)], utils.keccak256);
+    const merkle = new MerkleTree([bufferify(hash)], keccak256);
     return merkle.getHexProof(bufferify(hash));
   };
 
@@ -162,10 +162,8 @@ describe("CMCAdjudicator.sol", function() {
     token = addressBook.getContract("TestToken");
     transferDefinition = addressBook.getContract("HashlockTransfer");
     // mint token to alice/bob
-    const aliceMint = await token.mint(alice.address, parseEther("1"));
-    await aliceMint.wait();
-    const bobMint = await token.mint(bob.address, parseEther("1"));
-    await bobMint.wait();
+    await (await token.mint(alice.address, parseEther("1"))).wait();
+    await (await token.mint(bob.address, parseEther("1"))).wait();
     channel = await getTestChannel(addressBook);
     const preImage = getRandomBytes32();
     const state = {
@@ -185,8 +183,6 @@ describe("CMCAdjudicator.sol", function() {
       transferTimeout: "3",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
-    const hash = hashCoreTransferState(transferState);
-    const merkle = new MerkleTree([hash], utils.keccak256);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -195,7 +191,7 @@ describe("CMCAdjudicator.sol", function() {
       processedDepositsB: ["62"],
       timeout: "2",
       nonce: 3,
-      merkleRoot: merkle.getHexRoot(),
+      merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
     });
     const channelHash = hashCoreChannelState(channelState);
     aliceSignature = await aliceSigner.signMessage(channelHash);
@@ -208,31 +204,31 @@ describe("CMCAdjudicator.sol", function() {
     it("should fail if state.alice is incorrect", async function() {
       await expect(
         channel.disputeChannel({ ...channelState, alice: getRandomAddress() }, aliceSignature, bobSignature),
-      ).revertedWith("CMCAdjudicator: Mismatch between given core channel state and channel we are at");
+      ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
     it("should fail if state.bob is incorrect", async function() {
       await expect(
         channel.disputeChannel({ ...channelState, bob: getRandomAddress() }, aliceSignature, bobSignature),
-      ).revertedWith("CMCAdjudicator: Mismatch between given core channel state and channel we are at");
+      ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
     it("should fail if state.channelAddress is incorrect", async function() {
       await expect(
         channel.disputeChannel({ ...channelState, channelAddress: getRandomAddress() }, aliceSignature, bobSignature),
-      ).revertedWith("CMCAdjudicator: Mismatch between given core channel state and channel we are at");
+      ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
     it("should fail if alices signature is invalid", async function() {
       await expect(
         channel.disputeChannel(channelState, await aliceSigner.signMessage(getRandomBytes32()), bobSignature),
-      ).revertedWith("Invalid alice signature");
+      ).revertedWith("CMCAdjudicator: INVALID_ALICE_SIG");
     });
 
     it("should fail if bobs signature is invalid", async function() {
       await expect(
         channel.disputeChannel(channelState, aliceSignature, await bobSigner.signMessage(getRandomBytes32())),
-      ).revertedWith("Invalid bob signature");
+      ).revertedWith("CMCAdjudicator: INVALID_BOB_SIG");
     });
 
     it("should fail if channel is not in defund phase", async function() {
@@ -256,7 +252,7 @@ describe("CMCAdjudicator.sol", function() {
       const hash2 = hashCoreChannelState(nextState);
       await expect(
         channel.disputeChannel(nextState, await aliceSigner.signMessage(hash2), await bobSigner.signMessage(hash2)),
-      ).revertedWith("CMCAdjudicator disputeChannel: Not allowed in defund phase");
+      ).revertedWith("CMCAdjudicator: INVALID_PHASE");
     });
 
     it("should fail if nonce is lte stored nonce", async () => {
@@ -265,7 +261,7 @@ describe("CMCAdjudicator.sol", function() {
       await verifyChannelDispute(channelState, blockNumber);
 
       await expect(channel.disputeChannel(channelState, aliceSignature, bobSignature)).revertedWith(
-        "CMCAdjudicator disputeChannel: New nonce smaller than stored one",
+        "CMCAdjudicator: INVALID_NONCE",
       );
     });
 
@@ -304,7 +300,7 @@ describe("CMCAdjudicator.sol", function() {
       }
       await disputeChannel();
       await expect(channel.defundChannel({ ...channelState, alice: getRandomAddress() })).revertedWith(
-        "CMCAdjudicator: Mismatch between given core channel state and channel we are at",
+        "CMCAdjudicator: INVALID_CHANNEL",
       );
     });
 
@@ -314,7 +310,7 @@ describe("CMCAdjudicator.sol", function() {
       }
       await disputeChannel();
       await expect(channel.defundChannel({ ...channelState, bob: getRandomAddress() })).revertedWith(
-        "CMCAdjudicator: Mismatch between given core channel state and channel we are at",
+        "CMCAdjudicator: INVALID_CHANNEL",
       );
     });
 
@@ -324,7 +320,7 @@ describe("CMCAdjudicator.sol", function() {
       }
       await disputeChannel();
       await expect(channel.defundChannel({ ...channelState, channelAddress: getRandomAddress() })).revertedWith(
-        "CMCAdjudicator: Mismatch between given core channel state and channel we are at",
+        "CMCAdjudicator: INVALID_CHANNEL",
       );
     });
 
@@ -334,7 +330,7 @@ describe("CMCAdjudicator.sol", function() {
       }
       await disputeChannel();
       await expect(channel.defundChannel({ ...channelState, nonce: 652 })).revertedWith(
-        "CMCAdjudicator defundChannel: Hash of core channel state does not match stored hash",
+        "CMCAdjudicator: INVALID_CHANNEL_HASH",
       );
     });
 
@@ -346,7 +342,7 @@ describe("CMCAdjudicator.sol", function() {
       const { blockNumber } = await tx.wait();
       await verifyChannelDispute(channelState, blockNumber);
       await expect(channel.defundChannel(channelState)).revertedWith(
-        "CMCAdjudicator defundChannel: Not in defund phase",
+        "CMCAdjudicator: INVALID_PHASE",
       );
     });
 
@@ -357,7 +353,7 @@ describe("CMCAdjudicator.sol", function() {
       const toDispute = { ...channelState, defundNonce: "0" };
       await disputeChannel(toDispute);
       await expect(channel.defundChannel(toDispute)).revertedWith(
-        "CMCAdjudicator defundChannel: channel already defunded",
+        "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED",
       );
     });
 
@@ -416,7 +412,7 @@ describe("CMCAdjudicator.sol", function() {
       await disputeChannel();
       await expect(
         channel.disputeTransfer({ ...transferState, channelAddress: getRandomAddress() }, getMerkleProof()),
-      ).revertedWith("CMCAdjudicator: Mismatch between given core transfer state and channel we are at");
+      ).revertedWith("CMCAdjudicator: INVALID_TRANSFER");
     });
 
     it("should fail if merkle proof is invalid", async function() {
@@ -426,7 +422,7 @@ describe("CMCAdjudicator.sol", function() {
       await disputeChannel();
       await expect(
         channel.disputeTransfer({ ...transferState, transferId: getRandomBytes32() }, getMerkleProof()),
-      ).revertedWith("CMCAdjudicator: Merkle proof verification failed");
+      ).revertedWith("CMCAdjudicator: INVALID_MERKLE_PROOF");
     });
 
     it("should fail if channel is not in defund phase", async function() {
@@ -438,7 +434,7 @@ describe("CMCAdjudicator.sol", function() {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       await tx.wait();
       await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
-        "CMCAdjudicator disputeTransfer: Not in defund phase",
+        "CMCAdjudicator: INVALID_PHASE",
       );
     });
 
@@ -451,7 +447,7 @@ describe("CMCAdjudicator.sol", function() {
       const tx = await channel.disputeTransfer(transferState, getMerkleProof());
       await tx.wait();
       await expect(channel.disputeTransfer(transferState, getMerkleProof())).revertedWith(
-        "CMCAdjudicator disputeTransfer: transfer already disputed",
+        "CMCAdjudicator: TRANSFER_ALREADY_DISPUTED",
       );
     });
 
@@ -487,7 +483,7 @@ describe("CMCAdjudicator.sol", function() {
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
         ),
-      ).revertedWith("CMCAdjudicator: Mismatch between given core transfer state and channel we are at");
+      ).revertedWith("CMCAdjudicator: INVALID_TRANSFER");
     });
 
     it("should fail if transfer hasnt been disputed", async function() {
@@ -502,7 +498,7 @@ describe("CMCAdjudicator.sol", function() {
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
         ),
-      ).revertedWith("CMCAdjudicator defundTransfer: transfer not yet disputed");
+      ).revertedWith("CMCAdjudicator: TRANSFER_NOT_DISPUTED");
     });
 
     it("should fail if the transfer does not match whats stored", async function() {
@@ -516,7 +512,7 @@ describe("CMCAdjudicator.sol", function() {
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
         ),
-      ).revertedWith("CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash");
+      ).revertedWith("CMCAdjudicator: INVALID_TRANSFER_HASH");
     });
 
     it("should fail if transfer has been defunded", async function() {
@@ -540,7 +536,7 @@ describe("CMCAdjudicator.sol", function() {
             encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
             encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
           ),
-      ).revertedWith("CMCAdjudicator defundTransfer: transfer already defunded");
+      ).revertedWith("CMCAdjudicator: TRANSFER_ALREADY_DEFUNDED");
     });
 
     // NOTE: this means no watchtowers can dispute transfers where receiver
@@ -558,7 +554,7 @@ describe("CMCAdjudicator.sol", function() {
             encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
             encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
           ),
-      ).revertedWith("CMCAdjudicator: msg.sender is not transfer responder");
+      ).revertedWith("CMCAdjudicator: INVALID_MSG_SENDER");
     });
 
     it("should fail if the initial state hash doesnt match and the transfer is still in dispute", async function() {
@@ -578,12 +574,12 @@ describe("CMCAdjudicator.sol", function() {
             encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
           ),
       ).revertedWith(
-        "CMCAdjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash",
+        "CMCAdjudicator: INVALID_TRANSFER_HASH",
       );
     });
 
     // TODO: need to write a transfer def for this
-    it.skip("should fail if the resolved balances are > initial balances", async () => {});
+    // it.skip("should fail if the resolved balances are > initial balances", async () => {});
 
     it("should correctly resolve + defund transfer if transfer is still in dispute (cancelling resolve)", async function() {
       if (nonAutomining) {
@@ -632,6 +628,7 @@ describe("CMCAdjudicator.sol", function() {
       }
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _ of Array(BigNumber.from(transferState.transferTimeout).toNumber()).fill(0)) {
         await mineBlock();
       }

@@ -1,7 +1,7 @@
 import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { AddressZero, Zero } from "@ethersproject/constants";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
 import { deployContracts, registerTransfer } from "../actions";

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { VectorChainReader } from "@connext/vector-contracts";
 import {
   UpdateType,
@@ -11,7 +12,6 @@ import {
   DEFAULT_TRANSFER_TIMEOUT,
   Balance,
   TransferNames,
-  HashlockTransferStateEncoding,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -25,7 +25,6 @@ import {
   PartialChannelUpdate,
   createTestFullHashlockTransferState,
   ChannelSigner,
-  hashTransferState,
   expect,
   MemoryStoreService,
   getSignerAddressFromPublicIdentifier,
@@ -67,7 +66,6 @@ describe("applyUpdate", () => {
     chainId,
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
-    channelMastercopyAddress: mkAddress("0xcccffff333"),
     transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };
 
@@ -495,7 +493,6 @@ describe("generateUpdate", () => {
     chainId,
     providerUrl,
     channelFactoryAddress: mkAddress("0xaaabbbcccc"),
-    channelMastercopyAddress: mkAddress("0xbbbbccc3334"),
     transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
   };
 

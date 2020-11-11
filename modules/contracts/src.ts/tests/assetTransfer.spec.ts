@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
-import { parseEther } from "ethers/lib/utils";
 
 import { deployContracts } from "..";
 import { AddressBook } from "../addressBook";
