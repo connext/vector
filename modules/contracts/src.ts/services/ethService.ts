@@ -119,7 +119,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   public async sendDeployChannelTx(
     channelState: FullChannelState,
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const method = "sendDeployChannelTx";
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
