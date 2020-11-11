@@ -1,6 +1,6 @@
+import { Wallet } from "@ethersproject/wallet";
 import { expect } from "chai";
 import * as EthCrypto from "eth-crypto";
-import { Wallet } from "ethers";
 
 import { ChannelSigner, getRandomChannelSigner } from "./channelSigner";
 import {

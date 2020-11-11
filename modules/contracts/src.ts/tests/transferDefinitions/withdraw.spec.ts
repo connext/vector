@@ -17,8 +17,9 @@ import {
   encodeBalance,
   mkSig,
 } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
-import { BigNumber, Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";

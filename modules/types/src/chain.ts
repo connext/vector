@@ -1,4 +1,5 @@
-import { BigNumber, BigNumberish, providers } from "ethers";
+import { TransactionResponse } from "@ethersproject/abstract-provider";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
@@ -123,18 +124,18 @@ export interface IVectorChainService extends IVectorChainReader {
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponse, ChainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponse, ChainError>>;
 
   // Dispute methods
-  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
-  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
   sendDisputeTransferTx(
     transferState: FullTransferState,
     merkleProof: string[],
-  ): Promise<Result<providers.TransactionResponse, ChainError>>;
-  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<providers.TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponse, ChainError>>;
+  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponse, ChainError>>;
 }

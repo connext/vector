@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-
 import { RegisteredTransfer } from "@connext/vector-types";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
 
 import { deployContracts } from "../../actions";
 import { alice } from "../constants";

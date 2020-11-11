@@ -1,8 +1,7 @@
 import { DecString } from "@connext/vector-types";
-import { BigNumber, BigNumberish, constants, utils } from "ethers";
-
-const { Zero, MaxUint256 } = constants;
-const { parseUnits, formatUnits } = utils;
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { Zero, MaxUint256 } from "@ethersproject/constants";
+import { parseUnits, formatUnits } from "@ethersproject/units";
 
 export const toWad = (amount: string, decimals = 18): BigNumber => {
   return parseUnits(sanitizeDecimals(amount, decimals), decimals);

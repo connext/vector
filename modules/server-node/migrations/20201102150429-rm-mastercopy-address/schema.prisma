@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = ["postgresql", "sqlite"]
-  url      = env("VECTOR_DATABASE_URL")
+  url = "***"
 }
 
 model Balance {
@@ -39,7 +39,6 @@ model Channel {
   providerUrl              String
   latestUpdate             Update
   defundNonce              String
-  inDispute                Boolean
 
   activeTransfers Transfer[]
 
@@ -105,7 +104,6 @@ model Update {
 model Transfer {
   transferId String @id
   routingId  String
-  inDispute  Boolean
 
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])

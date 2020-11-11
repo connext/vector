@@ -163,7 +163,6 @@ export type ChainAddresses = {
 
 export type ContractAddresses = {
   channelFactoryAddress: Address;
-  channelMastercopyAddress: Address;
   transferRegistryAddress: Address;
 };
 
