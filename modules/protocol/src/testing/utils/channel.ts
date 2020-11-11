@@ -1,6 +1,5 @@
 import { ChannelFactory, TestToken, VectorChannel, VectorChainReader } from "@connext/vector-contracts";
 import {
-  Contract,
   FullChannelState,
   IChannelSigner,
   ILockService,
@@ -21,6 +20,7 @@ import {
   MemoryMessagingService,
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
+import { Contract } from "@ethersproject/contracts";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
