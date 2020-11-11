@@ -8,7 +8,7 @@ import {
   IVectorEngine,
   EngineParams,
 } from "@connext/vector-types";
-import { constructRpcRequest } from "@connext/vector-utils";
+import { constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
 
 export function isEventName(event: string): event is EngineEvent {
   return event in EngineEvents;
@@ -76,6 +76,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   async open(): Promise<void> {
+    console.log("OPENING");
     this.subscribe();
     await this.render();
   }
@@ -154,10 +155,13 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   };
 
   public render(): Promise<void> {
+    console.log("RENDERING");
     if (this.iframe) {
+      console.log("ALREADY RENDERED");
       return Promise.resolve(); // already rendered
     }
     if (window.document.getElementById(this.opts.id)) {
+      console.log("ALREADY EXISTS");
       return Promise.resolve(); // already exists
     }
     return new Promise(resolve => {
@@ -189,10 +193,9 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   public handleIncomingMessages(e: MessageEvent): void {
-    console.log("e: ", e);
     const iframeOrigin = new URL(this.opts.src).origin;
-    console.log("iframeOrigin: ", iframeOrigin);
     if (e.origin === iframeOrigin) {
+      console.log("e.origin === iframeOrigin");
       if (typeof e.data !== "string") {
         throw new Error(`Invalid incoming message data:${e.data}`);
       }
@@ -200,7 +203,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
         const event = e.data.replace("event:", "");
         this.events.emit(event);
       } else {
-        const payload = JSON.parse(e.data);
+        const payload = safeJsonParse(e.data);
         if (payload.method === "chan_subscription") {
           const { subscription, data } = payload.params;
           this.events.emit(subscription, data);
@@ -228,6 +231,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   private onConnect() {
+    console.log("IFRAME CONNECTED");
     this.connected = true;
     this.events.emit("connect");
     this.events.emit("open");

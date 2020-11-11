@@ -80,28 +80,28 @@ function App() {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client, data.channelAddress);
       });
-      client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
-        console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
-        if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
-          console.log("We are the sender");
-          return;
-        }
-        console.log(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-        const decryptedPreImage = await decrypt(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-        console.log(decryptedPreImage);
+      // client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
+      //   console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
+      //   if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
+      //     console.log("We are the sender");
+      //     return;
+      //   }
+      //   console.log(data.transfer.meta.encryptedPreImage, wallet.privateKey);
+      //   const decryptedPreImage = await decrypt(data.transfer.meta.encryptedPreImage, wallet.privateKey);
+      //   console.log(decryptedPreImage);
 
-        const requestRes = await client.resolveTransfer({
-          channelAddress: data.transfer.channelAddress,
-          transferResolver: {
-            preImage: decryptedPreImage,
-          },
-          transferId: data.transfer.transferId,
-        });
-        if (requestRes.isError) {
-          console.error("Error transfering", requestRes.getError());
-        }
-        await updateChannel(client, data.channelAddress);
-      });
+      //   const requestRes = await client.resolveTransfer({
+      //     channelAddress: data.transfer.channelAddress,
+      //     transferResolver: {
+      //       preImage: decryptedPreImage,
+      //     },
+      //     transferId: data.transfer.transferId,
+      //   });
+      //   if (requestRes.isError) {
+      //     console.error("Error transfering", requestRes.getError());
+      //   }
+      //   await updateChannel(client, data.channelAddress);
+      // });
     } catch (e) {
       console.error("Error connecting node: ", e);
       setConnectError(e.message);

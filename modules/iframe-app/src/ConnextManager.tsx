@@ -1,7 +1,7 @@
 import { Wallet, utils } from "ethers";
 import { BrowserNode } from "@connext/vector-browser-node";
 import { JsonRpcRequest, EngineParams } from "@connext/vector-types";
-import { ChannelSigner } from "@connext/vector-utils";
+import { ChannelSigner, safeJsonParse } from "@connext/vector-utils";
 import pino from "pino";
 import { config } from "./config";
 
@@ -47,7 +47,10 @@ export default class ConnextManager {
 
   private async handleIncomingMessage(e: MessageEvent) {
     if (e.origin !== this.parentOrigin) return;
-    const request = JSON.parse(e.data);
+    if (e.data === "Hello") {
+      window.parent.postMessage("World", "*");
+    }
+    const request = safeJsonParse(e.data);
     let response: any;
     try {
       const result = await this.handleRequest(request);
