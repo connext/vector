@@ -17,13 +17,13 @@ Out of the box, it supports the following features:
 
 This monorepo contains a number of packages hoisted using lerna. Documentation for each package can be found in their respective readme, with some helpful links in [Architecture](#architecture) below.
 
+You can find WIP documentation on integrating and using Vector [here](https://connext.github.io/vector/).
+
 Contents:
 
 - [Quick Start](#quick-start)
-- [Configuration API](#configuration-api)
 - [Architecture and Module Breakdown](#architecture-and-module-breakdown)
 - [Development and Running Tests](#development-and-running-tests)
-- Deploying Vector to Production // TODO
 
 ## Quick start
 
@@ -81,58 +81,7 @@ For any of these stacks, you can manage them with:
 - `make restart-${stack}` stops the stack if it's running & starts it again
 - `make test-${stack}` runs unit tests against some stack. It will build & start the stack if that hasn't been done already.
 
-## Configuration Layout
-
-The `node` and `router` stacks are configurable via the `config-node.json` and `config-router.json` files respectively. Note that the `duet` and `trio` stacks are designed exclusively for development/testing so these are not configurable.
-
-There is an additional `config-prod.json` file that can apply to either the node or router but not both. The `config-prod.json` file contains your domain name and, because it's _not_ tracked by git, it's a good place to put overrides for secret values like API keys. A prod-mode deployment using a domain name w https must be exposed on port 443, therefore only a single prod-mode stack can run on a given machine at a time.
-
-### Node Configuration API
-
-`config-node.json` contains the default configuration for the `node` stack: `make start-node`.
-
-Any of these values can be overwritten by providing the same key with a new value to `config-prod.json`.
-
-**Node Config Keys:**
-
-- `adminToken` (type: `string`): Currently, this is only used during development to protect a few admin endpoints eg to reset the database between tests. If/when we add admin-only features in prod, they will only be accessible to those who provide the correct adminToken.
-- `chainAddresses` (type: `object`): Specifies the addresses of all relevant contracts, keyed by `chainId`.
-- `chainProviders` (type: `object`): Specifies the URL to use to connect to each chain's provider, keyed by `chainId`
-- `logLevel` (type: `string`): one of `"debug"`, `"info"`, `"warn"`, `"error"` to specify the maximum log level that will be printed.
-- `messagingUrl` (type: `string`): The url used to connect to the messaging service.
-- `mnemonic` (type: `string`): Optional. If provided, the node will use this mnemonic. If not provided, the node will use a hard coded mnemonic with testnet funds in dev-mode (production=false). If not provided in prod, docker secrets will be used to manage the mnemonic; this is a much safer place to store a mnemonic that eg holds mainnet funds.
-- `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
-
-### Router Configuration API
-
-`config-router.json` contains the default configuration for the `router` stack's router module. The router stack also contains a node and this node's default configuration is also pulled from `config-node.json`.
-
-The router's node can be configured by adding any of the keys in `config-node.json` to `config-router.json` (any values in `config-router.json` will take precedence). This strategy is useful if you want to run tests on a router & node stack running on the same machine.
-
-Any config values for either the router or the node can be overwritten by adding the same key with a new value to `config-prod.json`. This is a good strategy if this machine will only be running a routing node bc these prod config changes will also be applied to a `node` stack thats running on the same machine.
-
-**Router Config Keys:**
-
-- `allowedSwaps` (type: `object`): Specifies which swaps are allowed & how swap rates are determined.
-- `nodeUrl` (type: `string`): The URL of the node instance used to power the router's channels.
-- `port` (type: `number`): The port number on which the stack should be exposed to the outside world.
-- `rebalanceProfiles` (type: `object`): Specifies the thresholds & target while collateralizing some `assetId` on some `chainId`.
-
-### Prod Configuration API
-
-Changes to `config-prod.json` aren't tracked by git so this is a good place to store secret API keys, etc.
-
-Be careful, changes to this file will be applied to both `node` & `router` stacks running on this machine.
-
-**Prod Config Keys:**
-
-- `awsAccessId` (type: `string`): An API KEY id that specifies credentials for a remote AWS S3 bucket for storing db backups
-- `awsAccessKey` (type: `string`): An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.
-- `domainName` (type: `string`): If provided, https will be auto-configured & the stack will be exposed on port 443.
-- `production` (type: `boolean`): Enables prod-mode if true. Implications of this flag:
-  - if `false`, ops will automatically build anything that isn't available locally before starting up a given stack. If `true`, nothing will be built locally. Instead, all images will be pulled from docker hub.
-  - if `false`, the `global` stack will start up 2 local testnet evm.
-  - Mnemonic handling is affected, see docs for the `mnemonic` key in node config.
+You can find WIP documentation on integrating and using Vector [here](https://connext.github.io/vector/).
 
 ## Architecture and Module Breakdown
 
