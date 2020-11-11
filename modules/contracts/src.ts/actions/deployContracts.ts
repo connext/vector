@@ -1,5 +1,5 @@
 import { AddressZero, EtherSymbol } from "@ethersproject/constants";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 import { Contract, ContractFactory } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { formatEther } from "@ethersproject/units";
