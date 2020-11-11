@@ -17,11 +17,10 @@ Out of the box, it supports the following features:
 
 This monorepo contains a number of packages hoisted using lerna. Documentation for each package can be found in their respective readme, with some helpful links in [Architecture](#architecture) below.
 
-You can find WIP documentation on integrating and using Vector [here](https://connext.github.io/vector/).
-
 Contents:
 
 - [Quick Start](#quick-start)
+- [WIP Developer Docs] (https://connext.github.io/vector/).
 - [Architecture and Module Breakdown](#architecture-and-module-breakdown)
 - [Development and Running Tests](#development-and-running-tests)
 
