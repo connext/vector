@@ -15,16 +15,17 @@ import {
   hashCoreTransferState,
   hashTransferState,
 } from "@connext/vector-utils";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { BigNumber, BigNumberish, Contract, utils } from "ethers";
+import { Contract } from "@ethersproject/contracts";
+import { keccak256 } from "@ethersproject/keccak256";
+import { parseEther } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
 import { bob, alice, provider, rando } from "../constants";
 import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
-
-const { parseEther } = utils;
 
 describe("CMCAdjudicator.sol", function() {
   this.timeout(120_000);
@@ -102,6 +103,7 @@ describe("CMCAdjudicator.sol", function() {
     const { blockNumber: disputeBlock } = await tx.wait();
     // Bring to defund phase
     const toMine = BigNumber.from(ccs.timeout).toNumber();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const _ of Array(toMine).fill(0)) {
       await mineBlock();
     }
@@ -114,7 +116,7 @@ describe("CMCAdjudicator.sol", function() {
   // Get merkle proof of transfer
   const getMerkleProof = (cts: FullTransferState = transferState) => {
     const hash = hashCoreTransferState(cts);
-    const merkle = new MerkleTree([bufferify(hash)], utils.keccak256);
+    const merkle = new MerkleTree([bufferify(hash)], keccak256);
     return merkle.getHexProof(bufferify(hash));
   };
 
@@ -186,7 +188,7 @@ describe("CMCAdjudicator.sol", function() {
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
     const hash = hashCoreTransferState(transferState);
-    const merkle = new MerkleTree([hash], utils.keccak256);
+    const merkle = new MerkleTree([hash], keccak256);
     channelState = createTestChannelStateWithSigners([aliceSigner, bobSigner], "create", {
       channelAddress: channel.address,
       assetIds: [AddressZero],
@@ -632,6 +634,7 @@ describe("CMCAdjudicator.sol", function() {
       }
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _ of Array(BigNumber.from(transferState.transferTimeout).toNumber()).fill(0)) {
         await mineBlock();
       }

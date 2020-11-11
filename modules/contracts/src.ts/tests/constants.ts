@@ -1,4 +1,6 @@
-import { utils, Wallet, providers } from "ethers";
+import { HDNode } from "@ethersproject/hdnode";
+import { Wallet } from "@ethersproject/wallet";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { waffle } from "hardhat";
 
 // Get defaults from env
@@ -8,10 +10,10 @@ const url = Object.values(chainProviders)[0];
 const mnemonic = process.env.SUGAR_DADDY!;
 
 export const provider = url
-  ? new providers.JsonRpcProvider(url as string, parseInt(chainId))
+  ? new JsonRpcProvider(url as string, parseInt(chainId))
   : waffle.provider;
 
-const hdNode = utils.HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
+const hdNode = HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
 
 export const wallets: Wallet[] = Array(20)
   .fill(0)

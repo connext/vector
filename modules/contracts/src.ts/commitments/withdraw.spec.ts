@@ -1,13 +1,14 @@
 import { signChannelMessage, expect } from "@connext/vector-utils";
-import { BigNumber, constants, Contract, utils } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
 import { bob, alice, getTestChannel, getTestAddressBook, provider } from "../tests";
 
 import { WithdrawCommitment } from "./withdraw";
-
-const { parseEther } = utils;
 
 describe("withdrawCommitment", function() {
   this.timeout(120_000);
@@ -36,7 +37,7 @@ describe("withdrawCommitment", function() {
       alice.address,
       bob.address,
       alice.address,
-      constants.AddressZero,
+      AddressZero,
       amount,
       "1",
     );

@@ -1,12 +1,13 @@
 import { Balance } from "@connext/vector-types";
+import { Contract } from "@ethersproject/contracts";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Wallet } from "@ethersproject/wallet";
+import { AddressZero } from "@ethersproject/constants";
 import { expect } from "chai";
-import { BigNumber, Contract, Wallet, constants } from "ethers";
 
 import { getTestAddressBook, bob, getTestChannel } from "..";
 import { AddressBook } from "../../addressBook";
 import { provider } from "../constants";
-
-const { AddressZero } = constants;
 
 describe("CMCAccountant.sol", function() {
   this.timeout(120_000);

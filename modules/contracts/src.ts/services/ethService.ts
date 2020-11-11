@@ -10,7 +10,13 @@ import {
   FullTransferState,
 } from "@connext/vector-types";
 import { delay, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
-import { BigNumber, constants, Contract, providers, Signer, Wallet } from "ethers";
+import { TransactionResponse } from "@ethersproject/abstract-provider";
+import { Signer } from "@ethersproject/abstract-signer";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { JsonRpcProvider } from "@ethersproject/providers";
+import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 
@@ -23,7 +29,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   private queue: PriorityQueue = new PriorityQueue({ concurrency: 1 });
   constructor(
     private readonly store: IChainServiceStore,
-    chainProviders: { [chainId: string]: providers.JsonRpcProvider },
+    chainProviders: { [chainId: string]: JsonRpcProvider },
     signer: string | Signer,
     log: BaseLogger,
     private readonly defaultRetries = 1,
@@ -39,7 +45,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   async sendDisputeChannelTx(
     channelState: FullChannelState,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -60,7 +66,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   async sendDefundChannelTx(
     channelState: FullChannelState,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -78,7 +84,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   async sendDisputeTransferTx(
     transferState: FullTransferState,
     merkleProof: string[],
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(transferState.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -92,7 +98,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
   async sendDefundTransferTx(
     transferState: FullTransferState,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(transferState.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -119,7 +125,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   public async sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const method = "sendWithdrawTx";
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
@@ -182,7 +188,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -216,7 +222,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         this.log.info({ method: "sendDepositTx" }, `Channel created event: ${JSON.stringify(data)}`);
       });
 
-      if (assetId !== constants.AddressZero) {
+      if (assetId !== AddressZero) {
         // approve tokens
         const approveRes = await this.approveTokens(
           channelState.channelAddress,
@@ -306,8 +312,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   private async sendTxWithRetries(
     channelAddress: string,
     reason: TransactionReason,
-    txFn: () => Promise<providers.TransactionResponse>,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    txFn: () => Promise<TransactionResponse>,
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const errors = [];
     for (let attempt = 1; attempt++; attempt < this.defaultRetries) {
       this.log.info(
@@ -350,8 +356,8 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   private async sendTxAndParseResponse(
     channelAddress: string,
     reason: TransactionReason,
-    txFn: () => Promise<providers.TransactionResponse>,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+    txFn: () => Promise<TransactionResponse>,
+  ): Promise<Result<TransactionResponse, ChainError>> {
     // TODO: add retries on specific errors
     try {
       const response = await this.queue.add(async () => {
@@ -382,7 +388,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     amount: string,
     assetId: string,
     chainId: number,
-  ): Promise<Result<providers.TransactionResponse | undefined, ChainError>> {
+  ): Promise<Result<TransactionResponse | undefined, ChainError>> {
     const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -443,14 +449,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
     const vectorChannel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
-    if (assetId !== constants.AddressZero) {
+    if (assetId !== AddressZero) {
       // need to approve
       this.log.info({ assetId, channelAddress: channelState.channelAddress }, "Approving token");
       const approveRes = await this.approveTokens(
@@ -490,13 +496,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     channelState: FullChannelState<any>,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, ChainError>> {
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
-    if (assetId === constants.AddressZero) {
+    if (assetId === AddressZero) {
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.depositB, () =>
         signer.sendTransaction({
           data: "0x",
