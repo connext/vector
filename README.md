@@ -20,7 +20,7 @@ This monorepo contains a number of packages hoisted using lerna. Documentation f
 Contents:
 
 - [Quick Start](#quick-start)
-- [WIP Developer Docs](https://connext.github.io/vector/).
+- [WIP Developer Docs](https://connext.github.io/vector/)
 - [Architecture and Module Breakdown](#architecture-and-module-breakdown)
 - [Development and Running Tests](#development-and-running-tests)
 
