@@ -386,7 +386,15 @@ async function handleWithdrawalTransferCreation(
 
   // Get the recipient + amount from the transfer state
   const transfer = (await store.getTransferState(transferId))!;
-  const { nonce, initiatorSignature, fee, initiator, responder } = transferInitialState as WithdrawState;
+  const {
+    nonce,
+    initiatorSignature,
+    fee,
+    initiator,
+    responder,
+    callTo,
+    callData,
+  } = transferInitialState as WithdrawState;
 
   const withdrawalAmount = transfer.balance.amount.reduce((prev, curr) => prev.add(curr), BigNumber.from(0)).sub(fee);
   logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
@@ -403,6 +411,8 @@ async function handleWithdrawalTransferCreation(
     channelBalance: balances[assetIdx],
     channelAddress,
     transfer,
+    callTo,
+    callData,
   };
   evts[EngineEvents.WITHDRAWAL_CREATED].post(payload);
 
@@ -422,6 +432,8 @@ async function handleWithdrawalTransferCreation(
     assetId,
     withdrawalAmount.toString(),
     nonce,
+    callTo,
+    callData,
   );
 
   // Generate your signature on the withdrawal commitment
@@ -556,6 +568,8 @@ async function handleWithdrawalTransferResolution(
     channelBalance: balances[assetIdx],
     channelAddress,
     transfer,
+    callTo: transfer.transferState.callTo,
+    callData: transfer.transferState.callData,
   };
   evts[EngineEvents.WITHDRAWAL_RESOLVED].post(payload);
 
@@ -566,6 +580,8 @@ async function handleWithdrawalTransferResolution(
   }
 
   // Generate our own commitment, and save the double signed version
+  // NOTE: while generalized withdrawals are enabled, they have not been
+  // added to the engine parameters (standard withdrawals permitted only)
   const commitment = new WithdrawCommitment(
     channelAddress,
     alice,
