@@ -17,7 +17,7 @@ import {
   ChannelDispute,
   TransferDispute,
 } from "@connext/vector-types";
-import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier, stringify } from "@connext/vector-utils";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
@@ -58,7 +58,7 @@ const convertOnchainTransactionEntityToTransaction = (
     from: onchainEntity.from,
     data: onchainEntity.data,
     value: onchainEntity.value,
-    chainId: onchainEntity.chainId,
+    chainId: BigNumber.from(onchainEntity.chainId).toNumber(),
     nonce: onchainEntity.nonce,
     gasLimit: onchainEntity.gasLimit,
     gasPrice: onchainEntity.gasPrice,
@@ -112,7 +112,7 @@ const convertChannelEntityToFullChannelState = (
       case "setup":
         details = {
           networkContext: {
-            chainId: channelEntity.chainId,
+            chainId: BigNumber.from(channelEntity.chainId).toNumber(),
             channelFactoryAddress: channelEntity.channelFactoryAddress,
             providerUrl: channelEntity.providerUrl,
           },
@@ -160,7 +160,7 @@ const convertChannelEntityToFullChannelState = (
     processedDepositsA,
     processedDepositsB,
     networkContext: {
-      chainId: channelEntity.chainId,
+      chainId: BigNumber.from(channelEntity.chainId).toNumber(),
       channelFactoryAddress: channelEntity.channelFactoryAddress,
       transferRegistryAddress: channelEntity.transferRegistryAddress,
       providerUrl: channelEntity.providerUrl,
@@ -199,7 +199,7 @@ const convertTransferEntityToFullTransferState = (
     inDispute: transfer.inDispute,
     channelFactoryAddress: transfer.channel!.channelFactoryAddress,
     assetId: transfer.createUpdate!.assetId,
-    chainId: transfer.channel!.chainId,
+    chainId: BigNumber.from(transfer.channel!.chainId).toNumber(),
     channelAddress: transfer.channel!.channelAddress!,
     balance: {
       amount: [transfer.amountA, transfer.amountB],
@@ -277,7 +277,7 @@ export class PrismaStore implements IServerNodeStore {
         from: response.from,
         data: response.data,
         value: response.value.toString(),
-        chainId: response.chainId,
+        chainId: response.chainId.toString(),
         nonce: response.nonce,
         gasLimit: response.gasLimit.toString(),
         gasPrice: response.gasPrice.toString(),
@@ -299,7 +299,7 @@ export class PrismaStore implements IServerNodeStore {
         from: response.from,
         data: response.data,
         value: response.value.toString(),
-        chainId: response.chainId,
+        chainId: response.chainId.toString(),
         nonce: response.nonce,
         gasLimit: response.gasLimit.toString(),
         gasPrice: response.gasPrice.toString(),
@@ -472,12 +472,12 @@ export class PrismaStore implements IServerNodeStore {
           {
             participantA,
             participantB,
-            chainId,
+            chainId: chainId.toString(),
           },
           {
             participantA: participantB,
             participantB: participantA,
-            chainId,
+            chainId: chainId.toString(),
           },
         ],
       },
@@ -619,7 +619,7 @@ export class PrismaStore implements IServerNodeStore {
           ...activeTransfers,
           disconnect: undefined,
         } as any,
-        chainId: channelState.networkContext.chainId,
+        chainId: channelState.networkContext.chainId.toString(),
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
         transferRegistryAddress: channelState.networkContext.transferRegistryAddress,

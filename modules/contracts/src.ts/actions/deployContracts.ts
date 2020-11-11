@@ -1,7 +1,8 @@
 import { AddressZero, EtherSymbol } from "@ethersproject/constants";
+import { BigNumber } from "@ethersproject/bignumber";
 import { Contract, ContractFactory } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
-import { formatEther, parseUnits } from "@ethersproject/units";
+import { formatEther } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 
 import { AddressBook, AddressBookEntry } from "../addressBook";
@@ -9,6 +10,8 @@ import { artifacts } from "../artifacts";
 import { logger } from "../constants";
 
 const hash = (input: string): string => keccak256(`0x${input.replace(/^0x/, "")}`);
+
+const MIN_GAS_LIMIT = BigNumber.from(500_000);
 
 // 3rd arg is: [ContractName, [ConstructorArgs]][]
 // If a ContractName is given as a ConstructorArg, it will be replaced by that contract's address
@@ -67,7 +70,10 @@ export const deployContracts = async (
     log.info(`Deploying ${name} with args [${processedArgs.join(", ")}]`);
     const factory = ContractFactory.fromSolidity(artifacts[name]).connect(wallet);
     const deployTx = factory.getDeployTransaction(...processedArgs);
-    const tx = await wallet.sendTransaction({ ...deployTx, gasPrice: parseUnits("100", 9) });
+    const tx = await wallet.sendTransaction({
+      ...deployTx,
+      gasLimit: deployTx.gasLimit && BigNumber.from(deployTx.gasLimit).lt(MIN_GAS_LIMIT) ? MIN_GAS_LIMIT : undefined,
+    });
 
     log.info(`Sent transaction to deploy ${name}, txHash: ${tx.hash}`);
     const receipt = await tx.wait();
