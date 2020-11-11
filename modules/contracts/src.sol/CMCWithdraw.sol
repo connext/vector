@@ -18,10 +18,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   mapping(bytes32 => bool) private isExecuted;
 
   modifier validateWithdrawData(WithdrawData calldata wd) {
-    require(
-      wd.channelAddress == address(this),
-      "CMCWithdraw: Channel address mismatch"
-    );
+    require(wd.channelAddress == address(this), "CMCWithdraw: Channel address mismatch");
     _;
   }
 
@@ -36,13 +33,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     WithdrawData calldata wd,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
-  )
-    external
-    override
-    onlyViaProxy
-    nonReentrant
-    validateWithdrawData(wd)
-  {
+  ) external override onlyViaProxy nonReentrant validateWithdrawData(wd) {
     // Generate hash
     bytes32 wdHash = hashWithdrawData(wd);
 
@@ -57,7 +48,8 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     uint256 balance = LibAsset.getOwnBalance(wd.assetId);
     uint256 amount = LibUtils.min(wd.amount, balance);
 
-    // TODO: Should we revert if amount is 0?
+    // Revert if amount is zero && callTo is 0
+    require(amount > 0 || wd.callTo != address(0), "CMCWithdraw: No-op");
 
     // Add to totalWithdrawn
     registerTransfer(wd.assetId, amount);
@@ -71,9 +63,14 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     }
   }
 
-  function getWithdrawalTransactionRecord(
-    WithdrawData calldata wd
-  ) external override view onlyViaProxy nonReentrantView returns (bool) {
+  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
+    external
+    override
+    view
+    onlyViaProxy
+    nonReentrantView
+    returns (bool)
+  {
     return isExecuted[hashWithdrawData(wd)];
   }
 
@@ -83,18 +80,11 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal view {
-    require(
-      wdHash.checkSignature(aliceSignature, alice),
-      "CMCWithdraw: Invalid alice signature"
-    );
-    require(
-      wdHash.checkSignature(bobSignature, bob),
-      "CMCWithdraw: Invalid bob signature"
-    );
+    require(wdHash.checkSignature(aliceSignature, alice), "CMCWithdraw: Invalid alice signature");
+    require(wdHash.checkSignature(bobSignature, bob), "CMCWithdraw: Invalid bob signature");
   }
 
   function hashWithdrawData(WithdrawData calldata wd) internal pure returns (bytes32) {
     return keccak256(abi.encode(wd));
   }
-
 }
