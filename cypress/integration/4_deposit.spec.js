@@ -6,7 +6,6 @@ const address = "0x627306090abaB3A6e1400e9345bC60c78a8BEf57"
 describe("Deposit", () => {
   beforeEach(() => {
     cy.request("http://localhost:8002/config").as("response");
-    cy.wrap("one").as("a");
     cy.visit("/");
 
     cy.contains("Generate Random Mnemonic").click();
@@ -47,12 +46,6 @@ describe("Deposit", () => {
    
 
   });
-
-  // it("make a withdraw", function () {
-    
-
-  // });
-  
 
   afterEach(() => {
     // clean store once done with the test

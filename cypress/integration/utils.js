@@ -98,7 +98,10 @@ my.deposit = value => {
 my.withdraw = (value, address) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-      cy.get("#withdraw_assetId").first().click({ force: true }).type('0x0000000000000000000000000000000000000000', { force: true })
+      cy.get("#withdraw_assetId")
+        .first()
+        .click({ force: true })
+        .type("0x0000000000000000000000000000000000000000", { force: true });
       cy.get("#withdraw_recipient").type(address);
       cy.get("#withdraw_amount").type(value);
       cy.get(
@@ -106,12 +109,30 @@ my.withdraw = (value, address) => {
       ).click();
 
       cy.log(`Withdraw ${value} eth into channel ${address}`);
-      my.getCounterpartyBalance().should("not.contain", "0.00");
-      return my.getCounterpartyBalance().then(resolve);
+      my.getOnchainEtherBalance().should("not.contain", "0.00");
+      return my.getOnchainEtherBalance().then(resolve);
     }),
   );
 };
 
+my.transfer = (value, address) => {
+  return cy.wrap(
+    new Cypress.Promise((resolve, reject) => {
+        cy.get('#transfer_assetId')
+        .first()
+        .click({ force: true })
+        .type("0x0000000000000000000000000000000000000000", { force: true });
+      cy.get("#transfer_recipient").type(address);
+      cy.get("#transfer_amount").type(value);
+      cy.get(
+        ":nth-child(7) > .ant-col > .ant-form-item-control-input > .ant-form-item-control-input-content > .ant-btn",
+      ).click();
+
+      cy.log(`Transfer ${value} eth to receiver ${address}`);
+      return my.getCounterpartyBalance().then(resolve);
+    }),
+  );
+};
 // my.getAddress = () => {
 //   return cy.wrap(
 //     new Cypress.Promise((resolve, reject) => {
