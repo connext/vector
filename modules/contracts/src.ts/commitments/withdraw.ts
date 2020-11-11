@@ -18,6 +18,8 @@ export class WithdrawCommitment {
     public readonly assetId: string,
     public readonly amount: string,
     public readonly nonce: string,
+    public readonly callTo: string = AddressZero,
+    public readonly callData: string = "0x",
   ) {}
 
   get signatures(): string[] {
@@ -42,6 +44,8 @@ export class WithdrawCommitment {
       assetId: this.assetId,
       amount: this.amount,
       nonce: this.nonce,
+      callTo: this.callTo,
+      callData: this.callData,
     };
   }
 
@@ -54,6 +58,8 @@ export class WithdrawCommitment {
       json.assetId,
       json.amount,
       json.nonce,
+      json.callTo,
+      json.callData,
     );
     if (json.aliceSignature || json.bobSignature) {
       await commitment.addSignatures(json.aliceSignature, json.bobSignature);
@@ -62,12 +68,11 @@ export class WithdrawCommitment {
   }
 
   public getCallData(): { to: string; data: string } {
-    return { to: AddressZero, data: "0x" };
+    return { to: this.callTo, data: this.callData };
   }
 
   public getWithdrawData(): string[] {
-    const callData = this.getCallData();
-    return [this.channelAddress, this.assetId, this.recipient, this.amount, this.nonce, callData.to, callData.data];
+    return [this.channelAddress, this.assetId, this.recipient, this.amount, this.nonce, this.callTo, this.callData];
   }
 
   public hashToSign(): string {

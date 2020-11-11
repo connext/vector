@@ -54,6 +54,8 @@ describe("Withdraw", function() {
         data,
         nonce: getRandomBytes32(),
         fee: "0",
+        callData: "0x",
+        callTo: AddressZero,
         ...(overrides.state ?? {}),
       },
     };

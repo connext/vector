@@ -385,6 +385,8 @@ export class PrismaStore implements IServerNodeStore {
         .sub(initialState.fee)
         .toString(),
       nonce: initialState.nonce,
+      callData: initialState.callTo,
+      callTo: initialState.callData,
     };
   }
 
