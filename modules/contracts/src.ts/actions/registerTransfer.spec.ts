@@ -8,7 +8,8 @@ import { alice, getTestAddressBook } from "../tests";
 import { deployContracts } from "./deployContracts";
 import { registerTransfer } from "./registerTransfer";
 
-describe("registerTransfer", () => {
+describe("registerTransfer", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let registry: Contract;
 
@@ -23,9 +24,6 @@ describe("registerTransfer", () => {
 
   it("should registry a new transfer", async () => {
     expect(registry.address).to.be.a("string");
-    await expect(
-      registerTransfer(TransferNames.HashlockTransfer, alice, addressBook),
-    ).to.be.fulfilled;
+    await expect(registerTransfer(TransferNames.HashlockTransfer, alice, addressBook)).to.be.fulfilled;
   });
-
 });

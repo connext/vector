@@ -11,7 +11,8 @@ import { alice, bob, chainIdReq, getTestAddressBook, getTestChannel, provider } 
 import { EthereumChainReader } from "./ethReader";
 
 // TODO: check whether result is valid, not just whether it exists
-describe("EthereumChainReader", () => {
+describe("EthereumChainReader", function() {
+  this.timeout(120_000);
   const assetId = AddressZero;
   const transfer = {} as any; // TODO
   let addressBook: AddressBook;

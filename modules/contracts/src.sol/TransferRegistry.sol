@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/ITransferRegistry.sol";
 import "./interfaces/Types.sol";
 import "./lib/LibIterableMapping.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title TransferRegistry
 /// @author Layne Haber <layne@connext.network>
@@ -14,22 +15,11 @@ import "./lib/LibIterableMapping.sol";
 ///         this information to get the correct encodings when generating
 ///         signatures. The information stored here can only be updated
 ///         by the owner of the contract
-contract TransferRegistry is ITransferRegistry {
+contract TransferRegistry is Ownable, ITransferRegistry {
 
   using LibIterableMapping for LibIterableMapping.IterableMapping;
 
-  address immutable owner;
-
   LibIterableMapping.IterableMapping transfers;
-
-  constructor() {
-    owner = msg.sender;
-  }
-
-  modifier onlyOwner() {
-    require(msg.sender == owner, "Only owner can call function");
-    _;
-  }
 
   // Should add a transfer definition to the registry
   // onlyOwner

@@ -1,14 +1,15 @@
 import { Balance } from "@connext/vector-types";
-import { AddressZero } from "@ethersproject/constants";
 import { expect } from "chai";
-import { BigNumber, Contract, Wallet } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { BigNumber, Contract, Wallet, constants } from "ethers";
 
 import { getTestAddressBook, bob, getTestChannel } from "..";
 import { AddressBook } from "../../addressBook";
 import { provider } from "../constants";
 
-describe("CMCAccountant.sol", () => {
+const { AddressZero } = constants;
+
+describe("CMCAccountant.sol", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let channel: Contract;
 
@@ -16,17 +17,18 @@ describe("CMCAccountant.sol", () => {
     addressBook = await getTestAddressBook();
     channel = await getTestChannel(addressBook);
     // Fund channel with eth
-    await (await bob.sendTransaction({ to: channel.address, value: parseEther("0.001") })).wait();
+    await (await bob.sendTransaction({ to: channel.address, value: BigNumber.from("10000") })).wait();
   });
 
   it("should properly transfer balance", async () => {
-    const value = parseEther("0.0001");
+    const value = BigNumber.from("1000");
     const balance: Balance = {
       to: [Wallet.createRandom().address, Wallet.createRandom().address],
       amount: [value.toString(), value.toString()],
     };
     const preTransfer = await Promise.all<BigNumber>(balance.to.map((a: string) => provider.getBalance(a)));
-    await channel.accountantBalanceTransfer(AddressZero, balance);
+    const tx = await channel.accountantBalanceTransfer(AddressZero, balance);
+    await tx.wait();
     await Promise.all(
       balance.to.map(async (a: string, idx: number) => {
         return expect(await provider.getBalance(a)).to.be.eq(preTransfer[idx].add(value));

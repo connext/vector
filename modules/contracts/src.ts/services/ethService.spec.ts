@@ -6,7 +6,8 @@ import { alice, chainIdReq, getTestChannel, provider } from "../tests";
 
 import { EthereumChainService } from "./ethService";
 
-describe("EthereumChainService", () => {
+describe("EthereumChainService", function() {
+  this.timeout(120_000);
   let channel: Contract;
   let chainService: EthereumChainService;
 
