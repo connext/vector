@@ -38,6 +38,7 @@ export class ChainError extends VectorError {
     MissingSigs: "Channel state is not double signed",
     ResolverNeeded: "Transfer resolver must be provided in dispute",
     NotInitialState: "Transfer must be disputed with initial state",
+    MultisigDeployed: "Multisig already deployed",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -127,6 +128,10 @@ export interface IVectorChainService extends IVectorChainReader {
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
+  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDeployChannelTx(
+    channelState: FullChannelState,
+    deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<providers.TransactionResponse, ChainError>>;
 
   // Dispute methods
