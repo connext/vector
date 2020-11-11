@@ -55,7 +55,7 @@ describe(testName, () => {
     );
     rogerIdentifier = rogerService.publicIdentifier;
     roger = rogerService.signerAddress;
-    await fundIfBelow(roger, constants.AddressZero, min.mul(2), wallet);
+    await fundIfBelow(roger, constants.AddressZero, min.mul(10), wallet);
   });
 
   it("roger should setup channels with carol and dave", async () => {

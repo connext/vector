@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { ChannelSigner, expect, getRandomBytes32 } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { BigNumber, Contract, Wallet } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
+import { Wallet } from "@ethersproject/wallet";
 
 import { getTestAddressBook, getTestChannel, alice } from "..";
 import { deployContracts, WithdrawCommitment } from "../..";

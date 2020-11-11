@@ -1,7 +1,9 @@
 import fs from "fs";
 
 import { AddressZero } from "@ethersproject/constants";
-import { Contract, providers, Wallet } from "ethers";
+import { Contract } from "@ethersproject/contracts";
+import { JsonRpcProvider } from "@ethersproject/providers";
+import { Wallet } from "@ethersproject/wallet";
 
 import { artifacts } from "./artifacts";
 
@@ -28,7 +30,7 @@ export interface AddressBook {
 export const getAddressBook = (
   path: string,
   chainId: string,
-  provider?: providers.JsonRpcProvider | Wallet,
+  provider?: JsonRpcProvider | Wallet,
 ): AddressBook => {
   if (!path) throw new Error(`A path to the address book file is required.`);
   if (!chainId) throw new Error(`A chainId is required.`);

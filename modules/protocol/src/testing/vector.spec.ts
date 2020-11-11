@@ -111,7 +111,6 @@ describe("Vector", () => {
         chainId: 2,
         providerUrl: "http://eth.com",
         channelFactoryAddress: mkAddress("0xccc"),
-        channelMastercopyAddress: mkAddress("0x444"),
         transferRegistryAddress: mkAddress("0xdef"),
       };
       const validParams = {
@@ -130,22 +129,6 @@ describe("Vector", () => {
           name: "should fail if there is an invalid counterparty",
           params: { ...validParams, counterpartyIdentifier: "fail" },
           error: 'should match pattern "^indra([a-zA-Z0-9]{50})$"',
-        },
-        {
-          name: "should fail if there is no channelMastercopyAddress",
-          params: {
-            ...validParams,
-            networkContext: { ...validParams.networkContext, channelMastercopyAddress: undefined },
-          },
-          error: "should have required property 'channelMastercopyAddress'",
-        },
-        {
-          name: "should fail if there is an invalid channelMastercopyAddress",
-          params: {
-            ...validParams,
-            networkContext: { ...validParams.networkContext, channelMastercopyAddress: "fail" },
-          },
-          error: 'should match pattern "^0x[a-fA-F0-9]{40}$"',
         },
         {
           name: "should fail if there is no transferRegistryAddress",

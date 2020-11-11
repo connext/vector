@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = ["postgresql", "sqlite"]
-  url      = env("VECTOR_DATABASE_URL")
+  url = "***"
 }
 
 model Balance {
@@ -35,11 +35,10 @@ model Channel {
   balances                 Balance[]
   channelFactoryAddress    String
   transferRegistryAddress  String
-  chainId                  String
+  chainId                  Int
   providerUrl              String
   latestUpdate             Update
   defundNonce              String
-  inDispute                Boolean
 
   activeTransfers Transfer[]
 
@@ -105,7 +104,6 @@ model Update {
 model Transfer {
   transferId String @id
   routingId  String
-  inDispute  Boolean
 
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
@@ -151,7 +149,7 @@ model OnchainTransaction {
   from            String
   data            String
   value           String
-  chainId         String
+  chainId         Int
   nonce           Int
   gasLimit        String
   gasPrice        String
@@ -177,7 +175,8 @@ model OnchainTransaction {
   channelAddress String
   channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 
-  @@unique([transactionHash, chainId])
+  @@unique(transactionHash)
+  @@unique([from, nonce])
   @@map(name: "onchain_transaction")
 }
 

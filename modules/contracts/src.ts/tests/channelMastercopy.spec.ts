@@ -1,6 +1,6 @@
 import { expect } from "@connext/vector-utils";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";

@@ -1,12 +1,13 @@
 import { Balance } from "@connext/vector-types";
+import { Contract } from "@ethersproject/contracts";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Wallet } from "@ethersproject/wallet";
+import { AddressZero } from "@ethersproject/constants";
 import { expect } from "chai";
-import { BigNumber, Contract, Wallet, constants } from "ethers";
 
 import { getTestAddressBook, bob, getTestChannel } from "..";
 import { AddressBook } from "../../addressBook";
 import { provider } from "../constants";
-
-const { AddressZero } = constants;
 
 describe("CMCAccountant.sol", function() {
   this.timeout(120_000);
@@ -16,10 +17,8 @@ describe("CMCAccountant.sol", function() {
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     channel = await getTestChannel(addressBook);
-
     // Fund channel with eth
-    const eth = await bob.sendTransaction({ to: channel.address, value: BigNumber.from("10000") });
-    await eth.wait();
+    await (await bob.sendTransaction({ to: channel.address, value: BigNumber.from("10000") })).wait();
   });
 
   it("should properly transfer balance", async () => {
