@@ -61,11 +61,11 @@ export class WithdrawCommitment {
     return commitment;
   }
 
-  public getCallData() {
+  public getCallData(): { to: string; data: string } {
     return { to: AddressZero, data: "0x" };
   }
 
-  public getWithdrawData() {
+  public getWithdrawData(): string[] {
     const callData = this.getCallData();
     return [this.channelAddress, this.assetId, this.recipient, this.amount, this.nonce, callData.to, callData.data];
   }
