@@ -12,6 +12,5 @@ interface ICMCDeposit {
   function depositAlice(
     address assetId,
     uint256 amount
-    // bytes memory signature
   ) external payable;
 }
