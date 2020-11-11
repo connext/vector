@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
+
 - add deploy channel tx function to eth service
 - add autodeployment after setup for some chains (currently only arbitrum)
 - add arbitrum to address book
