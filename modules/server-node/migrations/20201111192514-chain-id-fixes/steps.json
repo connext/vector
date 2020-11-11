@@ -2,6 +2,18 @@
   "version": "0.3.14-fixed",
   "steps": [
     {
+      "tag": "UpdateField",
+      "model": "Channel",
+      "field": "chainId",
+      "type": "String"
+    },
+    {
+      "tag": "UpdateField",
+      "model": "OnchainTransaction",
+      "field": "chainId",
+      "type": "String"
+    },
+    {
       "tag": "CreateDirective",
       "location": {
         "path": {
@@ -42,7 +54,7 @@
           "arguments": [
             {
               "name": "",
-              "value": "[from, nonce, chainId]"
+              "value": "[from, nonce]"
             }
           ]
         },

@@ -34,7 +34,6 @@ model Channel {
   merkleRoot               String
   balances                 Balance[]
   channelFactoryAddress    String
-  channelMastercopyAddress String
   transferRegistryAddress  String
   chainId                  String
   providerUrl              String
@@ -152,7 +151,7 @@ model OnchainTransaction {
   from            String
   data            String
   value           String
-  chainId         Int
+  chainId         String
   nonce           Int
   gasLimit        String
   gasPrice        String
@@ -178,8 +177,7 @@ model OnchainTransaction {
   channelAddress String
   channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 
-  @@unique(transactionHash)
-  @@unique([from, nonce])
+  @@unique([transactionHash, chainId])
   @@map(name: "onchain_transaction")
 }
 
