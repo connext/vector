@@ -1,10 +1,11 @@
-import { providers, BigNumber } from "ethers";
+import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { mkAddress, mkHash } from "./util";
 
 export const createTestTxResponse = (
-  overrides: Partial<providers.TransactionResponse> = {},
-): providers.TransactionResponse => {
+  overrides: Partial<TransactionResponse> = {},
+): TransactionResponse => {
   const to = overrides.to ?? mkAddress("0x1111");
   const from = overrides.from ?? mkAddress("0x2222");
   const hash = overrides.hash ?? mkHash("0xade134");
@@ -34,8 +35,8 @@ export const createTestTxResponse = (
 };
 
 export const createTestTxReceipt = (
-  overrides: Partial<providers.TransactionReceipt> = {},
-): providers.TransactionReceipt => {
+  overrides: Partial<TransactionReceipt> = {},
+): TransactionReceipt => {
   return {
     transactionHash: mkHash("0xaecb"),
     to: mkAddress("0x1111"),

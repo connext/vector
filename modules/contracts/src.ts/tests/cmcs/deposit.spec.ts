@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { expect } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, One } from "@ethersproject/constants";
-import { BigNumber, Contract } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
 
 import { deployContracts } from "../../actions";
 import { alice, bob } from "../constants";

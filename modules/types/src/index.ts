@@ -18,5 +18,5 @@ export * from "./rpc";
 export * from "./schemas";
 export * from "./store";
 export * from "./transferDefinitions";
-export * from "./vectorProvider";
 export * from "./utils";
+export * from "./vectorProvider";

@@ -56,7 +56,6 @@ describe(testName, () => {
   const withdrawAddress = mkAddress("0xdefff");
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
       transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
@@ -86,7 +85,7 @@ describe(testName, () => {
   const on = (
     event: ProtocolEventName,
     callback: (payload: ProtocolEventPayloadsMap[typeof event]) => void | Promise<void>,
-    filter: (payload) => boolean = _payload => true,
+    filter: (payload) => boolean = () => true,
   ) => evt.pipe(filter).attach(callback);
 
   let vector: Sinon.SinonStubbedInstance<Vector>;

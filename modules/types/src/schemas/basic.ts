@@ -28,7 +28,6 @@ export const TBasicMeta = Type.Optional(Type.Any());
 
 export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
-  channelMastercopyAddress: TAddress,
   transferRegistryAddress: TAddress,
 });
 

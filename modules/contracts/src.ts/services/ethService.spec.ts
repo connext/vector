@@ -1,5 +1,5 @@
 import { expect, MemoryStoreService } from "@connext/vector-utils";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
 import { alice, chainIdReq, getTestChannel, provider } from "../tests";
