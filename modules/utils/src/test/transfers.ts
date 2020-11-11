@@ -7,14 +7,12 @@ import {
   HashlockTransferStateEncoding,
   HashlockTransferResolverEncoding,
 } from "@connext/vector-types";
-import { utils } from "ethers";
+import { sha256 } from "@ethersproject/solidity";
 
 import { getRandomBytes32 } from "../hexStrings";
 import { hashTransferState } from "../transfers";
 
 import { mkAddress, mkHash, mkBytes32 } from "./util";
-
-const { keccak256, solidityPack } = utils;
 
 export const createTestHashlockTransferState = (overrides: Partial<HashlockTransferState> = {}): TransferState => {
   return {
@@ -73,7 +71,7 @@ export function createTestFullHashlockTransferState(
   const transferEncodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   const transferResolver = { preImage: preImage ?? getRandomBytes32() };
   const transferState = createTestHashlockTransferState({
-    lockHash: keccak256(solidityPack(["bytes32"], [transferResolver.preImage])),
+    lockHash: sha256(["bytes32"], [transferResolver.preImage]),
     expiry: expiry ?? "0",
   });
 

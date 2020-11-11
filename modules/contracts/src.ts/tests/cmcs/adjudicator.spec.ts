@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 import { FullChannelState, FullTransferState, HashlockTransferStateEncoding } from "@connext/vector-types";
 import {
   bufferify,
@@ -585,7 +584,7 @@ describe("CMCAdjudicator.sol", function() {
     });
 
     // TODO: need to write a transfer def for this
-    it.skip("should fail if the resolved balances are > initial balances", async () => {});
+    // it.skip("should fail if the resolved balances are > initial balances", async () => {});
 
     it("should correctly resolve + defund transfer if transfer is still in dispute (cancelling resolve)", async function() {
       if (nonAutomining) {
