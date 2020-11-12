@@ -252,11 +252,14 @@ const PostAdminResponseSchema = {
   }),
 };
 
+//////////////////
+/// Dispute Methods
+
 // DISPUTE CHANNEL
-const PostSendDisputeChannelTxBodySchema = Type.Object({
-  channelAddress: TAddress,
-  publicIdentifier: TPublicIdentifier,
-});
+const PostSendDisputeChannelTxBodySchema = Type.Intersect([
+  EngineParams.DisputeChannelSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
 
 const PostSendDisputeChannelTxResponseSchema = {
   200: Type.Object({
@@ -264,15 +267,11 @@ const PostSendDisputeChannelTxResponseSchema = {
   }),
 };
 
-//////////////////
-/// Dispute Methods
-
-// TODO: should these methods be on the engine?
 // DEFUND CHANNEL
-const PostSendDefundChannelTxBodySchema = Type.Object({
-  channelAddress: TAddress,
-  publicIdentifier: TPublicIdentifier,
-});
+const PostSendDefundChannelTxBodySchema = Type.Intersect([
+  EngineParams.DefundChannelSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
 
 const PostSendDefundChannelTxResponseSchema = {
   200: Type.Object({
@@ -281,10 +280,10 @@ const PostSendDefundChannelTxResponseSchema = {
 };
 
 // DISPUTE TRANSFER
-const PostSendDisputeTransferTxBodySchema = Type.Object({
-  transferId: TBytes32,
-  publicIdentifier: TPublicIdentifier,
-});
+const PostSendDisputeTransferTxBodySchema = Type.Intersect([
+  EngineParams.DisputeTransferSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
 
 const PostSendDisputeTransferTxResponseSchema = {
   200: Type.Object({
@@ -293,10 +292,10 @@ const PostSendDisputeTransferTxResponseSchema = {
 };
 
 // DEFUND TRANSFER
-const PostSendDefundTransferTxBodySchema = Type.Object({
-  transferId: TBytes32,
-  publicIdentifier: TPublicIdentifier,
-});
+const PostSendDefundTransferTxBodySchema = Type.Intersect([
+  EngineParams.DefundTransferSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
 
 const PostSendDefundTransferTxResponseSchema = {
   200: Type.Object({

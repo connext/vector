@@ -9,6 +9,7 @@ import {
   NodeResponses,
   ResolveUpdateDetails,
   CreateUpdateDetails,
+  ChannelRpcMethod,
 } from "@connext/vector-types";
 import { bufferify, constructRpcRequest, hashCoreTransferState, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
@@ -314,21 +315,20 @@ server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
     },
   },
   async (request, reply) => {
-    const chainService = getChainService(request.body.publicIdentifier);
     const engine = getNode(request.body.publicIdentifier);
-    if (!engine || !chainService) {
+    if (!engine) {
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
-    const channelState = await store.getChannelState(request.body.channelAddress);
-    if (!channelState) {
-      return reply.status(404).send({ message: "Channel not found" });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, { channelAddress: request.body.channelAddress });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_dispute>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
-    const disputeRes = await chainService.sendDisputeChannelTx(channelState);
-    if (disputeRes.isError) {
-      return reply.status(500).send({ message: disputeRes.getError()!.message.substring(0, 100) });
-    }
-    return reply.status(200).send({ txHash: disputeRes.getValue().hash });
   },
 );
 
@@ -341,21 +341,20 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
     },
   },
   async (request, reply) => {
-    const chainService = getChainService(request.body.publicIdentifier);
     const engine = getNode(request.body.publicIdentifier);
-    if (!engine || !chainService) {
+    if (!engine) {
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
-    const channelState = await store.getChannelState(request.body.channelAddress);
-    if (!channelState) {
-      return reply.status(404).send({ message: "Channel not found" });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, { channelAddress: request.body.channelAddress });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_defund>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
-    const defundRes = await chainService.sendDefundChannelTx(channelState);
-    if (defundRes.isError) {
-      return reply.status(500).send({ message: defundRes.getError()!.message.substring(0, 100) });
-    }
-    return reply.status(200).send({ txHash: defundRes.getValue().hash });
   },
 );
 
@@ -368,32 +367,20 @@ server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
     },
   },
   async (request, reply) => {
-    const chainService = getChainService(request.body.publicIdentifier);
     const engine = getNode(request.body.publicIdentifier);
-    if (!engine || !chainService) {
+    if (!engine) {
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
-    const transfer = await store.getTransferState(request.body.transferId);
-    if (!transfer) {
-      return reply.status(404).send({ message: "Transfer not found" });
-    }
-    const transfers = await store.getActiveTransfers(transfer.channelAddress);
-    // Make sure transfer is active
-    if (!transfers.find(t => t.transferId === transfer.transferId)) {
-      return reply.status(400).send({ message: "Transfer not active" });
-    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, { transferId: request.body.transferId });
 
-    // Generate merkle proof
-    const hashes = transfers.map(t => bufferify(hashCoreTransferState(t)));
-    const hash = bufferify(hashCoreTransferState(transfer));
-    const merkle = new MerkleTree(hashes, utils.keccak256);
-
-    const disputeRes = await chainService.sendDisputeTransferTx(transfer, merkle.getHexProof(hash));
-    if (disputeRes.isError) {
-      return reply.status(500).send({ message: disputeRes.getError()!.message.substring(0, 100) });
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
-    return reply.status(200).send({ txHash: disputeRes.getValue().hash });
   },
 );
 
@@ -406,21 +393,20 @@ server.post<{ Body: NodeParams.SendDefundTransferTx }>(
     },
   },
   async (request, reply) => {
-    const chainService = getChainService(request.body.publicIdentifier);
     const engine = getNode(request.body.publicIdentifier);
-    if (!engine || !chainService) {
+    if (!engine) {
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
     }
 
-    const transfer = await store.getTransferState(request.body.transferId);
-    if (!transfer) {
-      return reply.status(404).send({ message: "Transfer not found" });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, { transferId: request.body.transferId });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
     }
-    const defundRes = await chainService.sendDefundTransferTx(transfer);
-    if (defundRes.isError) {
-      return reply.status(500).send({ message: defundRes.getError()!.message.substring(0, 100) });
-    }
-    return reply.status(200).send({ txHash: defundRes.getValue().hash });
   },
 );
 
