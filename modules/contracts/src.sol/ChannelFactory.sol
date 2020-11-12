@@ -83,11 +83,11 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         if (!LibAsset.isEther(assetId)) {
             require(
                 LibERC20.transferFrom(assetId, msg.sender, address(this), amount),
-                "ChannelFactory: token transferFrom failed"
+                "ChannelFactory: ERC20_TRANSFER_FAILED"
             );
             require(
                 LibERC20.approve(assetId, address(channel), amount),
-                "ChannelFactory: token approve failed"
+                "ChannelFactory: ERC20_APPROVE_FAILED"
             );
         }
         IVectorChannel(channel).depositAlice{value: msg.value}(assetId, amount);

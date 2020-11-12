@@ -36,7 +36,7 @@ abstract contract MinimalProxyFactory {
       deployment := create2(0, encoded_data, encoded_size, salt)
     }
 
-    require(deployment != address(0), 'Factory: failed deployment');
+    require(deployment != address(0), 'MinimalProxyFactory: DEPLOYMENT_FAILED');
   }
 
   /**
