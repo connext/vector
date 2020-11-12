@@ -153,16 +153,16 @@ describe("AssetTransfer", function() {
 
     it("should fail if transfer fails", async () => {
       await (await failingToken.setTransferShouldFail(true)).wait();
-      await expect(
-        channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address),
-      ).revertedWith("AssetTransfer: ASSET_TRANSFER_FAILED");
+      await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
+        "AssetTransfer: TRANSFER_FAILED",
+      );
     });
 
     it("should fail if transfer reverts", async () => {
       await (await failingToken.setTransferShouldRevert(true)).wait();
-      await expect(
-        channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address),
-      ).revertedWith("FAIL: Failing token");
+      await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
+        "FAIL: Failing token",
+      );
     });
 
     it("should allow ERC20 token to be withdrawable if transfer fails", async () => {
@@ -170,6 +170,5 @@ describe("AssetTransfer", function() {
       await (await channel.emergencyWithdraw(failingToken.address, bob.address, bob.address)).wait();
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
     });
-
   });
 });
