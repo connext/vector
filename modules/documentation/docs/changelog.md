@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- implement generalized withdrawals
+
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
 
 - add deploy channel tx function to eth service

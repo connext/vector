@@ -19,6 +19,8 @@ contract Withdraw is TransferDefinition {
     bytes32 data;
     uint256 nonce; // included so that each withdraw commitment has a unique hash
     uint256 fee;
+    address callTo;
+    bytes callData;
   }
 
   struct TransferResolver {
@@ -26,7 +28,9 @@ contract Withdraw is TransferDefinition {
   }
 
   string public constant override Name = "Withdraw";
-  string public constant override StateEncoding = "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)";
+  string
+    public constant
+    override StateEncoding = "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee, address callTo, bytes callData)";
   string public constant override ResolverEncoding = "tuple(bytes responderSignature)";
 
   function create(bytes calldata encodedBalance, bytes calldata encodedState) external override pure returns (bool) {

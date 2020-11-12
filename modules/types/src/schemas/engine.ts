@@ -105,6 +105,8 @@ const WithdrawParamsSchema = Type.Object({
   assetId: TAddress,
   recipient: TAddress,
   fee: Type.Optional(TIntegerString),
+  callTo: Type.Optional(TAddress),
+  callData: Type.Optional(Type.String()),
   meta: TBasicMeta,
 });
 
