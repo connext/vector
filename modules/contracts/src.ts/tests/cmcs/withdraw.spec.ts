@@ -269,7 +269,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
     const withdrawData = commitment.getWithdrawData();
 
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: Transfer failed");
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("Ether rejected");
   });
 
   it("should fail if token transfer fails", async () => {
