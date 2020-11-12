@@ -46,7 +46,16 @@ export default class ConnextManager {
   }
 
   private async handleIncomingMessage(e: MessageEvent) {
+    if (e.data.target !== "inpage" || true) {
+      console.log(
+        `handleIncomingMessage e.origin: ${e.origin} this.parentOrigin: ${this.parentOrigin} e.source: ${
+          e.source
+        } e.data: ${JSON.stringify(e.data)}`,
+      );
+    }
+    console.log();
     if (e.origin !== this.parentOrigin) return;
+    console.log("handleIncomingMessage: ", e.data);
     if (e.data === "Hello") {
       window.parent.postMessage("World", "*");
     }
@@ -63,6 +72,7 @@ export default class ConnextManager {
   }
 
   private async handleRequest(request: EngineParams.RpcRequest) {
+    console.log("handleRequest: request: ", request);
     if (request.method === "connext_authenticate") {
       let sig = request.params.signature;
       if (!sig) {

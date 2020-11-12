@@ -96,6 +96,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
         throw new Error("iframe inner page not loaded!");
       }
       this.events.on(`${rpc.id}`, response => {
+        console.log("RECEIVED response: ", response);
         if (response?.result) {
           resolve(response?.result);
         } else {
@@ -106,6 +107,8 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
           }
         }
       });
+      console.log("SENDING RPC: ", JSON.stringify(rpc));
+      console.log("this.iframe: ", this.iframe);
       this.iframe.contentWindow.postMessage(JSON.stringify(rpc), "*");
     });
   }
