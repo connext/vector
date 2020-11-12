@@ -138,8 +138,10 @@ describe("AssetTransfer.sol", function() {
       expect(await channel.getEmergencyWithdrawableAmount(failingToken.address, bob.address)).to.be.eq(value);
 
       // Make transfers pass
-      const succeeding = await failingToken.setTransferShouldFail(false);
-      await succeeding.wait();
+      const dontRevert = await failingToken.setTransferShouldRevert(false);
+      await dontRevert.wait();
+      const dontFail = await failingToken.setTransferShouldFail(false);
+      await dontFail.wait();
     });
 
     it("should fail if owner is not msg.sender or recipient", async () => {
@@ -149,9 +151,19 @@ describe("AssetTransfer.sol", function() {
     });
 
     it("should fail if transfer fails", async () => {
-      // Make transfers pass
+      // Make transfers fail
       const failing = await failingToken.setTransferShouldFail(true);
       await failing.wait();
+
+      await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
+        "AssetTransfer: Transfer failed",
+      );
+    });
+
+    it("should fail if transfer reverts", async () => {
+      // Make transfers revert
+      const reverting = await failingToken.setTransferShouldRevert(true);
+      await reverting.wait();
 
       await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
         "FAIL: Failing token",

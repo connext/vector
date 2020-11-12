@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-types",
-  "version": "0.0.6-beta.1",
+  "version": "0.0.9",
   "description": "TypeScript typings for common Connext types",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",

@@ -28,6 +28,16 @@ describe("ChannelMastercopy", function() {
       [Zero, Zero],
       [AddressZero, AddressZero],
     ];
+    const WithdrawDataZero = [
+      AddressZero,
+      AddressZero,
+      AddressZero,
+      Zero,
+      Zero,
+      AddressZero,
+      Zero,
+      "0x"
+    ];
     const CoreChannelStateZero = [AddressZero, AddressZero, AddressZero, [], [], [], [], Zero, Zero, HashZero, Zero];
     const CoreTransferStateZero = [
       AddressZero,
@@ -57,8 +67,8 @@ describe("ChannelMastercopy", function() {
       { name: "depositAlice", args: [AddressZero, Zero /*, HashZero */] },
 
       // from ICMCWithdraw
-      { name: "getWithdrawalTransactionRecord", args: [AddressZero, AddressZero, Zero, Zero] },
-      { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, HashZero, HashZero] },
+      { name: "getWithdrawalTransactionRecord", args: [WithdrawDataZero] },
+      { name: "withdraw", args: [WithdrawDataZero, HashZero, HashZero] },
 
       // from ICMCAdjudicator
       { name: "getChannelDispute", args: [] },
