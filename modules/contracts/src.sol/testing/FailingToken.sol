@@ -23,7 +23,7 @@ contract FailingToken is ERC20 {
 
     receive() external payable {
         if (rejectEther) {
-          revert("Ether rejected");
+          revert("ERC20: ETHER_REJECTED");
         }
     }
 
