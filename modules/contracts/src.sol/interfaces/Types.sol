@@ -6,8 +6,3 @@ struct Balance {
   uint256[2] amount; // [alice, bob] in channel, [initiator, responder] in transfer
   address payable[2] to; // [alice, bob] in channel, [initiator, responder] in transfer
 }
-
-enum CommitmentType {
-  ChannelState,
-  WithdrawData
-}

@@ -2,6 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./interfaces/Commitment.sol";
 import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/Types.sol";
