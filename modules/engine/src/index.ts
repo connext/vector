@@ -528,23 +528,12 @@ export class VectorEngine implements IVectorEngine {
       );
     }
 
-    // Make sure its active
+    // Get active transfers
     const activeRes = await this.getActiveTransfers({ channelAddress: transfer.channelAddress });
     if (activeRes.isError) {
       return Result.fail(activeRes.getError()!);
     }
-    const active = activeRes.getValue();
-    if (!active.find(t => t.transferId === transfer.transferId)) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotActive, params as any),
-      );
-    }
-
-    // Generate merkle root
-    const hashes = active.map(t => bufferify(hashCoreTransferState(t)));
-    const hash = bufferify(hashCoreTransferState(transfer));
-    const merkle = new MerkleTree(hashes, utils.keccak256);
-    const disputeRes = await this.chainService.sendDisputeTransferTx(transfer, merkle.getHexProof(hash));
+    const disputeRes = await this.chainService.sendDisputeTransferTx(transfer.transferId, activeRes.getValue());
     if (disputeRes.isError) {
       return Result.fail(disputeRes.getError()!);
     }
