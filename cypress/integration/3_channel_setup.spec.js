@@ -1,6 +1,6 @@
 describe("Channel Setup", () => {
   beforeEach(() => {
-    cy.request("http://localhost:8002/config").as("response");
+    cy.request("http://localhost:8007/config").as("response");
     cy.wrap("one").as("a");
     cy.visit("/");
 
@@ -24,6 +24,7 @@ describe("Channel Setup", () => {
     cy.get(
       ":nth-child(5) > .ant-col-24 > #deposit > .ant-row > .ant-col-18 > .ant-form-item-control-input > .ant-form-item-control-input-content > .ant-input-group-wrapper > .ant-input-wrapper > .ant-input-group-addon > .ant-btn",
     ).click();
+    cy.wait(5000);
 
     cy.get(".ant-statistic-content-value")
       .invoke("text")
@@ -34,8 +35,8 @@ describe("Channel Setup", () => {
       });
   });
 
-  after(() => {
-    // clean store once done with the test
-    cy.get(".ant-col-8 > .ant-btn").click();
-  });
+  // after(() => {
+  //   // clean store once done with the test
+  //   cy.get(".ant-col-8 > .ant-btn").click();
+  // });
 });

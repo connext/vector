@@ -27,20 +27,6 @@ hr.clearStore = Url => {
   });
 };
 
-/// GET Config
-// GET {{carolUrl}}/config
-hr.getPublicIdentifier = Url => {
-  return cy.wrap(
-    new Cypress.Promise( async(resolve, reject) => {
-      await cy.request(`${Url}/config`).then(response => {
-        const publicIdentifier = response.body[0].publicIdentifier;
-        console.log(publicIdentifier);
-        resolve(cy.wrap(publicIdentifier));
-      });
-    }),
-  );
-};
-
 /// GET CHANNEL
 // GET {{carolUrl}}/{{carolPublicIdentifier}}/channels/{{channelAddress}}
 hr.getChannel = (Url, channelAddress) => {
@@ -85,8 +71,14 @@ hr.setupChannel = Url => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
       const params = {};
-      params.counterpartyIdentifier = hr.getPublicIdentifier(router);
-      params.publicIdentifier = hr.getPublicIdentifier(Url);
+      cy.request(`${router}/config`).then(response => {
+        console.log(response)
+        params.counterpartyIdentifier = response.body[0].publicIdentifier;
+      })
+      cy.request(`${Url}/config`).then(response => {
+        console.log(response)
+        params.publicIdentifier = response.body[0].publicIdentifier;
+      })
       params.chainId = chainId;
       params.timeout = "36000";
       cy.request({

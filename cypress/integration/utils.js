@@ -15,6 +15,18 @@ const from = "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
 // Exported object, attach anything to this that you want available in tests
 const my = {};
 
+my.getConfig = Url => {
+  cy.request(`${Url}/config`).should(response => {
+    console.log(response);
+    expect(response.status, "Get Request").to.eq(200);
+    expect(response, "headers as property").to.have.property("headers");
+    expect(response, "duration as property").to.have.property("duration");
+    expect(response.body[0], "publicIdentifier as property").to.have.property("publicIdentifier");
+    expect(response.body[0].publicIdentifier, "PublicIdentifier should be string").to.be.a("string");
+    expect(response.body[0].publicIdentifier, "indra as prefix in publicIdentifier").to.include("indra");
+  });
+};
+
 my.getChannelAddress = () => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
@@ -95,13 +107,10 @@ my.deposit = value => {
   );
 };
 
-my.withdraw = (value, address) => {
+my.withdraw = (value, address = cashout.address) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-      cy.get("#withdraw_assetId")
-        .first()
-        .click({ force: true })
-        .type("0x0000000000000000000000000000000000000000", { force: true });
+      cy.get('#withdraw_assetId').type("0x0000000000000000000000000000000000000000");
       cy.get("#withdraw_recipient").type(address);
       cy.get("#withdraw_amount").type(value);
       cy.get(
@@ -109,19 +118,16 @@ my.withdraw = (value, address) => {
       ).click();
 
       cy.log(`Withdraw ${value} eth into channel ${address}`);
-      my.getOnchainEtherBalance().should("not.contain", "0.00");
-      return my.getOnchainEtherBalance().then(resolve);
+      my.getOnchainEtherBalance(address).should("not.contain", "0.00");
+      return my.getOnchainEtherBalance(address).then(resolve);
     }),
   );
 };
 
-my.transfer = (value, address) => {
+my.transfer = (address, value) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-        cy.get('#transfer_assetId')
-        .first()
-        .click({ force: true })
-        .type("0x0000000000000000000000000000000000000000", { force: true });
+      cy.get('#transfer_assetId').type("0x0000000000000000000000000000000000000000");
       cy.get("#transfer_recipient").type(address);
       cy.get("#transfer_amount").type(value);
       cy.get(
