@@ -16,6 +16,10 @@ export const ChannelRpcMethods = {
   chan_createTransfer: "chan_createTransfer",
   chan_resolveTransfer: "chan_resolveTransfer",
   chan_withdraw: "chan_withdraw",
+  chan_dispute: "chan_dispute",
+  chan_defund: "chan_defund",
+  chan_disputeTransfer: "chan_disputeTransfer",
+  chan_defundTransfer: "chan_defundTransfer",
 } as const;
 export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
@@ -34,6 +38,10 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_createTransfer]: EngineParams.ConditionalTransfer;
   [ChannelRpcMethods.chan_resolveTransfer]: EngineParams.ResolveTransfer;
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
+  [ChannelRpcMethods.chan_dispute]: EngineParams.DisputeChannel;
+  [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;
+  [ChannelRpcMethods.chan_disputeTransfer]: EngineParams.DisputeTransfer;
+  [ChannelRpcMethods.chan_defundTransfer]: EngineParams.DefundTransfer;
 };
 
 export type ChannelRpcMethodsResponsesMap = {
@@ -51,4 +59,8 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
+  [ChannelRpcMethods.chan_dispute]: { transactionHash: string };
+  [ChannelRpcMethods.chan_defund]: { transactionHash: string };
+  [ChannelRpcMethods.chan_disputeTransfer]: { transactionHash: string };
+  [ChannelRpcMethods.chan_defundTransfer]: { transactionHash: string };
 };
