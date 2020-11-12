@@ -1,6 +1,6 @@
-import { utils } from "ethers";
-
-const { hexDataLength, hexlify, isHexString, getAddress, randomBytes } = utils;
+import { getAddress } from "@ethersproject/address";
+import { hexDataLength, hexlify, isHexString } from "@ethersproject/bytes";
+import { randomBytes } from "@ethersproject/random";
 
 ////////////////////////////////////////
 // Validators

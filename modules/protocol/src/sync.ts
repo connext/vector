@@ -361,7 +361,13 @@ export async function inbound(
     const { commitment, nextState: syncedChannel, transfer } = validateRes.getValue()!;
 
     // Save the newly signed update to your channel
-    await storeService.saveChannelState(syncedChannel, commitment, transfer);
+    try {
+      await storeService.saveChannelState(syncedChannel, commitment, transfer);
+    } catch (e) {
+      return returnError(InboundChannelUpdateError.reasons.SaveChannelFailed, update, previousState, {
+        error: e.message,
+      });
+    }
 
     // Set the previous state to the synced state
     previousState = syncedChannel;

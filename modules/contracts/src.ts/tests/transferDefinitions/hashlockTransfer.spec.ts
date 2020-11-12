@@ -15,8 +15,10 @@ import {
   encodeTransferState,
   encodeBalance,
 } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero, Zero } from "@ethersproject/constants";
-import { Contract, utils, BigNumber } from "ethers";
+import { Contract } from "@ethersproject/contracts";
+import { sha256 } from "@ethersproject/solidity";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
@@ -34,7 +36,7 @@ describe("HashlockTransfer", function() {
     transfer = addressBook.getContract("HashlockTransfer");
   });
 
-  const createlockHash = (preImage: string): string => utils.soliditySha256(["bytes32"], [preImage]);
+  const createlockHash = (preImage: string): string => sha256(["bytes32"], [preImage]);
 
   const createInitialState = async (preImage: string): Promise<{ state: HashlockTransferState; balance: Balance }> => {
     const senderAddr = getRandomAddress();

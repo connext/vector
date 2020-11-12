@@ -1,5 +1,6 @@
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { BigNumber, Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";

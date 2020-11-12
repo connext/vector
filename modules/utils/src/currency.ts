@@ -1,7 +1,6 @@
-import { BigNumber, constants, utils } from "ethers";
-
-const { EtherSymbol } = constants;
-const { commify, parseUnits, formatUnits } = utils;
+import { EtherSymbol } from "@ethersproject/constants";
+import { BigNumber } from "@ethersproject/bignumber";
+import { commify, parseUnits, formatUnits } from "@ethersproject/units";
 
 export class Currency {
   ////////////////////////////////////////

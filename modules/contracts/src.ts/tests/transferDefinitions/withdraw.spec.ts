@@ -17,8 +17,9 @@ import {
   encodeBalance,
   mkSig,
 } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
-import { BigNumber, Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
@@ -53,6 +54,8 @@ describe("Withdraw", function() {
         data,
         nonce: getRandomBytes32(),
         fee: "0",
+        callData: "0x",
+        callTo: AddressZero,
         ...(overrides.state ?? {}),
       },
     };
@@ -104,7 +107,7 @@ describe("Withdraw", function() {
     const registry = await withdraw.getRegistryInformation();
     expect(registry.name).to.be.eq("Withdraw");
     expect(registry.stateEncoding).to.be.eq(
-      "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee)",
+      "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee, address callTo, bytes callData)",
     );
     expect(registry.resolverEncoding).to.be.eq("tuple(bytes responderSignature)");
     expect(registry.definition).to.be.eq(withdraw.address);

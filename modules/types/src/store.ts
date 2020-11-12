@@ -1,4 +1,4 @@
-import { providers } from "ethers";
+import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
 import { FullChannelState, ChannelCommitmentData, FullTransferState } from "./channel";
@@ -118,9 +118,9 @@ export interface IChainServiceStore {
   saveTransactionResponse(
     channelAddress: string,
     reason: TransactionReason,
-    transaction: providers.TransactionResponse,
+    transaction: TransactionResponse,
   ): Promise<void>;
-  saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void>;
+  saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void>;
   saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void>;
 }
 

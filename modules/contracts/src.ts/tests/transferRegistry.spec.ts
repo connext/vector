@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { RegisteredTransfer } from "@connext/vector-types";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 
 import { deployContracts } from "..";

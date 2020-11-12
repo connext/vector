@@ -14,7 +14,10 @@ import {
   ChannelDispute,
 } from "@connext/vector-types";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
-import { BigNumber, constants, Contract, providers } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero, HashZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import pino from "pino";
 
 import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
@@ -29,7 +32,7 @@ const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
 export class EthereumChainReader implements IVectorChainReader {
   private transferRegistries: Map<string, RegisteredTransfer[]> = new Map();
   constructor(
-    public readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
+    public readonly chainProviders: { [chainId: string]: JsonRpcProvider },
     public readonly log: pino.BaseLogger = pino(),
   ) {}
 
@@ -52,7 +55,7 @@ export class EthereumChainReader implements IVectorChainReader {
 
     try {
       const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
-      if (dispute.channelStateHash === constants.HashZero) {
+      if (dispute.channelStateHash === HashZero) {
         return Result.ok(undefined);
       }
       return Result.ok({
@@ -174,7 +177,7 @@ export class EthereumChainReader implements IVectorChainReader {
       // TODO: check for reason?
       try {
         onchainBalance =
-          assetId === constants.AddressZero
+          assetId === AddressZero
             ? await provider!.getBalance(channelAddress)
             : await new Contract(assetId, ERC20Abi, provider).balanceOf(channelAddress);
       } catch (e) {
