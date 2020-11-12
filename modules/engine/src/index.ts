@@ -21,9 +21,12 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
+import { utils } from "ethers";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
+import { bufferify, hashCoreTransferState } from "@connext/vector-utils";
+import { MerkleTree } from "merkletreejs";
 
 import { InvalidTransferType } from "./errors";
 import {
@@ -464,6 +467,113 @@ export class VectorEngine implements IVectorEngine {
     }
 
     return Result.ok({ channel: res, transactionHash });
+  }
+
+  private async disputeChannel(
+    params: EngineParams.DisputeChannel,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], Error>> {
+    const channel = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channel.isError) {
+      return Result.fail(channel.getError()!);
+    }
+    const state = channel.getValue();
+    if (!state) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
+    const disputeRes = await this.chainService.sendDisputeChannelTx(state);
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()!);
+    }
+
+    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+  }
+
+  private async defundChannel(
+    params: EngineParams.DefundChannel,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defund], Error>> {
+    const channel = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channel.isError) {
+      return Result.fail(channel.getError()!);
+    }
+    const state = channel.getValue();
+    if (!state) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
+    if (!state.inDispute) {
+      return Result.fail(new Error("Channel not in dispute"));
+    }
+    const disputeRes = await this.chainService.sendDefundChannelTx(state);
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()!);
+    }
+
+    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+  }
+
+  private async disputeTransfer(
+    params: EngineParams.DisputeTransfer,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_disputeTransfer], Error>> {
+    const transferRes = await this.getTransferState(params);
+    if (transferRes.isError) {
+      return Result.fail(transferRes.getError()!);
+    }
+    const transfer = transferRes.getValue();
+    if (!transfer) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+      );
+    }
+
+    // Make sure its active
+    const activeRes = await this.getActiveTransfers({ channelAddress: transfer.channelAddress });
+    if (activeRes.isError) {
+      return Result.fail(activeRes.getError()!);
+    }
+    const active = activeRes.getValue();
+    if (!active.find(t => t.transferId === transfer.transferId)) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotActive, params as any),
+      );
+    }
+
+    // Generate merkle root
+    const hashes = active.map(t => bufferify(hashCoreTransferState(t)));
+    const hash = bufferify(hashCoreTransferState(transfer));
+    const merkle = new MerkleTree(hashes, utils.keccak256);
+    const disputeRes = await this.chainService.sendDisputeTransferTx(transfer, merkle.getHexProof(hash));
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()!);
+    }
+    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+  }
+
+  private async defundTransfer(
+    params: EngineParams.DefundTransfer,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defundTransfer], Error>> {
+    const transferRes = await this.getTransferState(params);
+    if (transferRes.isError) {
+      return Result.fail(transferRes.getError()!);
+    }
+    const transfer = transferRes.getValue();
+    if (!transfer) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+      );
+    }
+
+    if (!transfer.inDispute) {
+      return Result.fail(new Error("Transfer not in dispute"));
+    }
+
+    const defundRes = await this.chainService.sendDefundTransferTx(transfer);
+    if (defundRes.isError) {
+      return Result.fail(defundRes.getError()!);
+    }
+    return Result.ok({ transactionHash: defundRes.getValue().hash });
   }
 
   // JSON RPC interface -- this will accept:
