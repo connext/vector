@@ -2,7 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "../interfaces/Types.sol";
+import "../interfaces/ITransferRegistry.sol";
 
 library LibIterableMapping {
   struct TransferDefinitionWithIndex {

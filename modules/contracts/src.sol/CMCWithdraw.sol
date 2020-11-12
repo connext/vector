@@ -3,14 +3,12 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCWithdraw.sol";
-import "./interfaces/Types.sol";
 import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
 import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/LibUtils.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   using LibChannelCrypto for bytes32;
@@ -20,6 +18,17 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   modifier validateWithdrawData(WithdrawData calldata wd) {
     require(wd.channelAddress == address(this), "CMCWithdraw: CHANNEL_MISMATCH");
     _;
+  }
+
+  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
+    external
+    override
+    view
+    onlyViaProxy
+    nonReentrantView
+    returns (bool)
+  {
+    return isExecuted[hashWithdrawData(wd)];
   }
 
   /// @param wd The withdraw data consisting of
@@ -61,17 +70,6 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     if (wd.callTo != address(0)) {
       WithdrawHelper(wd.callTo).execute(wd, amount);
     }
-  }
-
-  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
-    external
-    override
-    view
-    onlyViaProxy
-    nonReentrantView
-    returns (bool)
-  {
-    return isExecuted[hashWithdrawData(wd)];
   }
 
   // TODO: include commitment type

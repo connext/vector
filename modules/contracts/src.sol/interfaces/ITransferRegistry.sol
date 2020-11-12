@@ -2,7 +2,12 @@
 pragma solidity ^0.7.1;
 pragma experimental "ABIEncoderV2";
 
-import "./Types.sol";
+struct RegisteredTransfer {
+  string name;
+  address definition;
+  string stateEncoding;
+  string resolverEncoding;
+}
 
 interface ITransferRegistry {
   // Should add a transfer definition to the registry
