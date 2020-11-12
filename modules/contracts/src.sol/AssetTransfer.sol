@@ -139,6 +139,6 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
 
     emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
     registerTransfer(assetId, amount);
-    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: Transfer failed");
+    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
   }
 }
