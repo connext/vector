@@ -9,7 +9,6 @@ import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/LibUtils.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   using LibChannelCrypto for bytes32;
