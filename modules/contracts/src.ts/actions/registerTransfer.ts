@@ -1,6 +1,6 @@
 import { RegisteredTransfer, tidy } from "@connext/vector-types";
 import { getEthProvider } from "@connext/vector-utils";
-import { Wallet } from "ethers";
+import { Wallet } from "@ethersproject/wallet";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";

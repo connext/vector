@@ -34,6 +34,7 @@ import {
 } from "../paramConverter";
 
 import { env } from "./env";
+import { AddressZero } from "@ethersproject/constants";
 
 describe("ParamConverter", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
@@ -42,7 +43,6 @@ describe("ParamConverter", () => {
   const signerB = getRandomChannelSigner(providerUrl);
   const chainAddresses: ChainAddresses = {
     [chainId]: {
-      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
       transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
@@ -239,6 +239,8 @@ describe("ParamConverter", () => {
         assetId: mkAddress("0x0"),
         recipient: mkAddress("0xb"),
         fee: "1",
+        callTo: AddressZero,
+        callData: "0x",
       };
     };
 
@@ -296,7 +298,9 @@ describe("ParamConverter", () => {
           responder: signerB.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
-          fee: params.fee ? params.fee : "0",
+          fee: params.fee ?? "0",
+          callTo: params.callTo ?? AddressZero,
+          callData: params.callData ?? "0x",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
@@ -340,7 +344,9 @@ describe("ParamConverter", () => {
           initiator: signerB.address,
           data: withdrawHash,
           nonce: channelState.nonce.toString(),
-          fee: params.fee ? params.fee : "0",
+          fee: params.fee ?? "0",
+          callTo: params.callTo ?? AddressZero,
+          callData: params.callData ?? "0x",
         },
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {

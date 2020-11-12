@@ -1,28 +1,28 @@
 import { VectorChannel } from "@connext/vector-contracts";
 import {
-  IVectorStore,
-  UpdateParams,
-  UpdateType,
+  ChannelUpdate,
+  ChannelUpdateEvent,
+  FullChannelState,
+  FullTransferState,
+  IChannelSigner,
+  IExternalValidation,
   ILockService,
   IMessagingService,
-  IChannelSigner,
-  FullChannelState,
-  ChannelUpdateEvent,
+  IVectorChainReader,
+  IVectorProtocol,
+  IVectorStore,
+  OutboundChannelUpdateError,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
-  IVectorProtocol,
-  Result,
-  FullTransferState,
-  IVectorChainReader,
-  OutboundChannelUpdateError,
   ProtocolParams,
-  IExternalValidation,
-  ChannelUpdate,
-  Contract,
+  Result,
+  UpdateParams,
+  UpdateType,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
 import Ajv from "ajv";
-import { BigNumber } from "ethers";
 import { Evt } from "evt";
 import pino from "pino";
 

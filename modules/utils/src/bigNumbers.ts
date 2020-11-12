@@ -1,5 +1,5 @@
 import { HexString } from "@connext/vector-types";
-import { BigNumber, BigNumberish } from "ethers";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 export const isBN = BigNumber.isBigNumber;
 

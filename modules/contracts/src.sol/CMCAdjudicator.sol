@@ -38,7 +38,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   modifier validateChannel(CoreChannelState calldata ccs) {
     require(
       ccs.channelAddress == address(this) && ccs.alice == alice && ccs.bob == bob,
-      "CMCAdjudicator: Mismatch between given core channel state and channel we are at"
+      "CMCAdjudicator: INVALID_CHANNEL"
     );
     _;
   }
@@ -46,7 +46,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   modifier validateTransfer(CoreTransferState calldata cts) {
     require(
       cts.channelAddress == address(this),
-      "CMCAdjudicator: Mismatch between given core transfer state and channel we are at"
+      "CMCAdjudicator: INVALID_TRANSFER"
     );
     _;
   }
@@ -75,10 +75,10 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     verifySignatures(ccs, aliceSignature, bobSignature);
 
     // We cannot dispute a channel in its defund phase
-    require(!inDefundPhase(), "CMCAdjudicator disputeChannel: Not allowed in defund phase");
+    require(!inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
 
     // New nonce must be strictly greater than the stored one
-    require(channelDispute.nonce < ccs.nonce, "CMCAdjudicator disputeChannel: New nonce smaller than stored one");
+    require(channelDispute.nonce < ccs.nonce, "CMCAdjudicator: INVALID_NONCE");
 
     if (!inConsensusPhase()) {
       // We are not already in a dispute
@@ -107,15 +107,15 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // Verify that the given channel state matches the stored one
     require(
       hashChannelState(ccs) == channelDispute.channelStateHash,
-      "CMCAdjudicator defundChannel: Hash of core channel state does not match stored hash"
+      "CMCAdjudicator: INVALID_CHANNEL_HASH"
     );
 
     // We need to be in defund phase for that
-    require(inDefundPhase(), "CMCAdjudicator defundChannel: Not in defund phase");
+    require(inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
 
     // We can't defund twice at the same defund nonce
     // TODO: should this be checked in the `disputeChannel`?
-    require(channelDispute.defundNonce < ccs.defundNonce, "CMCAdjudicator defundChannel: channel already defunded");
+    require(channelDispute.defundNonce < ccs.defundNonce, "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
     channelDispute.defundNonce = ccs.defundNonce;
 
     // TODO SECURITY: Beware of reentrancy
@@ -164,13 +164,13 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     verifyMerkleProof(merkleProofData, channelDispute.merkleRoot, transferStateHash);
 
     // The channel needs to be in defund phase for that, i.e. channel state is "finalized"
-    require(inDefundPhase(), "CMCAdjudicator disputeTransfer: Not in defund phase");
+    require(inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
 
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
     // Verify that this transfer has not been disputed before
-    require(transferDispute.transferDisputeExpiry == 0, "CMCAdjudicator disputeTransfer: transfer already disputed");
+    require(transferDispute.transferDisputeExpiry == 0, "CMCAdjudicator: TRANSFER_ALREADY_DISPUTED");
 
     // Store transfer state and set expiry
     transferDispute.transferStateHash = transferStateHash;
@@ -189,26 +189,26 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 
     // Verify that a dispute for this transfer has already been started
-    require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator defundTransfer: transfer not yet disputed");
+    require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator: TRANSFER_NOT_DISPUTED");
 
     // Verify that the given transfer state matches the stored one
     require(
       hashTransferState(cts) == transferDispute.transferStateHash,
-      "CMCAdjudicator defundTransfer: Hash of core transfer state does not match stored hash"
+      "CMCAdjudicator: INVALID_TRANSFER_HASH"
     );
 
     // We can't defund twice
-    require(!transferDispute.isDefunded, "CMCAdjudicator defundTransfer: transfer already defunded");
+    require(!transferDispute.isDefunded, "CMCAdjudicator: TRANSFER_ALREADY_DEFUNDED");
     transferDispute.isDefunded = true;
 
     Balance memory balance;
 
     if (block.number < transferDispute.transferDisputeExpiry) {
       // Before dispute expiry, responder can resolve
-      require(msg.sender == cts.responder, "CMCAdjudicator: msg.sender is not transfer responder");
+      require(msg.sender == cts.responder, "CMCAdjudicator: INVALID_MSG_SENDER");
       require(
         keccak256(encodedInitialTransferState) == cts.initialStateHash,
-        "CMCAdjudicator defundTransfer: Hash of encoded initial transfer state does not match stored hash"
+        "CMCAdjudicator: INVALID_TRANSFER_HASH"
       );
       ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
       balance = transferDefinition.resolve(
@@ -219,7 +219,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       // Verify that returned balances don't exceed initial balances
       require(
         balance.amount[0].add(balance.amount[1]) <= cts.balance.amount[0].add(cts.balance.amount[1]),
-        "CMCAdjudicator defundTransfer: resolved balances exceed initial balances"
+        "CMCAdjudicator: INVALID_BALANCES"
       );
     } else {
       // After dispute expiry, if the responder hasn't resolved, we defund the initial balance
@@ -247,14 +247,15 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     return _getTotalDepositsBob(assetId);
   }
 
+  // TODO: include commitment type
   function verifySignatures(
     CoreChannelState calldata ccs,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal pure {
     bytes32 ccsHash = hashChannelState(ccs);
-    require(ccsHash.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: Invalid alice signature");
-    require(ccsHash.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: Invalid bob signature");
+    require(ccsHash.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: INVALID_ALICE_SIG");
+    require(ccsHash.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: INVALID_BOB_SIG");
   }
 
   function verifyMerkleProof(
@@ -262,7 +263,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     bytes32 root,
     bytes32 leaf
   ) internal pure {
-    require(MerkleProof.verify(proof, root, leaf), "CMCAdjudicator: Merkle proof verification failed");
+    require(MerkleProof.verify(proof, root, leaf), "CMCAdjudicator: INVALID_MERKLE_PROOF");
   }
 
   function inConsensusPhase() internal view returns (bool) {

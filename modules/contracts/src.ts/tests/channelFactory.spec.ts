@@ -6,8 +6,9 @@ import {
   expect,
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract, BigNumber } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
 import { createChannel, deployContracts } from "../actions";

@@ -1,6 +1,6 @@
 import { JsonRpcResponse } from "@connext/vector-types";
+import { BigNumber } from "@ethersproject/bignumber";
 import axios, { AxiosResponse } from "axios";
-import { BigNumber } from "ethers";
 
 // Gets the chainId from the provider URL using a regular POST method
 // This is done as a workaround to get the network information before

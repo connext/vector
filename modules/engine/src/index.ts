@@ -19,6 +19,7 @@ import {
   WITHDRAWAL_RECONCILED_EVENT,
   ChannelRpcMethods,
   IExternalValidation,
+  AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -232,17 +233,54 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(chainProviders.getError()!.message));
     }
 
-    return this.vector.setup({
+    const setupRes = await this.vector.setup({
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
-        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
         transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
         chainId: params.chainId,
         providerUrl: chainProviders.getValue()[params.chainId],
       },
     });
+
+    if (setupRes.isError) {
+      return setupRes;
+    }
+
+    const channel = setupRes.getValue();
+    if (this.signerAddress === channel.bob) {
+      return setupRes;
+    }
+
+    // If it is alice && chain id is in autodeployable chains, deploy contract
+    if (!AUTODEPLOY_CHAIN_IDS.includes(channel.networkContext.chainId)) {
+      return setupRes;
+    }
+
+    this.logger.info(
+      { chainId: channel.networkContext.chainId, channel: channel.channelAddress },
+      "Deploying channel multisig",
+    );
+    const deployRes = await this.chainService.sendDeployChannelTx(channel);
+    if (deployRes.isError) {
+      const err = deployRes.getError();
+      this.logger.error(
+        {
+          ...(err?.context ?? {}),
+          chainId: channel.networkContext.chainId,
+          channel: channel.channelAddress,
+          error: deployRes.getError()!.message,
+        },
+        "Failed to deploy channel multisig",
+      );
+      return setupRes;
+    }
+    const tx = deployRes.getValue();
+    this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
+    await tx.wait();
+    this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
+    return setupRes;
   }
 
   private async requestSetup(
@@ -414,7 +452,7 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
     let transactionHash: string | undefined = undefined;
-    const timeout = 15_000;
+    const timeout = 90_000;
     try {
       const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
         timeout,

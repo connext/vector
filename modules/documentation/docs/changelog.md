@@ -2,6 +2,16 @@
 
 ## Next Release
 
+- implement generalized withdrawals
+
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
+
+- add deploy channel tx function to eth service
+- add autodeployment after setup for some chains (currently only arbitrum)
+- add arbitrum to address book
+
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.6-beta.1, @connext/{server-node}@0.0.8
+
 - fix `defundNonce` in server node store
 - expose nats 4221 by default
 - support trio and contract testing across remote chains

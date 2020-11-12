@@ -12,11 +12,19 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  */
 contract FailingToken is ERC20 {
 
+  bool public transferShouldRevert;
   bool public transferShouldFail;
+  bool public rejectEther;
 
     constructor () ERC20("Failing Token", "FAIL") {
-      transferShouldFail = true;
+      transferShouldRevert = true;
       _mint(msg.sender, 1000000 ether);
+    }
+
+    receive() external payable {
+        if (rejectEther) {
+          revert("Ether rejected");
+        }
     }
 
     function mint(address account, uint256 amount) external {
@@ -28,26 +36,38 @@ contract FailingToken is ERC20 {
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-      if (transferShouldFail) {
-        require(false, "FAIL: Failing token");
-        return false;
-      } else {
-        return super.transfer(recipient, amount);
+      if (transferShouldRevert) {
+        revert("FAIL: Failing token");
       }
+      if (transferShouldFail) {
+        return false;
+      }
+      return super.transfer(recipient, amount);
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-      if (transferShouldFail) {
-        require(false, "FAIL: Failing token");
-        return false;
-      } else {
-        return super.transferFrom(sender, recipient, amount);
+      if (transferShouldRevert) {
+        revert("FAIL: Failing token");
       }
+      if (transferShouldFail) {
+        return false;
+      }
+      return super.transferFrom(sender, recipient, amount);
+    }
+
+    function setTransferShouldRevert(bool _transferShouldRevert) public returns (bool) {
+      transferShouldRevert = _transferShouldRevert;
+      return transferShouldRevert;
     }
 
     function setTransferShouldFail(bool _transferShouldFail) public returns (bool) {
       transferShouldFail = _transferShouldFail;
       return transferShouldFail;
+    }
+
+    function setRejectEther(bool _rejectEther) public returns (bool) {
+      rejectEther = _rejectEther;
+      return rejectEther;
     }
 
     function succeedingTransfer(address recipient, uint256 amount) public returns (bool) {

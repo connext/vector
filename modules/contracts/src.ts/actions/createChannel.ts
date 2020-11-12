@@ -1,5 +1,6 @@
 import { getEthProvider } from "@connext/vector-utils";
-import { Contract, Wallet } from "ethers";
+import { Contract } from "@ethersproject/contracts";
+import { Wallet } from "@ethersproject/wallet";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
