@@ -7,20 +7,17 @@ import {
   getBalanceForAssetId,
   getRandomBytes32,
 } from "@connext/vector-utils";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import pino from "pino";
-import { Wallet, constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List, Collapse } from "antd";
+import { constants } from "ethers";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List } from "antd";
 import { EngineEvents, EngineParams, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
 
-const storedMnemonic = localStorage.getItem("mnemonic");
-
 function App() {
   const [node, setNode] = useState<BrowserNode>();
   const [channel, setChannel] = useState<FullChannelState>();
-  const [mnemonic, setMnemonic] = useState<string>();
 
   const [setupLoading, setSetupLoading] = useState<boolean>(false);
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
@@ -34,23 +31,14 @@ function App() {
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
 
-  useEffect(() => {
-    const init = async () => {
-      if (!storedMnemonic) {
-        return;
-      }
-      console.log("Found stored mnemonic, hydrating node");
-      await connectNode(storedMnemonic);
-    };
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const connectNode = async (mnemonic: string) => {
+  const connectNode = async (iframeSrc: string) => {
+    if (!iframeSrc) {
+      iframeSrc = "http://localhost:3030";
+    }
     try {
       setConnectLoading(true);
       const client = await BrowserNode.connect({
-        iframeSrc: "http://localhost:3030",
+        iframeSrc,
         logger: pino(),
       });
       const rpc: EngineParams.RpcRequest = {
@@ -74,8 +62,6 @@ function App() {
         setChannel(channelRes.getValue());
       }
       setNode(client);
-      localStorage.setItem("mnemonic", mnemonic);
-      setMnemonic(mnemonic);
       client.on(EngineEvents.DEPOSIT_RECONCILED, async data => {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client, data.channelAddress);
@@ -225,11 +211,6 @@ function App() {
                   </List.Item>
                 )}
               />
-              <Collapse>
-                <Collapse.Panel header="Show Mnemonic" key="1">
-                  <p>{mnemonic}</p>
-                </Collapse.Panel>
-              </Collapse>
             </Col>
             <Col span={8}>
               <Button
@@ -266,18 +247,12 @@ function App() {
           <>
             <Col span={16}>
               <Input.Search
-                placeholder="Mnemonic"
+                placeholder="IFrame Src"
                 enterButton="Setup Node"
                 size="large"
-                value={mnemonic}
                 onSearch={connectNode}
                 loading={connectLoading}
               />
-            </Col>
-            <Col span={8}>
-              <Button type="primary" size="large" onClick={() => setMnemonic(Wallet.createRandom().mnemonic.phrase)}>
-                Generate Random Mnemonic
-              </Button>
             </Col>
           </>
         )}
