@@ -3,7 +3,6 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCWithdraw.sol";
-import "./interfaces/Types.sol";
 import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
 import "./AssetTransfer.sol";
