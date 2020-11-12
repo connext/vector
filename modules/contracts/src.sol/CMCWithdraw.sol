@@ -20,6 +20,17 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     _;
   }
 
+  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
+    external
+    override
+    view
+    onlyViaProxy
+    nonReentrantView
+    returns (bool)
+  {
+    return isExecuted[hashWithdrawData(wd)];
+  }
+
   /// @param wd The withdraw data consisting of
   /// semantic withdraw information, i.e. assetId, recipient, and amount;
   /// information to make an optional call in addition to the actual transfer,
@@ -59,17 +70,6 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     if (wd.callTo != address(0)) {
       WithdrawHelper(wd.callTo).execute(wd, amount);
     }
-  }
-
-  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
-    external
-    override
-    view
-    onlyViaProxy
-    nonReentrantView
-    returns (bool)
-  {
-    return isExecuted[hashWithdrawData(wd)];
   }
 
   // TODO: include commitment type
