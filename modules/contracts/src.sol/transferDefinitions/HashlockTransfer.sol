@@ -54,7 +54,6 @@ contract HashlockTransfer is TransferDefinition {
       balance.amount[0] = 0;
     } else {
       // To cancel, the preImage must be empty (not simply incorrect)
-      // TODO: rm this assertion bc it will always succeed given the if statement that leads us here
       require(resolver.preImage == bytes32(0), "HashlockTransfer: NONZERO_LOCKHASH");
       // There are no additional state mutations
     }
