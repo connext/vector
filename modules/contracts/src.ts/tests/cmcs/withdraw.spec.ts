@@ -158,9 +158,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
 
     const withdrawData = commitment.getWithdrawData();
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: CHANNEL_MISMATCH",
-    );
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: CHANNEL_MISMATCH");
   });
 
   it("should fail if it is a no-op (callTo == address(0) && amount == 0)", async () => {
@@ -241,9 +239,7 @@ describe("CMCWithdraw.sol", function() {
 
     const withdrawData = commitment.getWithdrawData();
     await channel.withdraw(withdrawData, aliceSig, bobSig);
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith(
-      "CMCWithdraw: ALREADY_EXECUTED",
-    );
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: ALREADY_EXECUTED");
   });
 
   it("should fail if Ether transfer reverts", async () => {
@@ -269,7 +265,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
     const withdrawData = commitment.getWithdrawData();
 
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCWithdraw: ASSET_TRANSFER_FAILED");
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("Ether rejected");
   });
 
   it("should fail if token transfer fails", async () => {

@@ -145,6 +145,12 @@ describe("AssetTransfer", function() {
       ).revertedWith("AssetTransfer: OWNER_MISMATCH");
     });
 
+    it("should fail if withdrawable amount is 0", async () => {
+      await expect(channel.connect(bob).emergencyWithdraw(token.address, bob.address, bob.address)).revertedWith(
+        "AssetTransfer: NO_OP",
+      );
+    });
+
     it("should fail if transfer fails", async () => {
       await (await failingToken.setTransferShouldFail(true)).wait();
       await expect(
