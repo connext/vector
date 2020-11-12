@@ -3,14 +3,12 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCWithdraw.sol";
-import "./interfaces/Types.sol";
 import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
 import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/LibUtils.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 
 contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   using LibChannelCrypto for bytes32;
@@ -18,8 +16,19 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
   mapping(bytes32 => bool) private isExecuted;
 
   modifier validateWithdrawData(WithdrawData calldata wd) {
-    require(wd.channelAddress == address(this), "CMCWithdraw: Channel address mismatch");
+    require(wd.channelAddress == address(this), "CMCWithdraw: CHANNEL_MISMATCH");
     _;
+  }
+
+  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
+    external
+    override
+    view
+    onlyViaProxy
+    nonReentrantView
+    returns (bool)
+  {
+    return isExecuted[hashWithdrawData(wd)];
   }
 
   /// @param wd The withdraw data consisting of
@@ -41,7 +50,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     verifySignatures(wdHash, aliceSignature, bobSignature);
 
     // Replay protection
-    require(!isExecuted[wdHash], "CMCWithdraw: Transaction has already been executed");
+    require(!isExecuted[wdHash], "CMCWithdraw: ALREADY_EXECUTED");
     isExecuted[wdHash] = true;
 
     // Determine actually transferable amount
@@ -49,29 +58,18 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     uint256 amount = LibUtils.min(wd.amount, balance);
 
     // Revert if amount is zero && callTo is 0
-    require(amount > 0 || wd.callTo != address(0), "CMCWithdraw: No-op");
+    require(amount > 0 || wd.callTo != address(0), "CMCWithdraw: NO_OP");
 
     // Add to totalWithdrawn
     registerTransfer(wd.assetId, amount);
 
     // Execute the transfer
-    require(LibAsset.transfer(wd.assetId, wd.recipient, amount), "CMCWithdraw: Transfer failed");
+    require(LibAsset.transfer(wd.assetId, wd.recipient, amount), "CMCWithdraw: ASSET_TRANSFER_FAILED");
 
     // Do we have to make a call in addition to the actual transfer?
     if (wd.callTo != address(0)) {
       WithdrawHelper(wd.callTo).execute(wd, amount);
     }
-  }
-
-  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
-    external
-    override
-    view
-    onlyViaProxy
-    nonReentrantView
-    returns (bool)
-  {
-    return isExecuted[hashWithdrawData(wd)];
   }
 
   // TODO: include commitment type
@@ -80,8 +78,8 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal view {
-    require(wdHash.checkSignature(aliceSignature, alice), "CMCWithdraw: Invalid alice signature");
-    require(wdHash.checkSignature(bobSignature, bob), "CMCWithdraw: Invalid bob signature");
+    require(wdHash.checkSignature(aliceSignature, alice), "CMCWithdraw: INVALID_ALICE_SIG");
+    require(wdHash.checkSignature(bobSignature, bob), "CMCWithdraw: INVALID_BOB_SIG");
   }
 
   function hashWithdrawData(WithdrawData calldata wd) internal pure returns (bytes32) {

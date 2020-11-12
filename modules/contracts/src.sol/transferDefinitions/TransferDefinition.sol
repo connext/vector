@@ -3,6 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "../interfaces/ITransferDefinition.sol";
+import "../interfaces/ITransferRegistry.sol";
 
 abstract contract TransferDefinition is ITransferDefinition {
 

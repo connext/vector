@@ -7,6 +7,62 @@ import "./Types.sol";
 
 interface ICMCAdjudicator {
 
+    struct CoreChannelState {
+      address channelAddress;
+      address alice;
+      address bob;
+      address[] assetIds;
+      Balance[] balances;
+      uint256[] processedDepositsA;
+      uint256[] processedDepositsB;
+      uint256 timeout;
+      uint256 nonce;
+      bytes32 merkleRoot;
+      uint256 defundNonce;
+    }
+
+    struct CoreTransferState {
+      address channelAddress;
+      bytes32 transferId;
+      address transferDefinition;
+      address initiator;
+      address responder;
+      address assetId;
+      Balance balance;
+      uint256 transferTimeout;
+      bytes32 initialStateHash;
+    }
+
+    struct ChannelDispute {
+      bytes32 channelStateHash;
+      uint256 nonce;
+      bytes32 merkleRoot;
+      uint256 consensusExpiry;
+      uint256 defundExpiry;
+      uint256 defundNonce;
+    }
+
+    struct TransferDispute {
+      bytes32 transferStateHash;
+      uint256 transferDisputeExpiry;
+      bool isDefunded;
+    }
+
+    event ChannelDisputed(address disputer, address channelAddress, ChannelDispute dispute);
+
+    event ChannelDefunded(address defunder, address channelAddress, ChannelDispute dispute);
+
+    event TransferDisputed(address disputer, address channelAddress, bytes32 transferId, TransferDispute dispute);
+
+    event TransferDefunded(
+      address defunder,
+      address channelAddress,
+      TransferDispute dispute,
+      bytes encodedInitialState,
+      bytes encodedResolver,
+      Balance balance
+    );
+
     function getChannelDispute(
     ) external view returns (ChannelDispute memory);
 

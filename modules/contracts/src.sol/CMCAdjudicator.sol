@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
+import "./interfaces/Types.sol";
 import "./CMCCore.sol";
 import "./CMCAccountant.sol";
 import "./lib/LibChannelCrypto.sol";
@@ -14,21 +15,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
-
-  event ChannelDisputed(address disputer, address channelAddress, ChannelDispute dispute);
-
-  event ChannelDefunded(address defunder, address channelAddress, ChannelDispute dispute);
-
-  event TransferDisputed(address disputer, address channelAddress, bytes32 transferId, TransferDispute dispute);
-
-  event TransferDefunded(
-    address defunder,
-    address channelAddress,
-    TransferDispute dispute,
-    bytes encodedInitialState,
-    bytes encodedResolver,
-    Balance balance
-  );
 
   uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 12000;
 
