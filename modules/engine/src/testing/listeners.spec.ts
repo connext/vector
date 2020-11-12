@@ -39,6 +39,7 @@ import { Vector } from "@connext/vector-protocol";
 import { BigNumber, utils } from "ethers";
 import { Evt } from "evt";
 import Sinon from "sinon";
+import { AddressZero } from "@ethersproject/constants";
 
 import { setupEngineListeners } from "../listeners";
 import { getEngineEvtContainer } from "../utils";
@@ -139,6 +140,8 @@ describe(testName, () => {
         assetId: mkAddress(),
         amount: withdrawalAmount.toString(),
         nonce: getRandomBytes32(),
+        callTo: AddressZero,
+        callData: "0x",
         ...overrides,
       });
 
@@ -158,6 +161,8 @@ describe(testName, () => {
         data: hexlify(randomBytes(32)),
         nonce: commitment.nonce,
         fee: fee.toString(),
+        callTo: AddressZero,
+        callData: "0x",
       };
       const stateEncoding = WithdrawStateEncoding;
       const resolverEncoding = WithdrawResolverEncoding;
