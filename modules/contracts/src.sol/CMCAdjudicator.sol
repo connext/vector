@@ -135,11 +135,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       // this probably means the token is totally fucked up.
       // Since we mustn't revert here (in order to prevent other assets from becoming frozen),
       // we proceed anyway and assume there are no unprocessed deposits for Bob.
-      (bool success, bytes memory encodedReturnValue) = address(this).call{gas: QUERY_DEPOSITS_GAS_LIMIT}(
+      (bool success, bytes memory returnData) = address(this).call{gas: QUERY_DEPOSITS_GAS_LIMIT}(
         abi.encodeWithSignature("_depositsBob(address)", assetId)
       );
       if (success) {
-        uint256 depositsBob = abi.decode(encodedReturnValue, (uint256));
+        uint256 depositsBob = abi.decode(returnData, (uint256));
         balance.amount[1] += depositsBob - ccs.processedDepositsB[i];
       }
 

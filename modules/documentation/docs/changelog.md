@@ -3,6 +3,7 @@
 ## Next Release
 
 - implement generalized withdrawals
+- fix and minor improvements around asset transfers
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
 

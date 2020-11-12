@@ -150,6 +150,12 @@ describe("AssetTransfer.sol", function() {
       ).revertedWith("Either msg.sender or recipient of funds must be the owner of an emergency withdraw");
     });
 
+    it("should fail if withdrawable amount is 0", async () => {
+      await expect(channel.connect(bob).emergencyWithdraw(token.address, bob.address, bob.address)).revertedWith(
+        "AssetTransfer: NO_OP",
+      );
+    });
+
     it("should fail if transfer fails", async () => {
       // Make transfers fail
       const failing = await failingToken.setTransferShouldFail(true);
