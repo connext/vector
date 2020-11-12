@@ -32,13 +32,11 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
 
   function depositAlice(address assetId, uint256 amount) external override payable onlyViaProxy nonReentrant {
     if (LibAsset.isEther(assetId)) {
-      require(
-        msg.value == amount,
-        "CMCDeposit: msg.value does not match the provided amount");
+      require(msg.value == amount, "CMCDeposit: VALUE_MISMATCH");
     } else {
       require(
         LibERC20.transferFrom(assetId, msg.sender, address(this), amount),
-        "CMCDeposit: ERC20 transferFrom failed"
+        "CMCDeposit: ERC20_TRANSFER_FAILED"
       );
     }
     // NOTE: explicitly do NOT use safemath here

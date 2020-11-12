@@ -1,10 +1,10 @@
-import { MinimalTransaction, WithdrawCommitmentJson } from "@connext/vector-types";
+import { MinimalTransaction, WithdrawCommitmentJson, WithdrawDataEncoding } from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { utils } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
+import { Interface, defaultAbiCoder } from "@ethersproject/abi";
+import { keccak256 } from "@ethersproject/solidity";
 
 import { ChannelMastercopy } from "../artifacts";
-
-const { Interface, keccak256, solidityPack } = utils;
 
 export class WithdrawCommitment {
   private aliceSignature?: string;
@@ -18,6 +18,8 @@ export class WithdrawCommitment {
     public readonly assetId: string,
     public readonly amount: string,
     public readonly nonce: string,
+    public readonly callTo: string = AddressZero,
+    public readonly callData: string = "0x",
   ) {}
 
   get signatures(): string[] {
@@ -42,6 +44,8 @@ export class WithdrawCommitment {
       assetId: this.assetId,
       amount: this.amount,
       nonce: this.nonce,
+      callTo: this.callTo,
+      callData: this.callData,
     };
   }
 
@@ -54,6 +58,8 @@ export class WithdrawCommitment {
       json.assetId,
       json.amount,
       json.nonce,
+      json.callTo,
+      json.callData,
     );
     if (json.aliceSignature || json.bobSignature) {
       await commitment.addSignatures(json.aliceSignature, json.bobSignature);
@@ -61,29 +67,33 @@ export class WithdrawCommitment {
     return commitment;
   }
 
+  public getCallData(): { to: string; data: string } {
+    return { to: this.callTo, data: this.callData };
+  }
+
+  public getWithdrawData(): string[] {
+    return [this.channelAddress, this.assetId, this.recipient, this.amount, this.nonce, this.callTo, this.callData];
+  }
+
   public hashToSign(): string {
-    return keccak256(
-      solidityPack(
-        ["address", "address", "uint256", "uint256"],
-        [this.recipient, this.assetId, this.amount, this.nonce],
-      ),
-    );
+    const withdrawData = this.getWithdrawData();
+    const encodedWithdrawData = defaultAbiCoder.encode([WithdrawDataEncoding], [withdrawData]);
+    return keccak256(["bytes"], [encodedWithdrawData]);
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {
     if (!this.signatures || this.signatures.length === 0) {
       throw new Error(`No signatures detected`);
     }
-    const txData = new Interface(ChannelMastercopy.abi).encodeFunctionData("withdraw", [
-      this.recipient,
-      this.assetId,
-      this.amount,
-      this.nonce,
+    const data = new Interface(ChannelMastercopy.abi).encodeFunctionData("withdraw", [
+      this.getWithdrawData(),
       this.aliceSignature,
       this.bobSignature,
     ]);
-    return { to: this.channelAddress, value: 0, data: txData };
+    return { to: this.channelAddress, value: 0, data: data };
   }
+
+  // TODO: include commitment type
   public async addSignatures(signature1?: string, signature2?: string): Promise<void> {
     const hash = this.hashToSign();
     for (const sig of [signature1, signature2]) {

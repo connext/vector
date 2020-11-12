@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
-import { Contract } from "ethers";
 
 import { getTestChannel, alice, bob, getUnsetupChannel } from "..";
 
@@ -28,25 +28,26 @@ describe("CMCCore.sol", function() {
     it("should fail if it has already been setup", async () => {
       const setupTx = await channel.setup(alice.address, bob.address);
       await setupTx.wait();
-
-      await expect(channel.setup(alice.address, bob.address)).revertedWith("ReentrancyGuard: cannot initialize twice");
+      await expect(
+        channel.setup(alice.address, bob.address),
+      ).revertedWith("ReentrancyGuard: ALREADY_INITIALIZED");
     });
 
     it("should fail to setup if alice is not supplied", async () => {
       await expect(channel.setup(AddressZero, bob.address)).revertedWith(
-        "Address zero not allowed as channel participant",
+        "CMCCore: INVALID_PARTICIPANT",
       );
     });
 
     it("should fail to setup if bob is not supplied", async () => {
       await expect(channel.setup(AddressZero, bob.address)).revertedWith(
-        "Address zero not allowed as channel participant",
+        "CMCCore: INVALID_PARTICIPANT",
       );
     });
 
     it("should fail if alice == bob", async () => {
       await expect(channel.setup(alice.address, alice.address)).revertedWith(
-        "Channel participants must be different from each other",
+        "CMCCore: IDENTICAL_PARTICIPANTS",
       );
     });
   });

@@ -1,18 +1,3 @@
-import * as ethers from "ethers";
-import { providers } from "ethers";
-
-export { Contract } from "ethers";
-
-export type JsonRpcProvider = providers.JsonRpcProvider;
-export const JsonRpcProvider = providers.JsonRpcProvider;
-
-export type TransactionReceipt = providers.TransactionReceipt;
-
-export type TransactionResponse = providers.TransactionResponse;
-
-export type BigNumberish = ethers.BigNumberish;
-export type Network = providers.Network;
-export type Transaction = providers.TransactionRequest;
 
 // strings aliases: these function more as documentation for devs than checked types
 export type ABIEncoding = string; // eg "tuple(address to, uint256 amount)"
@@ -26,11 +11,5 @@ export type PublicKey = string; // aka HexString of length 132
 export type PrivateKey = string; // aka Bytes32
 export type SignatureString = string; // aka HexString of length 132
 export type UrlString = string; // eg "<protocol>://<host>[:<port>]/<path>
-
-export interface EthSignature {
-  r: string;
-  s: string;
-  v: string;
-}
 
 export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;

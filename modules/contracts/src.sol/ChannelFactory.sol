@@ -60,7 +60,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         override
         returns (address channel)
     {
-        return _createChannel(alice, bob, chainId);
+        _createChannel(alice, bob, chainId);
     }
 
     /// @dev Allows us to create a new channel contract and fund it in one transaction
@@ -83,11 +83,11 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         if (!LibAsset.isEther(assetId)) {
             require(
                 LibERC20.transferFrom(assetId, msg.sender, address(this), amount),
-                "ChannelFactory: token transferFrom failed"
+                "ChannelFactory: ERC20_TRANSFER_FAILED"
             );
             require(
                 LibERC20.approve(assetId, address(channel), amount),
-                "ChannelFactory: token approve failed"
+                "ChannelFactory: ERC20_APPROVE_FAILED"
             );
         }
         IVectorChannel(channel).depositAlice{value: msg.value}(assetId, amount);

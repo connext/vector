@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { expect } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, One } from "@ethersproject/constants";
-import { BigNumber, Contract } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
 
 import { deployContracts } from "../../actions";
 import { alice, bob } from "../constants";
@@ -44,7 +45,7 @@ describe("CMCDeposit.sol", function() {
 
   it("depositAlice should fail if the amount doesnt match the value", async () => {
     await expect(channel.depositAlice(AddressZero, value, { value: BigNumber.from(0) })).revertedWith(
-      "CMCDeposit: msg.value does not match the provided amount",
+      "CMCDeposit: VALUE_MISMATCH",
     );
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.be.eq(0);
   });

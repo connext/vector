@@ -2,20 +2,24 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+struct WithdrawData {
+  address channelAddress;
+  address assetId;
+  address payable recipient;
+  uint256 amount;
+  uint256 nonce;
+  address callTo;
+  bytes callData;
+}
+
 interface ICMCWithdraw {
   function getWithdrawalTransactionRecord(
-    address recipient,
-    address assetId,
-    uint256 amount,
-    uint256 nonce
+    WithdrawData calldata wd
   ) external view returns (bool);
 
   function withdraw(
-    address payable recipient,
-    address assetId,
-    uint256 amount,
-    uint256 nonce,
-    bytes memory aliceSignature,
-    bytes memory bobSignature
+    WithdrawData calldata wd,
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
   ) external;
 }
