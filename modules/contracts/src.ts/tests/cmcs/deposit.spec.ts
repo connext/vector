@@ -45,7 +45,7 @@ describe("CMCDeposit.sol", function() {
 
   it("depositAlice should fail if the amount doesnt match the value", async () => {
     await expect(channel.depositAlice(AddressZero, value, { value: BigNumber.from(0) })).revertedWith(
-      "CMCDeposit: msg.value does not match the provided amount",
+      "CMCDeposit: VALUE_MISMATCH",
     );
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.be.eq(0);
   });

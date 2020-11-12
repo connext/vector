@@ -22,7 +22,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
   mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
 
   modifier onlySelf() {
-    require(msg.sender == address(this), "AssetTransfer: Can only be called from this contract");
+    require(msg.sender == address(this), "AssetTransfer: NOT_SELF");
     _;
   }
 
@@ -75,7 +75,8 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     uint256 amount
   ) external onlySelf {
     require(
-      LibERC20.transfer(assetId, recipient, amount, ERC20_TRANSFER_GAS_LIMIT)
+      LibERC20.transfer(assetId, recipient, amount, ERC20_TRANSFER_GAS_LIMIT),
+      "AssetTransfer: ERC20_TRANSFER_FAILED"
     );
   }
 
@@ -129,7 +130,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
   ) external override onlyViaProxy nonReentrant {
     require(
       msg.sender == owner || owner == recipient,
-      "AssetTransfer: Either msg.sender or recipient of funds must be the owner of an emergency withdraw"
+      "AssetTransfer: OWNER_MISMATCH"
     );
 
     uint256 maxAmount = emergencyWithdrawableAmount[assetId][owner];
@@ -138,7 +139,10 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
 
     emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
     registerTransfer(assetId, maxAmount);
-    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: Transfer failed");
+    require(
+      LibAsset.transfer(assetId, recipient, amount),
+      "AssetTransfer: ASSET_TRANSFER_FAILED"
+    );
   }
 
 }

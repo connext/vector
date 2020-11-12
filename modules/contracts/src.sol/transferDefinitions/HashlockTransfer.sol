@@ -27,9 +27,9 @@ contract HashlockTransfer is TransferDefinition {
     TransferState memory state = abi.decode(encodedState, (TransferState));
     Balance memory balance = abi.decode(encodedBalance, (Balance));
 
-    require(balance.amount[1] == 0, "Cannot create hashlock transfer with nonzero recipient balance");
-    require(state.lockHash != bytes32(0), "Cannot create hashlock transfer with empty lockHash");
-    require(state.expiry == 0 || state.expiry > block.number, "Cannot create hashlock transfer with expired timelock");
+    require(balance.amount[1] == 0, "HashlockTransfer: NONZERO_RECIPIENT_BALANCE");
+    require(state.lockHash != bytes32(0), "HashlockTransfer: EMPTY_LOCKHASH");
+    require(state.expiry == 0 || state.expiry > block.number, "HashlockTransfer: EXPIRED_TIMELOCK");
     return true;
   }
 
@@ -47,15 +47,15 @@ contract HashlockTransfer is TransferDefinition {
     if (resolver.preImage != bytes32(0) && (state.expiry == 0 || state.expiry > block.number)) {
       // Check hash for normal payment unlock
       bytes32 generatedHash = sha256(abi.encode(resolver.preImage));
-      require(state.lockHash == generatedHash, "Hash generated from preimage does not match hash in state");
+      require(state.lockHash == generatedHash, "HashlockTransfer: INVALID_PREIMAGE");
 
       // Update state
       balance.amount[1] = balance.amount[0];
       balance.amount[0] = 0;
     } else {
       // To cancel, the preImage must be empty (not simply incorrect)
-      require(resolver.preImage == bytes32(0), "Must provide empty hash to cancel payment");
-
+      // TODO: rm this assertion bc it will always succeed given the if statement that leads us here
+      require(resolver.preImage == bytes32(0), "HashlockTransfer: NONZERO_LOCKHASH");
       // There are no additional state mutations
     }
 

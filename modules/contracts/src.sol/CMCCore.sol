@@ -29,9 +29,9 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
   /// @param _bob: Address representing user with multisig deposit
   function setup(address _alice, address _bob) external override onlyViaProxy {
     ReentrancyGuard.setup();
-    require(alice == address(0), "Channel has already been setup");
-    require(_alice != address(0) && _bob != address(0), "Address zero not allowed as channel participant");
-    require(_alice != _bob, "Channel participants must be different from each other");
+    require(alice == address(0), "CMCCore: ALREADY_SETUP");
+    require(_alice != address(0) && _bob != address(0), "CMCCore: INVALID_PARTICIPANT");
+    require(_alice != _bob, "CMCCore: IDENTICAL_PARTICIPANTS");
     alice = _alice;
     bob = _bob;
   }
