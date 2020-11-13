@@ -1,7 +1,7 @@
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
-import { FullChannelState, ChannelCommitmentData, FullTransferState } from "./channel";
+import { FullChannelState, FullTransferState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
 
@@ -21,18 +21,13 @@ export interface IVectorStore {
     participantB: string,
     chainId: number,
   ): Promise<FullChannelState | undefined>;
-  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined>;
   // Should return all initial transfer state data needed to
   // create the merkle root
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]>;
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
 
   // Setters
-  saveChannelState(
-    channelState: FullChannelState,
-    commitment: ChannelCommitmentData,
-    transfer?: FullTransferState,
-  ): Promise<void>;
+  saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;
 
   saveChannelDispute(
     channel: FullChannelState,

@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- introduce and use commitment types
+
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
 
 - implement generalized withdrawals
