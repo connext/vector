@@ -1,10 +1,10 @@
 {
   "4": {
     "ChannelMastercopy": {
-      "address": "0x51BA3509be9AC3B0c9eF35d405a5bBF50E20cB01",
-      "creationCodeHash": "0xace00e1f218afd33c0581bbbf0f921e80daef60ced3ab9621e956c4356b00e84",
-      "runtimeCodeHash": "0x426ae7c6070c6549b2badfc8fc0a3443cc7cdce03a839d83ba97e1ac21f77b37",
-      "txHash": "0xea81a0e142314a4beacbc2c8bb59e0f86af8d5f590b31b0e468068762aa90a09"
+      "address": "0x8622E4F6D98794F150Aee7c5b6121608849FB07c",
+      "creationCodeHash": "0x2114cfe541fceeb921e51c8a07484bb1cbfd3d72211feef57bd1d626e1d69837",
+      "runtimeCodeHash": "0xddb7718da4b06bd8be1eab58fcc1a650c79be6430fe88c62e3c9d0cb8cec6e39",
+      "txHash": "0x1a73826f541d25ca329067e4ab648901bd6db8b879f0d488059789d878dfc781"
     },
     "ChannelFactory": {
       "address": "0xf7Ddd2bA512F86Be8512Fa7C7c02244bF8DB1404",
@@ -48,10 +48,10 @@
       "txHash": "0x2e1c01051d5d692300edddab404117cbeaa95bc30cad6cdef9849e7424633ed4"
     },
     "ChannelMastercopy": {
-      "address": "0x3d2b45f2eE2d9b5168d3B2B849df3FD17EAF24bc",
-      "creationCodeHash": "0xace00e1f218afd33c0581bbbf0f921e80daef60ced3ab9621e956c4356b00e84",
-      "runtimeCodeHash": "0x426ae7c6070c6549b2badfc8fc0a3443cc7cdce03a839d83ba97e1ac21f77b37",
-      "txHash": "0xb89ba356d330f39a83d1800801d45f2f2b6b347bf23ea8ee00b35bc97fa5d32a"
+      "address": "0x7D2C920e36F03Fb8AE4Fe5ef5968c03E97489eA7",
+      "creationCodeHash": "0x2114cfe541fceeb921e51c8a07484bb1cbfd3d72211feef57bd1d626e1d69837",
+      "runtimeCodeHash": "0xddb7718da4b06bd8be1eab58fcc1a650c79be6430fe88c62e3c9d0cb8cec6e39",
+      "txHash": "0x61f14a8dbf85124d7b169505417a349d432e8b0277ca1462f848f14eb5f8de96"
     },
     "ChannelFactory": {
       "address": "0xBC27F6a346DF0D53beEF8e6293d1eE846d593FE1",
@@ -89,10 +89,10 @@
       "txHash": "0x2dae52ef6887f4e128fda276f50a7a99fbf200a3b5aedc769c7358e95d7edbaf"
     },
     "ChannelMastercopy": {
-      "address": "0x4a5cd58b24e3BF04360B06bFEaF45A39aA8035b6",
-      "creationCodeHash": "0xace00e1f218afd33c0581bbbf0f921e80daef60ced3ab9621e956c4356b00e84",
-      "runtimeCodeHash": "0x426ae7c6070c6549b2badfc8fc0a3443cc7cdce03a839d83ba97e1ac21f77b37",
-      "txHash": "0x0c53108bd511c1fb53c8eee7a4a187fb3240b1807b4a89b4a6820b1c66878f10"
+      "address": "0x058f7CeFf4a998E5ce3CE7a8e913e32e9fA52601",
+      "creationCodeHash": "0x2114cfe541fceeb921e51c8a07484bb1cbfd3d72211feef57bd1d626e1d69837",
+      "runtimeCodeHash": "0xddb7718da4b06bd8be1eab58fcc1a650c79be6430fe88c62e3c9d0cb8cec6e39",
+      "txHash": "0x3f082424101e0ce97b2e27e7a89ea841d4dca8c3bc1ef1070aeb23f7b530b4aa"
     },
     "ChannelFactory": {
       "address": "0x4EeE4559BD589b1cdFc419f0EEd2Ff9cBD47F439",
