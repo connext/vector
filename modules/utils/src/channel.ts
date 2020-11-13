@@ -29,7 +29,7 @@ export const hashCoreChannelState = (state: CoreChannelState): string =>
 // );
 export const hashChannelCommitment = (commitment: ChannelCommitmentData): string => {
   const encoded = defaultAbiCoder.encode(
-    ["uint256", "bytes"],
+    ["uint", "bytes"],
     [ChannelCommitmentTypes.ChannelState, hashCoreChannelState(commitment.state)],
   );
   return keccak256(["bytes"], [encoded]);
