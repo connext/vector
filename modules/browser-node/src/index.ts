@@ -56,7 +56,7 @@ export type BrowserNodeOpts = {
 
 export class BrowserNode implements INodeService {
   private channelProvider: IRpcChannelProvider;
-  private constructor({ engine, chainService, iframeSrc }: BrowserNodeOpts) {
+  private constructor({ engine, iframeSrc }: BrowserNodeOpts) {
     if (engine) {
       this.channelProvider = new DirectProvider(engine);
     } else {
