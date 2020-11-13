@@ -83,7 +83,7 @@ export class WithdrawCommitment {
   public hashToSign(): string {
     const encodedWithdrawData = defaultAbiCoder.encode([WithdrawDataEncoding], [this.getWithdrawData()]);
     const wdHash = keccak256(["bytes"], [encodedWithdrawData]);
-    const encoded = defaultAbiCoder.encode(["uint", "bytes32"], [ChannelCommitmentTypes.WithdrawData, wdHash]);
+    const encoded = defaultAbiCoder.encode(["uint8", "bytes32"], [ChannelCommitmentTypes.WithdrawData, wdHash]);
     return keccak256(["bytes"], [encoded]);
   }
 
