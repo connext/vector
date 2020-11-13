@@ -23,7 +23,7 @@ import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
-import { bob, alice, chainIdReq, provider, rando } from "../constants";
+import { bob, alice, networkName, provider, rando } from "../constants";
 import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
 
 describe("CMCAdjudicator.sol", async function() {
@@ -32,7 +32,7 @@ describe("CMCAdjudicator.sol", async function() {
   // These tests could be running on chains without automining
   // (i.e. matic), and if that is the case all the adjudicator tests
   // with automining should be skipped
-  const nonAutomining = (await chainIdReq) === 1337;
+  const nonAutomining = networkName !== "hardhat";
 
   let channel: Contract;
   let token: Contract;
