@@ -6,6 +6,7 @@ import {
   createlockHash,
   getBalanceForAssetId,
   getRandomBytes32,
+  delay,
 } from "@connext/vector-utils";
 import React, { useState } from "react";
 import pino from "pino";
@@ -41,6 +42,7 @@ function App() {
         iframeSrc,
         logger: pino(),
       });
+      await delay(5_000);
       const rpc: EngineParams.RpcRequest = {
         id: Date.now(),
         jsonrpc: "2.0",
@@ -247,7 +249,7 @@ function App() {
           <>
             <Col span={16}>
               <Input.Search
-                placeholder="IFrame Src"
+                placeholder="IFrame Src (blank for localhost:3030)"
                 enterButton="Setup Node"
                 size="large"
                 onSearch={connectNode}
