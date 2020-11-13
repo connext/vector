@@ -1,4 +1,9 @@
-import { MinimalTransaction, WithdrawCommitmentJson, WithdrawDataEncoding } from "@connext/vector-types";
+import {
+  MinimalTransaction,
+  WithdrawCommitmentJson,
+  WithdrawDataEncoding,
+  ChannelCommitmentTypes,
+} from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Interface, defaultAbiCoder } from "@ethersproject/abi";
@@ -78,7 +83,7 @@ export class WithdrawCommitment {
   public hashToSign(): string {
     const withdrawData = this.getWithdrawData();
     const encodedWithdrawData = defaultAbiCoder.encode([WithdrawDataEncoding], [withdrawData]);
-    return keccak256(["bytes"], [encodedWithdrawData]);
+    return keccak256(["uint256", "bytes"], [ChannelCommitmentTypes.WithdrawData, encodedWithdrawData]);
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {

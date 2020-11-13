@@ -72,6 +72,11 @@ export type Balance = {
   to: Address[];
 };
 
+export enum ChannelCommitmentTypes {
+  ChannelState,
+  WithdrawData,
+}
+
 export const CoreChannelStateEncoding = tidy(`tuple(
   address channelAddress,
   address alice,
