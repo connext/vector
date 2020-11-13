@@ -72,6 +72,11 @@ export type Balance = {
   to: Address[];
 };
 
+export enum ChannelCommitmentTypes {
+  ChannelState,
+  WithdrawData,
+}
+
 export const CoreChannelStateEncoding = tidy(`tuple(
   address channelAddress,
   address alice,
@@ -108,14 +113,6 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   networkContext: NetworkContext;
   inDispute: boolean;
 };
-
-export interface ChannelCommitmentData {
-  state: CoreChannelState;
-  aliceSignature?: string;
-  bobSignature?: string;
-  channelFactoryAddress: Address;
-  chainId: number;
-}
 
 export const CoreTransferStateEncoding = tidy(`tuple(
   address channelAddress,

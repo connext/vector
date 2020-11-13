@@ -1,5 +1,4 @@
 import {
-  ChannelCommitmentData,
   ChannelDispute,
   FullChannelState,
   FullTransferState,
@@ -106,11 +105,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.transactions.clear();
   }
 
-  async saveChannelState(
-    channelState: FullChannelState<any>,
-    commitment: ChannelCommitmentData,
-    transfer?: FullTransferState,
-  ): Promise<void> {
+  async saveChannelState(channelState: FullChannelState<any>, transfer?: FullTransferState): Promise<void> {
     await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
       await this.db.channels.put(channelState);
       if (channelState.latestUpdate.type === UpdateType.create) {
@@ -151,20 +146,6 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
       .equals([participantB, participantA, chainId])
       .first();
     return channel;
-  }
-
-  async getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
-    const channel = await this.db.channels.get(channelAddress);
-    if (!channel) {
-      return undefined;
-    }
-    return {
-      chainId: channel.networkContext.chainId,
-      channelFactoryAddress: channel.networkContext.channelFactoryAddress,
-      state: channel,
-      aliceSignature: channel.latestUpdate.aliceSignature,
-      bobSignature: channel.latestUpdate.bobSignature,
-    };
   }
 
   async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {

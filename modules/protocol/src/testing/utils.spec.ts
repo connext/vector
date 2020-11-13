@@ -33,13 +33,6 @@ type ReconcileDepositTest = {
 };
 
 describe("utils", () => {
-  describe.skip("addEvtHandler", () => {
-    it("should attach with callback", async () => {});
-    it("should attach with callback + filter", async () => {});
-    it("should attach with callback + timeout", async () => {});
-    it("should attach with callback + filter + timeout", async () => {});
-  });
-
   describe("generateSignedChannelCommitment", () => {
     const signer = getRandomChannelSigner();
     const counterpartyAddress = mkAddress();
@@ -114,11 +107,6 @@ describe("utils", () => {
 
       it(name, async () => {
         const { networkContext, ...core } = state;
-        const unsigned = {
-          chainId: networkContext.chainId,
-          state: core,
-          channelFactoryAddress: networkContext.channelFactoryAddress,
-        };
         // Run the test
         const result = (
           await generateSignedChannelCommitment(state, signer, update.aliceSignature, update.bobSignature)
@@ -126,24 +114,24 @@ describe("utils", () => {
 
         const aliceSignature =
           expected.aliceSignature === "sig"
-            ? await signer.signMessage(hashChannelCommitment(unsigned))
+            ? await signer.signMessage(hashChannelCommitment(core))
             : expected.aliceSignature;
         const bobSignature =
           expected.bobSignature === "sig"
-            ? await signer.signMessage(hashChannelCommitment(unsigned))
+            ? await signer.signMessage(hashChannelCommitment(core))
             : expected.bobSignature;
 
         const expectedSigs: string[] = [];
         for (let i = 0; i < 2; i++) {
           if (expected[i] == "sig") {
-            expectedSigs[i] = await signer.signMessage(hashChannelCommitment(unsigned));
+            expectedSigs[i] = await signer.signMessage(hashChannelCommitment(core));
           } else {
             expectedSigs[i] = expected[i];
           }
         }
 
         expect(result).to.deep.eq({
-          ...unsigned,
+          core,
           aliceSignature,
           bobSignature,
         });
@@ -157,12 +145,6 @@ describe("utils", () => {
     const wrongSigner = getRandomChannelSigner();
     const state = createTestChannelState("create", { alice: aliceSigner.address, bob: bobSigner.address });
     const { networkContext, ...core } = state;
-    const unsigned = {
-      chainId: networkContext.chainId,
-      state: core,
-      channelFactoryAddress: networkContext.channelFactoryAddress,
-      signatures: [],
-    };
 
     const tests = [
       {
@@ -199,11 +181,11 @@ describe("utils", () => {
         // Have to do this because of weird race conditions around looping
         for (let i = 0; i < 2; i++) {
           if (updateSignatures[i] == "bobSig") {
-            signatures[i] = await bobSigner.signMessage(hashChannelCommitment(unsigned));
+            signatures[i] = await bobSigner.signMessage(hashChannelCommitment(core));
           } else if (updateSignatures[i] == "aliceSig") {
-            signatures[i] = await aliceSigner.signMessage(hashChannelCommitment(unsigned));
+            signatures[i] = await aliceSigner.signMessage(hashChannelCommitment(core));
           } else if (updateSignatures[i] == "wrongSig") {
-            signatures[i] = await wrongSigner.signMessage(hashChannelCommitment(unsigned));
+            signatures[i] = await wrongSigner.signMessage(hashChannelCommitment(core));
           } else {
             signatures[i] = updateSignatures[i];
           }
@@ -228,13 +210,6 @@ describe("utils", () => {
   });
 
   describe("reconcileDeposit", () => {
-    // FIXME: THESE ARE BLOCKING TESTS!
-    it.skip("should fail if it cannot get the onchain balance", () => {});
-    it.skip("should fail if it cannot get the latest deposit a", () => {});
-    it.skip("should work if the offchain latest nonce is less than the onchain latest nonce", () => {});
-    it.skip("should work if the offchain latest nonce is greater than the onchain latest nonce", () => {});
-    it.skip("should work if the offchain latest nonce is equal to the onchain latest nonce", () => {});
-
     const channelAddress = mkAddress("0xccc");
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
     const to = [mkAddress("0xaaa"), mkAddress("0xbbb")];

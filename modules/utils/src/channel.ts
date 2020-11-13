@@ -1,31 +1,28 @@
-import { Balance, ChannelCommitmentData, CoreChannelState, CoreChannelStateEncoding } from "@connext/vector-types";
+import { Balance, CoreChannelState, CoreChannelStateEncoding, ChannelCommitmentTypes } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { keccak256 } from "@ethersproject/solidity";
 
-export const hashBalance = (balance: Balance): string => keccak256(
-  ["bytes32", "bytes32"],
-  [keccak256(["uint256[]"], [balance.amount]), keccak256(["address[]"], [balance.to])],
-);
+export const hashBalance = (balance: Balance): string =>
+  keccak256(
+    ["bytes32", "bytes32"],
+    [keccak256(["uint256[]"], [balance.amount]), keccak256(["address[]"], [balance.to])],
+  );
 
-export const hashBalances = (balances: Balance[]): string => keccak256(
-  ["bytes32[]"],
-  [balances.map(hashBalance)],
-);
+export const hashBalances = (balances: Balance[]): string => keccak256(["bytes32[]"], [balances.map(hashBalance)]);
 
-export const encodeCoreChannelState = (state: CoreChannelState): string => defaultAbiCoder.encode(
-  [CoreChannelStateEncoding],
-  [state],
-);
+export const encodeCoreChannelState = (state: CoreChannelState): string =>
+  defaultAbiCoder.encode([CoreChannelStateEncoding], [state]);
 
-export const hashCoreChannelState = (state: CoreChannelState): string => keccak256(
-  ["bytes"],
-  [encodeCoreChannelState(state)],
-);
+export const hashCoreChannelState = (state: CoreChannelState): string =>
+  keccak256(["bytes"], [encodeCoreChannelState(state)]);
 
-export const hashChannelCommitment = (commitment: ChannelCommitmentData): string => keccak256(
-  ["bytes32", "address", "uint256"],
-  [hashCoreChannelState(commitment.state), commitment.channelFactoryAddress, commitment.chainId.toString()],
-);
+export const hashChannelCommitment = (state: CoreChannelState): string => {
+  const encoded = defaultAbiCoder.encode(
+    ["uint8", "bytes32"],
+    [ChannelCommitmentTypes.ChannelState, hashCoreChannelState(state)],
+  );
+  return keccak256(["bytes"], [encoded]);
+};
 
 export const getBalanceForAssetId = (
   channel: CoreChannelState,

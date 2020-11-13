@@ -12,7 +12,6 @@ import {
   Values,
   DEFAULT_TRANSFER_TIMEOUT,
   FullTransferState,
-  ChannelCommitmentData,
   ValidationError,
   CreateUpdateDetails,
   ResolveUpdateDetails,
@@ -257,7 +256,6 @@ type InboundValidationResult<T extends UpdateType = any> = Result<
   {
     validUpdate: ChannelUpdate<T>;
     nextState: FullChannelState<T>;
-    commitment: ChannelCommitmentData;
     activeTransfers: FullTransferState[]; // after applyUpdate
     transfer?: FullTransferState; // after applyUpdate
   },

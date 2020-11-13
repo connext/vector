@@ -10,6 +10,7 @@ import {
   expect,
   getRandomAddress,
   getRandomBytes32,
+  hashChannelCommitment,
   hashCoreChannelState,
   hashCoreTransferState,
   hashTransferState,
@@ -92,7 +93,7 @@ describe("CMCAdjudicator.sol", function() {
 
   // Create a helper to dispute channel + bring to defund phase
   const disputeChannel = async (ccs: FullChannelState = channelState) => {
-    const hash = hashCoreChannelState(ccs);
+    const hash = hashChannelCommitment(ccs);
     const tx = await channel.disputeChannel(
       ccs,
       await aliceSigner.signMessage(hash),
@@ -193,7 +194,7 @@ describe("CMCAdjudicator.sol", function() {
       nonce: 3,
       merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
     });
-    const channelHash = hashCoreChannelState(channelState);
+    const channelHash = hashChannelCommitment(channelState);
     aliceSignature = await aliceSigner.signMessage(channelHash);
     bobSignature = await bobSigner.signMessage(channelHash);
     // make sure channel is connected to rando
@@ -236,7 +237,7 @@ describe("CMCAdjudicator.sol", function() {
         this.skip();
       }
       const shortTimeout = { ...channelState, timeout: "2" };
-      const hash = hashCoreChannelState(shortTimeout);
+      const hash = hashChannelCommitment(shortTimeout);
       const tx = await channel.disputeChannel(
         shortTimeout,
         await aliceSigner.signMessage(hash),
@@ -249,7 +250,7 @@ describe("CMCAdjudicator.sol", function() {
       await mineBlock();
 
       const nextState = { ...shortTimeout, nonce: channelState.nonce + 1 };
-      const hash2 = hashCoreChannelState(nextState);
+      const hash2 = hashChannelCommitment(nextState);
       await expect(
         channel.disputeChannel(nextState, await aliceSigner.signMessage(hash2), await bobSigner.signMessage(hash2)),
       ).revertedWith("CMCAdjudicator: INVALID_PHASE");
@@ -281,7 +282,7 @@ describe("CMCAdjudicator.sol", function() {
       await verifyChannelDispute(channelState, blockNumber);
       // Submit a new, higher nonced state
       const newState = { ...channelState, nonce: channelState.nonce + 1 };
-      const hash = hashCoreChannelState(newState);
+      const hash = hashChannelCommitment(newState);
       const tx2 = await channel.disputeChannel(
         newState,
         await aliceSigner.signMessage(hash),
@@ -341,9 +342,7 @@ describe("CMCAdjudicator.sol", function() {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       const { blockNumber } = await tx.wait();
       await verifyChannelDispute(channelState, blockNumber);
-      await expect(channel.defundChannel(channelState)).revertedWith(
-        "CMCAdjudicator: INVALID_PHASE",
-      );
+      await expect(channel.defundChannel(channelState)).revertedWith("CMCAdjudicator: INVALID_PHASE");
     });
 
     it("should fail if defund nonce does not increment", async function() {
@@ -352,9 +351,7 @@ describe("CMCAdjudicator.sol", function() {
       }
       const toDispute = { ...channelState, defundNonce: "0" };
       await disputeChannel(toDispute);
-      await expect(channel.defundChannel(toDispute)).revertedWith(
-        "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED",
-      );
+      await expect(channel.defundChannel(toDispute)).revertedWith("CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
     });
 
     it("should work (simple case)", async function() {
@@ -573,9 +570,7 @@ describe("CMCAdjudicator.sol", function() {
             ),
             encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
           ),
-      ).revertedWith(
-        "CMCAdjudicator: INVALID_TRANSFER_HASH",
-      );
+      ).revertedWith("CMCAdjudicator: INVALID_TRANSFER_HASH");
     });
 
     // TODO: need to write a transfer def for this

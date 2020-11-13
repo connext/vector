@@ -175,17 +175,7 @@ export async function outbound(
   }
 
   try {
-    await storeService.saveChannelState(
-      { ...nextState, latestUpdate: counterpartyUpdate },
-      {
-        channelFactoryAddress: nextState.networkContext.channelFactoryAddress,
-        state: nextState,
-        chainId: nextState.networkContext.chainId,
-        aliceSignature: counterpartyUpdate.aliceSignature,
-        bobSignature: counterpartyUpdate.bobSignature,
-      },
-      transfer,
-    );
+    await storeService.saveChannelState({ ...nextState, latestUpdate: counterpartyUpdate }, transfer);
     return Result.ok({
       updatedChannel: { ...nextState, latestUpdate: counterpartyUpdate },
       updatedTransfers: updatedActiveTransfers,
@@ -358,11 +348,11 @@ export async function inbound(
       return returnError(validateRes.getError()!.message, previousUpdate, previousState);
     }
 
-    const { commitment, nextState: syncedChannel, transfer } = validateRes.getValue()!;
+    const { nextState: syncedChannel, transfer } = validateRes.getValue()!;
 
     // Save the newly signed update to your channel
     try {
-      await storeService.saveChannelState(syncedChannel, commitment, transfer);
+      await storeService.saveChannelState(syncedChannel, transfer);
     } catch (e) {
       return returnError(InboundChannelUpdateError.reasons.SaveChannelFailed, update, previousState, {
         error: e.message,
@@ -388,11 +378,11 @@ export async function inbound(
     return returnError(validateRes.getError()!.message, update, previousState);
   }
 
-  const { commitment, nextState, transfer, activeTransfers } = validateRes.getValue()!;
+  const { nextState, transfer, activeTransfers } = validateRes.getValue()!;
 
   // Save the newly signed update to your channel
   try {
-    await storeService.saveChannelState(nextState, commitment, transfer);
+    await storeService.saveChannelState(nextState, transfer);
   } catch (e) {
     return returnError(InboundChannelUpdateError.reasons.SaveChannelFailed, update, previousState, {
       error: e.message,
@@ -483,10 +473,10 @@ const syncStateAndRecreateUpdate = async (
     );
   }
 
-  const { commitment, nextState: syncedChannel, transfer, activeTransfers } = validateRes.getValue()!;
+  const { nextState: syncedChannel, transfer, activeTransfers } = validateRes.getValue()!;
 
   // Save the newly signed update to your channel
-  await storeService.saveChannelState(syncedChannel, commitment, transfer);
+  await storeService.saveChannelState(syncedChannel, transfer);
 
   // Update successfully validated and applied to channel, now
   // regenerate the update to send to the counterparty from the
