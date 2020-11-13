@@ -1,7 +1,7 @@
 import {
   Balance,
-  ChannelCommitmentData,
   ChannelUpdate,
+  CoreChannelState,
   CreateTransferParams,
   CreateUpdateDetails,
   DepositParams,
@@ -19,21 +19,6 @@ import {
 } from "@connext/vector-types";
 import { BigNumber } from "ethers";
 import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
-import { Evt } from "evt";
-
-// Adds a handler to an evt instance and returns the result
-// based on the input arguments
-export function addEvtHandler<T = any>(
-  evt: Evt<T>,
-  callback: (event: T) => void | Promise<void>,
-  filter?: (event: T) => boolean,
-  timeout?: number,
-): Evt<T> | Promise<T> {
-  // NOTE: If this type is not an array with a length, then using
-  // the spread operator will cause errors on the evt package
-  const attachArgs = [filter, timeout, callback].filter(x => !!x) as [any, any, any];
-  return evt.attach(...attachArgs);
-}
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
 // must be converted to the `UpdateParams<T> when syncing
@@ -114,18 +99,13 @@ export async function generateSignedChannelCommitment(
   signer: IChannelSigner,
   aliceSignature?: string,
   bobSignature?: string,
-): Promise<Result<ChannelCommitmentData, Error>> {
+): Promise<Result<{ core: CoreChannelState; aliceSignature?: string; bobSignature?: string }, Error>> {
   const { networkContext, ...core } = newState;
 
-  const unsigned = {
-    chainId: networkContext.chainId,
-    state: core,
-    channelFactoryAddress: networkContext.channelFactoryAddress,
-  };
   if (aliceSignature && bobSignature) {
     // No need to sign, we have already signed
     return Result.ok({
-      ...unsigned,
+      core,
       aliceSignature,
       bobSignature,
     });
@@ -133,10 +113,10 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   try {
-    const sig = await signer.signMessage(hashChannelCommitment(unsigned));
+    const sig = await signer.signMessage(hashChannelCommitment(core));
     const isAlice = signer.address === newState.alice;
     return Result.ok({
-      ...unsigned,
+      core,
       aliceSignature: isAlice ? sig : aliceSignature,
       bobSignature: isAlice ? bobSignature : sig,
     });
@@ -155,11 +135,7 @@ export async function validateChannelUpdateSignatures(
   const { networkContext, ...core } = state;
   let hash;
   try {
-    hash = hashChannelCommitment({
-      chainId: networkContext.chainId,
-      state: core,
-      channelFactoryAddress: networkContext.channelFactoryAddress,
-    });
+    hash = hashChannelCommitment(core);
   } catch (e) {
     return Result.fail(new Error("Failed to generate channel commitment hash"));
   }

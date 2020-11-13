@@ -2,7 +2,6 @@
 import {
   FullTransferState,
   FullChannelState,
-  ChannelCommitmentData,
   IEngineStore,
   WithdrawCommitmentJson,
   StoredTransaction,
@@ -23,7 +22,7 @@ export class MemoryStoreService implements IEngineStore {
     if (existing) {
       this.channelStates.set(channel.channelAddress, {
         ...existing,
-        state: { ...existing.state, inDispute: channel.inDispute },
+        inDispute: channel.inDispute,
       });
     }
     if (transferDispute && this.transfers.has(transferDispute.transferId)) {
@@ -62,7 +61,7 @@ export class MemoryStoreService implements IEngineStore {
   private transfers: Map<string, FullTransferState> = new Map();
 
   // Map<channelAddress, channelState>
-  private channelStates: Map<string, { state: FullChannelState; commitment: ChannelCommitmentData }> = new Map();
+  private channelStates: Map<string, FullChannelState> = new Map();
 
   private schemaVersion: number | undefined = undefined;
 
@@ -85,7 +84,7 @@ export class MemoryStoreService implements IEngineStore {
   }
 
   getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
-    const { state } = this.channelStates.get(channelAddress) ?? {};
+    const state = this.channelStates.get(channelAddress);
     return Promise.resolve(state);
   }
 
@@ -96,27 +95,20 @@ export class MemoryStoreService implements IEngineStore {
   ): Promise<FullChannelState<any> | undefined> {
     return Promise.resolve(
       [...this.channelStates.values()].find(channelState => {
-        channelState.state.alice === participantA &&
-          channelState.state.bob === participantB &&
-          channelState.state.networkContext.chainId === chainId;
-      })?.state,
+        channelState.alice === participantA &&
+          channelState.bob === participantB &&
+          channelState.networkContext.chainId === chainId;
+      }),
     );
   }
 
   getChannelStates(): Promise<FullChannelState[]> {
-    return Promise.resolve([...this.channelStates.values()].map(c => c.state));
+    return Promise.resolve([...this.channelStates.values()]);
   }
 
-  saveChannelState(
-    channelState: FullChannelState,
-    commitment: ChannelCommitmentData,
-    transfer?: FullTransferState,
-  ): Promise<void> {
+  saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
     this.channelStates.set(channelState.channelAddress, {
-      state: {
-        ...channelState,
-      },
-      commitment,
+      ...channelState,
     });
     if (!transfer) {
       return Promise.resolve();
@@ -153,10 +145,6 @@ export class MemoryStoreService implements IEngineStore {
 
   getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
     throw new Error("Method not implemented.");
-  }
-
-  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
-    return Promise.resolve(this.channelStates.get(channelAddress)?.commitment);
   }
 
   getSchemaVersion(): Promise<number | undefined> {

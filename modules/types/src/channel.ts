@@ -114,14 +114,6 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   inDispute: boolean;
 };
 
-export interface ChannelCommitmentData {
-  state: CoreChannelState;
-  aliceSignature?: string;
-  bobSignature?: string;
-  channelFactoryAddress: Address;
-  chainId: number;
-}
-
 export const CoreTransferStateEncoding = tidy(`tuple(
   address channelAddress,
   bytes32 transferId,
