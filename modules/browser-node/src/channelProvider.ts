@@ -95,7 +95,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       if (this.iframe.contentWindow === null) {
         throw new Error("iframe inner page not loaded!");
       }
-      this.events.on(`${rpc.id}`, response => {
+      this.events.once(`${rpc.id}`, response => {
         console.log("RECEIVED response: ", response);
         if (response?.result) {
           resolve(response?.result);
@@ -108,7 +108,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
         }
       });
       console.log("SENDING RPC: ", JSON.stringify(rpc));
-      console.log("this.iframe: ", this.iframe);
       this.iframe.contentWindow.postMessage(JSON.stringify(rpc), "*");
     });
   }
@@ -198,7 +197,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   public handleIncomingMessages(e: MessageEvent): void {
     const iframeOrigin = new URL(this.opts.src).origin;
     if (e.origin === iframeOrigin) {
-      console.log("e.origin === iframeOrigin");
       if (typeof e.data !== "string") {
         throw new Error(`Invalid incoming message data:${e.data}`);
       }
@@ -219,10 +217,12 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public subscribe(): void {
     if (this.subscribed) {
+      console.log("subscribe() -----> this.subscribed = true");
       return;
     }
-    this.subscribed = true;
     window.addEventListener("message", this.handleIncomingMessages.bind(this));
+    this.subscribed = true;
+    console.log("subscribe() -----> subscribed to message event");
   }
 
   public unsubscribe(): void {
@@ -268,7 +268,7 @@ export class DirectProvider implements IRpcChannelProvider {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    this.engine.on(event, callback, filter);
   }
 
   async once<T extends EngineEvent>(
@@ -276,7 +276,7 @@ export class DirectProvider implements IRpcChannelProvider {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    this.engine.once(event, callback, filter);
   }
 }
 
