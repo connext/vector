@@ -145,12 +145,12 @@ export interface CoreTransferState {
   initialStateHash: string;
 }
 
-export type FullTransferState<T extends TransferName = any> = CoreTransferState & {
+export type FullTransferState = CoreTransferState & {
   channelFactoryAddress: string; // networkContext?
   chainId: number;
-  transferEncodings: typeof TransferEncodingsMap[T]; // Initial state encoding, resolver encoding
-  transferState: TransferStateMap[T];
-  transferResolver?: TransferResolverMap[T]; // undefined iff not resolved
+  transferEncodings: string[]; // Initial state encoding, resolver encoding
+  transferState: any;
+  transferResolver?: any; // undefined iff not resolved
   meta?: any;
   inDispute: boolean;
 };

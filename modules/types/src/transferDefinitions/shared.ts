@@ -42,14 +42,14 @@ export const TransferEncodingsMap = {
   [WithdrawName]: [WithdrawStateEncoding, WithdrawResolverEncoding],
 } as const;
 
-export type TransferName = keyof typeof TransferNames;
-export type TransferState = Values<TransferStateMap>;
-export type TransferResolver = Values<TransferResolverMap>;
-export type TransferEncodings = Values<typeof TransferEncodingsMap>;
+export type TransferName = keyof typeof TransferNames | string;
+export type TransferState = Values<TransferStateMap> | any;
+export type TransferResolver = Values<TransferResolverMap> | any;
+export type TransferEncodings = Values<typeof TransferEncodingsMap> | [string, string];
 
-export type RegisteredTransfer<T extends TransferName = any> = {
-  stateEncoding: typeof TransferEncodingsMap[T][0];
-  resolverEncoding: typeof TransferEncodingsMap[T][1];
+export type RegisteredTransfer = {
+  stateEncoding: string;
+  resolverEncoding: string;
   definition: Address;
-  name: T;
+  name: string;
 };
