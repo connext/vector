@@ -57,22 +57,29 @@ export interface IRpcChannelProvider {
 
 export class IframeChannelProvider extends EventEmitter<string> implements IRpcChannelProvider {
   public iframe: HTMLIFrameElement | undefined;
-  public opts: IframeOptions;
   public connected = false;
 
   private subscribed = false;
   private events = new EventEmitter<string>();
 
-  constructor(opts: IframeOptions) {
+  private constructor(private readonly opts: IframeOptions) {
     super();
-    this.opts = opts;
-    if (document.readyState === "loading") {
-      window.addEventListener("DOMContentLoaded", () => {
-        this.open();
-      });
-    } else {
-      this.open();
-    }
+  }
+
+  static async connect(opts: IframeOptions): Promise<IframeChannelProvider> {
+    const cp = new IframeChannelProvider(opts);
+    await new Promise(async res => {
+      if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", async () => {
+          await cp.open();
+          res();
+        });
+      } else {
+        await cp.open();
+        res();
+      }
+    });
+    return cp;
   }
 
   async open(): Promise<void> {
@@ -233,14 +240,14 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     window.removeEventListener("message", this.handleIncomingMessages.bind(this));
   }
 
-  private onConnect() {
+  private onConnect(): void {
     console.log("IFRAME CONNECTED");
     this.connected = true;
     this.events.emit("connect");
     this.events.emit("open");
   }
 
-  private onDisconnect() {
+  private onDisconnect(): void {
     this.connected = false;
     this.events.emit("disconnect");
     this.events.emit("close");
@@ -250,6 +257,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 export class DirectProvider implements IRpcChannelProvider {
   public connected = false;
   constructor(private readonly engine: IVectorEngine) {}
+
   async send(payload: EngineParams.RpcRequest): Promise<any> {
     const rpc = constructRpcRequest(payload.method as any, payload.params);
     const res = await this.engine.request(rpc);

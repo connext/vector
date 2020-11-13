@@ -16,22 +16,10 @@ import {
   Result,
   NodeParams,
   NodeResponses,
-  ChannelRpcMethod,
-  ChannelRpcMethodsPayloadMap,
-  ChannelRpcMethodsResponsesMap,
-  JsonRpcRequest,
   EngineParams,
 } from "@connext/vector-types";
-import {
-  bufferify,
-  constructRpcRequest,
-  hydrateProviders,
-  NatsMessagingService,
-  hashCoreTransferState,
-} from "@connext/vector-utils";
-import { MerkleTree } from "merkletreejs";
+import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
-import { utils } from "ethers";
 
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
@@ -55,17 +43,9 @@ export type BrowserNodeOpts = {
 };
 
 export class BrowserNode implements INodeService {
-  private channelProvider: IRpcChannelProvider;
-  private constructor({ engine, iframeSrc }: BrowserNodeOpts) {
-    if (engine) {
-      this.channelProvider = new DirectProvider(engine);
-    } else {
-      this.channelProvider = new IframeChannelProvider({
-        src: iframeSrc!,
-        id: "connext-iframe",
-      });
-    }
-  }
+  public channelProvider: IRpcChannelProvider | undefined;
+  public publicIdentifier = "";
+  public signerAddress = "";
 
   static async connect(config: BrowserNodeConfig): Promise<BrowserNode> {
     let node: BrowserNode;
@@ -101,30 +81,38 @@ export class BrowserNode implements INodeService {
         config.chainAddresses!,
         config.logger.child({ module: "VectorEngine" }),
       );
-      node = new BrowserNode({ engine, chainService });
+      node = new BrowserNode();
+      node.channelProvider = new DirectProvider(engine);
     } else {
       let iframeSrc = config.iframeSrc;
       if (!config.iframeSrc) {
         iframeSrc = "https://wallet.connext.network";
       }
       config.logger.info({ method: "connect", iframeSrc }, "Connecting with iframe provider");
-      node = new BrowserNode({ iframeSrc });
+      node = new BrowserNode();
+      node.channelProvider = await IframeChannelProvider.connect({
+        src: config.iframeSrc!,
+        id: "connext-iframe",
+      });
     }
+    const [nodeConfig] = await node.getConfig();
+    node.publicIdentifier = nodeConfig.publicIdentifier;
+    node.signerAddress = nodeConfig.signerAddress;
     return node;
-  }
-
-  get publicIdentifier(): string {
-    return "";
-    // return this.engine.publicIdentifier;
-  }
-
-  get signerAddress(): string {
-    return "";
-    // return this.engine.signerAddress;
   }
 
   createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>> {
     return Promise.resolve(Result.fail(new NodeError(NodeError.reasons.MultinodeProhibitted, { params })));
+  }
+
+  async getConfig(): Promise<NodeResponses.GetConfig> {
+    const rpc: EngineParams.RpcRequest = {
+      id: Date.now(),
+      jsonrpc: "2.0",
+      method: "chan_getConfig",
+      params: undefined,
+    };
+    return this.send(rpc);
   }
 
   async getStateChannelByParticipants(
@@ -139,7 +127,7 @@ export class BrowserNode implements INodeService {
           chainId: params.chainId,
         },
       );
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -151,7 +139,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.GetChannelState, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getChannelState">(ChannelRpcMethods.chan_getChannelState, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -161,7 +149,7 @@ export class BrowserNode implements INodeService {
   async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res.map(chan => chan.channelAddress));
     } catch (e) {
       return Result.fail(e);
@@ -176,7 +164,7 @@ export class BrowserNode implements INodeService {
         ChannelRpcMethods.chan_getTransferStateByRoutingId,
         params,
       );
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -191,7 +179,7 @@ export class BrowserNode implements INodeService {
         ChannelRpcMethods.chan_getTransferStatesByRoutingId,
         params,
       );
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res as NodeResponses.GetTransferStatesByRoutingId);
     } catch (e) {
       return Result.fail(e);
@@ -203,7 +191,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.GetTransferState, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferState">(ChannelRpcMethods.chan_getTransferState, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -215,7 +203,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getActiveTransfers">(ChannelRpcMethods.chan_getActiveTransfers, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -227,7 +215,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_setup">(ChannelRpcMethods.chan_setup, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -249,7 +237,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.Deposit, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_deposit">(ChannelRpcMethods.chan_deposit, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({ channelAddress: res.channelAddress });
     } catch (e) {
       return Result.fail(e);
@@ -261,7 +249,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.RequestCollateral, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_requestCollateral">(ChannelRpcMethods.chan_requestCollateral, params);
-      await this.channelProvider.send(rpc);
+      await this.channelProvider!.send(rpc);
       return Result.ok({ channelAddress: params.channelAddress });
     } catch (e) {
       return Result.fail(e);
@@ -273,7 +261,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.ConditionalTransfer, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_createTransfer">(ChannelRpcMethods.chan_createTransfer, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
@@ -289,7 +277,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.ResolveTransfer, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_resolveTransfer">(ChannelRpcMethods.chan_resolveTransfer, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({
         channelAddress: res.channelAddress,
         transferId: (res.latestUpdate.details as CreateUpdateDetails).transferId,
@@ -305,7 +293,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.Withdraw, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_withdraw">(ChannelRpcMethods.chan_withdraw, params);
-      const res = await this.channelProvider.send(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({
         channelAddress: res.channel.channelAddress,
         transferId: (res.channel.latestUpdate.details as CreateUpdateDetails).transferId,
@@ -317,7 +305,7 @@ export class BrowserNode implements INodeService {
   }
 
   async send(payload: EngineParams.RpcRequest): Promise<any> {
-    return this.channelProvider.send(payload);
+    return this.channelProvider!.send(payload);
   }
 
   //////////////////////
@@ -327,7 +315,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, params);
     try {
-      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_dispute>(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({ txHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
@@ -339,7 +327,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, params);
     try {
-      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_defund>(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({ txHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
@@ -351,7 +339,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, params);
     try {
-      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({ txHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
@@ -363,7 +351,7 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, params);
     try {
-      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
+      const res = await this.channelProvider!.send(rpc);
       return Result.ok({ txHash: res.transactionHash });
     } catch (e) {
       return Result.fail(e);
@@ -384,7 +372,7 @@ export class BrowserNode implements INodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void> {
-    return this.channelProvider.once(event, callback, filter);
+    return this.channelProvider!.once(event, callback, filter);
   }
 
   async on<T extends EngineEvent>(
@@ -392,7 +380,7 @@ export class BrowserNode implements INodeService {
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
   ): Promise<void> {
-    return this.channelProvider.on(event, callback, filter);
+    return this.channelProvider!.on(event, callback, filter);
   }
 
   async off<T extends EngineEvent>(event: T): Promise<void> {
