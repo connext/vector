@@ -59,7 +59,7 @@ export const registerTransferCommand = {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
     const addressBook = getAddressBook(
       argv.addressBook,
-      process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId.toString(),
+      (await wallet.provider.getNetwork()).chainId.toString(),
     );
     const level = argv.silent ? "silent" : "info";
     await registerTransfer(argv.transferName, wallet, addressBook, logger.child({ level }));
