@@ -86,11 +86,11 @@ describe("LibIterableMapping.sol", function() {
     });
 
     it("should fail if name is an empty string", async () => {
-      await expect(mapping.getTransferDefinitionByName("")).revertedWith("LibIterableMapping: empty name");
+      await expect(mapping.getTransferDefinitionByName("")).revertedWith("LibIterableMapping: EMPTY_NAME");
     });
 
     it("should fail if name is not in contract.names", async () => {
-      await expect(mapping.getTransferDefinitionByName("Test")).revertedWith("LibIterableMapping: name not found");
+      await expect(mapping.getTransferDefinitionByName("Test")).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
     });
   });
 
@@ -107,7 +107,7 @@ describe("LibIterableMapping.sol", function() {
 
     it("should fail if index > self.names.length", async () => {
       await expect(mapping.getTransferDefinitionByIndex(BigNumber.from(2))).revertedWith(
-        "LibIterableMapping: invalid index",
+        "LibIterableMapping: INVALID_INDEX",
       );
     });
   });
@@ -134,13 +134,13 @@ describe("LibIterableMapping.sol", function() {
 
     it("should fail if name is an empty string", async () => {
       await expect(mapping.addTransferDefinition({ ...info[0], name: "" })).revertedWith(
-        "LibIterableMapping: empty name",
+        "LibIterableMapping: EMPTY_NAME",
       );
     });
 
     it("should fail if name is in contract.names", async () => {
       await loadMapping();
-      await expect(mapping.addTransferDefinition(info[0])).revertedWith("LibIterableMapping: name not found");
+      await expect(mapping.addTransferDefinition(info[0])).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
     });
   });
 
@@ -166,11 +166,11 @@ describe("LibIterableMapping.sol", function() {
     });
 
     it("should fail if name is an empty string", async () => {
-      await expect(mapping.removeTransferDefinition("")).revertedWith("LibIterableMapping: empty name");
+      await expect(mapping.removeTransferDefinition("")).revertedWith("LibIterableMapping: EMPTY_NAME");
     });
 
     it("should fail if name is not in contract.names", async () => {
-      await expect(mapping.removeTransferDefinition("Test")).revertedWith("LibIterableMapping: name not found");
+      await expect(mapping.removeTransferDefinition("Test")).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
     });
   });
 });

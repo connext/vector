@@ -9,16 +9,24 @@ import {
   TransactionReason,
   FullTransferState,
 } from "@connext/vector-types";
-import { delay, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
+import {
+  bufferify,
+  delay,
+  encodeTransferResolver,
+  encodeTransferState,
+  hashCoreTransferState,
+} from "@connext/vector-utils";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { JsonRpcProvider } from "@ethersproject/providers";
+import { keccak256 } from "@ethersproject/keccak256";
 import { Wallet } from "@ethersproject/wallet";
 import { BaseLogger } from "pino";
 import PriorityQueue from "p-queue";
 import { AddressZero } from "@ethersproject/constants";
+import { MerkleTree } from "merkletreejs";
 
 import { ChannelFactory, VectorChannel } from "../artifacts";
 
@@ -78,17 +86,34 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   async sendDisputeTransferTx(
-    transferState: FullTransferState,
-    merkleProof: string[],
+    transferIdToDispute: string,
+    activeTransfers: FullTransferState[],
   ): Promise<Result<TransactionResponse, ChainError>> {
+    // Make sure transfer is active
+    const transferState = activeTransfers.find(t => t.transferId === transferIdToDispute);
+    if (!transferState) {
+      return Result.fail(
+        new ChainError(ChainError.reasons.TransferNotFound, {
+          transfer: transferIdToDispute,
+          active: activeTransfers.map(t => t.transferId),
+        }),
+      );
+    }
+
+    // Get signer
     const signer = this.signers.get(transferState.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
 
+    // Generate merkle root
+    const hashes = activeTransfers.map(t => bufferify(hashCoreTransferState(t)));
+    const hash = bufferify(hashCoreTransferState(transferState));
+    const merkle = new MerkleTree(hashes, keccak256);
+
     return this.sendTxWithRetries(transferState.channelAddress, TransactionReason.disputeTransfer, () => {
       const channel = new Contract(transferState.channelAddress, VectorChannel.abi, signer);
-      return channel.disputeTransfer(transferState, merkleProof);
+      return channel.disputeTransfer(transferState, merkle.getHexProof(hash));
     });
   }
 

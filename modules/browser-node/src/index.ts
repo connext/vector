@@ -325,98 +325,49 @@ export class BrowserNode implements INodeService {
   async sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
   ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>> {
-    throw new Error("TODO");
-    // const channelRes = await this.getStateChannel(params);
-    // if (!channelRes.isError) {
-    //   return Result.fail(channelRes.getError()!);
-    // }
-    // const channel = channelRes.getValue();
-    // if (!channel) {
-    //   return Result.fail(new NodeError(NodeError.reasons.ChannelNotFound, params));
-    // }
-    // const disputeRes = await this.chainService.sendDisputeChannelTx(channel);
-    // if (disputeRes.isError) {
-    //   return Result.fail(disputeRes.getError()! as any);
-    // }
-    // return Result.ok({ txHash: disputeRes.getValue().hash });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, params);
+    try {
+      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_dispute>(rpc);
+      return Result.ok({ txHash: res.transactionHash });
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async sendDefundChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
   ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>> {
-    throw new Error("TODO");
-
-    // const channelRes = await this.getStateChannel(params);
-    // if (!channelRes.isError) {
-    //   return Result.fail(channelRes.getError()!);
-    // }
-    // const channel = channelRes.getValue();
-    // if (!channel) {
-    //   return Result.fail(new NodeError(NodeError.reasons.ChannelNotFound, params));
-    // }
-    // const defundRes = await this.chainService.sendDefundChannelTx(channel);
-    // if (defundRes.isError) {
-    //   return Result.fail(defundRes.getError()! as any);
-    // }
-    // return Result.ok({ txHash: defundRes.getValue().hash });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, params);
+    try {
+      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_defund>(rpc);
+      return Result.ok({ txHash: res.transactionHash });
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async sendDisputeTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
   ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>> {
-    throw new Error("TODO");
-
-    // const transferRes = await this.getTransfer(params);
-    // if (!transferRes.isError) {
-    //   return Result.fail(transferRes.getError()!);
-    // }
-    // const transfer = transferRes.getValue();
-    // if (!transfer) {
-    //   return Result.fail(new NodeError(NodeError.reasons.TransferNotFound, params));
-    // }
-    // const activeTransferRes = await this.getActiveTransfers({
-    //   channelAddress: transfer.chainAddress,
-    //   publicIdentifier: this.publicIdentifier,
-    // });
-    // if (activeTransferRes.isError) {
-    //   return Result.fail(activeTransferRes.getError()!);
-    // }
-    // const active = activeTransferRes.getValue();
-    // if (!active.find(t => t.transferId === transfer.transferId)) {
-    //   return Result.fail(new NodeError(NodeError.reasons.TransferNotActive, params));
-    // }
-
-    // // Generate merkle proof
-    // const hashes = active.map(t => bufferify(hashCoreTransferState(t)));
-    // const hash = bufferify(hashCoreTransferState(transfer));
-    // const merkle = new MerkleTree(hashes, utils.keccak256);
-
-    // const disputeRes = await this.chainService.sendDisputeTransferTx(transfer, merkle.getHexProof(hash));
-
-    // if (disputeRes.isError) {
-    //   return Result.fail(disputeRes.getError()! as any);
-    // }
-    // return Result.ok({ txHash: disputeRes.getValue().hash });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, params);
+    try {
+      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
+      return Result.ok({ txHash: res.transactionHash });
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async sendDefundTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
   ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>> {
-    throw new Error("TODO");
-
-    // const transferRes = await this.getTransfer(params);
-    // if (!transferRes.isError) {
-    //   return Result.fail(transferRes.getError()!);
-    // }
-    // const transfer = transferRes.getValue();
-    // if (!transfer) {
-    //   return Result.fail(new NodeError(NodeError.reasons.TransferNotFound));
-    // }
-    // const defundRes = await this.chainService.sendDefundTransferTx(transfer);
-    // if (defundRes.isError) {
-    //   return Result.fail(defundRes.getError()! as any);
-    // }
-    // return Result.ok({ txHash: defundRes.getValue().hash });
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, params);
+    try {
+      const res = await this.channelProvider.send<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
+      return Result.ok({ txHash: res.transactionHash });
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   waitFor<T extends EngineEvent>(

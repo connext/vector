@@ -3,7 +3,6 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ITransferRegistry.sol";
-import "./interfaces/Types.sol";
 import "./lib/LibIterableMapping.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 

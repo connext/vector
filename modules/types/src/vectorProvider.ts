@@ -19,6 +19,10 @@ export const ChannelRpcMethods = {
   chan_subscribe: "chan_subscribe",
   chan_unsubscribeAll: "chan_unsubscribeAll",
   connext_authenticate: "connext_authenticate",
+  chan_dispute: "chan_dispute",
+  chan_defund: "chan_defund",
+  chan_disputeTransfer: "chan_disputeTransfer",
+  chan_defundTransfer: "chan_defundTransfer",
 } as const;
 export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
@@ -40,6 +44,10 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
   [ChannelRpcMethods.chan_unsubscribeAll]: undefined;
   [ChannelRpcMethods.connext_authenticate]: { signature?: string };
+  [ChannelRpcMethods.chan_dispute]: EngineParams.DisputeChannel;
+  [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;
+  [ChannelRpcMethods.chan_disputeTransfer]: EngineParams.DisputeTransfer;
+  [ChannelRpcMethods.chan_defundTransfer]: EngineParams.DefundTransfer;
 };
 
 export type ChannelRpcMethodsResponsesMap = {
@@ -60,4 +68,8 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
   [ChannelRpcMethods.connext_authenticate]: { publicIdentifier: string; signerAddress: string };
+  [ChannelRpcMethods.chan_dispute]: { transactionHash: string };
+  [ChannelRpcMethods.chan_defund]: { transactionHash: string };
+  [ChannelRpcMethods.chan_disputeTransfer]: { transactionHash: string };
+  [ChannelRpcMethods.chan_defundTransfer]: { transactionHash: string };
 };
