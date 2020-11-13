@@ -28,14 +28,13 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
     ["TestChannelFactory", ["TestChannel"]],
   ]);
   const testFactory = addressBook.getContract("TestChannelFactory");
-  const chainId = (await alice.provider.getNetwork()).chainId.toString();
-  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address, chainId);
-  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address, chainId);
+  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
+  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
   await tx.wait();
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bob.address.substring(2, 6)}`, {
     address: channelAddress,
-    args: [alice.address, bob.address, chainId],
+    args: [alice.address, bob.address],
     txHash: tx.hash,
   });
 

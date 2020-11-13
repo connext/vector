@@ -206,7 +206,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelFactory.createChannelAndDepositAlice(
           channelState.alice,
           channelState.bob,
-          channelState.networkContext.chainId,
           assetId,
           amount,
           { value: amount },
@@ -236,7 +235,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelFactory.createChannelAndDepositAlice(
         channelState.alice,
         channelState.bob,
-        channelState.networkContext.chainId,
         assetId,
         amount,
       ),

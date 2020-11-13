@@ -15,16 +15,15 @@ export const createChannel = async (
   test = false,
 ): Promise<Contract> => {
   log.info(`Preparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
-  const chainId = (await alice.provider.getNetwork()).chainId.toString();
   const channelFactory = addressBook.getContract("ChannelFactory");
-  const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress, chainId);
-  const tx = await channelFactory.createChannel(alice.address, bobAddress, chainId);
+  const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress);
+  const tx = await channelFactory.createChannel(alice.address, bobAddress);
   await tx.wait();
   log.info(`Successfully created a channel at ${channelAddress}`);
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bobAddress.substring(2, 6)}`, {
     address: channelAddress,
-    args: [alice.address, bobAddress, chainId],
+    args: [alice.address, bobAddress],
     txHash: tx.hash,
   });
   return test
