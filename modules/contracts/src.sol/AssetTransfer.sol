@@ -22,7 +22,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
   mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
 
   modifier onlySelf() {
-    require(msg.sender == address(this), "AssetTransfer: Can only be called from this contract");
+    require(msg.sender == address(this), "AssetTransfer: NOT_SELF");
     _;
   }
 
@@ -38,14 +38,14 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address recipient,
     uint256 maxAmount
   ) private returns (bool, uint256) {
-    (bool success, bytes memory encodedReturnValue) = address(this).staticcall(
+    (bool success, bytes memory returnData) = address(this).staticcall(
       abi.encodeWithSignature("_getOwnERC20Balance(address)", assetId)
     );
     if (!success) {
       return (false, 0);
     }
 
-    uint256 balance = abi.decode(encodedReturnValue, (uint256));
+    uint256 balance = abi.decode(returnData, (uint256));
     uint256 amount = LibUtils.min(maxAmount, balance);
     (success, ) = address(this).call(
       abi.encodeWithSignature("_transferERC20(address,address,uint256)", assetId, recipient, amount)
@@ -75,7 +75,8 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     uint256 amount
   ) external onlySelf {
     require(
-      LibERC20.transfer(assetId, recipient, amount, ERC20_TRANSFER_GAS_LIMIT)
+      LibERC20.transfer(assetId, recipient, amount, ERC20_TRANSFER_GAS_LIMIT),
+      "AssetTransfer: ERC20_TRANSFER_FAILED"
     );
   }
 
@@ -127,18 +128,17 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address owner,
     address payable recipient
   ) external override onlyViaProxy nonReentrant {
-    require(
-      msg.sender == owner || owner == recipient,
-      "AssetTransfer: Either msg.sender or recipient of funds must be the owner of an emergency withdraw"
-    );
+    require(msg.sender == owner || owner == recipient, "AssetTransfer: OWNER_MISMATCH");
 
     uint256 maxAmount = emergencyWithdrawableAmount[assetId][owner];
     uint256 balance = LibAsset.getOwnBalance(assetId);
     uint256 amount = LibUtils.min(maxAmount, balance);
 
-    emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
-    registerTransfer(assetId, maxAmount);
-    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: Transfer failed");
-  }
+    // Revert if amount is 0
+    require(amount > 0, "AssetTransfer: NO_OP");
 
+    emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
+    registerTransfer(assetId, amount);
+    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
+  }
 }

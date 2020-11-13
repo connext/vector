@@ -27,15 +27,11 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
     ["TestChannel", []],
     ["TestChannelFactory", ["TestChannel"]],
   ]);
-  const factory = addressBook.getContract("TestChannelFactory");
-  const doneBeingCreated: Promise<string> = new Promise(res => {
-    // NOTE: this takes kind of a long time to resolve.. is there any way to speed it up?
-    factory.once(factory.filters.ChannelCreation(), res);
-  });
+  const testFactory = addressBook.getContract("TestChannelFactory");
   const chainId = (await alice.provider.getNetwork()).chainId.toString();
-  const tx = await factory.createChannelWithoutSetup(alice.address, bob.address, chainId);
+  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address, chainId);
+  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address, chainId);
   await tx.wait();
-  const channelAddress = await doneBeingCreated;
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bob.address.substring(2, 6)}`, {
     address: channelAddress,

@@ -40,6 +40,7 @@ export class ChainError extends VectorError {
     ResolverNeeded: "Transfer resolver must be provided in dispute",
     NotInitialState: "Transfer must be disputed with initial state",
     MultisigDeployed: "Multisig already deployed",
+    TransferNotFound: "Transfer is not included in avtive transfers",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -139,8 +140,8 @@ export interface IVectorChainService extends IVectorChainReader {
   sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
   sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
   sendDisputeTransferTx(
-    transferState: FullTransferState,
-    merkleProof: string[],
+    transferIdToDispute: string,
+    activeTransfers: FullTransferState[],
   ): Promise<Result<TransactionResponse, ChainError>>;
   sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponse, ChainError>>;
 }

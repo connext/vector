@@ -15,15 +15,11 @@ export const createChannel = async (
   test = false,
 ): Promise<Contract> => {
   log.info(`\nPreparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
-  const channelFactory = addressBook.getContract("ChannelFactory");
-  const doneBeingCreated: Promise<string> = new Promise(res => {
-    // NOTE: this takes kind of a long time to resolve.. is there any way to speed it up?
-    channelFactory.once(channelFactory.filters.ChannelCreation(), res);
-  });
   const chainId = (await alice.provider.getNetwork()).chainId.toString();
+  const channelFactory = addressBook.getContract("ChannelFactory");
+  const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress, chainId);
   const tx = await channelFactory.createChannel(alice.address, bobAddress, chainId);
   await tx.wait();
-  const channelAddress = await doneBeingCreated;
   log.info(`Successfully created a channel at ${channelAddress}`);
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bobAddress.substring(2, 6)}`, {

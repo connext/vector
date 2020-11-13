@@ -15,16 +15,16 @@ export const getTransferId = (
   channelNonce: string,
   transferDefinition: Address,
   transferTimeout: string,
-): string => keccak256(
-  ["address", "address", "uint256", "uint256"],
-  [transferDefinition, channelAddress, transferTimeout, channelNonce],
-);
+): string =>
+  keccak256(
+    ["address", "address", "uint256", "uint256"],
+    [transferDefinition, channelAddress, transferTimeout, channelNonce],
+  );
 
 export const encodeTransferState = (state: TransferState, encoding: string): string =>
   defaultAbiCoder.encode([encoding], [state]);
 
-export const encodeBalance = (balance: Balance): string =>
-  defaultAbiCoder.encode([BalanceEncoding], [balance]);
+export const encodeBalance = (balance: Balance): string => defaultAbiCoder.encode([BalanceEncoding], [balance]);
 
 export const encodeTransferResolver = (resolver: TransferResolver, encoding: string): string =>
   defaultAbiCoder.encode([encoding], [resolver]);
@@ -38,5 +38,4 @@ export const hashTransferState = (state: TransferState, encoding: string): strin
 export const hashCoreTransferState = (state: CoreTransferState): string =>
   keccak256(["bytes"], [encodeCoreTransferState(state)]);
 
-export const createlockHash = (preImage: string): string =>
-  sha256(["bytes32"], [preImage]);
+export const createlockHash = (preImage: string): string => sha256(["bytes32"], [preImage]);

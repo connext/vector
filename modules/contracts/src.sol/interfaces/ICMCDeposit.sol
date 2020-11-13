@@ -2,8 +2,6 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./Types.sol";
-
 interface ICMCDeposit {
   function getTotalDepositsAlice(address assetId) external view returns (uint256);
 
@@ -12,6 +10,5 @@ interface ICMCDeposit {
   function depositAlice(
     address assetId,
     uint256 amount
-    // bytes memory signature
   ) external payable;
 }

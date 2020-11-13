@@ -2,23 +2,11 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./LibUtils.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 
 library LibERC20 {
-
-    function checkResult(bool success, bytes memory encodedReturnValue)
-        internal
-        pure
-        returns (bool)
-    {
-        if (!success) {
-            assembly {
-                revert(add(encodedReturnValue, 0x20), mload(encodedReturnValue))
-            }
-        }
-        return encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool));
-    }
 
     function wrapCall(address assetId, bytes memory callData)
         internal
@@ -31,9 +19,10 @@ library LibERC20 {
         internal
         returns (bool)
     {
-        require(Address.isContract(assetId));
-        (bool success, bytes memory encodedReturnValue) = assetId.call{gas: gas}(callData);
-        return checkResult(success, encodedReturnValue);
+        require(Address.isContract(assetId), "LibERC20: NO_CODE");
+        (bool success, bytes memory returnData) = assetId.call{gas: gas}(callData);
+        LibUtils.revertIfCallFailed(success, returnData);
+        return returnData.length == 0 || abi.decode(returnData, (bool));
     }
 
     function approve(address assetId, address spender, uint256 amount)

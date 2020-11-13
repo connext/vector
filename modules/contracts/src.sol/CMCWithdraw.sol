@@ -3,6 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCWithdraw.sol";
+import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
 import "./AssetTransfer.sol";
 import "./lib/LibAsset.sol";
@@ -14,46 +15,74 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
 
   mapping(bytes32 => bool) private isExecuted;
 
-  /// @param recipient The address to which we're withdrawing funds to
-  /// @param assetId The token address of the asset we're withdrawing (address(0)=eth)
-  /// @param maxAmount The number of units of asset we're withdrawing
+  modifier validateWithdrawData(WithdrawData calldata wd) {
+    require(wd.channelAddress == address(this), "CMCWithdraw: CHANNEL_MISMATCH");
+    _;
+  }
+
+  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
+    external
+    override
+    view
+    onlyViaProxy
+    nonReentrantView
+    returns (bool)
+  {
+    return isExecuted[hashWithdrawData(wd)];
+  }
+
+  /// @param wd The withdraw data consisting of
+  /// semantic withdraw information, i.e. assetId, recipient, and amount;
+  /// information to make an optional call in addition to the actual transfer,
+  /// i.e. target address for the call and call payload;
+  /// additional information, i.e. channel address and nonce.
   /// @param aliceSignature Signature of owner a
   /// @param bobSignature Signature of owner b
   function withdraw(
-    address payable recipient,
-    address assetId,
-    uint256 maxAmount,
-    uint256 nonce,
-    bytes memory aliceSignature,
-    bytes memory bobSignature
-  ) external override onlyViaProxy nonReentrant {
-    // Replay protection
-    bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, maxAmount, nonce));
-    require(!isExecuted[withdrawHash], "CMCWithdraw: Transaction has already been executed");
-    isExecuted[withdrawHash] = true;
+    WithdrawData calldata wd,
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
+  ) external override onlyViaProxy nonReentrant validateWithdrawData(wd) {
+    // Generate hash
+    bytes32 wdHash = hashWithdrawData(wd);
 
-    // Validate signatures
-    require(withdrawHash.checkSignature(aliceSignature, alice), "CMCWithdraw: Invalid alice signature");
-    require(withdrawHash.checkSignature(bobSignature, bob), "CMCWithdraw: Invalid bob signature");
+    // Verify Alice's and Bob's signature on the withdraw data
+    verifySignatures(wdHash, aliceSignature, bobSignature);
+
+    // Replay protection
+    require(!isExecuted[wdHash], "CMCWithdraw: ALREADY_EXECUTED");
+    isExecuted[wdHash] = true;
 
     // Determine actually transferable amount
-    uint256 balance = LibAsset.getOwnBalance(assetId);
-    uint256 amount = LibUtils.min(maxAmount, balance);
+    uint256 balance = LibAsset.getOwnBalance(wd.assetId);
+    uint256 amount = LibUtils.min(wd.amount, balance);
+
+    // Revert if amount is zero && callTo is 0
+    require(amount > 0 || wd.callTo != address(0), "CMCWithdraw: NO_OP");
 
     // Add to totalWithdrawn
-    registerTransfer(assetId, amount);
+    registerTransfer(wd.assetId, amount);
 
-    // Execute the withdraw
-    require(LibAsset.transfer(assetId, recipient, amount), "CMCWithdraw: Transfer failed");
+    // Execute the transfer
+    require(LibAsset.transfer(wd.assetId, wd.recipient, amount), "CMCWithdraw: ASSET_TRANSFER_FAILED");
+
+    // Do we have to make a call in addition to the actual transfer?
+    if (wd.callTo != address(0)) {
+      WithdrawHelper(wd.callTo).execute(wd, amount);
+    }
   }
 
-  function getWithdrawalTransactionRecord(
-    address recipient,
-    address assetId,
-    uint256 amount,
-    uint256 nonce
-  ) external override view onlyViaProxy nonReentrantView returns (bool) {
-    bytes32 withdrawHash = keccak256(abi.encodePacked(recipient, assetId, amount, nonce));
-    return isExecuted[withdrawHash];
+  // TODO: include commitment type
+  function verifySignatures(
+    bytes32 wdHash,
+    bytes calldata aliceSignature,
+    bytes calldata bobSignature
+  ) internal view {
+    require(wdHash.checkSignature(aliceSignature, alice), "CMCWithdraw: INVALID_ALICE_SIG");
+    require(wdHash.checkSignature(bobSignature, bob), "CMCWithdraw: INVALID_BOB_SIG");
+  }
+
+  function hashWithdrawData(WithdrawData calldata wd) internal pure returns (bytes32) {
+    return keccak256(abi.encode(wd));
   }
 }
