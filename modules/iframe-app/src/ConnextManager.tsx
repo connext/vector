@@ -1,6 +1,6 @@
 import { Wallet, utils } from "ethers";
 import { BrowserNode } from "@connext/vector-browser-node";
-import { JsonRpcRequest, EngineParams } from "@connext/vector-types";
+import { JsonRpcRequest, EngineParams, ChannelRpcMethodsResponsesMap, ChannelRpcMethod } from "@connext/vector-types";
 import { ChannelSigner, safeJsonParse } from "@connext/vector-utils";
 import pino from "pino";
 import { config } from "./config";
@@ -46,14 +46,6 @@ export default class ConnextManager {
   }
 
   private async handleIncomingMessage(e: MessageEvent) {
-    if (e.data.target !== "inpage" || true) {
-      console.log(
-        `handleIncomingMessage e.origin: ${e.origin} this.parentOrigin: ${this.parentOrigin} e.source: ${
-          e.source
-        } e.data: ${JSON.stringify(e.data)}`,
-      );
-    }
-    console.log();
     if (e.origin !== this.parentOrigin) return;
     console.log("handleIncomingMessage: ", e.data);
     if (e.data === "Hello") {
@@ -71,15 +63,20 @@ export default class ConnextManager {
     window.parent.postMessage(JSON.stringify(response), this.parentOrigin);
   }
 
-  private async handleRequest(request: EngineParams.RpcRequest) {
+  private async handleRequest<T extends ChannelRpcMethod>(
+    request: EngineParams.RpcRequest,
+  ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     console.log("handleRequest: request: ", request);
     if (request.method === "connext_authenticate") {
       let sig = request.params.signature;
       if (!sig) {
         sig = utils.hexlify(utils.randomBytes(65));
       }
-      await this.initChannel(sig);
-      return { success: true };
+      const node = await this.initChannel(sig);
+      return {
+        publicIdentifier: node.publicIdentifier,
+        signerAddress: node.signerAddress,
+      } as ChannelRpcMethodsResponsesMap["connext_authenticate"];
     }
     if (typeof this.browserNode === "undefined") {
       throw new Error(
