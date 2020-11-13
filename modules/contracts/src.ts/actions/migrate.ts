@@ -18,7 +18,7 @@ export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = lo
   const nonce = await wallet.getTransactionCount();
   const providerUrl = (wallet.provider as JsonRpcProvider).connection.url;
 
-  log.info(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
+  log.info(`Preparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
   log.info(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);
 
   if (balance.eq(Zero)) {
@@ -53,7 +53,7 @@ export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = lo
 
   ////////////////////////////////////////
   // Print summary
-  log.info("\nAll done!");
+  log.info("All done!");
   const spent = formatEther(balance.sub(await wallet.getBalance()));
   const nTx = (await wallet.getTransactionCount()) - nonce;
   log.info(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);

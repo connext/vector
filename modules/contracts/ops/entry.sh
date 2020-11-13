@@ -44,7 +44,7 @@ echo "Waiting for local testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
 
 echo "Migrating contracts.."
-node "$cwd/dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONIC" | pino-pretty -i pid,hostname
+node "$cwd/dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONIC" | pino-pretty --colorize --translateTime --ignore pid,level,hostname
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
 function fromAddressBook {

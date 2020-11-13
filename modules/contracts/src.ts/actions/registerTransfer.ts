@@ -13,7 +13,7 @@ export const registerTransfer = async (
   log = logger.child({}),
 ): Promise<void> => {
 
-  log.info(`\nPreparing to add ${transferName} to registry (Sender=${wallet.address})`);
+  log.info(`Preparing to add ${transferName} to registry (Sender=${wallet.address})`);
 
   const registry = addressBook.getContract("TransferRegistry").connect(wallet);
   const transfer = addressBook.getContract(transferName).connect(wallet);

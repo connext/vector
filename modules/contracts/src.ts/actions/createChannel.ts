@@ -14,7 +14,7 @@ export const createChannel = async (
   log = logger.child({}),
   test = false,
 ): Promise<Contract> => {
-  log.info(`\nPreparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
+  log.info(`Preparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
   const chainId = (await alice.provider.getNetwork()).chainId.toString();
   const channelFactory = addressBook.getContract("ChannelFactory");
   const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress, chainId);
