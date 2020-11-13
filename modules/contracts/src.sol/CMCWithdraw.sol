@@ -78,10 +78,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal view {
-    bytes32 commitment = keccak256(abi.encodePacked(
-      CommitmentType.WithdrawData,
-      wdHash
-    ));
+    bytes32 commitment = keccak256(abi.encode(CommitmentType.WithdrawData, wdHash));
     require(commitment.checkSignature(aliceSignature, alice), "CMCWithdraw: INVALID_ALICE_SIG");
     require(commitment.checkSignature(bobSignature, bob), "CMCWithdraw: INVALID_BOB_SIG");
   }

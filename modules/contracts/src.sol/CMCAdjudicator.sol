@@ -31,10 +31,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   modifier validateTransfer(CoreTransferState calldata cts) {
-    require(
-      cts.channelAddress == address(this),
-      "CMCAdjudicator: INVALID_TRANSFER"
-    );
+    require(cts.channelAddress == address(this), "CMCAdjudicator: INVALID_TRANSFER");
     _;
   }
 
@@ -92,10 +89,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     validateChannel(ccs)
   {
     // Verify that the given channel state matches the stored one
-    require(
-      hashChannelState(ccs) == channelDispute.channelStateHash,
-      "CMCAdjudicator: INVALID_CHANNEL_HASH"
-    );
+    require(hashChannelState(ccs) == channelDispute.channelStateHash, "CMCAdjudicator: INVALID_CHANNEL_HASH");
 
     // We need to be in defund phase for that
     require(inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
@@ -179,10 +173,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator: TRANSFER_NOT_DISPUTED");
 
     // Verify that the given transfer state matches the stored one
-    require(
-      hashTransferState(cts) == transferDispute.transferStateHash,
-      "CMCAdjudicator: INVALID_TRANSFER_HASH"
-    );
+    require(hashTransferState(cts) == transferDispute.transferStateHash, "CMCAdjudicator: INVALID_TRANSFER_HASH");
 
     // We can't defund twice
     require(!transferDispute.isDefunded, "CMCAdjudicator: TRANSFER_ALREADY_DEFUNDED");
@@ -193,10 +184,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     if (block.number < transferDispute.transferDisputeExpiry) {
       // Before dispute expiry, responder can resolve
       require(msg.sender == cts.responder, "CMCAdjudicator: INVALID_MSG_SENDER");
-      require(
-        keccak256(encodedInitialTransferState) == cts.initialStateHash,
-        "CMCAdjudicator: INVALID_TRANSFER_HASH"
-      );
+      require(keccak256(encodedInitialTransferState) == cts.initialStateHash, "CMCAdjudicator: INVALID_TRANSFER_HASH");
       ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
       balance = transferDefinition.resolve(
         abi.encode(cts.balance),
@@ -239,10 +227,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal pure {
-    bytes32 commitment = keccak256(abi.encodePacked(
-      CommitmentType.ChannelState,
-      hashChannelState(ccs)
-    ));
+    bytes32 commitment = keccak256(abi.encode(CommitmentType.ChannelState, hashChannelState(ccs)));
     require(commitment.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: INVALID_ALICE_SIG");
     require(commitment.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: INVALID_BOB_SIG");
   }
