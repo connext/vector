@@ -7,6 +7,7 @@
 - move dispute methods into engine
 - shorter revert message style and contract tests speedup
 - minor cleanup and reorganization related to types and interfaces
+- make transfer types generic
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
 
