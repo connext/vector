@@ -3,22 +3,28 @@ set -e
 
 echo "Ethereum testnet entrypoint activated!"
 
+## Setup env
+
 if [[ -d "modules/contracts" ]]
-then cd modules/contracts
+then cd modules/contracts || exit 1
 fi
 
-ADDRESS_BOOK="${ADDRESS_BOOK:-/data/address-book.json}"
+export ADDRESS_BOOK="${ADDRESS_BOOK:-/data/address-book.json}"
 export CHAIN_ID="${CHAIN_ID:-1337}"
 export MNEMONIC="${MNEMONIC:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
 
-cwd="$(pwd)"
 mkdir -p /data /tmp
 touch "$ADDRESS_BOOK"
 
+config_file="/tmp/hardhat.config.js"
 chain_addresses="$(dirname "$ADDRESS_BOOK")/chain-addresses.json"
+
+# rm this early so we can use it's presence to indicate when migrations finish
 rm -f "$chain_addresses"
 
-config_file="/tmp/hardhat.config.js"
+## Start hardhat testnet
+
+echo "Starting testnet with chain id $CHAIN_ID"
 echo 'module.exports = {
   defaultNetwork: "hardhat",
   networks: {
@@ -33,32 +39,29 @@ echo 'module.exports = {
     },
   },
 }' > "$config_file"
-
-launch="hardhat node --config $config_file --hostname 0.0.0.0 --port 8545"
-
-echo "Starting testnet to migrate contracts.."
-eval "$launch > /tmp/evm.log &"
+hardhat node --config $config_file --hostname 0.0.0.0 --port 8545 > /tmp/evm.log &
 pid=$!
-
-echo "Waiting for local testnet to wake up.."
+echo "Waiting for testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
 
+## Run contract migrations
+
 echo "Migrating contracts.."
-node "$cwd/dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONIC" | pino-pretty --colorize --translateTime --ignore pid,level,hostname
+node "./dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONIC" | pino-pretty --colorize --translateTime --ignore pid,level,hostname
+
+## Expose the address book in a more accessible format
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
-function fromAddressBook {
-  jq '
-    map_values(
-      map_values(.address) |
-      to_entries |
-      map(.key = "\(.key)Address") |
-      map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
-      from_entries
-    )
-  ';
-}
+jq '
+  map_values(
+    map_values(.address) |
+    to_entries |
+    map(.key = "\(.key)Address") |
+    map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
+    from_entries
+  )
+' < "$ADDRESS_BOOK" > "$chain_addresses"
 
-fromAddressBook < "$ADDRESS_BOOK" > "$chain_addresses"
+## exit iff our evm exits
 
 wait $pid
