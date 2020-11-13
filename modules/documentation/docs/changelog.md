@@ -2,7 +2,11 @@
 
 ## Next Release
 
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
+
 - introduce and use commitment types
+- reconcile hashing
+- remove commitment type
 
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
 
