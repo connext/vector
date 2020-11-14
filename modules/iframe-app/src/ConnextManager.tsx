@@ -28,11 +28,10 @@ export default class ConnextManager {
     }
   }
 
-  private async initChannel(signature: string): Promise<BrowserNode> {
+  private async initNode(signature: string): Promise<BrowserNode> {
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
     const mnemonic = utils.entropyToMnemonic(utils.keccak256(signature));
-    console.log(`Setting Private Key`);
     this.privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
     this.browserNode = await BrowserNode.connect({
       signer: new ChannelSigner(this.privateKey),
@@ -66,11 +65,8 @@ export default class ConnextManager {
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     console.log("handleRequest: request: ", request);
     if (request.method === "connext_authenticate") {
-      let sig = request.params.signature;
-      if (!sig) {
-        sig = utils.hexlify(utils.randomBytes(65));
-      }
-      const node = await this.initChannel(sig);
+      const sig = request.params.signature;
+      const node = await this.initNode(sig);
       return {
         publicIdentifier: node.publicIdentifier,
         signerAddress: node.signerAddress,

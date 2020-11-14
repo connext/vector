@@ -6,13 +6,12 @@ import {
   createlockHash,
   getBalanceForAssetId,
   getRandomBytes32,
-  delay,
 } from "@connext/vector-utils";
 import React, { useState } from "react";
 import pino from "pino";
-import { constants } from "ethers";
+import { constants, utils } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List } from "antd";
-import { EngineEvents, EngineParams, FullChannelState, TransferNames } from "@connext/vector-types";
+import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
 
@@ -40,6 +39,7 @@ function App() {
       setConnectLoading(true);
       const client = await BrowserNode.connect({
         iframeSrc,
+        iframeSignerEntropy: utils.hexlify(utils.randomBytes(65)),
         logger: pino(),
       });
       const channelsRes = await client.getStateChannels();

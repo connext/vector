@@ -9,8 +9,6 @@ import {
   EngineEventMap,
   IChannelSigner,
   INodeService,
-  IVectorChainService,
-  IVectorEngine,
   NodeError,
   OptionalPublicIdentifier,
   Result,
@@ -95,7 +93,9 @@ export class BrowserNode implements INodeService {
         id: Date.now(),
         jsonrpc: "2.0",
         method: "connext_authenticate",
-        params: {}, // TODO: add sig
+        params: {
+          signature: config.iframeSignerEntropy,
+        },
       };
       console.log("SENDING AUTH FROM PARENT");
       const auth = await node.channelProvider.send(rpc);
