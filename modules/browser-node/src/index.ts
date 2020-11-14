@@ -34,12 +34,7 @@ export type BrowserNodeConfig = {
   chainProviders?: ChainProviders;
   chainAddresses?: ChainAddresses;
   iframeSrc?: string;
-};
-
-export type BrowserNodeOpts = {
-  engine?: IVectorEngine;
-  chainService?: IVectorChainService;
-  iframeSrc?: string;
+  iframeSignerEntropy?: string;
 };
 
 export class BrowserNode implements INodeService {
@@ -83,6 +78,8 @@ export class BrowserNode implements INodeService {
       );
       node = new BrowserNode();
       node.channelProvider = new DirectProvider(engine);
+      node.publicIdentifier = config.signer.publicIdentifier;
+      node.signerAddress = config.signer.address;
     } else {
       let iframeSrc = config.iframeSrc;
       if (!config.iframeSrc) {
@@ -94,10 +91,20 @@ export class BrowserNode implements INodeService {
         src: config.iframeSrc!,
         id: "connext-iframe",
       });
+      const rpc: EngineParams.RpcRequest = {
+        id: Date.now(),
+        jsonrpc: "2.0",
+        method: "connext_authenticate",
+        params: {}, // TODO: add sig
+      };
+      console.log("SENDING AUTH FROM PARENT");
+      const auth = await node.channelProvider.send(rpc);
+      console.log("auth: ", auth);
+      console.log("CALLING GET CONFIG FROM PARENT");
+      const [nodeConfig] = await node.getConfig();
+      node.publicIdentifier = nodeConfig.publicIdentifier;
+      node.signerAddress = nodeConfig.signerAddress;
     }
-    const [nodeConfig] = await node.getConfig();
-    node.publicIdentifier = nodeConfig.publicIdentifier;
-    node.signerAddress = nodeConfig.signerAddress;
     return node;
   }
 

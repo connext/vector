@@ -32,6 +32,7 @@ export default class ConnextManager {
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
     const mnemonic = utils.entropyToMnemonic(utils.keccak256(signature));
+    console.log(`Setting Private Key`);
     this.privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
     this.browserNode = await BrowserNode.connect({
       signer: new ChannelSigner(this.privateKey),
@@ -48,9 +49,6 @@ export default class ConnextManager {
   private async handleIncomingMessage(e: MessageEvent) {
     if (e.origin !== this.parentOrigin) return;
     console.log("handleIncomingMessage: ", e.data);
-    if (e.data === "Hello") {
-      window.parent.postMessage("World", "*");
-    }
     const request = safeJsonParse(e.data);
     let response: any;
     try {
