@@ -113,6 +113,7 @@ export class OutboundChannelUpdateError extends VectorError {
     SaveChannelFailed: "Failed to save channel",
     StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
     StaleChannel: "Channel state is behind, cannot apply update",
+    StoreFailure: "Failed to execute store method",
     SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
     SyncFailure: "Failed to sync channel from counterparty update",
     SyncValidationFailed: "Failed to validate update for sync",

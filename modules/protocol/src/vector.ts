@@ -208,10 +208,12 @@ export class Vector implements IVectorProtocol {
         return;
       }
 
+      const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
+
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        updatedChannelState: inboundRes.getValue().nextState,
-        updatedTransfers: inboundRes.getValue().activeTransfers,
-        updatedTransfer: inboundRes.getValue().updatedTransfer,
+        updatedChannelState: updatedChannel,
+        updatedTransfers: updatedActiveTransfers,
+        updatedTransfer: updatedTransfer,
       });
     });
 
@@ -310,6 +312,7 @@ export class Vector implements IVectorProtocol {
 
   private validateParams(params: any, schema: any): undefined | OutboundChannelUpdateError {
     const validate = ajv.compile(schema);
+    console.log("**** validating ");
     const valid = validate(params);
     if (!valid) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {

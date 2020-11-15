@@ -29,7 +29,7 @@ export interface IExternalValidation {
   // counterparty
   validateInbound<T extends UpdateType = any>(
     update: ChannelUpdate<T>,
-    state: FullChannelState,
+    state: FullChannelState | undefined,
     transfer?: FullTransferState,
   ): Promise<Result<void | Error>>;
 
@@ -38,7 +38,7 @@ export interface IExternalValidation {
   // before generating an update.
   validateOutbound<T extends UpdateType = any>(
     params: UpdateParams<T>,
-    state: FullChannelState,
+    state: FullChannelState | undefined,
     transfer?: FullTransferState,
   ): Promise<Result<void | Error>>;
 }
