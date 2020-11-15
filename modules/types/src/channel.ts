@@ -168,13 +168,13 @@ export type NetworkContext = ContractAddresses & {
   providerUrl: string;
 };
 
-export type ChannelUpdate<T extends UpdateType> = {
+export type ChannelUpdate<T extends UpdateType = any> = {
   channelAddress: string;
   fromIdentifier: string;
   toIdentifier: string;
   type: T;
   nonce: number;
-  balance: Balance;
+  balance: Balance; // balance change for participants
   assetId: Address;
   details: ChannelUpdateDetailsMap[T];
   aliceSignature?: string;
@@ -193,7 +193,7 @@ export interface ChannelUpdateDetailsMap {
 
 export type CreateUpdateDetails = {
   transferId: string;
-  balance: Balance;
+  balance: Balance; // balance in transfer
   transferDefinition: Address;
   transferTimeout: string;
   transferInitialState: TransferState;
