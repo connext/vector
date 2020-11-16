@@ -270,9 +270,9 @@ describe("outbound", () => {
     chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Set the validation + generation mock
-    outboundValidationStub = Sinon.stub(vectorValidation, "validateOutbound");
+    outboundValidationStub = Sinon.stub(vectorValidation, "validateUpdateParams");
     inboundValidationStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
-    generationStub = Sinon.stub(vectorUpdate, "generateUpdate");
+    generationStub = Sinon.stub(vectorUpdate, "generateAndApplyUpdate");
 
     // Stub out all signature validation
     Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(Result.ok(undefined));
