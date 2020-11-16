@@ -22,6 +22,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   ChannelDispute private channelDispute;
   mapping(bytes32 => TransferDispute) private transferDisputes;
 
+  modifier onlySelf() {
+    require(msg.sender == address(this), "AssetTransfer: NOT_SELF");
+    _;
+  }
+
   modifier validateChannel(CoreChannelState calldata ccs) {
     require(
       ccs.channelAddress == address(this) && ccs.alice == alice && ccs.bob == bob,

@@ -15,11 +15,6 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
   mapping(address => uint256) internal totalTransferred;
   mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
 
-  modifier onlySelf() {
-    require(msg.sender == address(this), "AssetTransfer: NOT_SELF");
-    _;
-  }
-
   function registerTransfer(address assetId, uint256 amount) internal {
     totalTransferred[assetId] += amount;
   }
