@@ -155,7 +155,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     returnError(InboundChannelUpdateError.reasons.ChannelNotFound);
   }
 
-  if (previousState?.inDispute) {
+  if (previousState && previousState.inDispute) {
     return returnError(ValidationError.reasons.InDispute);
   }
 

@@ -108,7 +108,7 @@ describe("inbound", () => {
       },
     );
     // Set the validation stub
-    validationStub.resolves(Result.ok({ commitment: {} as any, nextState: {} as any }));
+    validationStub.resolves(Result.ok({ updatedChannel: {} as any }));
     const result = await inbound(
       update,
       update,
@@ -160,12 +160,8 @@ describe("inbound", () => {
     store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
 
     // Set the validation mock
-    validationStub
-      .onFirstCall()
-      .resolves(Result.ok({ commitment: {} as any, nextState: { nonce: 2, latestUpdate: {} as any } }));
-    validationStub
-      .onSecondCall()
-      .resolves(Result.ok({ commitment: {} as any, nextState: { nonce: 3, latestUpdate: {} as any } }));
+    validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+    validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
 
     // Create the update to sync
     const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 2 });
@@ -200,7 +196,7 @@ describe("inbound", () => {
     store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
 
     // Set the validation stub
-    validationStub.resolves(Result.ok({ commitment: {} as any, nextState: { nonce: 3 } as any }));
+    validationStub.resolves(Result.ok({ updatedChannel: { nonce: 3 } as any }));
 
     // Create the update to sync with (in this case, a deposit)
     const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
@@ -270,7 +266,7 @@ describe("outbound", () => {
     chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Set the validation + generation mock
-    outboundValidationStub = Sinon.stub(vectorValidation, "validateUpdateParams");
+    outboundValidationStub = Sinon.stub(vectorValidation, "validateUpdateParams").resolves(Result.ok(undefined));
     inboundValidationStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
     generationStub = Sinon.stub(vectorUpdate, "generateAndApplyUpdate");
 
@@ -297,9 +293,6 @@ describe("outbound", () => {
   it("should fail if it fails to generate the update", async () => {
     const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
 
-    // Stub the validation function
-    outboundValidationStub.resolves(Result.ok({ validParams: {}, validState: {}, activeTransfers: [] }));
-
     // Stub the generate update function
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
     generationStub.resolves(Result.fail(error));
@@ -319,9 +312,15 @@ describe("outbound", () => {
     const counterpartyError = new InboundChannelUpdateError(InboundChannelUpdateError.reasons.RestoreNeeded, {} as any);
     messaging.sendProtocolMessage.resolves(Result.fail(counterpartyError));
 
-    // Stub the validation + generation functions
-    outboundValidationStub.resolves(Result.ok({ validParams: {}, validState: {}, activeTransfers: [] }));
-    generationStub.resolves(Result.ok({ update: {}, channelState: {} }));
+    // Stub the generation function
+    generationStub.resolves(
+      Result.ok({
+        update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
+        updatedTransfer: undefined,
+        updatedActiveTransfers: undefined,
+        updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit),
+      }),
+    );
 
     // Call the outbound function
     const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
@@ -352,14 +351,13 @@ describe("outbound", () => {
     // Set the onchain service mocks
     chainService.getChannelOnchainBalance.resolves(Result.ok(depositBAmt));
 
-    // Stub the validation mocks
-    outboundValidationStub.resolves(Result.ok({ validParams: {}, validState: { nonce: 2 }, activeTransfers: [] }));
-
     // Stub the generation results
     generationStub.onFirstCall().resolves(
       Result.ok({
-        update: {},
-        channelState: createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
+        update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
+        updatedTransfer: undefined,
+        updatedActiveTransfers: undefined,
+        updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
       }),
     );
 
@@ -438,44 +436,23 @@ describe("outbound", () => {
           .onCall(1)
           .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
 
-        // Stub the outbound validation mocks
-        // - first call resolves final update at n - 1
-        // - second call resolves final update at n
-        outboundValidationStub.onCall(0).resolves(
-          Result.ok({
-            validState: { nonce: missedUpdateNonce - 1 },
-            validParams: {},
-          }),
-        );
-        outboundValidationStub.onCall(1).resolves(
-          Result.ok({
-            validState: { nonce: missedUpdateNonce },
-            validParams: {},
-          }),
-        );
-
-        // Stub out the inbound generation (where initiator syncs)
-        inboundValidationStub.resolves(
-          Result.ok({
-            commitment: {},
-            nextState: createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-              nonce: missedUpdateNonce,
-              latestUpdate: missedUpdate,
-            }),
-          }),
-        );
-
         // Stub the generation results
         generationStub.onCall(0).resolves(
           Result.ok({
-            update: {},
-            channelState: createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: missedUpdateNonce }),
+            update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: missedUpdateNonce }),
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+              nonce: missedUpdateNonce,
+            }),
           }),
         );
         generationStub.onCall(1).resolves(
           Result.ok({
-            update: {},
-            channelState: createTestChannelStateWithSigners(signers, UpdateType.deposit, {
+            update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: missedUpdateNonce + 1 }),
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit, {
               nonce: missedUpdateNonce + 1,
             }),
           }),
@@ -499,7 +476,6 @@ describe("outbound", () => {
         });
         expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
         expect(store.saveChannelState.callCount).to.be.eq(2);
-        expect(inboundValidationStub.callCount).to.be.eq(1);
       });
 
       it.skip("missed create, should work", async () => {});

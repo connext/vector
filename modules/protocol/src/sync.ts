@@ -193,11 +193,11 @@ export async function outbound(
   }
 
   try {
-    await storeService.saveChannelState({ ...updatedChannel, latestUpdate: counterpartyUpdate }, transfer);
+    await storeService.saveChannelState({ ...updatedChannel, latestUpdate: counterpartyUpdate }, updatedTransfer);
     return Result.ok({
       updatedChannel: { ...updatedChannel, latestUpdate: counterpartyUpdate },
       updatedTransfers: updatedActiveTransfers,
-      updatedTransfer: transfer,
+      updatedTransfer,
     });
   } catch (e) {
     logger.error("e", e.message);
@@ -353,7 +353,7 @@ export async function inbound(
     return returnError(validateRes.getError()!.message, update, previousState);
   }
 
-  const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue()!;
+  const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue();
 
   // Save the newly signed update to your channel
   try {
@@ -365,7 +365,11 @@ export async function inbound(
   }
 
   // Send response to counterparty
-  await messagingService.respondToProtocolMessage(inbox, updatedChannel.latestUpdate, previousState?.latestUpdate);
+  await messagingService.respondToProtocolMessage(
+    inbox,
+    updatedChannel.latestUpdate,
+    previousState ? previousState!.latestUpdate : undefined,
+  );
 
   // Return the double signed state
   return Result.ok({ updatedActiveTransfers, updatedChannel, updatedTransfer });
