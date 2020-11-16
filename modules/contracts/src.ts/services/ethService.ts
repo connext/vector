@@ -289,7 +289,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
             method,
             error: txRes.getError()!.message,
             channel: channelState.channelAddress,
-            chainId: channelState.networkContext.chainId,
           }),
         );
       }
