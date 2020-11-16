@@ -26,7 +26,10 @@ contract TestChannel is ChannelMastercopy, ITestChannel {
     return transferAsset(assetId, recipient, maxAmount);
   }
 
-  function accountantBalanceTransfer(address assetId, Balance memory balance) public {
-    return transferBalance(assetId, balance);
+  function accountantBalanceTransfer(
+    address assetId,
+    Balance memory balance
+  ) public override {
+    transferBalance(assetId, balance);
   }
 }

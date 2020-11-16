@@ -3,6 +3,7 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./IVectorChannel.sol";
+import "./Types.sol";
 
 interface ITestChannel is IVectorChannel {
   function assetTransfer(
@@ -10,4 +11,9 @@ interface ITestChannel is IVectorChannel {
     address payable recipient,
     uint256 maxAmount
   ) external returns (bool);
+
+  function accountantBalanceTransfer(
+    address assetId,
+    Balance memory balance
+  ) external;
 }
