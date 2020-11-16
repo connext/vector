@@ -6,14 +6,20 @@ import {
   createlockHash,
   getBalanceForAssetId,
   getRandomBytes32,
+  delay,
 } from "@connext/vector-utils";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { constants, utils } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List } from "antd";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
+
+const storedEntropy = localStorage.getItem("entropy");
+console.log("storedEntropy: ", storedEntropy);
+const storedIframeSrc = localStorage.getItem("iframeSrc");
+console.log("storedIframeSrc: ", storedIframeSrc);
 
 function App() {
   const [node, setNode] = useState<BrowserNode>();
@@ -32,7 +38,17 @@ function App() {
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
 
-  const connectNode = async (iframeSrc: string) => {
+  useEffect(() => {
+    const effect = async () => {
+      if (storedEntropy && storedIframeSrc) {
+        // await delay(5000);
+        // await connectNode(storedIframeSrc, storedEntropy);
+      }
+    };
+    effect();
+  }, []);
+
+  const connectNode = async (iframeSrc: string, entropy: string): Promise<BrowserNode> => {
     if (!iframeSrc) {
       iframeSrc = "http://localhost:3030";
     }
@@ -59,6 +75,7 @@ function App() {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client, data.channelAddress);
       });
+      return client;
       // client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
       //   console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
       //   if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
@@ -220,7 +237,11 @@ function App() {
                 placeholder="IFrame Src (blank for localhost:3030)"
                 enterButton="Setup Node"
                 size="large"
-                onSearch={connectNode}
+                onSearch={iframeSrc => {
+                  localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3000");
+                  localStorage.setItem("entropy", entropy);
+                  connectNode(iframeSrc, entropy);
+                }}
                 loading={connectLoading}
               />
             </Col>

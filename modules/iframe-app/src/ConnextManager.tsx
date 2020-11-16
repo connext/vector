@@ -33,8 +33,13 @@ export default class ConnextManager {
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
     const mnemonic = utils.entropyToMnemonic(utils.keccak256(signature));
     this.privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
+    const signer = new ChannelSigner(this.privateKey);
+
+    // store publicIdentifier in local storage to see if indexedDB needs to be deleted
+    // TODO
+
     this.browserNode = await BrowserNode.connect({
-      signer: new ChannelSigner(this.privateKey),
+      signer,
       chainAddresses: config.chainAddresses,
       chainProviders: config.chainProviders,
       logger: pino(),
