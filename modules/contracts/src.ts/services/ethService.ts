@@ -280,10 +280,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
-          BigNumber.from(channelState.networkContext.chainId),
         );
       });
       if (txRes.isError) {
+        console.log(`txRes.isError`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             method,
@@ -310,6 +310,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           ),
         ]);
       } catch (e) {
+        console.log(`caught (e)`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             error: e.message,
