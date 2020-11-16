@@ -2,6 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./interfaces/Commitment.sol";
 import "./interfaces/ICMCWithdraw.sol";
 import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
@@ -72,14 +73,14 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     }
   }
 
-  // TODO: include commitment type
   function verifySignatures(
     bytes32 wdHash,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal view {
-    require(wdHash.checkSignature(aliceSignature, alice), "CMCWithdraw: INVALID_ALICE_SIG");
-    require(wdHash.checkSignature(bobSignature, bob), "CMCWithdraw: INVALID_BOB_SIG");
+    bytes32 commitment = keccak256(abi.encode(CommitmentType.WithdrawData, wdHash));
+    require(commitment.checkSignature(aliceSignature, alice), "CMCWithdraw: INVALID_ALICE_SIG");
+    require(commitment.checkSignature(bobSignature, bob), "CMCWithdraw: INVALID_BOB_SIG");
   }
 
   function hashWithdrawData(WithdrawData calldata wd) internal pure returns (bytes32) {

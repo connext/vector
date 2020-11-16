@@ -30,7 +30,6 @@ import {
   OutboundChannelUpdateError,
   Result,
 } from "@connext/vector-types";
-import { stringify } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Pino from "pino";
 

@@ -5,7 +5,6 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  ChannelCommitmentData,
   FullTransferState,
   UpdateType,
   EngineEvent,
@@ -17,7 +16,7 @@ import {
   ChannelDispute,
   TransferDispute,
 } from "@connext/vector-types";
-import { getRandomBytes32, getSignerAddressFromPublicIdentifier, stringify } from "@connext/vector-utils";
+import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
   BalanceCreateWithoutChannelInput,
   BalanceUpsertWithWhereUniqueWithoutChannelInput,
@@ -431,10 +430,6 @@ export class PrismaStore implements IServerNodeStore {
     }, {} as { [event: string]: string });
   }
 
-  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
-    throw new Error("Method not implemented.");
-  }
-
   getSchemaVersion(): Promise<number> {
     throw new Error("Method not implemented.");
   }
@@ -497,11 +492,7 @@ export class PrismaStore implements IServerNodeStore {
     return channelEntities.map(convertChannelEntityToFullChannelState);
   }
 
-  async saveChannelState(
-    channelState: FullChannelState,
-    commitment: ChannelCommitmentData,
-    transfer?: FullTransferState,
-  ): Promise<void> {
+  async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
     const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
