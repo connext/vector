@@ -10,7 +10,7 @@ interface ITestChannel is IVectorChannel {
     address assetId,
     address payable recipient,
     uint256 maxAmount
-  ) external returns (bool);
+  ) external;
 
   function accountantBalanceTransfer(
     address assetId,

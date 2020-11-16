@@ -22,8 +22,8 @@ contract TestChannel is ChannelMastercopy, ITestChannel {
     address assetId,
     address payable recipient,
     uint256 maxAmount
-  ) public override returns (bool) {
-    return transferAsset(assetId, recipient, maxAmount);
+  ) public override {
+    transferAsset(assetId, recipient, maxAmount);
   }
 
   function accountantBalanceTransfer(
