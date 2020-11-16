@@ -8,10 +8,11 @@ import {
   Values,
   NetworkContext,
   Result,
-  ChannelUpdate,
-  DEFAULT_TRANSFER_TIMEOUT,
   Balance,
-  TransferNames,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
+  IChannelSigner,
+  UpdateParams,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -20,19 +21,21 @@ import {
   createTestChannelStateWithSigners,
   createTestChannelUpdateWithSigners,
   createTestUpdateParams,
-  PartialUpdateParams,
   PartialFullChannelState,
   PartialChannelUpdate,
   createTestFullHashlockTransferState,
-  ChannelSigner,
   expect,
-  MemoryStoreService,
   getSignerAddressFromPublicIdentifier,
+  stringify,
+  getTestLoggers,
+  getTransferId,
+  createTestHashlockTransferState,
 } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
 import Sinon from "sinon";
 
 import * as vectorUpdate from "../update";
+import * as vectorUtils from "../utils";
 
 import { env } from "./env";
 
@@ -51,7 +54,7 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
   error?: Values<typeof InboundChannelUpdateError.reasons>;
 };
 
-describe("applyUpdate", () => {
+describe.only("applyUpdate", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
   const signers = Array(2)
@@ -407,15 +410,15 @@ describe("applyUpdate", () => {
         expect(applyResult.getError()?.message).to.be.eq(error);
       } else if (expected) {
         expect(applyResult.getError()).to.be.undefined;
-        const applyRet = applyResult.getValue();
-        expect(applyRet.channel).to.containSubset(expected.channel);
+        const { updatedChannel, updatedTransfer, updatedActiveTransfers } = applyResult.getValue();
+        expect(updatedChannel).to.containSubset(expected.channel);
 
         // Validate the updated active transfer
         if (updateType !== UpdateType.create && updateType !== UpdateType.resolve) {
           // the transfer should be undefined, and the active transfers
           // should not change
-          expect(applyRet.transfer).to.be.undefined;
-          expect(applyRet.activeTransfers).to.deep.eq(activeTransfers);
+          expect(updatedTransfer).to.be.undefined;
+          expect(updatedActiveTransfers).to.be.undefined;
         } else {
           // On resolve:
           // - transfer balance === final balance
@@ -427,7 +430,7 @@ describe("applyUpdate", () => {
           // - transfer generated from update details
           // - transfer added to activeTransfers
           const { initialStateHash, ...sanitizedTransfer } = expected.transfer!;
-          expect(applyRet.transfer).to.containSubset({
+          expect(updatedTransfer).to.containSubset({
             ...sanitizedTransfer,
             chainId: previousState?.networkContext.chainId,
             assetId: update.assetId,
@@ -442,7 +445,7 @@ describe("applyUpdate", () => {
                 : activeTransfers[0].responder,
             transferResolver: updateType === UpdateType.resolve ? update.details.transferResolver : undefined,
           });
-          expect(applyRet.activeTransfers.map(t => t.transferId).includes(update.details.transferId)).to.be.eq(
+          expect(updatedActiveTransfers!.map(t => t.transferId).includes(update.details.transferId)).to.be.eq(
             updateType === UpdateType.create,
           );
         }
@@ -453,81 +456,30 @@ describe("applyUpdate", () => {
   }
 });
 
-type GenerateUpdateTestParams = {
-  name: string;
-  updateType: UpdateType;
-  stateOverrides?: PartialFullChannelState<any>;
-  paramOverrides?: PartialUpdateParams<any>;
-  expectedUpdate?: Partial<ChannelUpdate<any>>;
-  expectedTransfer?: Partial<FullTransferState>;
-  error?: Values<typeof InboundChannelUpdateError.reasons>;
-  from?: ChannelSigner;
-
-  // Mock values
-  storedChannel?: PartialFullChannelState<any>;
-  onchainBalance?: BigNumber;
-  depositA?: BigNumber;
-  depositB?: BigNumber;
-  resolveBalance?: Balance;
-};
-
-describe("generateUpdate", () => {
-  // FIXME: THESE ARE BLOCKING TESTS!
-  it.skip("should fail if it fails parameter validation", () => {});
-  it.skip("should fail if it is unable to reconcile the deposit", () => {});
-  it.skip("should fail if trying to resolve an inactive transfer", () => {});
-  it.skip("should fail if fails to call resolve using chain service", () => {});
-  it.skip("should work if creating a transfer to someone outside of channel", () => {});
-  it.skip("should work if resolving a transfer to someone outside of channel", () => {});
-
-  // Get channel constants
+// NOTE: The `generateAndApplyUpdate` function returns the generated update,
+// as well as the `updatedChannel`, `updatedTransfer`, and
+// `updatedActiveTransfers`. Every return value except for the update
+// is parroted from the `applyUpdate` function (unit tested above).
+// Therefore, only the `update` itself must be generated. The presence
+// of the other fields should be asserted, and validity tested in the
+// applyUpdate functino above
+describe("generateAndApplyUpdate", () => {
+  // Get test constants
+  const { log } = getTestLoggers("generateAndApplyUpdate", env.logLevel);
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
   const signers = Array(2)
     .fill(0)
     .map(() => getRandomChannelSigner(providerUrl));
-  const participants = signers.map(s => s.address);
-  const publicIdentifiers = signers.map(s => s.publicIdentifier);
-  const channelAddress = mkAddress("0xccc");
-  const networkContext: NetworkContext = {
-    chainId,
-    providerUrl,
-    channelFactoryAddress: mkAddress("0xaaabbbcccc"),
-    transferRegistryAddress: mkAddress("0xddddeeeeefffff44444"),
-  };
+  const [aliceSigner, bobSigner] = signers;
 
-  // Get transfer constants
-  const emptyHashlockTransfer = createTestFullHashlockTransferState({
-    channelAddress,
-    transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
-  });
-  const merkleProofData = [mkHash("0x1235asdf")];
-  const merkleRoot = mkHash("0xaaaeeecccbbbb123");
-
-  // Declare mocks
-  let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
+  // Setup mocks
   let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
+  let reconcileDeposit: Sinon.SinonStubbedInstance<any>;
 
   beforeEach(async () => {
-    store = Sinon.createStubInstance(MemoryStoreService);
     chainService = Sinon.createStubInstance(VectorChainReader);
-
-    const transferInfo = {
-      name: TransferNames.HashlockTransfer,
-      stateEncoding: emptyHashlockTransfer.transferEncodings[0],
-      resolverEncoding: emptyHashlockTransfer.transferEncodings[1],
-      definition: emptyHashlockTransfer.transferDefinition,
-    };
-    chainService.getRegisteredTransferByDefinition.resolves(Result.ok(transferInfo));
-
-    // Mock `applyUpdate` (tested above) so it always returns
-    // an empty object
-    Sinon.stub(vectorUpdate, "applyUpdate").resolves(Result.ok({} as any));
-    // Mock merkle tree
-    // FIXME: y no work here :(
-    // const merkleStub = Sinon.createStubInstance(MerkleTree);
-    // merkleStub.getHexProof.returns(merkleProofData);
-    // merkleStub.getHexRoot.returns(merkleRoot);
+    reconcileDeposit = Sinon.stub(vectorUtils, "reconcileDeposit");
   });
 
   afterEach(() => {
@@ -535,292 +487,267 @@ describe("generateUpdate", () => {
     Sinon.reset();
   });
 
-  const tests: GenerateUpdateTestParams[] = [
-    {
-      name: "should work for setup",
-      updateType: UpdateType.setup,
-      paramOverrides: {
-        details: {
-          counterpartyIdentifier: publicIdentifiers[1],
-          timeout: "1023497",
-          networkContext,
-        },
-      },
-      stateOverrides: {
-        assetIds: [],
-        balances: [],
-        processedDepositsA: [],
-        processedDepositsB: [],
-        merkleRoot: mkHash(),
-        nonce: 0,
-        timeout: "0",
-        latestUpdate: {} as any, // There is no latest update on setup
-      },
-      expectedUpdate: {
-        nonce: 1,
-        // should have the to field filled out
-        balance: { to: participants, amount: ["0", "0"] },
-        details: {
-          networkContext,
-          timeout: "1023497",
-        },
-        assetId: mkAddress(),
-      },
-    },
-    {
-      name: "should work for bob deposit",
-      updateType: UpdateType.deposit,
-      paramOverrides: {
-        details: {
-          assetId: mkAddress(),
-        },
-      },
-      stateOverrides: {
-        assetIds: [],
-        balances: [],
-        processedDepositsA: [],
-        processedDepositsB: [],
-        merkleRoot: mkHash(),
-        nonce: 1,
-      },
-      expectedUpdate: {
-        nonce: 2,
-        assetId: mkAddress(),
-        balance: { to: participants, amount: ["0", "10"] },
-        details: { totalDepositsAlice: "0", totalDepositsBob: "10" },
-      },
-      onchainBalance: BigNumber.from(10),
-      depositB: BigNumber.from(10),
-      from: signers[1],
-    },
-    {
-      name: "should work for alice deposit",
-      updateType: UpdateType.deposit,
-      paramOverrides: {
-        details: {
-          assetId: mkAddress(),
-        },
-      },
-      stateOverrides: {
-        assetIds: [],
-        balances: [],
-        processedDepositsA: [],
-        processedDepositsB: [],
-        merkleRoot: mkHash(),
-        nonce: 1,
-      },
-      expectedUpdate: {
-        nonce: 2,
-        assetId: mkAddress(),
-        balance: { to: participants, amount: ["10", "0"] },
-        details: { totalDepositsAlice: "10", totalDepositsBob: "0" },
-      },
-      onchainBalance: BigNumber.from(10),
-      depositA: BigNumber.from(10),
-    },
-    {
-      name: "should work for create (alice creates)",
-      updateType: UpdateType.create,
-      paramOverrides: {
-        details: {
-          balance: { to: emptyHashlockTransfer.balance.to, amount: ["7", "0"] },
-          transferInitialState: {
-            ...emptyHashlockTransfer.transferState,
-          },
-          timeout: emptyHashlockTransfer.transferTimeout,
-          meta: emptyHashlockTransfer.meta,
-        },
-      },
-      stateOverrides: {
-        assetIds: [mkAddress()],
-        processedDepositsA: [],
-        processedDepositsB: [],
-        balances: [{ to: participants, amount: ["14", "8"] }],
-        nonce: 3,
-      },
-      expectedUpdate: {
-        nonce: 4,
-        balance: { to: participants, amount: ["7", "8"] },
-        assetId: mkAddress(),
-        details: {
-          transferInitialState: {
-            ...emptyHashlockTransfer.transferState,
-          },
-          transferEncodings: emptyHashlockTransfer.transferEncodings,
-          transferTimeout: emptyHashlockTransfer.transferTimeout,
-          merkleProofData,
-          merkleRoot,
-          meta: emptyHashlockTransfer.meta,
-        },
-      },
-      expectedTransfer: {
-        ...emptyHashlockTransfer,
-        chainId: networkContext.chainId,
-        balance: { to: participants, amount: ["7", "0"] },
-        channelFactoryAddress: networkContext.channelFactoryAddress,
-        transferState: {
-          ...emptyHashlockTransfer.transferState,
-        },
-        initiator: participants[0],
-        responder: participants[1],
-        transferResolver: undefined,
-      },
-    },
-    {
-      name: "should work for resolve (bob resolves)",
-      updateType: UpdateType.resolve,
-      paramOverrides: {
-        details: {
-          balance: { to: emptyHashlockTransfer.balance.to, amount: ["0", "7"] },
-          transferId: emptyHashlockTransfer.transferId,
-          transferResolver: emptyHashlockTransfer.transferResolver,
-          meta: { resolve: "test" },
-        },
-      },
-      stateOverrides: {
-        assetIds: [mkAddress()],
-        processedDepositsA: [],
-        processedDepositsB: [],
-        balances: [{ to: participants, amount: ["7", "8"] }],
-        nonce: 3,
-      },
-      expectedUpdate: {
-        nonce: 4,
-        balance: { to: participants, amount: ["7", "15"] },
-        assetId: mkAddress(),
-        details: {
-          transferId: emptyHashlockTransfer.transferId,
-          transferResolver: emptyHashlockTransfer.transferResolver,
-          merkleRoot: mkHash(),
-          meta: { resolve: "test" },
-        },
-      },
-      expectedTransfer: {
-        meta: { resolve: "test" },
-        transferId: emptyHashlockTransfer.transferId,
-        initiator: participants[0],
-        responder: participants[1],
-        transferState: {
-          ...emptyHashlockTransfer.transferState,
-        },
-        transferResolver: emptyHashlockTransfer.transferResolver,
-      },
-      resolveBalance: { to: participants, amount: ["0", "7"] },
-    },
-  ];
+  const makeAndVerifyCall = async (
+    signer: IChannelSigner,
+    params: UpdateParams<"create" | "deposit" | "resolve" | "setup">,
+    previousState: FullChannelState<any> | undefined,
+    activeTransfers: FullTransferState[] | undefined,
+    expected: any,
+    isError = false,
+  ) => {
+    // Make call
+    const result = await vectorUpdate.generateAndApplyUpdate(
+      signer,
+      chainService,
+      params,
+      previousState,
+      activeTransfers,
+      log,
+    );
 
-  for (const test of tests) {
-    const {
-      name,
-      updateType,
-      stateOverrides,
-      paramOverrides,
-      expectedUpdate,
-      error,
-      expectedTransfer,
-      storedChannel,
-      onchainBalance,
-      depositA,
-      depositB,
-      resolveBalance,
-      from,
-    } = test;
+    // Verify results
+    expect(result.isError).to.be.eq(isError);
+    if (isError) {
+      expect(result.getError()!.message).to.be.eq(expected);
+      return;
+    }
+    const { update, updatedChannel, updatedActiveTransfers, updatedTransfer } = result.getValue();
+    console.log("expected", stringify(expected));
+    console.log("update", stringify(update));
+    expect(update).to.containSubset(expected);
+    expect(update[signer.address === aliceSigner.address ? "aliceSignature" : "bobSignature"]).to.be.ok;
+    expect(updatedChannel).to.be.ok;
+    if (params.type === UpdateType.create || params.type === UpdateType.resolve) {
+      expect(updatedActiveTransfers).to.be.ok;
+      expect(updatedTransfer).to.be.ok;
+      return;
+    }
+    expect(updatedActiveTransfers).to.be.undefined;
+    expect(updatedTransfer).to.be.undefined;
+  };
 
-    it(name, async () => {
-      // // Generate the expected transfer
-      // const expectedTransfer = createTestFullHashlockTransferState(expectedTransfer)
+  const generateBaseExpectedUpdate = (
+    signer: IChannelSigner,
+    params: UpdateParams<any>,
+    previousState: FullChannelState | undefined,
+  ) => {
+    return {
+      channelAddress: previousState?.channelAddress ?? params.channelAddress,
+      type: params.type,
+      fromIdentifier: signer.publicIdentifier,
+      toIdentifier:
+        signer.publicIdentifier === aliceSigner.publicIdentifier
+          ? bobSigner.publicIdentifier
+          : aliceSigner.publicIdentifier,
+      nonce: (previousState?.nonce ?? 0) + 1,
+    };
+  };
 
-      // Generate the transfer from the params IFF the update type is resolve
-      let transfer: FullTransferState | undefined = undefined;
-      if (updateType === UpdateType.resolve) {
-        transfer = createTestFullHashlockTransferState({
-          ...expectedTransfer,
-          balance: { ...resolveBalance!, amount: [resolveBalance!.amount[1], resolveBalance!.amount[0]] },
-        });
-        transfer.transferResolver = undefined;
-      }
-
-      // Generate the params
-      const params = createTestUpdateParams(updateType, { channelAddress, ...paramOverrides });
-
-      // Generate the state
-      const state = createTestChannelStateWithSigners(signers, UpdateType.setup, {
-        channelAddress,
-        networkContext,
-        ...stateOverrides,
-      });
-
-      // Set the mocks
-      const inStore = !!storedChannel
-        ? createTestChannelStateWithSigners(signers, UpdateType.setup, {
-            channelAddress,
-            networkContext,
-            ...storedChannel,
-          })
-        : state;
-      store.getChannelState.resolves(inStore);
-
-      // Chain service mocks are only used by deposit/resolve
-      chainService.getTotalDepositedA.resolves(Result.ok(depositA ?? BigNumber.from(0)));
-      chainService.getTotalDepositedB.resolves(Result.ok(depositB ?? BigNumber.from(0)));
-
-      chainService.getChannelOnchainBalance.resolves(Result.ok(onchainBalance ?? BigNumber.from(0)));
-
-      chainService.resolve.resolves(Result.ok(resolveBalance ?? { to: participants, amount: ["0", "0"] }));
-
-      // Execute function call
-      const result = await vectorUpdate.generateUpdate(
-        params,
-        state,
-        [transfer].filter(x => !!x) as any,
-        chainService,
-        from ?? signers[0],
-      );
-
-      // Verify result
-      if (error) {
-        expect(result.getError()?.message).to.be.eq(error);
-      } else if (expectedUpdate) {
-        expect(result.getError()).to.be.undefined;
-        const { update, transfer: updatedTransfer } = result.getValue()!;
-
-        // Verify expected update
-        const expected = createTestChannelUpdateWithSigners(signers, updateType, {
-          channelAddress,
-          type: updateType,
-          fromIdentifier: from?.publicIdentifier ?? publicIdentifiers[0],
-          toIdentifier:
-            from?.publicIdentifier && from?.publicIdentifier === publicIdentifiers[1]
-              ? publicIdentifiers[0]
-              : publicIdentifiers[1],
-          ...expectedUpdate,
-        });
-
-        // Dont compare signatures
-        const { aliceSignature, bobSignature, details, ...unsigned } = expected;
-
-        // Dont compare transferIds or merkle data
-        const { transferId, merkleProofData, merkleRoot, ...sanitizedDetails } = details;
-
-        expect(update).to.containSubset({
-          ...unsigned,
-          details: {
-            ...sanitizedDetails,
-          },
-        });
-
-        // Verify transfer
-        if (transfer) {
-          const { transferId: expectedId, ...sanitizedTransfer } = expectedTransfer ?? {};
-          expect(updatedTransfer).to.containSubset(sanitizedTransfer);
-        }
-
-        // Verify update initiator added sigs
-        expect(from?.address && from?.address == state.bob ? update.bobSignature : update.aliceSignature).to.be.ok;
-        expect(from?.address && from?.address == state.bob ? update.aliceSignature : update.bobSignature).to.not.be.ok;
-      } else {
-        expect(false).to.be.eq("Neither error or expected result provided in test");
-      }
+  it("should work for setup", async () => {
+    // Set test params
+    const params = createTestUpdateParams(UpdateType.setup, {
+      details: {
+        counterpartyIdentifier: bobSigner.publicIdentifier,
+      },
     });
-  }
+    const previousState = undefined;
+    const activeTransfers = undefined;
+    const signer = aliceSigner;
+
+    // Create expected return values
+    const expectedUpdate = {
+      ...generateBaseExpectedUpdate(signer, params, previousState),
+      details: {
+        timeout: params.details.timeout,
+        networkContext: params.details.networkContext,
+      },
+      balance: { to: signers.map(s => s.address), amount: ["0", "0"] },
+      assetId: mkAddress(),
+    };
+
+    // Make call
+    await makeAndVerifyCall(signer, params, previousState, activeTransfers, expectedUpdate);
+  });
+
+  it("should work for bob deposit", async () => {
+    const channelAddress = mkAddress("0xc");
+    const depositAmt = BigNumber.from(15);
+    const assetId = mkAddress("0xa");
+
+    // Set test params
+    const params = createTestUpdateParams(UpdateType.deposit, {
+      channelAddress,
+      details: { channelAddress, assetId },
+    });
+    const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
+      channelAddress,
+      assetIds: [],
+      balances: [],
+      processedDepositsA: [],
+      processedDepositsB: [],
+    });
+    const activeTransfers = undefined;
+    const signer = bobSigner;
+
+    // Set mocks
+    const balance = { to: signers.map(s => s.address), amount: ["0", depositAmt.toString()] };
+    const totalDepositsBob = depositAmt.toString();
+    const totalDepositsAlice = "0";
+    reconcileDeposit.resolves(
+      Result.ok({
+        totalDepositsBob,
+        totalDepositsAlice,
+        balance,
+      }),
+    );
+
+    // Set expected value
+    const expectedUpdate = {
+      ...generateBaseExpectedUpdate(signer, params, previousState),
+      balance,
+      assetId,
+      details: {
+        totalDepositsAlice,
+        totalDepositsBob,
+      },
+    };
+
+    // Make call
+    await makeAndVerifyCall(signer, params, previousState, activeTransfers, expectedUpdate);
+  });
+
+  it.skip("should work for alice deposit", async () => {});
+  it.skip("should work for alice create", async () => {});
+
+  it("should work for bob create", async () => {
+    const channelAddress = mkAddress("0xc");
+    const transferBalance = { to: [bobSigner.address, aliceSigner.address], amount: ["7", "0"] };
+    const transferAsset = mkAddress();
+    const transferState = createTestHashlockTransferState();
+
+    // Set test params
+    const params = createTestUpdateParams(UpdateType.create, {
+      channelAddress,
+      details: {
+        channelAddress,
+        balance: transferBalance,
+        assetId: transferAsset,
+        transferDefinition: mkAddress(),
+        transferInitialState: transferState,
+        meta: { hello: "world" },
+      },
+    });
+    const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
+      channelAddress,
+      assetIds: [transferAsset],
+      balances: [{ to: signers.map(s => s.address), amount: ["14", "23"] }],
+      processedDepositsA: ["37"],
+      processedDepositsB: ["0"],
+    });
+    const activeTransfers = [];
+    const signer = bobSigner;
+
+    // Set mocks
+    const registryInfo = {
+      stateEncoding: HashlockTransferStateEncoding,
+      resolverEncoding: HashlockTransferResolverEncoding,
+      name: "test",
+      definition: params.details.transferDefinition,
+    };
+    chainService.getRegisteredTransferByDefinition.resolves(Result.ok(registryInfo));
+
+    // Set expected value
+    const expectedUpdate = {
+      ...generateBaseExpectedUpdate(signer, params, previousState),
+      balance: { to: signers.map(s => s.address), amount: ["14", "16"] },
+      assetId: params.details.assetId,
+      details: {
+        transferId: getTransferId(
+          channelAddress,
+          previousState.nonce.toString(),
+          params.details.transferDefinition,
+          params.details.timeout,
+        ),
+        balance: transferBalance,
+        transferDefinition: params.details.transferDefinition,
+        transferTimeout: params.details.timeout,
+        transferInitialState: params.details.transferInitialState,
+        transferEncodings: [registryInfo.stateEncoding, registryInfo.resolverEncoding],
+        meta: params.details.meta,
+      },
+    };
+
+    // Make call
+    await makeAndVerifyCall(signer, params, previousState, activeTransfers, expectedUpdate);
+  });
+
+  it("should work for alice resolve", async () => {
+    const channelAddress = mkAddress("0xc");
+    const transferBalance = { to: [bobSigner.address, aliceSigner.address], amount: ["0", "7"] };
+    const transferAsset = mkAddress();
+    const transfer = createTestFullHashlockTransferState({
+      balance: { ...transferBalance, amount: ["7", "0"] },
+      assetId: transferAsset,
+      channelAddress,
+      initiator: bobSigner.address,
+      responder: aliceSigner.address,
+      meta: { existing: "meta" },
+    });
+    const resolver = transfer.transferResolver;
+    transfer.transferResolver = undefined;
+
+    // Set test params
+    const params = createTestUpdateParams(UpdateType.resolve, {
+      channelAddress,
+      details: {
+        transferId: transfer.transferId,
+        transferResolver: resolver,
+        meta: { hello: "world" },
+      },
+    });
+    const previousState = createTestChannelStateWithSigners(signers, UpdateType.create, {
+      channelAddress,
+      assetIds: [transferAsset],
+      balances: [{ to: signers.map(s => s.address), amount: ["14", "16"] }],
+      processedDepositsA: ["37"],
+      processedDepositsB: ["0"],
+    });
+    const activeTransfers = [transfer];
+    const signer = aliceSigner;
+
+    // Set mocks
+    const registryInfo = {
+      stateEncoding: transfer.transferEncodings[0],
+      resolverEncoding: transfer.transferEncodings[1],
+      name: "test",
+      definition: transfer.transferDefinition,
+    };
+    chainService.getRegisteredTransferByDefinition.resolves(Result.ok(registryInfo));
+    chainService.resolve.resolves(Result.ok(transferBalance));
+
+    // Set expected value
+    const expectedUpdate = {
+      ...generateBaseExpectedUpdate(signer, params, previousState),
+      balance: { to: signers.map(s => s.address), amount: ["21", "16"] },
+      assetId: transfer.assetId,
+      details: {
+        transferId: transfer.transferId,
+        transferDefinition: transfer.transferDefinition,
+        transferResolver: resolver,
+        merkleRoot: mkHash(),
+        meta: params.details.meta,
+      },
+    };
+
+    // Make call
+    await makeAndVerifyCall(signer, params, previousState, activeTransfers, expectedUpdate);
+  });
+
+  it.skip("should work for bob resolve", async () => {});
+  it.skip("should fail if reconcileDeposit fails", async () => {});
+  it.skip("should fail if trying to resolve inactive transfer", async () => {});
+  it.skip("should fail if calling resolve on chainService fails", async () => {});
+  it.skip("should fail if it cannot get the registered transfer", async () => {});
+  it.skip("should work if creating a transfer to someone outside of channel", async () => {});
+  it.skip("should work if resolving a transfer to someone outside of channel", async () => {});
 });
