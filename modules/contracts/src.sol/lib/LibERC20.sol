@@ -12,15 +12,8 @@ library LibERC20 {
         internal
         returns (bool)
     {
-        return wrapCall(assetId, callData, gasleft());
-    }
-
-    function wrapCall(address assetId, bytes memory callData, uint256 gas)
-        internal
-        returns (bool)
-    {
         require(Address.isContract(assetId), "LibERC20: NO_CODE");
-        (bool success, bytes memory returnData) = assetId.call{gas: gas}(callData);
+        (bool success, bytes memory returnData) = assetId.call(callData);
         LibUtils.revertIfCallFailed(success, returnData);
         return returnData.length == 0 || abi.decode(returnData, (bool));
     }
@@ -49,17 +42,9 @@ library LibERC20 {
         internal
         returns (bool)
     {
-        return transfer(assetId, recipient, amount, gasleft());
-    }
-
-    function transfer(address assetId, address recipient, uint256 amount, uint256 gas)
-        internal
-        returns (bool)
-    {
         return wrapCall(
             assetId,
-            abi.encodeWithSignature("transfer(address,uint256)", recipient, amount),
-            gas
+            abi.encodeWithSignature("transfer(address,uint256)", recipient, amount)
         );
     }
 
