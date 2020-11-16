@@ -83,7 +83,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   async open(): Promise<void> {
-    console.log("OPENING");
     this.subscribe();
     await this.render();
   }
@@ -103,7 +102,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
         throw new Error("iframe inner page not loaded!");
       }
       this.events.once(`${rpc.id}`, response => {
-        console.log("RECEIVED response: ", response);
         if (response?.result) {
           resolve(response?.result);
         } else {
@@ -114,7 +112,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
           }
         }
       });
-      console.log("SENDING RPC: ", JSON.stringify(rpc));
       this.iframe.contentWindow.postMessage(JSON.stringify(rpc), "*");
     });
   }
@@ -164,13 +161,10 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   };
 
   public render(): Promise<void> {
-    console.log("RENDERING");
     if (this.iframe) {
-      console.log("ALREADY RENDERED");
       return Promise.resolve(); // already rendered
     }
     if (window.document.getElementById(this.opts.id)) {
-      console.log("ALREADY EXISTS");
       return Promise.resolve(); // already exists
     }
     return new Promise(resolve => {
@@ -224,12 +218,10 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public subscribe(): void {
     if (this.subscribed) {
-      console.log("subscribe() -----> this.subscribed = true");
       return;
     }
     window.addEventListener("message", this.handleIncomingMessages.bind(this));
     this.subscribed = true;
-    console.log("subscribe() -----> subscribed to message event");
   }
 
   public unsubscribe(): void {
@@ -241,7 +233,6 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
   }
 
   private onConnect(): void {
-    console.log("IFRAME CONNECTED");
     this.connected = true;
     this.events.emit("connect");
     this.events.emit("open");
@@ -287,12 +278,3 @@ export class DirectProvider implements IRpcChannelProvider {
     this.engine.once(event, callback, filter);
   }
 }
-
-// export class IframeChannelProvider extends ChannelProvider {
-//   constructor(opts: IframeOptions) {
-//     super(new IframeRpcConnection(opts));
-//   }
-//   get isIframe(): boolean {
-//     return true;
-//   }
-// }

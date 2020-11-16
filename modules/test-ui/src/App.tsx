@@ -17,9 +17,7 @@ import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-t
 import "./App.css";
 
 const storedEntropy = localStorage.getItem("entropy");
-console.log("storedEntropy: ", storedEntropy);
 const storedIframeSrc = localStorage.getItem("iframeSrc");
-console.log("storedIframeSrc: ", storedIframeSrc);
 
 function App() {
   const [node, setNode] = useState<BrowserNode>();

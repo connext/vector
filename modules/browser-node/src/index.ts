@@ -97,10 +97,8 @@ export class BrowserNode implements INodeService {
           signature: config.iframeSignerEntropy,
         },
       };
-      console.log("SENDING AUTH FROM PARENT");
       const auth = await node.channelProvider.send(rpc);
-      console.log("auth: ", auth);
-      console.log("CALLING GET CONFIG FROM PARENT");
+      config.logger.info({ method: "connect", response: auth }, "Received response from auth method");
       const [nodeConfig] = await node.getConfig();
       node.publicIdentifier = nodeConfig.publicIdentifier;
       node.signerAddress = nodeConfig.signerAddress;

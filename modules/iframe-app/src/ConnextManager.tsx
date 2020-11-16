@@ -36,7 +36,11 @@ export default class ConnextManager {
     const signer = new ChannelSigner(this.privateKey);
 
     // store publicIdentifier in local storage to see if indexedDB needs to be deleted
-    // TODO
+    const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
+    if (storedPublicIdentifier && storedPublicIdentifier !== signer.publicIdentifier) {
+      console.warn("Public identifier does not match what is in storage, deleting store");
+      indexedDB.deleteDatabase("VectorIndexedDBDatabase");
+    }
 
     this.browserNode = await BrowserNode.connect({
       signer,
@@ -47,12 +51,12 @@ export default class ConnextManager {
       authUrl: config.authUrl,
       natsUrl: config.natsUrl,
     });
+    localStorage.setItem("publicIdentifier", signer.publicIdentifier);
     return this.browserNode;
   }
 
   private async handleIncomingMessage(e: MessageEvent) {
     if (e.origin !== this.parentOrigin) return;
-    console.log("handleIncomingMessage: ", e.data);
     const request = safeJsonParse(e.data);
     let response: any;
     try {
@@ -68,7 +72,6 @@ export default class ConnextManager {
   private async handleRequest<T extends ChannelRpcMethod>(
     request: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
-    console.log("handleRequest: request: ", request);
     if (request.method === "connext_authenticate") {
       const sig = request.params.signature;
       const node = await this.initNode(sig);
