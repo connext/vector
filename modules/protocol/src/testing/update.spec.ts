@@ -54,7 +54,7 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
   error?: Values<typeof InboundChannelUpdateError.reasons>;
 };
 
-describe.only("applyUpdate", () => {
+describe("applyUpdate", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
   const signers = Array(2)
