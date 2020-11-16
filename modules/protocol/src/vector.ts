@@ -312,7 +312,6 @@ export class Vector implements IVectorProtocol {
 
   private validateParams(params: any, schema: any): undefined | OutboundChannelUpdateError {
     const validate = ajv.compile(schema);
-    console.log("**** validating ");
     const valid = validate(params);
     if (!valid) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
@@ -437,6 +436,10 @@ export class Vector implements IVectorProtocol {
   // STORE METHODS
   public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     return this.storeService.getChannelState(channelAddress);
+  }
+
+  public async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
+    return this.storeService.getActiveTransfers(channelAddress);
   }
 
   public async getChannelStateByParticipants(
