@@ -181,7 +181,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
-          BigNumber.from(channelState.networkContext.chainId),
         );
       });
     }
