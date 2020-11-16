@@ -25,6 +25,7 @@ function App() {
   const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
   const [transferLoading, setTransferLoading] = useState<boolean>(false);
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
+  const [entropy, setEntropy] = useState<string>(utils.hexlify(utils.randomBytes(65)));
 
   const [connectError, setConnectError] = useState<string>();
 
@@ -39,7 +40,7 @@ function App() {
       setConnectLoading(true);
       const client = await BrowserNode.connect({
         iframeSrc,
-        iframeSignerEntropy: utils.hexlify(utils.randomBytes(65)),
+        iframeSignerEntropy: entropy,
         logger: pino(),
       });
       const channelsRes = await client.getStateChannels();
@@ -196,6 +197,7 @@ function App() {
                 dataSource={[
                   { title: "Public Identifier", description: node!.publicIdentifier },
                   { title: "Signer Address", description: node!.signerAddress },
+                  { title: "Entropy Used", description: entropy },
                 ]}
                 renderItem={item => (
                   <List.Item>
@@ -204,45 +206,32 @@ function App() {
                 )}
               />
             </Col>
-            <Col span={8}>
-              <Button
-                danger
-                onClick={() => {
-                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
-                  localStorage.clear();
-                  window.location.reload();
-                }}
-              >
-                Clear Store
-              </Button>
-            </Col>
           </>
         ) : connectError ? (
           <>
             <Col span={16}>
               <Statistic title="Error Connecting Node" value={connectError} />
             </Col>
-            <Col span={8}>
-              <Button
-                danger
-                onClick={() => {
-                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
-                  localStorage.clear();
-                  window.location.reload();
-                }}
-              >
-                Clear Store
-              </Button>
-            </Col>
           </>
         ) : (
           <>
-            <Col span={16}>
+            <Col span={12}>
               <Input.Search
                 placeholder="IFrame Src (blank for localhost:3030)"
                 enterButton="Setup Node"
                 size="large"
                 onSearch={connectNode}
+                loading={connectLoading}
+              />
+            </Col>
+            <Col span={12}>
+              <Input.Search
+                placeholder="Entropy"
+                enterButton="Random"
+                value={entropy}
+                size="large"
+                onChange={event => setEntropy(event.target.value)}
+                onSearch={() => setEntropy(utils.hexlify(utils.randomBytes(65)))}
                 loading={connectLoading}
               />
             </Col>

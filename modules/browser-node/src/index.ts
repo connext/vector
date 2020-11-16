@@ -221,7 +221,7 @@ export class BrowserNode implements INodeService {
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {
     try {
-      const rpc = constructRpcRequest<"chan_setup">(ChannelRpcMethods.chan_setup, params);
+      const rpc = constructRpcRequest<"chan_requestSetup">(ChannelRpcMethods.chan_requestSetup, params);
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {
