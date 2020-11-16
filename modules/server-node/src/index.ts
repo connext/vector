@@ -25,7 +25,7 @@ server.register(fastifyCors, {
   preflightContinue: true,
 });
 
-export const store = new PrismaStore(config.dbUrl);
+export const store = new PrismaStore();
 
 export const _providers = hydrateProviders(config.chainProviders);
 
