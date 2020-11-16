@@ -21,7 +21,7 @@
     "axios": "0.21.0",
     "ethers": "5.0.19",
     "evt": "1.9.2",
-    "fastify": "3.7.0",
+    "fastify": "3.8.0",
     "fastify-metrics": "6.0.2",
     "fastify-oas": "3.0.3",
     "pino": "6.7.0",
