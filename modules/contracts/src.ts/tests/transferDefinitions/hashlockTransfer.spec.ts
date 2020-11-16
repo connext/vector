@@ -18,7 +18,7 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { sha256 } from "@ethersproject/solidity";
+import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
@@ -36,7 +36,7 @@ describe("HashlockTransfer", function() {
     transfer = addressBook.getContract("HashlockTransfer");
   });
 
-  const createlockHash = (preImage: string): string => sha256(["bytes32"], [preImage]);
+  const createlockHash = (preImage: string): string => soliditySha256(["bytes32"], [preImage]);
 
   const createInitialState = async (preImage: string): Promise<{ state: HashlockTransferState; balance: Balance }> => {
     const senderAddr = getRandomAddress();

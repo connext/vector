@@ -7,7 +7,7 @@ import {
   HashlockTransferStateEncoding,
   HashlockTransferResolverEncoding,
 } from "@connext/vector-types";
-import { sha256 } from "@ethersproject/solidity";
+import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 
 import { getRandomBytes32 } from "../hexStrings";
 import { hashTransferState } from "../transfers";
@@ -71,7 +71,7 @@ export function createTestFullHashlockTransferState(
   const transferEncodings = [HashlockTransferStateEncoding, HashlockTransferResolverEncoding];
   const transferResolver = { preImage: preImage ?? getRandomBytes32() };
   const transferState = createTestHashlockTransferState({
-    lockHash: sha256(["bytes32"], [transferResolver.preImage]),
+    lockHash: soliditySha256(["bytes32"], [transferResolver.preImage]),
     expiry: expiry ?? "0",
   });
 

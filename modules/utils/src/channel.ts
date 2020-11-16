@@ -1,28 +1,28 @@
 import { Balance, CoreChannelState, CoreChannelStateEncoding, ChannelCommitmentTypes } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
-import { keccak256 } from "@ethersproject/solidity";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 
 export const hashBalance = (balance: Balance): string =>
-  keccak256(
+  solidityKeccak256(
     ["bytes32", "bytes32"],
-    [keccak256(["uint256[]"], [balance.amount]), keccak256(["address[]"], [balance.to])],
+    [solidityKeccak256(["uint256[]"], [balance.amount]), solidityKeccak256(["address[]"], [balance.to])],
   );
 
-export const hashBalances = (balances: Balance[]): string => keccak256(["bytes32[]"], [balances.map(hashBalance)]);
+export const hashBalances = (balances: Balance[]): string => solidityKeccak256(["bytes32[]"], [balances.map(hashBalance)]);
 
 export const encodeCoreChannelState = (state: CoreChannelState): string =>
   defaultAbiCoder.encode([CoreChannelStateEncoding], [state]);
 
 export const hashCoreChannelState = (state: CoreChannelState): string =>
-  keccak256(["bytes"], [encodeCoreChannelState(state)]);
+  solidityKeccak256(["bytes"], [encodeCoreChannelState(state)]);
 
-export const hashChannelCommitment = (state: CoreChannelState): string => {
-  const encoded = defaultAbiCoder.encode(
-    ["uint8", "bytes32"],
-    [ChannelCommitmentTypes.ChannelState, hashCoreChannelState(state)],
-  );
-  return keccak256(["bytes"], [encoded]);
-};
+export const hashChannelCommitment = (state: CoreChannelState): string =>
+  solidityKeccak256(["bytes"], [
+    defaultAbiCoder.encode(
+      ["uint8", "bytes32"],
+      [ChannelCommitmentTypes.ChannelState, hashCoreChannelState(state)],
+    ),
+  ]);
 
 export const getBalanceForAssetId = (
   channel: CoreChannelState,
