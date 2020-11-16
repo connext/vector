@@ -9,12 +9,9 @@ import {
   NodeResponses,
   ResolveUpdateDetails,
   CreateUpdateDetails,
-  ChannelRpcMethod,
 } from "@connext/vector-types";
-import { bufferify, constructRpcRequest, hashCoreTransferState, hydrateProviders } from "@connext/vector-utils";
+import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
-import { MerkleTree } from "merkletreejs";
-import { utils } from "ethers";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -28,7 +25,7 @@ server.register(fastifyCors, {
   preflightContinue: true,
 });
 
-export const store = new PrismaStore();
+export const store = new PrismaStore(config.dbUrl);
 
 export const _providers = hydrateProviders(config.chainProviders);
 
