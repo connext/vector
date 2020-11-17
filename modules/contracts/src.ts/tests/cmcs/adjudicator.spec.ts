@@ -136,7 +136,7 @@ describe("CMCAdjudicator.sol", async function() {
     const preDefundBob = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, bob.address)));
 
     // Defund channel
-    const tx = await channel.defundChannel(ccs);
+    const tx = await channel.defundChannel(ccs, ccs.assetIds);
     await tx.wait();
 
     // Get post-defund balances
@@ -300,9 +300,9 @@ describe("CMCAdjudicator.sol", async function() {
         this.skip();
       }
       await disputeChannel();
-      await expect(channel.defundChannel({ ...channelState, alice: getRandomAddress() })).revertedWith(
-        "CMCAdjudicator: INVALID_CHANNEL",
-      );
+      await expect(
+        channel.defundChannel({ ...channelState, alice: getRandomAddress() }, channelState.assetIds),
+      ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
     it("should fail if state.bob is incorrect", async function() {
@@ -310,9 +310,9 @@ describe("CMCAdjudicator.sol", async function() {
         this.skip();
       }
       await disputeChannel();
-      await expect(channel.defundChannel({ ...channelState, bob: getRandomAddress() })).revertedWith(
-        "CMCAdjudicator: INVALID_CHANNEL",
-      );
+      await expect(
+        channel.defundChannel({ ...channelState, bob: getRandomAddress() }, channelState.assetIds),
+      ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
     it("should fail if state.channelAddress is incorrect", async function() {
@@ -320,9 +320,9 @@ describe("CMCAdjudicator.sol", async function() {
         this.skip();
       }
       await disputeChannel();
-      await expect(channel.defundChannel({ ...channelState, channelAddress: getRandomAddress() })).revertedWith(
-        "CMCAdjudicator: INVALID_CHANNEL",
-      );
+      await expect(
+        channel.defundChannel({ ...channelState, channelAddress: getRandomAddress() }, channelState.assetIds),
+      ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
     it("should fail if channel state supplied does not match channels state stored", async function() {
@@ -330,7 +330,7 @@ describe("CMCAdjudicator.sol", async function() {
         this.skip();
       }
       await disputeChannel();
-      await expect(channel.defundChannel({ ...channelState, nonce: 652 })).revertedWith(
+      await expect(channel.defundChannel({ ...channelState, nonce: 652 }, channelState.assetIds)).revertedWith(
         "CMCAdjudicator: INVALID_CHANNEL_HASH",
       );
     });
@@ -342,7 +342,9 @@ describe("CMCAdjudicator.sol", async function() {
       const tx = await channel.disputeChannel(channelState, aliceSignature, bobSignature);
       const { blockNumber } = await tx.wait();
       await verifyChannelDispute(channelState, blockNumber);
-      await expect(channel.defundChannel(channelState)).revertedWith("CMCAdjudicator: INVALID_PHASE");
+      await expect(channel.defundChannel(channelState, channelState.assetIds)).revertedWith(
+        "CMCAdjudicator: INVALID_PHASE",
+      );
     });
 
     it("should fail if defund nonce does not increment", async function() {
@@ -351,7 +353,19 @@ describe("CMCAdjudicator.sol", async function() {
       }
       const toDispute = { ...channelState, defundNonce: "0" };
       await disputeChannel(toDispute);
-      await expect(channel.defundChannel(toDispute)).revertedWith("CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
+      await expect(channel.defundChannel(toDispute, toDispute.assetIds)).revertedWith(
+        "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED",
+      );
+    });
+
+    it("should fail if assetIds are not in the channel state", async function() {
+      if (nonAutomining) {
+        this.skip();
+      }
+      await disputeChannel(channelState);
+      await expect(channel.defundChannel(channelState, [getRandomAddress()])).revertedWith(
+        "CMCAdjudicator: ASSET_NOT_FOUND",
+      );
     });
 
     it("should work (simple case)", async function() {
