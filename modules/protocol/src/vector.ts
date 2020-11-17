@@ -208,10 +208,12 @@ export class Vector implements IVectorProtocol {
         return;
       }
 
+      const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
+
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        updatedChannelState: inboundRes.getValue().nextState,
-        updatedTransfers: inboundRes.getValue().activeTransfers,
-        updatedTransfer: inboundRes.getValue().updatedTransfer,
+        updatedChannelState: updatedChannel,
+        updatedTransfers: updatedActiveTransfers,
+        updatedTransfer: updatedTransfer,
       });
     });
 
@@ -434,6 +436,10 @@ export class Vector implements IVectorProtocol {
   // STORE METHODS
   public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     return this.storeService.getChannelState(channelAddress);
+  }
+
+  public async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
+    return this.storeService.getActiveTransfers(channelAddress);
   }
 
   public async getChannelStateByParticipants(

@@ -52,8 +52,10 @@ describe(testName, () => {
     const { transferResolver, ...toCompare } = transfer;
     expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+    expect(await alice.getActiveTransfers(channel.channelAddress)).to.containSubset([toCompare]);
     expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
     expect(await bob.getTransferState(transfer.transferId)).to.containSubset(toCompare);
+    expect(await bob.getActiveTransfers(channel.channelAddress)).to.containSubset([toCompare]);
     const aliceEvent = await alicePromise;
     expect(aliceEvent.updatedTransfers?.length).to.eq(1);
     const bobEvent = await bobPromise;
