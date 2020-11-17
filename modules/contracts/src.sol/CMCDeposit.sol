@@ -11,16 +11,9 @@ import "./lib/LibERC20.sol";
 contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
   mapping(address => uint256) private depositsAlice;
 
-  receive() external payable onlyViaProxy nonReentrant {}
+  receive() external payable onlyViaProxy {}
 
-  function getTotalDepositsAlice(address assetId)
-    external
-    override
-    view
-    onlyViaProxy
-    nonReentrantView
-    returns (uint256)
-  {
+  function getTotalDepositsAlice(address assetId) external override view onlyViaProxy returns (uint256) {
     return _getTotalDepositsAlice(assetId);
   }
 
@@ -28,7 +21,7 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
     return depositsAlice[assetId];
   }
 
-  function getTotalDepositsBob(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+  function getTotalDepositsBob(address assetId) external override view onlyViaProxy returns (uint256) {
     return _getTotalDepositsBob(assetId);
   }
 
@@ -37,7 +30,7 @@ contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
     return LibAsset.getOwnBalance(assetId) + totalTransferred[assetId] - depositsAlice[assetId];
   }
 
-  function depositAlice(address assetId, uint256 amount) external override payable onlyViaProxy nonReentrant {
+  function depositAlice(address assetId, uint256 amount) external override payable onlyViaProxy {
     if (LibAsset.isEther(assetId)) {
       require(msg.value == amount, "CMCDeposit: VALUE_MISMATCH");
     } else {

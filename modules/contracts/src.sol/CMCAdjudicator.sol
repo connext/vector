@@ -35,18 +35,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     _;
   }
 
-  function getChannelDispute() external override view onlyViaProxy nonReentrantView returns (ChannelDispute memory) {
+  function getChannelDispute() external override view onlyViaProxy returns (ChannelDispute memory) {
     return channelDispute;
   }
 
-  function getTransferDispute(bytes32 transferId)
-    external
-    override
-    view
-    onlyViaProxy
-    nonReentrantView
-    returns (TransferDispute memory)
-  {
+  function getTransferDispute(bytes32 transferId) external override view onlyViaProxy returns (TransferDispute memory) {
     return transferDisputes[transferId];
   }
 
@@ -54,7 +47,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreChannelState calldata ccs,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
-  ) external override onlyViaProxy nonReentrant validateChannel(ccs) {
+  ) external override onlyViaProxy validateChannel(ccs) {
     // Verify Alice's and Bob's signature on the channel state
     verifySignatures(ccs, aliceSignature, bobSignature);
 
@@ -81,13 +74,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     emit ChannelDisputed(msg.sender, address(this), channelDispute);
   }
 
-  function defundChannel(CoreChannelState calldata ccs)
-    external
-    override
-    onlyViaProxy
-    nonReentrant
-    validateChannel(ccs)
-  {
+  function defundChannel(CoreChannelState calldata ccs) external override onlyViaProxy validateChannel(ccs) {
     // Verify that the given channel state matches the stored one
     require(hashChannelState(ccs) == channelDispute.channelStateHash, "CMCAdjudicator: INVALID_CHANNEL_HASH");
 
@@ -137,7 +124,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     external
     override
     onlyViaProxy
-    nonReentrant
     validateTransfer(cts)
   {
     // Verify that the given transfer state is included in the "finalized" channel state
@@ -165,7 +151,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     CoreTransferState calldata cts,
     bytes calldata encodedInitialTransferState,
     bytes calldata encodedTransferResolver
-  ) external override onlyViaProxy nonReentrant validateTransfer(cts) {
+  ) external override onlyViaProxy validateTransfer(cts) {
     // Get stored dispute for this transfer
     TransferDispute storage transferDispute = transferDisputes[cts.transferId];
 

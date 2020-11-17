@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/ICMCCore.sol";
 import "./ReentrancyGuard.sol";
 
-contract CMCCore is ReentrancyGuard, ICMCCore {
+contract CMCCore is ICMCCore {
   address constant invalidParticipant = address(1);
 
   address internal alice;
@@ -28,7 +28,6 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
   /// @param _alice: Address representing user with function deposit
   /// @param _bob: Address representing user with multisig deposit
   function setup(address _alice, address _bob) external override onlyViaProxy {
-    ReentrancyGuard.setup();
     require(alice == address(0), "CMCCore: ALREADY_SETUP");
     require(_alice != address(0) && _bob != address(0), "CMCCore: INVALID_PARTICIPANT");
     require(_alice != _bob, "CMCCore: IDENTICAL_PARTICIPANTS");
@@ -38,13 +37,13 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
 
   /// @notice A getter function for the bob of the multisig
   /// @return Bob's signer address
-  function getAlice() external override view onlyViaProxy nonReentrantView returns (address) {
+  function getAlice() external override view onlyViaProxy returns (address) {
     return alice;
   }
 
   /// @notice A getter function for the bob of the multisig
   /// @return Alice's signer address
-  function getBob() external override view onlyViaProxy nonReentrantView returns (address) {
+  function getBob() external override view onlyViaProxy returns (address) {
     return bob;
   }
 }

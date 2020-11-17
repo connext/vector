@@ -21,14 +21,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     _;
   }
 
-  function getWithdrawalTransactionRecord(WithdrawData calldata wd)
-    external
-    override
-    view
-    onlyViaProxy
-    nonReentrantView
-    returns (bool)
-  {
+  function getWithdrawalTransactionRecord(WithdrawData calldata wd) external override view onlyViaProxy returns (bool) {
     return isExecuted[hashWithdrawData(wd)];
   }
 
@@ -43,7 +36,7 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     WithdrawData calldata wd,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
-  ) external override onlyViaProxy nonReentrant validateWithdrawData(wd) {
+  ) external override onlyViaProxy validateWithdrawData(wd) {
     // Generate hash
     bytes32 wdHash = hashWithdrawData(wd);
 
