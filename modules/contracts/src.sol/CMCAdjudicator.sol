@@ -263,7 +263,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   function getIndex(address assetId, address[] calldata assetIds) internal pure returns (uint256) {
     // Make sure that the asset id is in the array by initializing the index
     // to > length of array
-    uint256 index = assetIds.length + 1;
+    uint256 index = assetIds.length;
     for (uint256 i = 0; i < assetIds.length; i++) {
       if (assetId == assetIds[i]) {
         index = i;
