@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IVectorChannel.sol";
+import "./interfaces/IChannelMiddleware.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibERC20.sol";
 import "./lib/MinimalProxyFactory.sol";
@@ -11,10 +12,10 @@ import "./lib/MinimalProxyFactory.sol";
 /// @title Channel Factory - Allows us to create new channel proxy contract
 /// @author Connext & Friends <hello@connext.network>
 contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
-    address private immutable mastercopy;
+    address private immutable middleware;
 
-    constructor(address _mastercopy) {
-        mastercopy = _mastercopy;
+    constructor(address _middleware) {
+        middleware = _middleware;
     }
 
     ////////////////////////////////////////
@@ -22,11 +23,16 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
 
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
     function getMastercopy() external override view returns(address) {
-      return mastercopy;
+      return IChannelMiddleware(middleware).getMastercopy();
+    }
+
+    /// @dev Allows us to get the mastercopy that this factory will deploy channels against
+    function getMiddleware() external override view returns(address) {
+      return middleware;
     }
 
     function proxyCreationCode() external override view returns (bytes memory) {
-      return _generateMinimalProxyInitCode(mastercopy);
+      return _generateMinimalProxyInitCode(middleware);
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
@@ -43,7 +49,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         returns (address)
     {
         return _calculateMinimalProxyDeploymentAddress(
-            mastercopy,
+            middleware,
             generateSalt(alice, bob, chainId)
         );
     }
@@ -122,7 +128,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         internal
         returns (address)
     {
-        return _deployMinimalProxy(mastercopy, generateSalt(alice, bob, chainId));
+        return _deployMinimalProxy(middleware, generateSalt(alice, bob, chainId));
     }
 
     function generateSalt(

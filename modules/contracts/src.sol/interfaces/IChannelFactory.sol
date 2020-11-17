@@ -7,6 +7,8 @@ interface IChannelFactory {
 
   function getMastercopy() external view returns (address);
 
+  function getMiddleware() external view returns (address);
+
   function proxyCreationCode() external view returns (bytes memory);
 
   function getChannelAddress(

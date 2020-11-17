@@ -10,7 +10,7 @@ abstract contract MinimalProxyFactory {
   bytes private constant _minimalProxyInitCodeSuffix = hex'5af43d82803e903d91602b57fd5bf3';
 
   /**
-  * @notice deploy contract code using "CREATE" opcode
+   * @notice deploy contract code using "CREATE" opcode
    * @param initCode contract initialization code
    * @return deployment address of deployed contract
    */
