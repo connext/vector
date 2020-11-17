@@ -39,20 +39,24 @@ export class MemoryStoreService implements IEngineStore {
   //   return Promise.resolve(this.transferDisputes.get(transferAddress));
   // }
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
-    throw new Error("Method not implemented.");
+    // console.log("getTransactionByHash not implemented.");
+    return Promise.resolve(undefined);
   }
   saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
-    throw new Error("Method not implemented.");
+    // console.log("saveTransactionFailure not implemented.");
+    return Promise.resolve(undefined);
   }
   saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
-    throw new Error("Method not implemented.");
+    // console.log("saveTransactionReceipt not implemented.");
+    return Promise.resolve(undefined);
   }
   saveTransactionResponse(
     channelAddress: string,
     transactionReason: TransactionReason,
     response: TransactionResponse,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    // console.log("saveTransactionResponse not implemented.");
+    return Promise.resolve(undefined);
   }
   // Map<channelAddress, transferId[]>
   private transfersInChannel: Map<string, string[]> = new Map();
@@ -144,7 +148,7 @@ export class MemoryStoreService implements IEngineStore {
   }
 
   getTransfersByRoutingId(routingId: string): Promise<FullTransferState[]> {
-    throw new Error("Method not implemented.");
+    throw new Error("getTransfersByRoutingId not implemented.");
   }
 
   getSchemaVersion(): Promise<number | undefined> {

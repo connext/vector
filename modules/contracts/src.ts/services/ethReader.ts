@@ -320,7 +320,7 @@ export class EthereumChainReader implements IVectorChainReader {
 
   async getChannelAddress(
     alice: string,
-    responder: string,
+    bob: string,
     channelFactoryAddress: string,
     chainId: number,
   ): Promise<Result<string, ChainError>> {
@@ -329,9 +329,9 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+    const channelFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const derivedAddress = await vectorChannel.getChannelAddress(alice, responder, chainId);
+      const derivedAddress = await channelFactory.getChannelAddress(alice, bob, chainId);
       return Result.ok(derivedAddress);
     } catch (e) {
       return Result.fail(e);
