@@ -39,15 +39,15 @@ export class MemoryStoreService implements IEngineStore {
   //   return Promise.resolve(this.transferDisputes.get(transferAddress));
   // }
   getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
-    console.log("getTransactionByHash not implemented.");
+    // console.log("getTransactionByHash not implemented.");
     return Promise.resolve(undefined);
   }
   saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void> {
-    console.log("saveTransactionFailure not implemented.");
+    // console.log("saveTransactionFailure not implemented.");
     return Promise.resolve(undefined);
   }
   saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
-    console.log("saveTransactionReceipt not implemented.");
+    // console.log("saveTransactionReceipt not implemented.");
     return Promise.resolve(undefined);
   }
   saveTransactionResponse(
@@ -55,7 +55,7 @@ export class MemoryStoreService implements IEngineStore {
     transactionReason: TransactionReason,
     response: TransactionResponse,
   ): Promise<void> {
-    console.log("saveTransactionResponse not implemented.");
+    // console.log("saveTransactionResponse not implemented.");
     return Promise.resolve(undefined);
   }
   // Map<channelAddress, transferId[]>

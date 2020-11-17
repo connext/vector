@@ -17,17 +17,19 @@ import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
-import pino from "pino";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
+import { logger } from "../constants";
 import {
   alice,
   bob,
   chainIdReq,
   getTestAddressBook,
   getTestChannel,
+  mineBlock,
   provider,
+  rando,
 } from "../tests";
 
 import { EthereumChainService } from "./ethService";
@@ -38,25 +40,28 @@ describe("EthereumChainService", function() {
   const bobSigner = new ChannelSigner(bob.privateKey);
   let addressBook: AddressBook;
   let channel: Contract;
+  let channelFactory: Contract;
   let transferDefinition: Contract;
   let chainService: EthereumChainService;
   let channelState: FullChannelState<any>;
   let transferState: FullTransferState;
   let token: Contract;
+  let chainId: number;
 
-  before(async () => {
+  beforeEach(async () => {
     addressBook = await getTestAddressBook();
-    const chainId = await chainIdReq;
+    chainId = await chainIdReq;
     await deployContracts(alice, addressBook, [
       ["TestToken", []],
       ["HashlockTransfer", []],
     ]);
-    channel = await getTestChannel();
+    channel = await getTestChannel(addressBook);
+    channelFactory = addressBook.getContract("ChannelFactory");
     chainService = new EthereumChainService(
       new MemoryStoreService(),
       { [chainId]: provider },
       alice.privateKey,
-      pino(),
+      logger,
     );
     token = addressBook.getContract("TestToken");
     transferDefinition = addressBook.getContract("HashlockTransfer");
@@ -68,6 +73,7 @@ describe("EthereumChainService", function() {
       expiry: "0",
     };
     transferState = createTestFullHashlockTransferState({
+      chainId,
       initiator: alice.address,
       responder: bob.address,
       transferDefinition: transferDefinition.address,
@@ -77,7 +83,7 @@ describe("EthereumChainService", function() {
       balance: { to: [alice.address, getRandomAddress()], amount: ["7", "0"] },
       transferState: state,
       transferResolver: { preImage },
-      transferTimeout: "3",
+      transferTimeout: "2",
       initialStateHash: hashTransferState(state, HashlockTransferStateEncoding),
     });
 
@@ -109,7 +115,6 @@ describe("EthereumChainService", function() {
       "10",
       AddressZero,
     );
-    expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.ok;
   });
 
@@ -122,51 +127,66 @@ describe("EthereumChainService", function() {
         value: "0x01",
       },
     );
-    expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.ok;
   });
 
-  // Fails bc channel is already deployed
-  it.skip("should run sendDeployChannelTx without error", async () => {
+  // Need to setup a channel between alice & rando else it'll error w "channel already deployed"
+  it("should run sendDeployChannelTx without error", async () => {
+    const channelAddress = (await chainService.getChannelAddress(
+      alice.address,
+      rando.address,
+      channelFactory.address,
+      chainId,
+    )).getValue();
+    const newChannelState = {
+      ...channelState,
+      bob: rando.address,
+      channelAddress,
+    };
     const res = await chainService.sendDeployChannelTx(
-      channelState,
+      newChannelState,
       {
         amount: "0x01",
         assetId: AddressZero,
       },
     );
-    expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.ok;
   });
 
   it("should run sendDisputeChannelTx without error", async () => {
     const res = await chainService.sendDisputeChannelTx(channelState);
-    expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.ok;
   });
 
-  // Started failing after making channel state more "real"
-  it.skip("should run sendDefundChannelTx without error", async () => {
+  it("should run sendDefundChannelTx without error", async () => {
     await chainService.sendDisputeChannelTx(channelState);
+    await mineBlock();
     const res = await chainService.sendDefundChannelTx(channelState);
-    expect(res.isError).to.be.false;
     expect(res.getValue()).to.be.ok;
   });
 
-  // Fails with TransferNotFound
-  it.skip("should run sendDisputeTransferTx without error", async () => {
+  it("should run sendDisputeTransferTx without error", async () => {
     await chainService.sendDisputeChannelTx(channelState);
-    const res = await chainService.sendDisputeTransferTx(transferState.transferId, []);
-    console.log(`Error: ${res.getError()}`);
-    console.log(`Value: ${res.getValue()}`);
-    expect(res.isError).to.be.false;
+    await mineBlock();
+    await mineBlock();
+    const res = await chainService.sendDisputeTransferTx(transferState.transferId, [transferState]);
     expect(res.getValue()).to.be.ok;
   });
 
-  // Started failing after making channel state more "real"
-  it.skip("should run sendDefundTransferTx without error", async () => {
-    const res = await chainService.sendDefundTransferTx(transferState);
-    expect(res.isError).to.be.false;
+  // Fails with INVALID_MSG_SENDER
+  it("should run sendDefundTransferTx without error", async () => {
+    await chainService.sendDisputeChannelTx(channelState);
+    await mineBlock();
+    await mineBlock();
+    await chainService.sendDisputeTransferTx(transferState.transferId, [transferState]);
+    // Bob is the one who will defund, create a chainService for him to do so
+    const bobChainService = new EthereumChainService(
+      new MemoryStoreService(),
+      { [chainId]: provider },
+      bob.privateKey,
+      logger,
+    );
+    const res = await bobChainService.sendDefundTransferTx(transferState);
     expect(res.getValue()).to.be.ok;
   });
 
