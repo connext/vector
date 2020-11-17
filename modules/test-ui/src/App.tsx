@@ -1,5 +1,13 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { getPublicKeyFromPublicIdentifier, decrypt , encrypt, ChannelSigner, createlockHash, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import {
+  getPublicKeyFromPublicIdentifier,
+  decrypt,
+  encrypt,
+  ChannelSigner,
+  createlockHash,
+  getBalanceForAssetId,
+  getRandomBytes32,
+} from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { Wallet, constants } from "ethers";
@@ -202,7 +210,23 @@ function App() {
 
   return (
     <div style={{ margin: 36 }}>
-      <Typography.Title>Vector Browser Node</Typography.Title>
+      <Row gutter={16}>
+        <Col span={16}>
+          <Typography.Title>Vector Browser Node</Typography.Title>
+        </Col>
+        <Col span={8}>
+          <Button
+            danger
+            onClick={() => {
+              indexedDB.deleteDatabase("VectorIndexedDBDatabase");
+              localStorage.clear();
+              window.location.reload();
+            }}
+          >
+            Clear Store
+          </Button>
+        </Col>
+      </Row>
       <Divider orientation="left">Connection</Divider>
       <Row gutter={16}>
         {node?.publicIdentifier ? (
@@ -226,35 +250,11 @@ function App() {
                 </Collapse.Panel>
               </Collapse>
             </Col>
-            <Col span={8}>
-              <Button
-                danger
-                onClick={() => {
-                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
-                  localStorage.clear();
-                  window.location.reload();
-                }}
-              >
-                Clear Store
-              </Button>
-            </Col>
           </>
         ) : connectError ? (
           <>
             <Col span={16}>
               <Statistic title="Error Connecting Node" value={connectError} />
-            </Col>
-            <Col span={8}>
-              <Button
-                danger
-                onClick={() => {
-                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
-                  localStorage.clear();
-                  window.location.reload();
-                }}
-              >
-                Clear Store
-              </Button>
             </Col>
           </>
         ) : (
@@ -373,7 +373,8 @@ function App() {
                 form={transferForm}
               >
                 <Form.Item label="Asset ID" name="assetId">
-                  <Select>
+                  <Input placeholder={constants.AddressZero} />
+                  {/* <Select>
                     {channel?.assetIds?.map(aid => {
                       return (
                         <Select.Option key={aid} value={aid}>
@@ -381,7 +382,7 @@ function App() {
                         </Select.Option>
                       );
                     })}
-                  </Select>
+                  </Select> */}
                 </Form.Item>
 
                 <Form.Item
@@ -452,7 +453,8 @@ function App() {
                 form={withdrawForm}
               >
                 <Form.Item label="Asset ID" name="assetId">
-                  <Select>
+                  <Input placeholder={constants.AddressZero} />
+                  {/* <Select>
                     {channel?.assetIds?.map(aid => {
                       return (
                         <Select.Option key={aid} value={aid}>
@@ -460,7 +462,7 @@ function App() {
                         </Select.Option>
                       );
                     })}
-                  </Select>
+                  </Select> */}
                 </Form.Item>
 
                 <Form.Item
