@@ -9,4 +9,5 @@ COPY ops/package.json package.json
 RUN npm install
 COPY ops/entry.sh entry.sh
 COPY dist dist
+COPY dist/hardhat.config.js ./hardhat.config.js
 ENTRYPOINT ["bash", "entry.sh"]

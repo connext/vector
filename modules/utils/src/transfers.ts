@@ -8,7 +8,7 @@ import {
   BalanceEncoding,
 } from "@connext/vector-types";
 import { defaultAbiCoder } from "@ethersproject/abi";
-import { keccak256, sha256 } from "@ethersproject/solidity";
+import { keccak256 as solidityKeccak256, sha256 as soliditySha256 } from "@ethersproject/solidity";
 
 export const getTransferId = (
   channelAddress: Address,
@@ -16,7 +16,7 @@ export const getTransferId = (
   transferDefinition: Address,
   transferTimeout: string,
 ): string =>
-  keccak256(
+  solidityKeccak256(
     ["address", "address", "uint256", "uint256"],
     [transferDefinition, channelAddress, transferTimeout, channelNonce],
   );
@@ -33,9 +33,9 @@ export const encodeCoreTransferState = (state: CoreTransferState): string =>
   defaultAbiCoder.encode([CoreTransferStateEncoding], [state]);
 
 export const hashTransferState = (state: TransferState, encoding: string): string =>
-  keccak256(["bytes"], [encodeTransferState(state, encoding)]);
+  solidityKeccak256(["bytes"], [encodeTransferState(state, encoding)]);
 
 export const hashCoreTransferState = (state: CoreTransferState): string =>
-  keccak256(["bytes"], [encodeCoreTransferState(state)]);
+  solidityKeccak256(["bytes"], [encodeCoreTransferState(state)]);
 
-export const createlockHash = (preImage: string): string => sha256(["bytes32"], [preImage]);
+export const createlockHash = (preImage: string): string => soliditySha256(["bytes32"], [preImage]);

@@ -24,16 +24,16 @@ import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
-import { bob, alice, provider, rando } from "../constants";
+import { bob, alice, networkName, provider, rando } from "../constants";
 import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
 
-describe("CMCAdjudicator.sol", function() {
+describe("CMCAdjudicator.sol", async function() {
   this.timeout(120_000);
 
   // These tests could be running on chains without automining
   // (i.e. matic), and if that is the case all the adjudicator tests
   // with automining should be skipped
-  const nonAutomining = process.env.EVM && !["hardhat", "ganache"].includes(process.env.EVM);
+  const nonAutomining = networkName !== "hardhat";
 
   let channel: Contract;
   let token: Contract;
