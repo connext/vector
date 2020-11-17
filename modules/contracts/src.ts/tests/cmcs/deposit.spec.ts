@@ -14,15 +14,24 @@ describe("CMCDeposit.sol", function() {
   const value = One;
   let channel: Contract;
   let failingToken: Contract;
+  let reentrantToken: Contract;
 
   beforeEach(async () => {
     const addressBook = await getTestAddressBook();
     channel = await getTestChannel(addressBook);
 
-    await deployContracts(alice, addressBook, [["FailingToken", []]]);
+    await deployContracts(alice, addressBook, [
+      ["FailingToken", []],
+      ["ReentrantToken", [channel.address]],
+    ]);
     failingToken = addressBook.getContract("FailingToken");
+    reentrantToken = addressBook.getContract("ReentrantToken");
+    // mint failing token
     const tx = await failingToken.mint(alice.address, parseEther("0.001"));
     await tx.wait();
+    // mint reentrant token
+    const tx2 = await reentrantToken.mint(alice.address, parseEther("0.01"));
+    await tx2.wait();
   });
 
   it("should only increase totalDepositsBob after receiving a direct deposit", async () => {
@@ -54,5 +63,10 @@ describe("CMCDeposit.sol", function() {
     expect(await failingToken.balanceOf(alice.address)).to.be.gt(value);
     await expect(channel.depositAlice(failingToken.address, value)).revertedWith("FAIL: Failing token");
     expect(await channel.getTotalDepositsAlice(failingToken.address)).to.be.eq(0);
+  });
+
+  it("should protect against reentrant tokens", async () => {
+    await expect(channel.depositAlice(reentrantToken.address, value)).revertedWith("ReentrancyGuard: REENTRANT_CALL");
+    expect(await channel.getTotalDepositsAlice(reentrantToken.address)).to.be.eq(0);
   });
 });
