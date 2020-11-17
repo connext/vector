@@ -138,13 +138,12 @@ describe("EthereumChainService", function() {
       channelFactory.address,
       chainId,
     )).getValue();
-    const newChannelState = {
-      ...channelState,
-      bob: rando.address,
-      channelAddress,
-    };
     const res = await chainService.sendDeployChannelTx(
-      newChannelState,
+      {
+        ...channelState,
+        bob: rando.address,
+        channelAddress,
+      },
       {
         amount: "0x01",
         assetId: AddressZero,

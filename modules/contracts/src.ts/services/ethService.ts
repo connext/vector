@@ -167,9 +167,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const channelFactory = new Contract(channelState.networkContext.channelFactoryAddress, ChannelFactory.abi, signer);
 
     // Register event listener to log channel creation
+    /* TODO: this listener. It's never getting triggered & removed so tests never exit
     channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
       this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
     });
+    */
 
     // If there is no deposit information, just create the channel
     if (!deposit) {
@@ -203,7 +205,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     // Handle eth deposits
     if (assetId === AddressZero) {
-      return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositA, () =>
+      return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
         channelFactory.createChannelAndDepositAlice(
           channelState.alice,
           channelState.bob,
@@ -233,7 +235,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       const receipt = await approveRes.getValue()!.wait();
       this.log.info({ txHash: receipt.transactionHash, method, assetId }, "Token approval confirmed");
     }
-    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositA, () =>
+    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
       channelFactory.createChannelAndDepositAlice(
         channelState.alice,
         channelState.bob,
