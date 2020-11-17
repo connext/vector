@@ -70,7 +70,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
-  async sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>> {
+  async sendDefundChannelTx(
+    channelState: FullChannelState,
+    assetsToDefund: string[] = channelState.assetIds,
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -81,7 +84,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.defundChannel, () => {
       const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
-      return channel.defundChannel(channelState);
+      return channel.defundChannel(channelState, assetsToDefund);
     });
   }
 
@@ -181,11 +184,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         "Deploying channel without deposit",
       );
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
-        return channelFactory.createChannel(
-          channelState.alice,
-          channelState.bob,
-          chainId,
-        );
+        return channelFactory.createChannel(channelState.alice, channelState.bob, chainId);
       });
     }
 
@@ -206,14 +205,9 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // Handle eth deposits
     if (assetId === AddressZero) {
       return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
-        channelFactory.createChannelAndDepositAlice(
-          channelState.alice,
-          channelState.bob,
-          chainId,
-          assetId,
-          amount,
-          { value: amount },
-        ),
+        channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, chainId, assetId, amount, {
+          value: amount,
+        }),
       );
     }
 
@@ -236,13 +230,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       this.log.info({ txHash: receipt.transactionHash, method, assetId }, "Token approval confirmed");
     }
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
-      channelFactory.createChannelAndDepositAlice(
-        channelState.alice,
-        channelState.bob,
-        chainId,
-        assetId,
-        amount,
-      ),
+      channelFactory.createChannelAndDepositAlice(channelState.alice, channelState.bob, chainId, assetId, amount),
     );
   }
 
@@ -283,11 +271,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         }),
       );
       const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
-        return channelFactory.createChannel(
-          channelState.alice,
-          channelState.bob,
-          channelState.networkContext.chainId,
-        );
+        return channelFactory.createChannel(channelState.alice, channelState.bob, channelState.networkContext.chainId);
       });
       if (txRes.isError) {
         console.log(`txRes.isError`);
