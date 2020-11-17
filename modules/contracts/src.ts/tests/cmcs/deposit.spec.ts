@@ -19,7 +19,6 @@ describe("CMCDeposit.sol", function() {
   beforeEach(async () => {
     const addressBook = await getTestAddressBook();
     channel = await getTestChannel(addressBook);
-
     await deployContracts(alice, addressBook, [
       ["FailingToken", []],
       ["ReentrantToken", [channel.address]],
@@ -66,9 +65,13 @@ describe("CMCDeposit.sol", function() {
   });
 
   it.only("should protect against reentrant tokens", async () => {
+    console.log("trying to fetch deposits for the first time");
+    expect(await channel.getTotalDepositsAlice(reentrantToken.address)).to.be.eq(0);
     console.log("trying to make failing calls");
     await expect(channel.depositAlice(reentrantToken.address, value)).revertedWith("ReentrancyGuard: REENTRANT_CALL");
-    console.log("trying to fetch deposits");
+    console.log("trying to fetch deposits for the second time");
     expect(await channel.getTotalDepositsAlice(reentrantToken.address)).to.be.eq(0);
+    console.log("yay");
   });
+
 });

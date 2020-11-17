@@ -3,7 +3,6 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCCore.sol";
-import "./ReentrancyGuard.sol";
 
 contract CMCCore is ICMCCore {
   address constant invalidParticipant = address(1);

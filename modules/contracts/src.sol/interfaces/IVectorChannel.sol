@@ -10,5 +10,4 @@ import "./ICMCAdjudicator.sol";
 interface IVectorChannel is
     ICMCCore,
     ICMCAccountant,
-    ICMCAdjudicator
-    {}
+    ICMCAdjudicator {}

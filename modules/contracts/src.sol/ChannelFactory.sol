@@ -66,7 +66,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         override
         returns (address channel)
     {
-        _createChannel(alice, bob, chainId);
+        return _createChannel(alice, bob, chainId);
     }
 
     /// @dev Allows us to create a new channel contract and fund it in one transaction

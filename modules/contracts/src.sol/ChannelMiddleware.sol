@@ -3,13 +3,15 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IChannelMiddleware.sol";
-import "./ReentrancyGuard.sol";
 import "./ChannelMastercopy.sol";
 
-contract ChannelMiddleware is IChannelMiddleware, ReentrancyGuard {
-
+contract ChannelMiddleware is IChannelMiddleware {
   address private immutable mastercopy;
-  
+  uint256 public lock = OPEN;
+
+  uint256 private constant OPEN = 1;
+  uint256 private constant LOCKED = 2;
+
   constructor(address _mastercopy) {
     mastercopy = _mastercopy;
   }
@@ -18,13 +20,18 @@ contract ChannelMiddleware is IChannelMiddleware, ReentrancyGuard {
     return mastercopy;
   }
 
-  fallback() external payable nonReentrant {
+  receive() external payable {}
+
+  fallback() external payable {
+    require(lock == OPEN, "ReentrancyGuard: REENTRANT_CALL");
+    lock = LOCKED;
     assembly {
       let _masterCopy := and(sload(0), 0xffffffffffffffffffffffffffffffffffffffff)
       calldatacopy(0, 0, calldatasize())
       let success := delegatecall(gas(), _masterCopy, 0, calldatasize(), 0, 0)
       returndatacopy(0, 0, returndatasize())
       if eq(success, 0) { revert(0, returndatasize()) }
+      sstore(lock.slot, OPEN)
       return(0, returndatasize())
     }
   }
