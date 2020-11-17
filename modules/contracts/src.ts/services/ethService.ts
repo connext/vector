@@ -146,14 +146,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponse, ChainError>> {
     const method = "sendDeployChannelTx";
-    const signer = this.signers.get(channelState.networkContext.chainId);
+    const chainId = channelState.networkContext.chainId;
+    const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
     const sender = await signer.getAddress();
 
     // check if multisig must be deployed
-    const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+    const multisigRes = await this.getCode(channelState.channelAddress, chainId);
 
     if (multisigRes.isError) {
       return Result.fail(multisigRes.getError()!);
@@ -181,6 +182,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
+          chainId,
         );
       });
     }
@@ -205,6 +207,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelFactory.createChannelAndDepositAlice(
           channelState.alice,
           channelState.bob,
+          chainId,
           assetId,
           amount,
           { value: amount },
@@ -234,6 +237,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelFactory.createChannelAndDepositAlice(
         channelState.alice,
         channelState.bob,
+        chainId,
         assetId,
         amount,
       ),
@@ -280,6 +284,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
+          channelState.networkContext.chainId,
         );
       });
       if (txRes.isError) {

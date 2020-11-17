@@ -6,7 +6,7 @@ import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
 import { TestChannel, TestToken } from "../artifacts";
 
-import { alice, bob, provider } from "./constants";
+import { alice, bob, chainIdReq, provider } from "./constants";
 
 // Returns a different address book every time
 export const getTestAddressBook = async (): Promise<AddressBook> =>
@@ -28,8 +28,8 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
     ["TestChannelFactory", ["TestChannel"]],
   ]);
   const testFactory = addressBook.getContract("TestChannelFactory");
-  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
-  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
+  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address, await chainIdReq);
+  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address, await chainIdReq);
   await tx.wait();
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bob.address.substring(2, 6)}`, {
