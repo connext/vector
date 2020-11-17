@@ -15,7 +15,7 @@ describe(testName, () => {
     const transferAmount = "7";
 
     // Setup the channel with signers funded onchain
-    log.error("Setting up channel");
+    log.info("Setting up channel");
     const {
       alice: { protocol: alice, signer: aliceSigner },
       bob: { protocol: bob, signer: bobSigner },
