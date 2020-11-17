@@ -8,14 +8,14 @@ import "./ChannelMastercopy.sol";
 
 contract ChannelMiddleware is IChannelMiddleware, ReentrancyGuard {
 
-  ChannelMastercopy private mastercopy;
+  address private immutable mastercopy;
   
-  constructor(ChannelMastercopy _mastercopy) {
+  constructor(address _mastercopy) {
     mastercopy = _mastercopy;
   }
 
   function getMastercopy() override external view returns(address) {
-    return address(mastercopy);
+    return mastercopy;
   }
 
   fallback() external payable nonReentrant {
