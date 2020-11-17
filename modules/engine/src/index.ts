@@ -470,6 +470,16 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok({ channel: res, transactionHash });
   }
 
+  private async decrypt(encrypted: string): Promise<Result<string, Error>> {
+    try {
+      const res = await this.signer.decrypt(encrypted);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  // DISPUTE METHODS
   private async disputeChannel(
     params: EngineParams.DisputeChannel,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], Error>> {

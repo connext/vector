@@ -1,23 +1,18 @@
 import { BrowserNode } from "@connext/vector-browser-node";
 import {
   getPublicKeyFromPublicIdentifier,
-  decrypt,
   encrypt,
   createlockHash,
   getBalanceForAssetId,
   getRandomBytes32,
-  delay,
 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { constants, utils } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List } from "antd";
-import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
+import { EngineEvents, EngineParams, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
-
-const storedEntropy = localStorage.getItem("entropy");
-const storedIframeSrc = localStorage.getItem("iframeSrc");
 
 function App() {
   const [node, setNode] = useState<BrowserNode>();
@@ -30,6 +25,7 @@ function App() {
   const [transferLoading, setTransferLoading] = useState<boolean>(false);
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
   const [entropy, setEntropy] = useState<string>(utils.hexlify(utils.randomBytes(65)));
+  const [iframeSrc, setIframeSrc] = useState<string>("http://localhost:3030");
 
   const [connectError, setConnectError] = useState<string>();
 
@@ -38,10 +34,10 @@ function App() {
 
   useEffect(() => {
     const effect = async () => {
-      if (storedEntropy && storedIframeSrc) {
-        // await delay(5000);
-        // await connectNode(storedIframeSrc, storedEntropy);
-      }
+      const storedEntropy = localStorage.getItem("entropy");
+      const storedIframeSrc = localStorage.getItem("iframeSrc");
+      setEntropy(storedEntropy);
+      setIframeSrc(storedIframeSrc);
     };
     effect();
   }, []);
@@ -73,29 +69,35 @@ function App() {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client, data.channelAddress);
       });
-      return client;
-      // client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
-      //   console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
-      //   if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
-      //     console.log("We are the sender");
-      //     return;
-      //   }
-      //   console.log(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-      //   const decryptedPreImage = await decrypt(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-      //   console.log(decryptedPreImage);
+      client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
+        console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
+        if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
+          console.log("We are the sender");
+          return;
+        }
+        console.log(data.transfer.meta.encryptedPreImage);
+        const rpc: EngineParams.RpcRequest = {
+          id: Date.now(),
+          jsonrpc: "2.0",
+          method: "chan_decrypt",
+          params: data.transfer.meta.encryptedPreImage,
+        };
+        const decryptedPreImage = await client.send(rpc);
+        console.log("decryptedPreImage: ", decryptedPreImage);
 
-      //   const requestRes = await client.resolveTransfer({
-      //     channelAddress: data.transfer.channelAddress,
-      //     transferResolver: {
-      //       preImage: decryptedPreImage,
-      //     },
-      //     transferId: data.transfer.transferId,
-      //   });
-      //   if (requestRes.isError) {
-      //     console.error("Error transfering", requestRes.getError());
-      //   }
-      //   await updateChannel(client, data.channelAddress);
-      // });
+        const requestRes = await client.resolveTransfer({
+          channelAddress: data.transfer.channelAddress,
+          transferResolver: {
+            preImage: decryptedPreImage,
+          },
+          transferId: data.transfer.transferId,
+        });
+        if (requestRes.isError) {
+          console.error("Error resolving transfer", requestRes.getError());
+        }
+        await updateChannel(client, data.channelAddress);
+      });
+      return client;
     } catch (e) {
       console.error("Error connecting node: ", e);
       setConnectError(e.message);
@@ -158,7 +160,7 @@ function App() {
 
     const submittedMeta: { encryptedPreImage?: string } = {};
     if (recipient) {
-      const recipientPublicKey = await getPublicKeyFromPublicIdentifier(recipient);
+      const recipientPublicKey = getPublicKeyFromPublicIdentifier(recipient);
       const encryptedPreImage = await encrypt(preImage, recipientPublicKey);
       submittedMeta.encryptedPreImage = encryptedPreImage;
     }
@@ -235,7 +237,9 @@ function App() {
                 placeholder="IFrame Src (blank for localhost:3030)"
                 enterButton="Setup Node"
                 size="large"
-                onSearch={iframeSrc => {
+                value={iframeSrc}
+                onChange={event => setIframeSrc(event.target.value)}
+                onSearch={() => {
                   localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3000");
                   localStorage.setItem("entropy", entropy);
                   connectNode(iframeSrc, entropy);
