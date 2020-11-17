@@ -1,6 +1,7 @@
 import { getEthProvider } from "@connext/vector-utils";
 import { Contract } from "@ethersproject/contracts";
 import { Wallet } from "@ethersproject/wallet";
+import { BigNumber } from "ethers";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
@@ -18,7 +19,9 @@ export const createChannel = async (
   const chainId = (await alice.provider.getNetwork()).chainId.toString();
   const channelFactory = addressBook.getContract("ChannelFactory");
   const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress, chainId);
-  const tx = await channelFactory.createChannel(alice.address, bobAddress, chainId);
+  const tx = await channelFactory.createChannel(alice.address, bobAddress, chainId, {
+    gasLimit: BigNumber.from(800_000),
+  });
   await tx.wait();
   log.info(`Successfully created a channel at ${channelAddress}`);
   // Save this channel address in case we need it later

@@ -16,7 +16,8 @@ export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contra
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["ChannelFactory", ["TestChannel"]],
+    ["ChannelMiddleware", ["TestChannel"]],
+    ["ChannelFactory", ["ChannelMiddleware"]],
   ]);
   return createChannel(bob.address, alice, addressBook, undefined, true);
 };
