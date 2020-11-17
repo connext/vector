@@ -180,7 +180,6 @@ export const depositInChannel = async (
       const tx = await factory.createChannelAndDepositAlice(
         depositorSigner.address,
         counterparty.signerAddress,
-        chainId,
         assetId,
         value,
         { value },
@@ -229,7 +228,7 @@ export const depositInChannel = async (
           res(data);
         });
       });
-      const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address, chainId);
+      const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address);
       await createTx.wait();
       const deployedAddr = await created;
       expect(deployedAddr).to.equal(channelAddress);

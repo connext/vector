@@ -16,18 +16,16 @@ contract TestChannelFactory is ChannelFactory {
 
   function deployChannelProxyWithoutSetup(
     address alice,
-    address bob,
-    uint256 chainId
+    address bob
   ) public returns (address) {
-    return deployChannelProxy(alice, bob, chainId);
+    return deployChannelProxy(alice, bob);
   }
 
   function createChannelWithoutSetup(
     address alice,
-    address bob,
-    uint256 chainId
+    address bob
   ) public returns (address channel) {
-    channel = deployChannelProxy(alice, bob, chainId);
+    channel = deployChannelProxy(alice, bob);
     emit ChannelCreation(channel);
     return channel;
   }
