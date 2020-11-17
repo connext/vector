@@ -65,8 +65,10 @@ describe("CMCDeposit.sol", function() {
     expect(await channel.getTotalDepositsAlice(failingToken.address)).to.be.eq(0);
   });
 
-  it("should protect against reentrant tokens", async () => {
+  it.only("should protect against reentrant tokens", async () => {
+    console.log("trying to make failing calls");
     await expect(channel.depositAlice(reentrantToken.address, value)).revertedWith("ReentrancyGuard: REENTRANT_CALL");
+    console.log("trying to fetch deposits");
     expect(await channel.getTotalDepositsAlice(reentrantToken.address)).to.be.eq(0);
   });
 });
