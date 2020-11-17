@@ -13,10 +13,10 @@ interface ICMCAdjudicator {
     Balance[] balances;
     uint256[] processedDepositsA;
     uint256[] processedDepositsB;
+    uint256[] defundNonces;
     uint256 timeout;
     uint256 nonce;
     bytes32 merkleRoot;
-    uint256 defundNonce;
   }
 
   struct CoreTransferState {
@@ -37,7 +37,7 @@ interface ICMCAdjudicator {
     bytes32 merkleRoot;
     uint256 consensusExpiry;
     uint256 defundExpiry;
-    uint256 defundNonce;
+    uint256[] defundNonces;
   }
 
   struct TransferDispute {

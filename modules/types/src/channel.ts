@@ -85,10 +85,10 @@ export const CoreChannelStateEncoding = tidy(`tuple(
   ${BalanceEncoding}[] balances,
   uint256[] processedDepositsA,
   uint256[] processedDepositsB,
+  uint256[] defundNonces,
   uint256 timeout,
   uint256 nonce,
-  bytes32 merkleRoot,
-  uint256 defundNonce
+  bytes32 merkleRoot
 )`);
 
 export interface CoreChannelState {
@@ -99,10 +99,10 @@ export interface CoreChannelState {
   balances: Balance[]; // Indexed by assetId
   processedDepositsA: string[]; // Indexed by assetId
   processedDepositsB: string[]; // Indexed by assetId
+  defundNonces: string[]; // Indexed by assetId
   timeout: string;
   nonce: number;
   merkleRoot: string;
-  defundNonce: string;
 }
 
 // Includes any additional info that doesn't need to be sent to chain

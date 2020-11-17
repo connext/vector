@@ -94,11 +94,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // We need to be in defund phase for that
     require(inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
 
-    // We can't defund twice at the same defund nonce
-    // TODO: should this be checked in the `disputeChannel`?
-    require(channelDispute.defundNonce < ccs.defundNonce, "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
-    channelDispute.defundNonce = ccs.defundNonce;
-
     // TODO SECURITY: Beware of reentrancy
     // TODO: offchain-ensure that all arrays have the same length:
     // assetIds, balances, processedDepositsA, processedDepositsB
@@ -108,6 +103,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     for (uint256 i = 0; i < assetIds.length; i++) {
       // Find the index of the assetId in the ccs.assetIds
       uint256 index = getIndex(assetIds[i], ccs.assetIds);
+
+      // Check the assets haven't already been defunded + update the
+      // defundNonce for that asset
+      require(channelDispute.defundNonces[index] < ccs.defundNonces[index], "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
+      channelDispute.defundNonces[index] = ccs.defundNonces[index];
 
       address assetId = ccs.assetIds[index];
       Balance memory balance = ccs.balances[index];
