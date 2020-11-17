@@ -7,7 +7,7 @@ import {
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Interface, defaultAbiCoder } from "@ethersproject/abi";
-import { keccak256 } from "@ethersproject/solidity";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 
 import { ChannelMastercopy } from "../artifacts";
 
@@ -82,9 +82,9 @@ export class WithdrawCommitment {
 
   public hashToSign(): string {
     const encodedWithdrawData = defaultAbiCoder.encode([WithdrawDataEncoding], [this.getWithdrawData()]);
-    const wdHash = keccak256(["bytes"], [encodedWithdrawData]);
+    const wdHash = solidityKeccak256(["bytes"], [encodedWithdrawData]);
     const encoded = defaultAbiCoder.encode(["uint8", "bytes32"], [ChannelCommitmentTypes.WithdrawData, wdHash]);
-    return keccak256(["bytes"], [encoded]);
+    return solidityKeccak256(["bytes"], [encoded]);
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {

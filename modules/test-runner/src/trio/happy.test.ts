@@ -21,7 +21,6 @@ describe(testName, () => {
 
   let daveService: INodeService;
   let daveIdentifier: string;
-  let dave: string;
 
   let rogerService: INodeService;
   let rogerIdentifier: string;
@@ -45,7 +44,6 @@ describe(testName, () => {
       randomIndex,
     );
     daveIdentifier = daveService.publicIdentifier;
-    dave = daveService.signerAddress;
 
     rogerService = await RestServerNodeService.connect(
       env.rogerUrl,

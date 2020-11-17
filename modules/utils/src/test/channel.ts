@@ -112,8 +112,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
     channelAddress: mkAddress("0xccc"),
     fromIdentifier: mkPublicIdentifier("indraA"),
     nonce: 1,
-    aliceSignature: mkBytes32("0xsig1"),
-    bobSignature: mkBytes32("0xsig2"),
+    aliceSignature: mkBytes32("0x0001"),
+    bobSignature: mkBytes32("0x0002"),
     toIdentifier: mkPublicIdentifier("indraB"),
     type,
   };

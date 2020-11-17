@@ -13,12 +13,12 @@ import { registerTransfer } from "./registerTransfer";
 
 export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = logger.child({})): Promise<void> => {
   // Setup env & log initial state
-  const chainId = (process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId).toString();
+  const chainId = ((await wallet.provider.getNetwork()).chainId).toString();
   const balance = await wallet.getBalance();
   const nonce = await wallet.getTransactionCount();
   const providerUrl = (wallet.provider as JsonRpcProvider).connection.url;
 
-  log.info(`\nPreparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
+  log.info(`Preparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
   log.info(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);
 
   if (balance.eq(Zero)) {
@@ -53,7 +53,7 @@ export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = lo
 
   ////////////////////////////////////////
   // Print summary
-  log.info("\nAll done!");
+  log.info("All done!");
   const spent = formatEther(balance.sub(await wallet.getBalance()));
   const nTx = (await wallet.getTransactionCount()) - nonce;
   log.info(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);
@@ -73,7 +73,7 @@ export const migrateCommand = {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
     const addressBook = getAddressBook(
       argv.addressBook,
-      process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId.toString(),
+      (await wallet.provider.getNetwork()).chainId.toString(),
     );
     const level = argv.silent ? "silent" : "info";
     await migrate(wallet, addressBook, logger.child({ level }));

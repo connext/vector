@@ -39,6 +39,7 @@ export interface IVectorProtocol {
   getChannelStateByParticipants(alice: string, bob: string, chainId: number): Promise<FullChannelState | undefined>;
   getChannelStates(): Promise<FullChannelState[]>;
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
+  getActiveTransfers(channelAddress: string): Promise<FullTransferState[]>;
 }
 
 type VectorChannelMessageData<T extends UpdateType = any> = {
