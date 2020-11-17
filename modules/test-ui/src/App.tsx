@@ -24,8 +24,8 @@ function App() {
   const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
   const [transferLoading, setTransferLoading] = useState<boolean>(false);
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
-  const [entropy, setEntropy] = useState<string>(utils.hexlify(utils.randomBytes(65)));
-  const [iframeSrc, setIframeSrc] = useState<string>("http://localhost:3030");
+  const [entropy, setEntropy] = useState<string>("");
+  const [iframeSrc, setIframeSrc] = useState<string>("");
 
   const [connectError, setConnectError] = useState<string>();
 
@@ -36,8 +36,8 @@ function App() {
     const effect = async () => {
       const storedEntropy = localStorage.getItem("entropy");
       const storedIframeSrc = localStorage.getItem("iframeSrc");
-      setEntropy(storedEntropy);
-      setIframeSrc(storedIframeSrc);
+      setEntropy(storedEntropy || utils.hexlify(utils.randomBytes(65)));
+      setIframeSrc(storedIframeSrc || "http://localhost:3030");
     };
     effect();
   }, []);
@@ -214,7 +214,6 @@ function App() {
                 dataSource={[
                   { title: "Public Identifier", description: node!.publicIdentifier },
                   { title: "Signer Address", description: node!.signerAddress },
-                  { title: "Entropy Used", description: entropy },
                 ]}
                 renderItem={item => (
                   <List.Item>
@@ -240,7 +239,7 @@ function App() {
                 value={iframeSrc}
                 onChange={event => setIframeSrc(event.target.value)}
                 onSearch={() => {
-                  localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3000");
+                  localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3030");
                   localStorage.setItem("entropy", entropy);
                   connectNode(iframeSrc, entropy);
                 }}
