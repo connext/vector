@@ -24,6 +24,7 @@ export const ChannelRpcMethods = {
   chan_defund: "chan_defund",
   chan_disputeTransfer: "chan_disputeTransfer",
   chan_defundTransfer: "chan_defundTransfer",
+  chan_decrypt: "chan_decrypt",
 } as const;
 export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
@@ -50,6 +51,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;
   [ChannelRpcMethods.chan_disputeTransfer]: EngineParams.DisputeTransfer;
   [ChannelRpcMethods.chan_defundTransfer]: EngineParams.DefundTransfer;
+  [ChannelRpcMethods.chan_decrypt]: string;
 };
 
 export type ChannelRpcMethodsResponsesMap = {
@@ -75,4 +77,5 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_defund]: { transactionHash: string };
   [ChannelRpcMethods.chan_disputeTransfer]: { transactionHash: string };
   [ChannelRpcMethods.chan_defundTransfer]: { transactionHash: string };
+  [ChannelRpcMethods.chan_decrypt]: string;
 };
