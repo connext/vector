@@ -23,7 +23,6 @@ export const fundIfBelow = async (
 ): Promise<void> => {
   const balance = await getOnchainBalance(assetId, address);
   if (balance.gte(fundAmount)) {
-    console.log("sufficient balance, no need to fund");
     return;
   }
   const funderBal = await getOnchainBalance(assetId, funder.address);

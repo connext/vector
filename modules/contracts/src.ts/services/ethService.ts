@@ -146,14 +146,15 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponse, ChainError>> {
     const method = "sendDeployChannelTx";
-    const signer = this.signers.get(channelState.networkContext.chainId);
+    const chainId = channelState.networkContext.chainId;
+    const signer = this.signers.get(chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
     const sender = await signer.getAddress();
 
     // check if multisig must be deployed
-    const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
+    const multisigRes = await this.getCode(channelState.channelAddress, chainId);
 
     if (multisigRes.isError) {
       return Result.fail(multisigRes.getError()!);
@@ -166,9 +167,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     const channelFactory = new Contract(channelState.networkContext.channelFactoryAddress, ChannelFactory.abi, signer);
 
     // Register event listener to log channel creation
+    /* TODO: this listener. It's never getting triggered & removed so tests never exit
     channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
       this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
     });
+    */
 
     // If there is no deposit information, just create the channel
     if (!deposit) {
@@ -181,7 +184,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
-          BigNumber.from(channelState.networkContext.chainId),
+          chainId,
         );
       });
     }
@@ -202,11 +205,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     // Handle eth deposits
     if (assetId === AddressZero) {
-      return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositA, () =>
+      return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
         channelFactory.createChannelAndDepositAlice(
           channelState.alice,
           channelState.bob,
-          channelState.networkContext.chainId,
+          chainId,
           assetId,
           amount,
           { value: amount },
@@ -232,11 +235,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       const receipt = await approveRes.getValue()!.wait();
       this.log.info({ txHash: receipt.transactionHash, method, assetId }, "Token approval confirmed");
     }
-    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositA, () =>
+    return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deployWithDepositAlice, () =>
       channelFactory.createChannelAndDepositAlice(
         channelState.alice,
         channelState.bob,
-        channelState.networkContext.chainId,
+        chainId,
         assetId,
         amount,
       ),
@@ -283,16 +286,16 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
-          BigNumber.from(channelState.networkContext.chainId),
+          channelState.networkContext.chainId,
         );
       });
       if (txRes.isError) {
+        console.log(`txRes.isError`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             method,
             error: txRes.getError()!.message,
             channel: channelState.channelAddress,
-            chainId: channelState.networkContext.chainId,
           }),
         );
       }
@@ -314,6 +317,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           ),
         ]);
       } catch (e) {
+        console.log(`caught (e)`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             error: e.message,
