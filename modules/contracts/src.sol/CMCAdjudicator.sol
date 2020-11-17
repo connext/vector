@@ -81,7 +81,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     emit ChannelDisputed(msg.sender, address(this), channelDispute);
   }
 
-  function defundChannel(CoreChannelState calldata ccs)
+  function defundChannel(CoreChannelState calldata ccs, address[] calldata assetIds)
     external
     override
     onlyViaProxy
@@ -105,12 +105,15 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // Make sure there are no duplicates in the assetIds -- duplicates are often a source of double-spends
 
     // Defund all assets stored in the channel
-    for (uint256 i = 0; i < ccs.assetIds.length; i++) {
-      address assetId = ccs.assetIds[i];
-      Balance memory balance = ccs.balances[i];
+    for (uint256 i = 0; i < assetIds.length; i++) {
+      // Find the index of the assetId in the ccs.assetIds
+      uint256 index = getIndex(assetIds[i], ccs.assetIds);
+
+      address assetId = ccs.assetIds[index];
+      Balance memory balance = ccs.balances[index];
 
       // Add unprocessed deposits to amounts
-      balance.amount[0] += _getTotalDepositsAlice(assetId) - ccs.processedDepositsA[i];
+      balance.amount[0] += _getTotalDepositsAlice(assetId) - ccs.processedDepositsA[index];
 
       // If the following call fails, we were unable to query the channel's balance;
       // this probably means the token is totally fucked up.
@@ -121,7 +124,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       );
       if (success) {
         uint256 depositsBob = abi.decode(returnData, (uint256));
-        balance.amount[1] += depositsBob - ccs.processedDepositsB[i];
+        balance.amount[1] += depositsBob - ccs.processedDepositsB[index];
       }
 
       // Transfer funds; this will never revert or fail otherwise,
@@ -254,5 +257,19 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
   function hashTransferState(CoreTransferState calldata cts) internal pure returns (bytes32) {
     return keccak256(abi.encode(cts));
+  }
+
+  // TODO: is there a cheaper way to do this?
+  function getIndex(address assetId, address[] calldata assetIds) internal pure returns (uint256) {
+    // Make sure that the asset id is in the array by initializing the index
+    // to > length of array
+    uint256 index = assetIds.length + 1;
+    for (uint256 i = 0; i < assetIds.length; i++) {
+      if (assetId == assetIds[i]) {
+        index = i;
+      }
+    }
+    require(index < assetIds.length, "CMCAdjudicator: ASSET_NOT_FOUND");
+    return index;
   }
 }
