@@ -14,7 +14,7 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-node_config=$(cat "$root/modules/iframe-app/config-node.json")
+node_config=$(cat "$root/node.config.json")
 
 function getConfig { echo "$node_config" | jq ".$1" | tr -d '"'; }
 
