@@ -59,7 +59,7 @@ describe("CMCAdjudicator.sol", async function() {
         .mul(2)
         .add(disputeBlockNumber),
     );
-    expect(dispute.defundNonce).to.be.eq(BigNumber.from(ccs.defundNonce).sub(1));
+    expect(dispute.defundNonces).to.be.deep.eq(ccs.defundNonces.map((n: string) => BigNumber.from(n).sub(1)));
   };
 
   const verifyTransferDispute = async (cts: FullTransferState, disputeBlockNumber: number) => {
