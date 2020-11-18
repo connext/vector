@@ -40,6 +40,47 @@
       "txHash": "0x2463d2adabad01c24b4d3d5bb357d3796168cbf09e47507bf060a843b6ab19d8"
     }
   },
+  "42": {
+    "TestToken": {
+      "address": "0x880da7dDaca7DAd63F7E3cf6a0cfdD8e3D565FF8",
+      "creationCodeHash": "0xc087182a3b2c0bb948df488211587552a1033747cc9b7b6be7a544a8841c9951",
+      "runtimeCodeHash": "0x02e5063fcf7a31e121da48d1fe281485d5bd11d753bb0374996ddc34d32e5a02",
+      "txHash": "0x624140b6c65f1aa1410293151b5f682a2f8445c1483a6fd1eae29048992b1b1d"
+    },
+    "ChannelMastercopy": {
+      "address": "0xcF6E45d2CcCb8667dbBa2c89d881f8BD4bE0563c",
+      "creationCodeHash": "0x2114cfe541fceeb921e51c8a07484bb1cbfd3d72211feef57bd1d626e1d69837",
+      "runtimeCodeHash": "0xddb7718da4b06bd8be1eab58fcc1a650c79be6430fe88c62e3c9d0cb8cec6e39",
+      "txHash": "0x08377bcc2e8f1331a9d4c7898ac15951e55e411c6000e6bcb58c32c06cf773b7"
+    },
+    "ChannelFactory": {
+      "address": "0x59Ef9156ffF55F6491A5F006bD3138E3FE435809",
+      "args": [
+        "0xcF6E45d2CcCb8667dbBa2c89d881f8BD4bE0563c"
+      ],
+      "creationCodeHash": "0x9dbb772c23ed8ac0be396c40491528fd3059f718017f96ce7f92fcebe9717a9f",
+      "runtimeCodeHash": "0xf09c3d6e729c0d46af162233300128ce49def0960f29c96b422fa726620228b3",
+      "txHash": "0xafad5e02eda80af79101a123accd405e62b1b95baa269c634018e0d46b773208"
+    },
+    "HashlockTransfer": {
+      "address": "0x6FE0A6CeCc5c6A72a81dBc6576a818DdfD888288",
+      "creationCodeHash": "0xe09ad290ff1ce6d68a5ff59cdf48c8eb9e2ca9179814a2227d1923d98d957171",
+      "runtimeCodeHash": "0x9a5f688b99af1268c14c1441fce1dc68286afef367fe8af5e5c048702da92da6",
+      "txHash": "0x7ae0357036dbc691cecb56a7c381ab5b420fe5d649dc9beac0313eccf4d0b68f"
+    },
+    "Withdraw": {
+      "address": "0x478898dd6a0a1919DD13a8a04739058BA24Ee9ed",
+      "creationCodeHash": "0x5c75559269692027dff0708dc5256ee76eb4a25012e0ea601f9fb46ac1d66536",
+      "runtimeCodeHash": "0xae04927690cacf5cb8f00cba2eb271cb82d201578768224150c4dd97a9bb65a0",
+      "txHash": "0xa5e1c6de114636a5116b00604b6f55a5c48d0b89caad7093f91c90396bd15b79"
+    },
+    "TransferRegistry": {
+      "address": "0xdf6eedE3DbCDECcC1546bceC4B0675026a03A2E6",
+      "creationCodeHash": "0xa08864f98f515d12dbffcc9f4d36cf05270596421abd38d735029f498452c820",
+      "runtimeCodeHash": "0x42b7fe1b3baf7e97d38bf42af5f81b5acf44135494acaa68cee4ca5cb76e3991",
+      "txHash": "0x8d6d3dda52293e3627e8f68802906d1bfcc6a57b84f27a5fab6d941141033a61"
+    }
+  },
   "80001": {
     "TestToken": {
       "address": "0xe4e47451AAd6C89a6D9E4aD104A7b77FfE1D3b36",
