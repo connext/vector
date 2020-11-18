@@ -26,7 +26,7 @@ describe("EthereumChainReader", function() {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [
       ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy"]],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
       ["TransferRegistry", []],
       ["Withdraw", []],
     ]);

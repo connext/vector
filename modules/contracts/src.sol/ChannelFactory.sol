@@ -12,9 +12,11 @@ import "./lib/MinimalProxyFactory.sol";
 /// @author Connext & Friends <hello@connext.network>
 contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     address private immutable mastercopy;
+    uint private immutable chainId;
 
-    constructor(address _mastercopy) {
+    constructor(address _mastercopy, uint _chainId) {
         mastercopy = _mastercopy;
+        chainId = _chainId;
     }
 
     ////////////////////////////////////////
@@ -23,6 +25,11 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
     function getMastercopy() external override view returns(address) {
       return mastercopy;
+    }
+
+    /// @dev Allows us to get the chainId that this factory will use in the create2 salt
+    function getChainId() external override view returns(uint) {
+      return chainId;
     }
 
     function proxyCreationCode() external override view returns (bytes memory) {
@@ -125,14 +132,18 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         address bob
     )
         internal
-        pure
+        view
         returns (bytes32)
     {
-        uint chainId;
-        assembly {
-            chainId := chainid()
+        uint _chainId;
+        if (chainId == 0) {
+          assembly {
+              _chainId := chainid()
+          }
+        } else {
+          _chainId = chainId;
         }
-        return keccak256(abi.encodePacked(alice, bob, chainId));
+        return keccak256(abi.encodePacked(alice, bob, _chainId));
     }
 
 }

@@ -12,7 +12,7 @@ import "../ChannelFactory.sol";
 ///         setup tests)
 contract TestChannelFactory is ChannelFactory {
 
-  constructor(address _mastercopy) ChannelFactory(_mastercopy) {}
+  constructor(address _mastercopy, uint _chainId) ChannelFactory(_mastercopy, _chainId) {}
 
   function deployChannelProxyWithoutSetup(
     address alice,

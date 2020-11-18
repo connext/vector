@@ -7,7 +7,7 @@ import {
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
@@ -33,7 +33,7 @@ describe("ChannelFactory", function() {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [
       ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy"]],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
     ]);
     channelMastercopy = addressBook.getContract("ChannelMastercopy");
     channelFactory = addressBook.getContract("ChannelFactory");

@@ -1,5 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 
 import { createChannel, deployContracts } from "../actions";
@@ -16,7 +16,7 @@ export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contra
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["ChannelFactory", ["TestChannel"]],
+    ["ChannelFactory", ["TestChannel", Zero]],
   ]);
   return createChannel(bob.address, alice, addressBook, undefined, true);
 };
@@ -25,7 +25,7 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["TestChannelFactory", ["TestChannel"]],
+    ["TestChannelFactory", ["TestChannel", Zero]],
   ]);
   const testFactory = addressBook.getContract("TestChannelFactory");
   const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
