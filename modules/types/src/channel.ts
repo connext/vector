@@ -1,13 +1,6 @@
 import { Address } from "./basic";
 import { BalanceEncoding } from "./contracts";
-import {
-  TransferEncodingsMap,
-  TransferName,
-  TransferResolver,
-  TransferResolverMap,
-  TransferState,
-  TransferStateMap,
-} from "./transferDefinitions";
+import { TransferResolver, TransferState } from "./transferDefinitions";
 import { tidy } from "./utils";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
