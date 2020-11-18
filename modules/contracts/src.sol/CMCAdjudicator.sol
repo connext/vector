@@ -18,7 +18,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using SafeMath for uint256;
 
   uint256 private constant INITIAL_DEFUND_NONCE = 1;
-  uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 12000;
+  uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 25000;
 
   ChannelDispute private channelDispute;
   mapping(address => uint256) private defundNonces;
