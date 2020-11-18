@@ -87,13 +87,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     emit ChannelDisputed(msg.sender, address(this), channelDispute);
   }
 
-  function defundChannel(CoreChannelState calldata ccs, address[] calldata assetIds, uint256[] calldata indices)
-    external
-    override
-    onlyViaProxy
-    nonReentrant
-    validateChannel(ccs)
-  {
+  function defundChannel(
+    CoreChannelState calldata ccs,
+    address[] calldata assetIds,
+    uint256[] calldata indices
+  ) external override onlyViaProxy nonReentrant validateChannel(ccs) {
     // These checks are not strictly necessary, but it's a bit cleaner this way
     require(assetIds.length > 0, "CMCAdjudicator: NO_ASSETS_GIVEN");
     require(indices.length <= assetIds.length, "CMCAdjudicator: WRONG_ARRAY_LENGTHS");
@@ -115,12 +113,16 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
       // Verify or find the index of the assetId in the ccs.assetIds
       uint256 index;
-      if (i < indices.length) {  // The index was supposedly given -- we verify
+      if (i < indices.length) {
+        // The index was supposedly given -- we verify
         index = indices[i];
         require(assetId == ccs.assetIds[index], "CMCAdjudicator: INDEX_MISMATCH");
-      } else {  // we search through the assets in ccs
+      } else {
+        // we search through the assets in ccs
         for (index = 0; index < ccs.assetIds.length; index++) {
-          if (assetId == ccs.assetIds[index]) { break; }
+          if (assetId == ccs.assetIds[index]) {
+            break;
+          }
         }
       }
 
@@ -130,7 +132,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
       // Check the assets haven't already been defunded + update the
       // defundNonce for that asset
-      { // Open a new block to avoid "stack too deep" error
+      {
+        // Open a new block to avoid "stack too deep" error
         uint256 defundNonce = (index == ccs.assetIds.length) ? INITIAL_DEFUND_NONCE : ccs.defundNonces[index];
         require(defundNonces[assetId] < defundNonce, "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
         defundNonces[assetId] = defundNonce;
@@ -158,7 +161,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       transferBalance(assetId, balance);
     }
 
-    emit ChannelDefunded(msg.sender, address(this), channelDispute);
+    emit ChannelDefunded(msg.sender, address(this), channelDispute, assetIds, indices);
   }
 
   function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData)
