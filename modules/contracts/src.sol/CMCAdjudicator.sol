@@ -130,9 +130,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
       // Check the assets haven't already been defunded + update the
       // defundNonce for that asset
-      uint256 defundNonce = (index == ccs.assetIds.length) ? INITIAL_DEFUND_NONCE : ccs.defundNonces[index];
-      require(defundNonces[assetId] < defundNonce, "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
-      defundNonces[assetId] = defundNonce;
+      { // Open a new block to avoid "stack too deep" error
+        uint256 defundNonce = (index == ccs.assetIds.length) ? INITIAL_DEFUND_NONCE : ccs.defundNonces[index];
+        require(defundNonces[assetId] < defundNonce, "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
+        defundNonces[assetId] = defundNonce;
+      }
 
       // Get total deposits
       (uint256 tdAlice, uint256 tdBob) = getTotalDeposits(assetId);
