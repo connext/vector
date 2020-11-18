@@ -37,7 +37,6 @@ interface ICMCAdjudicator {
     bytes32 merkleRoot;
     uint256 consensusExpiry;
     uint256 defundExpiry;
-    uint256[] defundNonces;
   }
 
   struct TransferDispute {
@@ -63,6 +62,8 @@ interface ICMCAdjudicator {
 
   function getChannelDispute() external view returns (ChannelDispute memory);
 
+  function getDefundNonce(address assetId) external view returns (uint256);
+
   function getTransferDispute(bytes32 transferId) external view returns (TransferDispute memory);
 
   function disputeChannel(
@@ -71,7 +72,11 @@ interface ICMCAdjudicator {
     bytes calldata bobSignature
   ) external;
 
-  function defundChannel(CoreChannelState calldata ccs, address[] calldata assetIds) external;
+  function defundChannel(
+    CoreChannelState calldata ccs,
+    address[] calldata assetIds,
+    uint256[] calldata indices
+  ) external;
 
   function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData) external;
 
