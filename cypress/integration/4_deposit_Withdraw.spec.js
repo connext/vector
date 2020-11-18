@@ -32,17 +32,17 @@ context("Browser Node Setup", () => {
 
       cy.get(
         ":nth-child(5) > .ant-col-24 > #deposit > .ant-row > .ant-col-18 > .ant-form-item-control-input > .ant-form-item-control-input-content > .ant-input-group-wrapper > .ant-input-wrapper > .ant-input-group-addon > .ant-btn",
-      ).as("setup")
+      ).as("setup");
 
       cy.log("GET Config");
       cy.request(`http://localhost:8007/config`).then(response => {
         const publicIdentifier = response.body[0].publicIdentifier;
         cy.get("@channel_setup").type(publicIdentifier);
       });
-      
+
       cy.get("@setup").click();
       cy.wait(5000);
-      
+
       cy.get(".ant-statistic-content-value")
         .invoke("text")
         .should(channel_address => {

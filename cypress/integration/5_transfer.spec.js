@@ -57,11 +57,11 @@ context("Browser Node Setup", () => {
     });
 
     it("Creating channel for Server & Router Node", () => {
-      hr.setupChannel(carolUrl)
-    })
+      hr.setupChannel(carolUrl);
+    });
 
     it("Make transfer from Browser Node to Serve Node", () => {
-      my.transfer(carolUrl, transferEth)
-    })
+      my.transfer(carolUrl, transferEth);
+    });
   });
 });

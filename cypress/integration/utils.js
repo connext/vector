@@ -110,7 +110,7 @@ my.deposit = value => {
 my.withdraw = (value, address = cashout.address) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-      cy.get('#withdraw_assetId').type("0x0000000000000000000000000000000000000000");
+      cy.get("#withdraw_assetId").type("0x0000000000000000000000000000000000000000");
       cy.get("#withdraw_recipient").type(address);
       cy.get("#withdraw_amount").type(value);
       cy.get(
@@ -127,7 +127,7 @@ my.withdraw = (value, address = cashout.address) => {
 my.transfer = (address, value) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-      cy.get('#transfer_assetId').type("0x0000000000000000000000000000000000000000");
+      cy.get("#transfer_assetId").type("0x0000000000000000000000000000000000000000");
       cy.get("#transfer_recipient").type(address);
       cy.get("#transfer_amount").type(value);
       cy.get(
