@@ -14,7 +14,7 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-node_config=$(cat "$root/node.config.json")
+node_config=$(cat "$root/browser.config.json")
 
 docker run \
   "${interactive[@]}" \
