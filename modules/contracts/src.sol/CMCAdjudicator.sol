@@ -73,6 +73,10 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     }
 
     // Store newer state
+    // If this is the first dispute, make sure that the arrays are initialized
+    if (channelDispute.channelStateHash == bytes32(0)) {
+      channelDispute.defundNonces = new uint256[](ccs.assetIds.length);
+    }
     channelDispute.channelStateHash = hashChannelState(ccs);
     channelDispute.nonce = ccs.nonce;
     channelDispute.merkleRoot = ccs.merkleRoot;
