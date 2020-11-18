@@ -72,3 +72,7 @@ cypress/videos
 **/.env
 **/react-app-env.d.ts
 .secret
+
+modules/iframe-app/config-node.json
+modules/iframe-app/local.config-node.json
+modules/iframe-app/prod.config-node.json
