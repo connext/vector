@@ -130,13 +130,14 @@ describe("CMCAdjudicator.sol", async function() {
     ccs: FullChannelState = channelState,
     unprocessedAlice: BigNumberish[] = [],
     unprocessedBob: BigNumberish[] = [],
+    defundedAssets: string[] = ccs.assetIds,
   ) => {
     // Get pre-defund balances for signers
     const preDefundAlice = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, alice.address)));
     const preDefundBob = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, bob.address)));
 
     // Defund channel
-    const tx = await channel.defundChannel(ccs, ccs.assetIds);
+    const tx = await channel.defundChannel(ccs, defundedAssets);
     await tx.wait();
 
     // Get post-defund balances
@@ -149,11 +150,18 @@ describe("CMCAdjudicator.sol", async function() {
     // Verify change in balances + defund nonce
     await Promise.all(
       ccs.assetIds.map(async (assetId, idx) => {
-        expect(BigNumber.from(ccs.defundNonces[idx])).to.be.eq(dispute.defundNonces[idx]);
+        const defunded = defundedAssets.includes(assetId);
+        if (defunded) {
+          expect(BigNumber.from(ccs.defundNonces[idx])).to.be.eq(dispute.defundNonces[idx]);
+        }
         const diffAlice = postDefundAlice[idx].sub(preDefundAlice[idx]);
         const diffBob = postDefundBob[idx].sub(preDefundBob[idx]);
-        expect(diffAlice).to.be.eq(BigNumber.from(ccs.balances[idx].amount[0]).add(unprocessedAlice[idx] ?? "0"));
-        expect(diffBob).to.be.eq(BigNumber.from(ccs.balances[idx].amount[1]).add(unprocessedBob[idx] ?? "0"));
+        expect(diffAlice).to.be.eq(
+          defunded ? BigNumber.from(ccs.balances[idx].amount[0]).add(unprocessedAlice[idx] ?? "0") : 0,
+        );
+        expect(diffBob).to.be.eq(
+          defunded ? BigNumber.from(ccs.balances[idx].amount[1]).add(unprocessedBob[idx] ?? "0") : 0,
+        );
       }),
     );
   };
@@ -389,6 +397,7 @@ describe("CMCAdjudicator.sol", async function() {
       const multiAsset = {
         ...channelState,
         assetIds: [AddressZero, token.address],
+        defundNonces: ["1", "1"],
         balances: [
           { to: [alice.address, bob.address], amount: ["17", "26"] },
           { to: [alice.address, bob.address], amount: ["10", "8"] },
@@ -400,6 +409,27 @@ describe("CMCAdjudicator.sol", async function() {
       await fundChannel(multiAsset);
       await disputeChannel(multiAsset);
       await defundChannelAndVerify(multiAsset);
+    });
+
+    it.only("should work with multiple assets in channel, but only defunding one", async function() {
+      if (nonAutomining) {
+        this.skip();
+      }
+      const multiAsset = {
+        ...channelState,
+        assetIds: [AddressZero, token.address],
+        defundNonces: ["1", "1"],
+        balances: [
+          { to: [alice.address, bob.address], amount: ["17", "26"] },
+          { to: [alice.address, bob.address], amount: ["10", "8"] },
+        ],
+        processedDepositsA: ["0", "0"],
+        processedDepositsB: ["43", "18"],
+      };
+      // Deposit all funds into channel
+      await fundChannel(multiAsset);
+      await disputeChannel(multiAsset);
+      await defundChannelAndVerify(multiAsset, [], [], [AddressZero]);
     });
 
     it("should work with unprocessed deposits", async function() {
