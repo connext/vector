@@ -101,7 +101,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
     // TODO SECURITY: Beware of reentrancy
     // TODO: offchain-ensure that all arrays have the same length:
-    // assetIds, balances, processedDepositsA, processedDepositsB
+    // assetIds, balances, processedDepositsA, processedDepositsB, defundNonces
     // Make sure there are no duplicates in the assetIds -- duplicates are often a source of double-spends
 
     // Defund all assets stored in the channel
