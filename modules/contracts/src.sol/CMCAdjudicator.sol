@@ -20,6 +20,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 12000;
 
   ChannelDispute private channelDispute;
+  mapping(address => uint256) private defundNonces;
   mapping(bytes32 => TransferDispute) private transferDisputes;
 
   modifier validateChannel(CoreChannelState calldata ccs) {
@@ -37,6 +38,10 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
   function getChannelDispute() external override view onlyViaProxy nonReentrantView returns (ChannelDispute memory) {
     return channelDispute;
+  }
+
+  function getDefundNonce(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+    return defundNonces[assetId];
   }
 
   function getTransferDispute(bytes32 transferId)
@@ -73,10 +78,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     }
 
     // Store newer state
-    // If this is the first dispute, make sure that the arrays are initialized
-    if (channelDispute.channelStateHash == bytes32(0)) {
-      channelDispute.defundNonces = new uint256[](ccs.assetIds.length);
-    }
     channelDispute.channelStateHash = hashChannelState(ccs);
     channelDispute.nonce = ccs.nonce;
     channelDispute.merkleRoot = ccs.merkleRoot;
@@ -108,12 +109,13 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       // Find the index of the assetId in the ccs.assetIds
       uint256 index = getIndex(assetIds[i], ccs.assetIds);
 
+      address assetId = ccs.assetIds[index];
+
       // Check the assets haven't already been defunded + update the
       // defundNonce for that asset
-      require(channelDispute.defundNonces[index] < ccs.defundNonces[index], "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
-      channelDispute.defundNonces[index] = ccs.defundNonces[index];
+      require(defundNonces[assetId] < ccs.defundNonces[index], "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
+      defundNonces[assetId] = ccs.defundNonces[index];
 
-      address assetId = ccs.assetIds[index];
       Balance memory balance = ccs.balances[index];
 
       // Add unprocessed deposits to amounts
