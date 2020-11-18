@@ -154,36 +154,4 @@ my.transfer = (address, value) => {
 //   );
 // };
 
-// function sendTransaction(receiver) {
-//   var privateKey = Buffer.from(PrivateKey, "hex");
-
-//   console.log(from);
-//   cy.wrap(web3.eth.getTransactionCount(from)).as("account_nonce");
-//   cy.wait("@account_nonce", { timeout: 10000 });
-//   console.log(account_nonce);
-
-//   var rawTx = {
-//     nonce: account_nonce,
-//     gasPrice: "0x09184e72a000",
-//     gasLimit: "0x2710",
-//     to: receiver,
-//     value: "0x00",
-//   };
-
-//   var tx = new Tx(rawTx);
-//   tx.sign(privateKey);
-
-//   var serializedTx = tx.serialize();
-
-//   console.log(serializedTx.toString("hex"));
-//   let txHash;
-
-//   web3.eth.sendSignedTransaction("0x" + serializedTx.toString("hex")).then(async logs => {
-//     console.log("Sent: " + logs.transactionHash);
-//     txHash = logs.transactionHash;
-//   });
-
-//   return txHash;
-// }
-
 export default my;
