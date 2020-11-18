@@ -1,15 +1,9 @@
 import { Wallet, utils } from "ethers";
 import { BrowserNode } from "@connext/vector-browser-node";
-import { JsonRpcRequest, EngineParams, ChannelRpcMethodsResponsesMap, ChannelRpcMethod } from "@connext/vector-types";
-import { ChannelSigner, safeJsonParse } from "@connext/vector-utils";
+import { EngineParams, ChannelRpcMethodsResponsesMap, ChannelRpcMethod } from "@connext/vector-types";
+import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
 import pino from "pino";
 import { config } from "./config";
-
-export function payloadId(): number {
-  const date = new Date().getTime() * Math.pow(10, 3);
-  const extra = Math.floor(Math.random() * Math.pow(10, 3));
-  return date + extra;
-}
 
 export default class ConnextManager {
   private parentOrigin: string;
@@ -88,15 +82,10 @@ export default class ConnextManager {
     if (request.method === "chan_subscribe") {
       const subscription = utils.keccak256(utils.toUtf8Bytes(`${request.id}`));
       const listener = (data: any) => {
-        const payload: JsonRpcRequest = {
-          id: payloadId(),
-          jsonrpc: "2.0",
-          method: "chan_subscription",
-          params: {
-            subscription,
-            data,
-          },
-        };
+        const payload = constructRpcRequest<"chan_subscription">("chan_subscription", {
+          subscription,
+          data,
+        });
         window.parent.postMessage(JSON.stringify(payload), this.parentOrigin);
       };
       if (request.params.once) {

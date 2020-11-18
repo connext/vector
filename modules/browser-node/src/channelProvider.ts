@@ -23,12 +23,6 @@ export interface IframeOptions {
   src: string;
 }
 
-export function payloadId(): number {
-  const date = new Date().getTime() * Math.pow(10, 3);
-  const extra = Math.floor(Math.random() * Math.pow(10, 3));
-  return date + extra;
-}
-
 export function renderElement(name: string, attr: any, target: HTMLElement): HTMLElement {
   const elm = document.createElement(name);
   Object.keys(attr).forEach(key => {
@@ -118,15 +112,10 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public on = (event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any => {
     if (isEventName(event) || isMethodName(event)) {
-      const rpc: EngineParams.RpcRequest = {
-        id: Date.now(),
-        jsonrpc: "2.0",
-        method: "chan_subscribe",
-        params: {
-          event,
-          once: false,
-        },
-      };
+      const rpc = constructRpcRequest<"chan_subscribe">("chan_subscribe", {
+        event,
+        once: false,
+      });
       return this.send(rpc).then(id => {
         this.events.on(id, listener);
       });
@@ -136,12 +125,10 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public once = (event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any => {
     if (isEventName(event) || isMethodName(event)) {
-      const rpc: EngineParams.RpcRequest = {
-        id: Date.now(),
-        jsonrpc: "2.0",
-        method: "chan_subscribe",
-        params: { event, once: true },
-      };
+      const rpc = constructRpcRequest<"chan_subscribe">("chan_subscribe", {
+        event,
+        once: true,
+      });
       return this.send(rpc).then(id => {
         this.events.once(id, listener);
       });
