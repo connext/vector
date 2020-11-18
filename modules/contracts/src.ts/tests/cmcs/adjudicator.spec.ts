@@ -143,9 +143,13 @@ describe("CMCAdjudicator.sol", async function() {
     const postDefundAlice = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, alice.address)));
     const postDefundBob = await Promise.all(ccs.assetIds.map(assetId => getOnchainBalance(assetId, bob.address)));
 
-    // Verify change in balances
+    // Get onchain dispute
+    const dispute = await channel.getChannelDispute();
+
+    // Verify change in balances + defund nonce
     await Promise.all(
       ccs.assetIds.map(async (assetId, idx) => {
+        expect(BigNumber.from(ccs.defundNonces[idx])).to.be.eq(dispute.defundNonces[idx]);
         const diffAlice = postDefundAlice[idx].sub(preDefundAlice[idx]);
         const diffBob = postDefundBob[idx].sub(preDefundBob[idx]);
         expect(diffAlice).to.be.eq(BigNumber.from(ccs.balances[idx].amount[0]).add(unprocessedAlice[idx] ?? "0"));
