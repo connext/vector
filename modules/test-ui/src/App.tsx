@@ -10,7 +10,7 @@ import {
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { constants, utils } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List } from "antd";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Switch } from "antd";
 import { EngineEvents, EngineParams, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
@@ -27,6 +27,7 @@ function App() {
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
   const [entropy, setEntropy] = useState<string>("");
   const [iframeSrc, setIframeSrc] = useState<string>("");
+  const [useRandomEntropy, setUseRandomEntropy] = useState<boolean>(true);
 
   const [connectError, setConnectError] = useState<string>();
 
@@ -36,8 +37,11 @@ function App() {
   useEffect(() => {
     const effect = async () => {
       const storedEntropy = localStorage.getItem("entropy");
+      if (storedEntropy) {
+        setUseRandomEntropy(false);
+      }
       const storedIframeSrc = localStorage.getItem("iframeSrc");
-      setEntropy(storedEntropy || utils.hexlify(utils.randomBytes(65)));
+      setEntropy(storedEntropy);
       setIframeSrc(storedIframeSrc || "http://localhost:3030");
     };
     effect();
@@ -258,22 +262,26 @@ function App() {
                 value={iframeSrc}
                 onChange={event => setIframeSrc(event.target.value)}
                 onSearch={() => {
+                  let _entropy = entropy;
+                  if (useRandomEntropy) {
+                    _entropy = utils.hexlify(utils.randomBytes(65));
+                  }
                   localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3030");
-                  localStorage.setItem("entropy", entropy);
-                  connectNode(iframeSrc, entropy);
+                  localStorage.setItem("entropy", _entropy);
+                  setEntropy(_entropy);
+                  connectNode(iframeSrc, _entropy);
                 }}
                 loading={connectLoading}
               />
             </Col>
             <Col span={12}>
-              <Input.Search
-                placeholder="Entropy"
-                enterButton="Random"
-                value={entropy}
-                size="large"
-                onChange={event => setEntropy(event.target.value)}
-                onSearch={() => setEntropy(utils.hexlify(utils.randomBytes(65)))}
-                loading={connectLoading}
+              <Switch
+                defaultChecked
+                checkedChildren="Create New"
+                unCheckedChildren="Recover Stored"
+                onChange={createNew => setUseRandomEntropy(createNew)}
+                disabled={!entropy}
+                checked={useRandomEntropy}
               />
             </Col>
           </>
