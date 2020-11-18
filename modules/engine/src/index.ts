@@ -21,12 +21,9 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
-import { utils } from "ethers";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
-import { bufferify, hashCoreTransferState } from "@connext/vector-utils";
-import { MerkleTree } from "merkletreejs";
 
 import { InvalidTransferType } from "./errors";
 import {
@@ -116,6 +113,10 @@ export class VectorEngine implements IVectorEngine {
       this.logger,
       this.setup.bind(this),
     );
+  }
+
+  private async getConfig(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig]>> {
+    return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
   }
 
   private async getChannelState(
@@ -469,6 +470,16 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok({ channel: res, transactionHash });
   }
 
+  private async decrypt(encrypted: string): Promise<Result<string, Error>> {
+    try {
+      const res = await this.signer.decrypt(encrypted);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  // DISPUTE METHODS
   private async disputeChannel(
     params: EngineParams.DisputeChannel,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], Error>> {

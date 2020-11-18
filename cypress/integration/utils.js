@@ -110,7 +110,7 @@ my.deposit = value => {
 my.withdraw = (value, address = cashout.address) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-      cy.get('#withdraw_assetId').type("0x0000000000000000000000000000000000000000");
+      cy.get("#withdraw_assetId").type("0x0000000000000000000000000000000000000000");
       cy.get("#withdraw_recipient").type(address);
       cy.get("#withdraw_amount").type(value);
       cy.get(
@@ -127,7 +127,7 @@ my.withdraw = (value, address = cashout.address) => {
 my.transfer = (address, value) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-      cy.get('#transfer_assetId').type("0x0000000000000000000000000000000000000000");
+      cy.get("#transfer_assetId").type("0x0000000000000000000000000000000000000000");
       cy.get("#transfer_recipient").type(address);
       cy.get("#transfer_amount").type(value);
       cy.get(
@@ -153,37 +153,5 @@ my.transfer = (address, value) => {
 //     }),
 //   );
 // };
-
-// function sendTransaction(receiver) {
-//   var privateKey = Buffer.from(PrivateKey, "hex");
-
-//   console.log(from);
-//   cy.wrap(web3.eth.getTransactionCount(from)).as("account_nonce");
-//   cy.wait("@account_nonce", { timeout: 10000 });
-//   console.log(account_nonce);
-
-//   var rawTx = {
-//     nonce: account_nonce,
-//     gasPrice: "0x09184e72a000",
-//     gasLimit: "0x2710",
-//     to: receiver,
-//     value: "0x00",
-//   };
-
-//   var tx = new Tx(rawTx);
-//   tx.sign(privateKey);
-
-//   var serializedTx = tx.serialize();
-
-//   console.log(serializedTx.toString("hex"));
-//   let txHash;
-
-//   web3.eth.sendSignedTransaction("0x" + serializedTx.toString("hex")).then(async logs => {
-//     console.log("Sent: " + logs.transactionHash);
-//     txHash = logs.transactionHash;
-//   });
-
-//   return txHash;
-// }
 
 export default my;

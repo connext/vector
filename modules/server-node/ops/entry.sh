@@ -30,6 +30,7 @@ else
   touch "$sqlite_file"
   export VECTOR_DATABASE_URL="sqlite://$sqlite_file"
 fi
+echo "VECTOR_DATABASE_URL: $VECTOR_DATABASE_URL"
 
 ########################################
 # Wait for dependencies to wake up

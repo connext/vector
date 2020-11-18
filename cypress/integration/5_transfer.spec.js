@@ -15,17 +15,11 @@ context("Browser Node Setup", () => {
     cy.log("Clear IndexedDB");
     cy.contains("Clear Store").click();
 
-    cy.log("Generate Random Mnemonic");
-    cy.contains("Generate Random Mnemonic").click();
-    cy.get("input")
-      .invoke("val")
-      .should(mnemonic => {
-        expect(mnemonic).to.be.a("string");
-        expect(mnemonic).to.have.length.be.greaterThan(1);
-      });
-
+    // cy.log("Generate Random Mnemonic");
+    // cy.contains("Generate Random Mnemonic").click();
     cy.log("Setup Node");
     cy.contains("Setup Node").click();
+    cy.wait(5000);
   });
 
   describe("Setting up Channel Address", function() {
@@ -57,11 +51,11 @@ context("Browser Node Setup", () => {
     });
 
     it("Creating channel for Server & Router Node", () => {
-      hr.setupChannel(carolUrl)
-    })
+      hr.setupChannel(carolUrl);
+    });
 
     it("Make transfer from Browser Node to Serve Node", () => {
-      my.transfer(carolUrl, transferEth)
-    })
+      my.transfer(carolUrl, transferEth);
+    });
   });
 });

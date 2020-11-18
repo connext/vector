@@ -230,7 +230,7 @@ export class PrismaStore implements IServerNodeStore {
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
-    this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+    this.prisma = new PrismaClient(dbUrl ? { datasources: { db: { url: this.dbUrl } } } : undefined);
   }
 
   async saveChannelDispute(

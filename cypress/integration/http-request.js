@@ -72,13 +72,13 @@ hr.setupChannel = Url => {
     new Cypress.Promise((resolve, reject) => {
       const params = {};
       cy.request(`${router}/config`).then(response => {
-        console.log(response)
+        console.log(response);
         params.counterpartyIdentifier = response.body[0].publicIdentifier;
-      })
+      });
       cy.request(`${Url}/config`).then(response => {
-        console.log(response)
+        console.log(response);
         params.publicIdentifier = response.body[0].publicIdentifier;
-      })
+      });
       params.chainId = chainId;
       params.timeout = "36000";
       cy.request({

@@ -14,14 +14,17 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
+node_config=$(cat "$root/browser.config.json")
+
 docker run \
   "${interactive[@]}" \
   --entrypoint="bash" \
+  --env="REACT_APP_VECTOR_CONFIG=$node_config" \
   --env="SKIP_PREFLIGHT_CHECK=true" \
-  --name="${project}_browser_node" \
-  --publish="3333:3000" \
+  --name="${project}_iframe_app" \
+  --publish="3030:3030" \
   --network "$project" \
   --rm \
   --tmpfs="/tmp" \
   --volume="$root:/root" \
-  "${project}_builder" -c "cd ./modules/test-ui && npm start"
+  "${project}_builder" -c "cd ./modules/iframe-app && npm start"
