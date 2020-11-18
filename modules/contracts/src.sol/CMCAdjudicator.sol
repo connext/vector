@@ -87,13 +87,17 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     emit ChannelDisputed(msg.sender, address(this), channelDispute);
   }
 
-  function defundChannel(CoreChannelState calldata ccs, address[] calldata assetIds)
+  function defundChannel(CoreChannelState calldata ccs, address[] calldata assetIds, uint256[] calldata indices)
     external
     override
     onlyViaProxy
     nonReentrant
     validateChannel(ccs)
   {
+    // These checks are not strictly necessary, but it's a bit cleaner this way
+    require(assetIds.length > 0, "CMCAdjudicator: NO_ASSETS_GIVEN");
+    require(indices.length <= assetIds.length, "CMCAdjudicator: WRONG_ARRAY_LENGTHS");
+
     // Verify that the given channel state matches the stored one
     require(hashChannelState(ccs) == channelDispute.channelStateHash, "CMCAdjudicator: INVALID_CHANNEL_HASH");
 
@@ -109,10 +113,15 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     for (uint256 i = 0; i < assetIds.length; i++) {
       address assetId = assetIds[i];
 
-      // Find the index of the assetId in the ccs.assetIds
+      // Verify or find the index of the assetId in the ccs.assetIds
       uint256 index;
-      for (index = 0; index < ccs.assetIds.length; index++) {
-        if (assetId == ccs.assetIds[index]) { break; }
+      if (i < indices.length) {  // The index was supposedly given -- we verify
+        index = indices[i];
+        require(assetId == ccs.assetIds[index], "CMCAdjudicator: INDEX_MISMATCH");
+      } else {  // we search through the assets in ccs
+        for (index = 0; index < ccs.assetIds.length; index++) {
+          if (assetId == ccs.assetIds[index]) { break; }
+        }
       }
 
       // Now, if `index`  is equal to the number of assets in ccs,

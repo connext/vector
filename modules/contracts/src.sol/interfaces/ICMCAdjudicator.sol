@@ -72,7 +72,11 @@ interface ICMCAdjudicator {
     bytes calldata bobSignature
   ) external;
 
-  function defundChannel(CoreChannelState calldata ccs, address[] calldata assetIds) external;
+  function defundChannel(
+    CoreChannelState calldata ccs,
+    address[] calldata assetIds,
+    uint256[] calldata indices
+  ) external;
 
   function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData) external;
 
