@@ -29,6 +29,19 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
 
     /// @dev Allows us to get the chainId that this factory will use in the create2 salt
     function getChainId() external override view returns(uint) {
+      uint _chainId;
+      if (chainId == 0) {
+        assembly {
+            _chainId := chainid()
+        }
+      } else {
+        _chainId = chainId;
+      }
+      return _chainId;
+    }
+
+    /// @dev Allows us to get the chainId that this factory has stored
+    function getStoredChainId() external override view returns(uint) {
       return chainId;
     }
 
@@ -135,15 +148,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         view
         returns (bytes32)
     {
-        uint _chainId;
-        if (chainId == 0) {
-          assembly {
-              _chainId := chainid()
-          }
-        } else {
-          _chainId = chainId;
-        }
-        return keccak256(abi.encodePacked(alice, bob, _chainId));
+        return keccak256(abi.encodePacked(alice, bob, this.getChainId()));
     }
 
 }

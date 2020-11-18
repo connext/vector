@@ -9,6 +9,8 @@ interface IChannelFactory {
 
   function getChainId() external view returns (uint256);
 
+  function getStoredChainId() external view returns (uint256);
+
   function proxyCreationCode() external view returns (bytes memory);
 
   function getChannelAddress(address alice, address bob) external view returns (address);
