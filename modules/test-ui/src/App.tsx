@@ -6,12 +6,13 @@ import {
   getBalanceForAssetId,
   getRandomBytes32,
   delay,
+  constructRpcRequest,
 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { constants, utils } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Switch } from "antd";
-import { EngineEvents, EngineParams, FullChannelState, TransferNames } from "@connext/vector-types";
+import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
 
@@ -83,12 +84,7 @@ function App() {
           return;
         }
         console.log(data.transfer.meta.encryptedPreImage);
-        const rpc: EngineParams.RpcRequest = {
-          id: Date.now(),
-          jsonrpc: "2.0",
-          method: "chan_decrypt",
-          params: data.transfer.meta.encryptedPreImage,
-        };
+        const rpc = constructRpcRequest<"chan_decrypt">("chan_decrypt", data.transfer.meta.encryptedPreImage);
         const decryptedPreImage = await client.send(rpc);
         console.log("decryptedPreImage: ", decryptedPreImage);
 

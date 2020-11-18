@@ -1,7 +1,7 @@
 import { ChannelRpcMethod, ChannelRpcMethodsPayloadMap, EngineParams } from "@connext/vector-types";
 
 export const constructRpcRequest = <T extends ChannelRpcMethod>(
-  method: any,
+  method: T,
   params: ChannelRpcMethodsPayloadMap[T],
 ): EngineParams.RpcRequest => {
   return {
