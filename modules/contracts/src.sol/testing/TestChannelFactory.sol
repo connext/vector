@@ -12,22 +12,20 @@ import "../ChannelFactory.sol";
 ///         setup tests)
 contract TestChannelFactory is ChannelFactory {
 
-  constructor(address _mastercopy) ChannelFactory(_mastercopy) {}
+  constructor(address _mastercopy, uint _chainId) ChannelFactory(_mastercopy, _chainId) {}
 
   function deployChannelProxyWithoutSetup(
     address alice,
-    address bob,
-    uint256 chainId
+    address bob
   ) public returns (address) {
-    return deployChannelProxy(alice, bob, chainId);
+    return deployChannelProxy(alice, bob);
   }
 
   function createChannelWithoutSetup(
     address alice,
-    address bob,
-    uint256 chainId
+    address bob
   ) public returns (address channel) {
-    channel = deployChannelProxy(alice, bob, chainId);
+    channel = deployChannelProxy(alice, bob);
     emit ChannelCreation(channel);
     return channel;
   }
