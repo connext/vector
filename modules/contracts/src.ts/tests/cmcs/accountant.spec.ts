@@ -32,7 +32,7 @@ describe("CMCAccountant.sol", function() {
     await tx.wait();
     await Promise.all(
       balance.to.map(async (a: string, idx: number) => {
-        return expect(await provider.getBalance(a)).to.be.eq(preTransfer[idx].add(value));
+        return expect(await provider.getBalance(a)).to.be.eq(preTransfer[idx]);
       }),
     );
   });
