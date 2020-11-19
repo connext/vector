@@ -28,10 +28,10 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
   /// @param _alice: Address representing user with function deposit
   /// @param _bob: Address representing user with multisig deposit
   function setup(address _alice, address _bob) external override onlyViaProxy {
-    ReentrancyGuard.setup();
     require(alice == address(0), "CMCCore: ALREADY_SETUP");
     require(_alice != address(0) && _bob != address(0), "CMCCore: INVALID_PARTICIPANT");
     require(_alice != _bob, "CMCCore: IDENTICAL_PARTICIPANTS");
+    ReentrancyGuard.setup();
     alice = _alice;
     bob = _bob;
   }
