@@ -2,6 +2,39 @@
 
 ## Next Release
 
+## 0.0.12
+
+- Browser node iframe functionality
+
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
+
+- introduce and use commitment types
+- reconcile hashing
+- remove commitment type
+
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
+
+- implement generalized withdrawals
+- fix and minor improvements around asset transfers
+- move dispute methods into engine
+- shorter revert message style and contract tests speedup
+- minor cleanup and reorganization related to types and interfaces
+- make transfer types generic
+
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.9
+
+- add deploy channel tx function to eth service
+- add autodeployment after setup for some chains (currently only arbitrum)
+- add arbitrum to address book
+
+## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.6-beta.1, @connext/{server-node}@0.0.8
+
+- fix `defundNonce` in server node store
+- expose nats 4221 by default
+- support trio and contract testing across remote chains
+- improve asset handling
+- minor changes in transfer definitions and transfer registry
+
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.4
 
 - Fix webpack configs for browser node.

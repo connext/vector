@@ -1,5 +1,6 @@
-import { AddressZero } from "@ethersproject/constants";
-import { BigNumber, Contract } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero, Zero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
@@ -15,7 +16,7 @@ export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contra
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["ChannelFactory", ["TestChannel"]],
+    ["ChannelFactory", ["TestChannel", Zero]],
   ]);
   return createChannel(bob.address, alice, addressBook, undefined, true);
 };
@@ -24,21 +25,16 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["TestChannelFactory", ["TestChannel"]],
+    ["TestChannelFactory", ["TestChannel", Zero]],
   ]);
-  const factory = addressBook.getContract("TestChannelFactory");
-  const doneBeingCreated: Promise<string> = new Promise(res => {
-    // NOTE: this takes kind of a long time to resolve.. is there any way to speed it up?
-    factory.once(factory.filters.ChannelCreation(), res);
-  });
-  const chainId = (await alice.provider.getNetwork()).chainId.toString();
-  const tx = await factory.createChannelWithoutSetup(alice.address, bob.address, chainId);
+  const testFactory = addressBook.getContract("TestChannelFactory");
+  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
+  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
   await tx.wait();
-  const channelAddress = await doneBeingCreated;
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bob.address.substring(2, 6)}`, {
     address: channelAddress,
-    args: [alice.address, bob.address, chainId],
+    args: [alice.address, bob.address],
     txHash: tx.hash,
   });
 
@@ -56,4 +52,24 @@ export const getOnchainBalance = async (assetId: string, address: string): Promi
   return assetId === AddressZero
     ? provider.getBalance(address)
     : new Contract(assetId, TestToken.abi, provider).balanceOf(address);
+};
+
+export const fundAddress = async (address: string, assetId: string, minimumAmt: BigNumber): Promise<void> => {
+  const balance = await getOnchainBalance(assetId, address);
+  if (balance.gte(minimumAmt)) {
+    return;
+  }
+  const funderBal = await getOnchainBalance(assetId, alice.address);
+  if (funderBal.lt(minimumAmt)) {
+    throw new Error(
+      `${
+        alice.address
+      } has insufficient funds to gift to ${address} (requested: ${minimumAmt.toString()}, balance: ${funderBal.toString()})`,
+    );
+  }
+  const tx =
+    assetId === AddressZero
+      ? await alice.sendTransaction({ to: address, value: minimumAmt })
+      : await new Contract(assetId, TestToken.abi, alice).transfer(address, minimumAmt);
+  await tx.wait();
 };

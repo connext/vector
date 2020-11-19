@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-
 import { RegisteredTransfer } from "@connext/vector-types";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
 
 import { deployContracts } from "../../actions";
 import { alice } from "../constants";
 import { getTestAddressBook } from "../utils";
 
-describe("LibIterableMapping.sol", () => {
+describe("LibIterableMapping.sol", function() {
+  this.timeout(120_000);
   let mapping: Contract;
   let transferDefs: Contract[];
 
@@ -17,7 +18,8 @@ describe("LibIterableMapping.sol", () => {
     // Load some data into the library
     for (const transfer of transferDefs) {
       const info = await transfer.getRegistryInformation();
-      await mapping.addTransferDefinition(info);
+      const tx = await mapping.addTransferDefinition(info);
+      await tx.wait();
     }
   };
 
@@ -84,11 +86,11 @@ describe("LibIterableMapping.sol", () => {
     });
 
     it("should fail if name is an empty string", async () => {
-      await expect(mapping.getTransferDefinitionByName("")).revertedWith("LibIterableMapping: empty name");
+      await expect(mapping.getTransferDefinitionByName("")).revertedWith("LibIterableMapping: EMPTY_NAME");
     });
 
     it("should fail if name is not in contract.names", async () => {
-      await expect(mapping.getTransferDefinitionByName("Test")).revertedWith("LibIterableMapping: name not found");
+      await expect(mapping.getTransferDefinitionByName("Test")).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
     });
   });
 
@@ -105,7 +107,7 @@ describe("LibIterableMapping.sol", () => {
 
     it("should fail if index > self.names.length", async () => {
       await expect(mapping.getTransferDefinitionByIndex(BigNumber.from(2))).revertedWith(
-        "LibIterableMapping: invalid index",
+        "LibIterableMapping: INVALID_INDEX",
       );
     });
   });
@@ -132,13 +134,13 @@ describe("LibIterableMapping.sol", () => {
 
     it("should fail if name is an empty string", async () => {
       await expect(mapping.addTransferDefinition({ ...info[0], name: "" })).revertedWith(
-        "LibIterableMapping: empty name",
+        "LibIterableMapping: EMPTY_NAME",
       );
     });
 
     it("should fail if name is in contract.names", async () => {
       await loadMapping();
-      await expect(mapping.addTransferDefinition(info[0])).revertedWith("LibIterableMapping: name not found");
+      await expect(mapping.addTransferDefinition(info[0])).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
     });
   });
 
@@ -150,23 +152,25 @@ describe("LibIterableMapping.sol", () => {
     });
 
     it("should work with the last element", async () => {
-      await mapping.removeTransferDefinition(info[1].name);
+      const tx = await mapping.removeTransferDefinition(info[1].name);
+      await tx.wait();
       expect(await mapping.length()).to.be.eq(info.length - 1);
       expect(await mapping.nameExists(info[1].name)).to.be.false;
     });
 
     it("should work with another element than the last", async () => {
-      await mapping.removeTransferDefinition(info[0].name);
+      const tx = await mapping.removeTransferDefinition(info[0].name);
+      await tx.wait();
       expect(await mapping.length()).to.be.eq(info.length - 1);
       expect(await mapping.nameExists(info[0].name)).to.be.false;
     });
 
     it("should fail if name is an empty string", async () => {
-      await expect(mapping.removeTransferDefinition("")).revertedWith("LibIterableMapping: empty name");
+      await expect(mapping.removeTransferDefinition("")).revertedWith("LibIterableMapping: EMPTY_NAME");
     });
 
     it("should fail if name is not in contract.names", async () => {
-      await expect(mapping.removeTransferDefinition("Test")).revertedWith("LibIterableMapping: name not found");
+      await expect(mapping.removeTransferDefinition("Test")).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
     });
   });
 });

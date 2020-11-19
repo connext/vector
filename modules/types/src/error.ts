@@ -80,6 +80,7 @@ export class ValidationError extends VectorError {
     TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
     ExternalValidationFailed: "Failed external validation",
+    InDispute: "Channel currently in dispute",
   } as const;
 
   constructor(
@@ -112,12 +113,13 @@ export class OutboundChannelUpdateError extends VectorError {
     SaveChannelFailed: "Failed to save channel",
     StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
     StaleChannel: "Channel state is behind, cannot apply update",
+    StoreFailure: "Failed to execute store method",
     SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
     SyncFailure: "Failed to sync channel from counterparty update",
     SyncValidationFailed: "Failed to validate update for sync",
     TransferNotFound: "No transfer found in storage",
     TransferNotActive: "Transfer not found in activeTransfers",
-    TransferNotRegistered: "Transfer not found in activeTransfers",
+    TransferNotRegistered: "Transfer not found in registry",
   } as const;
 
   constructor(
@@ -179,6 +181,7 @@ export class NodeError extends VectorError {
   readonly type = VectorError.errors.NodeError;
 
   static readonly reasons = {
+    ChannelNotFound: "Channel not found",
     InternalServerError: "Failed to send request",
     InvalidParams: "Request has invalid parameters",
     MultinodeProhibitted: "Not allowed to have multiple nodes",
@@ -187,6 +190,8 @@ export class NodeError extends VectorError {
     ProviderNotFound: "Provider not available for chain",
     Timeout: "Timeout",
     TransactionNotMined: "Failed to wait for transaction to be mined",
+    TransferNotActive: "Transfer not found in channel active transfers",
+    TransferNotFound: "Transfer not found",
   } as const;
 
   constructor(

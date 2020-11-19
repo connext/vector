@@ -303,6 +303,110 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
   },
 );
 
+server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
+  "/send-dispute-channel-tx",
+  {
+    schema: {
+      body: NodeParams.SendDisputeChannelTxSchema,
+      response: NodeResponses.SendDisputeChannelTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, { channelAddress: request.body.channelAddress });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_dispute>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendDefundChannelTx }>(
+  "/send-defund-channel-tx",
+  {
+    schema: {
+      body: NodeParams.SendDefundChannelTxSchema,
+      response: NodeResponses.SendDefundChannelTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, { channelAddress: request.body.channelAddress });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_defund>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
+  "/send-dispute-transfer-tx",
+  {
+    schema: {
+      body: NodeParams.SendDisputeTransferTxSchema,
+      response: NodeResponses.SendDisputeTransferTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, { transferId: request.body.transferId });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.SendDefundTransferTx }>(
+  "/send-defund-transfer-tx",
+  {
+    schema: {
+      body: NodeParams.SendDefundTransferTxSchema,
+      response: NodeResponses.SendDefundTransferTxSchema,
+    },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, { transferId: request.body.transferId });
+
+    try {
+      const res = await engine.request<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.Deposit }>(
   "/deposit",
   { schema: { body: NodeParams.DepositSchema, response: NodeResponses.DepositSchema } },

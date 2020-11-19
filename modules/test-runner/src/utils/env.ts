@@ -7,7 +7,7 @@ export const env = {
   chainProviders: JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS || "{}"),
   chainAddresses: JSON.parse(process.env.VECTOR_CHAIN_ADDRESSES || "{}"),
   daveUrl: process.env.VECTOR_DAVE_URL || "http://dave:8000",
-  logLevel: process.env.VECTOR_LOG_LEVEL || "error",
+  logLevel: process.env.VECTOR_LOG_LEVEL || "warn",
   nodeUrl: process.env.VECTOR_NODE_URL || "http://node:8000",
   nodeContainerUrl: process.env.VECTOR_NODE_CONTAINER_URL || "http://vector_node:8000",
   rogerUrl: process.env.VECTOR_ROGER_URL || "http://roger:8000",

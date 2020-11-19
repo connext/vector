@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/IAssetTransfer.sol";
 import "./CMCCore.sol";
 import "./lib/LibAsset.sol";
+import "./lib/LibERC20.sol";
 import "./lib/LibUtils.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -12,19 +13,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract AssetTransfer is CMCCore, IAssetTransfer {
   using SafeMath for uint256;
 
-  string private constant BALANCE_SIG = "_getOwnERC20Balance(address)";
-  string private constant TRANSFER_SIG = "_transferERC20(address,address,uint256)";
-
   // TODO: These are ad hoc values. Confirm or find more suitable ones.
   uint256 private constant ETHER_TRANSFER_GAS_LIMIT = 10000;
   uint256 private constant ERC20_TRANSFER_GAS_LIMIT = 100000;
-  uint256 private constant ERC20_BALANCE_GAS_LIMIT = 10000;
+  uint256 private constant ERC20_BALANCEOF_GAS_LIMIT = 10000;
 
   mapping(address => uint256) internal totalTransferred;
   mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
 
   modifier onlySelf() {
-    require(msg.sender == address(this), "AssetTransfer: Can only be called from this contract");
+    require(msg.sender == address(this), "AssetTransfer: NOT_SELF");
     _;
   }
 
@@ -40,23 +38,19 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address recipient,
     uint256 maxAmount
   ) private returns (bool, uint256) {
-    (bool success, bytes memory encodedReturnValue) = address(this).call{gas: ERC20_BALANCE_GAS_LIMIT}(
-      abi.encodeWithSignature(BALANCE_SIG, assetId)
+    (bool success, bytes memory returnData) = address(this).staticcall(
+      abi.encodeWithSignature("_getOwnERC20Balance(address)", assetId)
     );
     if (!success) {
       return (false, 0);
     }
 
-    uint256 balance = abi.decode(encodedReturnValue, (uint256));
+    uint256 balance = abi.decode(returnData, (uint256));
     uint256 amount = LibUtils.min(maxAmount, balance);
-    (success, encodedReturnValue) = address(this).call{gas: ERC20_TRANSFER_GAS_LIMIT}(
-      abi.encodeWithSignature(TRANSFER_SIG, assetId, recipient, amount)
+    (success, ) = address(this).call(
+      abi.encodeWithSignature("_transferERC20(address,address,uint256)", assetId, recipient, amount)
     );
-    if (!success) {
-      return (false, 0);
-    }
 
-    success = abi.decode(encodedReturnValue, (bool));
     return (success, success ? amount : 0);
   }
 
@@ -72,15 +66,18 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
   }
 
   function _getOwnERC20Balance(address assetId) external view onlySelf returns (uint256) {
-    return IERC20(assetId).balanceOf(address(this));
+    return IERC20(assetId).balanceOf{gas: ERC20_BALANCEOF_GAS_LIMIT}(address(this));
   }
 
   function _transferERC20(
     address assetId,
     address recipient,
     uint256 amount
-  ) external onlySelf returns (bool) {
-    return LibAsset.transferERC20(assetId, recipient, amount);
+  ) external onlySelf {
+    require(
+      LibERC20.transfer(assetId, recipient, amount, ERC20_TRANSFER_GAS_LIMIT),
+      "AssetTransfer: ERC20_TRANSFER_FAILED"
+    );
   }
 
   function registerTransfer(address assetId, uint256 amount) internal {
@@ -131,17 +128,17 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address owner,
     address payable recipient
   ) external override onlyViaProxy nonReentrant {
-    require(
-      msg.sender == owner || owner == recipient,
-      "AssetTransfer: Either msg.sender or recipient of funds must be the owner of an emergency withdraw"
-    );
+    require(msg.sender == owner || owner == recipient, "AssetTransfer: OWNER_MISMATCH");
 
     uint256 maxAmount = emergencyWithdrawableAmount[assetId][owner];
     uint256 balance = LibAsset.getOwnBalance(assetId);
     uint256 amount = LibUtils.min(maxAmount, balance);
 
+    // Revert if amount is 0
+    require(amount > 0, "AssetTransfer: NO_OP");
+
     emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
-    registerTransfer(assetId, maxAmount);
-    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: Transfer failed");
+    registerTransfer(assetId, amount);
+    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
   }
 }

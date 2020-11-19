@@ -1,6 +1,5 @@
 import { ChannelFactory, TestToken, VectorChannel, VectorChainReader } from "@connext/vector-contracts";
 import {
-  Contract,
   FullChannelState,
   IChannelSigner,
   ILockService,
@@ -21,6 +20,7 @@ import {
   MemoryMessagingService,
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
+import { Contract } from "@ethersproject/contracts";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import Pino from "pino";
 
@@ -89,7 +89,6 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
       chainId,
       providerUrl: Object.values(env.chainProviders)[0] as string,
       channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      channelMastercopyAddress: env.chainAddresses[chainId].channelMastercopyAddress,
       transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
     },
   };
@@ -181,7 +180,6 @@ export const depositInChannel = async (
       const tx = await factory.createChannelAndDepositAlice(
         depositorSigner.address,
         counterparty.signerAddress,
-        chainId,
         assetId,
         value,
         { value },
@@ -230,7 +228,7 @@ export const depositInChannel = async (
           res(data);
         });
       });
-      const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address, chainId);
+      const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address);
       await createTx.wait();
       const deployedAddr = await created;
       expect(deployedAddr).to.equal(channelAddress);

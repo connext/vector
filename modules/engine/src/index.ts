@@ -19,6 +19,7 @@ import {
   WITHDRAWAL_RECONCILED_EVENT,
   ChannelRpcMethods,
   IExternalValidation,
+  AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
 import pino from "pino";
 import Ajv from "ajv";
@@ -112,6 +113,10 @@ export class VectorEngine implements IVectorEngine {
       this.logger,
       this.setup.bind(this),
     );
+  }
+
+  private async getConfig(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig]>> {
+    return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
   }
 
   private async getChannelState(
@@ -232,17 +237,54 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(chainProviders.getError()!.message));
     }
 
-    return this.vector.setup({
+    const setupRes = await this.vector.setup({
       counterpartyIdentifier: params.counterpartyIdentifier,
       timeout: params.timeout,
       networkContext: {
         channelFactoryAddress: this.chainAddresses[params.chainId].channelFactoryAddress,
-        channelMastercopyAddress: this.chainAddresses[params.chainId].channelMastercopyAddress,
         transferRegistryAddress: this.chainAddresses[params.chainId].transferRegistryAddress,
         chainId: params.chainId,
         providerUrl: chainProviders.getValue()[params.chainId],
       },
     });
+
+    if (setupRes.isError) {
+      return setupRes;
+    }
+
+    const channel = setupRes.getValue();
+    if (this.signerAddress === channel.bob) {
+      return setupRes;
+    }
+
+    // If it is alice && chain id is in autodeployable chains, deploy contract
+    if (!AUTODEPLOY_CHAIN_IDS.includes(channel.networkContext.chainId)) {
+      return setupRes;
+    }
+
+    this.logger.info(
+      { chainId: channel.networkContext.chainId, channel: channel.channelAddress },
+      "Deploying channel multisig",
+    );
+    const deployRes = await this.chainService.sendDeployChannelTx(channel);
+    if (deployRes.isError) {
+      const err = deployRes.getError();
+      this.logger.error(
+        {
+          ...(err?.context ?? {}),
+          chainId: channel.networkContext.chainId,
+          channel: channel.channelAddress,
+          error: deployRes.getError()!.message,
+        },
+        "Failed to deploy channel multisig",
+      );
+      return setupRes;
+    }
+    const tx = deployRes.getValue();
+    this.logger.info({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx broadcast");
+    await tx.wait();
+    this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
+    return setupRes;
   }
 
   private async requestSetup(
@@ -414,7 +456,7 @@ export class VectorEngine implements IVectorEngine {
     this.logger.info({ channelAddress: params.channelAddress, transferId }, "Withdraw transfer created");
 
     let transactionHash: string | undefined = undefined;
-    const timeout = 15_000;
+    const timeout = 90_000;
     try {
       const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
         timeout,
@@ -426,6 +468,112 @@ export class VectorEngine implements IVectorEngine {
     }
 
     return Result.ok({ channel: res, transactionHash });
+  }
+
+  private async decrypt(encrypted: string): Promise<Result<string, Error>> {
+    try {
+      const res = await this.signer.decrypt(encrypted);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  // DISPUTE METHODS
+  private async disputeChannel(
+    params: EngineParams.DisputeChannel,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], Error>> {
+    const channel = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channel.isError) {
+      return Result.fail(channel.getError()!);
+    }
+    const state = channel.getValue();
+    if (!state) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
+    const disputeRes = await this.chainService.sendDisputeChannelTx(state);
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()!);
+    }
+
+    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+  }
+
+  private async defundChannel(
+    params: EngineParams.DefundChannel,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defund], Error>> {
+    const channel = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channel.isError) {
+      return Result.fail(channel.getError()!);
+    }
+    const state = channel.getValue();
+    if (!state) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
+      );
+    }
+    if (!state.inDispute) {
+      return Result.fail(new Error("Channel not in dispute"));
+    }
+    const disputeRes = await this.chainService.sendDefundChannelTx(state);
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()!);
+    }
+
+    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+  }
+
+  private async disputeTransfer(
+    params: EngineParams.DisputeTransfer,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_disputeTransfer], Error>> {
+    const transferRes = await this.getTransferState(params);
+    if (transferRes.isError) {
+      return Result.fail(transferRes.getError()!);
+    }
+    const transfer = transferRes.getValue();
+    if (!transfer) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+      );
+    }
+
+    // Get active transfers
+    const activeRes = await this.getActiveTransfers({ channelAddress: transfer.channelAddress });
+    if (activeRes.isError) {
+      return Result.fail(activeRes.getError()!);
+    }
+    const disputeRes = await this.chainService.sendDisputeTransferTx(transfer.transferId, activeRes.getValue());
+    if (disputeRes.isError) {
+      return Result.fail(disputeRes.getError()!);
+    }
+    return Result.ok({ transactionHash: disputeRes.getValue().hash });
+  }
+
+  private async defundTransfer(
+    params: EngineParams.DefundTransfer,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defundTransfer], Error>> {
+    const transferRes = await this.getTransferState(params);
+    if (transferRes.isError) {
+      return Result.fail(transferRes.getError()!);
+    }
+    const transfer = transferRes.getValue();
+    if (!transfer) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+      );
+    }
+
+    if (!transfer.inDispute) {
+      return Result.fail(new Error("Transfer not in dispute"));
+    }
+
+    const defundRes = await this.chainService.sendDefundTransferTx(transfer);
+    if (defundRes.isError) {
+      return Result.fail(defundRes.getError()!);
+    }
+    return Result.ok({ transactionHash: defundRes.getValue().hash });
   }
 
   // JSON RPC interface -- this will accept:

@@ -34,12 +34,12 @@ model Channel {
   merkleRoot               String
   balances                 Balance[]
   channelFactoryAddress    String
-  channelMastercopyAddress String
   transferRegistryAddress  String
-  chainId                  Int
+  chainId                  String
   providerUrl              String
   latestUpdate             Update
   defundNonce              String
+  inDispute                Boolean
 
   activeTransfers Transfer[]
 
@@ -105,6 +105,7 @@ model Update {
 model Transfer {
   transferId String @id
   routingId  String
+  inDispute  Boolean
 
   createUpdate  Update? @relation(name: "CreatedTransfer", fields: [createUpdateChannelAddressId, createUpdateNonce], references: [channelAddressId, nonce])
   resolveUpdate Update? @relation(name: "ResolvedTransfer", fields: [resolveUpdateChannelAddressId, resolveUpdateNonce], references: [channelAddressId, nonce])
@@ -150,7 +151,7 @@ model OnchainTransaction {
   from            String
   data            String
   value           String
-  chainId         Int
+  chainId         String
   nonce           Int
   gasLimit        String
   gasPrice        String
@@ -176,8 +177,7 @@ model OnchainTransaction {
   channelAddress String
   channel        Channel @relation(fields: [channelAddress], references: [channelAddress])
 
-  @@unique(transactionHash)
-  @@unique([from, nonce])
+  @@unique([transactionHash, chainId])
   @@map(name: "onchain_transaction")
 }
 

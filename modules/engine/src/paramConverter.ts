@@ -16,7 +16,8 @@ import {
   TransferName,
   IVectorChainReader,
 } from "@connext/vector-types";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 
 import { InvalidTransferType } from "./errors";
 
@@ -109,7 +110,7 @@ export async function convertWithdrawParams(
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
-  const { channelAddress, assetId, recipient, fee } = params;
+  const { channelAddress, assetId, recipient, fee, callTo, callData } = params;
 
   // If there is a fee being charged, add the fee to the amount.
   const amount = fee
@@ -128,6 +129,8 @@ export async function convertWithdrawParams(
     params.amount,
     // Use channel nonce as a way to keep withdraw hashes unique
     channel.nonce.toString(),
+    callTo,
+    callData,
   );
 
   const initiatorSignature = await signer.signMessage(commitment.hashToSign());
@@ -140,7 +143,9 @@ export async function convertWithdrawParams(
     responder: channelCounterparty,
     data: commitment.hashToSign(),
     nonce: channel.nonce.toString(),
-    fee: fee ? fee : "0",
+    fee: fee ?? "0",
+    callTo: callTo ?? AddressZero,
+    callData: callData ?? "0x",
   };
 
   // Get the transfer information from the chain reader

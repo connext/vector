@@ -6,8 +6,9 @@ import {
   expect,
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
-import { AddressZero } from "@ethersproject/constants";
-import { Contract, BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero, Zero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
 import { createChannel, deployContracts } from "../actions";
@@ -18,7 +19,8 @@ import { VectorChainReader } from "../services";
 import { alice, bob, chainIdReq, provider } from "./constants";
 import { getTestAddressBook } from "./utils";
 
-describe("ChannelFactory", () => {
+describe("ChannelFactory", function() {
+  this.timeout(120_000);
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
   let addressBook: AddressBook;
@@ -31,17 +33,14 @@ describe("ChannelFactory", () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [
       ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy"]],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
     ]);
     channelMastercopy = addressBook.getContract("ChannelMastercopy");
     channelFactory = addressBook.getContract("ChannelFactory");
     chainId = await chainIdReq;
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
-    chainReader = new VectorChainReader(
-      chainProviders,
-      pino().child({ module: "VectorChainReader" }),
-    );
+    chainReader = new VectorChainReader(chainProviders, pino().child({ module: "VectorChainReader" }));
   });
 
   it("should deploy", async () => {
@@ -53,14 +52,12 @@ describe("ChannelFactory", () => {
   });
 
   it("should provide the proxy bytecode", async () => {
-    expect(
-      await channelFactory.proxyCreationCode(),
-    ).to.equal(getMinimalProxyInitCode(channelMastercopy.address));
+    expect(await channelFactory.proxyCreationCode()).to.equal(getMinimalProxyInitCode(channelMastercopy.address));
   });
 
   it("should create a channel and calculated addresses should match actual one", async () => {
     const channel = await createChannel(bob.address, alice, addressBook);
-    const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address, chainId);
+    const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr2 = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,
@@ -84,7 +81,7 @@ describe("ChannelFactory", () => {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDepositAlice(alice.address, bob.address, chainId, AddressZero, value, { value });
+      .createChannelAndDepositAlice(alice.address, bob.address, AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;

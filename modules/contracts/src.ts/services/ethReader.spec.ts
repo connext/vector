@@ -1,7 +1,7 @@
 import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { AddressZero, Zero } from "@ethersproject/constants";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
 import { deployContracts, registerTransfer } from "../actions";
@@ -11,7 +11,8 @@ import { alice, bob, chainIdReq, getTestAddressBook, getTestChannel, provider } 
 import { EthereumChainReader } from "./ethReader";
 
 // TODO: check whether result is valid, not just whether it exists
-describe("EthereumChainReader", () => {
+describe("EthereumChainReader", function() {
+  this.timeout(120_000);
   const assetId = AddressZero;
   const transfer = {} as any; // TODO
   let addressBook: AddressBook;
@@ -25,7 +26,7 @@ describe("EthereumChainReader", () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [
       ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy"]],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
       ["TransferRegistry", []],
       ["Withdraw", []],
     ]);

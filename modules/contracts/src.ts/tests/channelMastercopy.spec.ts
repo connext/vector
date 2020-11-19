@@ -1,6 +1,6 @@
 import { expect } from "@connext/vector-utils";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
-import { Contract } from "ethers";
+import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
@@ -8,7 +8,8 @@ import { AddressBook } from "../addressBook";
 import { alice } from "./constants";
 import { getTestAddressBook } from "./utils";
 
-describe("ChannelMastercopy", () => {
+describe("ChannelMastercopy", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let mastercopy: Contract;
 
@@ -27,19 +28,17 @@ describe("ChannelMastercopy", () => {
       [Zero, Zero],
       [AddressZero, AddressZero],
     ];
-    const CoreChannelStateZero = [
+    const WithdrawDataZero = [
       AddressZero,
       AddressZero,
       AddressZero,
-      [],
-      [],
-      [],
-      [],
       Zero,
       Zero,
-      HashZero,
+      AddressZero,
       Zero,
+      "0x"
     ];
+    const CoreChannelStateZero = [AddressZero, AddressZero, AddressZero, [], [], [], [], Zero, Zero, HashZero, Zero];
     const CoreTransferStateZero = [
       AddressZero,
       HashZero,
@@ -52,7 +51,6 @@ describe("ChannelMastercopy", () => {
       HashZero,
     ];
     for (const method of [
-
       // from ICMCCore
       { name: "setup", args: [AddressZero, AddressZero] },
       { name: "getAlice", args: [] },
@@ -69,8 +67,8 @@ describe("ChannelMastercopy", () => {
       { name: "depositAlice", args: [AddressZero, Zero /*, HashZero */] },
 
       // from ICMCWithdraw
-      { name: "getWithdrawalTransactionRecord", args: [AddressZero, AddressZero, Zero, Zero] },
-      { name: "withdraw", args: [AddressZero, AddressZero, Zero, Zero, HashZero, HashZero] },
+      { name: "getWithdrawalTransactionRecord", args: [WithdrawDataZero] },
+      { name: "withdraw", args: [WithdrawDataZero, HashZero, HashZero] },
 
       // from ICMCAdjudicator
       { name: "getChannelDispute", args: [] },
@@ -79,17 +77,14 @@ describe("ChannelMastercopy", () => {
       { name: "defundChannel", args: [CoreChannelStateZero] },
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
       { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero] },
-
     ]) {
-      await expect(
-        mastercopy[method.name](...method.args),
-      ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
+      await expect(mastercopy[method.name](...method.args)).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
     }
   });
 
   it("should revert if sent eth bc it's the mastercopy", async () => {
-    await expect(
-      alice.sendTransaction({ to: mastercopy.address, value: Zero }),
-    ).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
+    await expect(alice.sendTransaction({ to: mastercopy.address, value: Zero })).to.be.revertedWith(
+      "Mastercopy: ONLY_VIA_PROXY",
+    );
   });
 });

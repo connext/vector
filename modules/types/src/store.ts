@@ -1,8 +1,9 @@
-import { providers } from "ethers";
+import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
-import { FullChannelState, ChannelCommitmentData, FullTransferState } from "./channel";
+import { FullChannelState, FullTransferState } from "./channel";
 import { Address } from "./basic";
+import { ChannelDispute, TransferDispute } from "./dispute";
 
 export interface IVectorStore {
   // Store management methods
@@ -20,18 +21,22 @@ export interface IVectorStore {
     participantB: string,
     chainId: number,
   ): Promise<FullChannelState | undefined>;
-  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined>;
   // Should return all initial transfer state data needed to
   // create the merkle root
   getActiveTransfers(channelAddress: string): Promise<FullTransferState[]>;
   getTransferState(transferId: string): Promise<FullTransferState | undefined>;
 
   // Setters
-  saveChannelState(
-    channelState: FullChannelState,
-    commitment: ChannelCommitmentData,
-    transfer?: FullTransferState,
+  saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void>;
+
+  saveChannelDispute(
+    channel: FullChannelState,
+    channelDispute: ChannelDispute,
+    transferDispute?: TransferDispute,
   ): Promise<void>;
+  // TODO: full disputes
+  // getChannelDispute(channelAddress: string): Promise<ChannelDispute | undefined>;
+  // getTransferDispute(transferAddress: string): Promise<TransferDispute | undefined>;
 }
 
 export const StoredTransactionStatus = {
@@ -50,7 +55,8 @@ export const TransactionReason = {
   defundTransfer: "defundTransfer",
   depositA: "depositA",
   depositB: "depositB",
-  deployWithDepositA: "deployWithDepositA",
+  deploy: "deploy",
+  deployWithDepositAlice: "deployWithDepositAlice",
   transferTokens: "transferTokens",
   withdraw: "withdraw",
 } as const;
@@ -107,9 +113,9 @@ export interface IChainServiceStore {
   saveTransactionResponse(
     channelAddress: string,
     reason: TransactionReason,
-    transaction: providers.TransactionResponse,
+    transaction: TransactionResponse,
   ): Promise<void>;
-  saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void>;
+  saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void>;
   saveTransactionFailure(channelAddress: string, transactionHash: string, error: string): Promise<void>;
 }
 

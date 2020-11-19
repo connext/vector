@@ -5,7 +5,6 @@ import {
   DepositUpdateDetails,
   ResolveUpdateDetails,
   SetupUpdateDetails,
-  ChannelCommitmentData,
   FullTransferState,
   UpdateType,
   EngineEvent,
@@ -14,6 +13,8 @@ import {
   StoredTransaction,
   TransactionReason,
   StoredTransactionStatus,
+  ChannelDispute,
+  TransferDispute,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
@@ -56,7 +57,7 @@ const convertOnchainTransactionEntityToTransaction = (
     from: onchainEntity.from,
     data: onchainEntity.data,
     value: onchainEntity.value,
-    chainId: onchainEntity.chainId,
+    chainId: BigNumber.from(onchainEntity.chainId).toNumber(),
     nonce: onchainEntity.nonce,
     gasLimit: onchainEntity.gasLimit,
     gasPrice: onchainEntity.gasPrice,
@@ -110,7 +111,7 @@ const convertChannelEntityToFullChannelState = (
       case "setup":
         details = {
           networkContext: {
-            chainId: channelEntity.chainId,
+            chainId: BigNumber.from(channelEntity.chainId).toNumber(),
             channelFactoryAddress: channelEntity.channelFactoryAddress,
             providerUrl: channelEntity.providerUrl,
           },
@@ -158,9 +159,8 @@ const convertChannelEntityToFullChannelState = (
     processedDepositsA,
     processedDepositsB,
     networkContext: {
-      chainId: channelEntity.chainId,
+      chainId: BigNumber.from(channelEntity.chainId).toNumber(),
       channelFactoryAddress: channelEntity.channelFactoryAddress,
-      channelMastercopyAddress: channelEntity.channelMastercopyAddress,
       transferRegistryAddress: channelEntity.transferRegistryAddress,
       providerUrl: channelEntity.providerUrl,
     },
@@ -185,7 +185,8 @@ const convertChannelEntityToFullChannelState = (
       toIdentifier: channelEntity.latestUpdate.toIdentifier,
       type: channelEntity.latestUpdate.type,
     },
-    defundNonce: channelEntity.nonce.toString(),
+    defundNonce: channelEntity.defundNonce.toString(),
+    inDispute: channelEntity.inDispute,
   };
   return channel;
 };
@@ -194,9 +195,10 @@ const convertTransferEntityToFullTransferState = (
   transfer: Transfer & { channel: Channel | null; createUpdate: Update | null; resolveUpdate: Update | null },
 ) => {
   const fullTransfer: FullTransferState = {
+    inDispute: transfer.inDispute,
     channelFactoryAddress: transfer.channel!.channelFactoryAddress,
     assetId: transfer.createUpdate!.assetId,
-    chainId: transfer.channel!.chainId,
+    chainId: BigNumber.from(transfer.channel!.chainId).toNumber(),
     channelAddress: transfer.channel!.channelAddress!,
     balance: {
       amount: [transfer.amountA, transfer.amountB],
@@ -228,7 +230,24 @@ export class PrismaStore implements IServerNodeStore {
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
-    this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+    this.prisma = new PrismaClient(dbUrl ? { datasources: { db: { url: this.dbUrl } } } : undefined);
+  }
+
+  async saveChannelDispute(
+    channel: FullChannelState<any>,
+    channelDispute: ChannelDispute,
+    transferDispute?: TransferDispute,
+  ): Promise<void> {
+    await this.prisma.channel.update({
+      where: { channelAddress: channel.channelAddress },
+      data: { inDispute: channel.inDispute },
+    });
+    if (transferDispute) {
+      await this.prisma.transfer.update({
+        where: { transferId: transferDispute.transferId },
+        data: { inDispute: true },
+      });
+    }
   }
 
   async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
@@ -257,7 +276,7 @@ export class PrismaStore implements IServerNodeStore {
         from: response.from,
         data: response.data,
         value: response.value.toString(),
-        chainId: response.chainId,
+        chainId: response.chainId.toString(),
         nonce: response.nonce,
         gasLimit: response.gasLimit.toString(),
         gasPrice: response.gasPrice.toString(),
@@ -279,7 +298,7 @@ export class PrismaStore implements IServerNodeStore {
         from: response.from,
         data: response.data,
         value: response.value.toString(),
-        chainId: response.chainId,
+        chainId: response.chainId.toString(),
         nonce: response.nonce,
         gasLimit: response.gasLimit.toString(),
         gasPrice: response.gasPrice.toString(),
@@ -365,6 +384,8 @@ export class PrismaStore implements IServerNodeStore {
         .sub(initialState.fee)
         .toString(),
       nonce: initialState.nonce,
+      callData: initialState.callTo,
+      callTo: initialState.callData,
     };
   }
 
@@ -409,10 +430,6 @@ export class PrismaStore implements IServerNodeStore {
     }, {} as { [event: string]: string });
   }
 
-  getChannelCommitment(channelAddress: string): Promise<ChannelCommitmentData | undefined> {
-    throw new Error("Method not implemented.");
-  }
-
   getSchemaVersion(): Promise<number> {
     throw new Error("Method not implemented.");
   }
@@ -452,12 +469,12 @@ export class PrismaStore implements IServerNodeStore {
           {
             participantA,
             participantB,
-            chainId,
+            chainId: chainId.toString(),
           },
           {
             participantA: participantB,
             participantB: participantA,
-            chainId,
+            chainId: chainId.toString(),
           },
         ],
       },
@@ -475,14 +492,11 @@ export class PrismaStore implements IServerNodeStore {
     return channelEntities.map(convertChannelEntityToFullChannelState);
   }
 
-  async saveChannelState(
-    channelState: FullChannelState,
-    commitment: ChannelCommitmentData,
-    transfer?: FullTransferState,
-  ): Promise<void> {
+  async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
     const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
+            inDispute: false,
             channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
             routingId: transfer!.meta.routingId ?? getRandomBytes32(),
@@ -592,15 +606,15 @@ export class PrismaStore implements IServerNodeStore {
     await this.prisma.channel.upsert({
       where: { channelAddress: channelState.channelAddress },
       create: {
+        inDispute: false,
         assetIds,
         activeTransfers: {
           ...activeTransfers,
           disconnect: undefined,
         } as any,
-        chainId: channelState.networkContext.chainId,
+        chainId: channelState.networkContext.chainId.toString(),
         channelAddress: channelState.channelAddress,
         channelFactoryAddress: channelState.networkContext.channelFactoryAddress,
-        channelMastercopyAddress: channelState.networkContext.channelMastercopyAddress,
         transferRegistryAddress: channelState.networkContext.transferRegistryAddress,
         merkleRoot: channelState.merkleRoot,
         nonce: channelState.nonce,

@@ -2,6 +2,8 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./LibERC20.sol";
+import "./LibUtils.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
@@ -31,19 +33,16 @@ library LibAsset {
         internal
         returns (bool)
     {
-        (bool success, ) = recipient.call{value: amount}("");
-        return success;
+        (bool success, bytes memory returnData) = recipient.call{value: amount}("");
+        LibUtils.revertIfCallFailed(success, returnData);
+        return true;
     }
 
-    // takes care of "missing return value" bug that some tokens exhibit
     function transferERC20(address assetId, address recipient, uint256 amount)
         internal
         returns (bool)
     {
-        (bool success, bytes memory encodedReturnValue) = assetId.call(
-            abi.encodeWithSignature("transfer(address,uint256)", recipient, amount)
-        );
-        return success && (encodedReturnValue.length == 0 || abi.decode(encodedReturnValue, (bool)));
+        return LibERC20.transfer(assetId, recipient, amount);
     }
 
     function transfer(address assetId, address payable recipient, uint256 amount)

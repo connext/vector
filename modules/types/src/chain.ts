@@ -1,7 +1,9 @@
-import { BigNumber, BigNumberish, providers } from "ethers";
+import { TransactionResponse } from "@ethersproject/abstract-provider";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
 import { Balance, FullChannelState, FullTransferState } from "./channel";
+import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
 import { ChainProviders } from "./network";
 import { RegisteredTransfer, TransferName } from "./transferDefinitions";
@@ -31,11 +33,14 @@ export class ChainError extends VectorError {
     SignerNotFound: "Signer not found for chainId",
     SenderNotInChannel: "Sender is not a channel participant",
     NotEnoughFunds: "Not enough funds in wallet",
+    FailedToDeploy: "Could not deploy vector channel",
     FailedToSendTx: "Failed to send transaction to chain",
     TransferNotRegistered: "Transfer not in registry",
     MissingSigs: "Channel state is not double signed",
     ResolverNeeded: "Transfer resolver must be provided in dispute",
     NotInitialState: "Transfer must be disputed with initial state",
+    MultisigDeployed: "Multisig already deployed",
+    TransferNotFound: "Transfer is not included in active transfers",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -110,6 +115,8 @@ export interface IVectorChainReader {
   getCode(address: Address, chainId: number): Promise<Result<string, ChainError>>;
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
+
+  getChannelDispute(channelAddress: string, chainId: number): Promise<Result<ChannelDispute | undefined, ChainError>>;
 }
 
 export interface IVectorChainService extends IVectorChainReader {
@@ -119,18 +126,22 @@ export interface IVectorChainService extends IVectorChainReader {
     sender: string,
     amount: string,
     assetId: string,
-  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponse, ChainError>>;
   sendWithdrawTx(
     channelState: FullChannelState,
     minTx: MinimalTransaction,
-  ): Promise<Result<providers.TransactionResponse, ChainError>>;
+  ): Promise<Result<TransactionResponse, ChainError>>;
+  sendDeployChannelTx(
+    channelState: FullChannelState,
+    deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
+  ): Promise<Result<TransactionResponse, ChainError>>;
 
   // Dispute methods
-  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
-  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<providers.TransactionResponse, ChainError>>;
+  sendDisputeChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
+  sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>>;
   sendDisputeTransferTx(
-    transferState: FullTransferState,
-    merkleProof: string[],
-  ): Promise<Result<providers.TransactionResponse, ChainError>>;
-  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<providers.TransactionResponse, ChainError>>;
+    transferIdToDispute: string,
+    activeTransfers: FullTransferState[],
+  ): Promise<Result<TransactionResponse, ChainError>>;
+  sendDefundTransferTx(transferState: FullTransferState): Promise<Result<TransactionResponse, ChainError>>;
 }

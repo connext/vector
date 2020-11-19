@@ -1,5 +1,8 @@
 import { signChannelMessage, expect } from "@connext/vector-utils";
-import { BigNumber, constants, Contract, utils } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
@@ -7,9 +10,8 @@ import { bob, alice, getTestChannel, getTestAddressBook, provider } from "../tes
 
 import { WithdrawCommitment } from "./withdraw";
 
-const { parseEther } = utils;
-
-describe("withdrawCommitment", () => {
+describe("withdrawCommitment", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let channel: Contract;
   let token: Contract;
@@ -20,10 +22,12 @@ describe("withdrawCommitment", () => {
     await deployContracts(alice, addressBook, [["TestToken", []]]);
     token = addressBook.getContract("TestToken");
     channel = await getTestChannel(addressBook);
-    await (await alice.sendTransaction({
-      to: channel.address,
-      value: BigNumber.from(amount).mul(2),
-    })).wait();
+    await (
+      await alice.sendTransaction({
+        to: channel.address,
+        value: BigNumber.from(amount).mul(2),
+      })
+    ).wait();
     await (await token.transfer(channel.address, parseEther(amount))).wait();
   });
 
@@ -33,7 +37,7 @@ describe("withdrawCommitment", () => {
       alice.address,
       bob.address,
       alice.address,
-      constants.AddressZero,
+      AddressZero,
       amount,
       "1",
     );

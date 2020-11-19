@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish } from "ethers";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { getBigNumberishError } from "./bigNumbers";
 

@@ -1,5 +1,8 @@
 import { Address, Bytes32, HexString, PublicKey, PrivateKey, SignatureString } from "@connext/vector-types";
-import { utils } from "ethers";
+import { getAddress } from "@ethersproject/address";
+import { arrayify, hexlify } from "@ethersproject/bytes";
+import { randomBytes } from "@ethersproject/random";
+import { toUtf8String } from "@ethersproject/strings";
 import {
   arrayToBuffer,
   concatBuffers,
@@ -18,8 +21,6 @@ import {
 } from "eccrypto-js";
 
 import { getAddressError, getHexStringError, isValidHexString } from "./hexStrings";
-
-const { arrayify, getAddress, hexlify, randomBytes, toUtf8String } = utils;
 
 export const VECTOR_SIGN_PREFIX = "\x15Indra Signed Message:\n";
 
@@ -115,7 +116,7 @@ export const decrypt = async (encrypted: HexString, privateKey: PrivateKey): Pro
   toUtf8String(await libDecrypt(bufferify(privateKey), deserialize(bufferify(`0x${encrypted.replace(/^0x/, "")}`))));
 
 export const signChannelMessage = async (message: string, privateKey: PrivateKey): Promise<HexString> =>
-  hexlify(await sign(bufferify(privateKey), bufferify(hashChannelMessage(message)), true));
+  hexlify(sign(bufferify(privateKey), bufferify(hashChannelMessage(message)), true));
 
 export const recoverAddressFromChannelMessage = async (message: HexString, sig: SignatureString): Promise<Address> =>
-  getAddressFromPublicKey(hexlify(await recover(bufferify(hashChannelMessage(message)), bufferify(sig))));
+  getAddressFromPublicKey(hexlify(recover(bufferify(hashChannelMessage(message)), bufferify(sig))));

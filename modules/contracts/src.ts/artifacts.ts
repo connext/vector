@@ -1,5 +1,5 @@
 import { HexString } from "@connext/vector-types";
-import { utils } from "ethers";
+import { FunctionFragment, EventFragment, ParamType } from "@ethersproject/abi";
 
 import * as AssetTransfer from "../artifacts/src.sol/AssetTransfer.sol/AssetTransfer.json";
 import * as ChannelFactory from "../artifacts/src.sol/ChannelFactory.sol/ChannelFactory.json";
@@ -15,8 +15,9 @@ import * as TransferRegistry from "../artifacts/src.sol/TransferRegistry.sol/Tra
 import * as VectorChannel from "../artifacts/src.sol/interfaces/IVectorChannel.sol/IVectorChannel.json";
 import * as Withdraw from "../artifacts/src.sol/transferDefinitions/Withdraw.sol/Withdraw.json";
 import * as TestLibIterableMapping from "../artifacts/src.sol/testing/TestLibIterableMapping.sol/TestLibIterableMapping.json";
+import * as ReentrantToken from "../artifacts/src.sol/testing/ReentrantToken.sol/ReentrantToken.json";
 
-type Abi = Array<string | utils.FunctionFragment | utils.EventFragment | utils.ParamType>;
+type Abi = Array<string | FunctionFragment | EventFragment | ParamType>;
 
 type Artifact = {
   contractName: string;
@@ -34,6 +35,7 @@ export const artifacts: Artifacts = {
   FailingToken,
   HashlockTransfer,
   NonconformingToken,
+  ReentrantToken,
   TestChannel,
   TestChannelFactory,
   TestLibIterableMapping,
@@ -51,6 +53,7 @@ export {
   FailingToken,
   HashlockTransfer,
   NonconformingToken,
+  ReentrantToken,
   TestChannel,
   TestChannelFactory,
   TestLibIterableMapping,

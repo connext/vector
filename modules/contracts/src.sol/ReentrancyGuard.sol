@@ -12,19 +12,19 @@ contract ReentrancyGuard {
     uint256 public lock;
 
     function setup() internal {
-        require(lock == UNINITIALIZED, "ReentrancyGuard: cannot initialize twice");
+        require(lock == UNINITIALIZED, "ReentrancyGuard: ALREADY_INITIALIZED");
         lock = OPEN;
     }
 
     modifier nonReentrant() {
-        require(lock == OPEN, "ReentrancyGuard: reentrant call");
+        require(lock == OPEN, "ReentrancyGuard: REENTRANT_CALL");
         lock = LOCKED;
         _;
         lock = OPEN;
     }
 
     modifier nonReentrantView() {
-        require(lock == OPEN, "ReentrancyGuard: reentrant call");
+        require(lock == OPEN, "ReentrancyGuard: REENTRANT_CALL");
         _;
     }
 

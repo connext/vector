@@ -105,7 +105,32 @@ const WithdrawParamsSchema = Type.Object({
   assetId: TAddress,
   recipient: TAddress,
   fee: Type.Optional(TIntegerString),
+  callTo: Type.Optional(TAddress),
+  callData: Type.Optional(Type.String()),
   meta: TBasicMeta,
+});
+
+//////////////////
+/// Dispute Methods
+
+// Dispute channel engine params
+const DisputeChannelParamsSchema = Type.Object({
+  channelAddress: TAddress,
+});
+
+// Defund channel engine params
+const DefundChannelParamsSchema = Type.Object({
+  channelAddress: TAddress,
+});
+
+// Dispute transfer engine params
+const DisputeTransferParamsSchema = Type.Object({
+  transferId: TBytes32,
+});
+
+// Defund transfer engine params
+const DefundTransferParamsSchema = Type.Object({
+  transferId: TBytes32,
 });
 
 // Rpc request schema
@@ -164,4 +189,16 @@ export namespace EngineParams {
 
   export const WithdrawSchema = WithdrawParamsSchema;
   export type Withdraw = Static<typeof WithdrawSchema>;
+
+  export const DisputeChannelSchema = DisputeChannelParamsSchema;
+  export type DisputeChannel = Static<typeof DisputeChannelParamsSchema>;
+
+  export const DefundChannelSchema = DefundChannelParamsSchema;
+  export type DefundChannel = Static<typeof DefundChannelParamsSchema>;
+
+  export const DisputeTransferSchema = DisputeTransferParamsSchema;
+  export type DisputeTransfer = Static<typeof DisputeTransferParamsSchema>;
+
+  export const DefundTransferSchema = DefundTransferParamsSchema;
+  export type DefundTransfer = Static<typeof DefundTransferParamsSchema>;
 }

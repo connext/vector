@@ -1,24 +1,27 @@
+import { VectorChannel } from "@connext/vector-contracts";
 import {
-  IVectorStore,
-  UpdateParams,
-  UpdateType,
+  ChannelUpdate,
+  ChannelUpdateEvent,
+  FullChannelState,
+  FullTransferState,
+  IChannelSigner,
+  IExternalValidation,
   ILockService,
   IMessagingService,
-  IChannelSigner,
-  FullChannelState,
-  ChannelUpdateEvent,
+  IVectorChainReader,
+  IVectorProtocol,
+  IVectorStore,
+  OutboundChannelUpdateError,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
-  IVectorProtocol,
-  Result,
-  FullTransferState,
-  IVectorChainReader,
-  OutboundChannelUpdateError,
   ProtocolParams,
-  IExternalValidation,
-  ChannelUpdate,
+  Result,
+  UpdateParams,
+  UpdateType,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
 import Ajv from "ajv";
 import { Evt } from "evt";
 import pino from "pino";
@@ -205,10 +208,12 @@ export class Vector implements IVectorProtocol {
         return;
       }
 
+      const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
+
       this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        updatedChannelState: inboundRes.getValue().nextState,
-        updatedTransfers: inboundRes.getValue().activeTransfers,
-        updatedTransfer: inboundRes.getValue().updatedTransfer,
+        updatedChannelState: updatedChannel,
+        updatedTransfers: updatedActiveTransfers,
+        updatedTransfer: updatedTransfer,
       });
     });
 
@@ -220,6 +225,66 @@ export class Vector implements IVectorProtocol {
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
+
+    // Handle disputes
+    // First check on current dispute status of all channels onchain
+    // Since we have no way of knowing the last time the protocol
+    // connected, we must check this on startup
+    // TODO: is there a better way to do this?
+    await Promise.all(
+      channels.map(async channel => {
+        const currBlock = await this.chainReader.getBlockNumber(channel.networkContext.chainId);
+        const disputeRes = await this.chainReader.getChannelDispute(
+          channel.channelAddress,
+          channel.networkContext.chainId,
+        );
+        if (disputeRes.isError) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
+            "Could not get dispute",
+          );
+          return;
+        }
+        const dispute = disputeRes.getValue();
+        if (!dispute) {
+          return;
+        }
+        try {
+          // if the dispute has expired, save that the channel is no
+          // longer in dispute
+          if (BigNumber.from(currBlock).lte(dispute.defundExpiry)) {
+            // make store call IFF needed
+            if (channel.inDispute) {
+              await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, dispute);
+            }
+            return;
+          }
+          // otherwise, save dispute record
+          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
+        } catch (e) {
+          this.logger.error(
+            { channelAddress: channel.channelAddress, error: e.message },
+            "Failed to update dispute on startup",
+          );
+        }
+
+        // Register listeners to update all disputes while the protocol is
+        // online and actively connected
+        const contract = new Contract(channel.channelAddress, VectorChannel.abi, this.signer);
+        contract.on(contract.filters.ChannelDisputed(), async event => {
+          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, event.dispute);
+        });
+        // contract.on(contract.filters.ChannelDefunded(), async event => {
+        //   await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, event.dispute);
+        // });
+        contract.on(contract.filters.TransferDisputed(), async event => {
+          await this.storeService.saveChannelDispute(
+            { ...channel, inDispute: true },
+            { ...event.dispute, transferId: event.transferId },
+          );
+        });
+      }),
+    );
     await Promise.all(
       channels.map(channel =>
         sync
@@ -371,6 +436,10 @@ export class Vector implements IVectorProtocol {
   // STORE METHODS
   public async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     return this.storeService.getChannelState(channelAddress);
+  }
+
+  public async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
+    return this.storeService.getActiveTransfers(channelAddress);
   }
 
   public async getChannelStateByParticipants(

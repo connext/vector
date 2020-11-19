@@ -68,6 +68,8 @@ export type WithdrawalCreatedPayload = {
   assetId: string;
   amount: string;
   recipient: string;
+  callTo: string;
+  callData: string;
   channelBalance: Balance;
 };
 

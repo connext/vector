@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.1;
-pragma experimental "ABIEncoderV2";
+pragma experimental ABIEncoderV2;
 
-import "../interfaces/ITransferDefinition.sol";
+import "./TransferDefinition.sol";
 
 /// @title Hashlock Transfer
 /// @notice This contract allows users to claim a payment locked in
 ///         the application if they provide the correct preImage. The payment is
 ///         reverted if not unlocked by the timelock if one is provided.
 
-contract HashlockTransfer is ITransferDefinition {
+contract HashlockTransfer is TransferDefinition {
   struct TransferState {
     bytes32 lockHash;
     uint256 expiry; // If 0, then no timelock is enforced
@@ -19,29 +19,17 @@ contract HashlockTransfer is ITransferDefinition {
     bytes32 preImage;
   }
 
-  string StateEncoding = "tuple(bytes32 lockHash, uint256 expiry)";
-
-  string ResolverEncoding = "tuple(bytes32 preImage)";
-
-  string Name = "HashlockTransfer";
-
-  function getRegistryInformation() external override view returns (RegisteredTransfer memory) {
-    RegisteredTransfer memory info = RegisteredTransfer({
-      name: Name,
-      stateEncoding: StateEncoding,
-      resolverEncoding: ResolverEncoding,
-      definition: address(this)
-    });
-    return info;
-  }
+  string public constant override Name = "HashlockTransfer";
+  string public constant override StateEncoding = "tuple(bytes32 lockHash, uint256 expiry)";
+  string public constant override ResolverEncoding = "tuple(bytes32 preImage)";
 
   function create(bytes calldata encodedBalance, bytes calldata encodedState) external override view returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
     Balance memory balance = abi.decode(encodedBalance, (Balance));
 
-    require(balance.amount[1] == 0, "Cannot create hashlock transfer with nonzero recipient balance");
-    require(state.lockHash != bytes32(0), "Cannot create hashlock transfer with empty lockHash");
-    require(state.expiry > block.number || state.expiry == 0, "Cannot create hashlock transfer with expired timelock");
+    require(balance.amount[1] == 0, "HashlockTransfer: NONZERO_RECIPIENT_BALANCE");
+    require(state.lockHash != bytes32(0), "HashlockTransfer: EMPTY_LOCKHASH");
+    require(state.expiry == 0 || state.expiry > block.number, "HashlockTransfer: EXPIRED_TIMELOCK");
     return true;
   }
 
@@ -56,18 +44,17 @@ contract HashlockTransfer is ITransferDefinition {
 
     // If you pass in bytes32(0), payment is canceled
     // If timelock is nonzero and has expired, payment is canceled
-    if (resolver.preImage != bytes32(0) && (state.expiry > block.number || state.expiry == 0)) {
+    if (resolver.preImage != bytes32(0) && (state.expiry == 0 || state.expiry > block.number)) {
       // Check hash for normal payment unlock
       bytes32 generatedHash = sha256(abi.encode(resolver.preImage));
-      require(state.lockHash == generatedHash, "Hash generated from preimage does not match hash in state");
+      require(state.lockHash == generatedHash, "HashlockTransfer: INVALID_PREIMAGE");
 
       // Update state
       balance.amount[1] = balance.amount[0];
       balance.amount[0] = 0;
     } else {
       // To cancel, the preImage must be empty (not simply incorrect)
-      require(resolver.preImage == bytes32(0), "Must provide empty hash to cancel payment");
-
+      require(resolver.preImage == bytes32(0), "HashlockTransfer: NONZERO_LOCKHASH");
       // There are no additional state mutations
     }
 

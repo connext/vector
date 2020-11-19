@@ -67,6 +67,30 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest("config", "get", {}, NodeParams.GetConfigSchema);
   }
 
+  sendDisputeChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>> {
+    return this.executeHttpRequest(`send-dispute-channel-tx`, "post", params, NodeParams.SendDisputeChannelTxSchema);
+  }
+
+  sendDefundChannelTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>> {
+    return this.executeHttpRequest(`send-defund-channel-tx`, "post", params, NodeParams.SendDefundChannelTxSchema);
+  }
+
+  sendDisputeTransferTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>> {
+    return this.executeHttpRequest(`send-dispute-transfer-tx`, "post", params, NodeParams.SendDisputeTransferTxSchema);
+  }
+
+  sendDefundTransferTx(
+    params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>> {
+    return this.executeHttpRequest(`send-defund-transfer-tx`, "post", params, NodeParams.SendDefundTransferTxSchema);
+  }
+
   async createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>> {
     const res = await this.executeHttpRequest<NodeResponses.CreateNode>(
       `node`,

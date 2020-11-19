@@ -53,6 +53,7 @@ nav:
   - Router Guides:
       - router/basics.md
       - router/configure.md
+      - router/chains.md
       # - router/managingCollateral.md
   - API Reference:
       - reference/nodeAPI.md

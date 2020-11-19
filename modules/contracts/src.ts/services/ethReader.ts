@@ -11,12 +11,16 @@ import {
   ChainProviders,
   RegisteredTransfer,
   TransferName,
+  ChannelDispute,
 } from "@connext/vector-types";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
-import { BigNumber, constants, Contract, providers } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero, HashZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import pino from "pino";
 
-import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry } from "../artifacts";
+import { ChannelFactory, ChannelMastercopy, TransferDefinition, TransferRegistry, VectorChannel } from "../artifacts";
 
 // https://github.com/rustwasm/wasm-bindgen/issues/700#issuecomment-419708471
 const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
@@ -28,7 +32,7 @@ const execEvmBytecode = (bytecode: string, payload: string): Uint8Array =>
 export class EthereumChainReader implements IVectorChainReader {
   private transferRegistries: Map<string, RegisteredTransfer[]> = new Map();
   constructor(
-    public readonly chainProviders: { [chainId: string]: providers.JsonRpcProvider },
+    public readonly chainProviders: { [chainId: string]: JsonRpcProvider },
     public readonly log: pino.BaseLogger = pino(),
   ) {}
 
@@ -38,6 +42,33 @@ export class EthereumChainReader implements IVectorChainReader {
       ret[parseInt(name)] = value.connection.url;
     });
     return Result.ok(ret);
+  }
+
+  async getChannelDispute(
+    channelAddress: string,
+    chainId: number,
+  ): Promise<Result<ChannelDispute | undefined, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+
+    try {
+      const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
+      if (dispute.channelStateHash === HashZero) {
+        return Result.ok(undefined);
+      }
+      return Result.ok({
+        channelStateHash: dispute.channelStateHash,
+        nonce: dispute.nonce.toString(),
+        merkleRoot: dispute.merkleRoot,
+        consensusExpiry: dispute.consensusExpiry.toString(),
+        defundExpiry: dispute.defundExpiry.toString(),
+        defundNonce: dispute.defundNonce.toString(),
+      });
+    } catch (e) {
+      return Result.fail(e as any);
+    }
   }
 
   async getRegisteredTransferByDefinition(
@@ -146,7 +177,7 @@ export class EthereumChainReader implements IVectorChainReader {
       // TODO: check for reason?
       try {
         onchainBalance =
-          assetId === constants.AddressZero
+          assetId === AddressZero
             ? await provider!.getBalance(channelAddress)
             : await new Contract(assetId, ERC20Abi, provider).balanceOf(channelAddress);
       } catch (e) {
@@ -289,7 +320,7 @@ export class EthereumChainReader implements IVectorChainReader {
 
   async getChannelAddress(
     alice: string,
-    responder: string,
+    bob: string,
     channelFactoryAddress: string,
     chainId: number,
   ): Promise<Result<string, ChainError>> {
@@ -298,9 +329,9 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+    const channelFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const derivedAddress = await vectorChannel.getChannelAddress(alice, responder, chainId);
+      const derivedAddress = await channelFactory.getChannelAddress(alice, bob);
       return Result.ok(derivedAddress);
     } catch (e) {
       return Result.fail(e);

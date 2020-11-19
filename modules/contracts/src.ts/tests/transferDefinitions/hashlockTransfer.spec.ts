@@ -15,25 +15,28 @@ import {
   encodeTransferState,
   encodeBalance,
 } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero, Zero } from "@ethersproject/constants";
-import { Contract, utils, BigNumber } from "ethers";
+import { Contract } from "@ethersproject/contracts";
+import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
 import { alice, provider } from "../constants";
 import { getTestAddressBook } from "../utils";
 
-describe("HashlockTransfer", () => {
+describe("HashlockTransfer", function() {
+  this.timeout(120_000);
   let addressBook: AddressBook;
   let transfer: Contract;
 
-  beforeEach(async () => {
+  before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [["HashlockTransfer", []]]);
     transfer = addressBook.getContract("HashlockTransfer");
   });
 
-  const createlockHash = (preImage: string): string => utils.soliditySha256(["bytes32"], [preImage]);
+  const createlockHash = (preImage: string): string => soliditySha256(["bytes32"], [preImage]);
 
   const createInitialState = async (preImage: string): Promise<{ state: HashlockTransferState; balance: Balance }> => {
     const senderAddr = getRandomAddress();
@@ -116,7 +119,7 @@ describe("HashlockTransfer", () => {
       const { state, balance } = await createInitialState(preImage);
       balance.amount[1] = balance.amount[0];
       await expect(createTransfer(balance, state)).revertedWith(
-        "Cannot create hashlock transfer with nonzero recipient balance",
+        "HashlockTransfer: NONZERO_RECIPIENT_BALANCE",
       );
     });
 
@@ -124,7 +127,7 @@ describe("HashlockTransfer", () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
       state.lockHash = HashZero;
-      await expect(createTransfer(balance, state)).revertedWith("Cannot create hashlock transfer with empty lockHash");
+      await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: EMPTY_LOCKHASH");
     });
 
     it("should fail create if expiry is nonzero and expired", async () => {
@@ -132,7 +135,7 @@ describe("HashlockTransfer", () => {
       const { state, balance } = await createInitialState(preImage);
       state.expiry = "1";
       await expect(createTransfer(balance, state)).revertedWith(
-        "Cannot create hashlock transfer with expired timelock",
+        "HashlockTransfer: EXPIRED_TIMELOCK",
       );
     });
 
@@ -181,7 +184,7 @@ describe("HashlockTransfer", () => {
       const { state, balance } = await createInitialState(preImage);
       const incorrectPreImage = getRandomBytes32();
       await expect(resolveTransfer(balance, state, { preImage: incorrectPreImage })).revertedWith(
-        "Hash generated from preimage does not match hash in state",
+        "HashlockTransfer: INVALID_PREIMAGE",
       );
     });
 
@@ -190,7 +193,7 @@ describe("HashlockTransfer", () => {
       const { state, balance } = await createInitialState(preImage);
       state.expiry = "1";
       await expect(resolveTransfer(balance, state, { preImage: getRandomBytes32() })).revertedWith(
-        `Must provide empty hash to cancel payment`,
+        `HashlockTransfer: NONZERO_LOCKHASH`,
       );
     });
   });
