@@ -79,8 +79,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       // We are not already in a dispute
       // Set expiries
       // TODO: offchain-ensure that there can't be an overflow
-      channelDispute.consensusExpiry = block.number.add(ccs.timeout);
-      channelDispute.defundExpiry = block.number.add(ccs.timeout.mul(2));
+      channelDispute.consensusExpiry = block.timestamp.add(ccs.timeout);
+      channelDispute.defundExpiry = block.timestamp.add(ccs.timeout.mul(2));
     }
 
     // Store newer state
@@ -192,7 +192,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // Store transfer state and set expiry
     transferDispute.transferStateHash = transferStateHash;
     // TODO: offchain-ensure that there can't be an overflow
-    transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout);
+    transferDispute.transferDisputeExpiry = block.timestamp.add(cts.transferTimeout);
 
     emit TransferDisputed(msg.sender, address(this), cts.transferId, transferDispute);
   }
@@ -217,7 +217,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
     Balance memory balance;
 
-    if (block.number < transferDispute.transferDisputeExpiry) {
+    if (block.timestamp < transferDispute.transferDisputeExpiry) {
       // Before dispute expiry, responder can resolve
       require(msg.sender == cts.responder, "CMCAdjudicator: INVALID_MSG_SENDER");
       require(keccak256(encodedInitialTransferState) == cts.initialStateHash, "CMCAdjudicator: INVALID_TRANSFER_HASH");
@@ -292,11 +292,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   function inConsensusPhase() internal view returns (bool) {
-    return block.number < channelDispute.consensusExpiry;
+    return block.timestamp < channelDispute.consensusExpiry;
   }
 
   function inDefundPhase() internal view returns (bool) {
-    return channelDispute.consensusExpiry <= block.number && block.number < channelDispute.defundExpiry;
+    return channelDispute.consensusExpiry <= block.timestamp && block.timestamp < channelDispute.defundExpiry;
   }
 
   function hashChannelState(CoreChannelState calldata ccs) internal pure returns (bytes32) {

@@ -78,9 +78,10 @@ describe("HashlockTransfer", function() {
     resolver: HashlockTransferResolver,
     result: Balance,
   ): Promise<void> => {
+    const latestBlockTime = (await provider.getBlock("latest")).timestamp;
     if (
       resolver.preImage !== HashZero &&
-      (initialState.expiry === "0" || BigNumber.from(initialState.expiry).gt(await provider.getBlockNumber()))
+      (initialState.expiry === "0" || BigNumber.from(initialState.expiry).gt(latestBlockTime))
     ) {
       // Payment completed
       expect(result.to).to.deep.equal(balance.to);
@@ -118,9 +119,7 @@ describe("HashlockTransfer", function() {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
       balance.amount[1] = balance.amount[0];
-      await expect(createTransfer(balance, state)).revertedWith(
-        "HashlockTransfer: NONZERO_RECIPIENT_BALANCE",
-      );
+      await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: NONZERO_RECIPIENT_BALANCE");
     });
 
     it("should fail create if lockHash is empty", async () => {
@@ -133,16 +132,14 @@ describe("HashlockTransfer", function() {
     it("should fail create if expiry is nonzero and expired", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
-      state.expiry = "1";
-      await expect(createTransfer(balance, state)).revertedWith(
-        "HashlockTransfer: EXPIRED_TIMELOCK",
-      );
+      state.expiry = Math.floor((Date.now() - 10000) / 1000).toString();
+      await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: EXPIRED_TIMELOCK");
     });
 
     it("should create successfully if expiry is nonzero and not expired", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
-      state.expiry = ((await provider.getBlockNumber()) + 1).toString();
+      state.expiry = (Date.now() + 30).toString();
       const res = await createTransfer(balance, state);
       expect((res as any)[0]).to.be.true;
     });
@@ -159,7 +156,7 @@ describe("HashlockTransfer", function() {
     it("should resolve successfully with nonzero expiry that is not expired", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
-      state.expiry = ((await provider.getBlockNumber()) + 1).toString();
+      state.expiry = (Date.now() + 30).toString();
       const result = await resolveTransfer(balance, state, { preImage });
       await validateResult(balance, state, { preImage }, result);
     });
