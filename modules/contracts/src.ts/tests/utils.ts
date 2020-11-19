@@ -1,6 +1,7 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { final } from "pino";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
@@ -46,6 +47,18 @@ export const mineBlock = (): Promise<void> => {
     provider.once("block", () => resolve());
     await provider.send("evm_mine", []);
   });
+};
+
+export const advanceBlocktime = async (seconds: number): Promise<void> => {
+  const { timestamp: currTime } = await provider.getBlock("latest");
+  await provider.send("evm_increaseTime", [seconds]);
+  await provider.send("evm_mine", []);
+  const { timestamp: finalTime } = await provider.getBlock("latest");
+  const desired = currTime + seconds;
+  if (finalTime < desired) {
+    const diff = finalTime - desired;
+    await provider.send("evm_increaseTime", [diff]);
+  }
 };
 
 export const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {

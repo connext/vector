@@ -25,7 +25,7 @@ import { MerkleTree } from "merkletreejs";
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
 import { bob, alice, networkName, provider, rando } from "../constants";
-import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
+import { advanceBlocktime, getOnchainBalance, getTestAddressBook, getTestChannel } from "../utils";
 
 describe("CMCAdjudicator.sol", async function() {
   this.timeout(120_000);
@@ -49,15 +49,16 @@ describe("CMCAdjudicator.sol", async function() {
 
   // Helper to verify the channel dispute
   const verifyChannelDispute = async (ccs: FullChannelState, disputeBlockNumber: number) => {
+    const { timestamp } = await provider.getBlock(disputeBlockNumber);
     const dispute = await channel.getChannelDispute();
     expect(dispute.channelStateHash).to.be.eq(hashCoreChannelState(ccs));
     expect(dispute.nonce).to.be.eq(ccs.nonce);
     expect(dispute.merkleRoot).to.be.eq(ccs.merkleRoot);
-    expect(dispute.consensusExpiry).to.be.eq(BigNumber.from(ccs.timeout).add(disputeBlockNumber));
+    expect(dispute.consensusExpiry).to.be.eq(BigNumber.from(ccs.timeout).add(timestamp));
     expect(dispute.defundExpiry).to.be.eq(
       BigNumber.from(ccs.timeout)
         .mul(2)
-        .add(disputeBlockNumber),
+        .add(timestamp),
     );
     await Promise.all(
       ccs.assetIds.map(async (assetId: string, idx: number) => {
@@ -68,10 +69,11 @@ describe("CMCAdjudicator.sol", async function() {
   };
 
   const verifyTransferDispute = async (cts: FullTransferState, disputeBlockNumber: number) => {
+    const { timestamp } = await provider.getBlock(disputeBlockNumber);
     const transferDispute = await channel.getTransferDispute(cts.transferId);
     expect(transferDispute.transferStateHash).to.be.eq(hashCoreTransferState(cts));
     expect(transferDispute.isDefunded).to.be.false;
-    expect(transferDispute.transferDisputeExpiry).to.be.eq(BigNumber.from(disputeBlockNumber).add(cts.transferTimeout));
+    expect(transferDispute.transferDisputeExpiry).to.be.eq(BigNumber.from(timestamp).add(cts.transferTimeout));
   };
 
   // Helper to send funds to channel address
@@ -105,16 +107,13 @@ describe("CMCAdjudicator.sol", async function() {
       await bobSigner.signMessage(hash),
     );
     const { blockNumber: disputeBlock } = await tx.wait();
+    const { timestamp } = await provider.getBlock(disputeBlock);
     // Bring to defund phase
-    const toMine = BigNumber.from(ccs.timeout).toNumber();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const _ of Array(toMine).fill(0)) {
-      await mineBlock();
-    }
-    const currBlock = await provider.getBlockNumber();
-    expect(currBlock).to.be.at.least(BigNumber.from(disputeBlock).add(ccs.timeout));
+    await advanceBlocktime(BigNumber.from(ccs.timeout).toNumber());
+    const currBlock = await provider.getBlock("latest");
+    expect(currBlock.timestamp).to.be.at.least(BigNumber.from(timestamp).add(ccs.timeout));
     const defundTimeout = BigNumber.from(ccs.timeout).mul(2);
-    expect(defundTimeout.add(disputeBlock).gt(currBlock)).to.be.true;
+    expect(defundTimeout.add(timestamp).gt(currBlock.timestamp)).to.be.true;
   };
 
   // Get merkle proof of transfer
@@ -234,7 +233,7 @@ describe("CMCAdjudicator.sol", async function() {
       balances: [{ to: [alice.address, bob.address], amount: ["17", "45"] }],
       processedDepositsA: ["0"],
       processedDepositsB: ["62"],
-      timeout: "2",
+      timeout: "20",
       nonce: 3,
       merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
     });
@@ -288,10 +287,11 @@ describe("CMCAdjudicator.sol", async function() {
         await bobSigner.signMessage(hash),
       );
       const { blockNumber } = await tx.wait();
+
       await verifyChannelDispute(shortTimeout, blockNumber);
 
       // advance blocks
-      await mineBlock();
+      await advanceBlocktime(BigNumber.from(shortTimeout.timeout).toNumber());
 
       const nextState = { ...shortTimeout, nonce: channelState.nonce + 1 };
       const hash2 = hashChannelCommitment(nextState);
@@ -716,14 +716,16 @@ describe("CMCAdjudicator.sol", async function() {
       }
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
-      await (await channel.connect(bob).defundTransfer(
-        transferState,
-        encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
-        encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
-      )).wait();
       await (
-        await channel.emergencyWithdraw(transferState.assetId, alice.address, alice.address)
+        await channel
+          .connect(bob)
+          .defundTransfer(
+            transferState,
+            encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+            encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
+          )
       ).wait();
+      await (await channel.emergencyWithdraw(transferState.assetId, alice.address, alice.address)).wait();
       expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(
         preDefundAlice.add(transferState.balance.amount[0]),
       );
@@ -736,16 +738,18 @@ describe("CMCAdjudicator.sol", async function() {
       }
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
-      await (await channel.connect(bob).defundTransfer(
-        transferState,
-        encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
-        encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
-      )).wait();
-      await (await channel.emergencyWithdraw(
-        transferState.assetId,
-        transferState.balance.to[1],
-        transferState.balance.to[1],
-      )).wait();
+      await (
+        await channel
+          .connect(bob)
+          .defundTransfer(
+            transferState,
+            encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+            encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+          )
+      ).wait();
+      await (
+        await channel.emergencyWithdraw(transferState.assetId, transferState.balance.to[1], transferState.balance.to[1])
+      ).wait();
       expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(preDefundAlice);
       expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(
         transferState.balance.amount[0],
@@ -758,18 +762,18 @@ describe("CMCAdjudicator.sol", async function() {
       }
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const _ of Array(BigNumber.from(transferState.transferTimeout).toNumber()).fill(0)) {
-        await mineBlock();
-      }
-      await (await channel.connect(bob).defundTransfer(
-        transferState,
-        encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
-        encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
-      )).wait();
+      await advanceBlocktime(BigNumber.from(transferState.transferTimeout).toNumber());
+
       await (
-        await channel.emergencyWithdraw(transferState.assetId, alice.address, alice.address)
+        await channel
+          .connect(bob)
+          .defundTransfer(
+            transferState,
+            encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+            encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+          )
       ).wait();
+      await (await channel.emergencyWithdraw(transferState.assetId, alice.address, alice.address)).wait();
       const postDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
       expect(postDefundAlice).to.be.eq(preDefundAlice.add(transferState.balance.amount[0]));
       expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(0);
