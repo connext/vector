@@ -4,47 +4,58 @@ This quick start will guide you through getting to a simple e2e transfer flow ru
 
 We assume you're starting with an existing JS application that runs in the browser.
 
-## Spinning Up a Router Locally
+## Local Development With Local Blockchains
 
-Prerequisites:
+### Spinning Up a Trio Stack Locally
 
-- `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
-- `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
-- `docker`: sadly, Docker is kinda annoying to install. See [website](https://www.docker.com/) for instructions.
+View server node docs to [spin up a trio stack](./serverNode/#spinning-up-a-trio-stack-locally).
 
-First, clone the repo:
+This gives you a router to interact with and non-router nodes to test transfers to and from, as well as local EVM chains and messaging services.
 
-```bash
-git clone git@github.com:connext/vector.git
-cd vector
-```
+### Spinning Up the iframe App Locally
 
-Then, run:
+The iframe app will securely store the node's private keys in a separate browser window which's storage cannot be accessed by other windows, i.e. dapps which integrate the browser node.
+
+Run the app by running the command:
 
 ```bash
-make start-router
+make start-iframe-app
 ```
 
-The above command will spin up a routing node in `dev-mode` along with some local services for messaging and auth. It will also create two local blockchains (at chainIds `1337` and `1338` respectively) and then will deploy the Connext contracts to those chains. 
+The iframe app is configured by default to communicate with the local stack and EVM chains that are spun up with `make start-trio`. There is a config file generated at the root called `browser.config.json` which uses the same configuration API as [documented here]("../node/configure/#node-configuration-api).
 
-## Installation and Instantiation
+The iframe app runs by default at `http://localhost:3030`.
 
-You can install the `browser-node` [via npm](https://www.npmjs.com/package/@connext/vector-browser-node):
+### Application Installation and Instantiation
+
+You can install the `browser-node` into a React (or similar) application [via npm](https://www.npmjs.com/package/@connext/vector-browser-node):
 
 ```bash
-npm i @connext/vector-browser-node --save
+npm i @connext/vector-browser-node @connext/vector-utils @connext/vector-types
 ```
 
-You'll also probably want the `vector-utils` package.
+Somewhere in your page load code, you can instantiate the browser node using the `connect` call, specifying the local iframe app:
 
-```bash
-npm i @connext/vector-utils --save
+```ts
+const client = await BrowserNode.connect({
+  iframeSrc: "http://localhost:3030",
+  logger: pino(),
+});
 ```
 
-Instantiating the node takes in the following constructor params:
+Once this is connected, the `client` has the interface documented in the [node API docs]("../reference/nodeAPI/"). The steps to follow for basic operation are:
 
-- `chainProviders`: A provider URL for whatever chain(s) you want to connect to. E.g. Infura, Geth node in VPC, etc. Indexed by [chainId](https://chainId.network).
-- `chainAddresses`: An object containing Connext contract addresses also indexed by `chainId`.
-- `signer`: A ChannelSigner, which can be created using the `vector-utils` package and a private key.
-- `messagingUrl`: Local or remote URL access to a messaging service. In prod-mode, this is automatically defaulted to a global service.
-- `logger`: A [pino](https://getpino.io/#/) logger.
+- Setup a channel with your local router.
+- Deposit funds into your channel, transfer, and withdraw.
+
+## Local Development With Remote Testnets
+
+If you do not want/need to run a local blockchain/router/messaging service, you can skip the steps above and jump straight to "Application Installation and Instantiation". The connect call will instead be:
+
+```ts
+const client = await BrowserNode.connect({
+  logger: pino(),
+});
+```
+
+This will connect to our hosted iframe app at `https://wallet.connext.network` which is configured to communicate to the testnets and mainnets that we currently support. You can setup channels with router nodes from our [list of hosted nodes]("../reference/hostedNodes/).

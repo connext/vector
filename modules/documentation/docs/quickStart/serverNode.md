@@ -2,13 +2,13 @@
 
 This quick start will guide you through getting to a simple e2e transfer flow between two peers running [server-nodes](https://github.com/connext/vector/tree/master/modules/server-node) (Carol, Dave) that is routed through one intermediary routing node (Roger).
 
-## Spinning Up the Stack Locally
+## Spinning Up a Trio Stack Locally
 
 Prerequisites:
 
 - `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
-- `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
-- `docker`: sadly, Docker is kinda annoying to install. See [website](https://www.docker.com/) for instructions.
+- `jq`: Probably not installed yet, install with `brew install jq` or `apt install jq` or similar.
+- `docker`: Sadly, Docker is kind of annoying to install. See [website](https://www.docker.com/) for instructions.
 
 First, clone the repo:
 
