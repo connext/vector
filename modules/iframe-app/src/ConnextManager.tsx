@@ -22,13 +22,23 @@ export default class ConnextManager {
     }
   }
 
-  private async initNode(signature: string): Promise<BrowserNode> {
+  private async initNode(): Promise<BrowserNode> {
+    
+    // store entropy in local storage
+    const storedEntropy = localStorage.getItem("entropy");
+    if (!storedEntropy) {
+      const newEntropy = utils.hexlify(utils.randomBytes(65));
+      localStorage.setItem("entropy", newEntropy);
+    }
+    const entropy = localStorage.getItem('entropy')!;
+
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
-    const mnemonic = utils.entropyToMnemonic(utils.keccak256(signature));
+    const mnemonic = utils.entropyToMnemonic(utils.keccak256(entropy));
     this.privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
     const signer = new ChannelSigner(this.privateKey);
 
+  
     // store publicIdentifier in local storage to see if indexedDB needs to be deleted
     const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
     if (storedPublicIdentifier && storedPublicIdentifier !== signer.publicIdentifier) {
@@ -67,8 +77,7 @@ export default class ConnextManager {
     request: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     if (request.method === "connext_authenticate") {
-      const sig = request.params.signature;
-      const node = await this.initNode(sig);
+      const node = await this.initNode();
       return {
         publicIdentifier: node.publicIdentifier,
         signerAddress: node.signerAddress,
