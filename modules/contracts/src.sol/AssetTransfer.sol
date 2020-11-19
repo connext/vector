@@ -44,6 +44,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
 
   function getAvailableAmount(address assetId, uint256 maxAmount)
     internal
+    view
     returns (uint256)
   {
     return LibUtils.min(maxAmount, LibAsset.getOwnBalance(assetId));
