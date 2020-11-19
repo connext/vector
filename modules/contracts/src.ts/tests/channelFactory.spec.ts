@@ -52,7 +52,7 @@ describe("ChannelFactory", function() {
   });
 
   it("should provide the proxy bytecode", async () => {
-    expect(await channelFactory.proxyCreationCode()).to.equal(getMinimalProxyInitCode(channelMastercopy.address));
+    expect(await channelFactory.getProxyCreationCode()).to.equal(getMinimalProxyInitCode(channelMastercopy.address));
   });
 
   it("should create a channel and calculated addresses should match actual one", async () => {
