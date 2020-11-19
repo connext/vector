@@ -53,7 +53,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     internal
   {
     registerTransfer(assetId, amount);
-    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
+    require(LibAsset.unregisteredTransfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
   }
 
   function emergencyWithdraw(
