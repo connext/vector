@@ -16,7 +16,7 @@ import {
   hashTransferState,
 } from "@connext/vector-utils";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { AddressZero, HashZero } from "@ethersproject/constants";
+import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
@@ -126,8 +126,7 @@ describe("CMCAdjudicator.sol", async function() {
 
   // Helper to dispute transfers + bring to defund phase
   const disputeTransfer = async (cts: FullTransferState = transferState) => {
-    const tx = await channel.disputeTransfer(cts, getMerkleProof(cts));
-    await tx.wait();
+    await (await channel.disputeTransfer(cts, getMerkleProof(cts))).wait();
   };
 
   // Helper to defund channels and verify transfers
@@ -138,8 +137,7 @@ describe("CMCAdjudicator.sol", async function() {
     defundedAssets: string[] = ccs.assetIds,
     indices: BigNumberish[] = [],
   ) => {
-    // Handle case where you're defunding more assets than are signed
-    // into your channel
+    // Handle case where you're defunding more assets than are signed into your channel
     const assetIds = defundedAssets.length > ccs.assetIds.length ? defundedAssets : ccs.assetIds;
     // Get pre-defund balances for signers
     const preDefundAlice = await Promise.all<BigNumber>(
@@ -148,11 +146,18 @@ describe("CMCAdjudicator.sol", async function() {
     const preDefundBob = await Promise.all<BigNumber>(
       assetIds.map((assetId: string) => getOnchainBalance(assetId, bob.address)),
     );
-
     // Defund channel
-    const tx = await channel.defundChannel(ccs, defundedAssets, indices);
-    await tx.wait();
-
+    await (await channel.defundChannel(ccs, defundedAssets, indices)).wait();
+    // Withdraw all assets from channel
+    for (let i = 0; i < assetIds.length; i++) {
+      const assetId = assetIds[i];
+      if ((await channel.getEmergencyWithdrawableAmount(assetId, alice.address)).gt(Zero)) {
+        await (await channel.emergencyWithdraw(assetId, alice.address, alice.address)).wait();
+      }
+      if ((await channel.getEmergencyWithdrawableAmount(assetId, bob.address)).gt(Zero)) {
+        await (await channel.emergencyWithdraw(assetId, bob.address, bob.address)).wait();
+      }
+    }
     // Get post-defund balances
     const postDefundAlice = await Promise.all<BigNumber>(
       assetIds.map((assetId: string) => getOnchainBalance(assetId, alice.address)),
@@ -160,7 +165,6 @@ describe("CMCAdjudicator.sol", async function() {
     const postDefundBob = await Promise.all<BigNumber>(
       assetIds.map((assetId: string) => getOnchainBalance(assetId, bob.address)),
     );
-
     // Verify change in balances + defund nonce
     await Promise.all(
       assetIds.map(async (assetId: string) => {
@@ -391,7 +395,7 @@ describe("CMCAdjudicator.sol", async function() {
       if (nonAutomining) {
         this.skip();
       }
-      const toDispute = { ...channelState, defundNonces: channelState.assetIds.map(a => "0") };
+      const toDispute = { ...channelState, defundNonces: channelState.assetIds.map(() => "0") };
       await disputeChannel(toDispute);
       await expect(channel.defundChannel(toDispute, toDispute.assetIds, [])).revertedWith(
         "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED",
@@ -712,14 +716,14 @@ describe("CMCAdjudicator.sol", async function() {
       }
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
-      const tx = await channel
-        .connect(bob)
-        .defundTransfer(
-          transferState,
-          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
-          encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
-        );
-      await tx.wait();
+      await (await channel.connect(bob).defundTransfer(
+        transferState,
+        encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+        encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
+      )).wait();
+      await (
+        await channel.emergencyWithdraw(transferState.assetId, alice.address, alice.address)
+      ).wait();
       expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(
         preDefundAlice.add(transferState.balance.amount[0]),
       );
@@ -732,16 +736,17 @@ describe("CMCAdjudicator.sol", async function() {
       }
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
-      const tx = await channel
-        .connect(bob)
-        .defundTransfer(
-          transferState,
-          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
-          encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
-        );
-      await tx.wait();
-      const postDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
-      expect(postDefundAlice).to.be.eq(preDefundAlice);
+      await (await channel.connect(bob).defundTransfer(
+        transferState,
+        encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+        encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+      )).wait();
+      await (await channel.emergencyWithdraw(
+        transferState.assetId,
+        transferState.balance.to[1],
+        transferState.balance.to[1],
+      )).wait();
+      expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(preDefundAlice);
       expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(
         transferState.balance.amount[0],
       );
@@ -757,14 +762,14 @@ describe("CMCAdjudicator.sol", async function() {
       for (const _ of Array(BigNumber.from(transferState.transferTimeout).toNumber()).fill(0)) {
         await mineBlock();
       }
-      const tx = await channel
-        .connect(bob)
-        .defundTransfer(
-          transferState,
-          encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
-          encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
-        );
-      await tx.wait();
+      await (await channel.connect(bob).defundTransfer(
+        transferState,
+        encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+        encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+      )).wait();
+      await (
+        await channel.emergencyWithdraw(transferState.assetId, alice.address, alice.address)
+      ).wait();
       const postDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
       expect(postDefundAlice).to.be.eq(preDefundAlice.add(transferState.balance.amount[0]));
       expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(0);

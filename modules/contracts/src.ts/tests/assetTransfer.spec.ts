@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
@@ -75,7 +75,7 @@ describe("AssetTransfer", function() {
     });
   });
 
-  describe("transferAsset", () => {
+  describe("makeEmergencyWithdrawable", () => {
     beforeEach(async () => {
       // Fund the channel with tokens and eth
       const tx = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
@@ -91,29 +91,29 @@ describe("AssetTransfer", function() {
     it("should work for ETH transfers", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await bob.getBalance();
-      await channel.assetTransfer(AddressZero, bob.address, value);
-      expect(await bob.getBalance()).to.be.eq(preTransfer.add(value));
-      expect(await channel.getTotalTransferred(AddressZero)).to.be.eq(value);
-      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, bob.address)).to.be.eq(BigNumber.from(0));
+      await channel.testMakeEmergencyWithdrawable(AddressZero, bob.address, value);
+      expect(await bob.getBalance()).to.be.eq(preTransfer);
+      expect(await channel.getTotalTransferred(AddressZero)).to.be.eq(Zero);
+      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, bob.address)).to.be.eq(value);
     });
 
     it("should work for a valid ERC20 token", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await token.balanceOf(bob.address);
-      await channel.assetTransfer(token.address, bob.address, value);
-      expect(await token.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
-      expect(await channel.getTotalTransferred(token.address)).to.be.eq(value);
-      expect(await channel.getEmergencyWithdrawableAmount(token.address, bob.address)).to.be.eq(BigNumber.from(0));
+      await channel.testMakeEmergencyWithdrawable(token.address, bob.address, value);
+      expect(await token.balanceOf(bob.address)).to.be.eq(preTransfer);
+      expect(await channel.getTotalTransferred(token.address)).to.be.eq(Zero);
+      expect(await channel.getEmergencyWithdrawableAmount(token.address, bob.address)).to.be.eq(value);
     });
 
     it("should work for ERC20 token that does not return `bool` from transfer", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await nonconformingToken.balanceOf(bob.address);
-      await channel.assetTransfer(nonconformingToken.address, bob.address, value);
-      expect(await nonconformingToken.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
-      expect(await channel.getTotalTransferred(nonconformingToken.address)).to.be.eq(value);
+      await channel.testMakeEmergencyWithdrawable(nonconformingToken.address, bob.address, value);
+      expect(await nonconformingToken.balanceOf(bob.address)).to.be.eq(preTransfer);
+      expect(await channel.getTotalTransferred(nonconformingToken.address)).to.be.eq(Zero);
       expect(await channel.getEmergencyWithdrawableAmount(nonconformingToken.address, bob.address)).to.be.eq(
-        BigNumber.from(0),
+        value,
       );
     });
   });
@@ -129,7 +129,7 @@ describe("AssetTransfer", function() {
 
       // Make failing transfer
       const preTransfer = await failingToken.balanceOf(bob.address);
-      await (await channel.assetTransfer(failingToken.address, bob.address, value)).wait();
+      await (await channel.testMakeEmergencyWithdrawable(failingToken.address, bob.address, value)).wait();
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer);
       expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(BigNumber.from(0));
       expect(await channel.getEmergencyWithdrawableAmount(failingToken.address, bob.address)).to.be.eq(value);
