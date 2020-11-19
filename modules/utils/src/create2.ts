@@ -1,4 +1,4 @@
-import { getAddress } from "@ethersproject/address";
+import { getCreate2Address } from "@ethersproject/address";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { PublicIdentifier, IVectorChainReader, Result } from "@connext/vector-types";
 
@@ -30,26 +30,24 @@ export const getCreate2MultisigAddress = async (
 
   try {
     return Result.ok(
-      getAddress(solidityKeccak256(
-        ["bytes1", "address", "uint256", "bytes32"],
-        [
-          "0xff",
-          channelFactoryAddress,
-          // salt
-          solidityKeccak256(
-            ["address", "address", "uint256"],
-            [
-              getSignerAddressFromPublicIdentifier(initiatorIdentifier),
-              getSignerAddressFromPublicIdentifier(responderIdentifier),
-              chainId,
-            ],
-          ),
-          solidityKeccak256(
-            ["bytes"],
-            [getMinimalProxyInitCode(mastercopyRes.getValue())],
-          ),
-        ],
-      ).slice(-40)),
+      getCreate2Address(
+        // from
+        channelFactoryAddress,
+        // salt
+        solidityKeccak256(
+          ["address", "address", "uint256"],
+          [
+            getSignerAddressFromPublicIdentifier(initiatorIdentifier),
+            getSignerAddressFromPublicIdentifier(responderIdentifier),
+            chainId,
+          ],
+        ),
+        // init code hash
+        solidityKeccak256(
+          ["bytes"],
+          [getMinimalProxyInitCode(mastercopyRes.getValue())],
+        ),
+      ),
     );
   } catch (e) {
     return Result.fail(e);
