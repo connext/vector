@@ -65,7 +65,7 @@ describe("ChannelMastercopy", function() {
       { name: "getChannelDispute", args: [] },
       { name: "getTransferDispute", args: [HashZero] },
       { name: "disputeChannel", args: [CoreChannelStateZero, HashZero, HashZero] },
-      { name: "defundChannel", args: [CoreChannelStateZero, []] },
+      { name: "defundChannel", args: [CoreChannelStateZero, [], []] },
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
       { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero] },
     ]) {
