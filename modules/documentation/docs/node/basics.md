@@ -31,7 +31,7 @@ The server-node's HTTP requests are wrapped into a JS [client](./modules/utils/s
 import { RestServerNodeService } from "@connext/vector-utils";
 import pino from "pino";
 
-const alice = await RestServerNodeService.connect("http://localhost:8001", { 1337: "http://localhost:8545" }, pino());
+const alice = await RestServerNodeService.connect("http://localhost:8001", pino(), undefined, 0);
 ```
 
 The client has wrapper methods for the `server-node`'s REST interface, which implement the interface [`IServerNodeService`](./modules/utils/src/serverNode.ts).

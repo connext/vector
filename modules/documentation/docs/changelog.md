@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.12
+
+- Browser node iframe functionality
+
 ## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
 
 - introduce and use commitment types
