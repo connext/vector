@@ -16,18 +16,19 @@ import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
+import { BigNumber } from "ethers";
 import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
 import { logger } from "../constants";
 import {
+  advanceBlocktime,
   alice,
   bob,
   chainIdReq,
   getTestAddressBook,
   getTestChannel,
-  mineBlock,
   provider,
   rando,
 } from "../tests";
@@ -93,14 +94,13 @@ describe("EthereumChainService", function() {
       balances: [{ to: [alice.address, bob.address], amount: ["17", "45"] }],
       processedDepositsA: ["0"],
       processedDepositsB: ["62"],
-      timeout: "2",
+      timeout: "20",
       nonce: 3,
       merkleRoot: new MerkleTree([hashCoreTransferState(transferState)], keccak256).getHexRoot(),
     });
     const channelHash = hashChannelCommitment(channelState);
     channelState.latestUpdate.aliceSignature = await aliceSigner.signMessage(channelHash);
     channelState.latestUpdate.bobSignature = await bobSigner.signMessage(channelHash);
-
   });
 
   it("should be created without error", async () => {
@@ -109,35 +109,24 @@ describe("EthereumChainService", function() {
   });
 
   it("should run sendDepositTx without error", async () => {
-    const res = await chainService.sendDepositTx(
-      channelState,
-      alice.address,
-      "10",
-      AddressZero,
-    );
+    const res = await chainService.sendDepositTx(channelState, alice.address, "10", AddressZero);
     expect(res.getValue()).to.be.ok;
   });
 
   it("should run sendWithdrawTx without error", async () => {
-    const res = await chainService.sendWithdrawTx(
-      channelState,
-      {
-        to: bob.address,
-        data: "0x",
-        value: "0x01",
-      },
-    );
+    const res = await chainService.sendWithdrawTx(channelState, {
+      to: bob.address,
+      data: "0x",
+      value: "0x01",
+    });
     expect(res.getValue()).to.be.ok;
   });
 
   // Need to setup a channel between alice & rando else it'll error w "channel already deployed"
   it("should run sendDeployChannelTx without error", async () => {
-    const channelAddress = (await chainService.getChannelAddress(
-      alice.address,
-      rando.address,
-      channelFactory.address,
-      chainId,
-    )).getValue();
+    const channelAddress = (
+      await chainService.getChannelAddress(alice.address, rando.address, channelFactory.address, chainId)
+    ).getValue();
     const res = await chainService.sendDeployChannelTx(
       {
         ...channelState,
@@ -159,15 +148,14 @@ describe("EthereumChainService", function() {
 
   it("should run sendDefundChannelTx without error", async () => {
     await chainService.sendDisputeChannelTx(channelState);
-    await mineBlock();
+    await advanceBlocktime(BigNumber.from(channelState.timeout).toNumber());
     const res = await chainService.sendDefundChannelTx(channelState);
     expect(res.getValue()).to.be.ok;
   });
 
   it("should run sendDisputeTransferTx without error", async () => {
     await chainService.sendDisputeChannelTx(channelState);
-    await mineBlock();
-    await mineBlock();
+    await advanceBlocktime(BigNumber.from(channelState.timeout).toNumber());
     const res = await chainService.sendDisputeTransferTx(transferState.transferId, [transferState]);
     expect(res.getValue()).to.be.ok;
   });
@@ -175,8 +163,7 @@ describe("EthereumChainService", function() {
   // Fails with INVALID_MSG_SENDER
   it("should run sendDefundTransferTx without error", async () => {
     await chainService.sendDisputeChannelTx(channelState);
-    await mineBlock();
-    await mineBlock();
+    await advanceBlocktime(BigNumber.from(channelState.timeout).toNumber());
     await chainService.sendDisputeTransferTx(transferState.transferId, [transferState]);
     // Bob is the one who will defund, create a chainService for him to do so
     const bobChainService = new EthereumChainService(
@@ -188,5 +175,4 @@ describe("EthereumChainService", function() {
     const res = await bobChainService.sendDefundTransferTx(transferState);
     expect(res.getValue()).to.be.ok;
   });
-
 });
