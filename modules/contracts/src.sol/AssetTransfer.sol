@@ -42,6 +42,20 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     return emergencyWithdrawableAmount[assetId][owner];
   }
 
+  function getAvailableAmount(address assetId, uint256 maxAmount)
+    internal
+    returns (uint256)
+  {
+    return LibUtils.min(maxAmount, LibAsset.getOwnBalance(assetId));
+  }
+
+  function transferAsset(address assetId, address payable recipient, uint256 amount)
+    internal
+  {
+    registerTransfer(assetId, amount);
+    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
+  }
+
   function emergencyWithdraw(
     address assetId,
     address owner,
@@ -49,15 +63,12 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
   ) external override onlyViaProxy nonReentrant {
     require(msg.sender == owner || owner == recipient, "AssetTransfer: OWNER_MISMATCH");
 
-    uint256 maxAmount = emergencyWithdrawableAmount[assetId][owner];
-    uint256 balance = LibAsset.getOwnBalance(assetId);
-    uint256 amount = LibUtils.min(maxAmount, balance);
+    uint256 amount = getAvailableAmount(assetId, emergencyWithdrawableAmount[assetId][owner]);
 
     // Revert if amount is 0
     require(amount > 0, "AssetTransfer: NO_OP");
 
     emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
-    registerTransfer(assetId, amount);
-    require(LibAsset.transfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
+    transferAsset(assetId, recipient, amount);
   }
 }
