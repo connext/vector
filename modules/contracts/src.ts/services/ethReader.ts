@@ -135,7 +135,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     try {
       const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-      const proxyBytecode = await factory.proxyCreationCode();
+      const proxyBytecode = await factory.getProxyCreationCode();
       return Result.ok(proxyBytecode);
     } catch (e) {
       return Result.fail(e);
