@@ -1,23 +1,24 @@
 import { BrowserNode } from "@connext/vector-browser-node";
-import { getPublicKeyFromPublicIdentifier, decrypt , encrypt, ChannelSigner, createlockHash, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import {
+  getPublicKeyFromPublicIdentifier,
+  encrypt,
+  createlockHash,
+  getBalanceForAssetId,
+  getRandomBytes32,
+  delay,
+  constructRpcRequest,
+} from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
-import { Wallet, constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, Select, List, Collapse } from "antd";
-
-import "./App.css";
+import { constants, utils } from "ethers";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Switch } from "antd";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
-import { config } from "./config";
-
-const logger = pino();
-
-const storedMnemonic = localStorage.getItem("mnemonic");
+import "./App.css";
 
 function App() {
   const [node, setNode] = useState<BrowserNode>();
   const [channel, setChannel] = useState<FullChannelState>();
-  const [mnemonic, setMnemonic] = useState<string>();
 
   const [setupLoading, setSetupLoading] = useState<boolean>(false);
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
@@ -25,6 +26,9 @@ function App() {
   const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
   const [transferLoading, setTransferLoading] = useState<boolean>(false);
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
+  const [entropy, setEntropy] = useState<string>("");
+  const [iframeSrc, setIframeSrc] = useState<string>("");
+  const [useRandomEntropy, setUseRandomEntropy] = useState<boolean>(true);
 
   const [connectError, setConnectError] = useState<string>();
 
@@ -32,30 +36,28 @@ function App() {
   const [transferForm] = Form.useForm();
 
   useEffect(() => {
-    const init = async () => {
-      if (!storedMnemonic) {
-        return;
+    const effect = async () => {
+      const storedEntropy = localStorage.getItem("entropy");
+      if (storedEntropy) {
+        setUseRandomEntropy(false);
       }
-      console.log("Found stored mnemonic, hydrating node");
-      await connectNode(storedMnemonic);
+      const storedIframeSrc = localStorage.getItem("iframeSrc");
+      setEntropy(storedEntropy);
+      setIframeSrc(storedIframeSrc || "http://localhost:3030");
     };
-    init();
+    effect();
   }, []);
 
-  const connectNode = async (mnemonic: string) => {
-    console.log("creating node with config", config);
+  const connectNode = async (iframeSrc: string, entropy: string): Promise<BrowserNode> => {
+    if (!iframeSrc) {
+      iframeSrc = "http://localhost:3030";
+    }
     try {
       setConnectLoading(true);
-      const wallet = Wallet.fromMnemonic(mnemonic);
-      const signer = new ChannelSigner(wallet.privateKey);
       const client = await BrowserNode.connect({
-        chainAddresses: config.chainAddresses,
-        chainProviders: config.chainProviders,
-        logger,
-        authUrl: config.authUrl, // optional, only for local setups
-        natsUrl: config.natsUrl, // optional, only for local setups
-        messagingUrl: config.messagingUrl, // used in place of authUrl + natsUrl in prod setups
-        signer,
+        iframeSrc,
+        iframeSignerEntropy: entropy,
+        logger: pino(),
       });
       const channelsRes = await client.getStateChannels();
       if (channelsRes.isError) {
@@ -69,21 +71,22 @@ function App() {
         setChannel(channelRes.getValue());
       }
       setNode(client);
-      localStorage.setItem("mnemonic", mnemonic);
-      setMnemonic(mnemonic);
       client.on(EngineEvents.DEPOSIT_RECONCILED, async data => {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client, data.channelAddress);
       });
+      // TODO: this is required bc the event handlers are keyed on Date.now()
+      // await delay(10);
       client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
         console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
         if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
           console.log("We are the sender");
           return;
         }
-        console.log(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-        const decryptedPreImage = await decrypt(data.transfer.meta.encryptedPreImage, wallet.privateKey);
-        console.log(decryptedPreImage);
+        console.log(data.transfer.meta.encryptedPreImage);
+        const rpc = constructRpcRequest<"chan_decrypt">("chan_decrypt", data.transfer.meta.encryptedPreImage);
+        const decryptedPreImage = await client.send(rpc);
+        console.log("decryptedPreImage: ", decryptedPreImage);
 
         const requestRes = await client.resolveTransfer({
           channelAddress: data.transfer.channelAddress,
@@ -93,10 +96,11 @@ function App() {
           transferId: data.transfer.transferId,
         });
         if (requestRes.isError) {
-          console.error("Error transfering", requestRes.getError());
+          console.error("Error resolving transfer", requestRes.getError());
         }
         await updateChannel(client, data.channelAddress);
       });
+      return client;
     } catch (e) {
       console.error("Error connecting node: ", e);
       setConnectError(e.message);
@@ -159,7 +163,7 @@ function App() {
 
     const submittedMeta: { encryptedPreImage?: string } = {};
     if (recipient) {
-      const recipientPublicKey = await getPublicKeyFromPublicIdentifier(recipient);
+      const recipientPublicKey = getPublicKeyFromPublicIdentifier(recipient);
       const encryptedPreImage = await encrypt(preImage, recipientPublicKey);
       submittedMeta.encryptedPreImage = encryptedPreImage;
     }
@@ -202,7 +206,23 @@ function App() {
 
   return (
     <div style={{ margin: 36 }}>
-      <Typography.Title>Vector Browser Node</Typography.Title>
+      <Row gutter={16}>
+        <Col span={16}>
+          <Typography.Title>Vector Browser Node</Typography.Title>
+        </Col>
+        <Col span={8}>
+          <Button
+            danger
+            onClick={() => {
+              indexedDB.deleteDatabase("VectorIndexedDBDatabase");
+              localStorage.clear();
+              window.location.reload();
+            }}
+          >
+            Clear Store
+          </Button>
+        </Col>
+      </Row>
       <Divider orientation="left">Connection</Divider>
       <Row gutter={16}>
         {node?.publicIdentifier ? (
@@ -220,23 +240,6 @@ function App() {
                   </List.Item>
                 )}
               />
-              <Collapse>
-                <Collapse.Panel header="Show Mnemonic" key="1">
-                  <p>{mnemonic}</p>
-                </Collapse.Panel>
-              </Collapse>
-            </Col>
-            <Col span={8}>
-              <Button
-                danger
-                onClick={() => {
-                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
-                  localStorage.clear();
-                  window.location.reload();
-                }}
-              >
-                Clear Store
-              </Button>
             </Col>
           </>
         ) : connectError ? (
@@ -244,35 +247,38 @@ function App() {
             <Col span={16}>
               <Statistic title="Error Connecting Node" value={connectError} />
             </Col>
-            <Col span={8}>
-              <Button
-                danger
-                onClick={() => {
-                  indexedDB.deleteDatabase("VectorIndexedDBDatabase");
-                  localStorage.clear();
-                  window.location.reload();
-                }}
-              >
-                Clear Store
-              </Button>
-            </Col>
           </>
         ) : (
           <>
-            <Col span={16}>
+            <Col span={12}>
               <Input.Search
-                placeholder="Mnemonic"
+                placeholder="IFrame Src (blank for localhost:3030)"
                 enterButton="Setup Node"
                 size="large"
-                value={mnemonic}
-                onSearch={connectNode}
+                value={iframeSrc}
+                onChange={event => setIframeSrc(event.target.value)}
+                onSearch={() => {
+                  let _entropy = entropy;
+                  if (useRandomEntropy) {
+                    _entropy = utils.hexlify(utils.randomBytes(65));
+                  }
+                  localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3030");
+                  localStorage.setItem("entropy", _entropy);
+                  setEntropy(_entropy);
+                  connectNode(iframeSrc, _entropy);
+                }}
                 loading={connectLoading}
               />
             </Col>
-            <Col span={8}>
-              <Button type="primary" size="large" onClick={() => setMnemonic(Wallet.createRandom().mnemonic.phrase)}>
-                Generate Random Mnemonic
-              </Button>
+            <Col span={12}>
+              <Switch
+                defaultChecked
+                checkedChildren="Create New"
+                unCheckedChildren="Recover Stored"
+                onChange={createNew => setUseRandomEntropy(createNew)}
+                disabled={!entropy}
+                checked={useRandomEntropy}
+              />
             </Col>
           </>
         )}
@@ -373,7 +379,8 @@ function App() {
                 form={transferForm}
               >
                 <Form.Item label="Asset ID" name="assetId">
-                  <Select>
+                  <Input placeholder={constants.AddressZero} />
+                  {/* <Select>
                     {channel?.assetIds?.map(aid => {
                       return (
                         <Select.Option key={aid} value={aid}>
@@ -381,7 +388,7 @@ function App() {
                         </Select.Option>
                       );
                     })}
-                  </Select>
+                  </Select> */}
                 </Form.Item>
 
                 <Form.Item
@@ -452,7 +459,8 @@ function App() {
                 form={withdrawForm}
               >
                 <Form.Item label="Asset ID" name="assetId">
-                  <Select>
+                  <Input placeholder={constants.AddressZero} />
+                  {/* <Select>
                     {channel?.assetIds?.map(aid => {
                       return (
                         <Select.Option key={aid} value={aid}>
@@ -460,7 +468,7 @@ function App() {
                         </Select.Option>
                       );
                     })}
-                  </Select>
+                  </Select> */}
                 </Form.Item>
 
                 <Form.Item

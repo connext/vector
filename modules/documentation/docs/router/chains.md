@@ -62,7 +62,7 @@ to create files with the preconfigured defaults for a local setup.
 
 3. Update the `chainProviders` and `chainAddresses` fields in the `node.config.json` to include the providers and deployed contract addresses for your network, respectively. Make sure to keep the formatting consistent. See the node [configuration](../node/configure.md) section for more information.
 
-4. Update the `rebalanceProfiles` field in `router.config.json` to include an entry for the chain with appropriate collateralization values for the native asset. See the router [configuration](./configure.md) section for more information.
+4. Update the `rebalanceProfiles` field in `router.config.json` to include an entry for the chain with appropriate collateralization values for the native asset. See the router [configuration](./configure.md) section for more information. Once you update the `router.config.json` delete the `trio.docker.compose` (if it exists) to ensure your changes propagate properly.
 
 5. Run the trio happy case tests with:
 

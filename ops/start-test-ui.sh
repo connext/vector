@@ -14,19 +14,12 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
-node_config=$(cat "$root/modules/test-ui/config-node.json")
-
-function getConfig { echo "$node_config" | jq ".$1" | tr -d '"'; }
-
-public_port=$(getConfig port)
-
 docker run \
   "${interactive[@]}" \
   --entrypoint="bash" \
-  --env="REACT_APP_VECTOR_CONFIG=$node_config" \
   --env="SKIP_PREFLIGHT_CHECK=true" \
   --name="${project}_browser_node" \
-  --publish="$public_port:3000" \
+  --publish="3333:3000" \
   --network "$project" \
   --rm \
   --tmpfs="/tmp" \

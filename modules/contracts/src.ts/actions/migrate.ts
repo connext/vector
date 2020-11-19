@@ -40,7 +40,7 @@ export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = lo
       [
         ["TestToken", []],
         ["ChannelMastercopy", []],
-        ["ChannelFactory", ["ChannelMastercopy"]],
+        ["ChannelFactory", ["ChannelMastercopy", Zero]],
         ["HashlockTransfer", []],
         ["Withdraw", []],
         ["TransferRegistry", []],

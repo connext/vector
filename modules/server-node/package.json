@@ -22,7 +22,7 @@
     "ajv": "6.12.6",
     "axios": "0.21.0",
     "ethers": "5.0.19",
-    "fastify": "3.7.0",
+    "fastify": "3.8.0",
     "fastify-cors": "4.1.0",
     "fastify-oas": "3.0.3",
     "merkletreejs": "0.2.9",

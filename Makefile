@@ -95,6 +95,9 @@ stop-global:
 start-test-ui: browser-node
 	@bash ops/start-test-ui.sh
 
+start-iframe-app: browser-node
+	@bash ops/start-iframe-app.sh
+
 stop-all:
 	@bash ops/stop.sh trio
 	@bash ops/stop.sh router
@@ -147,11 +150,13 @@ config:
 	cp -n ops/config/global.default.json global.config.json
 	cp -n ops/config/node.default.json node.config.json
 	cp -n ops/config/router.default.json router.config.json
+	cp -n ops/config/browser.default.json browser.config.json
 
 reset-config:
 	cp -f ops/config/global.default.json global.config.json
 	cp -f ops/config/node.default.json node.config.json
 	cp -f ops/config/router.default.json router.config.json
+	cp -f ops/config/browser.default.json browser.config.json
 
 ########################################
 # Test Commands
