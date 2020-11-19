@@ -16,7 +16,7 @@ contract CMCAccountant is
     ICMCAccountant
 {
 
-    function transferBalance(address assetId, Balance memory balance)
+    function makeBalanceEmergencyWithdrawable(address assetId, Balance memory balance)
         internal
     {
         for (uint256 i = 0; i < 2; i++) {

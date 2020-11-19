@@ -26,10 +26,10 @@ contract TestChannel is ChannelMastercopy, ITestChannel {
     makeEmergencyWithdrawable(assetId, recipient, maxAmount);
   }
 
-  function accountantBalanceTransfer(
+  function testMakeBalanceEmergencyWithdrawable(
     address assetId,
     Balance memory balance
   ) public override {
-    transferBalance(assetId, balance);
+    makeBalanceEmergencyWithdrawable(assetId, balance);
   }
 }

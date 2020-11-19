@@ -163,7 +163,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       // Transfer funds; this will never revert or fail otherwise,
       // i.e. if the underlying "real" asset transfer fails,
       // the funds are made available for emergency withdrawal
-      transferBalance(assetId, balance);
+      makeBalanceEmergencyWithdrawable(assetId, balance);
     }
 
     emit ChannelDefunded(msg.sender, address(this), channelDispute, assetIds, indices);
@@ -241,7 +241,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // This will never revert or fail otherwise,
     // i.e. if the underlying "real" asset transfer fails,
     // the funds are made available for emergency withdrawal
-    transferBalance(cts.assetId, balance);
+    makeBalanceEmergencyWithdrawable(cts.assetId, balance);
 
     // Emit event
     emit TransferDefunded(

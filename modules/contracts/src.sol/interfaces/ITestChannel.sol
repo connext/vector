@@ -12,7 +12,7 @@ interface ITestChannel is IVectorChannel {
     uint256 maxAmount
   ) external;
 
-  function accountantBalanceTransfer(
+  function testMakeBalanceEmergencyWithdrawable(
     address assetId,
     Balance memory balance
   ) external;
