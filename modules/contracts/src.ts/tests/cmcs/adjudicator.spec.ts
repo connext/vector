@@ -27,7 +27,7 @@ import { AddressBook } from "../../addressBook";
 import { bob, alice, networkName, provider, rando } from "../constants";
 import { getOnchainBalance, getTestAddressBook, getTestChannel, mineBlock } from "../utils";
 
-describe.only("CMCAdjudicator.sol", async function() {
+describe("CMCAdjudicator.sol", async function() {
   this.timeout(120_000);
 
   // These tests could be running on chains without automining
@@ -734,7 +734,6 @@ describe.only("CMCAdjudicator.sol", async function() {
       if (nonAutomining) {
         this.skip();
       }
-      console.log(`transferState = ${JSON.stringify(transferState, null, 2)}`);
       await prepTransferForDefund();
       const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
       await (await channel.connect(bob).defundTransfer(
