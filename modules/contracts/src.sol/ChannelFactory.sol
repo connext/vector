@@ -12,9 +12,11 @@ import "./lib/MinimalProxyFactory.sol";
 /// @author Connext & Friends <hello@connext.network>
 contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     address private immutable mastercopy;
+    uint private immutable chainId;
 
-    constructor(address _mastercopy) {
+    constructor(address _mastercopy, uint _chainId) {
         mastercopy = _mastercopy;
+        chainId = _chainId;
     }
 
     ////////////////////////////////////////
@@ -23,6 +25,24 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
     function getMastercopy() external override view returns(address) {
       return mastercopy;
+    }
+
+    /// @dev Allows us to get the chainId that this factory will use in the create2 salt
+    function getChainId() external override view returns(uint) {
+      uint _chainId;
+      if (chainId == 0) {
+        assembly {
+            _chainId := chainid()
+        }
+      } else {
+        _chainId = chainId;
+      }
+      return _chainId;
+    }
+
+    /// @dev Allows us to get the chainId that this factory has stored
+    function getStoredChainId() external override view returns(uint) {
+      return chainId;
     }
 
     function proxyCreationCode() external override view returns (bytes memory) {
@@ -34,8 +54,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     /// @param bob address of the other channel participant
     function getChannelAddress(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         external
         override
@@ -44,7 +63,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     {
         return _calculateMinimalProxyDeploymentAddress(
             mastercopy,
-            generateSalt(alice, bob, chainId)
+            generateSalt(alice, bob)
         );
     }
 
@@ -53,14 +72,13 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     /// @param bob address of the other channel participant
     function createChannel(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         external
         override
         returns (address channel)
     {
-        _createChannel(alice, bob, chainId);
+        return _createChannel(alice, bob);
     }
 
     /// @dev Allows us to create a new channel contract and fund it in one transaction
@@ -68,7 +86,6 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     function createChannelAndDepositAlice(
         address alice,
         address bob,
-        uint256 chainId,
         address assetId,
         uint256 amount
     )
@@ -77,7 +94,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         override
         returns (address channel)
     {
-        channel = _createChannel(alice, bob, chainId);
+        channel = _createChannel(alice, bob);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
         if (!LibAsset.isEther(assetId)) {
@@ -98,13 +115,12 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
 
     function _createChannel(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         internal
         returns (address channel)
     {
-        channel = deployChannelProxy(alice, bob, chainId);
+        channel = deployChannelProxy(alice, bob);
         IVectorChannel(channel).setup(alice, bob);
         emit ChannelCreation(channel);
         return channel;
@@ -116,25 +132,23 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     /// @param bob address of the other channel participant
     function deployChannelProxy(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         internal
         returns (address)
     {
-        return _deployMinimalProxy(mastercopy, generateSalt(alice, bob, chainId));
+        return _deployMinimalProxy(mastercopy, generateSalt(alice, bob));
     }
 
     function generateSalt(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         internal
-        pure
+        view
         returns (bytes32)
     {
-        return keccak256(abi.encodePacked(alice, bob, chainId));
+        return keccak256(abi.encodePacked(alice, bob, this.getChainId()));
     }
 
 }

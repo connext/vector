@@ -331,7 +331,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     const channelFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const derivedAddress = await channelFactory.getChannelAddress(alice, bob, chainId);
+      const derivedAddress = await channelFactory.getChannelAddress(alice, bob);
       return Result.ok(derivedAddress);
     } catch (e) {
       return Result.fail(e);

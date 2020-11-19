@@ -1,12 +1,12 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
 import { TestChannel, TestToken } from "../artifacts";
 
-import { alice, bob, chainIdReq, provider } from "./constants";
+import { alice, bob, provider } from "./constants";
 
 // Returns a different address book every time
 export const getTestAddressBook = async (): Promise<AddressBook> =>
@@ -16,7 +16,7 @@ export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contra
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["ChannelFactory", ["TestChannel"]],
+    ["ChannelFactory", ["TestChannel", Zero]],
   ]);
   return createChannel(bob.address, alice, addressBook, undefined, true);
 };
@@ -25,11 +25,11 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["TestChannelFactory", ["TestChannel"]],
+    ["TestChannelFactory", ["TestChannel", Zero]],
   ]);
   const testFactory = addressBook.getContract("TestChannelFactory");
-  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address, await chainIdReq);
-  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address, await chainIdReq);
+  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
+  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
   await tx.wait();
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bob.address.substring(2, 6)}`, {

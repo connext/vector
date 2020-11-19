@@ -7,7 +7,7 @@ import {
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
@@ -33,7 +33,7 @@ describe("ChannelFactory", function() {
     addressBook = await getTestAddressBook();
     await deployContracts(alice, addressBook, [
       ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy"]],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
     ]);
     channelMastercopy = addressBook.getContract("ChannelMastercopy");
     channelFactory = addressBook.getContract("ChannelFactory");
@@ -57,7 +57,7 @@ describe("ChannelFactory", function() {
 
   it("should create a channel and calculated addresses should match actual one", async () => {
     const channel = await createChannel(bob.address, alice, addressBook);
-    const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address, chainId);
+    const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr2 = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,
@@ -81,7 +81,7 @@ describe("ChannelFactory", function() {
     const value = BigNumber.from("1000");
     const tx = await channelFactory
       .connect(alice)
-      .createChannelAndDepositAlice(alice.address, bob.address, chainId, AddressZero, value, { value });
+      .createChannelAndDepositAlice(alice.address, bob.address, AddressZero, value, { value });
     expect(tx.hash).to.be.a("string");
     await tx.wait();
     const channelAddress = await created;

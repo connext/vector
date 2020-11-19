@@ -16,12 +16,12 @@
 
 ##############
 ### Setup Channel
-POST {{bobUrl}}/setup
+POST {{carolUrl}}/setup
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{alicePublicIdentifier}}",
-  "publicIdentifier": "{{bobPublicIdentifier}}",
+  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
+  "publicIdentifier": "{{carolPublicIdentifier}}",
   "chainId": "{{chainId}}",
   "timeout": "36000"
 }

@@ -89,6 +89,7 @@ const convertChannelEntityToFullChannelState = (
   // get balances and locked value for each assetId
   const processedDepositsA: string[] = [];
   const processedDepositsB: string[] = [];
+  const defundNonces: string[] = [];
   const balances: Balance[] = assetIds.map(assetId => {
     const balanceA = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantA,
@@ -97,6 +98,7 @@ const convertChannelEntityToFullChannelState = (
     const balanceB = channelEntity.balances.find(
       bal => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
+    defundNonces.push(balanceA?.defundNonce ?? "1");
     processedDepositsB.push(balanceB?.processedDeposit ?? "0");
     return {
       amount: [balanceA?.amount ?? "0", balanceB?.amount ?? "0"],
@@ -158,6 +160,7 @@ const convertChannelEntityToFullChannelState = (
     merkleRoot: channelEntity.merkleRoot,
     processedDepositsA,
     processedDepositsB,
+    defundNonces,
     networkContext: {
       chainId: BigNumber.from(channelEntity.chainId).toNumber(),
       channelFactoryAddress: channelEntity.channelFactoryAddress,
@@ -185,7 +188,6 @@ const convertChannelEntityToFullChannelState = (
       toIdentifier: channelEntity.latestUpdate.toIdentifier,
       type: channelEntity.latestUpdate.type,
     },
-    defundNonce: channelEntity.defundNonce.toString(),
     inDispute: channelEntity.inDispute,
   };
   return channel;
@@ -230,7 +232,7 @@ export class PrismaStore implements IServerNodeStore {
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
-    this.prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+    this.prisma = new PrismaClient(dbUrl ? { datasources: { db: { url: this.dbUrl } } } : undefined);
   }
 
   async saveChannelDispute(
@@ -624,7 +626,6 @@ export class PrismaStore implements IServerNodeStore {
         publicIdentifierA: channelState.aliceIdentifier,
         publicIdentifierB: channelState.bobIdentifier,
         timeout: channelState.timeout,
-        defundNonce: channelState.defundNonce,
         balances: {
           create: channelState.assetIds.reduce(
             (create: BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
@@ -636,6 +637,7 @@ export class PrismaStore implements IServerNodeStore {
                   to: channelState.balances[index].to[0],
                   assetId,
                   processedDeposit: channelState.processedDepositsA[index],
+                  defundNonce: channelState.defundNonces[index],
                 },
                 {
                   amount: channelState.balances[index].amount[1],
@@ -643,6 +645,7 @@ export class PrismaStore implements IServerNodeStore {
                   to: channelState.balances[index].to[1],
                   assetId,
                   processedDeposit: channelState.processedDepositsB[index],
+                  defundNonce: channelState.defundNonces[index],
                 },
               ];
             },
@@ -681,12 +684,14 @@ export class PrismaStore implements IServerNodeStore {
                     participant: channelState.alice,
                     to: channelState.balances[index].to[0],
                     processedDeposit: channelState.processedDepositsA[index],
+                    defundNonce: channelState.defundNonces[index],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[0],
                     to: channelState.balances[index].to[0],
                     processedDeposit: channelState.processedDepositsA[index],
+                    defundNonce: channelState.defundNonces[index],
                   },
                   where: {
                     participant_channelAddress_assetId: {
@@ -702,12 +707,14 @@ export class PrismaStore implements IServerNodeStore {
                     participant: channelState.bob,
                     to: channelState.balances[index].to[1],
                     processedDeposit: channelState.processedDepositsB[index],
+                    defundNonce: channelState.defundNonces[index],
                     assetId,
                   },
                   update: {
                     amount: channelState.balances[index].amount[1],
                     to: channelState.balances[index].to[1],
                     processedDeposit: channelState.processedDepositsB[index],
+                    defundNonce: channelState.defundNonces[index],
                   },
                   where: {
                     participant_channelAddress_assetId: {

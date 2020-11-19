@@ -70,7 +70,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
-  async sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>> {
+  async sendDefundChannelTx(
+    channelState: FullChannelState,
+    assetsToDefund: string[] = channelState.assetIds,
+    indices: string[] = [],
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -81,7 +85,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.defundChannel, () => {
       const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
-      return channel.defundChannel(channelState);
+      return channel.defundChannel(channelState, assetsToDefund, indices);
     });
   }
 
@@ -146,15 +150,14 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     deposit?: { amount: string; assetId: string }, // Included IFF createChannelAndDepositAlice
   ): Promise<Result<TransactionResponse, ChainError>> {
     const method = "sendDeployChannelTx";
-    const chainId = channelState.networkContext.chainId;
-    const signer = this.signers.get(chainId);
+    const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
     }
     const sender = await signer.getAddress();
 
     // check if multisig must be deployed
-    const multisigRes = await this.getCode(channelState.channelAddress, chainId);
+    const multisigRes = await this.getCode(channelState.channelAddress, channelState.networkContext.chainId);
 
     if (multisigRes.isError) {
       return Result.fail(multisigRes.getError()!);
@@ -184,7 +187,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
-          chainId,
         );
       });
     }
@@ -209,7 +211,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         channelFactory.createChannelAndDepositAlice(
           channelState.alice,
           channelState.bob,
-          chainId,
           assetId,
           amount,
           { value: amount },
@@ -239,7 +240,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       channelFactory.createChannelAndDepositAlice(
         channelState.alice,
         channelState.bob,
-        chainId,
         assetId,
         amount,
       ),
@@ -286,7 +286,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         return channelFactory.createChannel(
           channelState.alice,
           channelState.bob,
-          channelState.networkContext.chainId,
         );
       });
       if (txRes.isError) {
