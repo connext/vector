@@ -6,7 +6,7 @@ import "./IVectorChannel.sol";
 import "./Types.sol";
 
 interface ITestChannel is IVectorChannel {
-  function assetTransfer(
+  function testMakeEmergencyWithdrawable(
     address assetId,
     address payable recipient,
     uint256 maxAmount

@@ -19,16 +19,16 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     totalTransferred[assetId] += amount;
   }
 
-  function transferAsset(
+  function getTotalTransferred(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+    return totalTransferred[assetId];
+  }
+
+  function makeEmergencyWithdrawable(
     address assetId,
     address recipient,
     uint256 amount
   ) internal {
     emergencyWithdrawableAmount[assetId][recipient] += amount;
-  }
-
-  function getTotalTransferred(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
-    return totalTransferred[assetId];
   }
 
   function getEmergencyWithdrawableAmount(address assetId, address owner)

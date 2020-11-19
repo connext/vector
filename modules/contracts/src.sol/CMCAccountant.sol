@@ -22,7 +22,7 @@ contract CMCAccountant is
         for (uint256 i = 0; i < 2; i++) {
             uint256 amount = balance.amount[i];
             if (amount > 0) {
-                transferAsset(assetId, balance.to[i], amount);
+                makeEmergencyWithdrawable(assetId, balance.to[i], amount);
             }
         }
     }
