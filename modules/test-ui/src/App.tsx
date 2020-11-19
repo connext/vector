@@ -37,18 +37,13 @@ function App() {
 
   useEffect(() => {
     const effect = async () => {
-      const storedEntropy = localStorage.getItem("entropy");
-      if (storedEntropy) {
-        setUseRandomEntropy(false);
-      }
       const storedIframeSrc = localStorage.getItem("iframeSrc");
-      setEntropy(storedEntropy);
       setIframeSrc(storedIframeSrc || "http://localhost:3030");
     };
     effect();
   }, []);
 
-  const connectNode = async (iframeSrc: string, entropy: string): Promise<BrowserNode> => {
+  const connectNode = async (iframeSrc: string): Promise<BrowserNode> => {
     if (!iframeSrc) {
       iframeSrc = "http://localhost:3030";
     }
@@ -56,7 +51,6 @@ function App() {
       setConnectLoading(true);
       const client = await BrowserNode.connect({
         iframeSrc,
-        iframeSignerEntropy: entropy,
         logger: pino(),
       });
       const channelsRes = await client.getStateChannels();
@@ -258,14 +252,8 @@ function App() {
                 value={iframeSrc}
                 onChange={event => setIframeSrc(event.target.value)}
                 onSearch={() => {
-                  let _entropy = entropy;
-                  if (useRandomEntropy) {
-                    _entropy = utils.hexlify(utils.randomBytes(65));
-                  }
                   localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3030");
-                  localStorage.setItem("entropy", _entropy);
-                  setEntropy(_entropy);
-                  connectNode(iframeSrc, _entropy);
+                  connectNode(iframeSrc);
                 }}
                 loading={connectLoading}
               />

@@ -32,7 +32,6 @@ export type BrowserNodeConfig = {
   chainProviders?: ChainProviders;
   chainAddresses?: ChainAddresses;
   iframeSrc?: string;
-  iframeSignerEntropy?: string;
 };
 
 export class BrowserNode implements INodeService {
@@ -93,9 +92,7 @@ export class BrowserNode implements INodeService {
         id: Date.now(),
         jsonrpc: "2.0",
         method: "connext_authenticate",
-        params: {
-          signature: config.iframeSignerEntropy,
-        },
+        params: {},
       };
       const auth = await node.channelProvider.send(rpc);
       config.logger.info({ method: "connect", response: auth }, "Received response from auth method");
