@@ -45,7 +45,19 @@ library LibAsset {
         return LibERC20.transfer(assetId, recipient, amount);
     }
 
-    function transfer(address assetId, address payable recipient, uint256 amount)
+    // This function is a wrapper for transfers of Ether or ERC20 tokens,
+    // both standard-compliant ones as well as tokens that exhibit the
+    // missing-return-value bug.
+    // Although it behaves very much like Solidity's `transfer` function
+    // or the ERC20 `transfer` and is, in fact, designed to replace direct
+    // usage of those, it is deliberately named `unregisteredTransfer`,
+    // because we need to register every transfer out of the channel.
+    // Therefore, it should normally not be used directly, with the single
+    // exception of the `transferAsset` function in `AssetTransfer.sol`,
+    // which combines the "naked" unregistered transfer given below
+    // with a registration.
+    // USING THIS FUNCTION SOMEWHERE ELSE IS PROBABLY WRONG!
+    function unregisteredTransfer(address assetId, address payable recipient, uint256 amount)
         internal
         returns (bool)
     {

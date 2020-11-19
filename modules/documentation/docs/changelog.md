@@ -2,7 +2,17 @@
 
 ## Next Release
 
-## @connext/{types,utils,contracts,protocol,engine,browser-node}@0.0.9, @connext/{server-node}@0.0.10
+- chainId pulled from opcode if not provided on creation
+- improve testing
+- deploy contracts to Kovan
+- refactor protocol to improve readability
+- pass in array of assetIds to `defundChannel` (defund by assetId)
+
+## 0.0.12
+
+- Browser node iframe functionality
+
+## 0.0.11
 
 - introduce and use commitment types
 - reconcile hashing
