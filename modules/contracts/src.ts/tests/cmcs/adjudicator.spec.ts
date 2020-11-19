@@ -148,10 +148,6 @@ describe("CMCAdjudicator.sol", async function() {
     const preDefundBob = await Promise.all<BigNumber>(
       assetIds.map((assetId: string) => getOnchainBalance(assetId, bob.address)),
     );
-    console.log(
-      "preDefundBob",
-      preDefundBob.map(b => b.toString()),
-    );
 
     // Defund channel
     const tx = await channel.defundChannel(ccs, defundedAssets, indices);
@@ -163,10 +159,6 @@ describe("CMCAdjudicator.sol", async function() {
     );
     const postDefundBob = await Promise.all<BigNumber>(
       assetIds.map((assetId: string) => getOnchainBalance(assetId, bob.address)),
-    );
-    console.log(
-      "postDefundBob",
-      postDefundBob.map(b => b.toString()),
     );
 
     // Verify change in balances + defund nonce
