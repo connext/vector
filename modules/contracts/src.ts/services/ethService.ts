@@ -70,7 +70,11 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     });
   }
 
-  async sendDefundChannelTx(channelState: FullChannelState): Promise<Result<TransactionResponse, ChainError>> {
+  async sendDefundChannelTx(
+    channelState: FullChannelState,
+    assetsToDefund: string[] = channelState.assetIds,
+    indices: string[] = [],
+  ): Promise<Result<TransactionResponse, ChainError>> {
     const signer = this.signers.get(channelState.networkContext.chainId);
     if (!signer?._isSigner) {
       return Result.fail(new ChainError(ChainError.reasons.SignerNotFound));
@@ -81,7 +85,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
     return this.sendTxWithRetries(channelState.channelAddress, TransactionReason.defundChannel, () => {
       const channel = new Contract(channelState.channelAddress, VectorChannel.abi, signer);
-      return channel.defundChannel(channelState);
+      return channel.defundChannel(channelState, assetsToDefund, indices);
     });
   }
 

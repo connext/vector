@@ -190,7 +190,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   const channelAddress = mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
   const nonce = overrides.nonce ?? 1;
-  const defundNonce = overrides.defundNonce ?? "1";
+  const defundNonces = overrides.defundNonces ?? ["1", "1"];
 
   const { latestUpdate: latestUpdateOverrides, networkContext, ...rest } = overrides;
 
@@ -235,7 +235,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     aliceIdentifier: publicIdentifiers[0],
     bobIdentifier: publicIdentifiers[1],
     timeout: "1",
-    defundNonce,
+    defundNonces,
     inDispute: false,
     ...rest,
   };
