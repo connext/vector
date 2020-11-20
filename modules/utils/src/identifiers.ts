@@ -1,7 +1,8 @@
 import { Address, AssetId, PublicKey, PublicIdentifier } from "@connext/vector-types";
-import { getAddress } from "@ethersproject/address";
+// import { getAddress } from "@ethersproject/address";
 import bs58check from "bs58check";
 import { hexToBuffer, bufferToHex, compress, decompress } from "eccrypto-js";
+import { utils } from "ethers";
 
 import { getAddressError } from "./hexStrings";
 import { LimitedCache } from "./limitedCache";
@@ -32,7 +33,7 @@ export const getSignerAddressFromPublicIdentifier = (publicIdentifier: PublicIde
 };
 
 // makes sure all addresses are normalized
-export const getAddressFromAssetId = (assetId: AssetId): Address => getAddress(assetId.toLowerCase());
+export const getAddressFromAssetId = (assetId: AssetId): Address => utils.getAddress(assetId.toLowerCase());
 
 ////////////////////////////////////////
 // Generator
