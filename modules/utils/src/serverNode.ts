@@ -217,7 +217,7 @@ export class RestServerNodeService implements INodeService {
     params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
   ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>> {
     return this.executeHttpRequest(
-      `${params.publicIdentifier ?? this.publicIdentifier}/registered-transfers`,
+      `${params.publicIdentifier ?? this.publicIdentifier}/registered-transfers/chain-id/${params.chainId}`,
       "get",
       params,
       NodeParams.GetRegisteredTransfersSchema,
