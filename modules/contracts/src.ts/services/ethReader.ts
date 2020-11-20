@@ -128,6 +128,23 @@ export class EthereumChainReader implements IVectorChainReader {
     return Result.ok(info);
   }
 
+  async getRegisteredTransfers(
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer[], ChainError>> {
+    let registry = this.transferRegistries.get(chainId.toString());
+    if (!registry) {
+      // Registry for chain not loaded, load into memory
+      const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+      if (loadRes.isError) {
+        return Result.fail(loadRes.getError()!);
+      }
+      registry = loadRes.getValue();
+    }
+    return Result.ok(registry);
+  }
+
   async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {

@@ -86,6 +86,21 @@ describe("EthereumChainReader", function() {
     expect(byDefinition).to.be.deep.eq(byName);
   });
 
+  it("getRegisteredTransfers", async () => {
+    const chain = await transferRegistry.getTransferDefinitions();
+    const cleaned = chain.map((r: RegisteredTransfer) => {
+      return {
+        name: r.name,
+        definition: r.definition,
+        stateEncoding: r.stateEncoding,
+        resolverEncoding: r.resolverEncoding,
+      };
+    });
+    const result = await chainReader.getRegisteredTransfers(transferRegistry.address, chainId);
+    expect(result.getError()).to.be.undefined;
+    expect(result.getValue()).to.be.deep.eq(cleaned);
+  });
+
   it.skip("create", async () => {
     const res = (
       await chainReader.create(
