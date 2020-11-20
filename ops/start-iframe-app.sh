@@ -14,6 +14,14 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
+####################
+# Misc Config
+
+# Load the config with defaults if it does not exist
+if [[ ! -f "$root/browser.config.json" ]]
+then cp "$root/ops/config/browser.default.json" "$root/browser.config.json"
+fi
+
 node_config=$(cat "$root/browser.config.json")
 
 docker run \
