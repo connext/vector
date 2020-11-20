@@ -2,6 +2,10 @@
 
 ## Next Release
 
+- various smaller contract changes
+- simplified inheritance hierarchy for channel mastercopy
+- cheaper `onlyViaProxy` modifier
+
 ## 0.0.13
 
 - chainId pulled from opcode if not provided on creation
