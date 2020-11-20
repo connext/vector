@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { BigNumber, constants, BigNumberish } from "ethers";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 import { Balance, Result, IVectorChainReader } from "@connext/vector-types";
 import {
   mkAddress,
@@ -311,7 +312,7 @@ describe("utils", () => {
           { ...(initialBalance ?? { amount: ["0", "0"] }), to },
           processedDepositsA ? processedDepositsA[0] || "0" : "0",
           processedDepositsB ? processedDepositsB[0] || "0" : "0",
-          assetId ?? constants.AddressZero,
+          assetId ?? AddressZero,
           chainReader,
         );
 
