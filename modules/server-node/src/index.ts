@@ -229,7 +229,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
 server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
   "/:publicIdentifier/registered-transfers/chain-id/:chainId",
   {
-    schema: { params: NodeParams.GetRegisteredTransfersSchema, response: NodeResponses.GetRegisteredTransfersSchema }, // TODO: fix response
+    schema: { params: NodeParams.GetRegisteredTransfersSchema, response: NodeResponses.GetRegisteredTransfersSchema },
   },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
