@@ -227,7 +227,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
 );
 
 server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
-  ":/publicIdentifier/registered-transfers",
+  "/:publicIdentifier/registered-transfers",
   {
     schema: { params: NodeParams.GetRegisteredTransfersSchema, response: NodeResponses.GetRegisteredTransfersSchema },
   },
