@@ -2,12 +2,18 @@
 
 ## Next Release
 
+## 0.0.13
+
 - chainId pulled from opcode if not provided on creation
 - improve testing
 - deploy contracts to Kovan
 - refactor protocol to improve readability
 - pass in array of assetIds to `defundChannel` (defund by assetId)
 - add `getRegisteredTransfers` rpc + node methods
+- move to withdrawal pattern
+- move from block numbers to timestamps
+- browser-node-sdk: generate entropy fully at iframe
+- refactor channel factory
 
 ## 0.0.12
 
