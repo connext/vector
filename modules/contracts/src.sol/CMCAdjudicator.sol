@@ -7,13 +7,14 @@ import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/Types.sol";
 import "./CMCCore.sol";
-import "./CMCAccountant.sol";
+import "./CMCAsset.sol";
+import "./CMCDeposit.sol";
 import "./lib/LibChannelCrypto.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// @title CMCAdjudicator - Dispute logic for ONE channel
-contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
+contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
