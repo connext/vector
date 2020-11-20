@@ -5,13 +5,13 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
 
-import { deployContracts } from "..";
-import { AddressBook } from "../addressBook";
+import { deployContracts } from "../..";
+import { AddressBook } from "../../addressBook";
 
-import { bob, rando } from "./constants";
-import { getTestAddressBook, getTestChannel } from "./utils";
+import { bob, rando } from "../constants";
+import { getTestAddressBook, getTestChannel } from "../utils";
 
-describe("AssetTransfer", function() {
+describe("CMCAsset", function() {
   this.timeout(120_000);
   let addressBook: AddressBook;
   let assetTransfer: Contract;
@@ -23,12 +23,12 @@ describe("AssetTransfer", function() {
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(bob, addressBook, [
-      ["AssetTransfer", []],
+      ["CMCAsset", []],
       ["TestToken", []],
       ["FailingToken", []],
       ["NonconformingToken", []],
     ]);
-    assetTransfer = addressBook.getContract("AssetTransfer");
+    assetTransfer = addressBook.getContract("CMCAsset");
     // NOTE: safe to do because of inheritance pattern
     channel = await getTestChannel(addressBook);
 
@@ -142,19 +142,19 @@ describe("AssetTransfer", function() {
     it("should fail if owner is not msg.sender or recipient", async () => {
       await expect(
         channel.connect(rando).emergencyWithdraw(failingToken.address, bob.address, rando.address),
-      ).revertedWith("AssetTransfer: OWNER_MISMATCH");
+      ).revertedWith("CMCAsset: OWNER_MISMATCH");
     });
 
     it("should fail if withdrawable amount is 0", async () => {
       await expect(channel.connect(bob).emergencyWithdraw(token.address, bob.address, bob.address)).revertedWith(
-        "AssetTransfer: NO_OP",
+        "CMCAsset: NO_OP",
       );
     });
 
     it("should fail if transfer fails", async () => {
       await (await failingToken.setTransferShouldFail(true)).wait();
       await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
-        "AssetTransfer: TRANSFER_FAILED",
+        "CMCAsset: TRANSFER_FAILED",
       );
     });
 

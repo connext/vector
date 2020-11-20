@@ -2,14 +2,14 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/IAssetTransfer.sol";
+import "./interfaces/ICMCAsset.sol";
 import "./CMCCore.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibUtils.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract AssetTransfer is CMCCore, IAssetTransfer {
+contract CMCAsset is CMCCore, ICMCAsset {
   using SafeMath for uint256;
 
   mapping(address => uint256) internal totalTransferred;
@@ -54,7 +54,7 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     internal
   {
     registerTransfer(assetId, amount);
-    require(LibAsset.unregisteredTransfer(assetId, recipient, amount), "AssetTransfer: TRANSFER_FAILED");
+    require(LibAsset.unregisteredTransfer(assetId, recipient, amount), "CMCAsset: TRANSFER_FAILED");
   }
 
   function emergencyWithdraw(
@@ -62,12 +62,12 @@ contract AssetTransfer is CMCCore, IAssetTransfer {
     address owner,
     address payable recipient
   ) external override onlyViaProxy nonReentrant {
-    require(msg.sender == owner || owner == recipient, "AssetTransfer: OWNER_MISMATCH");
+    require(msg.sender == owner || owner == recipient, "CMCAsset: OWNER_MISMATCH");
 
     uint256 amount = getAvailableAmount(assetId, emergencyWithdrawableAmount[assetId][owner]);
 
     // Revert if amount is 0
-    require(amount > 0, "AssetTransfer: NO_OP");
+    require(amount > 0, "CMCAsset: NO_OP");
 
     emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
     transferAsset(assetId, recipient, amount);

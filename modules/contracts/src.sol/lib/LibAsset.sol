@@ -53,7 +53,7 @@ library LibAsset {
     // usage of those, it is deliberately named `unregisteredTransfer`,
     // because we need to register every transfer out of the channel.
     // Therefore, it should normally not be used directly, with the single
-    // exception of the `transferAsset` function in `AssetTransfer.sol`,
+    // exception of the `transferAsset` function in `CMCAsset.sol`,
     // which combines the "naked" unregistered transfer given below
     // with a registration.
     // USING THIS FUNCTION SOMEWHERE ELSE IS PROBABLY WRONG!

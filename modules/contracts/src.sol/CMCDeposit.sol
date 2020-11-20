@@ -4,11 +4,11 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCDeposit.sol";
 import "./CMCCore.sol";
-import "./AssetTransfer.sol";
+import "./CMCAsset.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibERC20.sol";
 
-contract CMCDeposit is CMCCore, AssetTransfer, ICMCDeposit {
+contract CMCDeposit is CMCCore, CMCAsset, ICMCDeposit {
   mapping(address => uint256) private depositsAlice;
 
   receive() external payable onlyViaProxy nonReentrant {}

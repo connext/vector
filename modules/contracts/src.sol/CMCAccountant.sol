@@ -4,13 +4,13 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICMCAccountant.sol";
 import "./interfaces/Types.sol";
-import "./AssetTransfer.sol";
+import "./CMCAsset.sol";
 import "./CMCDeposit.sol";
 import "./CMCWithdraw.sol";
 
 
 contract CMCAccountant is
-    AssetTransfer,
+    CMCAsset,
     CMCDeposit,
     CMCWithdraw,
     ICMCAccountant
