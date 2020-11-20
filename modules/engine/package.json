@@ -19,10 +19,12 @@
     "@connext/vector-types": "0.0.13-beta.2",
     "@connext/vector-utils": "0.0.13-beta.2",
     "@ethersproject/bignumber": "5.0.8",
+    "@ethersproject/bytes": "5.0.6",
     "@ethersproject/constants": "5.0.5",
+    "@ethersproject/random": "5.0.5",
+    "@ethersproject/wallet": "5.0.7",
     "@sinclair/typebox": "0.11.0",
     "ajv": "6.12.6",
-    "ethers": "5.0.21",
     "evt": "1.9.2",
     "pino": "6.7.0",
     "pino-pretty": "4.3.0"

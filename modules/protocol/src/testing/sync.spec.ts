@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import {
   ChannelSigner,
   getRandomChannelSigner,
@@ -21,7 +22,8 @@ import {
   FullChannelState,
   FullTransferState,
 } from "@connext/vector-types";
-import { BigNumber, constants } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 import pino from "pino";
 import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
@@ -336,7 +338,7 @@ describe("outbound", () => {
 
   it("should successfully initiate an update if channels are in sync", async () => {
     // Create the update (a user deposit on a setup channel)
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
     const depositBAmt = BigNumber.from(16);
     const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
@@ -390,7 +392,7 @@ describe("outbound", () => {
     describe("initiator trying deposit", () => {
       // Assume the initiator is Alice, and she is always trying to reconcile
       // a deposit. Generate test constants
-      const assetId = constants.AddressZero;
+      const assetId = AddressZero;
       const userBBalance = BigNumber.from(9);
       const missedUpdateNonce = 2;
       const depositAAmt = BigNumber.from(14);

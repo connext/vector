@@ -20,7 +20,7 @@ import {
   mkPublicIdentifier,
   mkAddress,
 } from "@connext/vector-utils";
-import { constants } from "ethers";
+import { HashZero } from "@ethersproject/constants";
 import indexedDB from "fake-indexeddb";
 import IDBKeyRange from "fake-indexeddb/lib/FDBKeyRange";
 import pino from "pino";
@@ -230,7 +230,7 @@ describe("store", () => {
     });
     const transfer: FullTransferState = createTestFullHashlockTransferState({
       transferId,
-      preImage: constants.HashZero,
+      preImage: HashZero,
       channelAddress: createState.channelAddress,
       channelFactoryAddress: createState.networkContext.channelFactoryAddress,
       chainId: createState.networkContext.chainId,

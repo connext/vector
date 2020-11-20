@@ -24,7 +24,7 @@ import {
 import { expect } from "chai";
 import Sinon from "sinon";
 import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
 import { InvalidTransferType } from "../errors";

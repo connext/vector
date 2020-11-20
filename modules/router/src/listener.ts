@@ -7,7 +7,7 @@ import {
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
-import { providers } from "ethers";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 
 import { requestCollateral } from "./collateral";
@@ -18,10 +18,10 @@ import { IRouterStore } from "./services/store";
 const ajv = new Ajv();
 
 export type ChainJsonProviders = {
-  [k: string]: providers.JsonRpcProvider;
+  [k: string]: JsonRpcProvider;
 };
 const chainProviders: ChainJsonProviders = Object.entries(config.chainProviders).reduce((acc, [chainId, url]) => {
-  acc[chainId] = new providers.JsonRpcProvider(url);
+  acc[chainId] = new JsonRpcProvider(url);
   return acc;
 }, {} as ChainJsonProviders);
 

@@ -4,7 +4,6 @@ import {
   hashTransferState,
   getTransferId,
 } from "@connext/vector-utils";
-import { BigNumber, constants, utils } from "ethers";
 import {
   UpdateType,
   ChannelUpdate,
@@ -22,6 +21,9 @@ import {
   CreateUpdateDetails,
   ResolveUpdateDetails,
 } from "@connext/vector-types";
+import { HashZero, AddressZero } from "@ethersproject/constants";
+import { keccak256 } from "@ethersproject/keccak256";
+import { BigNumber } from "@ethersproject/bignumber";
 import pino from "pino";
 import { MerkleTree } from "merkletreejs";
 
@@ -93,7 +95,7 @@ export async function applyUpdate<T extends UpdateType>(
           processedDepositsB: [],
           assetIds: [],
           defundNonces: [],
-          merkleRoot: constants.HashZero,
+          merkleRoot: HashZero,
           latestUpdate: update,
           networkContext,
           aliceIdentifier: fromIdentifier,
@@ -348,7 +350,7 @@ function generateSetupUpdate(
       networkContext: params.details.networkContext,
       timeout: params.details.timeout,
     },
-    assetId: constants.AddressZero,
+    assetId: AddressZero,
   };
 
   return unsigned;
@@ -477,7 +479,7 @@ async function generateCreateUpdate(
   const hashes = updatedTransfers.map(state => {
     return hashCoreTransferState(state);
   });
-  const merkle = new MerkleTree(hashes, utils.keccak256);
+  const merkle = new MerkleTree(hashes, keccak256);
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
@@ -494,7 +496,7 @@ async function generateCreateUpdate(
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
       merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
-      merkleRoot: root === "0x" ? constants.HashZero : root,
+      merkleRoot: root === "0x" ? HashZero : root,
       meta,
     },
   };
@@ -531,7 +533,7 @@ async function generateResolveUpdate(
   const hashes = updatedTransfers.map(state => {
     return hashCoreTransferState(state);
   });
-  const merkle = new MerkleTree(hashes, utils.keccak256);
+  const merkle = new MerkleTree(hashes, keccak256);
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(
@@ -579,7 +581,7 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      merkleRoot: root === "0x" ? constants.HashZero : root,
+      merkleRoot: root === "0x" ? HashZero : root,
       meta,
     },
   };

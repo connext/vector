@@ -30,7 +30,7 @@ import {
   OutboundChannelUpdateError,
   Result,
 } from "@connext/vector-types";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
 
 import { EngineEvtContainer } from "./index";
