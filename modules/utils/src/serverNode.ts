@@ -213,6 +213,17 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  getRegisteredTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/registered-transfers/chain-id/${params.chainId}`,
+      "get",
+      params,
+      NodeParams.GetRegisteredTransfersSchema,
+    );
+  }
+
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {

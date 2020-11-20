@@ -212,6 +212,21 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async getRegisteredTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getRegisteredTransfers">(
+        ChannelRpcMethods.chan_getRegisteredTransfers,
+        params,
+      );
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {

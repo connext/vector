@@ -138,6 +138,23 @@ const GetListenersResponseSchema = {
   200: Type.Map(TUrl),
 };
 
+// GET REGISTERED TRANSFERS
+const GetRegisteredTransfersParamsSchema = Type.Intersect([
+  EngineParams.GetRegisteredTransfersSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetRegisteredTransfersResponseSchema = {
+  200: Type.Array(
+    Type.Object({
+      name: Type.String(),
+      stateEncoding: Type.String(),
+      resolverEncoding: Type.String(),
+      definition: TAddress,
+    }),
+  ),
+};
+
 // REGISTER LISTENER
 const PostRegisterListenerBodySchema = Type.Object({
   publicIdentifier: TPublicIdentifier,
@@ -333,6 +350,9 @@ export namespace NodeParams {
   export const GetListenersSchema = GetListenersParamsSchema;
   export type GetListeners = Static<typeof GetListenersSchema>;
 
+  export const GetRegisteredTransfersSchema = GetRegisteredTransfersParamsSchema;
+  export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersSchema>;
+
   export const GetConfigSchema = Type.Object({});
   export type GetConfig = Static<typeof GetConfigSchema>;
 
@@ -415,6 +435,9 @@ export namespace NodeResponses {
 
   export const GetConfigSchema = GetConfigResponseSchema;
   export type GetConfig = Static<typeof GetConfigSchema["200"]>;
+
+  export const GetRegisteredTransfersSchema = GetRegisteredTransfersResponseSchema;
+  export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersSchema["200"]>;
 
   export const SetupSchema = PostSetupResponseSchema;
   export type Setup = Static<typeof SetupSchema["200"]>;

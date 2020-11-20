@@ -7,6 +7,7 @@
 - deploy contracts to Kovan
 - refactor protocol to improve readability
 - pass in array of assetIds to `defundChannel` (defund by assetId)
+- add `getRegisteredTransfers` rpc + node methods
 
 ## 0.0.12
 
