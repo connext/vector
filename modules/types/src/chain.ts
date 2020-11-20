@@ -106,6 +106,12 @@ export interface IVectorChainReader {
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer, ChainError>>;
 
+  getRegisteredTransfers(
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer[], ChainError>>;
+
   getChainProviders(): Result<ChainProviders, ChainError>;
 
   create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>>;
