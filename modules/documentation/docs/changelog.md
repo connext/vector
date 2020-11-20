@@ -7,6 +7,10 @@
 - deploy contracts to Kovan
 - refactor protocol to improve readability
 - pass in array of assetIds to `defundChannel` (defund by assetId)
+- move to withdrawal pattern
+- move from block numbers to timestamps
+- browser-node-sdk: generate entropy fully at iframe
+- refactor channel factory
 
 ## 0.0.12
 
