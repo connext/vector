@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- use individual ethers packages instead of ethers
+
 ## 0.0.13
 
 - chainId pulled from opcode if not provided on creation

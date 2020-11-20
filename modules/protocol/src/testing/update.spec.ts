@@ -32,7 +32,7 @@ import {
   getTransferId,
   createTestHashlockTransferState,
 } from "@connext/vector-utils";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 import Sinon from "sinon";
 
 import * as vectorUpdate from "../update";

@@ -36,17 +36,17 @@ import {
   MemoryMessagingService,
 } from "@connext/vector-utils";
 import { Vector } from "@connext/vector-protocol";
-import { BigNumber, utils } from "ethers";
 import { Evt } from "evt";
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
+import { BigNumber } from "@ethersproject/bignumber";
+import { hexlify } from "@ethersproject/bytes";
+import { randomBytes } from "@ethersproject/random";
 
 import { setupEngineListeners } from "../listeners";
 import { getEngineEvtContainer } from "../utils";
 
 import { env } from "./env";
-
-const { hexlify, randomBytes } = utils;
 
 const testName = "Engine listeners unit";
 const { log } = getTestLoggers(testName, env.logLevel);

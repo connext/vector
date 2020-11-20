@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { getTestLoggers, expect } from "@connext/vector-utils";
 import { IVectorProtocol, IChannelSigner, IVectorStore, ProtocolEventName } from "@connext/vector-types";
-import { constants } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
 
 import { env } from "../env";
 import { createTransfer, getFundedChannel } from "../utils";
@@ -20,7 +20,7 @@ describe(testName, () => {
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
       {
-        assetId: constants.AddressZero,
+        assetId: AddressZero,
         amount: ["100", "100"],
       },
     ]);
@@ -43,7 +43,7 @@ describe(testName, () => {
 
   it("should create an eth transfer from alice -> bob", async () => {
     // Set test constants
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
     const transferAmount = "7";
     const alicePromise = alice.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
@@ -64,7 +64,7 @@ describe(testName, () => {
 
   it("should create an eth transfer from bob -> alice", async () => {
     // Set test constants
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
     const transferAmount = "7";
     const { channel, transfer } = await createTransfer(abChannelAddress, bob, alice, assetId, transferAmount);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -81,7 +81,7 @@ describe(testName, () => {
   it("should work for concurrent transfers from alice to bob", async () => {
     // Set transfer constants
     const transferAmount = "7";
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
     // Create two transfers from alice to bob
     const concurrentResult = await Promise.all([
       createTransfer(abChannelAddress, alice, bob, assetId, transferAmount),
@@ -93,7 +93,7 @@ describe(testName, () => {
   it("should work for concurrent transfers from alice -> [bob, carol]", async () => {
     // Set transfer constants
     const transferAmount = "7";
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
 
     // Create an alice <-> carol channel
     const setup = await getFundedChannel(

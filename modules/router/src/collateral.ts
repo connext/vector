@@ -1,6 +1,6 @@
 import { FullChannelState, INodeService, Result, NodeResponses, Values, VectorError } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
 import { ChainJsonProviders } from "./listener";
