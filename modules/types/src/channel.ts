@@ -1,13 +1,6 @@
 import { Address } from "./basic";
 import { BalanceEncoding } from "./contracts";
-import {
-  TransferEncodingsMap,
-  TransferName,
-  TransferResolver,
-  TransferResolverMap,
-  TransferState,
-  TransferStateMap,
-} from "./transferDefinitions";
+import { TransferResolver, TransferState } from "./transferDefinitions";
 import { tidy } from "./utils";
 
 // TODO: Use the standard here and replace all non-signer addresses everywhere
@@ -72,6 +65,11 @@ export type Balance = {
   to: Address[];
 };
 
+export enum ChannelCommitmentTypes {
+  ChannelState,
+  WithdrawData,
+}
+
 export const CoreChannelStateEncoding = tidy(`tuple(
   address channelAddress,
   address alice,
@@ -80,10 +78,10 @@ export const CoreChannelStateEncoding = tidy(`tuple(
   ${BalanceEncoding}[] balances,
   uint256[] processedDepositsA,
   uint256[] processedDepositsB,
+  uint256[] defundNonces,
   uint256 timeout,
   uint256 nonce,
-  bytes32 merkleRoot,
-  uint256 defundNonce
+  bytes32 merkleRoot
 )`);
 
 export interface CoreChannelState {
@@ -94,10 +92,10 @@ export interface CoreChannelState {
   balances: Balance[]; // Indexed by assetId
   processedDepositsA: string[]; // Indexed by assetId
   processedDepositsB: string[]; // Indexed by assetId
+  defundNonces: string[]; // Indexed by assetId
   timeout: string;
   nonce: number;
   merkleRoot: string;
-  defundNonce: string;
 }
 
 // Includes any additional info that doesn't need to be sent to chain
@@ -108,14 +106,6 @@ export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   networkContext: NetworkContext;
   inDispute: boolean;
 };
-
-export interface ChannelCommitmentData {
-  state: CoreChannelState;
-  aliceSignature?: string;
-  bobSignature?: string;
-  channelFactoryAddress: Address;
-  chainId: number;
-}
 
 export const CoreTransferStateEncoding = tidy(`tuple(
   address channelAddress,
@@ -171,13 +161,13 @@ export type NetworkContext = ContractAddresses & {
   providerUrl: string;
 };
 
-export type ChannelUpdate<T extends UpdateType> = {
+export type ChannelUpdate<T extends UpdateType = any> = {
   channelAddress: string;
   fromIdentifier: string;
   toIdentifier: string;
   type: T;
   nonce: number;
-  balance: Balance;
+  balance: Balance; // balance change for participants
   assetId: Address;
   details: ChannelUpdateDetailsMap[T];
   aliceSignature?: string;
@@ -196,7 +186,7 @@ export interface ChannelUpdateDetailsMap {
 
 export type CreateUpdateDetails = {
   transferId: string;
-  balance: Balance;
+  balance: Balance; // balance in transfer
   transferDefinition: Address;
   transferTimeout: string;
   transferInitialState: TransferState;

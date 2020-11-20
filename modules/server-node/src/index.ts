@@ -9,12 +9,9 @@ import {
   NodeResponses,
   ResolveUpdateDetails,
   CreateUpdateDetails,
-  ChannelRpcMethod,
 } from "@connext/vector-types";
-import { bufferify, constructRpcRequest, hashCoreTransferState, hydrateProviders } from "@connext/vector-utils";
+import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
-import { MerkleTree } from "merkletreejs";
-import { utils } from "ethers";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
@@ -222,6 +219,29 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
           chan.bobIdentifier === request.params.publicIdentifier,
       );
       return reply.status(200).send(filtered.map(chan => chan.channelAddress));
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
+  "/:publicIdentifier/registered-transfers/chain-id/:chainId",
+  {
+    schema: { params: NodeParams.GetRegisteredTransfersSchema, response: NodeResponses.GetRegisteredTransfersSchema },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getRegisteredTransfers, {
+      chainId: request.params.chainId,
+    });
+    try {
+      const res = await engine.request<"chan_getRegisteredTransfers">(params);
+      return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

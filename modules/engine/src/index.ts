@@ -21,12 +21,9 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
-import { utils } from "ethers";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
-import { bufferify, hashCoreTransferState } from "@connext/vector-utils";
-import { MerkleTree } from "merkletreejs";
 
 import { InvalidTransferType } from "./errors";
 import {
@@ -116,6 +113,10 @@ export class VectorEngine implements IVectorEngine {
       this.logger,
       this.setup.bind(this),
     );
+  }
+
+  private async getConfig(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig]>> {
+    return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
   }
 
   private async getChannelState(
@@ -218,6 +219,27 @@ export class VectorEngine implements IVectorEngine {
   > {
     const channel = await this.vector.getChannelStates();
     return Result.ok(channel);
+  }
+
+  private async getRegisteredTransfers(
+    params: EngineParams.GetRegisteredTransfers,
+  ): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getRegisteredTransfers],
+      Error | OutboundChannelUpdateError
+    >
+  > {
+    const validate = ajv.compile(EngineParams.GetRegisteredTransfersSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const { chainId } = params;
+    const result = await this.chainService.getRegisteredTransfers(
+      this.chainAddresses[chainId].transferRegistryAddress,
+      chainId,
+    );
+    return result;
   }
 
   private async setup(
@@ -469,6 +491,16 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok({ channel: res, transactionHash });
   }
 
+  private async decrypt(encrypted: string): Promise<Result<string, Error>> {
+    try {
+      const res = await this.signer.decrypt(encrypted);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  // DISPUTE METHODS
   private async disputeChannel(
     params: EngineParams.DisputeChannel,
   ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], Error>> {
@@ -587,6 +619,7 @@ export class VectorEngine implements IVectorEngine {
     if (typeof this[methodName] !== "function") {
       throw new Error(`Invalid method: ${methodName}`);
     }
+    console.log("trying to call", methodName);
     this.logger.info({ methodName }, "Method called");
 
     // every method must be a result type

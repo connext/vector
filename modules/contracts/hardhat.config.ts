@@ -1,23 +1,12 @@
+import "@nomiclabs/hardhat-waffle";
 import { HardhatUserConfig } from "hardhat/types";
-import { BigNumber } from "ethers";
 
 import * as packageJson from "./package.json";
-
-// for deposit tests, you will need an account that
-// holds the maximum uint256 value
-
-// create accounts with the default balance of MAX_INT / 2
-// and use them to fund accounts in the test as needed
-const MAX_INT = BigNumber.from(2)
-  .pow(256)
-  .sub(1);
 
 const mnemonic =
   process.env.SUGAR_DADDY ??
   process.env.MNEMONIC ??
   "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
-
-import "@nomiclabs/hardhat-waffle";
 
 const config: HardhatUserConfig = {
   paths: {
@@ -36,16 +25,12 @@ const config: HardhatUserConfig = {
   },
   defaultNetwork: "hardhat",
   networks: {
-    ganache: {
-      chainId: 1337,
-      url: "http://localhost:8545",
-    },
     hardhat: {
-      chainId: 1338,
+      chainId: parseInt(process.env.CHAIN_ID ?? "1337"),
       loggingEnabled: false,
       accounts: {
         mnemonic,
-        accountsBalance: MAX_INT.div(2).toString(),
+        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       },
     },
     matic: {

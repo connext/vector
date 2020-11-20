@@ -16,22 +16,14 @@ contract CMCAccountant is
     ICMCAccountant
 {
 
-    function transferBalance(address assetId, Balance memory balance)
+    function makeBalanceEmergencyWithdrawable(address assetId, Balance memory balance)
         internal
     {
-        address payable recipient;
-        uint256 amount;
-
-        recipient = balance.to[0];
-        amount = balance.amount[0];
-        if (amount != 0) {
-            transferAsset(assetId, recipient, amount);
-        }
-
-        recipient = balance.to[1];
-        amount = balance.amount[1];
-        if (amount != 0) {
-            transferAsset(assetId, recipient, amount);
+        for (uint256 i = 0; i < 2; i++) {
+            uint256 amount = balance.amount[i];
+            if (amount > 0) {
+                makeEmergencyWithdrawable(assetId, balance.to[i], amount);
+            }
         }
     }
 

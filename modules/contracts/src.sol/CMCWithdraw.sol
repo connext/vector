@@ -2,6 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./interfaces/Commitment.sol";
 import "./interfaces/ICMCWithdraw.sol";
 import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
@@ -54,32 +55,28 @@ contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
     isExecuted[wdHash] = true;
 
     // Determine actually transferable amount
-    uint256 balance = LibAsset.getOwnBalance(wd.assetId);
-    uint256 amount = LibUtils.min(wd.amount, balance);
+    uint256 actualAmount = getAvailableAmount(wd.assetId, wd.amount);
 
-    // Revert if amount is zero && callTo is 0
-    require(amount > 0 || wd.callTo != address(0), "CMCWithdraw: NO_OP");
+    // Revert if actualAmount is zero && callTo is 0
+    require(actualAmount > 0 || wd.callTo != address(0), "CMCWithdraw: NO_OP");
 
-    // Add to totalWithdrawn
-    registerTransfer(wd.assetId, amount);
-
-    // Execute the transfer
-    require(LibAsset.transfer(wd.assetId, wd.recipient, amount), "CMCWithdraw: ASSET_TRANSFER_FAILED");
+    // Register and execute the transfer
+    transferAsset(wd.assetId, wd.recipient, actualAmount);
 
     // Do we have to make a call in addition to the actual transfer?
     if (wd.callTo != address(0)) {
-      WithdrawHelper(wd.callTo).execute(wd, amount);
+      WithdrawHelper(wd.callTo).execute(wd, actualAmount);
     }
   }
 
-  // TODO: include commitment type
   function verifySignatures(
     bytes32 wdHash,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal view {
-    require(wdHash.checkSignature(aliceSignature, alice), "CMCWithdraw: INVALID_ALICE_SIG");
-    require(wdHash.checkSignature(bobSignature, bob), "CMCWithdraw: INVALID_BOB_SIG");
+    bytes32 commitment = keccak256(abi.encode(CommitmentType.WithdrawData, wdHash));
+    require(commitment.checkSignature(aliceSignature, alice), "CMCWithdraw: INVALID_ALICE_SIG");
+    require(commitment.checkSignature(bobSignature, bob), "CMCWithdraw: INVALID_BOB_SIG");
   }
 
   function hashWithdrawData(WithdrawData calldata wd) internal pure returns (bytes32) {

@@ -28,17 +28,8 @@ describe("ChannelMastercopy", function() {
       [Zero, Zero],
       [AddressZero, AddressZero],
     ];
-    const WithdrawDataZero = [
-      AddressZero,
-      AddressZero,
-      AddressZero,
-      Zero,
-      Zero,
-      AddressZero,
-      Zero,
-      "0x"
-    ];
-    const CoreChannelStateZero = [AddressZero, AddressZero, AddressZero, [], [], [], [], Zero, Zero, HashZero, Zero];
+    const WithdrawDataZero = [AddressZero, AddressZero, AddressZero, Zero, Zero, AddressZero, Zero, "0x"];
+    const CoreChannelStateZero = [AddressZero, AddressZero, AddressZero, [], [], [], [], [], Zero, Zero, HashZero];
     const CoreTransferStateZero = [
       AddressZero,
       HashZero,
@@ -72,9 +63,10 @@ describe("ChannelMastercopy", function() {
 
       // from ICMCAdjudicator
       { name: "getChannelDispute", args: [] },
+      { name: "getDefundNonce", args: [AddressZero] },
       { name: "getTransferDispute", args: [HashZero] },
       { name: "disputeChannel", args: [CoreChannelStateZero, HashZero, HashZero] },
-      { name: "defundChannel", args: [CoreChannelStateZero] },
+      { name: "defundChannel", args: [CoreChannelStateZero, [AddressZero], [Zero]] },
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
       { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero] },
     ]) {

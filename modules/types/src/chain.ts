@@ -40,7 +40,7 @@ export class ChainError extends VectorError {
     ResolverNeeded: "Transfer resolver must be provided in dispute",
     NotInitialState: "Transfer must be disputed with initial state",
     MultisigDeployed: "Multisig already deployed",
-    TransferNotFound: "Transfer is not included in avtive transfers",
+    TransferNotFound: "Transfer is not included in active transfers",
   };
 
   // Errors you would see from trying to send a transaction, and
@@ -105,6 +105,12 @@ export interface IVectorChainReader {
     chainId: number,
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer, ChainError>>;
+
+  getRegisteredTransfers(
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer[], ChainError>>;
 
   getChainProviders(): Result<ChainProviders, ChainError>;
 

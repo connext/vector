@@ -2,6 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "./interfaces/Commitment.sol";
 import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/Types.sol";
@@ -16,10 +17,17 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
-  uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 12000;
+  uint256 private constant INITIAL_DEFUND_NONCE = 1;
+  uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 25000;
 
   ChannelDispute private channelDispute;
+  mapping(address => uint256) private defundNonces;
   mapping(bytes32 => TransferDispute) private transferDisputes;
+
+  modifier onlySelf() {
+    require(msg.sender == address(this), "AssetTransfer: NOT_SELF");
+    _;
+  }
 
   modifier validateChannel(CoreChannelState calldata ccs) {
     require(
@@ -30,15 +38,16 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   modifier validateTransfer(CoreTransferState calldata cts) {
-    require(
-      cts.channelAddress == address(this),
-      "CMCAdjudicator: INVALID_TRANSFER"
-    );
+    require(cts.channelAddress == address(this), "CMCAdjudicator: INVALID_TRANSFER");
     _;
   }
 
   function getChannelDispute() external override view onlyViaProxy nonReentrantView returns (ChannelDispute memory) {
     return channelDispute;
+  }
+
+  function getDefundNonce(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+    return defundNonces[assetId];
   }
 
   function getTransferDispute(bytes32 transferId)
@@ -70,8 +79,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       // We are not already in a dispute
       // Set expiries
       // TODO: offchain-ensure that there can't be an overflow
-      channelDispute.consensusExpiry = block.number.add(ccs.timeout);
-      channelDispute.defundExpiry = block.number.add(ccs.timeout.mul(2));
+      channelDispute.consensusExpiry = block.timestamp.add(ccs.timeout);
+      channelDispute.defundExpiry = block.timestamp.add(ccs.timeout.mul(2));
     }
 
     // Store newer state
@@ -83,59 +92,81 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     emit ChannelDisputed(msg.sender, address(this), channelDispute);
   }
 
-  function defundChannel(CoreChannelState calldata ccs)
-    external
-    override
-    onlyViaProxy
-    nonReentrant
-    validateChannel(ccs)
-  {
+  function defundChannel(
+    CoreChannelState calldata ccs,
+    address[] calldata assetIds,
+    uint256[] calldata indices
+  ) external override onlyViaProxy nonReentrant validateChannel(ccs) {
+    // These checks are not strictly necessary, but it's a bit cleaner this way
+    require(assetIds.length > 0, "CMCAdjudicator: NO_ASSETS_GIVEN");
+    require(indices.length <= assetIds.length, "CMCAdjudicator: WRONG_ARRAY_LENGTHS");
+
     // Verify that the given channel state matches the stored one
-    require(
-      hashChannelState(ccs) == channelDispute.channelStateHash,
-      "CMCAdjudicator: INVALID_CHANNEL_HASH"
-    );
+    require(hashChannelState(ccs) == channelDispute.channelStateHash, "CMCAdjudicator: INVALID_CHANNEL_HASH");
 
     // We need to be in defund phase for that
     require(inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
 
-    // We can't defund twice at the same defund nonce
-    // TODO: should this be checked in the `disputeChannel`?
-    require(channelDispute.defundNonce < ccs.defundNonce, "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
-    channelDispute.defundNonce = ccs.defundNonce;
-
     // TODO SECURITY: Beware of reentrancy
     // TODO: offchain-ensure that all arrays have the same length:
-    // assetIds, balances, processedDepositsA, processedDepositsB
+    // assetIds, balances, processedDepositsA, processedDepositsB, defundNonces
     // Make sure there are no duplicates in the assetIds -- duplicates are often a source of double-spends
 
-    // Defund all assets stored in the channel
-    for (uint256 i = 0; i < ccs.assetIds.length; i++) {
-      address assetId = ccs.assetIds[i];
-      Balance memory balance = ccs.balances[i];
+    // Defund all assets given
+    for (uint256 i = 0; i < assetIds.length; i++) {
+      address assetId = assetIds[i];
 
-      // Add unprocessed deposits to amounts
-      balance.amount[0] += _getTotalDepositsAlice(assetId) - ccs.processedDepositsA[i];
+      // Verify or find the index of the assetId in the ccs.assetIds
+      uint256 index;
+      if (i < indices.length) {
+        // The index was supposedly given -- we verify
+        index = indices[i];
+        require(assetId == ccs.assetIds[index], "CMCAdjudicator: INDEX_MISMATCH");
+      } else {
+        // we search through the assets in ccs
+        for (index = 0; index < ccs.assetIds.length; index++) {
+          if (assetId == ccs.assetIds[index]) {
+            break;
+          }
+        }
+      }
 
-      // If the following call fails, we were unable to query the channel's balance;
-      // this probably means the token is totally fucked up.
-      // Since we mustn't revert here (in order to prevent other assets from becoming frozen),
-      // we proceed anyway and assume there are no unprocessed deposits for Bob.
-      (bool success, bytes memory returnData) = address(this).call{gas: QUERY_DEPOSITS_GAS_LIMIT}(
-        abi.encodeWithSignature("_depositsBob(address)", assetId)
-      );
-      if (success) {
-        uint256 depositsBob = abi.decode(returnData, (uint256));
-        balance.amount[1] += depositsBob - ccs.processedDepositsB[i];
+      // Now, if `index`  is equal to the number of assets in ccs,
+      // then the current asset is not in ccs;
+      // otherwise, `index` is the index in ccs for the current asset
+
+      // Check the assets haven't already been defunded + update the
+      // defundNonce for that asset
+      {
+        // Open a new block to avoid "stack too deep" error
+        uint256 defundNonce = (index == ccs.assetIds.length) ? INITIAL_DEFUND_NONCE : ccs.defundNonces[index];
+        require(defundNonces[assetId] < defundNonce, "CMCAdjudicator: CHANNEL_ALREADY_DEFUNDED");
+        defundNonces[assetId] = defundNonce;
+      }
+
+      // Get total deposits
+      (uint256 tdAlice, uint256 tdBob) = getTotalDeposits(assetId);
+
+      Balance memory balance;
+
+      if (index == ccs.assetIds.length) {
+        // The current asset is not a part of ccs; refund what has been deposited
+        balance = Balance({amount: [tdAlice, tdBob], to: [payable(ccs.alice), payable(ccs.bob)]});
+      } else {
+        // Start with the final balances in ccs
+        balance = ccs.balances[index];
+        // Add unprocessed deposits
+        balance.amount[0] += tdAlice - ccs.processedDepositsA[index];
+        balance.amount[1] += tdBob - ccs.processedDepositsB[index];
       }
 
       // Transfer funds; this will never revert or fail otherwise,
       // i.e. if the underlying "real" asset transfer fails,
       // the funds are made available for emergency withdrawal
-      transferBalance(assetId, balance);
+      makeBalanceEmergencyWithdrawable(assetId, balance);
     }
 
-    emit ChannelDefunded(msg.sender, address(this), channelDispute);
+    emit ChannelDefunded(msg.sender, address(this), channelDispute, assetIds, indices);
   }
 
   function disputeTransfer(CoreTransferState calldata cts, bytes32[] calldata merkleProofData)
@@ -161,7 +192,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // Store transfer state and set expiry
     transferDispute.transferStateHash = transferStateHash;
     // TODO: offchain-ensure that there can't be an overflow
-    transferDispute.transferDisputeExpiry = block.number.add(cts.transferTimeout);
+    transferDispute.transferDisputeExpiry = block.timestamp.add(cts.transferTimeout);
 
     emit TransferDisputed(msg.sender, address(this), cts.transferId, transferDispute);
   }
@@ -178,10 +209,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     require(transferDispute.transferDisputeExpiry != 0, "CMCAdjudicator: TRANSFER_NOT_DISPUTED");
 
     // Verify that the given transfer state matches the stored one
-    require(
-      hashTransferState(cts) == transferDispute.transferStateHash,
-      "CMCAdjudicator: INVALID_TRANSFER_HASH"
-    );
+    require(hashTransferState(cts) == transferDispute.transferStateHash, "CMCAdjudicator: INVALID_TRANSFER_HASH");
 
     // We can't defund twice
     require(!transferDispute.isDefunded, "CMCAdjudicator: TRANSFER_ALREADY_DEFUNDED");
@@ -189,13 +217,10 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
 
     Balance memory balance;
 
-    if (block.number < transferDispute.transferDisputeExpiry) {
+    if (block.timestamp < transferDispute.transferDisputeExpiry) {
       // Before dispute expiry, responder can resolve
       require(msg.sender == cts.responder, "CMCAdjudicator: INVALID_MSG_SENDER");
-      require(
-        keccak256(encodedInitialTransferState) == cts.initialStateHash,
-        "CMCAdjudicator: INVALID_TRANSFER_HASH"
-      );
+      require(keccak256(encodedInitialTransferState) == cts.initialStateHash, "CMCAdjudicator: INVALID_TRANSFER_HASH");
       ITransferDefinition transferDefinition = ITransferDefinition(cts.transferDefinition);
       balance = transferDefinition.resolve(
         abi.encode(cts.balance),
@@ -216,7 +241,7 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     // This will never revert or fail otherwise,
     // i.e. if the underlying "real" asset transfer fails,
     // the funds are made available for emergency withdrawal
-    transferBalance(cts.assetId, balance);
+    makeBalanceEmergencyWithdrawable(cts.assetId, balance);
 
     // Emit event
     emit TransferDefunded(
@@ -229,19 +254,33 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     );
   }
 
+  function getTotalDeposits(address assetId) internal returns (uint256 tdAlice, uint256 tdBob) {
+    tdAlice = _getTotalDepositsAlice(assetId);
+
+    // If the following call fails, we were unable to query the channel's balance;
+    // this probably means the token is totally fucked up.
+    // Since we mustn't revert here (in order to prevent other assets from becoming frozen),
+    // we proceed anyway and assume there are no unprocessed deposits for Bob.
+    (bool success, bytes memory returnData) = address(this).call{gas: QUERY_DEPOSITS_GAS_LIMIT}(
+      abi.encodeWithSignature("_depositsBob(address)", assetId)
+    );
+    if (success) {
+      tdBob = abi.decode(returnData, (uint256));
+    }
+  }
+
   function _depositsBob(address assetId) external view onlySelf returns (uint256) {
     return _getTotalDepositsBob(assetId);
   }
 
-  // TODO: include commitment type
   function verifySignatures(
     CoreChannelState calldata ccs,
     bytes calldata aliceSignature,
     bytes calldata bobSignature
   ) internal pure {
-    bytes32 ccsHash = hashChannelState(ccs);
-    require(ccsHash.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: INVALID_ALICE_SIG");
-    require(ccsHash.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: INVALID_BOB_SIG");
+    bytes32 commitment = keccak256(abi.encode(CommitmentType.ChannelState, hashChannelState(ccs)));
+    require(commitment.checkSignature(aliceSignature, ccs.alice), "CMCAdjudicator: INVALID_ALICE_SIG");
+    require(commitment.checkSignature(bobSignature, ccs.bob), "CMCAdjudicator: INVALID_BOB_SIG");
   }
 
   function verifyMerkleProof(
@@ -253,15 +292,14 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
   }
 
   function inConsensusPhase() internal view returns (bool) {
-    return block.number < channelDispute.consensusExpiry;
+    return block.timestamp < channelDispute.consensusExpiry;
   }
 
   function inDefundPhase() internal view returns (bool) {
-    return channelDispute.consensusExpiry <= block.number && block.number < channelDispute.defundExpiry;
+    return channelDispute.consensusExpiry <= block.timestamp && block.timestamp < channelDispute.defundExpiry;
   }
 
   function hashChannelState(CoreChannelState calldata ccs) internal pure returns (bytes32) {
-    // TODO: include commitment type
     return keccak256(abi.encode(ccs));
   }
 

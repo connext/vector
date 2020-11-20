@@ -2,31 +2,57 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/utils/Create2.sol";
+
 import "./interfaces/IChannelFactory.sol";
 import "./interfaces/IVectorChannel.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibERC20.sol";
-import "./lib/MinimalProxyFactory.sol";
 
 /// @title Channel Factory - Allows us to create new channel proxy contract
 /// @author Connext & Friends <hello@connext.network>
-contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
-    address private immutable mastercopy;
+contract ChannelFactory is IChannelFactory {
+    bytes private constant proxyCreationCodePrefix = hex"3d602d80600a3d3981f3_363d3d373d3d3d363d73";
+    bytes private constant proxyCreationCodeSuffix = hex"5af43d82803e903d91602b57fd5bf3";
 
-    constructor(address _mastercopy) {
+    address private immutable mastercopy;
+    uint256 private immutable chainId;
+
+    constructor(address _mastercopy, uint256 _chainId) {
         mastercopy = _mastercopy;
+        chainId = _chainId;
     }
 
     ////////////////////////////////////////
     // Public Methods
 
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
-    function getMastercopy() external override view returns(address) {
+    function getMastercopy() external override view returns (address) {
       return mastercopy;
     }
 
-    function proxyCreationCode() external override view returns (bytes memory) {
-      return _generateMinimalProxyInitCode(mastercopy);
+    /// @dev Allows us to get the chainId that this factory will use in the create2 salt
+    function getChainId() public override view returns (uint256 _chainId) {
+      if (chainId == 0) {
+        assembly {
+            _chainId := chainid()
+        }
+      } else {
+        _chainId = chainId;
+      }
+    }
+
+    /// @dev Allows us to get the chainId that this factory has stored
+    function getStoredChainId() external override view returns (uint256) {
+      return chainId;
+    }
+
+    function getProxyCreationCode() public override view returns (bytes memory) {
+        return abi.encodePacked(
+            proxyCreationCodePrefix,
+            mastercopy,
+            proxyCreationCodeSuffix
+        );
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
@@ -34,17 +60,16 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     /// @param bob address of the other channel participant
     function getChannelAddress(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         external
         override
         view
         returns (address)
     {
-        return _calculateMinimalProxyDeploymentAddress(
-            mastercopy,
-            generateSalt(alice, bob, chainId)
+        return Create2.computeAddress(
+            generateSalt(alice, bob),
+            keccak256(getProxyCreationCode())
         );
     }
 
@@ -53,14 +78,15 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     /// @param bob address of the other channel participant
     function createChannel(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
-        external
+        public
         override
         returns (address channel)
     {
-        _createChannel(alice, bob, chainId);
+        channel = deployChannelProxy(alice, bob);
+        IVectorChannel(channel).setup(alice, bob);
+        emit ChannelCreation(channel);
     }
 
     /// @dev Allows us to create a new channel contract and fund it in one transaction
@@ -68,7 +94,6 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     function createChannelAndDepositAlice(
         address alice,
         address bob,
-        uint256 chainId,
         address assetId,
         uint256 amount
     )
@@ -77,7 +102,7 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
         override
         returns (address channel)
     {
-        channel = _createChannel(alice, bob, chainId);
+        channel = createChannel(alice, bob);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
         if (!LibAsset.isEther(assetId)) {
@@ -96,45 +121,30 @@ contract ChannelFactory is IChannelFactory, MinimalProxyFactory {
     ////////////////////////////////////////
     // Internal Methods
 
-    function _createChannel(
-        address alice,
-        address bob,
-        uint256 chainId
-    )
-        internal
-        returns (address channel)
-    {
-        channel = deployChannelProxy(alice, bob, chainId);
-        IVectorChannel(channel).setup(alice, bob);
-        emit ChannelCreation(channel);
-        return channel;
-    }
-
     /// @dev Allows us to create new channel contact using CREATE2
     /// @dev This method is only meant as an utility to be called from other methods
     /// @param alice address of one of the two participants in the channel
     /// @param bob address of the other channel participant
     function deployChannelProxy(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         internal
         returns (address)
     {
-        return _deployMinimalProxy(mastercopy, generateSalt(alice, bob, chainId));
+        bytes32 salt = generateSalt(alice, bob);
+        return Create2.deploy(0, salt, getProxyCreationCode());
     }
 
     function generateSalt(
         address alice,
-        address bob,
-        uint256 chainId
+        address bob
     )
         internal
-        pure
+        view
         returns (bytes32)
     {
-        return keccak256(abi.encodePacked(alice, bob, chainId));
+        return keccak256(abi.encodePacked(alice, bob, getChainId()));
     }
 
 }

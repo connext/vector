@@ -128,6 +128,23 @@ export class EthereumChainReader implements IVectorChainReader {
     return Result.ok(info);
   }
 
+  async getRegisteredTransfers(
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer[], ChainError>> {
+    let registry = this.transferRegistries.get(chainId.toString());
+    if (!registry) {
+      // Registry for chain not loaded, load into memory
+      const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
+      if (loadRes.isError) {
+        return Result.fail(loadRes.getError()!);
+      }
+      registry = loadRes.getValue();
+    }
+    return Result.ok(registry);
+  }
+
   async getChannelFactoryBytecode(channelFactoryAddress: string, chainId: number): Promise<Result<string, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
@@ -135,7 +152,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     try {
       const factory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
-      const proxyBytecode = await factory.proxyCreationCode();
+      const proxyBytecode = await factory.getProxyCreationCode();
       return Result.ok(proxyBytecode);
     } catch (e) {
       return Result.fail(e);
@@ -320,7 +337,7 @@ export class EthereumChainReader implements IVectorChainReader {
 
   async getChannelAddress(
     alice: string,
-    responder: string,
+    bob: string,
     channelFactoryAddress: string,
     chainId: number,
   ): Promise<Result<string, ChainError>> {
@@ -329,9 +346,9 @@ export class EthereumChainReader implements IVectorChainReader {
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
-    const vectorChannel = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
+    const channelFactory = new Contract(channelFactoryAddress, ChannelFactory.abi, provider);
     try {
-      const derivedAddress = await vectorChannel.getChannelAddress(alice, responder, chainId);
+      const derivedAddress = await channelFactory.getChannelAddress(alice, bob);
       return Result.ok(derivedAddress);
     } catch (e) {
       return Result.fail(e);

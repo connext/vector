@@ -12,8 +12,7 @@ export const registerTransfer = async (
   addressBook: AddressBook,
   log = logger.child({}),
 ): Promise<void> => {
-
-  log.info(`\nPreparing to add ${transferName} to registry (Sender=${wallet.address})`);
+  log.info(`Preparing to add ${transferName} to registry (Sender=${wallet.address})`);
 
   const registry = addressBook.getContract("TransferRegistry").connect(wallet);
   const transfer = addressBook.getContract(transferName).connect(wallet);
@@ -23,12 +22,26 @@ export const registerTransfer = async (
 
   // Check if transfer is already in registry
   const entry = registered.find((info: RegisteredTransfer) => info.name === transferName);
-  if (entry) {
-    log.info(`Transfer ${transferName} has already been registered`);
+  if (entry && entry.definition === transfer.address) {
+    log.info({ transferName }, `Transfer has already been registered`);
     return;
   }
 
-  log.info(`Getting registry information for ${transferName} at ${transfer.address}`);
+  // Check for the case where the registered transfer doesnt have the
+  // right address
+  if (entry && entry.definition !== transfer.address) {
+    // Remove transfer from registry
+    log.info(
+      { transferName, registered: entry.definition, latest: transfer.address },
+      `Transfer has stale registration, removing and updating`,
+    );
+    const removal = await registry.removeTransferDefinition(transferName);
+    log.info({ hash: removal.hash }, "Removal tx broadcast");
+    await removal.wait();
+    log.info("Removal tx mined");
+  }
+
+  log.info({ transferName, latest: transfer.address }, `Getting registry information`);
 
   // Sanity-check: tidy return value
   const cleaned = {
@@ -57,10 +70,7 @@ export const registerTransferCommand = {
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const addressBook = getAddressBook(
-      argv.addressBook,
-      process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId.toString(),
-    );
+    const addressBook = getAddressBook(argv.addressBook, (await wallet.provider.getNetwork()).chainId.toString());
     const level = argv.silent ? "silent" : "info";
     await registerTransfer(argv.transferName, wallet, addressBook, logger.child({ level }));
   },

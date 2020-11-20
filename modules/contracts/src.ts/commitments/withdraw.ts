@@ -1,8 +1,13 @@
-import { MinimalTransaction, WithdrawCommitmentJson, WithdrawDataEncoding } from "@connext/vector-types";
+import {
+  MinimalTransaction,
+  WithdrawCommitmentJson,
+  WithdrawDataEncoding,
+  ChannelCommitmentTypes,
+} from "@connext/vector-types";
 import { recoverAddressFromChannelMessage } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
 import { Interface, defaultAbiCoder } from "@ethersproject/abi";
-import { keccak256 } from "@ethersproject/solidity";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 
 import { ChannelMastercopy } from "../artifacts";
 
@@ -76,9 +81,10 @@ export class WithdrawCommitment {
   }
 
   public hashToSign(): string {
-    const withdrawData = this.getWithdrawData();
-    const encodedWithdrawData = defaultAbiCoder.encode([WithdrawDataEncoding], [withdrawData]);
-    return keccak256(["bytes"], [encodedWithdrawData]);
+    const encodedWithdrawData = defaultAbiCoder.encode([WithdrawDataEncoding], [this.getWithdrawData()]);
+    const wdHash = solidityKeccak256(["bytes"], [encodedWithdrawData]);
+    const encoded = defaultAbiCoder.encode(["uint8", "bytes32"], [ChannelCommitmentTypes.WithdrawData, wdHash]);
+    return solidityKeccak256(["bytes"], [encoded]);
   }
 
   public async getSignedTransaction(): Promise<MinimalTransaction> {

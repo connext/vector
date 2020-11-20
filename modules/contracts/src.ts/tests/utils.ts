@@ -1,6 +1,7 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { final } from "pino";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
@@ -16,7 +17,7 @@ export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contra
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["ChannelFactory", ["TestChannel"]],
+    ["ChannelFactory", ["TestChannel", Zero]],
   ]);
   return createChannel(bob.address, alice, addressBook, undefined, true);
 };
@@ -25,17 +26,16 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
   const addressBook = _addressBook || (await getTestAddressBook());
   await deployContracts(alice, addressBook, [
     ["TestChannel", []],
-    ["TestChannelFactory", ["TestChannel"]],
+    ["TestChannelFactory", ["TestChannel", Zero]],
   ]);
   const testFactory = addressBook.getContract("TestChannelFactory");
-  const chainId = (await alice.provider.getNetwork()).chainId.toString();
-  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address, chainId);
-  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address, chainId);
+  const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
+  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
   await tx.wait();
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bob.address.substring(2, 6)}`, {
     address: channelAddress,
-    args: [alice.address, bob.address, chainId],
+    args: [alice.address, bob.address],
     txHash: tx.hash,
   });
 
@@ -47,6 +47,18 @@ export const mineBlock = (): Promise<void> => {
     provider.once("block", () => resolve());
     await provider.send("evm_mine", []);
   });
+};
+
+export const advanceBlocktime = async (seconds: number): Promise<void> => {
+  const { timestamp: currTime } = await provider.getBlock("latest");
+  await provider.send("evm_increaseTime", [seconds]);
+  await provider.send("evm_mine", []);
+  const { timestamp: finalTime } = await provider.getBlock("latest");
+  const desired = currTime + seconds;
+  if (finalTime < desired) {
+    const diff = finalTime - desired;
+    await provider.send("evm_increaseTime", [diff]);
+  }
 };
 
 export const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {

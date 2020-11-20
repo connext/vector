@@ -101,7 +101,7 @@ EOF
 docker stack deploy -c "$docker_compose" "$stack"
 
 echo "The $stack stack has been deployed, waiting for $public_url to start responding.."
-timeout=$(( $(date +%s) + 60 ))
+timeout=$(( $(date +%s) + 300 ))
 while true
 do
   res=$(curl -k -m 5 -s $public_url || true)

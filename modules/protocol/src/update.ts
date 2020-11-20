@@ -45,11 +45,15 @@ import { generateSignedChannelCommitment, reconcileDeposit } from "./utils";
 export async function applyUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   previousState: FullChannelState | undefined, // undefined only on setup
-  activeTransfers: FullTransferState[],
+  previousActiveTransfers: FullTransferState[] | undefined, // defined on create/resolve
   finalTransferBalance: Balance | undefined, // defined only on resolve
 ): Promise<
   Result<
-    { channel: FullChannelState<T>; activeTransfers: FullTransferState[]; transfer?: FullTransferState },
+    {
+      updatedChannel: FullChannelState<T>;
+      updatedActiveTransfers?: FullTransferState[];
+      updatedTransfer?: FullTransferState;
+    },
     InboundChannelUpdateError
   >
 > {
@@ -78,8 +82,7 @@ export async function applyUpdate<T extends UpdateType>(
     case UpdateType.setup: {
       const { timeout, networkContext } = details as SetupUpdateDetails;
       return Result.ok({
-        activeTransfers: [],
-        channel: {
+        updatedChannel: {
           nonce: 1,
           channelAddress,
           timeout,
@@ -89,12 +92,12 @@ export async function applyUpdate<T extends UpdateType>(
           processedDepositsA: [],
           processedDepositsB: [],
           assetIds: [],
+          defundNonces: [],
           merkleRoot: constants.HashZero,
           latestUpdate: update,
           networkContext,
           aliceIdentifier: fromIdentifier,
           bobIdentifier: toIdentifier,
-          defundNonce: "1",
           inDispute: false,
         },
       });
@@ -112,13 +115,13 @@ export async function applyUpdate<T extends UpdateType>(
         previousState!.assetIds,
       );
       return Result.ok({
-        activeTransfers: [...activeTransfers],
-        channel: {
+        updatedChannel: {
           ...previousState!,
           balances,
           processedDepositsA,
           processedDepositsB,
           assetIds: assetIdx !== -1 ? previousState!.assetIds : [...previousState!.assetIds, assetId],
+          defundNonces: assetIdx !== -1 ? [...previousState!.defundNonces] : [...previousState!.defundNonces, "1"],
           nonce,
           latestUpdate: update,
         },
@@ -137,7 +140,7 @@ export async function applyUpdate<T extends UpdateType>(
       } = details as CreateUpdateDetails;
       // Generate the new balance field for the channel
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
-      const channel = {
+      const updatedChannel = {
         ...previousState!,
         balances,
         nonce,
@@ -163,14 +166,18 @@ export async function applyUpdate<T extends UpdateType>(
         meta,
         inDispute: false,
       };
-      return Result.ok({ channel, transfer: createdTransfer, activeTransfers: [...activeTransfers, createdTransfer] });
+      return Result.ok({
+        updatedChannel,
+        updatedTransfer: createdTransfer,
+        updatedActiveTransfers: [...previousActiveTransfers!, createdTransfer],
+      });
     }
     case UpdateType.resolve: {
       const { merkleRoot, transferId, transferResolver, meta } = details as ResolveUpdateDetails;
       // Safe to force unwrap because the validation has been performed
-      const transfer = activeTransfers.find(t => t.transferId === transferId)!;
+      const transfer = previousActiveTransfers!.find(t => t.transferId === transferId)!;
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
-      const channel = {
+      const updatedChannel = {
         ...previousState!,
         balances,
         nonce,
@@ -187,9 +194,9 @@ export async function applyUpdate<T extends UpdateType>(
         },
       };
       return Result.ok({
-        channel,
-        transfer: resolvedTransfer,
-        activeTransfers: activeTransfers.filter(t => t.transferId !== transferId),
+        updatedChannel,
+        updatedTransfer: resolvedTransfer,
+        updatedActiveTransfers: previousActiveTransfers!.filter(t => t.transferId !== transferId),
       });
     }
     default: {
@@ -201,40 +208,36 @@ export async function applyUpdate<T extends UpdateType>(
 }
 
 // This function accepts user given parameters, generates
-// a specific update based on the user input, validates the
-// generated update, and signs it. To maximize code-reuse,
-// all state/update validation should happen in the `validate`
-// function, while all parameter validation should happen at
-// the API level when the parameters first enter the system.
-
-// It is also important to note that in all of these functions
-// we will need to generate a signature for the state that
-// would result if these updates are applied. That means that
-// the `applyUpdate` function should be used to generate the
-// properly validated resultant state
-export async function generateUpdate<T extends UpdateType>(
-  params: UpdateParams<T>,
-  state: FullChannelState | undefined, // passed in to avoid store call
-  activeTransfers: FullTransferState[],
-  chainReader: IVectorChainReader,
+// a specific update based on the user input, creates the
+// generated update, applies it, signs it, and returns all updated.
+// information. All validation is performed in the before this function is
+// called (parameter structure validation is performed at API level
+// and contextual validation is performed within `sync.outbound`)
+export async function generateAndApplyUpdate<T extends UpdateType>(
   signer: IChannelSigner,
-  logger: pino.BaseLogger = pino(),
+  chainReader: IVectorChainReader,
+  params: UpdateParams<T>,
+  previousState: FullChannelState | undefined, // undefined IFF setup
+  activeTransfers: FullTransferState[] | undefined, // defined IFF create/resolve
+  logger: pino.BaseLogger,
 ): Promise<
   Result<
     {
       update: ChannelUpdate<T>;
-      channelState: FullChannelState<T>;
-      transfer: FullTransferState | undefined;
+      updatedChannel: FullChannelState<T>;
       updatedActiveTransfers: FullTransferState[] | undefined;
+      updatedTransfer: FullTransferState | undefined;
     },
     OutboundChannelUpdateError
   >
 > {
-  // Create the update from user parameters based on type
-  let proposedUpdate: ChannelUpdate<any>;
-  // See note re: resolve in `applyUpdate`
+  // Create the update from user parameters based on update type
+  let proposedUpdate: ChannelUpdate;
+  // The transfer balance after resolve is pulled from the
+  // transfer definition onchain. This balance is required for
+  // generating the channel update, as well as for applying the
+  // update.
   let finalTransferBalance: Balance | undefined = undefined;
-  let updatedActiveTransfers: FullTransferState[] | undefined;
   switch (params.type) {
     case UpdateType.setup: {
       proposedUpdate = generateSetupUpdate(params as UpdateParams<"setup">, signer);
@@ -242,115 +245,83 @@ export async function generateUpdate<T extends UpdateType>(
     }
     case UpdateType.deposit: {
       const depositRes = await generateDepositUpdate(
-        state!,
+        previousState!,
         params as UpdateParams<"deposit">,
         signer,
         chainReader,
         logger,
       );
       if (depositRes.isError) {
-        return Result.fail(new OutboundChannelUpdateError(depositRes.getError()!.message as any, params, state));
+        return Result.fail(
+          new OutboundChannelUpdateError(depositRes.getError()!.message as any, params, previousState),
+        );
       }
       proposedUpdate = depositRes.getValue();
       break;
     }
     case UpdateType.create: {
-      const proposedRes = await generateCreateUpdate(
-        state!,
+      const createRes = await generateCreateUpdate(
+        previousState!,
         params as UpdateParams<"create">,
         signer,
-        activeTransfers,
+        activeTransfers!,
         chainReader,
       );
-      if (proposedRes.isError) {
-        return Result.fail(new OutboundChannelUpdateError(proposedRes.getError()!.message as any, params, state));
+      if (createRes.isError) {
+        return Result.fail(new OutboundChannelUpdateError(createRes.getError()!.message as any, params, previousState));
       }
-      proposedUpdate = proposedRes.getValue().unsigned;
-      updatedActiveTransfers = proposedRes.getValue().updatedTransfers;
+      proposedUpdate = createRes.getValue();
       break;
     }
     case UpdateType.resolve: {
       // See note re: resolve in `applyUpdate` for why this has a
       // different return signature
-      const generatedResult = await generateResolveUpdate(
-        state!,
+      const resolveRes = await generateResolveUpdate(
+        previousState!,
         params as UpdateParams<"resolve">,
         signer,
-        activeTransfers,
+        activeTransfers!,
         chainReader,
         logger,
       );
-      if (generatedResult.isError) {
-        return Result.fail(new OutboundChannelUpdateError(generatedResult.getError()!.message as any, params, state));
+      if (resolveRes.isError) {
+        return Result.fail(
+          new OutboundChannelUpdateError(resolveRes.getError()!.message as any, params, previousState),
+        );
       }
-      const { update, transferBalance, updatedTransfers } = generatedResult.getValue();
-      proposedUpdate = update;
-      finalTransferBalance = transferBalance;
-      updatedActiveTransfers = updatedTransfers;
+      const resolve = resolveRes.getValue();
+      proposedUpdate = resolve.update;
+      finalTransferBalance = resolve.transferBalance;
       break;
     }
     default: {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.BadUpdateType, params, state),
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.BadUpdateType, params, previousState),
       );
     }
   }
-  logger.debug(
-    {
-      method: "generateUpdate",
-      unsigned: proposedUpdate,
-    },
-    "Generated unsigned update",
-  );
-  logger.info(
-    {
-      method: "generateUpdate",
-      channelAddress: proposedUpdate.channelAddress,
-      unsigned: proposedUpdate.nonce,
-    },
-    "Generated unsigned update",
-  );
 
-  // Create a signed commitment for the new state
-  const result = await applyUpdate(proposedUpdate, state, activeTransfers, finalTransferBalance);
-  if (result.isError) {
-    // Cast to an outbound error (see note in applyUpdate, safe to any cast)
-    const inboundError = result.getError()!;
-    return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, state));
+  // Create a signed commitment for the new state. `applyUpdate` will also
+  // return any updated transfers/active transfers
+  const applyUpdateRes = await applyUpdate(proposedUpdate, previousState, activeTransfers, finalTransferBalance);
+  if (applyUpdateRes.isError) {
+    const inboundError = applyUpdateRes.getError()!;
+    return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, previousState));
   }
-
-  const { channel: updatedChannel, transfer: updatedTransfer } = result.getValue();
+  // Get all updated values
+  const { updatedChannel, updatedTransfer, updatedActiveTransfers } = applyUpdateRes.getValue();
+  // Sign updated channel
   const commitmentRes = await generateSignedChannelCommitment(updatedChannel, signer);
   if (commitmentRes.isError) {
-    return Result.fail(new OutboundChannelUpdateError(commitmentRes.getError()?.message as any, params, state));
+    return Result.fail(new OutboundChannelUpdateError(commitmentRes.getError()?.message as any, params, previousState));
   }
-  const commitment = commitmentRes.getValue();
-  logger.debug(
-    {
-      method: "generateUpdate",
-      commitment,
-    },
-    "Applied and signed update",
-  );
-  logger.info(
-    {
-      method: "generateUpdate",
-      aliceSignature: commitment.aliceSignature,
-      bobSignature: commitment.bobSignature,
-    },
-    "Applied and signed update",
-  );
-
-  // Return the validated update to send to counterparty
+  const { aliceSignature, bobSignature } = commitmentRes.getValue();
+  // Add signature to update and return
   return Result.ok({
-    update: {
-      ...proposedUpdate,
-      aliceSignature: commitment.aliceSignature,
-      bobSignature: commitment.bobSignature,
-    },
-    transfer: updatedTransfer,
-    channelState: updatedChannel,
+    update: { ...proposedUpdate, aliceSignature, bobSignature },
+    updatedChannel,
     updatedActiveTransfers,
+    updatedTransfer,
   });
 }
 
@@ -447,9 +418,7 @@ async function generateCreateUpdate(
   signer: IChannelSigner,
   transfers: FullTransferState[],
   chainReader: IVectorChainReader,
-): Promise<
-  Result<{ unsigned: ChannelUpdate<"create">; updatedTransfers: FullTransferState[] }, OutboundChannelUpdateError>
-> {
+): Promise<Result<ChannelUpdate<"create">, OutboundChannelUpdateError>> {
   const {
     details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
   } = params;
@@ -529,7 +498,7 @@ async function generateCreateUpdate(
       meta,
     },
   };
-  return Result.ok({ unsigned, updatedTransfers });
+  return Result.ok(unsigned);
 }
 
 // Generates resolve update from user input params
@@ -540,9 +509,7 @@ async function generateResolveUpdate(
   transfers: FullTransferState[],
   chainService: IVectorChainReader,
   logger: pino.BaseLogger,
-): Promise<
-  Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance; updatedTransfers: FullTransferState[] }, Error>
-> {
+): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, Error>> {
   // A transfer resolution update can effect the following
   // channel fields:
   // - balances
@@ -617,7 +584,7 @@ async function generateResolveUpdate(
     },
   };
 
-  return Result.ok({ update: unsigned, transferBalance, updatedTransfers });
+  return Result.ok({ update: unsigned, transferBalance });
 }
 
 // Holds the logic that is the same between all update types:

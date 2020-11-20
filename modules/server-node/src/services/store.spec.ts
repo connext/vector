@@ -46,13 +46,7 @@ describe("store", () => {
   it("should save transaction responses and receipts", async () => {
     // Load store with channel
     const setupState = createTestChannelState("setup");
-    await store.saveChannelState(setupState, {
-      channelFactoryAddress: setupState.networkContext.channelFactoryAddress,
-      chainId: setupState.networkContext.chainId,
-      aliceSignature: setupState.latestUpdate.aliceSignature,
-      bobSignature: setupState.latestUpdate.bobSignature,
-      state: setupState,
-    });
+    await store.saveChannelState(setupState);
 
     const response = createTestTxResponse();
 
@@ -115,13 +109,7 @@ describe("store", () => {
 
   it("should save and retrieve all update types and keep updating the channel", async () => {
     const setupState = createTestChannelState("setup");
-    await store.saveChannelState(setupState, {
-      channelFactoryAddress: setupState.networkContext.channelFactoryAddress,
-      chainId: setupState.networkContext.chainId,
-      aliceSignature: setupState.latestUpdate.aliceSignature,
-      bobSignature: setupState.latestUpdate.bobSignature,
-      state: setupState,
-    });
+    await store.saveChannelState(setupState);
 
     let fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(setupState);
@@ -129,16 +117,10 @@ describe("store", () => {
     const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
     const depositState = createTestChannelState("deposit", {
       nonce: setupState.nonce + 1,
-      defundNonce: setupState.defundNonce,
+      defundNonces: setupState.defundNonces,
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
     });
-    await store.saveChannelState(depositState, {
-      channelFactoryAddress: depositState.networkContext.channelFactoryAddress,
-      chainId: depositState.networkContext.chainId,
-      aliceSignature: depositState.latestUpdate.aliceSignature,
-      bobSignature: depositState.latestUpdate.bobSignature,
-      state: depositState,
-    });
+    await store.saveChannelState(depositState);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(depositState);
@@ -152,7 +134,7 @@ describe("store", () => {
       channelAddress: transfer.channelAddress,
       networkContext: { channelFactoryAddress: transfer.channelFactoryAddress, chainId: transfer.chainId },
       nonce: depositState.nonce + 1,
-      defundNonce: setupState.defundNonce,
+      defundNonces: setupState.defundNonces,
       latestUpdate: {
         details: {
           balance: transfer.balance,
@@ -166,24 +148,14 @@ describe("store", () => {
         nonce: depositState.nonce + 1,
       },
     });
-    await store.saveChannelState(
-      createState,
-      {
-        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
-        chainId: createState.networkContext.chainId,
-        aliceSignature: createState.latestUpdate.aliceSignature,
-        bobSignature: createState.latestUpdate.bobSignature,
-        state: createState,
-      },
-      transfer,
-    );
+    await store.saveChannelState(createState, transfer);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(createState);
 
     const resolveState = createTestChannelState("resolve", {
       nonce: createState.nonce + 1,
-      defundNonce: setupState.defundNonce,
+      defundNonces: setupState.defundNonces,
       latestUpdate: {
         nonce: createState.nonce + 1,
         details: {
@@ -191,13 +163,7 @@ describe("store", () => {
         },
       },
     });
-    await store.saveChannelState(resolveState, {
-      channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,
-      chainId: resolveState.networkContext.chainId,
-      aliceSignature: resolveState.latestUpdate.aliceSignature,
-      bobSignature: resolveState.latestUpdate.bobSignature,
-      state: resolveState,
-    });
+    await store.saveChannelState(resolveState);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(resolveState);
@@ -227,17 +193,7 @@ describe("store", () => {
       transferTimeout: createState.latestUpdate.details.transferTimeout,
       transferState: createState.latestUpdate.details.transferInitialState,
     });
-    await store.saveChannelState(
-      createState,
-      {
-        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
-        chainId: createState.networkContext.chainId,
-        aliceSignature: createState.latestUpdate.aliceSignature,
-        bobSignature: createState.latestUpdate.bobSignature,
-        state: createState,
-      },
-      transfer,
-    );
+    await store.saveChannelState(createState, transfer);
     let transferFromStore = await store.getTransferState(transfer.transferId);
     expect(transferFromStore).to.deep.eq(transfer);
 
@@ -251,21 +207,15 @@ describe("store", () => {
     resolveState.latestUpdate.details.transferResolver = { preImage: mkBytes32("0xaabbcc") };
     resolveState.latestUpdate.type = UpdateType.resolve;
     resolveState.nonce = createState.nonce + 1;
-    (resolveState.defundNonce = createState.defundNonce),
+    (resolveState.defundNonces = createState.defundNonces),
       (resolveState.latestUpdate.nonce = createState.latestUpdate.nonce + 1);
 
-    await store.saveChannelState(resolveState, {
-      channelFactoryAddress: resolveState.networkContext.channelFactoryAddress,
-      chainId: resolveState.networkContext.chainId,
-      aliceSignature: resolveState.latestUpdate.aliceSignature,
-      bobSignature: resolveState.latestUpdate.bobSignature,
-      state: resolveState,
-    });
+    await store.saveChannelState(resolveState);
     const fromStore = await store.getChannelState(resolveState.channelAddress);
     expect(fromStore).to.deep.eq(resolveState);
 
     transferFromStore = await store.getTransferState(transfer.transferId);
-    expect(transferFromStore.transferResolver).to.deep.eq(
+    expect(transferFromStore?.transferResolver).to.deep.eq(
       (resolveState.latestUpdate.details as ResolveUpdateDetails).transferResolver,
     );
   });
@@ -294,17 +244,7 @@ describe("store", () => {
 
     transfer1.transferResolver = undefined;
 
-    await store.saveChannelState(
-      createState,
-      {
-        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
-        chainId: createState.networkContext.chainId,
-        aliceSignature: createState.latestUpdate.aliceSignature,
-        bobSignature: createState.latestUpdate.bobSignature,
-        state: createState,
-      },
-      transfer1,
-    );
+    await store.saveChannelState(createState, transfer1);
 
     const transfer2 = createTestFullHashlockTransferState({
       channelAddress: createState.channelAddress,
@@ -329,20 +269,10 @@ describe("store", () => {
         nonce: createState.latestUpdate.nonce + 1,
       },
       nonce: createState.latestUpdate.nonce + 1,
-      defundNonce: createState.defundNonce,
+      defundNonces: createState.defundNonces,
     });
 
-    await store.saveChannelState(
-      updatedState,
-      {
-        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
-        chainId: createState.networkContext.chainId,
-        aliceSignature: createState.latestUpdate.aliceSignature,
-        bobSignature: createState.latestUpdate.bobSignature,
-        state: updatedState,
-      },
-      transfer2,
-    );
+    await store.saveChannelState(updatedState, transfer2);
 
     const channelFromStore = await store.getChannelState(createState.channelAddress);
     expect(channelFromStore).to.deep.eq(updatedState);
@@ -414,17 +344,7 @@ describe("store", () => {
 
     transfer1.transferResolver = undefined;
 
-    await store.saveChannelState(
-      createState,
-      {
-        channelFactoryAddress: createState.networkContext.channelFactoryAddress,
-        chainId: createState.networkContext.chainId,
-        aliceSignature: createState.latestUpdate.aliceSignature,
-        bobSignature: createState.latestUpdate.bobSignature,
-        state: createState,
-      },
-      transfer1,
-    );
+    await store.saveChannelState(createState, transfer1);
 
     const newBob = getRandomIdentifier();
     const transfer2 = createTestFullHashlockTransferState({
@@ -461,17 +381,7 @@ describe("store", () => {
       },
     });
 
-    await store.saveChannelState(
-      createState2,
-      {
-        channelFactoryAddress: createState2.networkContext.channelFactoryAddress,
-        chainId: createState2.networkContext.chainId,
-        aliceSignature: createState2.latestUpdate.aliceSignature,
-        bobSignature: createState2.latestUpdate.bobSignature,
-        state: createState2,
-      },
-      transfer2,
-    );
+    await store.saveChannelState(createState2, transfer2);
 
     const transfers = await store.getTransfersByRoutingId(routingId);
     expect(transfers.length).to.eq(2);

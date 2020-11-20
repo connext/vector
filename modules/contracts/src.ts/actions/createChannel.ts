@@ -14,17 +14,16 @@ export const createChannel = async (
   log = logger.child({}),
   test = false,
 ): Promise<Contract> => {
-  log.info(`\nPreparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
-  const chainId = (await alice.provider.getNetwork()).chainId.toString();
+  log.info(`Preparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
   const channelFactory = addressBook.getContract("ChannelFactory");
-  const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress, chainId);
-  const tx = await channelFactory.createChannel(alice.address, bobAddress, chainId);
+  const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress);
+  const tx = await channelFactory.createChannel(alice.address, bobAddress);
   await tx.wait();
   log.info(`Successfully created a channel at ${channelAddress}`);
   // Save this channel address in case we need it later
   addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bobAddress.substring(2, 6)}`, {
     address: channelAddress,
-    args: [alice.address, bobAddress, chainId],
+    args: [alice.address, bobAddress],
     txHash: tx.hash,
   });
   return test
@@ -47,7 +46,7 @@ export const createChannelCommand = {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
     const addressBook = getAddressBook(
       argv.addressBook,
-      process?.env?.REAL_CHAIN_ID || (await wallet.provider.getNetwork()).chainId.toString(),
+      (await wallet.provider.getNetwork()).chainId.toString(),
     );
     const level = argv.silent ? "silent" : "info";
     await createChannel(argv.transferName, wallet, addressBook, logger.child({ level }));
