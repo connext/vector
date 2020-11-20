@@ -145,12 +145,14 @@ const GetRegisteredTransfersParamsSchema = Type.Intersect([
 ]);
 
 const GetRegisteredTransfersResponseSchema = {
-  200: Type.Array({
-    name: Type.String(),
-    stateEncoding: Type.String(),
-    resolverEncoding: Type.String(),
-    definition: TAddress,
-  }),
+  200: Type.Array(
+    Type.Object({
+      name: Type.String(),
+      stateEncoding: Type.String(),
+      resolverEncoding: Type.String(),
+      definition: TAddress,
+    }),
+  ),
 };
 
 // REGISTER LISTENER
