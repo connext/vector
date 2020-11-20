@@ -6,7 +6,7 @@ import "./interfaces/ICMCCore.sol";
 import "./ReentrancyGuard.sol";
 
 contract CMCCore is ReentrancyGuard, ICMCCore {
-  address constant invalidParticipant = address(1);
+  address private immutable mastercopyAddress;
 
   address internal alice;
   address internal bob;
@@ -15,12 +15,12 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
   ///         Nonzero address also prevents the mastercopy from being setup
   ///         Only setting alice is sufficient, setting bob too wouldn't change anything
   constructor () {
-      alice = invalidParticipant;
+      mastercopyAddress = address(this);
   }
 
   // Prevents us from calling methods directly from the mastercopy contract
   modifier onlyViaProxy {
-    require(alice != address(1), "Mastercopy: ONLY_VIA_PROXY");
+    require(address(this) != mastercopyAddress, "Mastercopy: ONLY_VIA_PROXY");
     _;
   }
 
