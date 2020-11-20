@@ -2,7 +2,9 @@
 import { VectorChannel } from "@connext/vector-contracts";
 import { expect, getTestLoggers } from "@connext/vector-utils";
 import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
-import { BigNumber, constants, Contract } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
+import { AddressZero } from "@ethersproject/constants";
 
 import { depositInChannel, getSetupChannel } from "../utils";
 import { env } from "../env";
@@ -39,14 +41,14 @@ describe(testName, () => {
 
   it("should deposit eth for Alice (depositA)", async () => {
     const depositAmount = BigNumber.from("1000");
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
 
     await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
   });
 
   it("should deposit eth for Bob (multisig deposit)", async () => {
     const depositAmount = BigNumber.from("1000");
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
 
     await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
   });
@@ -58,7 +60,7 @@ describe(testName, () => {
 
   it("should work concurrently", async () => {
     const depositAmount = BigNumber.from("1000");
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
 
     // Perform an alice deposit to make sure multisig is deployed
     const initialDeposit = await depositInChannel(

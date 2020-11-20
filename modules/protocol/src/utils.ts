@@ -17,7 +17,7 @@ import {
   UpdateParamsMap,
   UpdateType,
 } from "@connext/vector-types";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which

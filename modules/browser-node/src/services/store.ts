@@ -12,7 +12,7 @@ import {
   UpdateType,
   WithdrawCommitmentJson,
 } from "@connext/vector-types";
-import { providers } from "ethers";
+import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 import Dexie, { DexieOptions } from "dexie";
 import { BaseLogger } from "pino";
 
@@ -173,7 +173,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   async saveTransactionResponse(
     channelAddress: string,
     reason: TransactionReason,
-    transaction: providers.TransactionResponse,
+    transaction: TransactionResponse,
   ): Promise<void> {
     await this.db.transactions.put({
       //// Helper fields
@@ -203,7 +203,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     });
   }
 
-  async saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void> {
+  async saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
     await this.db.transactions.update(transaction.transactionHash, {
       status: StoredTransactionStatus.mined,
       logs: transaction.logs,

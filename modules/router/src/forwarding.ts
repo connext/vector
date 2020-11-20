@@ -13,7 +13,7 @@ import {
 } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 
 import { getSwappedAmount } from "./services/swap";
 import { IRouterStore } from "./services/store";

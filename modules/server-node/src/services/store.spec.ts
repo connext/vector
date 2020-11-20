@@ -22,7 +22,7 @@ import {
   mkAddress,
   mkPublicIdentifier,
 } from "@connext/vector-utils";
-import { constants } from "ethers";
+import { HashZero } from "@ethersproject/constants";
 
 import { config } from "../config";
 
@@ -181,7 +181,7 @@ describe("store", () => {
     });
     const transfer: FullTransferState = createTestFullHashlockTransferState({
       transferId,
-      preImage: constants.HashZero,
+      preImage: HashZero,
       channelAddress: createState.channelAddress,
       channelFactoryAddress: createState.networkContext.channelFactoryAddress,
       chainId: createState.networkContext.chainId,
