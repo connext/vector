@@ -30,7 +30,8 @@ import {
   TransferCreateWithoutChannelInput,
   OnchainTransaction,
 } from "@prisma/client";
-import { BigNumber, providers } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
@@ -266,7 +267,7 @@ export class PrismaStore implements IServerNodeStore {
   async saveTransactionResponse(
     channelAddress: string,
     reason: TransactionReason,
-    response: providers.TransactionResponse,
+    response: TransactionResponse,
   ): Promise<void> {
     await this.prisma.onchainTransaction.upsert({
       where: { transactionHash: response.hash },
@@ -318,7 +319,7 @@ export class PrismaStore implements IServerNodeStore {
     });
   }
 
-  async saveTransactionReceipt(channelAddress: string, transaction: providers.TransactionReceipt): Promise<void> {
+  async saveTransactionReceipt(channelAddress: string, transaction: TransactionReceipt): Promise<void> {
     await this.prisma.onchainTransaction.update({
       where: { transactionHash: transaction.transactionHash },
       data: {

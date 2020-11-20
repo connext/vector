@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { expect, getTestLoggers } from "@connext/vector-utils";
 import { IVectorProtocol, ProtocolEventName } from "@connext/vector-types";
-import { constants } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
 
 import { createTransfer, getFundedChannel, resolveTransfer } from "../utils";
 import { env } from "../env";
@@ -21,7 +21,7 @@ describe(testName, () => {
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
       {
-        assetId: constants.AddressZero,
+        assetId: AddressZero,
         amount: ["14", 0],
       },
     ]);
@@ -37,7 +37,7 @@ describe(testName, () => {
 
   it("should resolve an eth transfer from alice -> bob", async () => {
     // Set test constants
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
     const transferAmount = "7";
 
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
@@ -64,7 +64,7 @@ describe(testName, () => {
 
   it("should work concurrently", async () => {
     // Set test constants
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
     const transferAmount = "7";
 
     // Create two transfers from alice -> bob

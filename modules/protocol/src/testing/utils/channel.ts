@@ -21,7 +21,8 @@ import {
   getSignerAddressFromPublicIdentifier,
 } from "@connext/vector-utils";
 import { Contract } from "@ethersproject/contracts";
-import { BigNumber, BigNumberish, constants } from "ethers";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import Pino from "pino";
 
 import { env } from "../env";
@@ -110,7 +111,7 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
     assetIds: [],
     processedDepositsA: [],
     processedDepositsB: [],
-    merkleRoot: constants.HashZero,
+    merkleRoot: HashZero,
     networkContext: setupParams.networkContext,
     latestUpdate: {
       type: UpdateType.setup,
@@ -130,7 +131,7 @@ export const depositInChannel = async (
   depositor: IVectorProtocol,
   depositorSigner: IChannelSigner,
   counterparty: IVectorProtocol,
-  assetId: string = constants.AddressZero,
+  assetId: string = AddressZero,
   amount?: BigNumberish,
 ): Promise<FullChannelState<any>> => {
   // If amount is not supplied, simply reconcile
@@ -164,7 +165,7 @@ export const depositInChannel = async (
       await depositorSigner.connectProvider(provider);
       // Get the previous balance before deploying
       const prev =
-        assetId === constants.AddressZero
+        assetId === AddressZero
           ? await depositorSigner.provider!.getBalance(channelAddress)
           : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
       const factory = new Contract(
@@ -203,7 +204,7 @@ export const depositInChannel = async (
       const totalDepositsBob = await channel.getTotalDepositsBob(assetId);
       // Deposit onchain
       const tx =
-        assetId === constants.AddressZero
+        assetId === AddressZero
           ? await depositorSigner.sendTransaction({ value, to: channelAddress })
           : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
       await tx.wait();
@@ -215,7 +216,7 @@ export const depositInChannel = async (
       }
       // If not assertion fail, assume we threw because channel isn't deployed
       const prev =
-        assetId === constants.AddressZero
+        assetId === AddressZero
           ? await depositorSigner.provider!.getBalance(channelAddress)
           : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
       const factory = new Contract(
@@ -233,7 +234,7 @@ export const depositInChannel = async (
       const deployedAddr = await created;
       expect(deployedAddr).to.equal(channelAddress);
       const tx =
-        assetId === constants.AddressZero
+        assetId === AddressZero
           ? await depositorSigner.sendTransaction({ value, to: deployedAddr })
           : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(deployedAddr, value);
       await tx.wait();
@@ -315,9 +316,7 @@ export const getSetupChannel = async (
 // is funded) it will not deploy the multisig
 export const getFundedChannel = async (
   testName = "deposit",
-  balances: { assetId: string; amount: [BigNumberish, BigNumberish] }[] = [
-    { assetId: constants.AddressZero, amount: [100, 0] },
-  ],
+  balances: { assetId: string; amount: [BigNumberish, BigNumberish] }[] = [{ assetId: AddressZero, amount: [100, 0] }],
   providedAlice?: { signer: IChannelSigner; store: IVectorStore },
 ): Promise<{
   channel: FullChannelState;
@@ -330,7 +329,7 @@ export const getFundedChannel = async (
     const { assetId, amount } = requestedDeposit;
     const [depositAlice, depositBob] = amount;
     // Perform the alice deposit
-    if (constants.Zero.lt(depositAlice)) {
+    if (Zero.lt(depositAlice)) {
       await depositInChannel(
         setupChannel.channelAddress,
         aliceInfo.protocol,
@@ -341,7 +340,7 @@ export const getFundedChannel = async (
       );
     }
     // Perform the bob deposit
-    if (constants.Zero.lt(depositBob)) {
+    if (Zero.lt(depositBob)) {
       await depositInChannel(
         setupChannel.channelAddress,
         bobInfo.protocol,

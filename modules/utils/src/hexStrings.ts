@@ -1,7 +1,6 @@
-// import { getAddress } from "@ethersproject/address";
+import { getAddress } from "@ethersproject/address";
 import { hexDataLength, hexlify, isHexString } from "@ethersproject/bytes";
 import { randomBytes } from "@ethersproject/random";
-import { utils } from "ethers";
 
 ////////////////////////////////////////
 // Validators
@@ -30,7 +29,7 @@ export const getAddressError = (value: any): string | undefined => {
   try {
     const hexError = getHexStringError(value, 20);
     if (hexError) return hexError;
-    utils.getAddress(value);
+    getAddress(value);
     return undefined;
   } catch (e) {
     return e.message;
@@ -51,5 +50,5 @@ export const isValidBytes32 = (value: any): boolean => !getBytes32Error(value);
 ////////////////////////////////////////
 // Generators
 
-export const getRandomAddress = (): string => utils.getAddress(hexlify(randomBytes(20)));
+export const getRandomAddress = (): string => getAddress(hexlify(randomBytes(20)));
 export const getRandomBytes32 = (): string => hexlify(randomBytes(32));

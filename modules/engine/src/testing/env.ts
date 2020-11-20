@@ -1,5 +1,5 @@
 import { ChainProviders } from "@connext/vector-types";
-import { Wallet } from "ethers";
+import { Wallet } from "@ethersproject/wallet";
 import pino from "pino";
 
 type EngineTestEnv = {

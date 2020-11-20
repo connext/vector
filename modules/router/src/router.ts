@@ -1,7 +1,7 @@
 import { BaseLogger } from "pino";
 import { FullChannelState, INodeService } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
-import { utils } from "ethers";
+import { formatEther } from "@ethersproject/units";
 
 import { setupListeners } from "./listener";
 import { IRouterStore } from "./services/store";
@@ -97,7 +97,7 @@ export class Router implements IRouter {
           // Set the proper collateral gauge
           collateral.set(
             { assetId, channelAddress: channelAddr },
-            parseFloat(utils.formatEther(balance.amount[this.publicIdentifier === aliceIdentifier ? 0 : 1])),
+            parseFloat(formatEther(balance.amount[this.publicIdentifier === aliceIdentifier ? 0 : 1])),
           );
         });
       }

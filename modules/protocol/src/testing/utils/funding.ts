@@ -1,10 +1,11 @@
 import { TestToken } from "@connext/vector-contracts";
-import { Contract, utils } from "ethers";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
 
 import { sugarDaddy, tokenAddress } from "../constants";
 
 export const fundAddress = async (recipient: string): Promise<void> => {
-  const value = utils.parseEther("100");
+  const value = parseEther("100");
 
   const ethTx = await sugarDaddy.sendTransaction({
     to: recipient,

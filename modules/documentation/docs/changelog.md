@@ -2,6 +2,7 @@
 
 ## Next Release
 
+- use individual ethers packages instead of ethers
 - various smaller contract changes
 - simplified inheritance hierarchy for channel mastercopy
 - cheaper `onlyViaProxy` modifier

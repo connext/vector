@@ -17,7 +17,9 @@ import {
   encodeTransferResolver,
   expect,
 } from "@connext/vector-utils";
-import { BigNumberish, constants, utils } from "ethers";
+import { defaultAbiCoder } from "@ethersproject/abi";
+import { BigNumberish } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 
 import { env } from "../env";
 import { chainId } from "../constants";
@@ -30,7 +32,7 @@ export const createTransfer = async (
   channelAddress: string,
   payor: IVectorProtocol,
   payee: IVectorProtocol,
-  assetId: string = constants.AddressZero,
+  assetId: string = AddressZero,
   amount: BigNumberish = 10,
 ): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
   // Create the transfer information
@@ -76,7 +78,7 @@ export const createTransfer = async (
   const encoding = encodeTransferResolver({ preImage }, transfer!.transferEncodings[1]);
 
   expect(transfer!.initialStateHash).to.be.eq(hash);
-  const decoded = utils.defaultAbiCoder.decode([transfer!.transferEncodings[1]], encoding)[0];
+  const decoded = defaultAbiCoder.decode([transfer!.transferEncodings[1]], encoding)[0];
   expect(decoded.preImage).to.be.deep.eq(preImage);
   expect(transfer!.transferEncodings.length).to.be.eq(2);
 
