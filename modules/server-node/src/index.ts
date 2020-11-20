@@ -226,6 +226,29 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
   },
 );
 
+server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
+  ":/publicIdentifier/registered-transfers",
+  {
+    schema: { params: NodeParams.GetRegisteredTransfersSchema, response: NodeResponses.GetRegisteredTransfersSchema },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getRegisteredTransfers, {
+      chainId: request.params.chainId,
+    });
+    try {
+      const res = await engine.request<"chan_getRegisteredTransfers">(params);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.Setup }>(
   "/internal-setup",
   { schema: { body: NodeParams.SetupSchema, response: NodeResponses.SetupSchema } },
