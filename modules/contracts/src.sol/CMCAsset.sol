@@ -6,7 +6,7 @@ import "./interfaces/ICMCAsset.sol";
 import "./interfaces/Types.sol";
 import "./CMCCore.sol";
 import "./lib/LibAsset.sol";
-import "./lib/LibUtils.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -60,7 +60,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
     view
     returns (uint256)
   {
-    return LibUtils.min(maxAmount, LibAsset.getOwnBalance(assetId));
+    return Math.min(maxAmount, LibAsset.getOwnBalance(assetId));
   }
 
   function transferAsset(address assetId, address payable recipient, uint256 amount)
