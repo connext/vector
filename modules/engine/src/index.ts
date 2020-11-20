@@ -221,6 +221,27 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok(channel);
   }
 
+  private async getRegisteredTransfers(
+    params: EngineParams.GetRegisteredTransfers,
+  ): Promise<
+    Result<
+      ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getRegisteredTransfers],
+      Error | OutboundChannelUpdateError
+    >
+  > {
+    const validate = ajv.compile(EngineParams.GetRegisteredTransfersSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+    }
+    const { chainId } = params;
+    const result = await this.chainService.getRegisteredTransfers(
+      this.chainAddresses[chainId].transferRegistryAddress,
+      chainId,
+    );
+    return result;
+  }
+
   private async setup(
     params: EngineParams.Setup,
   ): Promise<
@@ -598,6 +619,7 @@ export class VectorEngine implements IVectorEngine {
     if (typeof this[methodName] !== "function") {
       throw new Error(`Invalid method: ${methodName}`);
     }
+    console.log("trying to call", methodName);
     this.logger.info({ methodName }, "Method called");
 
     // every method must be a result type
