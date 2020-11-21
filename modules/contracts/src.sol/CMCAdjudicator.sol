@@ -152,8 +152,8 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         // Start with the final balances in ccs
         balance = ccs.balances[index];
         // Add unprocessed deposits
-        balance.amount[0] += tdAlice - ccs.processedDepositsA[index];
-        balance.amount[1] += tdBob - ccs.processedDepositsB[index];
+        balance.amount[0] = balance.amount[0].add(tdAlice - ccs.processedDepositsA[index]);
+        balance.amount[1] = balance.amount[1].add(tdBob - ccs.processedDepositsB[index]);
       }
 
       // Add result to emergency-withdrawable amounts
