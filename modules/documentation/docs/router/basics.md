@@ -15,3 +15,54 @@ Router consumes the server-node gRPC interface to do the following:
 - When a recipient comes online, the node emits an isAlive event for that channel. Router should catch isAlive events and complete all pending transfers to the recipient.
 
 Note that validation around allowed transfer types all happens in the node itself.
+
+## Testing Deployed Router
+
+So you've deployed a router -- that's great! Now it's time to check if it's all done correctly. If you don't have your own setup ready to go, you can use the modules within vector to spin up a local UI pointed at your deployed router:
+
+1. Create a `browser.config.json` if it does not exist:
+
+```sh
+> make config
+```
+
+2. Update your `browser.config.json` to have the correct `chainProviders`, `chainAddresses`, and `messagingUrl` for your chain. For example, if your router is configured for rinkeby:
+
+```json
+{
+  "adminToken": "cxt1234",
+  "chainAddresses": {
+    "4": {
+      "channelFactoryAddress": "0x00F89bFDFD0dECa323793C3d3d2aED2d3ac9FAbD",
+      "testTokenAddress": "0x07f2B2b021cF4F31bFBa79d77F39EA7Fb599213b",
+      "transferRegistryAddress": "0x78B498f3Bc35EeCEb7fA2aC80206652c4138721f"
+    }
+  },
+  "chainProviders": {
+    "4": "https://rinkeby.infura.io/v3/your-infura-secret"
+  },
+  "logLevel": "info",
+  "messagingUrl": "https://messaging.connext.network",
+  "production": false
+}
+```
+
+3. Spin up the `iframe-app`:
+
+```sh
+> make start-iframe-app
+```
+
+4. Spin up the `test-ui`:
+
+```sh
+> make start-test-ui
+```
+
+Note: If you are using an ad blocker, it may block the connection to the router. You would see an error like this:
+
+```sh
+transport.ts:70 WebSocket connection to 'wss://messaging.connext.network/ws-nats' failed: Unknown reason
+```
+
+From there, you can plug in your routers public identifier, and test out all the functionality.
