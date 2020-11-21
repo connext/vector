@@ -6,6 +6,7 @@
 - various smaller contract changes
 - simplified inheritance hierarchy for channel mastercopy
 - cheaper `onlyViaProxy` modifier
+- saturated addition for emergency-withdrawable amounts
 
 ## 0.0.13
 

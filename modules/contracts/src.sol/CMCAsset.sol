@@ -6,12 +6,14 @@ import "./interfaces/ICMCAsset.sol";
 import "./interfaces/Types.sol";
 import "./CMCCore.sol";
 import "./lib/LibAsset.sol";
+import "./lib/LibMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract CMCAsset is CMCCore, ICMCAsset {
   using SafeMath for uint256;
+  using LibMath for uint256;
 
   mapping(address => uint256) internal totalTransferred;
   mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
@@ -29,7 +31,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
     address recipient,
     uint256 amount
   ) internal {
-    emergencyWithdrawableAmount[assetId][recipient] += amount;
+    emergencyWithdrawableAmount[assetId][recipient] = emergencyWithdrawableAmount[assetId][recipient].satAdd(amount);
   }
 
   function makeBalanceEmergencyWithdrawable(
