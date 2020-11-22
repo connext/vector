@@ -74,6 +74,50 @@ There are three main public contracts:
 
 ## Events
 
+### ChannelCreation
+
+Emitted by the `ChannelFactory` when a new channel proxy is deployed, contains:
+
+- `channel`: `address` - The address of the newly deployed channel
+
+### ChannelDisputed
+
+Emitted by the `ChannelMastercopy` when `disputeChannel` has been called, contains:
+
+- `disputer`: `address` - The address of the `disputeChannel` caller
+- `channelAddress`: `address` - The address of the channel being disputed
+- `dispute`: `ChannelDispute` - The resulting channel dispute record
+
+### ChannelDefunded
+
+Emitted by the `ChannelMastercopy` when `defundChannel` has been called, contains:
+
+- `defunder`: `address` - The address of the `defundChannel` caller
+- `channelAddress`: `address` - The address of the channel being defunded
+- `dispute`: `ChannelDispute` - The resulting channel dispute record
+- `assetIds`: `address[]` - The assets that were defunded
+- `indices`: `indices` - The indices used when defunding assets
+
+### TransferDisputed
+
+Emitted by the `ChannelMastercopy` when `disputeTransfer` has been called, contains:
+
+- `disputer`: `address` - The address of the `disputeTransfer` caller
+- `channelAddress`: `address` - The address of the channel associated with the disputed transfer
+- `transferId`: `bytes32` - The identifier of the transfer being disputed
+- `dispute`: `TransferDispute` - The resulting transfer dispute record
+
+### TransferDefunded
+
+Emitted by the `ChannelMastercopy` when `defundTransfer` has been called, contains:
+
+- `defunder`: `address` - The address of the `defundTransfer` caller
+- `channelAddress`: `address` - The address of the channel associated with the defunded transfer
+- `dispute`: `TransferDispute` - The resulting transfer dispute record
+- `encodedInitialState`: `bytes` - The initial state used to defund transfer
+- `encodedInitialState`: `bytes` - The transfer resolver used to defund transfer
+- `balance`: `Balance` - The balance transferred during the transfer defund process.
+
 ## ChannelFactory
 
 ## ChannelMastercopy
