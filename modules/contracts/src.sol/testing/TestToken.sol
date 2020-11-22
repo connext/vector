@@ -9,15 +9,15 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  * Anybody can burn anyone else's tokens
  */
 contract TestToken is ERC20 {
-  constructor() ERC20("Test Token", "TEST") {
-    _mint(msg.sender, 1000000 ether);
-  }
+    constructor() ERC20("Test Token", "TEST") {
+        _mint(msg.sender, 1000000 ether);
+    }
 
-  function mint(address account, uint256 amount) external {
-    _mint(account, amount);
-  }
+    function mint(address account, uint256 amount) external {
+        _mint(account, amount);
+    }
 
-  function burn(address account, uint256 amount) external {
-    _burn(account, amount);
-  }
+    function burn(address account, uint256 amount) external {
+        _burn(account, amount);
+    }
 }

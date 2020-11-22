@@ -11,45 +11,61 @@ import "../lib/LibIterableMapping.sol";
 ///         LibIterableMapping.sol by aliasing them to public
 ///         methods.
 contract TestLibIterableMapping {
-  using LibIterableMapping for LibIterableMapping.IterableMapping;
+    using LibIterableMapping for LibIterableMapping.IterableMapping;
 
-  LibIterableMapping.IterableMapping data;
+    LibIterableMapping.IterableMapping data;
 
-  constructor() {}
+    constructor() {}
 
-  function stringEqual(string memory s, string memory t) public pure returns (bool) {
-    return LibIterableMapping.stringEqual(s, t);
-  }
+    function stringEqual(string memory s, string memory t)
+        public
+        pure
+        returns (bool)
+    {
+        return LibIterableMapping.stringEqual(s, t);
+    }
 
-  function isEmptyString(string memory s) public pure returns (bool) {
-    return LibIterableMapping.isEmptyString(s);
-  }
+    function isEmptyString(string memory s) public pure returns (bool) {
+        return LibIterableMapping.isEmptyString(s);
+    }
 
-  function nameExists(string memory name) public view returns (bool) {
-    return LibIterableMapping.nameExists(data, name);
-  }
+    function nameExists(string memory name) public view returns (bool) {
+        return LibIterableMapping.nameExists(data, name);
+    }
 
-  function length() public view returns (uint256) {
-    return LibIterableMapping.length(data);
-  }
+    function length() public view returns (uint256) {
+        return LibIterableMapping.length(data);
+    }
 
-  function getTransferDefinitionByName(string memory name) public view returns (RegisteredTransfer memory) {
-    return LibIterableMapping.getTransferDefinitionByName(data, name);
-  }
+    function getTransferDefinitionByName(string memory name)
+        public
+        view
+        returns (RegisteredTransfer memory)
+    {
+        return LibIterableMapping.getTransferDefinitionByName(data, name);
+    }
 
-  function getTransferDefinitionByIndex(uint256 index) public view returns (RegisteredTransfer memory) {
-    return LibIterableMapping.getTransferDefinitionByIndex(data, index);
-  }
+    function getTransferDefinitionByIndex(uint256 index)
+        public
+        view
+        returns (RegisteredTransfer memory)
+    {
+        return LibIterableMapping.getTransferDefinitionByIndex(data, index);
+    }
 
-  function getTransferDefinitions() public view returns (RegisteredTransfer[] memory) {
-    return LibIterableMapping.getTransferDefinitions(data);
-  }
+    function getTransferDefinitions()
+        public
+        view
+        returns (RegisteredTransfer[] memory)
+    {
+        return LibIterableMapping.getTransferDefinitions(data);
+    }
 
-  function addTransferDefinition(RegisteredTransfer memory transfer) public {
-    return LibIterableMapping.addTransferDefinition(data, transfer);
-  }
+    function addTransferDefinition(RegisteredTransfer memory transfer) public {
+        return LibIterableMapping.addTransferDefinition(data, transfer);
+    }
 
-  function removeTransferDefinition(string memory name) public {
-    return LibIterableMapping.removeTransferDefinition(data, name);
-  }
+    function removeTransferDefinition(string memory name) public {
+        return LibIterableMapping.removeTransferDefinition(data, name);
+    }
 }

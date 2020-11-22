@@ -16,6 +16,13 @@ import "./CMCAdjudicator.sol";
 /// (b) Executes transactions dispute logic on a hardcoded channel factory
 /// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
 
-contract ChannelMastercopy is CMCCore, CMCAsset, CMCDeposit, CMCWithdraw, CMCAdjudicator, IVectorChannel {
+contract ChannelMastercopy is
+    CMCCore,
+    CMCAsset,
+    CMCDeposit,
+    CMCWithdraw,
+    CMCAdjudicator,
+    IVectorChannel
+{
 
 }

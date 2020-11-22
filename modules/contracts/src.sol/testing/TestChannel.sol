@@ -18,15 +18,18 @@ import "../interfaces/ITestChannel.sol";
 ///         that functionality.
 
 contract TestChannel is ChannelMastercopy, ITestChannel {
-  function testMakeEmergencyWithdrawable(
-    address assetId,
-    address payable recipient,
-    uint256 maxAmount
-  ) public override {
-    makeEmergencyWithdrawable(assetId, recipient, maxAmount);
-  }
+    function testMakeEmergencyWithdrawable(
+        address assetId,
+        address payable recipient,
+        uint256 maxAmount
+    ) public override {
+        makeEmergencyWithdrawable(assetId, recipient, maxAmount);
+    }
 
-  function testMakeBalanceEmergencyWithdrawable(address assetId, Balance memory balance) public override {
-    makeBalanceEmergencyWithdrawable(assetId, balance);
-  }
+    function testMakeBalanceEmergencyWithdrawable(
+        address assetId,
+        Balance memory balance
+    ) public override {
+        makeBalanceEmergencyWithdrawable(assetId, balance);
+    }
 }
