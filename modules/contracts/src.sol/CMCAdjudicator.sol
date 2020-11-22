@@ -227,7 +227,10 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         "CMCAdjudicator: INVALID_BALANCES"
       );
     } else {
-      // After dispute expiry, if the responder hasn't resolved, we defund the initial balance
+      // After dispute expiry, if the responder hasn't resolved, we defund the 
+      // initial balance (can't ever be the non-initial balance since resolved
+      // transfers do not exist in the channel state and cannot be defunded, so
+      // safe to do)
       balance = cts.balance;
     }
 
