@@ -3,12 +3,16 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 import "./ICMCCore.sol";
-import "./ICMCAccountant.sol";
+import "./ICMCAsset.sol";
+import "./ICMCDeposit.sol";
+import "./ICMCWithdraw.sol";
 import "./ICMCAdjudicator.sol";
 
 
 interface IVectorChannel is
     ICMCCore,
-    ICMCAccountant,
+    ICMCAsset,
+    ICMCDeposit,
+    ICMCWithdraw,
     ICMCAdjudicator
     {}

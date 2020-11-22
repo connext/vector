@@ -47,7 +47,7 @@ describe("ChannelMastercopy", function() {
       { name: "getAlice", args: [] },
       { name: "getBob", args: [] },
 
-      // from IAssetTransfer
+      // from ICMCAsset
       { name: "getTotalTransferred", args: [AddressZero] },
       { name: "getEmergencyWithdrawableAmount", args: [AddressZero, AddressZero] },
       { name: "emergencyWithdraw", args: [AddressZero, AddressZero, AddressZero] },

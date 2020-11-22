@@ -30,7 +30,7 @@ describe("CMCCore.sol", function() {
       await setupTx.wait();
       await expect(
         channel.setup(alice.address, bob.address),
-      ).revertedWith("ReentrancyGuard: ALREADY_INITIALIZED");
+      ).revertedWith("CMCCore: ALREADY_SETUP");
     });
 
     it("should fail to setup if alice is not supplied", async () => {

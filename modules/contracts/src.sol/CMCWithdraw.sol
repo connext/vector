@@ -6,12 +6,12 @@ import "./interfaces/Commitment.sol";
 import "./interfaces/ICMCWithdraw.sol";
 import "./interfaces/WithdrawHelper.sol";
 import "./CMCCore.sol";
-import "./AssetTransfer.sol";
+import "./CMCAsset.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/LibUtils.sol";
 
-contract CMCWithdraw is CMCCore, AssetTransfer, ICMCWithdraw {
+contract CMCWithdraw is CMCCore, CMCAsset, ICMCWithdraw {
   using LibChannelCrypto for bytes32;
 
   mapping(bytes32 => bool) private isExecuted;

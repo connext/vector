@@ -7,27 +7,22 @@ import "./interfaces/ICMCAdjudicator.sol";
 import "./interfaces/ITransferDefinition.sol";
 import "./interfaces/Types.sol";
 import "./CMCCore.sol";
-import "./CMCAccountant.sol";
+import "./CMCAsset.sol";
+import "./CMCDeposit.sol";
 import "./lib/LibChannelCrypto.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// @title CMCAdjudicator - Dispute logic for ONE channel
-contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
+contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
   using LibChannelCrypto for bytes32;
   using SafeMath for uint256;
 
   uint256 private constant INITIAL_DEFUND_NONCE = 1;
-  uint256 private constant QUERY_DEPOSITS_GAS_LIMIT = 25000;
 
   ChannelDispute private channelDispute;
   mapping(address => uint256) private defundNonces;
   mapping(bytes32 => TransferDispute) private transferDisputes;
-
-  modifier onlySelf() {
-    require(msg.sender == address(this), "AssetTransfer: NOT_SELF");
-    _;
-  }
 
   modifier validateChannel(CoreChannelState calldata ccs) {
     require(
@@ -145,7 +140,8 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       }
 
       // Get total deposits
-      (uint256 tdAlice, uint256 tdBob) = getTotalDeposits(assetId);
+      uint256 tdAlice = _getTotalDepositsAlice(assetId);
+      uint256 tdBob = _getTotalDepositsBob(assetId);
 
       Balance memory balance;
 
@@ -156,13 +152,11 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
         // Start with the final balances in ccs
         balance = ccs.balances[index];
         // Add unprocessed deposits
-        balance.amount[0] += tdAlice - ccs.processedDepositsA[index];
-        balance.amount[1] += tdBob - ccs.processedDepositsB[index];
+        balance.amount[0] = balance.amount[0].add(tdAlice - ccs.processedDepositsA[index]);
+        balance.amount[1] = balance.amount[1].add(tdBob - ccs.processedDepositsB[index]);
       }
 
-      // Transfer funds; this will never revert or fail otherwise,
-      // i.e. if the underlying "real" asset transfer fails,
-      // the funds are made available for emergency withdrawal
+      // Add result to emergency-withdrawable amounts
       makeBalanceEmergencyWithdrawable(assetId, balance);
     }
 
@@ -238,9 +232,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
     }
 
     // Depending on previous code path, defund either resolved or initial balance
-    // This will never revert or fail otherwise,
-    // i.e. if the underlying "real" asset transfer fails,
-    // the funds are made available for emergency withdrawal
     makeBalanceEmergencyWithdrawable(cts.assetId, balance);
 
     // Emit event
@@ -252,25 +243,6 @@ contract CMCAdjudicator is CMCCore, CMCAccountant, ICMCAdjudicator {
       encodedTransferResolver,
       balance
     );
-  }
-
-  function getTotalDeposits(address assetId) internal returns (uint256 tdAlice, uint256 tdBob) {
-    tdAlice = _getTotalDepositsAlice(assetId);
-
-    // If the following call fails, we were unable to query the channel's balance;
-    // this probably means the token is totally fucked up.
-    // Since we mustn't revert here (in order to prevent other assets from becoming frozen),
-    // we proceed anyway and assume there are no unprocessed deposits for Bob.
-    (bool success, bytes memory returnData) = address(this).call{gas: QUERY_DEPOSITS_GAS_LIMIT}(
-      abi.encodeWithSignature("_depositsBob(address)", assetId)
-    );
-    if (success) {
-      tdBob = abi.decode(returnData, (uint256));
-    }
-  }
-
-  function _depositsBob(address assetId) external view onlySelf returns (uint256) {
-    return _getTotalDepositsBob(assetId);
   }
 
   function verifySignatures(

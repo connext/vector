@@ -2,7 +2,7 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-interface IAssetTransfer {
+interface ICMCAsset {
 
   function getTotalTransferred(
     address assetId

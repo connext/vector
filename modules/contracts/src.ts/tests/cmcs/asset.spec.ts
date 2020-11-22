@@ -1,17 +1,18 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
+import { Balance } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
 
-import { deployContracts } from "..";
-import { AddressBook } from "../addressBook";
+import { deployContracts } from "../..";
+import { AddressBook } from "../../addressBook";
 
-import { bob, rando } from "./constants";
-import { getTestAddressBook, getTestChannel } from "./utils";
+import { bob, rando } from "../constants";
+import { getTestAddressBook, getTestChannel } from "../utils";
 
-describe("AssetTransfer", function() {
+describe("CMCAsset", function() {
   this.timeout(120_000);
   let addressBook: AddressBook;
   let assetTransfer: Contract;
@@ -23,12 +24,12 @@ describe("AssetTransfer", function() {
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(bob, addressBook, [
-      ["AssetTransfer", []],
+      ["CMCAsset", []],
       ["TestToken", []],
       ["FailingToken", []],
       ["NonconformingToken", []],
     ]);
-    assetTransfer = addressBook.getContract("AssetTransfer");
+    assetTransfer = addressBook.getContract("CMCAsset");
     // NOTE: safe to do because of inheritance pattern
     channel = await getTestChannel(addressBook);
 
@@ -118,6 +119,31 @@ describe("AssetTransfer", function() {
     });
   });
 
+  describe("makeBalanceEmergencyWithdrawable", () => {
+    beforeEach(async () => {
+      // Fund the channel with tokens and eth
+      const tx = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
+      await tx.wait();
+    });
+
+    it("should work", async () => {
+      const valueBob = BigNumber.from(1000);
+      const valueRando = BigNumber.from(2000);
+      const balance: Balance = {
+        to: [bob.address, rando.address],
+        amount: [valueBob.toString(), valueRando.toString()],
+      };
+      const preTransferBob = await bob.getBalance();
+      const preTransferRando = await rando.getBalance();
+      await channel.testMakeBalanceEmergencyWithdrawable(AddressZero, balance);
+      expect(await bob.getBalance()).to.be.eq(preTransferBob);
+      expect(await rando.getBalance()).to.be.eq(preTransferRando);
+      expect(await channel.getTotalTransferred(AddressZero)).to.be.eq(Zero);
+      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, bob.address)).to.be.eq(valueBob);
+      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, rando.address)).to.be.eq(valueRando);
+    });
+  });
+
   describe("emergencyWithdraw", () => {
     const value = BigNumber.from(1000);
 
@@ -142,19 +168,19 @@ describe("AssetTransfer", function() {
     it("should fail if owner is not msg.sender or recipient", async () => {
       await expect(
         channel.connect(rando).emergencyWithdraw(failingToken.address, bob.address, rando.address),
-      ).revertedWith("AssetTransfer: OWNER_MISMATCH");
+      ).revertedWith("CMCAsset: OWNER_MISMATCH");
     });
 
     it("should fail if withdrawable amount is 0", async () => {
       await expect(channel.connect(bob).emergencyWithdraw(token.address, bob.address, bob.address)).revertedWith(
-        "AssetTransfer: NO_OP",
+        "CMCAsset: NO_OP",
       );
     });
 
     it("should fail if transfer fails", async () => {
       await (await failingToken.setTransferShouldFail(true)).wait();
       await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
-        "AssetTransfer: TRANSFER_FAILED",
+        "CMCAsset: TRANSFER_FAILED",
       );
     });
 
