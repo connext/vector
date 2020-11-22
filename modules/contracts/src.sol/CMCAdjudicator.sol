@@ -80,8 +80,11 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         bytes calldata aliceSignature,
         bytes calldata bobSignature
     ) external override onlyViaProxy nonReentrant validateChannel(ccs) {
+        // Generate hash
+        bytes32 ccsHash = hashChannelState(ccs);
+
         // Verify Alice's and Bob's signature on the channel state
-        verifySignatures(ccs, aliceSignature, bobSignature);
+        verifySignatures(ccsHash, aliceSignature, bobSignature);
 
         // We cannot dispute a channel in its defund phase
         require(!inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
@@ -103,7 +106,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         }
 
         // Store newer state
-        channelDispute.channelStateHash = hashChannelState(ccs);
+        channelDispute.channelStateHash = ccsHash;
         channelDispute.nonce = ccs.nonce;
         channelDispute.merkleRoot = ccs.merkleRoot;
 
@@ -328,20 +331,18 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     }
 
     function verifySignatures(
-        CoreChannelState calldata ccs,
+        bytes32 ccsHash,
         bytes calldata aliceSignature,
         bytes calldata bobSignature
     ) internal pure {
         bytes32 commitment =
-            keccak256(
-                abi.encode(CommitmentType.ChannelState, hashChannelState(ccs))
-            );
+            keccak256(abi.encode(CommitmentType.ChannelState, ccsHash));
         require(
-            commitment.checkSignature(aliceSignature, ccs.alice),
+            commitment.checkSignature(aliceSignature, alice),
             "CMCAdjudicator: INVALID_ALICE_SIG"
         );
         require(
-            commitment.checkSignature(bobSignature, ccs.bob),
+            commitment.checkSignature(bobSignature, bob),
             "CMCAdjudicator: INVALID_BOB_SIG"
         );
     }
