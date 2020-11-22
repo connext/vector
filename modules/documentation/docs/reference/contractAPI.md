@@ -1,0 +1,81 @@
+# Contract API Reference
+
+There are three main public contracts:
+
+- [`ChannelFactory`](#channel-factory): deploys and sets up the channel multisigs
+- [`ChannelMastercopy`](#channel-mastercopy): contains all logic for channel multisigs
+- [`TransferRegistry`](#transfer-registry): contains all supported transfer definitions
+
+## Entities
+
+### Balance
+
+`Balance`: `struct` - contains:
+
+- `amount`: `uint256[2]` - Balance owed to `[alice, bob]` in channel, or `[initiator, responder]` in transfers. Represents value to be transferred in the case of a defund event.
+- `to`: `address payable[2]` - Addresses of `[alice, bob]` in channel balances, or `[initiator, responder]` in transfers. Represents where the funds will be sent in the case of a defund event.
+
+### CoreChannelState
+
+`CoreChannelState`: `struct` - contains:
+
+- `channelAddress`: `address` - Deployed address of the channel multisig
+- `alice`: `address` - The non-priveleged actor of the channel (must call `depositAlice` function when sending funds to the multisig). Intermediaries will always be `alice` in their channels with users.
+- `bob`: `address` - The priveleged actor of the channel (can send funds directly to the `channelAddress` when depositing). End-users will always be `bob` in their channels with intermediaries.
+- `assetIds`: `address[]` - Address of all assets that have ever been deposited into the channel
+- `balances`: `Balance[]` - Balances of participants, ordered by `assetId` (i.e. `balances[i]` represents the balance of each participant for the `assetId` stored at `assetId[i]`)
+- `processedDepositsA`: `uint256[]` - Deposits that have been incorporated into the offchain state for `alice`, ordered by `assetId` (allows unreconciled assets to be properly disbursed during adjudication)
+- `processedDepositsB`: `uint256[]` - Deposits that have been incorporated into the offchain state for `bob`, ordered by `assetId` (allows unreconciled assets to be properly disbursed during adjudication)
+- `defundNonces`: `uint256[]` - The latest nonce the channel was defunded at, ordered by `assetId` (prevents double-defunding of assets during adjudication)
+- `timeout`: `uint256` - The time used to set dispute windows, in seconds.
+- `nonce`: `uint256` - The channel nonce
+- `merkleRoot`: `bytes32` - The root of the merkle tree constructed from the hash of all active initial transfer states
+
+### CoreTransferState
+
+`CoreTransferState`: `struct` - contains:
+
+- `channelAddress`: `address` - Deployed address of the channel multisig associated with the transfer
+- `transferId`: `bytes32` - Unique transfer identifier, constructed by the participants and channel nonce
+- `transferDefinition`: `address` - The deployed address of the transfer logic
+- `initiator`: `address` - The transfer initiator address
+- `responder`: `address` - The transfer responder address
+- `assetId`: `address` - The deployed address of the transfer asset
+- `balance`: `Balance` - The balance of the transfer
+- `transferTimeout`: `uint256` - The timeout for the transfer to be resolved
+- `initialStateHash`: `bytes32` - Hash of the transfer initial state (as defined by the transfer definition)
+
+### ChannelDispute
+
+`ChannelDispute`: `struct` - contains:
+
+- `channelStateHash`: `bytes32` - The hash of the channel state being disputed
+- `nonce`: `uint256` - The nonce of the state being disputed
+- `merkleRoot`: `bytes32` - The root of the merkle tree constructed from the hash of all initial transfer states active at the disputed channel state nonce
+- `consensusExpiry`: `uint256` - The `block.timestamp` representing when it is no longer acceptable to progress the nonce of the channel dispute. Calculated as `block.timestamp.add(channelState.timeout)` at the time of channel dispute
+- `defundExpiry`: `uint256` - The `block.timestamp` representing when it is no longer acceptable to attempt to defund any additional transfers or assets. Calculated as `block.timestamp.add(channelState.timeout.mul(2))` at the time of channel dispute
+
+### TransferDispute
+
+`TransferDispute`: `struct` - contains:
+
+- `transferStateHash`: `bytes32` - The hash of the disputed transfer state
+- `transferDisputeExpiry`: `uint256` - The `block.timestamp` representing when the transfer can no longer be defunded. Calculated as `block.timestamp.add(transferState.transferTimeout)`
+- `isDefunded`: `bool` - Flag indicating whether a disputed transfer has been defunded
+
+### RegisteredTransfer
+
+`RegisteredTransfer`: `struct` - contains:
+
+- `name`: `string` - The name of the transfer (i.e. `HashlockTransfer`)
+- `definition`: `address` - The deployed address of the contract hosting the transfer logic
+- `stateEncoding`: `string` - The abi encoder v2 compatible encoding of the transfer state used in the transfer definition
+- `resolverEncoding`: `string` - The abi encoder v2 compatible encoding of the transfer resolver used in the transfer definition
+
+## Events
+
+## ChannelFactory
+
+## ChannelMastercopy
+
+## TransferRegistry
