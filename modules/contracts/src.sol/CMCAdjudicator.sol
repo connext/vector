@@ -334,7 +334,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         bytes32 ccsHash,
         bytes calldata aliceSignature,
         bytes calldata bobSignature
-    ) internal pure {
+    ) internal view {
         bytes32 commitment =
             keccak256(abi.encode(CommitmentType.ChannelState, ccsHash));
         require(
