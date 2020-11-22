@@ -33,19 +33,11 @@ contract TestLibIterableMapping {
     return LibIterableMapping.length(data);
   }
 
-  function getTransferDefinitionByName(string memory name)
-    public
-    view
-    returns (RegisteredTransfer memory)
-  {
+  function getTransferDefinitionByName(string memory name) public view returns (RegisteredTransfer memory) {
     return LibIterableMapping.getTransferDefinitionByName(data, name);
   }
 
-  function getTransferDefinitionByIndex(uint256 index)
-    public
-    view
-    returns (RegisteredTransfer memory)
-  {
+  function getTransferDefinitionByIndex(uint256 index) public view returns (RegisteredTransfer memory) {
     return LibIterableMapping.getTransferDefinitionByIndex(data, index);
   }
 

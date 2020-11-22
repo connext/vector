@@ -13,9 +13,7 @@ struct WithdrawData {
 }
 
 interface ICMCWithdraw {
-  function getWithdrawalTransactionRecord(
-    WithdrawData calldata wd
-  ) external view returns (bool);
+  function getWithdrawalTransactionRecord(WithdrawData calldata wd) external view returns (bool);
 
   function withdraw(
     WithdrawData calldata wd,

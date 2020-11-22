@@ -26,7 +26,10 @@ interface ITransferDefinition {
   // to make it easier for implementers to add new transfers by
   // only include a `.sol` file
   function Name() external view returns (string memory);
+
   function StateEncoding() external view returns (string memory);
+
   function ResolverEncoding() external view returns (string memory);
+
   function getRegistryInformation() external view returns (RegisteredTransfer memory);
 }

@@ -37,18 +37,18 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     _;
   }
 
-  function getChannelDispute() external override view onlyViaProxy nonReentrantView returns (ChannelDispute memory) {
+  function getChannelDispute() external view override onlyViaProxy nonReentrantView returns (ChannelDispute memory) {
     return channelDispute;
   }
 
-  function getDefundNonce(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+  function getDefundNonce(address assetId) external view override onlyViaProxy nonReentrantView returns (uint256) {
     return defundNonces[assetId];
   }
 
   function getTransferDispute(bytes32 transferId)
     external
-    override
     view
+    override
     onlyViaProxy
     nonReentrantView
     returns (TransferDispute memory)

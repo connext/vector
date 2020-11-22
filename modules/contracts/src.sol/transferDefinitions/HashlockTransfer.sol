@@ -23,7 +23,7 @@ contract HashlockTransfer is TransferDefinition {
   string public constant override StateEncoding = "tuple(bytes32 lockHash, uint256 expiry)";
   string public constant override ResolverEncoding = "tuple(bytes32 preImage)";
 
-  function create(bytes calldata encodedBalance, bytes calldata encodedState) external override view returns (bool) {
+  function create(bytes calldata encodedBalance, bytes calldata encodedState) external view override returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
     Balance memory balance = abi.decode(encodedBalance, (Balance));
 
@@ -37,7 +37,7 @@ contract HashlockTransfer is TransferDefinition {
     bytes calldata encodedBalance,
     bytes calldata encodedState,
     bytes calldata encodedResolver
-  ) external override view returns (Balance memory) {
+  ) external view override returns (Balance memory) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
     TransferResolver memory resolver = abi.decode(encodedResolver, (TransferResolver));
     Balance memory balance = abi.decode(encodedBalance, (Balance));

@@ -13,7 +13,14 @@ contract CMCDeposit is CMCCore, CMCAsset, ICMCDeposit {
 
   receive() external payable onlyViaProxy nonReentrant {}
 
-  function getTotalDepositsAlice(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+  function getTotalDepositsAlice(address assetId)
+    external
+    view
+    override
+    onlyViaProxy
+    nonReentrantView
+    returns (uint256)
+  {
     return _getTotalDepositsAlice(assetId);
   }
 
@@ -21,7 +28,7 @@ contract CMCDeposit is CMCCore, CMCAsset, ICMCDeposit {
     return depositsAlice[assetId];
   }
 
-  function getTotalDepositsBob(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+  function getTotalDepositsBob(address assetId) external view override onlyViaProxy nonReentrantView returns (uint256) {
     return _getTotalDepositsBob(assetId);
   }
 
@@ -30,14 +37,11 @@ contract CMCDeposit is CMCCore, CMCAsset, ICMCDeposit {
     return LibAsset.getOwnBalance(assetId) + totalTransferred[assetId] - depositsAlice[assetId];
   }
 
-  function depositAlice(address assetId, uint256 amount) external override payable onlyViaProxy nonReentrant {
+  function depositAlice(address assetId, uint256 amount) external payable override onlyViaProxy nonReentrant {
     if (LibAsset.isEther(assetId)) {
       require(msg.value == amount, "CMCDeposit: VALUE_MISMATCH");
     } else {
-      require(
-        LibERC20.transferFrom(assetId, msg.sender, address(this), amount),
-        "CMCDeposit: ERC20_TRANSFER_FAILED"
-      );
+      require(LibERC20.transferFrom(assetId, msg.sender, address(this), amount), "CMCDeposit: ERC20_TRANSFER_FAILED");
     }
     // NOTE: explicitly do NOT use safemath here
     depositsAlice[assetId] += amount;

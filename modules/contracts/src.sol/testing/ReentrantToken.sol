@@ -16,7 +16,11 @@ contract ReentrantToken is ERC20 {
   }
 
   // Designed to be called alongside CMCDeposit.depositAlice
-  function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+  function transferFrom(
+    address sender,
+    address recipient,
+    uint256 amount
+  ) public override returns (bool) {
     IVectorChannel(channel).depositAlice(address(this), amount);
     return super.transferFrom(sender, recipient, amount);
   }

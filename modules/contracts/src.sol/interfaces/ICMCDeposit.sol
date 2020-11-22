@@ -7,8 +7,5 @@ interface ICMCDeposit {
 
   function getTotalDepositsBob(address assetId) external view returns (uint256);
 
-  function depositAlice(
-    address assetId,
-    uint256 amount
-  ) external payable;
+  function depositAlice(address assetId, uint256 amount) external payable;
 }

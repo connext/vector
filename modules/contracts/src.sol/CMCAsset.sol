@@ -22,7 +22,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
     totalTransferred[assetId] += amount;
   }
 
-  function getTotalTransferred(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
+  function getTotalTransferred(address assetId) external view override onlyViaProxy nonReentrantView returns (uint256) {
     return totalTransferred[assetId];
   }
 
@@ -34,10 +34,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
     emergencyWithdrawableAmount[assetId][recipient] = emergencyWithdrawableAmount[assetId][recipient].satAdd(amount);
   }
 
-  function makeBalanceEmergencyWithdrawable(
-    address assetId,
-    Balance memory balance
-  ) internal {
+  function makeBalanceEmergencyWithdrawable(address assetId, Balance memory balance) internal {
     for (uint256 i = 0; i < 2; i++) {
       uint256 amount = balance.amount[i];
       if (amount > 0) {
@@ -48,8 +45,8 @@ contract CMCAsset is CMCCore, ICMCAsset {
 
   function getEmergencyWithdrawableAmount(address assetId, address owner)
     external
-    override
     view
+    override
     onlyViaProxy
     nonReentrantView
     returns (uint256)
@@ -57,17 +54,15 @@ contract CMCAsset is CMCCore, ICMCAsset {
     return emergencyWithdrawableAmount[assetId][owner];
   }
 
-  function getAvailableAmount(address assetId, uint256 maxAmount)
-    internal
-    view
-    returns (uint256)
-  {
+  function getAvailableAmount(address assetId, uint256 maxAmount) internal view returns (uint256) {
     return Math.min(maxAmount, LibAsset.getOwnBalance(assetId));
   }
 
-  function transferAsset(address assetId, address payable recipient, uint256 amount)
-    internal
-  {
+  function transferAsset(
+    address assetId,
+    address payable recipient,
+    uint256 amount
+  ) internal {
     registerTransfer(assetId, amount);
     require(LibAsset.unregisteredTransfer(assetId, recipient, amount), "CMCAsset: TRANSFER_FAILED");
   }

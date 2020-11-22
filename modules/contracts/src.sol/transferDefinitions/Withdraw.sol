@@ -28,12 +28,11 @@ contract Withdraw is TransferDefinition {
   }
 
   string public constant override Name = "Withdraw";
-  string
-    public constant
-    override StateEncoding = "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee, address callTo, bytes callData)";
+  string public constant override StateEncoding =
+    "tuple(bytes initiatorSignature, address initiator, address responder, bytes32 data, uint256 nonce, uint256 fee, address callTo, bytes callData)";
   string public constant override ResolverEncoding = "tuple(bytes responderSignature)";
 
-  function create(bytes calldata encodedBalance, bytes calldata encodedState) external override pure returns (bool) {
+  function create(bytes calldata encodedBalance, bytes calldata encodedState) external pure override returns (bool) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
     Balance memory balance = abi.decode(encodedBalance, (Balance));
     require(balance.amount[1] == 0, "Withdraw: NONZERO_RECIPIENT_BALANCE");
@@ -49,7 +48,7 @@ contract Withdraw is TransferDefinition {
     bytes calldata encodedBalance,
     bytes calldata encodedState,
     bytes calldata encodedResolver
-  ) external override pure returns (Balance memory) {
+  ) external pure override returns (Balance memory) {
     TransferState memory state = abi.decode(encodedState, (TransferState));
     TransferResolver memory resolver = abi.decode(encodedResolver, (TransferResolver));
     Balance memory balance = abi.decode(encodedBalance, (Balance));

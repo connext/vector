@@ -14,8 +14,8 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
   /// @notice Set invalid participants to block the mastercopy from being used directly
   ///         Nonzero address also prevents the mastercopy from being setup
   ///         Only setting alice is sufficient, setting bob too wouldn't change anything
-  constructor () {
-      mastercopyAddress = address(this);
+  constructor() {
+    mastercopyAddress = address(this);
   }
 
   // Prevents us from calling methods directly from the mastercopy contract
@@ -38,13 +38,13 @@ contract CMCCore is ReentrancyGuard, ICMCCore {
 
   /// @notice A getter function for the bob of the multisig
   /// @return Bob's signer address
-  function getAlice() external override view onlyViaProxy nonReentrantView returns (address) {
+  function getAlice() external view override onlyViaProxy nonReentrantView returns (address) {
     return alice;
   }
 
   /// @notice A getter function for the bob of the multisig
   /// @return Alice's signer address
-  function getBob() external override view onlyViaProxy nonReentrantView returns (address) {
+  function getBob() external view override onlyViaProxy nonReentrantView returns (address) {
     return bob;
   }
 }

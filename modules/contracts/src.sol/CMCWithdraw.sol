@@ -23,8 +23,8 @@ contract CMCWithdraw is CMCCore, CMCAsset, ICMCWithdraw {
 
   function getWithdrawalTransactionRecord(WithdrawData calldata wd)
     external
-    override
     view
+    override
     onlyViaProxy
     nonReentrantView
     returns (bool)

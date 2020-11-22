@@ -5,10 +5,5 @@ pragma experimental ABIEncoderV2;
 import "./ICMCWithdraw.sol";
 
 interface WithdrawHelper {
-
-  function execute(
-    WithdrawData calldata wd,
-    uint256 actualAmount
-  ) external;
-
+  function execute(WithdrawData calldata wd, uint256 actualAmount) external;
 }
