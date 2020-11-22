@@ -84,7 +84,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         bytes32 ccsHash = hashChannelState(ccs);
 
         // Verify Alice's and Bob's signature on the channel state
-        verifySignatures(ccsHash, aliceSignature, bobSignature);
+        verifySignaturesOnChannelStateHash(ccsHash, aliceSignature, bobSignature);
 
         // We cannot dispute a channel in its defund phase
         require(!inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
@@ -330,7 +330,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         );
     }
 
-    function verifySignatures(
+    function verifySignaturesOnChannelStateHash(
         bytes32 ccsHash,
         bytes calldata aliceSignature,
         bytes calldata bobSignature
