@@ -20,6 +20,7 @@
     "src.ts"
   ],
   "scripts": {
+    "prettier": "prettier --write './src.sol/**/*.sol'",
     "build": "rm -rf dist && npx hardhat compile && tsc",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
     "test": "mocha --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
