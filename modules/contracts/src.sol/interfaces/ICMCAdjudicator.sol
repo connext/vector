@@ -60,6 +60,7 @@ interface ICMCAdjudicator {
   event TransferDefunded(
     address defunder,
     address channelAddress,
+    bytes32 transferId,
     TransferDispute dispute,
     bytes encodedInitialState,
     bytes encodedResolver,

@@ -241,6 +241,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     emit TransferDefunded(
       msg.sender,
       address(this),
+      cts.transferId,
       transferDispute,
       encodedInitialTransferState,
       encodedTransferResolver,
