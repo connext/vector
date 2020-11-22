@@ -1,4 +1,5 @@
 # Node API Reference
+
 There is one consolidated API across both the `server-node` and `browser-node`. Server nodes expose that interface via HTTP and gRPC (coming soon), and we additionally have [an example TS "client"](./modules/utils/src/serverNode.ts) which wraps the HTTP methods. The browser node exposes a TS interface only.
 
 ## Base Objects
