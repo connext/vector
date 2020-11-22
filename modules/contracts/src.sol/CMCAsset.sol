@@ -12,79 +12,103 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract CMCAsset is CMCCore, ICMCAsset {
-  using SafeMath for uint256;
-  using LibMath for uint256;
+    using SafeMath for uint256;
+    using LibMath for uint256;
 
-  mapping(address => uint256) internal totalTransferred;
-  mapping(address => mapping(address => uint256)) private emergencyWithdrawableAmount;
+    mapping(address => uint256) internal totalTransferred;
+    mapping(address => mapping(address => uint256))
+        private emergencyWithdrawableAmount;
 
-  function registerTransfer(address assetId, uint256 amount) internal {
-    totalTransferred[assetId] += amount;
-  }
-
-  function getTotalTransferred(address assetId) external override view onlyViaProxy nonReentrantView returns (uint256) {
-    return totalTransferred[assetId];
-  }
-
-  function makeEmergencyWithdrawable(
-    address assetId,
-    address recipient,
-    uint256 amount
-  ) internal {
-    emergencyWithdrawableAmount[assetId][recipient] = emergencyWithdrawableAmount[assetId][recipient].satAdd(amount);
-  }
-
-  function makeBalanceEmergencyWithdrawable(
-    address assetId,
-    Balance memory balance
-  ) internal {
-    for (uint256 i = 0; i < 2; i++) {
-      uint256 amount = balance.amount[i];
-      if (amount > 0) {
-        makeEmergencyWithdrawable(assetId, balance.to[i], amount);
-      }
+    function registerTransfer(address assetId, uint256 amount) internal {
+        totalTransferred[assetId] += amount;
     }
-  }
 
-  function getEmergencyWithdrawableAmount(address assetId, address owner)
-    external
-    override
-    view
-    onlyViaProxy
-    nonReentrantView
-    returns (uint256)
-  {
-    return emergencyWithdrawableAmount[assetId][owner];
-  }
+    function getTotalTransferred(address assetId)
+        external
+        view
+        override
+        onlyViaProxy
+        nonReentrantView
+        returns (uint256)
+    {
+        return totalTransferred[assetId];
+    }
 
-  function getAvailableAmount(address assetId, uint256 maxAmount)
-    internal
-    view
-    returns (uint256)
-  {
-    return Math.min(maxAmount, LibAsset.getOwnBalance(assetId));
-  }
+    function makeEmergencyWithdrawable(
+        address assetId,
+        address recipient,
+        uint256 amount
+    ) internal {
+        emergencyWithdrawableAmount[assetId][
+            recipient
+        ] = emergencyWithdrawableAmount[assetId][recipient].satAdd(amount);
+    }
 
-  function transferAsset(address assetId, address payable recipient, uint256 amount)
-    internal
-  {
-    registerTransfer(assetId, amount);
-    require(LibAsset.unregisteredTransfer(assetId, recipient, amount), "CMCAsset: TRANSFER_FAILED");
-  }
+    function makeBalanceEmergencyWithdrawable(
+        address assetId,
+        Balance memory balance
+    ) internal {
+        for (uint256 i = 0; i < 2; i++) {
+            uint256 amount = balance.amount[i];
+            if (amount > 0) {
+                makeEmergencyWithdrawable(assetId, balance.to[i], amount);
+            }
+        }
+    }
 
-  function emergencyWithdraw(
-    address assetId,
-    address owner,
-    address payable recipient
-  ) external override onlyViaProxy nonReentrant {
-    require(msg.sender == owner || owner == recipient, "CMCAsset: OWNER_MISMATCH");
+    function getEmergencyWithdrawableAmount(address assetId, address owner)
+        external
+        view
+        override
+        onlyViaProxy
+        nonReentrantView
+        returns (uint256)
+    {
+        return emergencyWithdrawableAmount[assetId][owner];
+    }
 
-    uint256 amount = getAvailableAmount(assetId, emergencyWithdrawableAmount[assetId][owner]);
+    function getAvailableAmount(address assetId, uint256 maxAmount)
+        internal
+        view
+        returns (uint256)
+    {
+        return Math.min(maxAmount, LibAsset.getOwnBalance(assetId));
+    }
 
-    // Revert if amount is 0
-    require(amount > 0, "CMCAsset: NO_OP");
+    function transferAsset(
+        address assetId,
+        address payable recipient,
+        uint256 amount
+    ) internal {
+        registerTransfer(assetId, amount);
+        require(
+            LibAsset.unregisteredTransfer(assetId, recipient, amount),
+            "CMCAsset: TRANSFER_FAILED"
+        );
+    }
 
-    emergencyWithdrawableAmount[assetId][owner] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
-    transferAsset(assetId, recipient, amount);
-  }
+    function emergencyWithdraw(
+        address assetId,
+        address owner,
+        address payable recipient
+    ) external override onlyViaProxy nonReentrant {
+        require(
+            msg.sender == owner || owner == recipient,
+            "CMCAsset: OWNER_MISMATCH"
+        );
+
+        uint256 amount =
+            getAvailableAmount(
+                assetId,
+                emergencyWithdrawableAmount[assetId][owner]
+            );
+
+        // Revert if amount is 0
+        require(amount > 0, "CMCAsset: NO_OP");
+
+        emergencyWithdrawableAmount[assetId][
+            owner
+        ] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
+        transferAsset(assetId, recipient, amount);
+    }
 }

@@ -15,26 +15,37 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 ///         signatures. The information stored here can only be updated
 ///         by the owner of the contract
 contract TransferRegistry is Ownable, ITransferRegistry {
+    using LibIterableMapping for LibIterableMapping.IterableMapping;
 
-  using LibIterableMapping for LibIterableMapping.IterableMapping;
+    LibIterableMapping.IterableMapping transfers;
 
-  LibIterableMapping.IterableMapping transfers;
+    // Should add a transfer definition to the registry
+    // onlyOwner
+    function addTransferDefinition(RegisteredTransfer memory definition)
+        external
+        override
+        onlyOwner
+    {
+        transfers.addTransferDefinition(definition);
+    }
 
-  // Should add a transfer definition to the registry
-  // onlyOwner
-  function addTransferDefinition(RegisteredTransfer memory definition) external override onlyOwner {
-    transfers.addTransferDefinition(definition);
-  }
+    // Should remove a transfer definition from the registry
+    // onlyOwner
+    function removeTransferDefinition(string memory name)
+        external
+        override
+        onlyOwner
+    {
+        transfers.removeTransferDefinition(name);
+    }
 
-  // Should remove a transfer definition from the registry
-  // onlyOwner
-  function removeTransferDefinition(string memory name) external override onlyOwner {
-    transfers.removeTransferDefinition(name);
-  }
-
-  // Should return all transfer defintions in registry
-  function getTransferDefinitions() external override view returns (RegisteredTransfer[] memory) {
-    return transfers.getTransferDefinitions();
-  }
-
+    // Should return all transfer defintions in registry
+    function getTransferDefinitions()
+        external
+        view
+        override
+        returns (RegisteredTransfer[] memory)
+    {
+        return transfers.getTransferDefinitions();
+    }
 }

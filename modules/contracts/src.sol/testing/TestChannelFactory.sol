@@ -11,22 +11,23 @@ import "../ChannelFactory.sol";
 ///         deploy contracts without setting them up (to run the CMCCore
 ///         setup tests)
 contract TestChannelFactory is ChannelFactory {
+    constructor(address _mastercopy, uint256 _chainId)
+        ChannelFactory(_mastercopy, _chainId)
+    {}
 
-  constructor(address _mastercopy, uint _chainId) ChannelFactory(_mastercopy, _chainId) {}
+    function deployChannelProxyWithoutSetup(address alice, address bob)
+        public
+        returns (address)
+    {
+        return deployChannelProxy(alice, bob);
+    }
 
-  function deployChannelProxyWithoutSetup(
-    address alice,
-    address bob
-  ) public returns (address) {
-    return deployChannelProxy(alice, bob);
-  }
-
-  function createChannelWithoutSetup(
-    address alice,
-    address bob
-  ) public returns (address channel) {
-    channel = deployChannelProxy(alice, bob);
-    emit ChannelCreation(channel);
-    return channel;
-  }
+    function createChannelWithoutSetup(address alice, address bob)
+        public
+        returns (address channel)
+    {
+        channel = deployChannelProxy(alice, bob);
+        emit ChannelCreation(channel);
+        return channel;
+    }
 }

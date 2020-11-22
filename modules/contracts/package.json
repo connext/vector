@@ -20,6 +20,7 @@
     "src.ts"
   ],
   "scripts": {
+    "prettier": "prettier --write './src.sol/**/*.sol'",
     "build": "rm -rf dist && npx hardhat compile && tsc",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
     "test": "mocha --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
@@ -66,6 +67,8 @@
     "event-target-shim": "5.0.1",
     "hardhat-typechain": "0.3.3",
     "mocha": "8.2.0",
+    "prettier": "2.2.0",
+    "prettier-plugin-solidity": "1.0.0-beta.1",
     "solc": "0.7.1",
     "solhint": "3.3.1",
     "ts-generator": "0.1.1",
