@@ -113,6 +113,7 @@ Emitted by the `ChannelMastercopy` when `defundTransfer` has been called, contai
 
 - `defunder`: `address` - The address of the `defundTransfer` caller
 - `channelAddress`: `address` - The address of the channel associated with the defunded transfer
+- `transferId`: `bytes32` - The identifier of the transfer being disputed
 - `dispute`: `TransferDispute` - The resulting transfer dispute record
 - `encodedInitialState`: `bytes` - The initial state used to defund transfer
 - `encodedInitialState`: `bytes` - The transfer resolver used to defund transfer
@@ -120,6 +121,62 @@ Emitted by the `ChannelMastercopy` when `defundTransfer` has been called, contai
 
 ## ChannelFactory
 
+### getMastercopy
+
+### getChainId
+
+### getStoredChainId
+
+### getProxyCreationCode
+
+### getChannelAddress
+
+### createChannel
+
+### createChannelAndDepositAlice
+
 ## ChannelMastercopy
 
+### setup
+
+### getAlice
+
+### getBob
+
+### getTotalTransferred
+
+### getEmergencyWithdrawableAmount
+
+### emergencyWithdraw
+
+### getTotalDepositsAlice
+
+### getTotalDepositsBob
+
+### depositAlice
+
+### getWithdrawalTransactionRecord
+
+### withdraw
+
+### getChannelDispute
+
+### getDefundNonce
+
+### getTransferDispute
+
+### disputeChannel
+
+### defundChannel
+
+### disputeTransfer
+
+### defundTransfer
+
 ## TransferRegistry
+
+### getTransferDefinitions
+
+### addTransferDefinition
+
+### removeTransferDefinition
