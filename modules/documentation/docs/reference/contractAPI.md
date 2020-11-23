@@ -121,6 +121,8 @@ Emitted by the `ChannelMastercopy` when `defundTransfer` has been called, contai
 
 ## ChannelFactory
 
+Allows us to create new channel proxy contract
+
 ### getMastercopy
 
 Returns the `ChannelMastercopy` (vector channel logic) address associated with the `ChannelFactory`
@@ -249,8 +251,38 @@ Deploys, sets up, and calls `depositAlice` on a channel multisig. Must have the 
 
 ## TransferRegistry
 
+The `TransferRegistry` maintains an onchain record of all supported transfers (specifically holds the registry information defined within the contracts). The offchain protocol uses this information to get the correct encodings when generating signatures. The information stored here can only be updated by the owner of the contract
+
 ### getTransferDefinitions
+
+Returns all registered transfers supported by the registry.
+#### Params
+
+None
+
+#### Returns
+
+`RegisteredTransfer[]`: An array of all the transfers supported by the registry
 
 ### addTransferDefinition
 
+Adds a new `RegisteredTransfer` to the registry. May only be called by registry owner
+
+#### Params
+
+- `RegisteredTransfer`: The transfer to add to the registry
+
+#### Returns
+
+None
+
 ### removeTransferDefinition
+
+Removes a supported transfer from the registry. May only be called by registry owner
+#### Params
+
+- `string`: The registered name of the transfer to remove
+
+#### Returns
+
+None

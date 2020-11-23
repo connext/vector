@@ -7,7 +7,7 @@ import "./lib/LibIterableMapping.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title TransferRegistry
-/// @author Layne Haber <layne@connext.network>
+/// @author Connext <support@connext.network>
 /// @notice The TransferRegistry maintains an onchain record of all
 ///         supported transfers (specifically holds the registry information
 ///         defined within the contracts). The offchain protocol uses
@@ -20,19 +20,19 @@ contract TransferRegistry is Ownable, ITransferRegistry {
 
   LibIterableMapping.IterableMapping transfers;
 
-  // Should add a transfer definition to the registry
-  // onlyOwner
+  /// @dev Adds a transfer definition to the registry
+  /// @param definition the registry information to add to the transfer (see ITransferRegistry for the typedef)
   function addTransferDefinition(RegisteredTransfer memory definition) external override onlyOwner {
     transfers.addTransferDefinition(definition);
   }
 
-  // Should remove a transfer definition from the registry
-  // onlyOwner
+  /// @dev Should remove a transfer definition from the registry
+  /// @param name the registered name of the transfer to remove
   function removeTransferDefinition(string memory name) external override onlyOwner {
     transfers.removeTransferDefinition(name);
   }
 
-  // Should return all transfer defintions in registry
+  /// @dev Should return all transfer defintions in registry
   function getTransferDefinitions() external override view returns (RegisteredTransfer[] memory) {
     return transfers.getTransferDefinitions();
   }
