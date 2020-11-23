@@ -605,6 +605,7 @@ Gets all registered transers from the `TransferRegistry`.
 `ServerNodeParams.GetRegisteredTransfers` object. Contains:
 
 - `chainId`: `number` - Chain id of the `TransferRegistry` you want to query
+
 #### Returns
 
 EITHER `ServerNodeResponses.GetRegisteredTransfers` object. Contains:
