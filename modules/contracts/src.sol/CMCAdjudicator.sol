@@ -10,12 +10,14 @@ import "./CMCCore.sol";
 import "./CMCAsset.sol";
 import "./CMCDeposit.sol";
 import "./lib/LibChannelCrypto.sol";
+import "./lib/LibMath.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// @title CMCAdjudicator - Dispute logic for ONE channel
 contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     using LibChannelCrypto for bytes32;
+    using LibMath for uint256;
     using SafeMath for uint256;
 
     uint256 private constant INITIAL_DEFUND_NONCE = 1;
@@ -197,10 +199,10 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
                 // Start with the final balances in ccs
                 balance = ccs.balances[index];
                 // Add unprocessed deposits
-                balance.amount[0] = balance.amount[0].add(
+                balance.amount[0] = balance.amount[0].satAdd(
                     tdAlice - ccs.processedDepositsA[index]
                 );
-                balance.amount[1] = balance.amount[1].add(
+                balance.amount[1] = balance.amount[1].satAdd(
                     tdBob - ccs.processedDepositsB[index]
                 );
             }
