@@ -258,7 +258,7 @@ export async function inbound(
   // Assume that our stored state has nonce `k`, and the update
   // has nonce `n`, and `k` is the latest double signed state for you. The
   // following cases exist:
-  // - n < k - 2: counterparty is behind, they must restore
+  // - n <= k - 2: counterparty is behind, they must restore
   // - n == k - 1: counterparty is behind, they will sync and recover, we
   //   can ignore update
   // - n == k, single signed: counterparty is behind, ignore update
