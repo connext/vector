@@ -123,17 +123,91 @@ Emitted by the `ChannelMastercopy` when `defundTransfer` has been called, contai
 
 ### getMastercopy
 
+Returns the `ChannelMastercopy` (vector channel logic) address associated with the `ChannelFactory`
+
+#### Params
+
+None
+
+#### Returns
+
+`address`
+
 ### getChainId
+
+Returns the `chainId` used in the salt to calculate the CREATE2 channel address. If there is a stored `chainId`, it will return that value otherwise returns the value from the `chainId` opcode. The stored value is used to account for chains that do not correctly implement the opcode
+
+#### Params
+
+None
+
+#### Returns
+
+`uint256`
 
 ### getStoredChainId
 
+Returns the `chainId` stored by the factory (set at deployment)
+
+#### Params
+
+None
+
+#### Returns
+
+`uint256`
 ### getProxyCreationCode
+
+Returns the proxy code used to both calculate the CREATE2 address and deploy the channel proxy pointed to the `ChannelMastercopy`
+
+#### Params
+
+None
+
+#### Returns
+
+`bytes`
 
 ### getChannelAddress
 
+Returns the CREATE2 address for the deployed channel multisig for `alice` and `bob`
+
+#### Params
+
+- `alice`: `address` - the signing address of `alice` in the channel
+- `bob`: `address` - the signing address of `bob` in the channel
+
+#### Returns
+
+`address` when the multisig would be deployed
+
 ### createChannel
 
+Deploys and sets the owners of the channel multisig for a given `alice` and `bob`
+
+#### Params
+
+- `alice`: `address` - the signing address of `alice` in the channel
+- `bob`: `address` - the signing address of `bob` in the channel
+
+#### Returns
+
+`address` of the deployed multisig
+
 ### createChannelAndDepositAlice
+
+Deploys, sets up, and calls `depositAlice` on a channel multisig. Must have the `deposit` value sent along with the message (if depositing ETH), or approved for spending by the `ChannelFactory`
+
+#### Params
+
+- `alice`: `address` - the signing address of `alice` in the channel
+- `bob`: `address` - the signing address of `bob` in the channel
+- `assetId`: `address` - the asset of `alice`'s channel deposit
+- `amount`: `uint256` - the value of `alice`'s channel deposit
+
+#### Returns
+
+`address` of the deployed multisig
 
 ## ChannelMastercopy
 
