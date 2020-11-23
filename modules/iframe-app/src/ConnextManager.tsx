@@ -29,6 +29,8 @@ export default class ConnextManager {
 
   private async initNode(): Promise<BrowserNode> {
     // store entropy in local storage
+    console.log('localStorage: ', localStorage);
+    console.log('window.localStorage: ', window.localStorage);
     const storedEntropy = localStorage.getItem("entropy");
     if (!storedEntropy) {
       const newEntropy = hexlify(randomBytes(65));
