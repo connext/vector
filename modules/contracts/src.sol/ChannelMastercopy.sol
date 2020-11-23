@@ -23,4 +23,6 @@ contract ChannelMastercopy is
     CMCWithdraw,
     CMCAdjudicator,
     IVectorChannel
-    {}
+{
+
+}

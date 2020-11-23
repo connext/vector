@@ -12,8 +12,10 @@ import "./lib/LibERC20.sol";
 /// @title Channel Factory - Allows us to create new channel proxy contract
 /// @author Connext & Friends <hello@connext.network>
 contract ChannelFactory is IChannelFactory {
-    bytes private constant proxyCreationCodePrefix = hex"3d602d80600a3d3981f3_363d3d373d3d3d363d73";
-    bytes private constant proxyCreationCodeSuffix = hex"5af43d82803e903d91602b57fd5bf3";
+    bytes private constant proxyCreationCodePrefix =
+        hex"3d602d80600a3d3981f3_363d3d373d3d3d363d73";
+    bytes private constant proxyCreationCodeSuffix =
+        hex"5af43d82803e903d91602b57fd5bf3";
 
     address private immutable mastercopy;
     uint256 private immutable chainId;
@@ -30,60 +32,61 @@ contract ChannelFactory is IChannelFactory {
     // Public Methods
 
     /// @dev Allows us to get the mastercopy that this factory will deploy channels against
-    function getMastercopy() external override view returns (address) {
-      return mastercopy;
+    function getMastercopy() external view override returns (address) {
+        return mastercopy;
     }
 
     /// @dev Allows us to get the chainId that this factory will use in the create2 salt
-    function getChainId() public override view returns (uint256 _chainId) {
-      if (chainId == 0) {
-        assembly {
-            _chainId := chainid()
+    function getChainId() public view override returns (uint256 _chainId) {
+        if (chainId == 0) {
+            assembly {
+                _chainId := chainid()
+            }
+        } else {
+            _chainId = chainId;
         }
-      } else {
-        _chainId = chainId;
-      }
     }
 
     /// @dev Allows us to get the chainId that this factory has stored
-    function getStoredChainId() external override view returns (uint256) {
-      return chainId;
+    function getStoredChainId() external view override returns (uint256) {
+        return chainId;
     }
 
     /// @dev Returns the proxy code used to both calculate the CREATE2 address and deploy the channel proxy pointed to the `ChannelMastercopy`
-    function getProxyCreationCode() public override view returns (bytes memory) {
-        return abi.encodePacked(
-            proxyCreationCodePrefix,
-            mastercopy,
-            proxyCreationCodeSuffix
-        );
+    function getProxyCreationCode()
+        public
+        view
+        override
+        returns (bytes memory)
+    {
+        return
+            abi.encodePacked(
+                proxyCreationCodePrefix,
+                mastercopy,
+                proxyCreationCodeSuffix
+            );
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
     /// @param alice address of the igh fidelity channel participant
     /// @param bob address of the other channel participant
-    function getChannelAddress(
-        address alice,
-        address bob
-    )
+    function getChannelAddress(address alice, address bob)
         external
-        override
         view
+        override
         returns (address)
     {
-        return Create2.computeAddress(
-            generateSalt(alice, bob),
-            keccak256(getProxyCreationCode())
-        );
+        return
+            Create2.computeAddress(
+                generateSalt(alice, bob),
+                keccak256(getProxyCreationCode())
+            );
     }
 
     /// @dev Allows us to create new channel contract and get it all set up in one transaction
     /// @param alice address of the high fidelity channel participant
     /// @param bob address of the other channel participant
-    function createChannel(
-        address alice,
-        address bob
-    )
+    function createChannel(address alice, address bob)
         public
         override
         returns (address channel)
@@ -100,18 +103,18 @@ contract ChannelFactory is IChannelFactory {
         address bob,
         address assetId,
         uint256 amount
-    )
-        external
-        payable
-        override
-        returns (address channel)
-    {
+    ) external payable override returns (address channel) {
         channel = createChannel(alice, bob);
         // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
         // Do we want to keep it this way?
         if (!LibAsset.isEther(assetId)) {
             require(
-                LibERC20.transferFrom(assetId, msg.sender, address(this), amount),
+                LibERC20.transferFrom(
+                    assetId,
+                    msg.sender,
+                    address(this),
+                    amount
+                ),
                 "ChannelFactory: ERC20_TRANSFER_FAILED"
             );
             require(
@@ -129,10 +132,7 @@ contract ChannelFactory is IChannelFactory {
     /// @dev This method is only meant as an utility to be called from other methods
     /// @param alice address of the high fidelity participant in the channel
     /// @param bob address of the other channel participant
-    function deployChannelProxy(
-        address alice,
-        address bob
-    )
+    function deployChannelProxy(address alice, address bob)
         internal
         returns (address)
     {
@@ -141,15 +141,11 @@ contract ChannelFactory is IChannelFactory {
     }
 
     /// @dev Generates the unique salt for calculating the CREATE2 address of the channel proxy
-    function generateSalt(
-        address alice,
-        address bob
-    )
+    function generateSalt(address alice, address bob)
         internal
         view
         returns (bytes32)
     {
         return keccak256(abi.encodePacked(alice, bob, getChainId()));
     }
-
 }

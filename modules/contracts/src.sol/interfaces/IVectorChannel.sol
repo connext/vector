@@ -8,11 +8,10 @@ import "./ICMCDeposit.sol";
 import "./ICMCWithdraw.sol";
 import "./ICMCAdjudicator.sol";
 
-
 interface IVectorChannel is
     ICMCCore,
     ICMCAsset,
     ICMCDeposit,
     ICMCWithdraw,
     ICMCAdjudicator
-    {}
+{}
