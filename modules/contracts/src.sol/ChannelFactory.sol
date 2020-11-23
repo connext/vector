@@ -18,6 +18,9 @@ contract ChannelFactory is IChannelFactory {
     address private immutable mastercopy;
     uint256 private immutable chainId;
 
+    /// @dev Creates a new `ChannelFactory`
+    /// @param _mastercopy the address of the `ChannelMastercopy` (channel logic)
+    /// @param _chainId the chain identifier when generating the CREATE2 salt. If zero, the chain identifier used in the proxy salt will be the result of the opcode
     constructor(address _mastercopy, uint256 _chainId) {
         mastercopy = _mastercopy;
         chainId = _chainId;
@@ -47,6 +50,7 @@ contract ChannelFactory is IChannelFactory {
       return chainId;
     }
 
+    /// @dev Returns the proxy code used to both calculate the CREATE2 address and deploy the channel proxy pointed to the `ChannelMastercopy`
     function getProxyCreationCode() public override view returns (bytes memory) {
         return abi.encodePacked(
             proxyCreationCodePrefix,
@@ -56,7 +60,7 @@ contract ChannelFactory is IChannelFactory {
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
-    /// @param alice address of one of the two participants in the channel
+    /// @param alice address of the igh fidelity channel participant
     /// @param bob address of the other channel participant
     function getChannelAddress(
         address alice,
@@ -74,7 +78,7 @@ contract ChannelFactory is IChannelFactory {
     }
 
     /// @dev Allows us to create new channel contract and get it all set up in one transaction
-    /// @param alice address of one of the channel participants
+    /// @param alice address of the high fidelity channel participant
     /// @param bob address of the other channel participant
     function createChannel(
         address alice,
@@ -123,7 +127,7 @@ contract ChannelFactory is IChannelFactory {
 
     /// @dev Allows us to create new channel contact using CREATE2
     /// @dev This method is only meant as an utility to be called from other methods
-    /// @param alice address of one of the two participants in the channel
+    /// @param alice address of the high fidelity participant in the channel
     /// @param bob address of the other channel participant
     function deployChannelProxy(
         address alice,
@@ -136,6 +140,7 @@ contract ChannelFactory is IChannelFactory {
         return Create2.deploy(0, salt, getProxyCreationCode());
     }
 
+    /// @dev Generates the unique salt for calculating the CREATE2 address of the channel proxy
     function generateSalt(
         address alice,
         address bob
