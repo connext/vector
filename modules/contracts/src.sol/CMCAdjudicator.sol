@@ -84,7 +84,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         bytes32 ccsHash = hashChannelState(ccs);
 
         // Verify Alice's and Bob's signature on the channel state
-        verifySignaturesOnChannelStateHash(ccsHash, aliceSignature, bobSignature);
+        verifySignaturesOnChannelStateHash(ccs, ccsHash, aliceSignature, bobSignature);
 
         // We cannot dispute a channel in its defund phase
         require(!inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
@@ -331,18 +331,19 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     }
 
     function verifySignaturesOnChannelStateHash(
+        CoreChannelState calldata ccs,
         bytes32 ccsHash,
         bytes calldata aliceSignature,
         bytes calldata bobSignature
-    ) internal view {
+    ) internal pure {
         bytes32 commitment =
             keccak256(abi.encode(CommitmentType.ChannelState, ccsHash));
         require(
-            commitment.checkSignature(aliceSignature, alice),
+            commitment.checkSignature(aliceSignature, ccs.alice),
             "CMCAdjudicator: INVALID_ALICE_SIG"
         );
         require(
-            commitment.checkSignature(bobSignature, bob),
+            commitment.checkSignature(bobSignature, ccs.bob),
             "CMCAdjudicator: INVALID_BOB_SIG"
         );
     }
