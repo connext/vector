@@ -44,6 +44,32 @@ export class EthereumChainReader implements IVectorChainReader {
     return Result.ok(ret);
   }
 
+  async getSyncing(
+    chainId: number,
+  ): Promise<
+    Result<
+      | boolean
+      | {
+          startingBlock: string;
+          currentBlock: string;
+          highestBlock: string;
+        },
+      ChainError
+    >
+  > {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+
+    try {
+      const res = await provider.send("eth_syncing", []);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getChannelDispute(
     channelAddress: string,
     chainId: number,
@@ -91,10 +117,14 @@ export class EthereumChainReader implements IVectorChainReader {
     }
 
     const registry = this.transferRegistries.get(chainId.toString())!;
-    const info = registry.find(r => r.definition === definition);
+    const info = registry.find((r) => r.definition === definition);
     if (!info) {
       return Result.fail(
-        new ChainError(ChainError.reasons.TransferNotRegistered, { definition, transferRegistry, chainId }),
+        new ChainError(ChainError.reasons.TransferNotRegistered, {
+          definition,
+          transferRegistry,
+          chainId,
+        }),
       );
     }
     return Result.ok(info);
@@ -121,9 +151,15 @@ export class EthereumChainReader implements IVectorChainReader {
       registry = loadRes.getValue();
     }
 
-    const info = registry.find(r => r.name === name);
+    const info = registry!.find((r) => r.name === name);
     if (!info) {
-      return Result.fail(new ChainError(ChainError.reasons.TransferNotRegistered, { name, transferRegistry, chainId }));
+      return Result.fail(
+        new ChainError(ChainError.reasons.TransferNotRegistered, {
+          name,
+          transferRegistry,
+          chainId,
+        }),
+      );
     }
     return Result.ok(info);
   }
@@ -278,7 +314,10 @@ export class EthereumChainReader implements IVectorChainReader {
       }
     }
     this.log.debug(
-      { transferDefinition: transfer.transferDefinition, transferId: transfer.transferId },
+      {
+        transferDefinition: transfer.transferDefinition,
+        transferId: transfer.transferId,
+      },
       "Calling create onchain",
     );
     try {
@@ -321,7 +360,10 @@ export class EthereumChainReader implements IVectorChainReader {
       }
     }
     this.log.debug(
-      { transferDefinition: transfer.transferDefinition, transferId: transfer.transferId },
+      {
+        transferDefinition: transfer.transferDefinition,
+        transferId: transfer.transferId,
+      },
       "Calling resolve onchain",
     );
     try {

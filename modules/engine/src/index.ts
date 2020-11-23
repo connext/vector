@@ -25,6 +25,8 @@ import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
 
+import pkg from "../../../package.json";
+
 import { InvalidTransferType } from "./errors";
 import {
   convertConditionalTransferParams,
@@ -40,8 +42,6 @@ export type EngineEvtContainer = { [K in keyof EngineEventMap]: Evt<EngineEventM
 
 export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
-  // FIXME: Is this JSON RPC compatible?
-  // RS: it's not, we will have to change the .on methods to use a JSON RPC compatible subscription
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
   private constructor(
@@ -119,6 +119,33 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok([{ index: 0, publicIdentifier: this.publicIdentifier, signerAddress: this.signerAddress }]);
   }
 
+  private async getStatus(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getStatus]>> {
+    const chainIds = Object.keys(this.chainAddresses).map(parseInt);
+    const providerResponses = await Promise.all(chainIds.map(this.chainService.getSyncing));
+    const providerSyncing = Object.fromEntries(
+      chainIds.map((chainId, index) => {
+        const res = providerResponses[index];
+        let syncing:
+          | string
+          | boolean
+          | { startingBlock: string; currentBlock: string; highestBlock: string }
+          | undefined;
+        if (res.isError) {
+          syncing = res.getError()?.message;
+        } else {
+          syncing = res.getValue();
+        }
+        return [chainId, syncing];
+      }),
+    );
+    return Result.ok({
+      version: pkg.version,
+      publicIdentifier: this.publicIdentifier,
+      signerAddress: this.signerAddress,
+      providerSyncing,
+    });
+  }
+
   private async getChannelState(
     params: EngineParams.GetChannelState,
   ): Promise<
@@ -130,7 +157,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.GetChannelStateSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
     const channel = await this.vector.getChannelState(params.channelAddress);
     return Result.ok(channel);
@@ -142,7 +169,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.GetTransferStateSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     try {
@@ -159,7 +186,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.GetActiveTransfersSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     try {
@@ -176,7 +203,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.GetTransferStateByRoutingIdSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
     const transfer = await this.store.getTransferByRoutingId(params.channelAddress, params.routingId);
     return Result.ok(transfer);
@@ -188,7 +215,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.GetTransferStatesByRoutingIdSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
     const transfers = await this.store.getTransfersByRoutingId(params.routingId);
     return Result.ok(transfers);
@@ -205,7 +232,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.GetChannelStateByParticipantsSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
     const channel = await this.vector.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
     return Result.ok(channel);
@@ -232,7 +259,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.GetRegisteredTransfersSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
     const { chainId } = params;
     const result = await this.chainService.getRegisteredTransfers(
@@ -250,7 +277,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     const chainProviders = this.chainService.getChainProviders();
@@ -314,7 +341,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     const chainProviders = this.chainService.getChainProviders();
@@ -337,7 +364,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.DepositSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     return this.vector.deposit(params);
@@ -349,7 +376,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.RequestCollateralSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     const channel = await this.store.getChannelState(params.channelAddress);
@@ -378,7 +405,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     const channel = await this.store.getChannelState(params.channelAddress);
@@ -414,7 +441,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.ResolveTransferSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     // TODO: consider a store method to find active transfer by routingId
@@ -446,7 +473,7 @@ export class VectorEngine implements IVectorEngine {
     const validate = ajv.compile(EngineParams.WithdrawSchema);
     const valid = validate(params);
     if (!valid) {
-      return Result.fail(new Error(validate.errors?.map(err => err.message).join(",")));
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
     const channel = await this.store.getChannelState(params.channelAddress);
@@ -481,7 +508,7 @@ export class VectorEngine implements IVectorEngine {
     try {
       const event = await this.evts[WITHDRAWAL_RECONCILED_EVENT].attachOnce(
         timeout,
-        data => data.channelAddress === params.channelAddress && data.transferId === transferId,
+        (data) => data.channelAddress === params.channelAddress && data.transferId === transferId,
       );
       transactionHash = event.transactionHash;
     } catch (e) {
@@ -612,7 +639,7 @@ export class VectorEngine implements IVectorEngine {
       // dont use result type since this could go over the wire
       // TODO: how to represent errors over the wire?
       this.logger.error({ method: "request", payload, ...(validate.errors ?? {}) });
-      throw new Error(validate.errors?.map(err => err.message).join(","));
+      throw new Error(validate.errors?.map((err) => err.message).join(","));
     }
 
     const methodName = payload.method.replace("chan_", "");
@@ -663,6 +690,6 @@ export class VectorEngine implements IVectorEngine {
       return;
     }
 
-    Object.keys(EngineEvents).forEach(k => this.evts[k].detach());
+    Object.keys(EngineEvents).forEach((k) => this.evts[k].detach());
   }
 }
