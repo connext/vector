@@ -57,6 +57,8 @@ export class EthereumChainReader implements IVectorChainReader {
       ChainError
     >
   > {
+    console.log("this.chainProviders: ", this.chainProviders);
+    console.log("this: ", this);
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
