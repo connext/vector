@@ -65,7 +65,7 @@ server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, a
 
 server.get<{ Params: { publicIdentifier: string } }>(
   "/:publicIdentifier/status",
-  { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier }), response: NodeResponses.GetStatusSchema } },
+  { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier }) } },
   async (request, reply) => {
     const engine = getNode(request.params.publicIdentifier);
     if (!engine) {

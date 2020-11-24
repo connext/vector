@@ -118,8 +118,8 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async getStatus(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getStatus]>> {
-    const chainIds = Object.keys(this.chainAddresses).map(parseInt);
-    const providerResponses = await Promise.all(chainIds.map(this.chainService.getSyncing));
+    const chainIds = Object.keys(this.chainAddresses).map((chainId) => parseInt(chainId));
+    const providerResponses = await Promise.all(chainIds.map((chainId) => this.chainService.getSyncing(chainId)));
     const providerSyncing = Object.fromEntries(
       chainIds.map((chainId, index) => {
         const res = providerResponses[index];
