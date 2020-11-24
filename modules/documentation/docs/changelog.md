@@ -7,6 +7,7 @@
 - simplified inheritance hierarchy for channel mastercopy
 - cheaper `onlyViaProxy` modifier
 - saturated addition for emergency-withdrawable amounts
+- dockerized iframe-app published with docker images
 
 ## 0.0.13
 
