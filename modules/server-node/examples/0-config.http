@@ -19,6 +19,10 @@
 GET {{carolUrl}}/config
 
 ##############
+### GET STATUS
+GET {{aliceUrl}}/{{alicePublicIdentifier}}/status
+
+##############
 ### GET CHANNELS
 GET {{aliceUrl}}/{{alicePublicIdentifier}}/channels
 
@@ -41,7 +45,7 @@ Content-Type: application/json
 
 ##############
 ### CREATE NODE
-POST {{carolUrl}}/node
+POST {{aliceUrl}}/node
 Content-Type: application/json
 
 {

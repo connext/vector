@@ -8,6 +8,7 @@
 - cheaper `onlyViaProxy` modifier
 - saturated addition for emergency-withdrawable amounts
 - dockerized iframe-app published with docker images
+- add endpoint for getting ethprovider sync status
 
 ## 0.0.13
 

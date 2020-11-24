@@ -4,6 +4,7 @@ import { RegisteredTransfer } from "./transferDefinitions";
 
 export const ChannelRpcMethods = {
   chan_getConfig: "chan_getConfig",
+  chan_getStatus: "chan_getStatus",
   chan_getChannelState: "chan_getChannelState",
   chan_getChannelStateByParticipants: "chan_getChannelStateByParticipants",
   chan_getChannelStates: "chan_getChannelStates",
@@ -33,6 +34,7 @@ export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcM
 
 export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getConfig]: undefined;
+  [ChannelRpcMethods.chan_getStatus]: undefined;
   [ChannelRpcMethods.chan_getChannelState]: EngineParams.GetChannelState;
   [ChannelRpcMethods.chan_getChannelStateByParticipants]: EngineParams.GetChannelStateByParticipants;
   [ChannelRpcMethods.chan_getTransferStateByRoutingId]: EngineParams.GetTransferStateByRoutingId;
@@ -64,6 +66,7 @@ export type ChannelRpcMethodsPayloadMap = {
 
 export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_getConfig]: NodeResponses.GetConfig;
+  [ChannelRpcMethods.chan_getStatus]: NodeResponses.GetStatus;
   [ChannelRpcMethods.chan_getChannelState]: FullChannelState | undefined;
   [ChannelRpcMethods.chan_getChannelStateByParticipants]: FullChannelState | undefined;
   [ChannelRpcMethods.chan_getChannelStates]: FullChannelState[];
