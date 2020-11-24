@@ -56,7 +56,7 @@ The core purpose of any state channel protocol is to produce one or more commitm
 
 In the interest of simplicity, Vector only has one type of commitment that is actually signed - the `ChannelCommitment`, which is a signature on the `CoreChannelState`:
 
-```
+```ts
 struct CoreChannelState {
   Balance[] balances, // index matches assetId index
   address[] assetIds,
@@ -72,7 +72,7 @@ struct CoreChannelState {
 
 Despite not being a "real" commitment, the `CoreTransferState` is a part of the merkle root in the channel state. Thus it's security is enforced using both peers' signatures on the above.
 
-```
+```ts
 struct CoreTransferState {
    Balance initialBalance;
    address assetId;
@@ -92,14 +92,14 @@ To properly protect against replay attacks across chains or discrete networks, t
 
 Deriving `channelAddress` uses the following CREATE2 salt:
 
-```
+```ts
 keccak256(
-   abi.encodePacked(
-      alice, // initiator signer address
-      bob, // responder signer address
-      chainId,
-      keccak256("vector")
-   )
+  abi.encodePacked(
+    alice, // initiator signer address
+    bob, // responder signer address
+    chainId,
+    keccak256("vector")
+  )
 );
 ```
 
@@ -121,7 +121,7 @@ As mentioned above, funding a channel is asymmetric. The initiator of a channel 
 
 Calling `depositAlice` increments the `totalDepositsAlice` by the amount that Alice deposits for a given assetId. We can get this value offchain or in the adjudicator by calling the `totalDepositsAlice` getter. We can also get `totalDepositsBob` the same way -- the contract calculates using the following identity:
 
-```
+```txt
 getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedAlice[assetId]
 ```
 
@@ -141,7 +141,7 @@ A withdraw from the channel is done by locking up some funds in a transfer and "
 
 ## Contract TODOs
 
-#### Adjudicator
+### Adjudicator
 
 - [x] Make accessible from mastercopy
 - [x] Change timeouts in `disputeChannel` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
@@ -151,7 +151,7 @@ A withdraw from the channel is done by locking up some funds in a transfer and "
 - [ ] Fill out signing/hashing utils based on any new needs that might have been introduced as a result of the new control flow for contracts.
 - [ ] Events
 
-#### VectorChannel
+### VectorChannel
 
 - [ ] Add events/event listening for deposits
 - [x] Write the `adjudicatorTransfer` fn
