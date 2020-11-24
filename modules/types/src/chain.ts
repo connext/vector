@@ -106,6 +106,12 @@ export interface IVectorChainReader {
     bytecode?: string,
   ): Promise<Result<RegisteredTransfer, ChainError>>;
 
+  getRegisteredTransfers(
+    transferRegistry: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<RegisteredTransfer[], ChainError>>;
+
   getChainProviders(): Result<ChainProviders, ChainError>;
 
   create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>>;
@@ -117,6 +123,20 @@ export interface IVectorChainReader {
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
   getChannelDispute(channelAddress: string, chainId: number): Promise<Result<ChannelDispute | undefined, ChainError>>;
+
+  getSyncing(
+    chainId: number,
+  ): Promise<
+    Result<
+      | boolean
+      | {
+          startingBlock: string;
+          currentBlock: string;
+          highestBlock: string;
+        },
+      ChainError
+    >
+  >;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

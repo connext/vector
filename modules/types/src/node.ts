@@ -15,6 +15,8 @@ export interface INodeService {
   publicIdentifier: string;
   signerAddress: string;
 
+  getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>>;
+
   getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>>;
@@ -42,6 +44,10 @@ export interface INodeService {
   getActiveTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>>;
+
+  getRegisteredTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>>;
 
   createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>>;
 

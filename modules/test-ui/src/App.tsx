@@ -5,13 +5,12 @@ import {
   createlockHash,
   getBalanceForAssetId,
   getRandomBytes32,
-  delay,
   constructRpcRequest,
 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import pino from "pino";
-import { constants, utils } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Switch } from "antd";
+import { constants } from "ethers";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List } from "antd";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
@@ -26,9 +25,6 @@ function App() {
   const [requestCollateralLoading, setRequestCollateralLoading] = useState<boolean>(false);
   const [transferLoading, setTransferLoading] = useState<boolean>(false);
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
-  const [entropy, setEntropy] = useState<string>("");
-  const [iframeSrc, setIframeSrc] = useState<string>("");
-  const [useRandomEntropy, setUseRandomEntropy] = useState<boolean>(true);
 
   const [connectError, setConnectError] = useState<string>();
 
@@ -36,27 +32,15 @@ function App() {
   const [transferForm] = Form.useForm();
 
   useEffect(() => {
-    const effect = async () => {
-      const storedEntropy = localStorage.getItem("entropy");
-      if (storedEntropy) {
-        setUseRandomEntropy(false);
-      }
-      const storedIframeSrc = localStorage.getItem("iframeSrc");
-      setEntropy(storedEntropy);
-      setIframeSrc(storedIframeSrc || "http://localhost:3030");
-    };
+    const effect = async () => {};
     effect();
   }, []);
 
-  const connectNode = async (iframeSrc: string, entropy: string): Promise<BrowserNode> => {
-    if (!iframeSrc) {
-      iframeSrc = "http://localhost:3030";
-    }
+  const connectNode = async (iframeSrc: string): Promise<BrowserNode> => {
     try {
       setConnectLoading(true);
       const client = await BrowserNode.connect({
         iframeSrc,
-        iframeSignerEntropy: entropy,
         logger: pino(),
       });
       const channelsRes = await client.getStateChannels();
@@ -249,38 +233,21 @@ function App() {
             </Col>
           </>
         ) : (
-          <>
-            <Col span={12}>
-              <Input.Search
-                placeholder="IFrame Src (blank for localhost:3030)"
-                enterButton="Setup Node"
-                size="large"
-                value={iframeSrc}
-                onChange={event => setIframeSrc(event.target.value)}
-                onSearch={() => {
-                  let _entropy = entropy;
-                  if (useRandomEntropy) {
-                    _entropy = utils.hexlify(utils.randomBytes(65));
-                  }
-                  localStorage.setItem("iframeSrc", iframeSrc || "http://localhost:3030");
-                  localStorage.setItem("entropy", _entropy);
-                  setEntropy(_entropy);
-                  connectNode(iframeSrc, _entropy);
-                }}
-                loading={connectLoading}
-              />
-            </Col>
-            <Col span={12}>
-              <Switch
-                defaultChecked
-                checkedChildren="Create New"
-                unCheckedChildren="Recover Stored"
-                onChange={createNew => setUseRandomEntropy(createNew)}
-                disabled={!entropy}
-                checked={useRandomEntropy}
-              />
-            </Col>
-          </>
+          <Col span={18}>
+            <Form layout="horizontal" name="node" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
+              <Form.Item label="IFrame Src">
+                <Input.Search
+                  placeholder="IFrame Src"
+                  defaultValue="http://localhost:3030"
+                  enterButton="Setup Node"
+                  onSearch={iframeSrc => {
+                    connectNode(iframeSrc);
+                  }}
+                  loading={connectLoading}
+                />
+              </Form.Item>
+            </Form>
+          </Col>
         )}
       </Row>
       {node?.publicIdentifier && (
@@ -291,7 +258,7 @@ function App() {
               {channel ? (
                 <Statistic title="Channel Address" value={channel.channelAddress} />
               ) : (
-                <Form layout="horizontal" name="deposit" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
+                <Form layout="horizontal" name="setup" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
                   <Form.Item label="Setup Channel">
                     <Input.Search
                       onSearch={async value => setupChannel(value)}

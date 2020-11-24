@@ -63,6 +63,15 @@ export class RestServerNodeService implements INodeService {
     return service;
   }
 
+  getStatus(publicIdentifer?: string): Promise<Result<NodeResponses.GetStatus, NodeError>> {
+    return this.executeHttpRequest(
+      `${publicIdentifer ?? this.publicIdentifier}/status`,
+      "get",
+      {},
+      NodeParams.GetConfigSchema,
+    );
+  }
+
   async getConfig(): Promise<Result<NodeResponses.GetConfig, NodeError>> {
     return this.executeHttpRequest("config", "get", {}, NodeParams.GetConfigSchema);
   }
@@ -210,6 +219,17 @@ export class RestServerNodeService implements INodeService {
       "get",
       params,
       NodeParams.GetChannelStateByParticipantsSchema,
+    );
+  }
+
+  getRegisteredTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>> {
+    return this.executeHttpRequest(
+      `${params.publicIdentifier ?? this.publicIdentifier}/registered-transfers/chain-id/${params.chainId}`,
+      "get",
+      params,
+      NodeParams.GetRegisteredTransfersSchema,
     );
   }
 
@@ -386,7 +406,7 @@ export class RestServerNodeService implements INodeService {
     if (!validate(filled)) {
       return Result.fail(
         new NodeError(NodeError.reasons.InvalidParams, {
-          errors: validate.errors?.map(err => err.message).join(","),
+          errors: validate.errors?.map((err) => err.message).join(","),
         }),
       );
     }

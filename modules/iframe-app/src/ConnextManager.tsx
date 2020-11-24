@@ -1,7 +1,12 @@
-import { Wallet, utils } from "ethers";
 import { BrowserNode } from "@connext/vector-browser-node";
-import { EngineParams, ChannelRpcMethodsResponsesMap, ChannelRpcMethod } from "@connext/vector-types";
+import { ChannelRpcMethod, ChannelRpcMethodsResponsesMap, EngineParams } from "@connext/vector-types";
 import { ChannelSigner, constructRpcRequest, safeJsonParse } from "@connext/vector-utils";
+import { hexlify } from "@ethersproject/bytes";
+import { entropyToMnemonic } from "@ethersproject/hdnode";
+import { keccak256 } from "@ethersproject/keccak256";
+import { randomBytes } from "@ethersproject/random";
+import { toUtf8Bytes } from "@ethersproject/strings";
+import { Wallet } from "@ethersproject/wallet";
 import pino from "pino";
 import { config } from "./config";
 
@@ -22,10 +27,21 @@ export default class ConnextManager {
     }
   }
 
-  private async initNode(signature: string): Promise<BrowserNode> {
+  private async initNode(): Promise<BrowserNode> {
+    // store entropy in local storage
+    if (!localStorage) {
+      throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.")
+    }
+    const storedEntropy = localStorage.getItem("entropy");
+    if (!storedEntropy) {
+      const newEntropy = hexlify(randomBytes(65));
+      localStorage.setItem("entropy", newEntropy);
+    }
+    const entropy = localStorage.getItem("entropy")!;
+
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
-    const mnemonic = utils.entropyToMnemonic(utils.keccak256(signature));
+    const mnemonic = entropyToMnemonic(keccak256(entropy));
     this.privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
     const signer = new ChannelSigner(this.privateKey);
 
@@ -67,8 +83,7 @@ export default class ConnextManager {
     request: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     if (request.method === "connext_authenticate") {
-      const sig = request.params.signature;
-      const node = await this.initNode(sig);
+      const node = await this.initNode();
       return {
         publicIdentifier: node.publicIdentifier,
         signerAddress: node.signerAddress,
@@ -80,7 +95,7 @@ export default class ConnextManager {
       );
     }
     if (request.method === "chan_subscribe") {
-      const subscription = utils.keccak256(utils.toUtf8Bytes(`${request.id}`));
+      const subscription = keccak256(toUtf8Bytes(`${request.id}`));
       const listener = (data: any) => {
         const payload = constructRpcRequest<"chan_subscription">("chan_subscription", {
           subscription,

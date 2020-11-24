@@ -1,5 +1,5 @@
 import { getTestLoggers, expect } from "@connext/vector-utils";
-import { constants } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
 
 import { env } from "../env";
 import { createTransfer, depositInChannel, getSetupChannel, resolveTransfer } from "../utils";
@@ -10,7 +10,7 @@ const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   it("should work for a simple ETH setup -> deposit -> create -> resolve flow", async () => {
     // Set test constants
-    const assetId = constants.AddressZero;
+    const assetId = AddressZero;
     const depositAmount = "16";
     const transferAmount = "7";
 

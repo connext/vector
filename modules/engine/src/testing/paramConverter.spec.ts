@@ -24,7 +24,8 @@ import {
 import { expect } from "chai";
 import Sinon from "sinon";
 import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts";
-import { BigNumber } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 
 import { InvalidTransferType } from "../errors";
 import {
@@ -34,7 +35,6 @@ import {
 } from "../paramConverter";
 
 import { env } from "./env";
-import { AddressZero } from "@ethersproject/constants";
 
 describe("ParamConverter", () => {
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);

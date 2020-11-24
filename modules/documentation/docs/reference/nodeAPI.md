@@ -54,6 +54,15 @@ There is one consolidated API across both the `server-node` and `browser-node`. 
 - `transferResolver`: Data needed to resolve the transfer as defined in the `transferDefinition` contract.
 - `meta`: `object` - User-defined object for optional metadata sent along with the transfer (e.g. Invoice number, messages, etc.)
 
+### Registered Transfer
+
+`RegisteredTransfer`: `object` - contains:
+
+- `name`: `string` - The name of the transfer
+- `stateEncoding`: `string` - The state encoding of the transfer
+- `resolverEncoding`: `string` - The resolver encoding of the transfer
+- `definition`: `string` - The deployed address of the transfer definition
+
 ## Core Methods
 
 ### createNode
@@ -583,6 +592,23 @@ Gets all active transfers for a given channel address.
 EITHER `ServerNodeResponses.GetActiveTransfersByChannelAddress` object. Contains:
 
 - `FullTransferState[]`: `object[]` - Array of [transfer states](#full-transfer-state).
+
+OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/error.ts#L177)
+
+### getRegisteredTransfers
+
+Gets all registered transers from the `TransferRegistry`.
+
+#### Params
+
+`ServerNodeParams.GetRegisteredTransfers` object. Contains:
+
+- `chainId`: `number` - Chain id of the `TransferRegistry` you want to query
+#### Returns
+
+EITHER `ServerNodeResponses.GetRegisteredTransfers` object. Contains:
+
+- `RegisteredTransfer[]`: `object[]` - Array of [registered transferss](#registered-transfer).
 
 OR [NodeError](https://github.com/connext/vector/blob/master/modules/types/src/error.ts#L177)
 

@@ -121,9 +121,29 @@ const GetConfigResponseSchema = {
   ),
 };
 
+// GET STATUS
+const GetStatusResponseSchema = {
+  200: Type.Object({
+    publicIdentifier: TPublicIdentifier,
+    signerAddress: TAddress,
+    providerSyncing: Type.Map(
+      Type.Union([
+        Type.Boolean,
+        Type.Object({
+          startingBlock: Type.String(),
+          currentBlock: Type.String(),
+          highestBlock: Type.String(),
+        }),
+        Type.String(),
+      ]),
+    ),
+    version: Type.String(),
+  }),
+};
+
 // GET LISTENER
 const GetListenerParamsSchema = Type.Object({
-  eventName: Type.Union(Object.values(EngineEvents).map(e => Type.Literal(e)) as [TStringLiteral<EngineEvent>]),
+  eventName: Type.Union(Object.values(EngineEvents).map((e) => Type.Literal(e)) as [TStringLiteral<EngineEvent>]),
   publicIdentifier: TPublicIdentifier,
 });
 
@@ -136,6 +156,23 @@ const GetListenersParamsSchema = Type.Object({ publicIdentifier: TPublicIdentifi
 
 const GetListenersResponseSchema = {
   200: Type.Map(TUrl),
+};
+
+// GET REGISTERED TRANSFERS
+const GetRegisteredTransfersParamsSchema = Type.Intersect([
+  EngineParams.GetRegisteredTransfersSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const GetRegisteredTransfersResponseSchema = {
+  200: Type.Array(
+    Type.Object({
+      name: Type.String(),
+      stateEncoding: Type.String(),
+      resolverEncoding: Type.String(),
+      definition: TAddress,
+    }),
+  ),
 };
 
 // REGISTER LISTENER
@@ -333,6 +370,9 @@ export namespace NodeParams {
   export const GetListenersSchema = GetListenersParamsSchema;
   export type GetListeners = Static<typeof GetListenersSchema>;
 
+  export const GetRegisteredTransfersSchema = GetRegisteredTransfersParamsSchema;
+  export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersSchema>;
+
   export const GetConfigSchema = Type.Object({});
   export type GetConfig = Static<typeof GetConfigSchema>;
 
@@ -415,6 +455,12 @@ export namespace NodeResponses {
 
   export const GetConfigSchema = GetConfigResponseSchema;
   export type GetConfig = Static<typeof GetConfigSchema["200"]>;
+
+  export const GetStatusSchema = GetStatusResponseSchema;
+  export type GetStatus = Static<typeof GetStatusSchema["200"]>;
+
+  export const GetRegisteredTransfersSchema = GetRegisteredTransfersResponseSchema;
+  export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersSchema["200"]>;
 
   export const SetupSchema = PostSetupResponseSchema;
   export type Setup = Static<typeof SetupSchema["200"]>;

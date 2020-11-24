@@ -54,6 +54,11 @@ const GetTransferStateParamsSchema = Type.Object({
   transferId: TBytes32,
 });
 
+// Returns all registered transfer info
+const GetRegisteredTransfersParamsSchema = Type.Object({
+  chainId: TChainId,
+});
+
 // Setup engine params
 const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
@@ -171,6 +176,9 @@ export namespace EngineParams {
 
   export const GetTransferStateSchema = GetTransferStateParamsSchema;
   export type GetTransferState = Static<typeof GetTransferStateParamsSchema>;
+
+  export const GetRegisteredTransfersSchema = GetRegisteredTransfersParamsSchema;
+  export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersParamsSchema>;
 
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;

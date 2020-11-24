@@ -9,7 +9,7 @@ import {
   mkPublicIdentifier,
   RestServerNodeService,
 } from "@connext/vector-utils";
-import { constants } from "ethers";
+import { AddressZero } from "@ethersproject/constants";
 import pino from "pino";
 import Sinon from "sinon";
 
@@ -75,7 +75,7 @@ describe("Forwarding", () => {
       const receiverChannel = createTestChannelState("deposit", {
         alice: mkAddress("0xa"),
         bob: mkAddress("0xb2"),
-        assetIds: [constants.AddressZero],
+        assetIds: [AddressZero],
         balances: [
           {
             amount: ["5", "7"],

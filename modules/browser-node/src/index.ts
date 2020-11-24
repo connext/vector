@@ -32,7 +32,6 @@ export type BrowserNodeConfig = {
   chainProviders?: ChainProviders;
   chainAddresses?: ChainAddresses;
   iframeSrc?: string;
-  iframeSignerEntropy?: string;
 };
 
 export class BrowserNode implements INodeService {
@@ -93,9 +92,7 @@ export class BrowserNode implements INodeService {
         id: Date.now(),
         jsonrpc: "2.0",
         method: "connext_authenticate",
-        params: {
-          signature: config.iframeSignerEntropy,
-        },
+        params: {},
       };
       const auth = await node.channelProvider.send(rpc);
       config.logger.info({ method: "connect", response: auth }, "Received response from auth method");
@@ -118,6 +115,21 @@ export class BrowserNode implements INodeService {
       params: undefined,
     };
     return this.send(rpc);
+  }
+
+  async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
+    const rpc: EngineParams.RpcRequest = {
+      id: Date.now(),
+      jsonrpc: "2.0",
+      method: "chan_getStatus",
+      params: undefined,
+    };
+    try {
+      const res = await this.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   async getStateChannelByParticipants(
@@ -155,7 +167,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok(res.map(chan => chan.channelAddress));
+      return Result.ok(res.map((chan) => chan.channelAddress));
     } catch (e) {
       return Result.fail(e);
     }
@@ -208,6 +220,21 @@ export class BrowserNode implements INodeService {
   ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getActiveTransfers">(ChannelRpcMethods.chan_getActiveTransfers, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async getRegisteredTransfers(
+    params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_getRegisteredTransfers">(
+        ChannelRpcMethods.chan_getRegisteredTransfers,
+        params,
+      );
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res);
     } catch (e) {

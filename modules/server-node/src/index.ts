@@ -9,6 +9,7 @@ import {
   NodeResponses,
   ResolveUpdateDetails,
   CreateUpdateDetails,
+  TPublicIdentifier,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
@@ -52,7 +53,7 @@ server.get("/ping", async () => {
 server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, async (request, reply) => {
   const nodes = getNodes();
   return reply.status(200).send(
-    nodes.map(node => {
+    nodes.map((node) => {
       return {
         index: node.index,
         publicIdentifier: node.node.publicIdentifier,
@@ -61,6 +62,25 @@ server.get("/config", { schema: { response: NodeResponses.GetConfigSchema } }, a
     }),
   );
 });
+
+server.get<{ Params: { publicIdentifier: string } }>(
+  "/:publicIdentifier/status",
+  { schema: { params: Type.Object({ publicIdentifier: TPublicIdentifier }) } },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
+    try {
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, undefined);
+      const res = await engine.request<"chan_getStatus">(params);
+      return reply.status(200).send(res);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack });
+      return reply.status(500).send({ message: e.message });
+    }
+  },
+);
 
 server.get<{ Params: NodeParams.GetChannelState }>(
   "/:publicIdentifier/channels/:channelAddress",
@@ -214,11 +234,34 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
       const res = await engine.request<"chan_getChannelStates">(params);
       // OPTIMIZATION: use db query instead of filter
       const filtered = res.filter(
-        chan =>
+        (chan) =>
           chan.aliceIdentifier === request.params.publicIdentifier ||
           chan.bobIdentifier === request.params.publicIdentifier,
       );
-      return reply.status(200).send(filtered.map(chan => chan.channelAddress));
+      return reply.status(200).send(filtered.map((chan) => chan.channelAddress));
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
+  "/:publicIdentifier/registered-transfers/chain-id/:chainId",
+  {
+    schema: { params: NodeParams.GetRegisteredTransfersSchema, response: NodeResponses.GetRegisteredTransfersSchema },
+  },
+  async (request, reply) => {
+    const engine = getNode(request.params.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
+    }
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getRegisteredTransfers, {
+      chainId: request.params.chainId,
+    });
+    try {
+      const res = await engine.request<"chan_getRegisteredTransfers">(params);
+      return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

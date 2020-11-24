@@ -22,7 +22,7 @@ import {
   mkAddress,
   mkPublicIdentifier,
 } from "@connext/vector-utils";
-import { constants } from "ethers";
+import { HashZero } from "@ethersproject/constants";
 
 import { config } from "../config";
 
@@ -117,7 +117,7 @@ describe("store", () => {
     const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
     const depositState = createTestChannelState("deposit", {
       nonce: setupState.nonce + 1,
-      defundNonce: setupState.defundNonce,
+      defundNonces: setupState.defundNonces,
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
     });
     await store.saveChannelState(depositState);
@@ -134,7 +134,7 @@ describe("store", () => {
       channelAddress: transfer.channelAddress,
       networkContext: { channelFactoryAddress: transfer.channelFactoryAddress, chainId: transfer.chainId },
       nonce: depositState.nonce + 1,
-      defundNonce: setupState.defundNonce,
+      defundNonces: setupState.defundNonces,
       latestUpdate: {
         details: {
           balance: transfer.balance,
@@ -155,7 +155,7 @@ describe("store", () => {
 
     const resolveState = createTestChannelState("resolve", {
       nonce: createState.nonce + 1,
-      defundNonce: setupState.defundNonce,
+      defundNonces: setupState.defundNonces,
       latestUpdate: {
         nonce: createState.nonce + 1,
         details: {
@@ -181,7 +181,7 @@ describe("store", () => {
     });
     const transfer: FullTransferState = createTestFullHashlockTransferState({
       transferId,
-      preImage: constants.HashZero,
+      preImage: HashZero,
       channelAddress: createState.channelAddress,
       channelFactoryAddress: createState.networkContext.channelFactoryAddress,
       chainId: createState.networkContext.chainId,
@@ -207,7 +207,7 @@ describe("store", () => {
     resolveState.latestUpdate.details.transferResolver = { preImage: mkBytes32("0xaabbcc") };
     resolveState.latestUpdate.type = UpdateType.resolve;
     resolveState.nonce = createState.nonce + 1;
-    (resolveState.defundNonce = createState.defundNonce),
+    (resolveState.defundNonces = createState.defundNonces),
       (resolveState.latestUpdate.nonce = createState.latestUpdate.nonce + 1);
 
     await store.saveChannelState(resolveState);
@@ -269,7 +269,7 @@ describe("store", () => {
         nonce: createState.latestUpdate.nonce + 1,
       },
       nonce: createState.latestUpdate.nonce + 1,
-      defundNonce: createState.defundNonce,
+      defundNonces: createState.defundNonces,
     });
 
     await store.saveChannelState(updatedState, transfer2);

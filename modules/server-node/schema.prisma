@@ -15,6 +15,7 @@ model Balance {
   to               String
   amount           String
   processedDeposit String
+  defundNonce      String
   Channel          Channel @relation(fields: [channelAddress], references: [channelAddress])
   channelAddress   String
 
@@ -38,7 +39,6 @@ model Channel {
   chainId                  String
   providerUrl              String
   latestUpdate             Update
-  defundNonce              String
   inDispute                Boolean
 
   activeTransfers Transfer[]
