@@ -15,6 +15,8 @@ export interface INodeService {
   publicIdentifier: string;
   signerAddress: string;
 
+  getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>>;
+
   getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>>;

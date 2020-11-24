@@ -117,6 +117,21 @@ export class BrowserNode implements INodeService {
     return this.send(rpc);
   }
 
+  async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
+    const rpc: EngineParams.RpcRequest = {
+      id: Date.now(),
+      jsonrpc: "2.0",
+      method: "chan_getStatus",
+      params: undefined,
+    };
+    try {
+      const res = await this.send(rpc);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
   ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>> {
@@ -152,7 +167,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok(res.map(chan => chan.channelAddress));
+      return Result.ok(res.map((chan) => chan.channelAddress));
     } catch (e) {
       return Result.fail(e);
     }
