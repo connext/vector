@@ -6,15 +6,16 @@ The contracts module contains the core solidity files that back Vector's securit
 
 Contents:
 
-- [Developing and Running Tests](#developing)
-- Contracts CLI // TODO
+- [Developing and Running Tests](#developing-and-running-tests)
+- [Contracts CLI](#contract-cli)
 - [Contract Architecture](#contract-architecture)
 - [Principles and Assumptions](#principles-and-assumptions)
 - [Commitments](#commitments)
 - [ChannelFactory and CREATE2](#channelfactory-and-create2)
 - [Dispute Flow](#dispute-flow)
+- [Transfers](#transfers)
 - [Depositing and Withdrawing](#depositing-and-withdrawing)
-- Security // TODO
+- [Security](#security)
 
 ## Developing and Running Tests
 
@@ -23,6 +24,65 @@ In `~/vector` (root), run:
 - `make contracts` to build just the contracts & it's dependencies
 - `make test-contracts` to run the tests
 - `make watch-contracts` to test in watch-mode
+
+## Contract CLI
+
+There are a few command line functions that allow you to easily deploy and interact with the contracts:
+
+### migrate
+
+Checks deployed contracts are up to date, and redeploys them if needed for a given chain. Will pull current addresses, and update information if needed, from the given `addressBook`
+
+#### Arguments
+
+- `a`/`address-book`: the address book path. Default is `./address-book.json`
+- `m`/`mnemonic`: the mnemonic used to deploy the contracts (`accounts[0]`will be the deployer and owner of the`TransferRegistry`). Default is the `vector`default dev mnemonic:`candy maple cake sugar pudding cream honey rich smooth crumble sweet treat`
+- `p`/`eth-provider`: the provider url. Default is `http://localhost:8545`.
+- `s`/`silent`: a boolean indicating whether the command should execute with or without logs. Default is false.
+
+#### Example
+
+From the `~/vector/modules/contracts` directory:
+
+```sh
+dist/cli.js migrate --address-book=/data/address-book.json --eth-provider "http://localhost:8545"
+```
+
+### registerTransfer
+
+Adds a new transfer definition to the `TransferRegistry`.
+
+#### Arguments
+
+- `t`/`transfer-name`: the name of the transfer to add (should be in the `address-book`). Default is `HashlockTransfer`
+- `a`/`address-book`: the address book path. Default is `./address-book.json`
+- `m`/`mnemonic`: the mnemonic used to add registry (`accounts[0]` should be the deployer and owner of the`TransferRegistry`). Default is the `vector`default dev mnemonic:`candy maple cake sugar pudding cream honey rich smooth crumble sweet treat`
+- `p`/`eth-provider`: the provider url. Default is `http://localhost:8545`.
+- `s`/`silent`: a boolean indicating whether the command should execute with or without logs. Default is false.
+
+#### Example
+
+From the `~/vector/modules/contracts` directory:
+
+```sh
+dist/cli.js registerTransfer --address-book=/data/address-book.json --eth-provider "http://localhost:8545"
+```
+
+### display
+
+Displays the accounts used for contract testing, as well as current and recommended balance. Useful if testing contracts against a remote chain.
+
+#### Arguments
+
+- `m`/`mnemonic`: the mnemonic used to run the tests. Default is the `vector`default dev mnemonic: `candy maple cake sugar pudding cream honey rich smooth crumble sweet treat`
+
+#### Example
+
+From the `~/vector/modules/contracts` directory:
+
+```sh
+dist/cli.js display --mnemonic "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+```
 
 ## Contract Architecture
 
@@ -185,9 +245,11 @@ The dispute flow works as follows:
    - Note that the merkle root is updated to include transfer state during the `create` channel op (where balances are locked into the transfer), and then is updated again to remove the transfer state during the `resolve` channel op (where balances are reintroduced to the core channel state). This means that a disputed transfer can only ever be in it's initial state, which keeps things really simple. See the [protocol writeup](../protocol/README.md) for more information.
 5. Once a transfer is in dispute, the transfer resolver can resolve it manually onchain using `defundTransfer` anytime before the transfer dispute window expires. This will call the `TransferDefinition` to get an updated set of balances, and then send those balances to both parties onchain. If no transfer resolver is available, or the transfer dispute window has elapsed, the `defundTransfer` can be called (this time by anyone) to pay out the initial balances of the transfer via `adjudicatorTransfer` on the `VectorChannel` contract.
 
+## Transfers
+
 ## Depositing and Withdrawing
 
-As mentioned above, funding a channel is asymmetric. The initiator of a channel (as determined by `participants[]`), _must_ deposit using the `depositA` function in the channel contract. The responder of a channel can deposit simply by sending funds to the channel address.
+As mentioned above, funding a channel is asymmetric. The initiator of a channel (as determined by `alice`), _must_ deposit using the `depositAlice` function in the channel contract. The responder of a channel (`bob`) can deposit simply by sending funds to the channel address.
 
 Calling `depositAlice` increments the `totalDepositsAlice` by the amount that Alice deposits for a given assetId. We can get this value offchain or in the adjudicator by calling the `totalDepositsAlice` getter. We can also get `totalDepositsBob` the same way -- the contract calculates using the following identity:
 
@@ -208,3 +270,7 @@ The above pattern has a few _highly_ desireable UX consequences:
 Withdrawing works a bit differently:
 
 A withdraw from the channel is done by locking up some funds in a transfer and "burning" them, conditionally upon a withdraw commitment being generated from the channel. Once a commitment is generated, one or both parties _always_ have the ability to put it onchain to get their funds. Because of this, we consider offchain that the withdraw was completed even if it wasn't actually submitted to chain. Note that, in the event of a dispute, both parties MUST submit any pending withdraw commitments to chain to properly receive their remaining funds.
+
+## Security
+
+These contracts have not yet been audited, but an audit is forthcoming. Stay tuned!
