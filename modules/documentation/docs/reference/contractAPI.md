@@ -213,41 +213,114 @@ Deploys, sets up, and calls `depositAlice` on a channel multisig. Must have the 
 
 ## ChannelMastercopy
 
+Hosts all the onchain logic used by the channel multisigs. All deployed channel proxies will point to this onchain contract.
+
 ### setup
+
+#### Params
+
+#### Returns
 
 ### getAlice
 
+#### Params
+
+#### Returns
+
 ### getBob
+
+#### Params
+
+#### Returns
 
 ### getTotalTransferred
 
+#### Params
+
+#### Returns
+
 ### getEmergencyWithdrawableAmount
+
+#### Params
+
+#### Returns
 
 ### emergencyWithdraw
 
+#### Params
+
+#### Returns
+
 ### getTotalDepositsAlice
+
+#### Params
+
+#### Returns
 
 ### getTotalDepositsBob
 
+#### Params
+
+#### Returns
+
 ### depositAlice
+#### Params
+
+#### Returns
 
 ### getWithdrawalTransactionRecord
 
+#### Params
+
+#### Returns
+
 ### withdraw
+
+#### Params
+
+#### Returns
 
 ### getChannelDispute
 
+#### Params
+
+#### Returns
+
 ### getDefundNonce
+
+#### Params
+
+#### Returns
 
 ### getTransferDispute
 
+#### Params
+
+#### Returns
+
 ### disputeChannel
+
+#### Params
+
+#### Returns
 
 ### defundChannel
 
+#### Params
+
+#### Returns
+
 ### disputeTransfer
 
+#### Params
+
+#### Returns
+
 ### defundTransfer
+
+#### Params
+
+#### Returns
 
 ## TransferRegistry
 
