@@ -137,7 +137,7 @@ struct CoreTransferState {
 
 ### WithdrawCommitment
 
-New `WithdrawCommitment`s are generated whenever a `Withdraw` transfer is resolved, and are the signatures of both channel participants on the `WithdrawData`, or the data needed to execute the cooperative withdrawal from the channel multisig:
+A new `WithdrawCommitment` is generated whenever a `Withdraw` transfer is resolved, and are the signatures of both channel participants on the `WithdrawData`, or the data needed to execute the cooperative withdrawal from the channel multisig:
 
 ```ts
 struct WithdrawData {
@@ -157,20 +157,21 @@ Once a withdrawal is resolved, the balance to be withdrawn is removed from the `
 
 Vector uses a proxy pattern and the CREATE2 opcode to optimize onboarding UX for new channels. This means that participants can derive a `channelAddress` deterministically and independently as part of setting up a channel (and, in Bob's case, depositing to it). At some point later (decoupled from onboarding flow), either participant can then call `ChannelFactory.createChannel` to deploy their channel proxy.
 
-To properly protect against replay attacks across chains or discrete networks, the `channelAddress` MUST be globally unique. We additionally include `channelAddress` as part of the channel state, and as a prt of the derivation for `transferId` to properly domain-separate signed calldata as well.
+To properly protect against replay attacks across chains or discrete networks, the `channelAddress` MUST be globally unique. We additionally include `channelAddress` as part of the channel state, and as a part of the derivation for `transferId` to properly domain-separate signed calldata as well.
 
 Deriving `channelAddress` uses the following CREATE2 salt:
 
+```ts
+function generateSalt(address alice, address bob)
+    internal
+    view
+    returns (bytes32)
+{
+    return keccak256(abi.encodePacked(alice, bob, getChainId()));
+}
 ```
-keccak256(
-   abi.encodePacked(
-      alice, // initiator signer address
-      bob, // responder signer address
-      chainId,
-      keccak256("vector")
-   )
-);
-```
+
+where the `chainId` is either pulled from the opcode directly, or initialized with the deployment of the `ChannelFactory`. The optional setting of the `chainId` on construction is used to cover the edgecases where chains do not properly implement the `chainId` opcode (i.e. `ganache`).
 
 ## Dispute Flow
 
@@ -181,8 +182,8 @@ The dispute flow works as follows:
 2. After the consensus phase is complete, the latest state of the channel is available onchain. Then, the `defund` phase of the dispute game begins.
 3. During the `defund` phase, either party may call `defundChannel()` to withdraw all assets from the channel (for both parties).
 4. It is also possible for either party to dispute transfers directly during this phase. The process for this looks somewhat similar to disputing channels. First, parties call `disputeTransfer()` which starts a timeout window within which the transfer state must be finalized. `disputeTransfer()` checks that the hash of the passed in transfer state is a part of the merkle root checkpointed onchain during the channel `consensus` phase.
-   - Note that the merkle root is updated to include transfer state during the `create` channel op (where balances are locked into the transfer), and then is updated again to remove the transfer state during the `resolve` channel op (where balances are reintroduced to the core channel state). This means that a disputed transfer can only ever be in it's initial state, which keeps things really simple.
-5. Once a transfer is in dispute, anyone can resolve it manually onchain using `defundTransfer` anytime before the transfer dispute window expires. This will call the `TransferDefinition` to get an updated set of balances, and then send those balances to both parties onchain. If no transfer resolver is available, the dispute window will expire and then `defundTransfer` can be called (once again by anyone) to pay out the initial balances of the transfer via `adjudicatorTransfer` on the `VectorChannel` contract.
+   - Note that the merkle root is updated to include transfer state during the `create` channel op (where balances are locked into the transfer), and then is updated again to remove the transfer state during the `resolve` channel op (where balances are reintroduced to the core channel state). This means that a disputed transfer can only ever be in it's initial state, which keeps things really simple. See the [protocol writeup](../protocol/README.md) for more information.
+5. Once a transfer is in dispute, the transfer resolver can resolve it manually onchain using `defundTransfer` anytime before the transfer dispute window expires. This will call the `TransferDefinition` to get an updated set of balances, and then send those balances to both parties onchain. If no transfer resolver is available, or the transfer dispute window has elapsed, the `defundTransfer` can be called (this time by anyone) to pay out the initial balances of the transfer via `adjudicatorTransfer` on the `VectorChannel` contract.
 
 ## Depositing and Withdrawing
 
@@ -190,8 +191,8 @@ As mentioned above, funding a channel is asymmetric. The initiator of a channel 
 
 Calling `depositAlice` increments the `totalDepositsAlice` by the amount that Alice deposits for a given assetId. We can get this value offchain or in the adjudicator by calling the `totalDepositsAlice` getter. We can also get `totalDepositsBob` the same way -- the contract calculates using the following identity:
 
-```
-getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedAlice[assetId]
+```ts
+getBalance(assetId) + _totalWithdrawn[assetId] - _totalDepositedAlice[assetId];
 ```
 
 Note that because this is an identity, we **do not** use SafeMath. _We explicitly want these values to wrap around in the event of an over/undeflow_.
@@ -207,39 +208,3 @@ The above pattern has a few _highly_ desireable UX consequences:
 Withdrawing works a bit differently:
 
 A withdraw from the channel is done by locking up some funds in a transfer and "burning" them, conditionally upon a withdraw commitment being generated from the channel. Once a commitment is generated, one or both parties _always_ have the ability to put it onchain to get their funds. Because of this, we consider offchain that the withdraw was completed even if it wasn't actually submitted to chain. Note that, in the event of a dispute, both parties MUST submit any pending withdraw commitments to chain to properly receive their remaining funds.
-
-## Contract TODOs
-
-#### Adjudicator
-
-- [x] Make accessible from mastercopy
-- [x] Change timeouts in `disputeChannel` to only refresh in the case that the channel is not in the `Consensus` phase. (Basically, each phase `Running`, `Consensus`, `Dispute` should be handled separately)
-- [ ] Only allow recipient of a transfer to use `transferResolver` to `resolve` a transfer onchain in `defundTransfer`. Either party should be able to defund it with the existing state, however.
-- [ ] Don't need `onlyParticipants` anymore if we're allowing anybody to dispute.
-- [ ] `getChannelAddress` needs to be implemented using participants, chainId (from onchain data), hardcoded vector domain separator, and hardcoded `ChannelFactory` address.
-- [ ] Fill out signing/hashing utils based on any new needs that might have been introduced as a result of the new control flow for contracts.
-- [ ] Events
-
-#### VectorChannel
-
-- [ ] Add events/event listening for deposits
-- [x] Write the `adjudicatorTransfer` fn
-- [x] Update `getTransactionHash` to use nonce-based replay protection
-- [x] Clean up + add missing functions to interface
-- [x] Remove update functionality for adjudicator
-
-#### ChannelFactory
-
-- [ ] `createChannelAndDepositA` is very ugly + we need two onchain txs no matter what because of approve/transferFrom
-
-#### Other
-
-- [ ] Do we want to downgrade to 0.6? Possibly not -- TODO/open an issue
-- [ ] Change encoding of `Balance` offchain to be fixed size arrays
-- [ ] Remove transfer encodings from CoreTransferState offchain
-- [ ] Comments / NatSpec
-
-#### Later
-
-- [ ] Solidify asset handling: deal with non-standard-conforming tokens, reverts, reentrancy, etc.
-- [ ] Allow to selectively defund assets (?)
