@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.0.14
+
 - use individual ethers packages instead of ethers
 - various smaller contract changes
 - simplified inheritance hierarchy for channel mastercopy
