@@ -54,7 +54,7 @@ The protocol can be visualized as follows:
 
 All channel updates fall into one of 4 types. Each update type is responsible for generating and storing one [double-signed commitment](https://github.com/connext/vector/blob/master/modules/contracts/README.md#commitments).
 
-Note that there is no specific update for `withdraw`. Instead, withdrawals can be constructed in an easy and generalizeable way using `create` and `resolve` (see [here](#withdrawals)).
+Note that there is no specific update for `withdraw`. Instead, withdrawals can be constructed in an easy and generalizeable way using `create` and `resolve` (see [here](https://github.com/connext/vector/blob/master/modules/contracts/README.md#depositing-and-withdrawing)).
 
 ### Setup
 
@@ -102,9 +102,3 @@ The resolve update must do the following:
 3. Generate a new merkle tree by removing the hash of the `TransferState` from the active transfers, and update the `merkleRoot` in the channel state.
 4. Generate a double signed `ChannelCommitment`
 5. Set this update to `state.latestUpdate`
-
-## A Note on Transfers
-
-### TransferDefinition.sol
-
-### Withdrawals
