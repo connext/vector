@@ -10,12 +10,14 @@ import "./CMCCore.sol";
 import "./CMCAsset.sol";
 import "./CMCDeposit.sol";
 import "./lib/LibChannelCrypto.sol";
+import "./lib/LibMath.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// @title CMCAdjudicator - Dispute logic for ONE channel
 contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     using LibChannelCrypto for bytes32;
+    using LibMath for uint256;
     using SafeMath for uint256;
 
     uint256 private constant INITIAL_DEFUND_NONCE = 1;
@@ -80,8 +82,11 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         bytes calldata aliceSignature,
         bytes calldata bobSignature
     ) external override onlyViaProxy nonReentrant validateChannel(ccs) {
+        // Generate hash
+        bytes32 ccsHash = hashChannelState(ccs);
+
         // Verify Alice's and Bob's signature on the channel state
-        verifySignatures(ccs, aliceSignature, bobSignature);
+        verifySignaturesOnChannelStateHash(ccs, ccsHash, aliceSignature, bobSignature);
 
         // We cannot dispute a channel in its defund phase
         require(!inDefundPhase(), "CMCAdjudicator: INVALID_PHASE");
@@ -103,7 +108,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         }
 
         // Store newer state
-        channelDispute.channelStateHash = hashChannelState(ccs);
+        channelDispute.channelStateHash = ccsHash;
         channelDispute.nonce = ccs.nonce;
         channelDispute.merkleRoot = ccs.merkleRoot;
 
@@ -194,10 +199,10 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
                 // Start with the final balances in ccs
                 balance = ccs.balances[index];
                 // Add unprocessed deposits
-                balance.amount[0] = balance.amount[0].add(
+                balance.amount[0] = balance.amount[0].satAdd(
                     tdAlice - ccs.processedDepositsA[index]
                 );
-                balance.amount[1] = balance.amount[1].add(
+                balance.amount[1] = balance.amount[1].satAdd(
                     tdBob - ccs.processedDepositsB[index]
                 );
             }
@@ -327,15 +332,14 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         );
     }
 
-    function verifySignatures(
+    function verifySignaturesOnChannelStateHash(
         CoreChannelState calldata ccs,
+        bytes32 ccsHash,
         bytes calldata aliceSignature,
         bytes calldata bobSignature
     ) internal pure {
         bytes32 commitment =
-            keccak256(
-                abi.encode(CommitmentType.ChannelState, hashChannelState(ccs))
-            );
+            keccak256(abi.encode(CommitmentType.ChannelState, ccsHash));
         require(
             commitment.checkSignature(aliceSignature, ccs.alice),
             "CMCAdjudicator: INVALID_ALICE_SIG"
