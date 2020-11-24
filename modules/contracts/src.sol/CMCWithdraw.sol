@@ -51,7 +51,7 @@ contract CMCWithdraw is CMCCore, CMCAsset, ICMCWithdraw {
         bytes32 wdHash = hashWithdrawData(wd);
 
         // Verify Alice's and Bob's signature on the withdraw data
-        verifySignatures(wdHash, aliceSignature, bobSignature);
+        verifySignaturesOnWithdrawDataHash(wdHash, aliceSignature, bobSignature);
 
         // Replay protection
         require(!isExecuted[wdHash], "CMCWithdraw: ALREADY_EXECUTED");
@@ -75,7 +75,7 @@ contract CMCWithdraw is CMCCore, CMCAsset, ICMCWithdraw {
         }
     }
 
-    function verifySignatures(
+    function verifySignaturesOnWithdrawDataHash(
         bytes32 wdHash,
         bytes calldata aliceSignature,
         bytes calldata bobSignature

@@ -29,6 +29,9 @@ export default class ConnextManager {
 
   private async initNode(): Promise<BrowserNode> {
     // store entropy in local storage
+    if (!localStorage) {
+      throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.")
+    }
     const storedEntropy = localStorage.getItem("entropy");
     if (!storedEntropy) {
       const newEntropy = hexlify(randomBytes(65));
