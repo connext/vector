@@ -36,53 +36,122 @@ The contracts are structured as follows:
 
 ## Principles and Assumptions
 
-To simplify the implementation and support the required featureset, the contracts adopt the following principles/assumptions:
+To simplify the implementation and support the required feature set, the contracts adopt the following principles/assumptions:
 
-1. Channels only have two participants. They are ordered by `[initiator, responder]` and signed into the initial channel state when setting up the channel.
+1. Channels only have two participants, `alice` and `bob`. They are set and signed into the initial channel state when setting up the channel.
 2. Every channel update is accompanied by a **single** corresponding commitment. This commitment is a `CoreChannelState` that is signed by both channel participants.
-3. Depositing into a channel is asymmetric -- the intiator of the channel deposits by calling a `depositA` function. The responder simply sends funds to the contract. (This allows for _very_ powerful end-user experiences).
-4. Updating the balance of the channel happens by `create`ing and `resolve`ing conditional transfers. Creating a transfer generates a `CoreTransferState` which gets hashed and added to the `merkleRoot` that is a part of the signed `CoreChannelState` for that update. Resolving a transfer removes the hash from the `merkleRoot`.
+3. Depositing into a channel is asymmetric -- `alice` deposits by calling a `depositAlice` function. The responder simply sends funds to the contract. (This allows for _very_ powerful end-user experiences).
+4. Updating the balance of the channel happens by `create`-ing and `resolve`-ing conditional transfers. Creating a transfer generates a `CoreTransferState` which gets hashed and added to the `merkleRoot` within the signed `CoreChannelState` for that update. Resolving a transfer removes the hash from the `merkleRoot`.
    - The consequence of this is that a channel can have an arbitrary number of unresolved transfers without changing anything about how the channel is disputed.
 5. Transfers can only be resolved by the receiver of that transfer.
-6. Transfers are generalized: any arbitrary conditionality can be attached to a `resolve` update. This happens through a `transferDefinition`, a `pure` or `view` contract of the following interface (TODO) which outputs a final balance post-transfer.
-7. Transfer are single-turn: they follow a strict `create`->`resolve` flow. However, because they are generalized, it is possible to construct transfers with many intermediary states _so long as those states are independently resolveable_ (i.e. so long as at any point the receiver of the transfer can `resolve` to get a final balance).
+6. Transfers are generalized: any arbitrary conditionality can be attached to a `resolve` update. This happens through a `transferDefinition`, a `pure` or `view` contract of the following interface which outputs a final balance post-transfer:
+
+```ts
+struct RegisteredTransfer {
+    string name;
+    address definition;
+    string stateEncoding;
+    string resolverEncoding;
+}
+
+interface ITransferDefinition {
+    // Validates the initial state of the transfer.
+    // Called by validator.ts during `create` updates.
+    function create(bytes calldata encodedBalance, bytes calldata)
+        external
+        view
+        returns (bool);
+
+    // Performs a state transition to resolve a transfer and returns final balances.
+    // Called by validator.ts during `resolve` updates.
+    function resolve(
+        bytes calldata encodedBalance,
+        bytes calldata,
+        bytes calldata
+    ) external view returns (Balance memory);
+
+    // Returns encodings, name, and address of the transfer definition so the protocol
+    // can be unopinionated about the transfers
+    function getRegistryInformation()
+        external
+        view
+        returns (RegisteredTransfer memory);
+}
+
+```
+
+7. Transfers are single-turn: they follow a strict `create`->`resolve` flow. However, because they are generalized, it is possible to construct transfers with many intermediary states _so long as those states are independently resolveable_ (i.e. so long as at any point the receiver of the transfer can `resolve` to get a final balance).
 8. Withdrawing from the channel happens by constructing a mutually signed commitment to execute an arbitrary transaction from the contract. This can happen trustlessly using `create` and `resolve`.
 9. Disputing a channel/transfer happens in two phases: (1) Calling `disputeChannel()` (or `disputeTransfer()`) which finalizes the latest state onchain, (2) Calling `defundChannel()` (or `defundTransfer()`) which withdraws disputed funds.
 10. The above calls are made in a `consensus` phase and a `defund` phase, which are started when a dispute begins. After these phases end, the onchain channel contract _resumes a "happy" state_. This means both parties can continue signing commitments at a higher nonce and resume normal channel operations. They also retain the ability to dispute again in case further offchain coordination cannot be reached.
 
 ## Commitments
 
-The core purpose of any state channel protocol is to produce one or more commitments that represent a user's ability to get funds onchain in the event that coordination breaks down. This means that commitments are the primary interface between the onchain contracts (which manage rare channel failure cases i.e. disputes) and the offchain protocol (used 99.99% of the time).
+The core purpose of any state channel protocol is to produce one or more commitments that represent a user's ability to remove funds from a two of two onchain multisig in the event offchain coordination breaks down. This means commitments are the primary interface between the onchain contracts (which manage rare channel failure cases i.e. disputes) and the offchain protocol (used 99% of the time).
 
-In the interest of simplicity, Vector only has one type of commitment that is actually signed - the `ChannelCommitment`, which is a signature on the `CoreChannelState`:
+There are two types of commitments in Vector:
 
-```
+- `ChannelCommitment`: a signature on the `CoreChannelState`, which ensures the channel and every unresolved transfer in a channel is disputable
+- `WithdrawCommitment`: a signature on the data used in cooperative withdrawals from the multisig
+
+### ChannelCommitment
+
+A new `ChannelCommitment` is generated for every channel state that increments the `nonce`, ensuring the latest state may always be safely disputed.
+
+```ts
+struct Balance {
+    uint256[2] amount; // [alice, bob] in channel, [initiator, responder] in transfer
+    address payable[2] to; // [alice, bob] in channel, [initiator, responder] in transfer
+}
+
 struct CoreChannelState {
-  Balance[] balances, // index matches assetId index
-  address[] assetIds,
-  address channelAddress, // Globally unique
-  address[2] participants, // [initiator, responder]
-  uint256[] processedDepositsA, // index matches assetId index
-  uint256[] processedDepositsB, // index matches assetId index
-  uint256 timeout,
-  uint256 nonce,
-  bytes32 merkleRoot
+    address channelAddress;
+    address alice; // High fidelity participant
+    address bob; // Low fidelity participant
+    address[] assetIds;
+    Balance[] balances; // Ordered by assetId
+    uint256[] processedDepositsA; // Ordered by assetId
+    uint256[] processedDepositsB; // Ordered by assetId
+    uint256[] defundNonces; // Ordered by assetId
+    uint256 timeout;
+    uint256 nonce;
+    bytes32 merkleRoot; // Tree is made of hashes of unresolved transfers
 }
 ```
 
 Despite not being a "real" commitment, the `CoreTransferState` is a part of the merkle root in the channel state. Thus it's security is enforced using both peers' signatures on the above.
 
-```
+```ts
 struct CoreTransferState {
-   Balance initialBalance;
-   address assetId;
-   address channelAddress;
-   bytes32 transferId; // Globally unique
-   address transferDefinition;
-   uint256 transferTimeout; // Note: we have a transfer-specific timeout to enable decrementing timelocks for hopped transfers
-   bytes32 initialStateHash;
+    address channelAddress;
+    bytes32 transferId;
+    address transferDefinition;
+    address initiator;
+    address responder;
+    address assetId;
+    Balance balance;
+    uint256 transferTimeout;
+    bytes32 initialStateHash;
 }
 ```
+
+### WithdrawCommitment
+
+New `WithdrawCommitment`s are generated whenever a `Withdraw` transfer is resolved, and are the signatures of both channel participants on the `WithdrawData`, or the data needed to execute the cooperative withdrawal from the channel multisig:
+
+```ts
+struct WithdrawData {
+    address channelAddress;
+    address assetId;
+    address payable recipient;
+    uint256 amount;
+    uint256 nonce;
+    address callTo;
+    bytes callData;
+}
+```
+
+Once a withdrawal is resolved, the balance to be withdrawn is removed from the `CoreChannelState`, and the commitment may be submitted to chain at any point to remove funds from the channel multisig. See the [withdraw writeup](#depositing-and-withdrawing) for more details on this process.
 
 ## ChannelFactory and CREATE2
 
