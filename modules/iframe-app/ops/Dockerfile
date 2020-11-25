@@ -9,5 +9,4 @@ RUN npm install
 ENV PATH="/root/node_modules/.bin:./node_modules/.bin:${PATH}"
 COPY build build
 EXPOSE 5000
-CMD ["/bin/bash", "-c", "ls build && cd build && ./env.sh && cat env-config.js && serve ."]
-# CMD ["serve", "build"]
+CMD ["serve", "build"]
