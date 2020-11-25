@@ -10,6 +10,10 @@ struct RegisteredTransfer {
 }
 
 interface ITransferRegistry {
+    event TransferAdded(RegisteredTransfer transfer);
+
+    event TransferRemoved(RegisteredTransfer transfer);
+
     // Should add a transfer definition to the registry
     // onlyOwner
     function addTransferDefinition(RegisteredTransfer memory transfer) external;
