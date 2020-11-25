@@ -8,11 +8,10 @@ import { expect } from "chai";
 
 import { deployContracts } from "../..";
 import { AddressBook } from "../../addressBook";
-
 import { bob, rando } from "../constants";
 import { getTestAddressBook, getTestChannel } from "../utils";
 
-describe("CMCAsset", function() {
+describe("CMCAsset", function () {
   this.timeout(120_000);
   let addressBook: AddressBook;
   let assetTransfer: Contract;
@@ -63,20 +62,20 @@ describe("CMCAsset", function() {
     });
   });
 
-  describe("getEmergencyWithdrawableAmount", () => {
+  describe("getExitableAmount", () => {
     it("should fail if called directly", async () => {
-      await expect(assetTransfer.getEmergencyWithdrawableAmount(AddressZero, bob.address)).revertedWith(
+      await expect(assetTransfer.getExitableAmount(AddressZero, bob.address)).revertedWith(
         "Mastercopy: ONLY_VIA_PROXY",
       );
     });
 
     it("should work when nothing has been transferred", async () => {
-      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, bob.address)).to.be.eq(BigNumber.from(0));
-      expect(await channel.getEmergencyWithdrawableAmount(token.address, bob.address)).to.be.eq(BigNumber.from(0));
+      expect(await channel.getExitableAmount(AddressZero, bob.address)).to.be.eq(BigNumber.from(0));
+      expect(await channel.getExitableAmount(token.address, bob.address)).to.be.eq(BigNumber.from(0));
     });
   });
 
-  describe("makeEmergencyWithdrawable", () => {
+  describe("makeExitable", () => {
     beforeEach(async () => {
       // Fund the channel with tokens and eth
       const tx = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
@@ -92,34 +91,32 @@ describe("CMCAsset", function() {
     it("should work for ETH transfers", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await bob.getBalance();
-      await channel.testMakeEmergencyWithdrawable(AddressZero, bob.address, value);
+      await channel.testMakeExitable(AddressZero, bob.address, value);
       expect(await bob.getBalance()).to.be.eq(preTransfer);
       expect(await channel.getTotalTransferred(AddressZero)).to.be.eq(Zero);
-      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, bob.address)).to.be.eq(value);
+      expect(await channel.getExitableAmount(AddressZero, bob.address)).to.be.eq(value);
     });
 
     it("should work for a valid ERC20 token", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await token.balanceOf(bob.address);
-      await channel.testMakeEmergencyWithdrawable(token.address, bob.address, value);
+      await channel.testMakeExitable(token.address, bob.address, value);
       expect(await token.balanceOf(bob.address)).to.be.eq(preTransfer);
       expect(await channel.getTotalTransferred(token.address)).to.be.eq(Zero);
-      expect(await channel.getEmergencyWithdrawableAmount(token.address, bob.address)).to.be.eq(value);
+      expect(await channel.getExitableAmount(token.address, bob.address)).to.be.eq(value);
     });
 
     it("should work for ERC20 token that does not return `bool` from transfer", async () => {
       const value = BigNumber.from(1000);
       const preTransfer = await nonconformingToken.balanceOf(bob.address);
-      await channel.testMakeEmergencyWithdrawable(nonconformingToken.address, bob.address, value);
+      await channel.testMakeExitable(nonconformingToken.address, bob.address, value);
       expect(await nonconformingToken.balanceOf(bob.address)).to.be.eq(preTransfer);
       expect(await channel.getTotalTransferred(nonconformingToken.address)).to.be.eq(Zero);
-      expect(await channel.getEmergencyWithdrawableAmount(nonconformingToken.address, bob.address)).to.be.eq(
-        value,
-      );
+      expect(await channel.getExitableAmount(nonconformingToken.address, bob.address)).to.be.eq(value);
     });
   });
 
-  describe("makeBalanceEmergencyWithdrawable", () => {
+  describe("makeBalanceExitable", () => {
     beforeEach(async () => {
       // Fund the channel with tokens and eth
       const tx = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
@@ -135,16 +132,16 @@ describe("CMCAsset", function() {
       };
       const preTransferBob = await bob.getBalance();
       const preTransferRando = await rando.getBalance();
-      await channel.testMakeBalanceEmergencyWithdrawable(AddressZero, balance);
+      await channel.testMakeBalanceExitable(AddressZero, balance);
       expect(await bob.getBalance()).to.be.eq(preTransferBob);
       expect(await rando.getBalance()).to.be.eq(preTransferRando);
       expect(await channel.getTotalTransferred(AddressZero)).to.be.eq(Zero);
-      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, bob.address)).to.be.eq(valueBob);
-      expect(await channel.getEmergencyWithdrawableAmount(AddressZero, rando.address)).to.be.eq(valueRando);
+      expect(await channel.getExitableAmount(AddressZero, bob.address)).to.be.eq(valueBob);
+      expect(await channel.getExitableAmount(AddressZero, rando.address)).to.be.eq(valueRando);
     });
   });
 
-  describe("emergencyWithdraw", () => {
+  describe("exit", () => {
     const value = BigNumber.from(1000);
 
     beforeEach(async () => {
@@ -155,10 +152,10 @@ describe("CMCAsset", function() {
 
       // Make failing transfer
       const preTransfer = await failingToken.balanceOf(bob.address);
-      await (await channel.testMakeEmergencyWithdrawable(failingToken.address, bob.address, value)).wait();
+      await (await channel.testMakeExitable(failingToken.address, bob.address, value)).wait();
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer);
       expect(await channel.getTotalTransferred(failingToken.address)).to.be.eq(BigNumber.from(0));
-      expect(await channel.getEmergencyWithdrawableAmount(failingToken.address, bob.address)).to.be.eq(value);
+      expect(await channel.getExitableAmount(failingToken.address, bob.address)).to.be.eq(value);
 
       // Make transfers pass
       await (await failingToken.setTransferShouldRevert(false)).wait();
@@ -166,34 +163,32 @@ describe("CMCAsset", function() {
     });
 
     it("should fail if owner is not msg.sender or recipient", async () => {
-      await expect(
-        channel.connect(rando).emergencyWithdraw(failingToken.address, bob.address, rando.address),
-      ).revertedWith("CMCAsset: OWNER_MISMATCH");
+      await expect(channel.connect(rando).exit(failingToken.address, bob.address, rando.address)).revertedWith(
+        "CMCAsset: OWNER_MISMATCH",
+      );
     });
 
     it("should fail if withdrawable amount is 0", async () => {
-      await expect(channel.connect(bob).emergencyWithdraw(token.address, bob.address, bob.address)).revertedWith(
-        "CMCAsset: NO_OP",
-      );
+      await expect(channel.connect(bob).exit(token.address, bob.address, bob.address)).revertedWith("CMCAsset: NO_OP");
     });
 
     it("should fail if transfer fails", async () => {
       await (await failingToken.setTransferShouldFail(true)).wait();
-      await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
+      await expect(channel.connect(bob).exit(failingToken.address, bob.address, bob.address)).revertedWith(
         "CMCAsset: TRANSFER_FAILED",
       );
     });
 
     it("should fail if transfer reverts", async () => {
       await (await failingToken.setTransferShouldRevert(true)).wait();
-      await expect(channel.connect(bob).emergencyWithdraw(failingToken.address, bob.address, bob.address)).revertedWith(
+      await expect(channel.connect(bob).exit(failingToken.address, bob.address, bob.address)).revertedWith(
         "FAIL: Failing token",
       );
     });
 
     it("should allow ERC20 token to be withdrawable if transfer fails", async () => {
       const preTransfer = await failingToken.balanceOf(bob.address);
-      await (await channel.emergencyWithdraw(failingToken.address, bob.address, bob.address)).wait();
+      await (await channel.exit(failingToken.address, bob.address, bob.address)).wait();
       expect(await failingToken.balanceOf(bob.address)).to.be.eq(preTransfer.add(value));
     });
   });

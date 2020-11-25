@@ -207,8 +207,8 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
                 );
             }
 
-            // Add result to emergency-withdrawable amounts
-            makeBalanceEmergencyWithdrawable(assetId, balance);
+            // Add result to exitable amounts
+            makeBalanceExitable(assetId, balance);
         }
 
         emit ChannelDefunded(
@@ -319,7 +319,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         }
 
         // Depending on previous code path, defund either resolved or initial balance
-        makeBalanceEmergencyWithdrawable(cts.assetId, balance);
+        makeBalanceExitable(cts.assetId, balance);
 
         // Emit event
         emit TransferDefunded(

@@ -8,7 +8,7 @@ import { AddressBook } from "../addressBook";
 import { alice } from "./constants";
 import { getTestAddressBook } from "./utils";
 
-describe("ChannelMastercopy", function() {
+describe("ChannelMastercopy", function () {
   this.timeout(120_000);
   let addressBook: AddressBook;
   let mastercopy: Contract;
@@ -49,8 +49,8 @@ describe("ChannelMastercopy", function() {
 
       // from ICMCAsset
       { name: "getTotalTransferred", args: [AddressZero] },
-      { name: "getEmergencyWithdrawableAmount", args: [AddressZero, AddressZero] },
-      { name: "emergencyWithdraw", args: [AddressZero, AddressZero, AddressZero] },
+      { name: "getExitableAmount", args: [AddressZero, AddressZero] },
+      { name: "exit", args: [AddressZero, AddressZero, AddressZero] },
 
       // from ICMCDeposit
       { name: "getTotalDepositsAlice", args: [AddressZero] },
