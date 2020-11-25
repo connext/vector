@@ -13,7 +13,7 @@ import { registerTransfer } from "./registerTransfer";
 
 export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = logger.child({})): Promise<void> => {
   // Setup env & log initial state
-  const chainId = ((await wallet.provider.getNetwork()).chainId).toString();
+  const chainId = (await wallet.provider.getNetwork()).chainId.toString();
   const balance = await wallet.getBalance();
   const nonce = await wallet.getTransactionCount();
   const providerUrl = (wallet.provider as JsonRpcProvider).connection.url;
@@ -71,10 +71,7 @@ export const migrateCommand = {
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const addressBook = getAddressBook(
-      argv.addressBook,
-      (await wallet.provider.getNetwork()).chainId.toString(),
-    );
+    const addressBook = getAddressBook(argv.addressBook, (await wallet.provider.getNetwork()).chainId.toString());
     const level = argv.silent ? "silent" : "info";
     await migrate(wallet, addressBook, logger.child({ level }));
   },
