@@ -23,15 +23,13 @@ export type AddressBookJson = {
 
 export interface AddressBook {
   getContract: (name: string) => Contract;
+  getContractByAddress: (address: string) => AddressBookEntry;
   getEntry: (name: string) => AddressBookEntry;
+  getEntryByAddress: (address: string) => AddressBookEntry;
   setEntry: (name: string, entry: AddressBookEntry) => void;
 }
 
-export const getAddressBook = (
-  path: string,
-  chainId: string,
-  provider?: JsonRpcProvider | Wallet,
-): AddressBook => {
+export const getAddressBook = (path: string, chainId: string, provider?: JsonRpcProvider | Wallet): AddressBook => {
   if (!path) throw new Error(`A path to the address book file is required.`);
   if (!chainId) throw new Error(`A chainId is required.`);
   let addressBook: AddressBookJson = { [chainId]: {} };
@@ -57,6 +55,18 @@ export const getAddressBook = (
     }
   };
 
+  const getEntryByAddressHelper = (address: string): AddressBookEntry & { name: string } => {
+    const [name, entry] = Object.entries(addressBook[chainId]).find(([name, deploymentData]) => {
+      return deploymentData?.address === address;
+    }) ?? ["unknown", { address: AddressZero }];
+    return { name, ...entry };
+  };
+
+  const getEntryByAddress = (address: string): AddressBookEntry => {
+    const { name, ...entry } = getEntryByAddressHelper(address);
+    return entry;
+  };
+
   const setEntry = (name: string, entry: AddressBookEntry): void => {
     addressBook[chainId][name] = entry;
     try {
@@ -69,14 +79,26 @@ export const getAddressBook = (
   const getContract = (name: string): Contract => {
     const entry = getEntry(name);
     if (entry.address == AddressZero) {
-      throw Error(`getContract(${name}): NO_ADDRESS_BOOK_ENTRY`);
+      throw new Error(`getContract(${name}): NO_ADDRESS_BOOK_ENTRY`);
     }
     const artifact = artifacts[name.split("-")[0]];
     if (!artifact || !artifact.abi) {
-      throw Error(`getContract(${name}): NO_AVAILABLE_ARTIFACTS`);
+      throw new Error(`getContract(${name}): NO_AVAILABLE_ARTIFACTS`);
     }
     return new Contract(entry.address, artifact.abi, provider);
   };
 
-  return { getContract, getEntry, setEntry };
+  const getContractByAddress = (address: string): Contract => {
+    const { name, ...entry } = getEntryByAddressHelper(address);
+    if (entry.address === AddressZero) {
+      throw new Error(`getContractByAddress(${address}): NO_ADDRESS_BOOK_ENTRY`);
+    }
+    const artifact = artifacts[name.split("-")[0]];
+    if (!artifact || !artifact.abi) {
+      throw new Error(`getContractByAddress(${address}): NO_AVAILABLE_ARTIFACTS_FOR_${name}`);
+    }
+    return new Contract(entry.address, artifact.abi, provider);
+  };
+
+  return { getContract, getEntry, setEntry, getContractByAddress, getEntryByAddress };
 };
