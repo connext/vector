@@ -1,0 +1,9 @@
+{
+  "name": "router",
+  "description": "This is only used to install & pin versions for a few global packages in the prod-mode docker container",
+  "dependencies": {
+    "pino-pretty": "4.3.0"
+  }
+}
+
+
