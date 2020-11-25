@@ -113,7 +113,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         channelDispute.merkleRoot = ccs.merkleRoot;
 
         // Emit event
-        emit ChannelDisputed(msg.sender, address(this), channelDispute);
+        emit ChannelDisputed(msg.sender, ccs, channelDispute);
     }
 
     function defundChannel(
@@ -213,10 +213,9 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
 
         emit ChannelDefunded(
             msg.sender,
-            address(this),
+            ccs,
             channelDispute,
-            assetIds,
-            indices
+            assetIds
         );
     }
 
@@ -254,8 +253,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
 
         emit TransferDisputed(
             msg.sender,
-            address(this),
-            cts.transferId,
+            cts,
             transferDispute
         );
     }
@@ -329,7 +327,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         // Emit event
         emit TransferDefunded(
             msg.sender,
-            address(this),
+            cts,
             transferDispute,
             encodedInitialTransferState,
             encodedTransferResolver,

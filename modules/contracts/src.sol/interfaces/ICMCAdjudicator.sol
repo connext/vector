@@ -47,28 +47,26 @@ interface ICMCAdjudicator {
 
     event ChannelDisputed(
         address disputer,
-        address channelAddress,
+        CoreChannelState state,
         ChannelDispute dispute
     );
 
     event ChannelDefunded(
         address defunder,
-        address channelAddress,
+        CoreChannelState state,
         ChannelDispute dispute,
-        address[] assetIds,
-        uint256[] indices
+        address[] assetIds
     );
 
     event TransferDisputed(
         address disputer,
-        address channelAddress,
-        bytes32 transferId,
+        CoreTransferState state,
         TransferDispute dispute
     );
 
     event TransferDefunded(
         address defunder,
-        address channelAddress,
+        CoreTransferState state,
         TransferDispute dispute,
         bytes encodedInitialState,
         bytes encodedResolver,
