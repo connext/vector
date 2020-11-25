@@ -9,6 +9,7 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { ethers } from "hardhat";
 import pino from "pino";
 
 import { createChannel, deployContracts } from "../actions";
@@ -19,7 +20,7 @@ import { VectorChainReader } from "../services";
 import { alice, bob, chainIdReq, provider } from "./constants";
 import { getTestAddressBook } from "./utils";
 
-describe("ChannelFactory", function() {
+describe("ChannelFactory", function () {
   this.timeout(120_000);
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
@@ -73,8 +74,8 @@ describe("ChannelFactory", function() {
 
   it("should create a channel with a deposit", async () => {
     // Use funded account for alice
-    const created = new Promise<string>(res => {
-      channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
+    const created = new Promise<string>((res) => {
+      channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
         res(data);
       });
     });
@@ -105,5 +106,29 @@ describe("ChannelFactory", function() {
       AddressZero,
     );
     expect(totalDepositsAlice).to.be.eq(value);
+  });
+
+  it("should create a different channel with a different mastercopy address", async () => {
+    const channel = await createChannel(bob.address, alice, addressBook);
+
+    const ChannelMastercopy = await ethers.getContractFactory("ChannelMastercopy");
+    const newMastercopy = await ChannelMastercopy.deploy();
+    await newMastercopy.deployed();
+
+    const ChannelFactory = await ethers.getContractFactory("ChannelFactory");
+    const newFactory = await ChannelFactory.deploy(newMastercopy.address, Zero);
+    await newFactory.deployed();
+
+    const created = new Promise<string>((res) => {
+      newFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
+        res(data);
+      });
+    });
+    const newChannelAddress = await newFactory.getChannelAddress(alice.address, bob.address);
+    const tx = await newFactory.createChannel(alice.address, bob.address);
+    await tx.wait();
+    const newCreatedAddress = await created;
+    expect(newCreatedAddress).to.eq(newChannelAddress);
+    expect(channel.address).to.not.eq(newCreatedAddress);
   });
 });
