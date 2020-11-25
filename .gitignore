@@ -41,6 +41,7 @@ config-prod.json
 **/.db-snapshots
 modules/server-node/connext-store.db
 modules/server-node/migrations/migrate.lock
+modules/contracts/typechain
 
 # Docs
 modules/client/docs
