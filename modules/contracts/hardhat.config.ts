@@ -1,5 +1,6 @@
 import "@nomiclabs/hardhat-waffle";
 import { HardhatUserConfig } from "hardhat/types";
+import "hardhat-typechain";
 
 import * as packageJson from "./package.json";
 
