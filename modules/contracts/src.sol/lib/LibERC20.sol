@@ -5,6 +5,12 @@ pragma experimental ABIEncoderV2;
 import "./LibUtils.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+/// @title LibERC20
+/// @author Connext <support@connext.network>
+/// @notice This library provides several functions to safely handle
+///         noncompliant tokens (i.e. does not return a boolean from
+///         the transfer function)
+
 library LibERC20 {
     function wrapCall(address assetId, bytes memory callData)
         internal

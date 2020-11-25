@@ -4,6 +4,11 @@ pragma experimental ABIEncoderV2;
 
 import "../interfaces/ITransferRegistry.sol";
 
+/// @title LibIterableMapping
+/// @author Connext <support@connext.network>
+/// @notice This library provides an efficient way to store and retrieve
+///         RegisteredTransfers. This contract is used to manage the transfers
+///         stored by `TransferRegistry.sol`
 library LibIterableMapping {
     struct TransferDefinitionWithIndex {
         RegisteredTransfer transfer;

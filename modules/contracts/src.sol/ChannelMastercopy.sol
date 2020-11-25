@@ -9,13 +9,12 @@ import "./CMCDeposit.sol";
 import "./CMCWithdraw.sol";
 import "./CMCAdjudicator.sol";
 
-/// @title Vector Channel
-/// @author Arjun Bhuptani <arjun@connext.network>
-/// @notice
-/// (a) A proxy to this contract is deployed per-channel using the ChannelFactory.sol contract
-/// (b) Executes transactions dispute logic on a hardcoded channel factory
-/// (c) Supports executing arbitrary CALLs when called w/ commitment that has 2 signatures
-
+/// @title ChannelMastercopy
+/// @author Connext <support@connext.network>
+/// @notice Contains the logic used by all Vector multisigs. A proxy to this
+///         contract is deployed per-channel using the ChannelFactory.sol.
+///         Supports channel adjudication logic, deposit logic, and arbitrary
+///         calls when a commitment is double-signed.
 contract ChannelMastercopy is
     CMCCore,
     CMCAsset,

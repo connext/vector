@@ -11,6 +11,14 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/// @title CMCAsset
+/// @author Connext <support@connext.network>
+/// @notice Contains logic to safely transfer channel assets (even if they are
+///         noncompliant). During adjudication, balances from defunding the
+///         channel or defunding transfers are registered as withdrawable. Once
+///         they are registered, the owner (or a watchtower on behalf of the
+///         owner), may call `exit` to reclaim funds from the multisig.
+
 contract CMCAsset is CMCCore, ICMCAsset {
     using SafeMath for uint256;
     using LibMath for uint256;

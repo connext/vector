@@ -6,6 +6,13 @@ import "./LibERC20.sol";
 import "./LibUtils.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+
+/// @title LibAsset
+/// @author Connext <support@connext.network>
+/// @notice This library contains helpers for dealing with onchain transfers
+///         of in-channel assets. It is designed to safely handle all asset
+///         transfers out of channel in the event of an onchain dispute. Also
+///         safely handles ERC20 transfers that may be non-compliant
 library LibAsset {
     address constant ETHER_ASSETID = address(0);
 

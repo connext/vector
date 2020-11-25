@@ -14,6 +14,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 ///         this information to get the correct encodings when generating
 ///         signatures. The information stored here can only be updated
 ///         by the owner of the contract
+
 contract TransferRegistry is Ownable, ITransferRegistry {
     using LibIterableMapping for LibIterableMapping.IterableMapping;
 

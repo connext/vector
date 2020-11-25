@@ -9,8 +9,9 @@ import "./interfaces/IVectorChannel.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibERC20.sol";
 
-/// @title Channel Factory - Allows us to create new channel proxy contract
-/// @author Connext & Friends <hello@connext.network>
+/// @title ChannelFactory
+/// @author Connext <support@connext.network>
+/// @notice Creates and sets up a new channel proxy contract
 contract ChannelFactory is IChannelFactory {
     bytes private constant proxyCreationCodePrefix =
         hex"3d602d80600a3d3981f3_363d3d373d3d3d363d73";
@@ -129,7 +130,6 @@ contract ChannelFactory is IChannelFactory {
     // Internal Methods
 
     /// @dev Allows us to create new channel contact using CREATE2
-    /// @dev This method is only meant as an utility to be called from other methods
     /// @param alice address of the high fidelity participant in the channel
     /// @param bob address of the other channel participant
     function deployChannelProxy(address alice, address bob)

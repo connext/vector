@@ -14,7 +14,12 @@ import "./lib/LibMath.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-/// @title CMCAdjudicator - Dispute logic for ONE channel
+/// @title CMCAdjudicator
+/// @author Connext <support@connext.network>
+/// @notice Contains logic for disputing a single channel and all active
+///         transfers associated with the channel. Contains two major phases:
+///         (1) consensus: settle on latest channel state
+///         (2) defund: remove assets and dispute active transfers
 contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     using LibChannelCrypto for bytes32;
     using LibMath for uint256;

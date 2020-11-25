@@ -2,7 +2,10 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-// A "mutex" reentrancy guard, heavily influenced by OpenZeppelin's
+/// @title CMCWithdraw
+/// @author Connext <support@connext.network>
+/// @notice A "mutex" reentrancy guard, heavily influenced by OpenZeppelin.
+
 contract ReentrancyGuard {
     uint256 private constant OPEN = 1;
     uint256 private constant LOCKED = 2;
