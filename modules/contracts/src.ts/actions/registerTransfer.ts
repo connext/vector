@@ -83,10 +83,11 @@ export const registerTransferCommand = {
       .option("s", cliOpts.silent);
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
-    const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
+    const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider, 1337));
     console.log("connected wallet to", argv.ethProvider, "trying to get chainId");
+    console.log("wallet.getChainId", await wallet.getChainId());
+    console.log("provider.getNetwork", await wallet.provider.getNetwork());
     const chainId = await wallet.getChainId();
-    console.log("chainId", chainId);
     const addressBook = getAddressBook(argv.addressBook, chainId.toString(), wallet);
     const level = argv.silent ? "silent" : "info";
     await registerTransfer(argv.transfer, wallet, addressBook, logger.child({ level }));
