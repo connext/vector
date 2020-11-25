@@ -1,29 +1,43 @@
 import { RegisteredTransfer, tidy } from "@connext/vector-types";
 import { getEthProvider } from "@connext/vector-utils";
 import { Wallet } from "@ethersproject/wallet";
+import { Contract } from "@ethersproject/contracts";
+import { isAddress } from "@ethersproject/address";
 import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
 import { cliOpts, logger } from "../constants";
+import { artifacts } from "../artifacts";
 
 export const registerTransfer = async (
-  transferName: string,
+  transferNameOrAddress: string,
   wallet: Wallet,
   addressBook: AddressBook,
   log = logger.child({}),
 ): Promise<void> => {
-  log.info(`Preparing to add ${transferName} to registry (Sender=${wallet.address})`);
+  log.info(`Preparing to add ${transferNameOrAddress} to registry (Sender=${wallet.address})`);
 
   const registry = addressBook.getContract("TransferRegistry").connect(wallet);
-  const transfer = addressBook.getContract(transferName).connect(wallet);
+  let transfer: Contract;
+  if (isAddress(transferNameOrAddress)) {
+    transfer = new Contract(transferNameOrAddress, artifacts.TransferDefinition.abi).connect(wallet);
+  } else {
+    const addressBookEntry = addressBook.getEntry(transferNameOrAddress);
+    console.log("got transfer entry");
+    transfer = new Contract(addressBookEntry.address, artifacts.TransferDefinition.abi).connect(wallet);
+  }
+
+  console.log("got contracts");
 
   const registered = await registry.getTransferDefinitions();
+  console.log("got transfer defs", registered);
   const transferInfo = await transfer.getRegistryInformation();
+  console.log("got registry info");
 
   // Check if transfer is already in registry
-  const entry = registered.find((info: RegisteredTransfer) => info.name === transferName);
+  const entry = registered.find((info: RegisteredTransfer) => info.name === transferInfo.name);
   if (entry && entry.definition === transfer.address) {
-    log.info({ transferName }, `Transfer has already been registered`);
+    log.info({ transfer: transferNameOrAddress }, `Transfer has already been registered`);
     return;
   }
 
@@ -32,16 +46,16 @@ export const registerTransfer = async (
   if (entry && entry.definition !== transfer.address) {
     // Remove transfer from registry
     log.info(
-      { transferName, registered: entry.definition, latest: transfer.address },
+      { transfer: transferInfo.name, registered: entry.definition, latest: transfer.address },
       `Transfer has stale registration, removing and updating`,
     );
-    const removal = await registry.removeTransferDefinition(transferName);
+    const removal = await registry.removeTransferDefinition(transferInfo.name);
     log.info({ hash: removal.hash }, "Removal tx broadcast");
     await removal.wait();
     log.info("Removal tx mined");
   }
 
-  log.info({ transferName, latest: transfer.address }, `Getting registry information`);
+  log.info({ transfer: transferInfo.name, latest: transfer.address }, `Getting registry information`);
 
   // Sanity-check: tidy return value
   const cleaned = {
@@ -70,7 +84,10 @@ export const registerTransferCommand = {
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const addressBook = getAddressBook(argv.addressBook, (await wallet.provider.getNetwork()).chainId.toString());
+    console.log("connected wallet to", argv.ethProvider, "trying to get chainId");
+    const chainId = await wallet.getChainId();
+    console.log("chainId", chainId);
+    const addressBook = getAddressBook(argv.addressBook, chainId.toString(), wallet);
     const level = argv.silent ? "silent" : "info";
     await registerTransfer(argv.transferName, wallet, addressBook, logger.child({ level }));
   },
