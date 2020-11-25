@@ -46,9 +46,9 @@ export const cliOpts = {
     type: "string",
     default: defaults.mnemonic,
   },
-  transferName: {
-    alias: "transfer-name",
-    description: "Name of transfer to add to registry",
+  transfer: {
+    alias: "transfer",
+    description: "Name or address of transfer to add to registry",
     type: "string",
     default: "HashlockTransfer",
   },
