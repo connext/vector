@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.16
+
+- fix dockerfile in iframe-app
+
 ## 0.0.15
 
 - fix db package issue which was causing migrations to break
