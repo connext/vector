@@ -263,7 +263,8 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     function defundTransfer(
         CoreTransferState calldata cts,
         bytes calldata encodedInitialTransferState,
-        bytes calldata encodedTransferResolver
+        bytes calldata encodedTransferResolver,
+        bytes calldata responderSignature
     ) external override onlyViaProxy nonReentrant validateTransfer(cts) {
         // Get stored dispute for this transfer
         TransferDispute storage transferDispute =
@@ -291,15 +292,19 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         Balance memory balance;
 
         if (block.timestamp < transferDispute.transferDisputeExpiry) {
-            // Before dispute expiry, responder can resolve
-            require(
-                msg.sender == cts.responder,
-                "CMCAdjudicator: INVALID_MSG_SENDER"
-            );
+            // Ensure the correct hash is provided
             require(
                 keccak256(encodedInitialTransferState) == cts.initialStateHash,
                 "CMCAdjudicator: INVALID_TRANSFER_HASH"
             );
+            
+            // Before dispute expiry, responder or responder-authorized
+            // agent (i.e. watchtower) can resolve
+            require(
+                msg.sender == cts.responder || cts.initialStateHash.checkSignature(responderSignature, cts.responder),
+                "CMCAdjudicator: INVALID_RESOLVER"
+            );
+            
             ITransferDefinition transferDefinition =
                 ITransferDefinition(cts.transferDefinition);
             balance = transferDefinition.resolve(

@@ -104,6 +104,7 @@ interface ICMCAdjudicator {
     function defundTransfer(
         CoreTransferState calldata cts,
         bytes calldata encodedInitialTransferState,
-        bytes calldata encodedTransferResolver
+        bytes calldata encodedTransferResolver,
+        bytes calldata responderSignature
     ) external;
 }

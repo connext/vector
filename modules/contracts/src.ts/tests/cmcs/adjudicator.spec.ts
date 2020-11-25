@@ -14,6 +14,7 @@ import {
   hashCoreChannelState,
   hashCoreTransferState,
   hashTransferState,
+  signChannelMessage,
 } from "@connext/vector-utils";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
@@ -589,7 +590,7 @@ describe("CMCAdjudicator.sol", async function () {
     });
   });
 
-  describe("defundTransfer", () => {
+  describe.only("defundTransfer", () => {
     const prepTransferForDefund = async (
       ccs: FullChannelState = channelState,
       cts: FullTransferState = transferState,
@@ -609,6 +610,7 @@ describe("CMCAdjudicator.sol", async function () {
           { ...transferState, channelAddress: getRandomAddress() },
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+          HashZero,
         ),
       ).revertedWith("CMCAdjudicator: INVALID_TRANSFER");
     });
@@ -624,6 +626,7 @@ describe("CMCAdjudicator.sol", async function () {
           transferState,
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+          HashZero,
         ),
       ).revertedWith("CMCAdjudicator: TRANSFER_NOT_DISPUTED");
     });
@@ -638,6 +641,7 @@ describe("CMCAdjudicator.sol", async function () {
           { ...transferState, initialStateHash: getRandomBytes32() },
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+          HashZero,
         ),
       ).revertedWith("CMCAdjudicator: INVALID_TRANSFER_HASH");
     });
@@ -653,6 +657,7 @@ describe("CMCAdjudicator.sol", async function () {
           transferState,
           encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
           encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+          HashZero,
         );
       await tx.wait();
       await expect(
@@ -662,13 +667,12 @@ describe("CMCAdjudicator.sol", async function () {
             transferState,
             encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
             encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+            HashZero,
           ),
       ).revertedWith("CMCAdjudicator: TRANSFER_ALREADY_DEFUNDED");
     });
 
-    // NOTE: this means no watchtowers can dispute transfers where receiver
-    // is owed funds
-    it("should fail if the responder is not the defunder and the transfer is still in dispute", async function () {
+    it("should fail if the responder is not the defunder and the responder signature is invalid, and the transfer is still in dispute", async function () {
       if (nonAutomining) {
         this.skip();
       }
@@ -680,8 +684,9 @@ describe("CMCAdjudicator.sol", async function () {
             transferState,
             encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
             encodeTransferResolver(transferState.transferResolver!, transferState.transferEncodings[1]),
+            await bob.signMessage(getRandomBytes32()),
           ),
-      ).revertedWith("CMCAdjudicator: INVALID_MSG_SENDER");
+      ).revertedWith("CMCAdjudicator: INVALID_RESOLVER");
     });
 
     it("should fail if the initial state hash doesnt match and the transfer is still in dispute", async function () {
@@ -699,6 +704,7 @@ describe("CMCAdjudicator.sol", async function () {
               transferState.transferEncodings[0],
             ),
             encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
+            HashZero,
           ),
       ).revertedWith("CMCAdjudicator: INVALID_TRANSFER_HASH");
     });
@@ -719,6 +725,7 @@ describe("CMCAdjudicator.sol", async function () {
             transferState,
             encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
             encodeTransferResolver({ preImage: HashZero }, transferState.transferEncodings[1]),
+            HashZero,
           )
       ).wait();
       await (await channel.exit(transferState.assetId, alice.address, alice.address)).wait();
@@ -741,6 +748,32 @@ describe("CMCAdjudicator.sol", async function () {
             transferState,
             encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
             encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+            HashZero,
+          )
+      ).wait();
+      await (
+        await channel.exit(transferState.assetId, transferState.balance.to[1], transferState.balance.to[1])
+      ).wait();
+      expect(await getOnchainBalance(transferState.assetId, alice.address)).to.be.eq(preDefundAlice);
+      expect(await getOnchainBalance(transferState.assetId, transferState.balance.to[1])).to.be.eq(
+        transferState.balance.amount[0],
+      );
+    });
+
+    it("should correctly resolve + defund transfer if transfer is still in dispute (successful resolve) when sent by a watchtower", async function () {
+      if (nonAutomining) {
+        this.skip();
+      }
+      await prepTransferForDefund();
+      const preDefundAlice = await getOnchainBalance(transferState.assetId, alice.address);
+      await (
+        await channel
+          .connect(rando)
+          .defundTransfer(
+            transferState,
+            encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
+            encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+            await signChannelMessage(transferState.initialStateHash, bob.privateKey),
           )
       ).wait();
       await (
@@ -767,6 +800,7 @@ describe("CMCAdjudicator.sol", async function () {
             transferState,
             encodeTransferState(transferState.transferState, transferState.transferEncodings[0]),
             encodeTransferResolver(transferState.transferResolver, transferState.transferEncodings[1]),
+            HashZero,
           )
       ).wait();
       await (await channel.exit(transferState.assetId, alice.address, alice.address)).wait();
