@@ -89,6 +89,6 @@ export const registerTransferCommand = {
     console.log("chainId", chainId);
     const addressBook = getAddressBook(argv.addressBook, chainId.toString(), wallet);
     const level = argv.silent ? "silent" : "info";
-    await registerTransfer(argv.transferName, wallet, addressBook, logger.child({ level }));
+    await registerTransfer(argv.transfer, wallet, addressBook, logger.child({ level }));
   },
 };
