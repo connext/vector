@@ -590,7 +590,7 @@ describe("CMCAdjudicator.sol", async function () {
     });
   });
 
-  describe.only("defundTransfer", () => {
+  describe("defundTransfer", () => {
     const prepTransferForDefund = async (
       ccs: FullChannelState = channelState,
       cts: FullTransferState = transferState,
