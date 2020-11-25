@@ -247,6 +247,16 @@ The dispute flow works as follows:
 
 ## Transfers
 
+Transfer definitions hold the logic governing the conditional transfer onchain. All transfers that are supported by the Vector protocol must be added to the `TransferRegistry`. The registry allows the protocol to be unopinonated about the transfer logic -- to add a new supported transfer, you must simply add it to the registry.
+
+Instead of having turn-takers as seen in other state channel protocols (i.e. `magmo`, `counterfactual`), transfers in Vector are designed to be short-lived and immediately `resolve`-able. All transfer definitions implement the following functions:
+
+- `getRegistryInformation`: Returns the address, encodings, and name of the definition. This function is what allows the protocol to remain unopionated about transfer definitions, while still being able to dispute and defund transfers.
+- `create`: Returns a `bool` indiciating whether or not the transfer's created state is valid. This function is called during offchain execution, and ensures all transfers added to the channel's `merkleRoot` are valid.
+- `resolve`: Returns the final `balance` of the transfer to be incoporated back into the channel state based on the provided `resolver`. Only the transfer responder can call `resolve`, ensuring the transfer initiator cannot defund a transfer that is owed to the responder.
+
+Once a transfer is resolved, it is immediately removed from the `merkleRoot` and can no longer be disputed.
+
 ## Depositing and Withdrawing
 
 As mentioned above, funding a channel is asymmetric. The initiator of a channel (as determined by `alice`), _must_ deposit using the `depositAlice` function in the channel contract. The responder of a channel (`bob`) can deposit simply by sending funds to the channel address.
