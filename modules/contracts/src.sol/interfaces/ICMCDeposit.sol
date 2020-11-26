@@ -3,6 +3,8 @@ pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
 interface ICMCDeposit {
+    event AliceDeposited(address assetId, uint256 amount);
+    
     function getTotalDepositsAlice(address assetId)
         external
         view

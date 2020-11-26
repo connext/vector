@@ -8,12 +8,12 @@ interface ICMCAsset {
         view
         returns (uint256);
 
-    function getEmergencyWithdrawableAmount(address assetId, address owner)
+    function getExitableAmount(address assetId, address owner)
         external
         view
         returns (uint256);
 
-    function emergencyWithdraw(
+    function exit(
         address assetId,
         address owner,
         address payable recipient

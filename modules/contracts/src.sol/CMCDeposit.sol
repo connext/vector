@@ -77,5 +77,6 @@ contract CMCDeposit is CMCCore, CMCAsset, ICMCDeposit {
         }
         // NOTE: explicitly do NOT use safemath here
         depositsAlice[assetId] += amount;
+        emit AliceDeposited(assetId, amount);
     }
 }
