@@ -68,7 +68,7 @@ describe("ChannelMastercopy", function () {
       { name: "disputeChannel", args: [CoreChannelStateZero, HashZero, HashZero] },
       { name: "defundChannel", args: [CoreChannelStateZero, [AddressZero], [Zero]] },
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
-      { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero] },
+      { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero, HashZero] },
     ]) {
       await expect(mastercopy[method.name](...method.args)).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
     }
