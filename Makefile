@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_global_proxy:latest"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_global_proxy:latest,$(project)_iframe_app"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -36,7 +36,7 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 default: dev
 dev: global node router duet trio test-runner-js
 prod: global-prod node-prod router-prod test-runner
-all: dev prod browser-node
+all: dev prod iframe-app
 
 global: auth-js ethprovider global-proxy nats
 global-prod: auth-img global-proxy nats
@@ -348,6 +348,17 @@ router-img: router-bundle $(shell find modules/router/ops $(find_options))
 	$(log_start)
 	docker build --file modules/router/ops/Dockerfile $(image_cache) --tag $(project)_router modules/router
 	docker tag $(project)_router $(project)_router:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+
+iframe-app: iframe-app-img
+iframe-app-js: browser-node $(shell find modules/iframe-app $(find_options))
+	$(log_start)
+	$(docker_run) "cd modules/iframe-app && npm run build"
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+iframe-app-img: iframe-app-js $(shell find modules/iframe-app/ops $(find_options))
+	$(log_start)
+	docker build --file modules/iframe-app/ops/Dockerfile $(image_cache) --tag $(project)_iframe_app modules/iframe-app
+	docker tag $(project)_iframe_app $(project)_iframe_app:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 

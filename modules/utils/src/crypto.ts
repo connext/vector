@@ -22,7 +22,7 @@ import {
 
 import { getAddressError, getHexStringError, isValidHexString } from "./hexStrings";
 
-export const VECTOR_SIGN_PREFIX = "\x15Indra Signed Message:\n";
+export const VECTOR_SIGN_PREFIX = "\x15Vector Signed Message:\n";
 
 ////////////////////////////////////////
 // Misc

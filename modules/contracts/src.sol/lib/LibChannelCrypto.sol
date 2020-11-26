@@ -37,6 +37,6 @@ library LibChannelCrypto {
         // enforced by the type signature above
         // TODO namespace this to Vector?
         return
-            keccak256(abi.encodePacked("\x15Indra Signed Message:\n32", hash));
+            keccak256(abi.encodePacked("\x15Vector Signed Message:\n32", hash));
     }
 }

@@ -55,7 +55,8 @@ nav:
       - router/configure.md
       - router/chains.md
       # - router/managingCollateral.md
-  - API Reference:
+  - Reference:
       - reference/nodeAPI.md
+      - reference/hostedNodes.md
   - Changelog:
       - changelog.md

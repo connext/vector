@@ -26,7 +26,14 @@ contract TransferRegistry is Ownable, ITransferRegistry {
         override
         onlyOwner
     {
+        // Get index transfer will be added at
+        uint256 idx = transfers.length();
+        
+        // Add registered transfer
         transfers.addTransferDefinition(definition);
+
+        // Emit event
+        emit TransferAdded(transfers.getTransferDefinitionByIndex(idx));
     }
 
     /// @dev Should remove a transfer definition from the registry
@@ -35,7 +42,14 @@ contract TransferRegistry is Ownable, ITransferRegistry {
         override
         onlyOwner
     {
+        // Get transfer from library to remove for event
+        RegisteredTransfer memory transfer = transfers.getTransferDefinitionByName(name);
+
+        // Remove transfer
         transfers.removeTransferDefinition(name);
+
+        // Emit event
+        emit TransferRemoved(transfer);
     }
 
     /// @dev Should return all transfer defintions in registry

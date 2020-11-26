@@ -2,11 +2,23 @@
 
 ## Next Release
 
+## 0.0.16
+
+- fix dockerfile in iframe-app
+
+## 0.0.15
+
+- fix db package issue which was causing migrations to break
+
+## 0.0.14
+
 - use individual ethers packages instead of ethers
 - various smaller contract changes
 - simplified inheritance hierarchy for channel mastercopy
 - cheaper `onlyViaProxy` modifier
 - saturated addition for emergency-withdrawable amounts
+- dockerized iframe-app published with docker images
+- add endpoint for getting ethprovider sync status
 
 ## 0.0.13
 

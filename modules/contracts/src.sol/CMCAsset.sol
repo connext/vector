@@ -25,7 +25,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
 
     mapping(address => uint256) internal totalTransferred;
     mapping(address => mapping(address => uint256))
-        private emergencyWithdrawableAmount;
+        private exitableAmount;
 
     function registerTransfer(address assetId, uint256 amount) internal {
         totalTransferred[assetId] += amount;
@@ -42,29 +42,29 @@ contract CMCAsset is CMCCore, ICMCAsset {
         return totalTransferred[assetId];
     }
 
-    function makeEmergencyWithdrawable(
+    function makeExitable(
         address assetId,
         address recipient,
         uint256 amount
     ) internal {
-        emergencyWithdrawableAmount[assetId][
+        exitableAmount[assetId][
             recipient
-        ] = emergencyWithdrawableAmount[assetId][recipient].satAdd(amount);
+        ] = exitableAmount[assetId][recipient].satAdd(amount);
     }
 
-    function makeBalanceEmergencyWithdrawable(
+    function makeBalanceExitable(
         address assetId,
         Balance memory balance
     ) internal {
         for (uint256 i = 0; i < 2; i++) {
             uint256 amount = balance.amount[i];
             if (amount > 0) {
-                makeEmergencyWithdrawable(assetId, balance.to[i], amount);
+                makeExitable(assetId, balance.to[i], amount);
             }
         }
     }
 
-    function getEmergencyWithdrawableAmount(address assetId, address owner)
+    function getExitableAmount(address assetId, address owner)
         external
         view
         override
@@ -72,7 +72,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
         nonReentrantView
         returns (uint256)
     {
-        return emergencyWithdrawableAmount[assetId][owner];
+        return exitableAmount[assetId][owner];
     }
 
     function getAvailableAmount(address assetId, uint256 maxAmount)
@@ -99,7 +99,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
         );
     }
 
-    function emergencyWithdraw(
+    function exit(
         address assetId,
         address owner,
         address payable recipient
@@ -115,18 +115,18 @@ contract CMCAsset is CMCCore, ICMCAsset {
         uint256 amount =
             getAvailableAmount(
                 assetId,
-                emergencyWithdrawableAmount[assetId][owner]
+                exitableAmount[assetId][owner]
             );
 
         // Revert if amount is 0
         require(amount > 0, "CMCAsset: NO_OP");
 
         // Reduce the amount claimable from the multisig by the owner
-        emergencyWithdrawableAmount[assetId][
+        exitableAmount[assetId][
             owner
-        ] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
+        ] = exitableAmount[assetId][owner].sub(amount);
 
-        // Perform a transfer
+        // Perform transfer
         transferAsset(assetId, recipient, amount);
     }
 }

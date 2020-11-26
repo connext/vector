@@ -7,6 +7,6 @@ RUN curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721
 COPY ops/package.json package.json
 RUN npm install
 ENV PATH="/root/node_modules/.bin:./node_modules/.bin:${PATH}"
-COPY ops ops
-COPY dist dist
-ENTRYPOINT ["bash", "ops/entry.sh"]
+COPY build build
+EXPOSE 5000
+CMD ["serve", "build"]
