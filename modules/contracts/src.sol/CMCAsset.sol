@@ -80,6 +80,10 @@ contract CMCAsset is CMCCore, ICMCAsset {
         view
         returns (uint256)
     {
+        // Taking the min protects against the case where the multisig
+        // holds less than the amount that is trying to be withdrawn
+        // while still allowing the total of the funds to be removed
+        // without the transaction reverting.
         return Math.min(maxAmount, LibAsset.getOwnBalance(assetId));
     }
 
@@ -100,6 +104,9 @@ contract CMCAsset is CMCCore, ICMCAsset {
         address owner,
         address payable recipient
     ) external override onlyViaProxy nonReentrant {
+        // Either the owner must be the recipient, or in control
+        // of setting the recipient of the funds to whomever they
+        // choose
         require(
             msg.sender == owner || owner == recipient,
             "CMCAsset: OWNER_MISMATCH"
@@ -114,9 +121,12 @@ contract CMCAsset is CMCCore, ICMCAsset {
         // Revert if amount is 0
         require(amount > 0, "CMCAsset: NO_OP");
 
+        // Reduce the amount claimable from the multisig by the owner
         emergencyWithdrawableAmount[assetId][
             owner
         ] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
+
+        // Perform a transfer
         transferAsset(assetId, recipient, amount);
     }
 }

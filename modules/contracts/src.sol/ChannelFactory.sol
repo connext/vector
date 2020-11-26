@@ -13,6 +13,7 @@ import "./lib/LibERC20.sol";
 /// @author Connext <support@connext.network>
 /// @notice Creates and sets up a new channel proxy contract
 contract ChannelFactory is IChannelFactory {
+    // Creation code constants taken from EIP1167
     bytes private constant proxyCreationCodePrefix =
         hex"3d602d80600a3d3981f3_363d3d373d3d3d363d73";
     bytes private constant proxyCreationCodeSuffix =
@@ -106,8 +107,10 @@ contract ChannelFactory is IChannelFactory {
         uint256 amount
     ) external payable override returns (address channel) {
         channel = createChannel(alice, bob);
-        // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
-        // Do we want to keep it this way?
+        // Deposit funds (if a token) must be approved for the
+        // `ChannelFactory`, which then claims the funds and transfers
+        // to the channel address. While this is inefficient, this is
+        // the safest/clearest way to transfer funds
         if (!LibAsset.isEther(assetId)) {
             require(
                 LibERC20.transferFrom(
