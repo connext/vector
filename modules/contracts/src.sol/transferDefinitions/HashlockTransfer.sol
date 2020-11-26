@@ -4,7 +4,8 @@ pragma experimental ABIEncoderV2;
 
 import "./TransferDefinition.sol";
 
-/// @title Hashlock Transfer
+/// @title HashlockTransfer
+/// @author Connext <support@connext.network>
 /// @notice This contract allows users to claim a payment locked in
 ///         the application if they provide the correct preImage. The payment is
 ///         reverted if not unlocked by the timelock if one is provided.
@@ -19,6 +20,7 @@ contract HashlockTransfer is TransferDefinition {
         bytes32 preImage;
     }
 
+    // Provide registry information
     string public constant override Name = "HashlockTransfer";
     string public constant override StateEncoding =
         "tuple(bytes32 lockHash, uint256 expiry)";
@@ -31,6 +33,7 @@ contract HashlockTransfer is TransferDefinition {
         override
         returns (bool)
     {
+        // Decode parameters
         TransferState memory state = abi.decode(encodedState, (TransferState));
         Balance memory balance = abi.decode(encodedBalance, (Balance));
 
@@ -46,6 +49,8 @@ contract HashlockTransfer is TransferDefinition {
             state.expiry == 0 || state.expiry > block.timestamp,
             "HashlockTransfer: EXPIRED_TIMELOCK"
         );
+
+        // Valid transfer state
         return true;
     }
 

@@ -11,6 +11,14 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/// @title CMCAsset
+/// @author Connext <support@connext.network>
+/// @notice Contains logic to safely transfer channel assets (even if they are
+///         noncompliant). During adjudication, balances from defunding the
+///         channel or defunding transfers are registered as withdrawable. Once
+///         they are registered, the owner (or a watchtower on behalf of the
+///         owner), may call `exit` to reclaim funds from the multisig.
+
 contract CMCAsset is CMCCore, ICMCAsset {
     using SafeMath for uint256;
     using LibMath for uint256;
@@ -72,6 +80,10 @@ contract CMCAsset is CMCCore, ICMCAsset {
         view
         returns (uint256)
     {
+        // Taking the min protects against the case where the multisig
+        // holds less than the amount that is trying to be withdrawn
+        // while still allowing the total of the funds to be removed
+        // without the transaction reverting.
         return Math.min(maxAmount, LibAsset.getOwnBalance(assetId));
     }
 
@@ -92,6 +104,9 @@ contract CMCAsset is CMCCore, ICMCAsset {
         address owner,
         address payable recipient
     ) external override onlyViaProxy nonReentrant {
+        // Either the owner must be the recipient, or in control
+        // of setting the recipient of the funds to whomever they
+        // choose
         require(
             msg.sender == owner || owner == recipient,
             "CMCAsset: OWNER_MISMATCH"
@@ -106,9 +121,12 @@ contract CMCAsset is CMCCore, ICMCAsset {
         // Revert if amount is 0
         require(amount > 0, "CMCAsset: NO_OP");
 
+        // Reduce the amount claimable from the multisig by the owner
         exitableAmount[assetId][
             owner
         ] = exitableAmount[assetId][owner].sub(amount);
+
+        // Perform transfer
         transferAsset(assetId, recipient, amount);
     }
 }

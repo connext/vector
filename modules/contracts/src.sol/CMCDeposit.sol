@@ -8,6 +8,13 @@ import "./CMCAsset.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibERC20.sol";
 
+/// @title CMCDeposit
+/// @author Connext <support@connext.network>
+/// @notice Contains logic supporting channel multisig deposits. Channel
+///         funding is asymmetric, with `alice` having to call a deposit
+///         function which tracks the total amount she has deposited so far,
+///         and any other funds in the multisig being attributed to `bob`.
+
 contract CMCDeposit is CMCCore, CMCAsset, ICMCDeposit {
     mapping(address => uint256) private depositsAlice;
 

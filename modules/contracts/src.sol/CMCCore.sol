@@ -5,6 +5,12 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/ICMCCore.sol";
 import "./ReentrancyGuard.sol";
 
+/// @title CMCCore
+/// @author Connext <support@connext.network>
+/// @notice Contains logic pertaining to the participants of a channel,
+///         including setting and retrieving the participants and the
+///         mastercopy.
+
 contract CMCCore is ReentrancyGuard, ICMCCore {
     address private immutable mastercopyAddress;
 

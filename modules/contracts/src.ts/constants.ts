@@ -5,7 +5,8 @@ import { Options } from "yargs";
 export const logger = pino({ level: process.env.LOG_LEVEL || "silent" });
 
 export const defaults = {
-  mnemonic: "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
+  mnemonic:
+    "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
   providerUrl: "http://localhost:8545",
   addressBookPath: "./address-book.json",
 };
@@ -61,13 +62,13 @@ export const cliOpts = {
     alias: "force",
     description: "Deploy contract even if it's already deployed",
     type: "boolean",
-    deafult: false,
+    default: false,
   },
   silent: {
     alias: "silent",
     description: "Don't log anything to console",
     type: "boolean",
-    deafult: false,
+    default: false,
   },
   tokenAddress: {
     alias: "token-address",
