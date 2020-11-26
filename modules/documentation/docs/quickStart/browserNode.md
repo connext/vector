@@ -26,6 +26,14 @@ The iframe app is configured by default to communicate with the local stack and 
 
 The iframe app runs by default at `http://localhost:3030`.
 
+#### Using Docker
+
+We have published the iframe app on [Docker](https://hub.docker.com/repository/docker/connextproject/vector_iframe_app). You can run it like so:
+
+```sh
+docker run -p "5000:5000" connextproject/vector_iframe_app:latest
+```
+
 ### Application Installation and Instantiation
 
 You can install the `browser-node` into a React (or similar) application [via npm](https://www.npmjs.com/package/@connext/vector-browser-node):

@@ -1,9 +1,9 @@
 import { HexString } from "@connext/vector-types";
 import { FunctionFragment, EventFragment, ParamType } from "@ethersproject/abi";
 
-import * as AssetTransfer from "../artifacts/src.sol/AssetTransfer.sol/AssetTransfer.json";
 import * as ChannelFactory from "../artifacts/src.sol/ChannelFactory.sol/ChannelFactory.json";
 import * as ChannelMastercopy from "../artifacts/src.sol/ChannelMastercopy.sol/ChannelMastercopy.json";
+import * as CMCAsset from "../artifacts/src.sol/CMCAsset.sol/CMCAsset.json";
 import * as FailingToken from "../artifacts/src.sol/testing/FailingToken.sol/FailingToken.json";
 import * as HashlockTransfer from "../artifacts/src.sol/transferDefinitions/HashlockTransfer.sol/HashlockTransfer.json";
 import * as NonconformingToken from "../artifacts/src.sol/testing/NonconformingToken.sol/NonconformingToken.json";
@@ -29,9 +29,9 @@ type Artifact = {
 type Artifacts = { [contractName: string]: Artifact };
 
 export const artifacts: Artifacts = {
-  AssetTransfer,
   ChannelFactory,
   ChannelMastercopy,
+  CMCAsset,
   FailingToken,
   HashlockTransfer,
   NonconformingToken,
@@ -47,9 +47,9 @@ export const artifacts: Artifacts = {
 } as any;
 
 export {
-  AssetTransfer,
   ChannelFactory,
   ChannelMastercopy,
+  CMCAsset,
   FailingToken,
   HashlockTransfer,
   NonconformingToken,

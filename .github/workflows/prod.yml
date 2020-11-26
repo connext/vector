@@ -177,7 +177,7 @@ jobs:
       - run: bash ops/test-integration.sh router
       - name: Print logs
         if: failure()
-        run: docker service ls && docker service logs --tail 200 node_node
+        run: docker service ls && docker service logs --tail 200 router_node
 
   deploy-testnet:
     env:

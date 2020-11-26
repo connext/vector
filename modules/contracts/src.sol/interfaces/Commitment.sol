@@ -2,7 +2,4 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-enum CommitmentType {
-  ChannelState,
-  WithdrawData
-}
+enum CommitmentType {ChannelState, WithdrawData}

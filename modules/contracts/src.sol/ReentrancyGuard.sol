@@ -2,17 +2,17 @@
 pragma solidity ^0.7.1;
 pragma experimental ABIEncoderV2;
 
-// A "mutex" reentrancy guard, heavily influenced by OpenZeppelin's
-contract ReentrancyGuard {
+/// @title CMCWithdraw
+/// @author Connext <support@connext.network>
+/// @notice A "mutex" reentrancy guard, heavily influenced by OpenZeppelin.
 
-    uint256 private constant UNINITIALIZED = 0;
+contract ReentrancyGuard {
     uint256 private constant OPEN = 1;
     uint256 private constant LOCKED = 2;
 
     uint256 public lock;
 
     function setup() internal {
-        require(lock == UNINITIALIZED, "ReentrancyGuard: ALREADY_INITIALIZED");
         lock = OPEN;
     }
 
@@ -27,5 +27,4 @@ contract ReentrancyGuard {
         require(lock == OPEN, "ReentrancyGuard: REENTRANT_CALL");
         _;
     }
-
 }

@@ -6,14 +6,14 @@ import "./IVectorChannel.sol";
 import "./Types.sol";
 
 interface ITestChannel is IVectorChannel {
-  function testMakeEmergencyWithdrawable(
-    address assetId,
-    address payable recipient,
-    uint256 maxAmount
-  ) external;
+    function testMakeExitable(
+        address assetId,
+        address payable recipient,
+        uint256 maxAmount
+    ) external;
 
-  function testMakeBalanceEmergencyWithdrawable(
-    address assetId,
-    Balance memory balance
-  ) external;
+    function testMakeBalanceExitable(
+        address assetId,
+        Balance memory balance
+    ) external;
 }

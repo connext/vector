@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.0.14-beta.0",
+  "version": "0.0.17",
   "license": "ISC",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "keywords": [
@@ -20,14 +20,15 @@
     "src.ts"
   ],
   "scripts": {
+    "prettier": "prettier --write './src.sol/**/*.sol'",
     "build": "rm -rf dist && npx hardhat compile && tsc",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
     "test": "mocha --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.0.14-beta.0",
-    "@connext/vector-utils": "0.0.14-beta.0",
+    "@connext/vector-types": "0.0.17",
+    "@connext/vector-utils": "0.0.17",
     "@ethersproject/abi": "5.0.8",
     "@ethersproject/abstract-provider": "5.0.6",
     "@ethersproject/abstract-signer": "5.0.8",
@@ -59,6 +60,7 @@
     "@types/node": "14.14.6",
     "@types/sinon-chai": "3.2.5",
     "@types/yargs": "15.0.9",
+    "@typechain/ethers-v5": "4.0.0",
     "babel-loader": "8.1.0",
     "chai": "4.2.0",
     "chai-subset": "1.6.0",
@@ -66,6 +68,8 @@
     "event-target-shim": "5.0.1",
     "hardhat-typechain": "0.3.3",
     "mocha": "8.2.0",
+    "prettier": "2.2.0",
+    "prettier-plugin-solidity": "1.0.0-beta.1",
     "solc": "0.7.1",
     "solhint": "3.3.1",
     "ts-generator": "0.1.1",

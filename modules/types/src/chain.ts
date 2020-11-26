@@ -123,6 +123,20 @@ export interface IVectorChainReader {
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
   getChannelDispute(channelAddress: string, chainId: number): Promise<Result<ChannelDispute | undefined, ChainError>>;
+
+  getSyncing(
+    chainId: number,
+  ): Promise<
+    Result<
+      | boolean
+      | {
+          startingBlock: string;
+          currentBlock: string;
+          highestBlock: string;
+        },
+      ChainError
+    >
+  >;
 }
 
 export interface IVectorChainService extends IVectorChainReader {

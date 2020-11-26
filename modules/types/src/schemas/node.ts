@@ -121,9 +121,29 @@ const GetConfigResponseSchema = {
   ),
 };
 
+// GET STATUS
+const GetStatusResponseSchema = {
+  200: Type.Object({
+    publicIdentifier: TPublicIdentifier,
+    signerAddress: TAddress,
+    providerSyncing: Type.Map(
+      Type.Union([
+        Type.Boolean,
+        Type.Object({
+          startingBlock: Type.String(),
+          currentBlock: Type.String(),
+          highestBlock: Type.String(),
+        }),
+        Type.String(),
+      ]),
+    ),
+    version: Type.String(),
+  }),
+};
+
 // GET LISTENER
 const GetListenerParamsSchema = Type.Object({
-  eventName: Type.Union(Object.values(EngineEvents).map(e => Type.Literal(e)) as [TStringLiteral<EngineEvent>]),
+  eventName: Type.Union(Object.values(EngineEvents).map((e) => Type.Literal(e)) as [TStringLiteral<EngineEvent>]),
   publicIdentifier: TPublicIdentifier,
 });
 
@@ -435,6 +455,9 @@ export namespace NodeResponses {
 
   export const GetConfigSchema = GetConfigResponseSchema;
   export type GetConfig = Static<typeof GetConfigSchema["200"]>;
+
+  export const GetStatusSchema = GetStatusResponseSchema;
+  export type GetStatus = Static<typeof GetStatusSchema["200"]>;
 
   export const GetRegisteredTransfersSchema = GetRegisteredTransfersResponseSchema;
   export type GetRegisteredTransfers = Static<typeof GetRegisteredTransfersSchema["200"]>;

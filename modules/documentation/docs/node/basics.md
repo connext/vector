@@ -58,4 +58,3 @@ Content-Type: application/json
 ```
 
 The response to this request contains a `signerAddress` and `publicIdentifier`. Additional calls to the server node must include the `publicIdentifier` to specify which `engine` to use.
-

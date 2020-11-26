@@ -8,7 +8,7 @@ import { AddressBook } from "../addressBook";
 import { alice } from "./constants";
 import { getTestAddressBook } from "./utils";
 
-describe("ChannelMastercopy", function() {
+describe("ChannelMastercopy", function () {
   this.timeout(120_000);
   let addressBook: AddressBook;
   let mastercopy: Contract;
@@ -47,10 +47,10 @@ describe("ChannelMastercopy", function() {
       { name: "getAlice", args: [] },
       { name: "getBob", args: [] },
 
-      // from IAssetTransfer
+      // from ICMCAsset
       { name: "getTotalTransferred", args: [AddressZero] },
-      { name: "getEmergencyWithdrawableAmount", args: [AddressZero, AddressZero] },
-      { name: "emergencyWithdraw", args: [AddressZero, AddressZero, AddressZero] },
+      { name: "getExitableAmount", args: [AddressZero, AddressZero] },
+      { name: "exit", args: [AddressZero, AddressZero, AddressZero] },
 
       // from ICMCDeposit
       { name: "getTotalDepositsAlice", args: [AddressZero] },
@@ -68,7 +68,7 @@ describe("ChannelMastercopy", function() {
       { name: "disputeChannel", args: [CoreChannelStateZero, HashZero, HashZero] },
       { name: "defundChannel", args: [CoreChannelStateZero, [AddressZero], [Zero]] },
       { name: "disputeTransfer", args: [CoreTransferStateZero, []] },
-      { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero] },
+      { name: "defundTransfer", args: [CoreTransferStateZero, HashZero, HashZero, HashZero] },
     ]) {
       await expect(mastercopy[method.name](...method.args)).to.be.revertedWith("Mastercopy: ONLY_VIA_PROXY");
     }

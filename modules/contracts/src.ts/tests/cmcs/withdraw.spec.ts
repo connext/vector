@@ -289,7 +289,7 @@ describe("CMCWithdraw.sol", function() {
     const bobSig = await new ChannelSigner(bob.privateKey).signMessage(commitment.hashToSign());
     const withdrawData = commitment.getWithdrawData();
 
-    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("AssetTransfer: TRANSFER_FAILED");
+    await expect(channel.withdraw(withdrawData, aliceSig, bobSig)).revertedWith("CMCAsset: TRANSFER_FAILED");
   });
 
   it("should fail if token transfer reverts", async () => {

@@ -7,41 +7,41 @@ import "./LibUtils.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
+/// @title LibAsset
+/// @author Connext <support@connext.network>
+/// @notice This library contains helpers for dealing with onchain transfers
+///         of in-channel assets. It is designed to safely handle all asset
+///         transfers out of channel in the event of an onchain dispute. Also
+///         safely handles ERC20 transfers that may be non-compliant
 library LibAsset {
-
     address constant ETHER_ASSETID = address(0);
 
-    function isEther(address assetId)
-        internal
-        pure
-        returns (bool)
-    {
+    function isEther(address assetId) internal pure returns (bool) {
         return assetId == ETHER_ASSETID;
     }
 
-    function getOwnBalance(address assetId)
-        internal
-        view
-        returns (uint256)
-    {
-        return isEther(assetId) ?
-            address(this).balance :
-            IERC20(assetId).balanceOf(address(this));
+    function getOwnBalance(address assetId) internal view returns (uint256) {
+        return
+            isEther(assetId)
+                ? address(this).balance
+                : IERC20(assetId).balanceOf(address(this));
     }
 
     function transferEther(address payable recipient, uint256 amount)
         internal
         returns (bool)
     {
-        (bool success, bytes memory returnData) = recipient.call{value: amount}("");
+        (bool success, bytes memory returnData) =
+            recipient.call{value: amount}("");
         LibUtils.revertIfCallFailed(success, returnData);
         return true;
     }
 
-    function transferERC20(address assetId, address recipient, uint256 amount)
-        internal
-        returns (bool)
-    {
+    function transferERC20(
+        address assetId,
+        address recipient,
+        uint256 amount
+    ) internal returns (bool) {
         return LibERC20.transfer(assetId, recipient, amount);
     }
 
@@ -53,17 +53,18 @@ library LibAsset {
     // usage of those, it is deliberately named `unregisteredTransfer`,
     // because we need to register every transfer out of the channel.
     // Therefore, it should normally not be used directly, with the single
-    // exception of the `transferAsset` function in `AssetTransfer.sol`,
+    // exception of the `transferAsset` function in `CMCAsset.sol`,
     // which combines the "naked" unregistered transfer given below
     // with a registration.
     // USING THIS FUNCTION SOMEWHERE ELSE IS PROBABLY WRONG!
-    function unregisteredTransfer(address assetId, address payable recipient, uint256 amount)
-        internal
-        returns (bool)
-    {
-        return isEther(assetId) ?
-            transferEther(recipient, amount) :
-            transferERC20(assetId, recipient, amount);
+    function unregisteredTransfer(
+        address assetId,
+        address payable recipient,
+        uint256 amount
+    ) internal returns (bool) {
+        return
+            isEther(assetId)
+                ? transferEther(recipient, amount)
+                : transferERC20(assetId, recipient, amount);
     }
-
 }

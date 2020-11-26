@@ -10,26 +10,26 @@ import "../interfaces/ITestChannel.sol";
 /// @notice This contract will help test the `ChannelMastercopy` contract and
 ///         the associated bits of functionality. This contract should *only*
 ///         contain aliases to internal functions that should be unit-tested,
-///         like the `makeEmergencyWithdrawable` call on `AssetTransfer.sol`. Using this
+///         like the `makeExitable` call on `CMCAsset.sol`. Using this
 ///         contract will help reduce the amount of boilerplate needed to test
-///         component functionality. For example, `AssetTransfer.sol` is only
+///         component functionality. For example, `CMCAsset.sol` is only
 ///         able to be tested via the adjudicator in many practical cases.
 ///         Creating a helper function allows for easier testing of only
 ///         that functionality.
 
 contract TestChannel is ChannelMastercopy, ITestChannel {
-  function testMakeEmergencyWithdrawable(
-    address assetId,
-    address payable recipient,
-    uint256 maxAmount
-  ) public override {
-    makeEmergencyWithdrawable(assetId, recipient, maxAmount);
-  }
+    function testMakeExitable(
+        address assetId,
+        address payable recipient,
+        uint256 maxAmount
+    ) public override {
+        makeExitable(assetId, recipient, maxAmount);
+    }
 
-  function testMakeBalanceEmergencyWithdrawable(
-    address assetId,
-    Balance memory balance
-  ) public override {
-    makeBalanceEmergencyWithdrawable(assetId, balance);
-  }
+    function testMakeBalanceExitable(
+        address assetId,
+        Balance memory balance
+    ) public override {
+        makeBalanceExitable(assetId, balance);
+    }
 }
