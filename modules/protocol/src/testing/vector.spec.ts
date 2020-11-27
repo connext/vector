@@ -78,7 +78,7 @@ describe("Vector", () => {
 
   describe("Vector.setup", () => {
     let vector: Vector;
-    const counterpartyIdentifier = "indra6LkSoBv6QD5BKZ5vZQnVsd8cq6Tyb2oi93s62sTvW6xUUQg8PC";
+    const counterpartyIdentifier = "vector6LkSoBv6QD5BKZ5vZQnVsd8cq6Tyb2oi93s62sTvW6xUUQg8PC";
 
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
@@ -128,7 +128,7 @@ describe("Vector", () => {
         {
           name: "should fail if there is an invalid counterparty",
           params: { ...validParams, counterpartyIdentifier: "fail" },
-          error: 'should match pattern "^indra([a-zA-Z0-9]{50})$"',
+          error: 'should match pattern "^vector([a-zA-Z0-9]{50})$"',
         },
         {
           name: "should fail if there is no transferRegistryAddress",
