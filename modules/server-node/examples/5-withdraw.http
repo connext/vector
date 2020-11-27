@@ -7,7 +7,7 @@
 
 @bobAddress = 0x95B7e93A3aF19AcAE95aD120d4D8307bF1a6Be63
 
-@alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
+@alicePublicIdentifier = vector8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 
 # 0.01 ETH
 @ethAmount = 1000000000000000

@@ -29,7 +29,7 @@ export const stringify = (value: any, abrv = false, spaces = 2): string =>
     (key: string, value: any): any =>
       value && value._hex
         ? BigNumber.from(value).toString()
-        : abrv && value && typeof value === "string" && value.startsWith("indra")
+        : abrv && value && typeof value === "string" && value.startsWith("vector")
         ? abbreviate(value)
         : abrv && value && typeof value === "string" && value.startsWith("0x") && value.length > 12
         ? abbreviate(value)

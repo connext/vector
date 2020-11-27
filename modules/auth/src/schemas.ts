@@ -3,7 +3,7 @@ import { Static, Type } from "@sinclair/typebox";
 // GET NONCE
 export const getNonceParamsSchema = Type.Object({
   userIdentifier: Type.String({
-    example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
+    example: "vector8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
     description: "Public identifier",
   }),
 });
@@ -20,7 +20,7 @@ export type GetNonceResponseBody = Static<typeof getNonceResponseSchema["200"]>;
 // POST AUTH
 export const postAuthBodySchema = Type.Object({
   userIdentifier: Type.String({
-    example: "indra8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
+    example: "vector8AXWmo3dFpK1drnjeWPyi9KTy9Fy3SkCydWx8waQrxhnW4KPmR",
     description: "Public identifier",
   }),
   sig: Type.String({

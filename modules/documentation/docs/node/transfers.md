@@ -58,7 +58,7 @@ You can create a transfer by calling the `conditionalTransfer()` method.
             lockHash: "0xlockHash...",
             expiry: "0"
         },
-        recipient: "indra123ABC...",
+        recipient: "vector123ABC...",
         meta: {
             hello: "world"
         }
@@ -82,7 +82,7 @@ You can create a transfer by calling the `conditionalTransfer()` method.
             "lockHash": "0xlockHash...",
             "expiry": "0"
         },
-        "recipient": "indra123ABC...",
+        "recipient": "vector123ABC...",
         "meta": {
             "hello": "world"
         }
@@ -111,7 +111,7 @@ As a receiver, you can learn about an incoming transfer by listening for the `CO
         async data => {
             console.log(`Received conditional transfer: ${JSON.stringify(data)}`);
         },
-        data => data.transfer.initiator === "indraABCD", // can filter on the data here
+        data => data.transfer.initiator === "vectorABCD", // can filter on the data here
     );
     ```
 
@@ -178,7 +178,7 @@ If the router that you're transferring over [supports it](../router/configure.md
             lockHash: "0xlockHash...",
             expiry: "0"
         },
-        recipient: "indra123ABC...",
+        recipient: "vector123ABC...",
         recipientChainId: 137, // Matic chainId
         // Recipient assetId is relative to recipient chain. 0x0 on Matic chain is $MATIC
         recipientAssetId: "0x0000000000000000000000000000000000000000"
@@ -202,7 +202,7 @@ If the router that you're transferring over [supports it](../router/configure.md
             "lockHash": "0xlockHash...",
             "expiry": "0"
         },
-        "recipient": "indra123ABC...",
+        "recipient": "vector123ABC...",
         recipientChainId: 137, // Matic chainId
         // Recipient assetId is relative to recipient chain. 0x0 on Matic chain is $MATIC
         recipientAssetId: "0x0000000000000000000000000000000000000000"
