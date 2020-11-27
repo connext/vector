@@ -42,7 +42,10 @@ export class BrowserNode implements INodeService {
   static async connect(config: BrowserNodeConfig): Promise<BrowserNode> {
     let node: BrowserNode;
     if (config.signer) {
-      config.logger.info({ method: "connect" }, "Connecting with provided signer");
+      config.logger.info(
+        { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
+        "Connecting with provided signer",
+      );
       const chainJsonProviders = hydrateProviders(config.chainProviders!);
       const messaging = new NatsMessagingService({
         logger: config.logger.child({ module: "MessagingService" }),

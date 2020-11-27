@@ -12,12 +12,11 @@ import { config } from "./config";
 
 export default class ConnextManager {
   private parentOrigin: string;
-  private privateKey: string | undefined;
   private browserNode: BrowserNode | undefined;
 
   constructor() {
     this.parentOrigin = new URL(document.referrer).origin;
-    window.addEventListener("message", e => this.handleIncomingMessage(e), true);
+    window.addEventListener("message", (e) => this.handleIncomingMessage(e), true);
     if (document.readyState === "loading") {
       window.addEventListener("DOMContentLoaded", () => {
         window.parent.postMessage("event:iframe-initialized", this.parentOrigin as string);
@@ -30,20 +29,19 @@ export default class ConnextManager {
   private async initNode(): Promise<BrowserNode> {
     // store entropy in local storage
     if (!localStorage) {
-      throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.")
+      throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
     }
-    const storedEntropy = localStorage.getItem("entropy");
+    let storedEntropy = localStorage.getItem("entropy");
     if (!storedEntropy) {
-      const newEntropy = hexlify(randomBytes(65));
-      localStorage.setItem("entropy", newEntropy);
+      storedEntropy = hexlify(randomBytes(65));
+      localStorage.setItem("entropy", storedEntropy);
     }
-    const entropy = localStorage.getItem("entropy")!;
 
     // use the entropy of the signature to generate a private key for this wallet
     // since the signature depends on the private key stored by Magic/Metamask, this is not forgeable by an adversary
-    const mnemonic = entropyToMnemonic(keccak256(entropy));
-    this.privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
-    const signer = new ChannelSigner(this.privateKey);
+    const mnemonic = entropyToMnemonic(keccak256(storedEntropy));
+    const privateKey = Wallet.fromMnemonic(mnemonic).privateKey;
+    const signer = new ChannelSigner(privateKey);
 
     // store publicIdentifier in local storage to see if indexedDB needs to be deleted
     const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
