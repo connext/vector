@@ -7,7 +7,7 @@ import { getAddressError } from "./hexStrings";
 import { LimitedCache } from "./limitedCache";
 import { getRandomPublicKey, getAddressFromPublicKey } from "./crypto";
 
-export const VECTOR_PUB_ID_PREFIX = "indra";
+export const VECTOR_PUB_ID_PREFIX = "vector";
 
 const cache = new LimitedCache(200);
 

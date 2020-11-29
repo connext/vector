@@ -56,9 +56,13 @@ export class NatsMessagingService implements IMessagingService {
       if (isNode()) {
         this.natsUrl = `nats://${
           // Remove protocol prefix and port+path suffix
-          config.messagingUrl.replace(/^.*:\/\//, "").replace(/\//, "").replace(/:[0-9]+/, "")
+          config.messagingUrl
+            .replace(/^.*:\/\//, "")
+            .replace(/\//, "")
+            .replace(/:[0-9]+/, "")
         }:4222`;
-      } else { // Browser env
+      } else {
+        // Browser env
         this.natsUrl = `${
           // Replace "http" in the protocol with "ws" (preserving an "s" suffix if present)
           config.messagingUrl.replace(/:\/\/.*/, "").replace("http", "ws")
@@ -509,7 +513,7 @@ export class NatsMessagingService implements IMessagingService {
   public async unsubscribe(subject: string): Promise<void> {
     this.assertConnected();
     const unsubscribeFrom = this.getSubjectsToUnsubscribeFrom(subject);
-    unsubscribeFrom.forEach(sub => {
+    unsubscribeFrom.forEach((sub) => {
       this.connection!.unsubscribe(sub);
     });
   }
@@ -528,9 +532,9 @@ export class NatsMessagingService implements IMessagingService {
     // `*` represents any set of characters
     // if no match for split, will return [subject]
     const substrsToMatch = subject.split(`>`)[0].split(`*`);
-    subscribedTo.forEach(subscribedSubject => {
+    subscribedTo.forEach((subscribedSubject) => {
       let subjectIncludesAllSubstrings = true;
-      substrsToMatch.forEach(match => {
+      substrsToMatch.forEach((match) => {
         if (!subscribedSubject.includes(match) && match !== ``) {
           subjectIncludesAllSubstrings = false;
         }

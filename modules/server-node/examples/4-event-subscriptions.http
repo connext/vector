@@ -3,11 +3,11 @@
 @carolUrl = http://localhost:8005
 @daveUrl = http://localhost:8006
 @rogerUrl = http://localhost:8007
-@alicePublicIdentifier = indra8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
-@bobPublicIdentifier = indra5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
-@carolPublicIdentifier = indra8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
-@davePublicIdentifier = indra7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
-@rogerPublicIdentifier = indra8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
+@alicePublicIdentifier = vector8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
+@bobPublicIdentifier = vector5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
+@davePublicIdentifier = vector7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
+@rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 
 @eventName = CONDITIONAL_TRANSFER_CREATED
 

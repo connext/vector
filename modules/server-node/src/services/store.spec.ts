@@ -171,8 +171,8 @@ describe("store", () => {
 
   it("should update transfer resolver", async () => {
     const transferId = mkBytes32("0xabcde");
-    const alice = mkPublicIdentifier("indraA");
-    const bob = mkPublicIdentifier("indraB");
+    const alice = mkPublicIdentifier("vectorA");
+    const bob = mkPublicIdentifier("vectorB");
     const meta = { hello: "world" };
     const createState = createTestChannelState("create", {
       aliceIdentifier: alice,
