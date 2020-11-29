@@ -78,7 +78,7 @@ describe("Vector", () => {
 
   describe("Vector.setup", () => {
     let vector: Vector;
-    const counterpartyIdentifier = "vector6LkSoBv6QD5BKZ5vZQnVsd8cq6Tyb2oi93s62sTvW6xUUQg8PC";
+    const counterpartyIdentifier = getRandomChannelSigner().publicIdentifier;
 
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
@@ -114,7 +114,7 @@ describe("Vector", () => {
         transferRegistryAddress: mkAddress("0xdef"),
       };
       const validParams = {
-        counterpartyIdentifier: mkPublicIdentifier(),
+        counterpartyIdentifier,
         networkContext: { ...network },
         timeout: "1000",
       };
