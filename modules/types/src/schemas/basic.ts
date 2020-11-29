@@ -9,7 +9,7 @@ import { UpdateType } from "../channel";
 export const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
 export const TIntegerString = Type.Pattern(/^([0-9])*$/);
 export const TDecimalString = Type.Pattern(/^[0-9]*\.?[0-9]*$/);
-export const TPublicIdentifier = Type.Pattern(/^vector([a-zA-Z0-9]{49})$/);
+export const TPublicIdentifier = Type.Pattern(/^vector([a-zA-Z0-9]{50})$/);
 export const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
 export const TBytes = Type.Pattern(/^0x([a-fA-F0-9])$/);
 export const TSignature = Type.Pattern(/^0x([a-fA-F0-9]{130})$/);
