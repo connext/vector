@@ -423,6 +423,26 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
+  async getTokenAllowance(
+    tokenAddress: string,
+    owner: string,
+    spender: string,
+    chainId: number,
+  ): Promise<Result<BigNumber, ChainError>> {
+    const provider = this.chainProviders[chainId];
+    if (!provider) {
+      return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+
+    const erc20 = new Contract(tokenAddress, ERC20Abi, provider);
+    try {
+      const res = await erc20.allowance(owner, spender);
+      return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   private tryEvm(encodedFunctionData: string, bytecode: string): Result<Uint8Array, Error> {
     try {
       const output = execEvmBytecode(bytecode, encodedFunctionData);
