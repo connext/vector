@@ -1,4 +1,10 @@
 import { ChannelUpdate, FullChannelState, UpdateParams } from "./channel";
+import {
+  MAXIMUM_CHANNEL_TIMEOUT,
+  MAXIMUM_TRANSFER_TIMEOUT,
+  MINIMUM_CHANNEL_TIMEOUT,
+  MINIMUM_TRANSFER_TIMEOUT,
+} from "./constants";
 
 export class Result<T, Y = any> {
   private value?: T;
@@ -73,14 +79,31 @@ export class ValidationError extends VectorError {
   readonly type = VectorError.errors.ValidationError;
 
   static readonly reasons = {
+    AssetNotFound: "Asset is not found in channel",
     BadUpdateType: "Unrecognized update type",
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
-    SetupTimeoutInvalid: "Provided state timeout is invalid",
-    TransferNotActive: "Transfer not found in activeTransfers",
-    TransferNotFound: "No transfer found in storage",
     ExternalValidationFailed: "Failed external validation",
     InDispute: "Channel currently in dispute",
+    InsufficientFunds: "Insufficient funds in channel",
+    InvalidArrayLength:
+      "Channel array values have mismatching lengths (balances, assetIds, defundNonces, processedDepositsA/B)",
+    InvalidAssetId: "Asset ID is invalid",
+    InvalidChannelAddress: "Provided channel address is invalid",
+    InvalidCounterparty: "Channel counterparty is invalid",
+    InvalidInitialState: "Initial transfer state is invalid",
+    InvalidResolver: "Transfer resolver must be an object",
+    LongChannelTimeout: `Channel timeout above maximum of ${MAXIMUM_CHANNEL_TIMEOUT.toString()}s`,
+    NoActiveTransfers: "Active transfers are undefined",
+    SetupTimeoutInvalid: "Provided state timeout is invalid",
+    ShortChannelTimeout: `Channel timeout below minimum of ${MINIMUM_CHANNEL_TIMEOUT.toString()}s`,
+    TransferNotActive: "Transfer not found in activeTransfers",
+    TransferNotFound: "No transfer found in storage",
+    TransferTimeoutAboveChannel: `Transfer timeout must be less than the channel timeout`,
+    TransferTimeoutBelowMin: `Transfer timeout below minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    TransferTimeoutAboveMax: `Transfer timeout below minimum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    UnrecognizedType: "Unrecognized update type",
+    ValidationFailed: "Outbound validation failed",
   } as const;
 
   constructor(
@@ -99,15 +122,13 @@ export class OutboundChannelUpdateError extends VectorError {
   readonly type = VectorError.errors.OutboundChannelUpdateError;
 
   static readonly reasons = {
+    ...ValidationError.reasons,
     ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
-    BadUpdateType: "Unrecognized update type",
-    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     CounterpartyFailure: "Counterparty failed to apply update",
     Create2Failed: "Failed to get create2 address",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
-    OutboundValidationFailed: "Requested update is invalid",
     RestoreNeeded: "Channel too far out of sync, must be restored",
     RegenerateUpdateFailed: "Failed to regenerate update after sync",
     SaveChannelFailed: "Failed to save channel",
@@ -146,10 +167,9 @@ export class InboundChannelUpdateError extends VectorError {
   readonly type = VectorError.errors.InboundChannelUpdateError;
 
   static readonly reasons = {
+    ...ValidationError.reasons,
     ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
-    BadUpdateType: "Unrecognized update type",
-    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     DifferentIdentifiers: "Update changes channel publicIdentifiers",
     DifferentChannelAddress: "Update changes channelAddress",
     InboundValidationFailed: "Failed to validate incoming update",
