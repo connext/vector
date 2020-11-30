@@ -403,7 +403,7 @@ nats: $(shell find ops/nats $(find_options))
 
 messaging-proxy: $(shell find ops/proxy $(find_options))
 	$(log_start)
-	docker build $(image_cache) --tag $(project)_messaging_proxy ops/proxy/messaging
+	docker build $(image_cache) --tag $(project)_messaging_proxy ops/proxy
 	docker tag $(project)_messaging_proxy $(project)_messaging_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
