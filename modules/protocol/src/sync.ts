@@ -75,6 +75,7 @@ export async function outbound(
   // Ensure parameters are valid, and action can be taken
   const validationRes = await validateUpdateParams(
     signer,
+    chainReader,
     externalValidationService,
     params,
     previousState,
@@ -123,14 +124,14 @@ export async function outbound(
       {
         method,
         update: update.nonce,
-        counterparty: error.update.nonce,
+        counterparty: (error as InboundChannelUpdateError).update.nonce,
       },
       `Behind, syncing and retrying`,
     );
 
     // Get the synced state and new update
     const syncedResult = await syncStateAndRecreateUpdate(
-      error,
+      error as InboundChannelUpdateError,
       params,
       previousState!, // safe to do bc will fail if syncing setup (only time state is undefined)
       activeTransfers,
@@ -457,7 +458,7 @@ const syncStateAndRecreateUpdate = async (
   let finalTransferBalance: Balance | undefined;
   if (counterpartyUpdate.type === UpdateType.resolve) {
     // Get the final transfer balance from chain
-    const transfer = activeTransfers!.find(t => t.transferId === counterpartyUpdate.details.transferId);
+    const transfer = activeTransfers!.find((t) => t.transferId === counterpartyUpdate.details.transferId);
     // FIXME: add bytecode!
     if (!transfer) {
       return Result.fail(
