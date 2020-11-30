@@ -111,6 +111,7 @@ stop-all:
 	@bash ops/stop.sh duet
 	@bash ops/stop.sh node
 	@bash ops/stop.sh global
+	@bash ops/stop.sh chains
 	@bash ops/stop.sh evm
 
 clean: stop-all
