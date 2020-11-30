@@ -85,6 +85,13 @@ restart-trio: stop-trio
 stop-trio:
 	@bash ops/stop.sh trio
 
+start-chains: ethprovider
+	@bash ops/start-chains.sh
+restart-chains: stop-chains
+	@bash ops/start-chains.sh
+stop-chains:
+	@bash ops/stop.sh chains
+
 start-global: global
 	@bash ops/start-global.sh
 restart-global: stop-global
