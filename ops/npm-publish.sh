@@ -33,7 +33,7 @@ if [[ ! "$REPLY" =~ ^[Yy]$ ]]
 then echo "Be the change you want to see in the world -- write some documentation." && exit 1 # abort!
 fi
 
-make
+make all
 
 package_names=""
 package_versions=""
