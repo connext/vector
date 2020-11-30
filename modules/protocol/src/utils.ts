@@ -225,12 +225,8 @@ export const reconcileDeposit = async (
   const balance = {
     ...initialBalance,
     amount: [
-      BigNumber.from(initialBalance.amount[0])
-        .add(depositsToReconcile[0])
-        .toString(),
-      BigNumber.from(initialBalance.amount[1])
-        .add(depositsToReconcile[1])
-        .toString(),
+      BigNumber.from(initialBalance.amount[0]).add(depositsToReconcile[0]).toString(),
+      BigNumber.from(initialBalance.amount[1]).add(depositsToReconcile[1]).toString(),
     ],
   };
 
