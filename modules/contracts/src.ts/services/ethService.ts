@@ -473,7 +473,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     this.log.info({ assetId, channelAddress: spender }, "Approving token");
     const erc20 = new Contract(assetId, ERC20Abi, signer);
-    const checkApprovalRes = await this.getApproval(assetId, owner, spender, chainId);
+    const checkApprovalRes = await this.getTokenAllowance(assetId, owner, spender, chainId);
     if (checkApprovalRes.isError) {
       this.log.error(
         {

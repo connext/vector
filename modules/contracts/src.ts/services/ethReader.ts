@@ -423,7 +423,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
   }
 
-  async getApproval(
+  async getTokenAllowance(
     tokenAddress: string,
     owner: string,
     spender: string,
