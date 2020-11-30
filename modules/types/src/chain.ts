@@ -122,6 +122,13 @@ export interface IVectorChainReader {
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
+  getApproval(
+    tokenAddress: string,
+    owner: string,
+    spender: string,
+    chainId: number,
+  ): Promise<Result<BigNumber, ChainError>>;
+
   getChannelDispute(channelAddress: string, chainId: number): Promise<Result<ChannelDispute | undefined, ChainError>>;
 
   getSyncing(
