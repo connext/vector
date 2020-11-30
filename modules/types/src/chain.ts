@@ -122,7 +122,7 @@ export interface IVectorChainReader {
 
   getBlockNumber(chainId: number): Promise<Result<number, ChainError>>;
 
-  getApproval(
+  getTokenAllowance(
     tokenAddress: string,
     owner: string,
     spender: string,

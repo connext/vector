@@ -438,7 +438,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     try {
       const response = await this.queue.add(async () => {
         const response = await txFn();
-        console.log("sendTxAndParseResponse =======> response: ", response);
         await this.store.saveTransactionResponse(channelAddress, reason, response);
         // Register callbacks for saving tx, then return
         response
