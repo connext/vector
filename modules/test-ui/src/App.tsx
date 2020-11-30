@@ -55,13 +55,13 @@ function App() {
         setChannel(channelRes.getValue());
       }
       setNode(client);
-      client.on(EngineEvents.DEPOSIT_RECONCILED, async data => {
+      client.on(EngineEvents.DEPOSIT_RECONCILED, async (data) => {
         console.log("Received EngineEvents.DEPOSIT_RECONCILED: ", data);
         await updateChannel(client, data.channelAddress);
       });
       // TODO: this is required bc the event handlers are keyed on Date.now()
       // await delay(10);
-      client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async data => {
+      client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async (data) => {
         console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
         if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
           console.log("We are the sender");
@@ -103,11 +103,11 @@ function App() {
     }
   };
 
-  const setupChannel = async (aliceIdentifier: string) => {
+  const setupChannel = async (aliceIdentifier: string, chainId: number) => {
     setSetupLoading(true);
     const setupRes = await node.setup({
       counterpartyIdentifier: aliceIdentifier,
-      chainId: 1337,
+      chainId,
       timeout: "100000",
     });
     if (setupRes.isError) {
@@ -194,18 +194,6 @@ function App() {
         <Col span={16}>
           <Typography.Title>Vector Browser Node</Typography.Title>
         </Col>
-        <Col span={8}>
-          <Button
-            danger
-            onClick={() => {
-              indexedDB.deleteDatabase("VectorIndexedDBDatabase");
-              localStorage.clear();
-              window.location.reload();
-            }}
-          >
-            Clear Store
-          </Button>
-        </Col>
       </Row>
       <Divider orientation="left">Connection</Divider>
       <Row gutter={16}>
@@ -218,7 +206,7 @@ function App() {
                   { title: "Public Identifier", description: node!.publicIdentifier },
                   { title: "Signer Address", description: node!.signerAddress },
                 ]}
-                renderItem={item => (
+                renderItem={(item) => (
                   <List.Item>
                     <List.Item.Meta title={item.title} description={item.description} />
                   </List.Item>
@@ -240,7 +228,7 @@ function App() {
                   placeholder="IFrame Src"
                   defaultValue="http://localhost:3030"
                   enterButton="Setup Node"
-                  onSearch={iframeSrc => {
+                  onSearch={(iframeSrc) => {
                     connectNode(iframeSrc);
                   }}
                   loading={connectLoading}
@@ -254,18 +242,37 @@ function App() {
         <>
           <Divider orientation="left">Channel</Divider>
           <Row gutter={16}>
-            <Col span={24}>
+            <Col span={18}>
               {channel ? (
                 <Statistic title="Channel Address" value={channel.channelAddress} />
               ) : (
-                <Form layout="horizontal" name="setup" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
-                  <Form.Item label="Setup Channel">
-                    <Input.Search
-                      onSearch={async value => setupChannel(value)}
-                      placeholder="Counterparty Identifier"
-                      enterButton="Setup"
-                      loading={setupLoading}
-                    />
+                <Form
+                  layout="horizontal"
+                  name="setup"
+                  wrapperCol={{ span: 18 }}
+                  labelCol={{ span: 6 }}
+                  onFinish={(vals) => setupChannel(vals.counterparty, parseInt(vals.chainId))}
+                >
+                  <Form.Item
+                    label="Counterparty"
+                    name="counterparty"
+                    rules={[{ required: true, message: "Please input the counterparty identifier!" }]}
+                  >
+                    <Input placeholder="Counterparty Identifier" />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="Chain Id"
+                    name="chainId"
+                    rules={[{ required: true, message: "Please input the chain ID!" }]}
+                  >
+                    <Input placeholder="Chain Id" />
+                  </Form.Item>
+
+                  <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+                    <Button type="primary" htmlType="submit" loading={setupLoading}>
+                      Setup Channel
+                    </Button>
                   </Form.Item>
                 </Form>
               )}
@@ -315,7 +322,7 @@ function App() {
                     placeholder={constants.AddressZero}
                     enterButton="Reconcile"
                     suffix="Asset ID"
-                    onSearch={assetId => reconcileDeposit(assetId || constants.AddressZero)}
+                    onSearch={(assetId) => reconcileDeposit(assetId || constants.AddressZero)}
                     loading={depositLoading}
                   />
                 </Form.Item>
@@ -324,7 +331,7 @@ function App() {
                     placeholder={constants.AddressZero}
                     enterButton="Request"
                     suffix="Asset ID"
-                    onSearch={assetId => requestCollateral(assetId || constants.AddressZero)}
+                    onSearch={(assetId) => requestCollateral(assetId || constants.AddressZero)}
                     loading={requestCollateralLoading}
                   />
                 </Form.Item>
@@ -341,7 +348,7 @@ function App() {
                 wrapperCol={{ span: 18 }}
                 name="transfer"
                 initialValues={{ assetId: channel?.assetIds && channel?.assetIds[0], preImage: getRandomBytes32() }}
-                onFinish={values => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
+                onFinish={(values) => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
                 onFinishFailed={onFinishFailed}
                 form={transferForm}
               >
@@ -421,7 +428,7 @@ function App() {
                 wrapperCol={{ span: 18 }}
                 name="withdraw"
                 initialValues={{ assetId: channel?.assetIds && channel?.assetIds[0], recipient: channel?.bob }}
-                onFinish={values => withdraw(values.assetId, values.amount, values.recipient)}
+                onFinish={(values) => withdraw(values.assetId, values.amount, values.recipient)}
                 onFinishFailed={onFinishFailed}
                 form={withdrawForm}
               >
