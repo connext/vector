@@ -17,8 +17,7 @@ Content-Type: application/json
   "params":[{
     "from": "{{sugarDaddy}}",
     "to": "{{alice}}",
-    "value": "{{amount}}",
-    "data": "0x0"
+    "value": "{{amount}}"
   }],
   "id":1
 }
