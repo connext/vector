@@ -71,9 +71,9 @@ common="networks:
 ########################################
 # Global services / chain provider config
 
-# If no messaging url or custom ethproviders are given, spin up a global stack
+# If no messaging url or custom ethproviders are given, spin up a messaging stack
 if [[ -z "$messaging_url" || "$use_local_evms" == "true" ]]
-then bash "$root/ops/start-global.sh"
+then bash "$root/ops/start-messaging.sh"
 fi
 
 # If no custom ethproviders are given, configure mnemonic/addresses from local evms

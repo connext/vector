@@ -42,7 +42,7 @@ common="networks:
 ########################################
 # Global services / chain provider config
 
-bash "$root/ops/start-global.sh"
+bash "$root/ops/start-messaging.sh"
 
 # Do we need to spin up local evms or will the node use external ones?
 chain_addresses=$(

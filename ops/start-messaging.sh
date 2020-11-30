@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-stack="global"
+stack="messaging"
 
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
@@ -224,8 +224,8 @@ function abort {
   echo "====="
   docker container ls -a
   echo "====="
-  docker service ps global_auth || true
-  docker service logs --tail 50 --raw global_auth || true
+  docker service ps messaging_auth || true
+  docker service logs --tail 50 --raw messaging_auth || true
   echo "====="
   curl "$public_url" || true
   echo "====="

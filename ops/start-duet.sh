@@ -30,7 +30,7 @@ common="networks:
 ########################################
 # Global services / chain provider config
 
-bash "$root/ops/start-global.sh"
+bash "$root/ops/start-messaging.sh"
 if [[ ! -f "$root/.chaindata/chain-addresses.json" ]]
 then echo "Can't run $stack against external providers yet" && exit 1
 fi
