@@ -6,7 +6,7 @@ import { Balance, FullChannelState, FullTransferState } from "./channel";
 import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
 import { ChainProviders } from "./network";
-import { RegisteredTransfer, TransferName } from "./transferDefinitions";
+import { RegisteredTransfer, TransferName, TransferState } from "./transferDefinitions";
 
 export const ERC20Abi = [
   // Read-Only Functions
@@ -114,7 +114,14 @@ export interface IVectorChainReader {
 
   getChainProviders(): Result<ChainProviders, ChainError>;
 
-  create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>>;
+  create(
+    initialState: TransferState,
+    balance: Balance,
+    transferDefinition: string,
+    transferRegistryAddress: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<boolean, ChainError>>;
 
   resolve(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<Balance, ChainError>>;
 

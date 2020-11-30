@@ -12,6 +12,7 @@ import {
   RegisteredTransfer,
   TransferName,
   ChannelDispute,
+  TransferState,
 } from "@connext/vector-types";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -288,21 +289,38 @@ export class EthereumChainReader implements IVectorChainReader {
     return Result.ok(totalDepositsBob);
   }
 
-  async create(transfer: FullTransferState, chainId: number, bytecode?: string): Promise<Result<boolean, ChainError>> {
+  async create(
+    initialState: TransferState,
+    balance: Balance,
+    transferDefinition: string,
+    transferRegistryAddress: string,
+    chainId: number,
+    bytecode?: string,
+  ): Promise<Result<boolean, ChainError>> {
     const provider = this.chainProviders[chainId];
     if (!provider) {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
+    }
+    // Get encoding
+    const registryRes = await this.getRegisteredTransferByDefinition(
+      transferDefinition,
+      transferRegistryAddress,
+      chainId,
+      bytecode,
+    );
+    if (registryRes.isError) {
+      return Result.fail(registryRes.getError()!);
     }
     // Try to encode
     let encodedState: string;
     let encodedBalance: string;
     try {
-      encodedState = encodeTransferState(transfer.transferState, transfer.transferEncodings[0]);
-      encodedBalance = encodeBalance(transfer.balance);
+      encodedState = encodeTransferState(initialState, registryRes.getValue().stateEncoding);
+      encodedBalance = encodeBalance(balance);
     } catch (e) {
       return Result.fail(e);
     }
-    const contract = new Contract(transfer.transferDefinition, TransferDefinition.abi, provider);
+    const contract = new Contract(transferDefinition, TransferDefinition.abi, provider);
     if (bytecode) {
       const evmRes = this.tryEvm(
         contract.interface.encodeFunctionData("create", [encodedBalance, encodedState]),
@@ -315,8 +333,7 @@ export class EthereumChainReader implements IVectorChainReader {
     }
     this.log.debug(
       {
-        transferDefinition: transfer.transferDefinition,
-        transferId: transfer.transferId,
+        transferDefinition,
       },
       "Calling create onchain",
     );
