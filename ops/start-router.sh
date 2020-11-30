@@ -2,11 +2,9 @@
 set -e
 
 stack="router"
-
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
-# make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
@@ -17,22 +15,18 @@ fi
 ####################
 # Load config
 
-if [[ ! -f "$root/${stack}.config.json" ]]
-then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
-fi
-router_config=$(
-  cat "$root/ops/config/$stack.default.json" "$root/$stack.config.json" | jq -s '.[0] + .[1]'
-)
-
-# Router inherits from node config
 if [[ ! -f "$root/node.config.json" ]]
 then cp "$root/ops/config/node.default.json" "$root/node.config.json"
 fi
-node_config=$(
-  cat "$root/ops/config/node.default.json" "$root/node.config.json" | jq -s '.[0] + .[1]'
-)
+if [[ ! -f "$root/router.config.json" ]]
+then cp "$root/ops/config/router.default.json" "$root/router.config.json"
+fi
 
-config=$(echo "$node_config" "$router_config" | jq -s '.[0] + .[1]')
+config=$(
+  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" \
+  | cat - "$root/node.config.json" "$root/router.config.json" \
+  | jq -s '.[0] + .[1] + .[2] + .[3]'
+)
 
 function getConfig {
   value=$(echo "$config" | jq ".$1" | tr -d '"')
@@ -57,11 +51,6 @@ then use_local_evms=true
 else use_local_evms=false
 fi
 
-echo "Preparing to launch $stack stack (prod=$production)"
-
-####################
-# Misc Config
-
 if [[ "$production" == "true" ]]
 then
   # If we're on the prod branch then use the release semvar, otherwise use the commit hash
@@ -79,23 +68,36 @@ common="networks:
       options:
           max-size: '10m'"
 
-########################################
-# Global services / chain provider config
-# If no messaging service urls provided, spin up local ones & use those
+####################
+# Start up dependency stacks
 
-# If no messaging url or custom ethproviders are given, spin up a messaging stack
-if [[ -z "$messaging_url" || "$use_local_evms" == "true" ]]
+if [[ "$use_local_evms" == "true" ]]
+then bash "$root/ops/start-chains.sh"
+fi
+if [[ -z "$messaging_url" ]]
 then bash "$root/ops/start-messaging.sh"
 fi
 
-# If no custom ethproviders are given, configure mnemonic/addresses from local evms
+echo
+echo "Preparing to launch $stack stack w config:"
+echo " - chain_providers=$chain_providers"
+echo " - messaging_url=$messaging_url"
+echo " - production=$production"
+echo " - public_port=$public_port"
+echo " - version=$version"
+
+########################################
+# Chain config
+
 if [[ "$use_local_evms" == "true" ]]
 then
   mnemonic_secret=""
   eth_mnemonic="${mnemonic:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
   eth_mnemonic_file=""
-  chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
-  config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
+  config=$(
+    echo "$config" '{"chainAddresses":'"$(cat "$root/.chaindata/chain-addresses.json")"'}' \
+    | jq -s '.[0] + .[1]'
+  )
 
 else
   echo "Connecting to external services: messaging=$messaging_url | chain_providers=$chain_providers"
@@ -115,7 +117,7 @@ else
 fi
 
 ########################################
-## Database config
+## Database config (postgres)
 
 database_image="${project}_database:$version";
 bash "$root/ops/pull-images.sh" "$database_image" > /dev/null

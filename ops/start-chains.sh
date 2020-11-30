@@ -2,7 +2,6 @@
 set -e
 
 stack="chains"
-
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
@@ -15,22 +14,16 @@ then echo "A $stack stack is already running" && exit 0
 fi
 
 ####################
-# Misc Config
-
-common="networks:
-      - '$project'
-    logging:
-      driver: 'json-file'
-      options:
-          max-size: '100m'"
-
-####################
-# Eth Provider config
+# Config
 
 mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-
 chain_id_1="1337"
 chain_id_2="1338"
+echo
+echo "Preparing to launch $stack stack w config:"
+echo " - mnemonic=$mnemonic"
+echo " - chain_id_1=$chain_id_1"
+echo " - chain_id_2=$chain_id_2"
 
 evm_port_1="8545"
 evm_port_2="8546"
@@ -38,17 +31,28 @@ echo "${stack} will be exposed on *:$evm_port_1 and *:$evm_port_2"
 
 chain_data="$root/.chaindata"
 rm -rf "$chain_data"
+
 chain_data_1="$chain_data/$chain_id_1"
 chain_data_2="$chain_data/$chain_id_2"
 mkdir -p "$chain_data_1" "$chain_data_2"
 
+chain_addresses_1="$chain_data_1/chain-addresses.json"
+chain_addresses_2="$chain_data_2/chain-addresses.json"
+
 evm_image_name="${project}_ethprovider:latest";
 bash "$root/ops/pull-images.sh" "$evm_image_name" > /dev/null
+
 evm_image="image: '$evm_image_name'
+    networks:
+      - '$project'
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '100m'
     tmpfs: /tmp"
 
 ####################
-# Launch stack
+# Launch
 
 docker_compose=$root/.${stack}.docker-compose.yml
 rm -f "$docker_compose"
@@ -62,7 +66,6 @@ networks:
 services:
 
   'evm_$chain_id_1':
-    $common
     $evm_image
     environment:
       MNEMONIC: '$mnemonic'
@@ -73,7 +76,6 @@ services:
       - '$chain_data_1:/data'
 
   'evm_$chain_id_2':
-    $common
     $evm_image
     environment:
       MNEMONIC: '$mnemonic'
@@ -86,14 +88,9 @@ services:
 EOF
 
 docker stack deploy -c "$docker_compose" "$stack"
-echo "The $stack stack has been deployed."
-
-
-chain_addresses_1="$chain_data_1/chain-addresses.json"
-chain_addresses_2="$chain_data_2/chain-addresses.json"
+echo "The $stack stack has been deployed, waiting for it to wake up.."
 
 timeout=$(( $(date +%s) + 300 ))
-echo "Waiting for evms to wake up.."
 while 
   ! grep -qs "transferRegistryAddress" "$chain_addresses_1" ||\
   ! grep -qs "transferRegistryAddress" "$chain_addresses_2"

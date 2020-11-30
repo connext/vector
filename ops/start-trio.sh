@@ -2,7 +2,6 @@
 set -e
 
 stack="trio"
-
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
@@ -12,25 +11,36 @@ docker network create --attachable --driver overlay "$project" 2> /dev/null || t
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
 then echo "A $stack stack is already running" && exit 0;
-else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Misc Config
+## Load Config
 
-# Load the config with defaults if it does not exist
 if [[ ! -f "$root/node.config.json" ]]
 then cp "$root/ops/config/node.default.json" "$root/node.config.json"
 fi
-
 if [[ ! -f "$root/router.config.json" ]]
 then cp "$root/ops/config/router.default.json" "$root/router.config.json"
 fi
 
 config=$(
-  cat "$root/node.config.json" "$root/router.config.json" |\
-  jq -s '.[0] + .[1]'
+  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" \
+  | cat - "$root/node.config.json" "$root/router.config.json" \
+  | jq -s '.[0] + .[1] + .[2] + .[3]'
 )
+
+function getConfig {
+  value=$(echo "$config" | jq ".$1" | tr -d '"')
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
+
+messaging_url=$(getConfig messagingUrl)
+
+chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
+default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
 
 common="networks:
       - '$project'
@@ -39,41 +49,24 @@ common="networks:
       options:
           max-size: '100m'"
 
-########################################
-# Global services / chain provider config
+####################
+## Start dependency stacks
 
-bash "$root/ops/start-messaging.sh"
-
-# Do we need to spin up local evms or will the node use external ones?
-chain_addresses=$(
-  echo "$config" | jq -s '.[0] + .[1] | .chainAddresses' | tr -d '\n\r '
-)
-chain_providers=$(
-  echo "$config" | jq -s '.[0] + .[1] | .chainProviders' | tr -d '\n\r '
-)
-
-# If the providers are the default providers, override the addresses
-# with what exists in the `.chaindata` folder (in case default config
-# values are not correct)
-default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
-if [[ "$default_providers" == "$given_providers" ]]
+if [[ "$chain_providers" == "$default_providers" ]]
 then
-  if [[ ! -f "$root/.chaindata/chain-addresses.json" ]]
-  then echo "No .chaindata configured for local chains" && exit 1
-  else
-    chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
-  fi
+  bash "$root/ops/start-chains.sh"
+  config=$(
+    echo "$config" '{"chainAddresses":'"$(cat "$root/.chaindata/chain-addresses.json")"'}' \
+    | jq -s '.[0] + .[1]'
+  )
 fi
 
-# Sanity check: make sure there are addresses for each chain there
-# is a provider for
-chain_addresses_ids=$(echo $chain_addresses | jq 'keys')
-chain_providers_ids=$(echo $chain_providers | jq 'keys')
-if [[ "$chain_addresses_ids" != "$chain_providers_ids" ]]
-then echo "Addresses and providers have different supported chains" && exit 1;
+if [[ -z "$messaging_url" ]]
+then bash "$root/ops/start-messaging.sh"
 fi
 
-config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
+echo
+echo "Preparing to launch $stack stack"
 
 ########################################
 ## Database config
