@@ -179,6 +179,25 @@ jobs:
         if: failure()
         run: docker service ls && docker service logs --tail 200 router_node
 
+  deploy-messaging:
+    env:
+      DOMAINNAME: messaging.connext.network
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: deploy messaging service to production
+        uses: ./ops/ssh-action/
+        with:
+          HOST: ubuntu@${{ env.DOMAINNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          CMD: '
+            git checkout --force prod;
+            git reset --hard $GITHUB_SHA;
+            make restart-messaging;
+            docker container prune -f;
+            docker image ls -q | xargs docker image rm || true;
+          '
   deploy-testnet:
     env:
       DOMAINNAME: testnet-vector.connext.network
