@@ -10,7 +10,7 @@ import {
 import React, { useEffect, useState } from "react";
 import pino from "pino";
 import { constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List } from "antd";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select } from "antd";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
@@ -18,6 +18,7 @@ import "./App.css";
 function App() {
   const [node, setNode] = useState<BrowserNode>();
   const [channel, setChannel] = useState<FullChannelState>();
+  const [showCustomIframe, setShowCustomIframe] = useState<boolean>(false);
 
   const [setupLoading, setSetupLoading] = useState<boolean>(false);
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
@@ -222,17 +223,44 @@ function App() {
           </>
         ) : (
           <Col span={18}>
-            <Form layout="horizontal" name="node" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
-              <Form.Item label="IFrame Src">
-                <Input.Search
-                  placeholder="IFrame Src"
-                  defaultValue="http://localhost:3030"
-                  enterButton="Setup Node"
-                  onSearch={(iframeSrc) => {
-                    connectNode(iframeSrc);
+            <Form
+              layout="horizontal"
+              name="node"
+              wrapperCol={{ span: 18 }}
+              labelCol={{ span: 6 }}
+              onFinish={(vals) => {
+                const iframe = showCustomIframe ? vals.customIframe : vals.iframeSrc;
+                console.log("Connecting to iframe at: ", iframe);
+                connectNode(iframe);
+              }}
+              initialValues={{ iframeSrc: "http://localhost:3030" }}
+            >
+              <Form.Item label="IFrame Src" name="iframeSrc">
+                <Select
+                  onChange={(event) => {
+                    if (event === "custom") {
+                      setShowCustomIframe(true);
+                    } else {
+                      setShowCustomIframe(false);
+                    }
                   }}
-                  loading={connectLoading}
-                />
+                >
+                  <Select.Option value="http://localhost:3030">http://localhost:3030</Select.Option>
+                  <Select.Option value="https://wallet.connext.network">https://wallet.connext.network</Select.Option>
+                  <Select.Option value="custom">Custom</Select.Option>
+                </Select>
+              </Form.Item>
+
+              {showCustomIframe && (
+                <Form.Item label="Custom Iframe URL" name="customIframe">
+                  <Input />
+                </Form.Item>
+              )}
+
+              <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+                <Button type="primary" htmlType="submit" loading={connectLoading}>
+                  Connect To Iframe
+                </Button>
               </Form.Item>
             </Form>
           </Col>
