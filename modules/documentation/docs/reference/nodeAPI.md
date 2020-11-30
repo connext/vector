@@ -1,4 +1,5 @@
 # Node API Reference
+
 There is one consolidated API across both the `server-node` and `browser-node`. Server nodes expose that interface via HTTP and gRPC (coming soon), and we additionally have [an example TS "client"](./modules/utils/src/serverNode.ts) which wraps the HTTP methods. The browser node exposes a TS interface only.
 
 ## Base Objects
@@ -121,7 +122,7 @@ Creates a channel with a given counterparty.
         ``` typescript
         const result = await node.setup({
             chainId: 1 // Ethereum
-            counterpartyPublicIdentifier: "indra123ABC..."
+            counterpartyPublicIdentifier: "vector123ABC..."
         });
         ```
 
@@ -134,7 +135,7 @@ Creates a channel with a given counterparty.
         Content-Type: application/json
 
         {
-            "counterpartyPublicIdentifier": "indra123ABC...",
+            "counterpartyPublicIdentifier": "vector123ABC...",
             "chainId": 1,
         }
         ```
@@ -216,7 +217,7 @@ Creates a conditional transfer to a given counterparty, locking up the transfer 
                 lockHash: "0xlockHash...",
                 expiry: "0"
             },
-            recipient: "indra123ABC...",
+            recipient: "vector123ABC...",
             meta: {
                 hello: "world"
             }
@@ -240,7 +241,7 @@ Creates a conditional transfer to a given counterparty, locking up the transfer 
                 "lockHash": "0xlockHash...",
                 "expiry": "0"
             },
-            "recipient": "indra123ABC...",
+            "recipient": "vector123ABC...",
             "meta": {
                 "hello": "world"
             }
@@ -435,8 +436,8 @@ Gets a channel given the participant public identifiers of that channel.
 
         ``` typescript
         const result = await node.getStateChannelByParticipants({
-            publicIdentifier: "indra123MyId...",
-            counterparty: "indra456TheirId...",
+            publicIdentifier: "vector123MyId...",
+            counterparty: "vector456TheirId...",
             chainId: 1 // Ethereum
         });
         ```
@@ -446,7 +447,7 @@ Gets a channel given the participant public identifiers of that channel.
         ``` http
         ##############
         ### getChannelByParticipants
-        GET {{nodeUrl}}/indra123MyId.../channels/counterparty/indra456TheirId.../chain-id/1
+        GET {{nodeUrl}}/vector123MyId.../channels/counterparty/vector456TheirId.../chain-id/1
         ```
 
 #### Params
@@ -604,6 +605,7 @@ Gets all registered transers from the `TransferRegistry`.
 `ServerNodeParams.GetRegisteredTransfers` object. Contains:
 
 - `chainId`: `number` - Chain id of the `TransferRegistry` you want to query
+
 #### Returns
 
 EITHER `ServerNodeResponses.GetRegisteredTransfers` object. Contains:

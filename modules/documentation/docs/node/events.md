@@ -67,6 +67,6 @@ await node.on(
   async data => {
     console.log(`Received conditional transfer: ${JSON.stringify(data)}`);
   },
-  data => data.transfer.initiator === "indraABCD", // can filter on the data here
+  data => data.transfer.initiator === "vectorABCD", // can filter on the data here
 );
 ```

@@ -1,6 +1,6 @@
 export const abbreviate = (str?: string, len = 4): string =>
   !str ? "undefined"
-    : str.startsWith("indra") ? `${str.substring(0, 5 + len)}..${str.substring(str.length - len)}`
+    : str.startsWith("vector") ? `${str.substring(0, 5 + len)}..${str.substring(str.length - len)}`
     : str.startsWith("0x") ? `${str.substring(0, 2 + len)}..${str.substring(str.length - len)}`
     : `${str.substring(0, len)}..${str.substring(str.length - len)}`;
 

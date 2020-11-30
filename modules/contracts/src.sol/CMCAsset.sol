@@ -11,13 +11,21 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/// @title CMCAsset
+/// @author Connext <support@connext.network>
+/// @notice Contains logic to safely transfer channel assets (even if they are
+///         noncompliant). During adjudication, balances from defunding the
+///         channel or defunding transfers are registered as withdrawable. Once
+///         they are registered, the owner (or a watchtower on behalf of the
+///         owner), may call `exit` to reclaim funds from the multisig.
+
 contract CMCAsset is CMCCore, ICMCAsset {
     using SafeMath for uint256;
     using LibMath for uint256;
 
     mapping(address => uint256) internal totalTransferred;
     mapping(address => mapping(address => uint256))
-        private emergencyWithdrawableAmount;
+        private exitableAmount;
 
     function registerTransfer(address assetId, uint256 amount) internal {
         totalTransferred[assetId] += amount;
@@ -34,29 +42,29 @@ contract CMCAsset is CMCCore, ICMCAsset {
         return totalTransferred[assetId];
     }
 
-    function makeEmergencyWithdrawable(
+    function makeExitable(
         address assetId,
         address recipient,
         uint256 amount
     ) internal {
-        emergencyWithdrawableAmount[assetId][
+        exitableAmount[assetId][
             recipient
-        ] = emergencyWithdrawableAmount[assetId][recipient].satAdd(amount);
+        ] = exitableAmount[assetId][recipient].satAdd(amount);
     }
 
-    function makeBalanceEmergencyWithdrawable(
+    function makeBalanceExitable(
         address assetId,
         Balance memory balance
     ) internal {
         for (uint256 i = 0; i < 2; i++) {
             uint256 amount = balance.amount[i];
             if (amount > 0) {
-                makeEmergencyWithdrawable(assetId, balance.to[i], amount);
+                makeExitable(assetId, balance.to[i], amount);
             }
         }
     }
 
-    function getEmergencyWithdrawableAmount(address assetId, address owner)
+    function getExitableAmount(address assetId, address owner)
         external
         view
         override
@@ -64,7 +72,7 @@ contract CMCAsset is CMCCore, ICMCAsset {
         nonReentrantView
         returns (uint256)
     {
-        return emergencyWithdrawableAmount[assetId][owner];
+        return exitableAmount[assetId][owner];
     }
 
     function getAvailableAmount(address assetId, uint256 maxAmount)
@@ -72,6 +80,10 @@ contract CMCAsset is CMCCore, ICMCAsset {
         view
         returns (uint256)
     {
+        // Taking the min protects against the case where the multisig
+        // holds less than the amount that is trying to be withdrawn
+        // while still allowing the total of the funds to be removed
+        // without the transaction reverting.
         return Math.min(maxAmount, LibAsset.getOwnBalance(assetId));
     }
 
@@ -87,11 +99,14 @@ contract CMCAsset is CMCCore, ICMCAsset {
         );
     }
 
-    function emergencyWithdraw(
+    function exit(
         address assetId,
         address owner,
         address payable recipient
     ) external override onlyViaProxy nonReentrant {
+        // Either the owner must be the recipient, or in control
+        // of setting the recipient of the funds to whomever they
+        // choose
         require(
             msg.sender == owner || owner == recipient,
             "CMCAsset: OWNER_MISMATCH"
@@ -100,15 +115,18 @@ contract CMCAsset is CMCCore, ICMCAsset {
         uint256 amount =
             getAvailableAmount(
                 assetId,
-                emergencyWithdrawableAmount[assetId][owner]
+                exitableAmount[assetId][owner]
             );
 
         // Revert if amount is 0
         require(amount > 0, "CMCAsset: NO_OP");
 
-        emergencyWithdrawableAmount[assetId][
+        // Reduce the amount claimable from the multisig by the owner
+        exitableAmount[assetId][
             owner
-        ] = emergencyWithdrawableAmount[assetId][owner].sub(amount);
+        ] = exitableAmount[assetId][owner].sub(amount);
+
+        // Perform transfer
         transferAsset(assetId, recipient, amount);
     }
 }

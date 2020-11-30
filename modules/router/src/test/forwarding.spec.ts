@@ -91,7 +91,7 @@ describe("Forwarding", () => {
       await expect(
         forwardTransferCreation(
           data,
-          mkPublicIdentifier("indraBBB"),
+          mkPublicIdentifier("vectorBBB"),
           mkAddress("0xb"),
           node as INodeService,
           store,

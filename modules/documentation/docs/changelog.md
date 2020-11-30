@@ -2,6 +2,18 @@
 
 ## Next Release
 
+## 0.0.18
+
+- public identifiers prefixed with `vector` instead of `indra`
+
+## 0.0.17
+
+- update dispute contract events to be more verbose
+- add `AliceDeposited` events
+- add `TransferRegistered` and `TransferRemoved` events
+- rename `emergencyWithdraw` to `exit`
+- update contract documentation (ready for audit)
+
 ## 0.0.16
 
 - fix dockerfile in iframe-app

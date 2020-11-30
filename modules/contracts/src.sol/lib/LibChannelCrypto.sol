@@ -4,6 +4,12 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 
+/// @title LibChannelCrypto
+/// @author Connext <support@connext.network>
+/// @notice This library contains helpers for recovering signatures from a
+///         Vector commitments. Channels do not allow for arbitrary signing of
+///         messages to prevent misuse of private keys by injected providers,
+///         and instead only sign messages with a Vector channel prefix.
 library LibChannelCrypto {
     function checkSignature(
         bytes32 hash,
@@ -31,6 +37,6 @@ library LibChannelCrypto {
         // enforced by the type signature above
         // TODO namespace this to Vector?
         return
-            keccak256(abi.encodePacked("\x15Indra Signed Message:\n32", hash));
+            keccak256(abi.encodePacked("\x15Vector Signed Message:\n32", hash));
     }
 }

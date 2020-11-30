@@ -15,15 +15,15 @@ const from = "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
 // Exported object, attach anything to this that you want available in tests
 const my = {};
 
-my.getConfig = Url => {
-  cy.request(`${Url}/config`).should(response => {
+my.getConfig = (Url) => {
+  cy.request(`${Url}/config`).should((response) => {
     console.log(response);
     expect(response.status, "Get Request").to.eq(200);
     expect(response, "headers as property").to.have.property("headers");
     expect(response, "duration as property").to.have.property("duration");
     expect(response.body[0], "publicIdentifier as property").to.have.property("publicIdentifier");
     expect(response.body[0].publicIdentifier, "PublicIdentifier should be string").to.be.a("string");
-    expect(response.body[0].publicIdentifier, "indra as prefix in publicIdentifier").to.include("indra");
+    expect(response.body[0].publicIdentifier, "vector as prefix in publicIdentifier").to.include("vector");
   });
 };
 
@@ -32,7 +32,7 @@ my.getChannelAddress = () => {
     new Cypress.Promise((resolve, reject) => {
       cy.get(".ant-statistic-content-value")
         .invoke("text")
-        .then(address => {
+        .then((address) => {
           cy.log(`Got Channel address: ${address}`);
           resolve(address);
         });
@@ -45,7 +45,7 @@ my.getNodeBalance = () => {
     new Cypress.Promise((resolve, reject) => {
       cy.get(".ant-table-row > :nth-child(2)")
         .invoke("text")
-        .then(balance => {
+        .then((balance) => {
           cy.log(`Got Node Balance: ${balance}`);
           resolve(balance);
         });
@@ -58,7 +58,7 @@ my.getCounterpartyBalance = () => {
     new Cypress.Promise((resolve, reject) => {
       cy.get(".ant-table-row > :nth-child(3)")
         .invoke("text")
-        .then(balance => {
+        .then((balance) => {
           cy.log(`Got Counterparty Balance: ${balance}`);
           resolve(balance);
         });
@@ -69,7 +69,7 @@ my.getCounterpartyBalance = () => {
 my.getOnchainEtherBalance = (address = cashout.address) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
-      return cy.wrap(cashout.provider.getBalance(address)).then(balance => {
+      return cy.wrap(cashout.provider.getBalance(address)).then((balance) => {
         cy.log(`Onchain ether balance is ${balance.toString()} for ${address}`);
         resolve(balance.toString());
       });
@@ -77,13 +77,13 @@ my.getOnchainEtherBalance = (address = cashout.address) => {
   );
 };
 
-my.deposit = value => {
+my.deposit = (value) => {
   return cy.wrap(
     new Cypress.Promise((resolve, reject) => {
       cy.get(
         ":nth-child(1) > .ant-col-18 > .ant-form-item-control-input > .ant-form-item-control-input-content > .ant-input-group-wrapper > .ant-input-wrapper > .ant-input-group-addon > .ant-btn",
       ).click();
-      my.getChannelAddress().then(address => {
+      my.getChannelAddress().then((address) => {
         cy.log(`Depositing ${value} eth into channel ${address}`);
         return cy
           .wrap(
@@ -92,7 +92,7 @@ my.deposit = value => {
               value: eth.utils.parseEther(value),
             }),
           )
-          .then(tx => {
+          .then((tx) => {
             return cy.wrap(funder.provider.waitForTransaction(tx.hash)).then(() => {
               my.getNodeBalance().should("not.contain", "0.00");
               my.getNodeBalance().then(resolve);

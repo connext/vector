@@ -11,6 +11,13 @@ import "./lib/LibAsset.sol";
 import "./lib/LibChannelCrypto.sol";
 import "./lib/LibUtils.sol";
 
+/// @title CMCWithdraw
+/// @author Connext <support@connext.network>
+/// @notice Contains logic for all cooperative channel multisig withdrawals.
+///         Cooperative withdrawal commitments must be signed by both channel
+///         participants. As part of the channel withdrawals, an arbitrary
+///         call can be made, which is extracted from the withdraw data.
+
 contract CMCWithdraw is CMCCore, CMCAsset, ICMCWithdraw {
     using LibChannelCrypto for bytes32;
 

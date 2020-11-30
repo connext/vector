@@ -2,8 +2,8 @@ export const mkAddress = (prefix = "0x0"): string => {
   return prefix.padEnd(42, "0");
 };
 
-export const mkPublicIdentifier = (prefix = "indraA"): string => {
-  return prefix.padEnd(55, "0");
+export const mkPublicIdentifier = (prefix = "vectorA"): string => {
+  return prefix.padEnd(56, "0");
 };
 
 export const mkHash = (prefix = "0x"): string => {

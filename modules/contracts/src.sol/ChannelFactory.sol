@@ -9,9 +9,11 @@ import "./interfaces/IVectorChannel.sol";
 import "./lib/LibAsset.sol";
 import "./lib/LibERC20.sol";
 
-/// @title Channel Factory - Allows us to create new channel proxy contract
-/// @author Connext & Friends <hello@connext.network>
+/// @title ChannelFactory
+/// @author Connext <support@connext.network>
+/// @notice Creates and sets up a new channel proxy contract
 contract ChannelFactory is IChannelFactory {
+    // Creation code constants taken from EIP1167
     bytes private constant proxyCreationCodePrefix =
         hex"3d602d80600a3d3981f3_363d3d373d3d3d363d73";
     bytes private constant proxyCreationCodeSuffix =
@@ -20,6 +22,9 @@ contract ChannelFactory is IChannelFactory {
     address private immutable mastercopy;
     uint256 private immutable chainId;
 
+    /// @dev Creates a new `ChannelFactory`
+    /// @param _mastercopy the address of the `ChannelMastercopy` (channel logic)
+    /// @param _chainId the chain identifier when generating the CREATE2 salt. If zero, the chain identifier used in the proxy salt will be the result of the opcode
     constructor(address _mastercopy, uint256 _chainId) {
         mastercopy = _mastercopy;
         chainId = _chainId;
@@ -49,6 +54,7 @@ contract ChannelFactory is IChannelFactory {
         return chainId;
     }
 
+    /// @dev Returns the proxy code used to both calculate the CREATE2 address and deploy the channel proxy pointed to the `ChannelMastercopy`
     function getProxyCreationCode()
         public
         view
@@ -64,7 +70,7 @@ contract ChannelFactory is IChannelFactory {
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
-    /// @param alice address of one of the two participants in the channel
+    /// @param alice address of the igh fidelity channel participant
     /// @param bob address of the other channel participant
     function getChannelAddress(address alice, address bob)
         external
@@ -80,7 +86,7 @@ contract ChannelFactory is IChannelFactory {
     }
 
     /// @dev Allows us to create new channel contract and get it all set up in one transaction
-    /// @param alice address of one of the channel participants
+    /// @param alice address of the high fidelity channel participant
     /// @param bob address of the other channel participant
     function createChannel(address alice, address bob)
         public
@@ -101,8 +107,10 @@ contract ChannelFactory is IChannelFactory {
         uint256 amount
     ) external payable override returns (address channel) {
         channel = createChannel(alice, bob);
-        // TODO: This is a bit ugly and inefficient, but alternative solutions are too.
-        // Do we want to keep it this way?
+        // Deposit funds (if a token) must be approved for the
+        // `ChannelFactory`, which then claims the funds and transfers
+        // to the channel address. While this is inefficient, this is
+        // the safest/clearest way to transfer funds
         if (!LibAsset.isEther(assetId)) {
             require(
                 LibERC20.transferFrom(
@@ -125,8 +133,7 @@ contract ChannelFactory is IChannelFactory {
     // Internal Methods
 
     /// @dev Allows us to create new channel contact using CREATE2
-    /// @dev This method is only meant as an utility to be called from other methods
-    /// @param alice address of one of the two participants in the channel
+    /// @param alice address of the high fidelity participant in the channel
     /// @param bob address of the other channel participant
     function deployChannelProxy(address alice, address bob)
         internal
@@ -136,6 +143,7 @@ contract ChannelFactory is IChannelFactory {
         return Create2.deploy(0, salt, getProxyCreationCode());
     }
 
+    /// @dev Generates the unique salt for calculating the CREATE2 address of the channel proxy
     function generateSalt(address alice, address bob)
         internal
         view

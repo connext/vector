@@ -48,7 +48,7 @@ export function createTestUpdateParams<T extends UpdateType>(
   switch (type) {
     case UpdateType.setup:
       details = {
-        counterpartyIdentifier: mkPublicIdentifier("indraBdea4"),
+        counterpartyIdentifier: mkPublicIdentifier("vectorBdea4"),
         timeout: "1200",
         networkContext: {
           chainId: 2,
@@ -110,11 +110,11 @@ export function createTestChannelUpdate<T extends UpdateType>(
       to: [mkAddress("0xaaa"), mkAddress("0xbbb")],
     },
     channelAddress: mkAddress("0xccc"),
-    fromIdentifier: mkPublicIdentifier("indraA"),
+    fromIdentifier: mkPublicIdentifier("vectorA"),
     nonce: 1,
     aliceSignature: mkBytes32("0x0001"),
     bobSignature: mkBytes32("0x0002"),
-    toIdentifier: mkPublicIdentifier("indraB"),
+    toIdentifier: mkPublicIdentifier("vectorB"),
     type,
   };
 
@@ -183,8 +183,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = [
-    overrides.aliceIdentifier ?? mkPublicIdentifier("indraA"),
-    overrides.bobIdentifier ?? mkPublicIdentifier("indraB"),
+    overrides.aliceIdentifier ?? mkPublicIdentifier("vectorA"),
+    overrides.bobIdentifier ?? mkPublicIdentifier("vectorB"),
   ];
   const participants = [overrides.alice ?? mkAddress("0xaaa"), overrides.bob ?? mkAddress("0xbbb")];
   const channelAddress = mkAddress("0xccc");

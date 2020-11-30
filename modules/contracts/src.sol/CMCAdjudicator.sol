@@ -14,7 +14,12 @@ import "./lib/LibMath.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-/// @title CMCAdjudicator - Dispute logic for ONE channel
+/// @title CMCAdjudicator
+/// @author Connext <support@connext.network>
+/// @notice Contains logic for disputing a single channel and all active
+///         transfers associated with the channel. Contains two major phases:
+///         (1) consensus: settle on latest channel state
+///         (2) defund: remove assets and dispute active transfers
 contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     using LibChannelCrypto for bytes32;
     using LibMath for uint256;
@@ -113,7 +118,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         channelDispute.merkleRoot = ccs.merkleRoot;
 
         // Emit event
-        emit ChannelDisputed(msg.sender, address(this), channelDispute);
+        emit ChannelDisputed(msg.sender, ccs, channelDispute);
     }
 
     function defundChannel(
@@ -207,16 +212,15 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
                 );
             }
 
-            // Add result to emergency-withdrawable amounts
-            makeBalanceEmergencyWithdrawable(assetId, balance);
+            // Add result to exitable amounts
+            makeBalanceExitable(assetId, balance);
         }
 
         emit ChannelDefunded(
             msg.sender,
-            address(this),
+            ccs,
             channelDispute,
-            assetIds,
-            indices
+            assetIds
         );
     }
 
@@ -254,8 +258,7 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
 
         emit TransferDisputed(
             msg.sender,
-            address(this),
-            cts.transferId,
+            cts,
             transferDispute
         );
     }
@@ -263,7 +266,8 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
     function defundTransfer(
         CoreTransferState calldata cts,
         bytes calldata encodedInitialTransferState,
-        bytes calldata encodedTransferResolver
+        bytes calldata encodedTransferResolver,
+        bytes calldata responderSignature
     ) external override onlyViaProxy nonReentrant validateTransfer(cts) {
         // Get stored dispute for this transfer
         TransferDispute storage transferDispute =
@@ -291,15 +295,19 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         Balance memory balance;
 
         if (block.timestamp < transferDispute.transferDisputeExpiry) {
-            // Before dispute expiry, responder can resolve
-            require(
-                msg.sender == cts.responder,
-                "CMCAdjudicator: INVALID_MSG_SENDER"
-            );
+            // Ensure the correct hash is provided
             require(
                 keccak256(encodedInitialTransferState) == cts.initialStateHash,
                 "CMCAdjudicator: INVALID_TRANSFER_HASH"
             );
+            
+            // Before dispute expiry, responder or responder-authorized
+            // agent (i.e. watchtower) can resolve
+            require(
+                msg.sender == cts.responder || cts.initialStateHash.checkSignature(responderSignature, cts.responder),
+                "CMCAdjudicator: INVALID_RESOLVER"
+            );
+            
             ITransferDefinition transferDefinition =
                 ITransferDefinition(cts.transferDefinition);
             balance = transferDefinition.resolve(
@@ -319,12 +327,12 @@ contract CMCAdjudicator is CMCCore, CMCAsset, CMCDeposit, ICMCAdjudicator {
         }
 
         // Depending on previous code path, defund either resolved or initial balance
-        makeBalanceEmergencyWithdrawable(cts.assetId, balance);
+        makeBalanceExitable(cts.assetId, balance);
 
         // Emit event
         emit TransferDefunded(
             msg.sender,
-            address(this),
+            cts,
             transferDispute,
             encodedInitialTransferState,
             encodedTransferResolver,
