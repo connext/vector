@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.21
+
+- fix `iframe-app` docker image to not override env vars on start
+
 ## 0.0.20
 
 - fix allowance bug in `chainReader` for token deposits
