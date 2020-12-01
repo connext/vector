@@ -13,10 +13,10 @@
     "migration:generate": "prisma migrate save --experimental"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.0.18",
-    "@connext/vector-engine": "0.0.18",
-    "@connext/vector-types": "0.0.18",
-    "@connext/vector-utils": "0.0.18",
+    "@connext/vector-contracts": "0.0.21",
+    "@connext/vector-engine": "0.0.21",
+    "@connext/vector-types": "0.0.21",
+    "@connext/vector-utils": "0.0.21",
     "@prisma/client": "2.10.0",
     "@sinclair/typebox": "0.11.0",
     "ajv": "6.12.6",

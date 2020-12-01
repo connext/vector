@@ -215,8 +215,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     }
 
     // Must be token deposit, first approve the token transfer
-    this.log.info({ channel: channelState.channelAddress }, "Approving tokens");
-    this.log.debug({ assetId, amount, channel: channelState.channelAddress, sender }, "Approving tokens");
+    this.log.info({ assetId, amount, channel: channelState.channelAddress, sender }, "Approving tokens");
     const approveRes = await this.approveTokens(
       channelState.channelAddress,
       channelState.networkContext.channelFactoryAddress,
@@ -406,7 +405,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       // Otherwise, handle error
       const error = response.getError()!;
       if (!error.canRetry) {
-        this.log.error({ error: error.message, channelAddress, reason }, "Failed to send tx, will not retry");
+        this.log.error(
+          { error: error.message, channelAddress, reason, stack: error.stack },
+          "Failed to send tx, will not retry",
+        );
         return response;
       }
       // wait before retrying
@@ -470,9 +472,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     this.log.info({ assetId, channelAddress: spender }, "Approving token");
     const erc20 = new Contract(assetId, ERC20Abi, signer);
-    const checkApprovalRes = await this.sendTxWithRetries(channelAddress, TransactionReason.approveTokens, () =>
-      erc20.allowance(owner, spender),
-    );
+    const checkApprovalRes = await this.getTokenAllowance(assetId, owner, spender, chainId);
     if (checkApprovalRes.isError) {
       this.log.error(
         {
@@ -484,7 +484,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         },
         "Error checking approved tokens for deposit A",
       );
-      return checkApprovalRes;
+      return Result.fail(checkApprovalRes.getError()!);
     }
 
     if (BigNumber.from(checkApprovalRes.getValue()).gte(amount)) {
