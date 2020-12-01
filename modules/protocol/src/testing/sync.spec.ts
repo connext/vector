@@ -729,7 +729,7 @@ describe("outbound", () => {
     Sinon.restore();
   });
 
-  it.only("should fail if update to sync is single signed", async () => {
+  it("should fail if update to sync is single signed", async () => {
     const singleSignedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
       aliceSignature: mkSig("0xaaabbb"),
       bobSignature: undefined,
