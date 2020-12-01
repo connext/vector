@@ -2,7 +2,6 @@
 set -e
 
 stack="duet"
-
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
@@ -12,13 +11,26 @@ docker network create --attachable --driver overlay "$project" 2> /dev/null || t
 
 if grep -qs "$stack" <<<"$(docker stack ls --format '{{.Name}}')"
 then echo "A $stack stack is already running" && exit 0;
-else echo; echo "Preparing to launch $stack stack"
 fi
 
 ####################
-# Misc Config
+# Start up dependencies
 
-config=$(cat "$root/ops/config/node.default.json")
+bash "$root/ops/start-chains.sh"
+bash "$root/ops/start-messaging.sh"
+
+echo
+echo "Preparing to launch $stack stack"
+
+####################
+# Load Config
+
+chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
+config=$(
+  echo '{"chainAddresses":'"$chain_addresses"'}' \
+  | cat "$root/ops/config/node.default.json" - \
+  | jq -s '.[0] + .[1]'
+)
 
 common="networks:
       - '$project'
@@ -26,16 +38,6 @@ common="networks:
       driver: 'json-file'
       options:
           max-size: '100m'"
-
-########################################
-# Global services / chain provider config
-
-bash "$root/ops/start-global.sh"
-if [[ ! -f "$root/.chaindata/chain-addresses.json" ]]
-then echo "Can't run $stack against external providers yet" && exit 1
-fi
-chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
-config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
 
 ########################################
 ## Node config

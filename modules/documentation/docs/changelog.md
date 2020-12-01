@@ -2,6 +2,18 @@
 
 ## Next Release
 
+## 0.0.21
+
+- fix `iframe-app` docker image to not override env vars on start
+
+## 0.0.20
+
+- fix allowance bug in `chainReader` for token deposits
+
+## 0.0.19
+
+- republish due to browser-node error in 0.0.18
+
 ## 0.0.18
 
 - public identifiers prefixed with `vector` instead of `indra`

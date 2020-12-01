@@ -57,11 +57,11 @@ if [[ "$VECTOR_PROD" == "true" ]]
 then
   echo "Starting node in prod-mode"
   export NODE_ENV=production
-  exec node --no-deprecation dist/bundle.js | pino-pretty
+  node --no-deprecation dist/bundle.js | pino-pretty &
 
 else
   echo "Starting node in dev-mode"
-  exec  nodemon \
+  nodemon \
     --delay 1 \
     --exitcrash \
     --ignore ./**/*.test.ts \
@@ -71,5 +71,13 @@ else
     --polling-interval 1000 \
     --watch src \
     --exec ts-node \
-    ./src/index.ts | pino-pretty
+    ./src/index.ts | pino-pretty &
 fi
+
+# Wait around & respond to signals
+function goodbye {
+  echo "Received kill signal, goodbye"
+  exit
+}
+trap goodbye SIGTERM SIGINT
+wait
