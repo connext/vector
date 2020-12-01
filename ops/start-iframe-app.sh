@@ -8,6 +8,16 @@ project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
+####################
+## Load Config
+
+# Load the config with defaults if it does not exist
+if [[ ! -f "$root/browser.config.json" ]]
+then cp "$root/ops/config/browser.default.json" "$root/browser.config.json"
+fi
+
+config=$(cat "$root/browser.config.json")
+
 # If file descriptors 0-2 exist, then we're prob running via interactive shell instead of on CD/CI
 if [[ -t 0 && -t 1 && -t 2 ]]
 then interactive=(--interactive --tty)
@@ -15,19 +25,12 @@ else echo "Running in non-interactive mode"
 fi
 
 ####################
-# Misc Config
-
-# Load the config with defaults if it does not exist
-if [[ ! -f "$root/browser.config.json" ]]
-then cp "$root/ops/config/browser.default.json" "$root/browser.config.json"
-fi
-
-node_config=$(cat "$root/browser.config.json")
+## Launch it
 
 docker run \
   "${interactive[@]}" \
   --entrypoint="bash" \
-  --env="REACT_APP_VECTOR_CONFIG=$node_config" \
+  --env="REACT_APP_VECTOR_CONFIG=$config" \
   --env="SKIP_PREFLIGHT_CHECK=true" \
   --name="${project}_iframe_app" \
   --publish="3030:3030" \
