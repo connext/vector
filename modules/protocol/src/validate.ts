@@ -16,10 +16,14 @@ import {
   ResolveUpdateDetails,
   IExternalValidation,
   Balance,
+  TSetupUpdateDetails,
+  TDepositUpdateDetails,
+  TCreateUpdateDetails,
+  TResolveUpdateDetails,
 } from "@connext/vector-types";
 
 import { applyUpdate } from "./update";
-import { generateSignedChannelCommitment, validateChannelUpdateSignatures } from "./utils";
+import { generateSignedChannelCommitment, validateChannelUpdateSignatures, validateSchema } from "./utils";
 
 // This function performs all update *initiator* side validation
 // and is called from within the `sync.outbound` function.
@@ -183,6 +187,12 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   let storedTransfer: FullTransferState | undefined = undefined;
   switch (type) {
     case UpdateType.setup: {
+      // Verify details are properly structured
+      const invalid = validateSchema(details, TSetupUpdateDetails);
+      if (invalid) {
+        return returnError(ValidationError.reasons.MalformedDetails, previousState, { invalid });
+      }
+
       // Ensure the channelAddress is correctly generated
 
       // Ensure the timeout is reasonable
@@ -192,11 +202,21 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     }
 
     case UpdateType.deposit: {
+      // Verify details are properly structured
+      const invalid = validateSchema(details, TDepositUpdateDetails);
+      if (invalid) {
+        return returnError(ValidationError.reasons.MalformedDetails, previousState, { invalid });
+      }
       // Ensure the balance has been correctly reconciled
 
       break;
     }
     case UpdateType.create: {
+      // Verify details are properly structured
+      const invalid = validateSchema(details, TCreateUpdateDetails);
+      if (invalid) {
+        return returnError(ValidationError.reasons.MalformedDetails, previousState, { invalid });
+      }
       const {
         transferId,
         transferDefinition,
@@ -231,6 +251,11 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       break;
     }
     case UpdateType.resolve: {
+      // Verify details are properly structured
+      const invalid = validateSchema(details, TResolveUpdateDetails);
+      if (invalid) {
+        return returnError(ValidationError.reasons.MalformedDetails, previousState, { invalid });
+      }
       const { transferId, transferResolver } = details as ResolveUpdateDetails;
 
       // Ensure transfer exists in store / retrieve for validation
@@ -240,9 +265,9 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       }
 
       // Ensure the transfer is active
-      if (!activeTransfers.find(t => t.transferId === transferId)) {
+      if (!activeTransfers.find((t) => t.transferId === transferId)) {
         return returnError(ValidationError.reasons.TransferNotActive, previousState, {
-          activeTransfers: activeTransfers.map(t => t.transferId).join(","),
+          activeTransfers: activeTransfers.map((t) => t.transferId).join(","),
         });
       }
 
