@@ -37,32 +37,6 @@ import { inbound, outbound } from "../sync";
 import { env } from "./env";
 
 describe("inbound", () => {
-  // FIXME: These are blocking tests!
-  it.skip("should fail if you are 3+ states behind the update", async () => {});
-  it.skip("should fail if validating the update fails", async () => {});
-  it.skip("should fail if saving the data fails", async () => {});
-  it.skip("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {});
-  describe.skip("should sync channel and retry update IFF state nonce is behind by 2 updates", async () => {
-    describe.skip("initiator trying deposit", () => {
-      it("missed setup, should work", async () => {});
-      it("missed deposit, should work", async () => {});
-      it("missed create, should work", async () => {});
-      it("missed resolve, should work", async () => {});
-    });
-
-    describe.skip("initiator trying create", () => {
-      it("missed deposit, should work", async () => {});
-      it("missed create, should work", async () => {});
-      it("missed resolve, should work", async () => {});
-    });
-
-    describe.skip("initiator trying resolve", () => {
-      it("missed deposit, should work", async () => {});
-      it("missed create, should work", async () => {});
-      it("missed resolve, should work", async () => {});
-    });
-  });
-
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [chainIdStr, providerUrl] = Object.entries(chainProviders)[0] as string[];
@@ -98,6 +72,488 @@ describe("inbound", () => {
 
   afterEach(() => {
     Sinon.restore();
+  });
+
+  it("should fail if you are 3+ states behind the update", async () => {
+    // Generate the update
+    const prevUpdate: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
+      signers,
+      UpdateType.setup,
+      {
+        nonce: 1,
+      },
+    );
+
+    const update: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
+      signers,
+      UpdateType.setup,
+      {
+        nonce: 5,
+      },
+    );
+
+    const result = await inbound(
+      update,
+      prevUpdate,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
+
+    expect(result.isError).to.be.true;
+    const error = result.getError()!;
+    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.StaleChannel);
+    // Make sure the calls were correctly performed
+    expect(validationStub.callCount).to.be.eq(0);
+    expect(store.saveChannelState.callCount).to.be.eq(0);
+    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
+  });
+
+  it("should fail if validating the update fails", async () => {
+    // Generate the update
+    const update: ChannelUpdate<typeof UpdateType.deposit> = createTestChannelUpdateWithSigners(
+      signers,
+      UpdateType.deposit,
+      {
+        nonce: 1,
+      },
+    );
+    // Set the validation stub
+    validationStub.resolves(
+      Result.fail(
+        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InboundValidationFailed, update, {} as any),
+      ),
+    );
+
+    const result = await inbound(
+      update,
+      update,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
+
+    expect(result.isError).to.be.true;
+    const error = result.getError()!;
+    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.InboundValidationFailed);
+    // Make sure the calls were correctly performed
+    expect(validationStub.callCount).to.be.eq(1);
+    expect(store.saveChannelState.callCount).to.be.eq(0);
+    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
+  });
+
+  it("should fail if saving the data fails", async () => {
+    // Generate the update
+    store.saveChannelState.rejects();
+
+    const update: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
+      signers,
+      UpdateType.setup,
+      {
+        nonce: 1,
+      },
+    );
+    // Set the validation stub
+    validationStub.resolves(Result.ok({ updatedChannel: {} as any }));
+    const result = await inbound(
+      update,
+      update,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
+
+    expect(result.isError).to.be.true;
+    const error = result.getError()!;
+    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.SaveChannelFailed);
+    // Make sure the calls were correctly performed
+    expect(validationStub.callCount).to.be.eq(1);
+    expect(store.saveChannelState.callCount).to.be.eq(1);
+    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
+  });
+
+  it("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {
+    const prevUpdate: ChannelUpdate<typeof UpdateType.setup> = createTestChannelUpdateWithSigners(
+      signers,
+      UpdateType.setup,
+      {
+        nonce: 1,
+      },
+    );
+    validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 1, latestUpdate: {} as any } }));
+
+    const update: ChannelUpdate<typeof UpdateType.deposit> = createTestChannelUpdateWithSigners(
+      signers,
+      UpdateType.deposit,
+      {
+        nonce: 2,
+      },
+    );
+    validationStub
+      .onSecondCall()
+      .resolves(
+        Result.fail(
+          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InboundValidationFailed, update, {} as any),
+        ),
+      );
+    const result = await inbound(
+      update,
+      prevUpdate,
+      inbox,
+      chainService,
+      store,
+      messaging,
+      externalValidation,
+      signers[1],
+      logger,
+    );
+
+    expect(result.isError).to.be.true;
+    const error = result.getError()!;
+    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.InboundValidationFailed);
+    expect(validationStub.callCount).to.be.eq(2);
+    expect(validationStub.firstCall.args[0].nonce).to.be.eq(1);
+    expect(validationStub.secondCall.args[0].nonce).to.be.eq(2);
+    // Make sure the calls were correctly performed
+    expect(store.saveChannelState.callCount).to.be.eq(1);
+    expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
+  });
+
+  describe("should sync channel and retry update IFF state nonce is behind by 2 updates", async () => {
+    describe("initiator trying deposit", () => {
+      it("missed deposit, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+      it("missed create, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+      it("missed resolve, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+    });
+
+    describe("initiator trying create", () => {
+      it("missed deposit, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+      it("missed create, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+      it("missed resolve, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+    });
+
+    describe("initiator trying resolve", () => {
+      it("missed deposit, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+      it("missed create, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+      it("missed resolve, should work", async () => {
+        // Set the store mock
+        store.getChannelState.resolves({ nonce: 1, latestUpdate: {} as any } as any);
+
+        // Set the validation mock
+        validationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+        validationStub.onSecondCall().resolves(Result.ok({ updatedChannel: { nonce: 3, latestUpdate: {} as any } }));
+
+        // Create the update to sync
+        const toSync = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 2 });
+
+        // Create the update to propose
+        const update = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 3 });
+
+        const result = await inbound(
+          update,
+          toSync,
+          inbox,
+          chainService,
+          store,
+          messaging,
+          externalValidation,
+          signers[1],
+          logger,
+        );
+
+        expect(result.getError()).to.be.undefined;
+        // Verify callstack
+        expect(messaging.respondToProtocolMessage.callCount).to.be.eq(1);
+        expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(validationStub.callCount).to.be.eq(2);
+        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+      });
+    });
   });
 
   it("should work if there is no channel state stored and you are receiving a setup update", async () => {
