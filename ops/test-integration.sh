@@ -19,7 +19,7 @@ else echo "Running in non-interactive mode"
 fi
 
 # If this stack can be tested in prod-mode..
-if [[ "$stack" == "global" || "$stack" == "node" || "$stack" == "router" || "$stack" == "trio" ]]
+if [[ "$stack" == "messaging" || "$stack" == "node" || "$stack" == "router" || "$stack" == "trio" ]]
 then
   if [ ! -f "$root/${stack}.config.json" ] && [ "$stack" != "trio" ]
   then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"

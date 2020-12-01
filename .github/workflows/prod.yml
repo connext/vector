@@ -84,17 +84,17 @@ jobs:
       - uses: actions/checkout@v1
       - run: make test-router
 
-  global:
+  messaging:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
-      - run: make global
-      - run: make start-global
-      - run: make test-global
+      - run: make messaging
+      - run: make start-messaging
+      - run: make test-messaging
       - name: Print logs
         if: failure()
-        run: docker service logs --tail 200 global_auth
+        run: docker service logs --tail 200 messaging_auth
 
   duet:
     runs-on: ubuntu-latest
@@ -152,18 +152,18 @@ jobs:
           docker service logs --tail 200 router_node
           docker service logs --tail 200 router_router
 
-  global-prod:
+  messaging-prod:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
       - uses: actions/checkout@v1
       - run: make pull
-      - run: jq '.production = true' ops/config/global.default.json > global.config.json
-      - run: make restart-global
-      - run: bash ops/test-integration.sh global
+      - run: jq '.production = true' ops/config/messaging.default.json > messaging.config.json
+      - run: make restart-messaging
+      - run: bash ops/test-integration.sh messaging
       - name: Print logs
         if: failure()
-        run: docker service ls && docker service logs --tail 200 global_auth
+        run: docker service ls && docker service logs --tail 200 messaging_auth
 
   routing-node-prod:
     runs-on: ubuntu-latest
@@ -171,7 +171,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: make pull
-      - run: jq '.production = true' ops/config/global.default.json > global.config.json
+      - run: jq '.production = true' ops/config/messaging.default.json > messaging.config.json
       - run: jq '.production = true' ops/config/router.default.json > router.config.json
       - run: make restart-router
       - run: bash ops/test-integration.sh router
@@ -179,11 +179,30 @@ jobs:
         if: failure()
         run: docker service ls && docker service logs --tail 200 router_node
 
+  deploy-messaging:
+    env:
+      DOMAINNAME: messaging.connext.network
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: deploy messaging service to production
+        uses: ./ops/ssh-action/
+        with:
+          HOST: ubuntu@${{ env.DOMAINNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          CMD: '
+            git checkout --force prod;
+            git reset --hard $GITHUB_SHA;
+            make restart-messaging;
+            docker container prune -f;
+            docker image ls -q | xargs docker image rm || true;
+          '
   deploy-testnet:
     env:
       DOMAINNAME: testnet-vector.connext.network
       MESSAGING_URL: https://messaging.connext.network
-    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, global, duet, trio, node, routing-node, global-prod, routing-node-prod]
+    needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1

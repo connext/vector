@@ -4,7 +4,6 @@ set -e
 root=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 project=$(grep -m 1 '"name":' "$root/package.json" | cut -d '"' -f 4)
 
-# make sure a network for this project has been created
 docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
@@ -30,9 +29,9 @@ function getConfig {
 }
 
 messaging_url=$(getConfig messagingUrl)
+mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)
 public_port=$(getConfig port)
-mnemonic=$(getConfig mnemonic)
 
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
 default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
@@ -40,11 +39,6 @@ if [[ "$chain_providers" == "$default_providers" ]]
 then use_local_evms=true
 else use_local_evms=false
 fi
-
-echo "Preparing to launch node (prod=$production)"
-
-####################
-# Misc Config
 
 if [[ "$production" == "true" ]]
 then
@@ -56,30 +50,58 @@ then
 else version="latest"
 fi
 
-########################################
-# Global services / chain provider config
+####################
+# Start up dependencies
 
-# If no messaging url or custom ethproviders are given, spin up a global stack
-if [[ -z "$messaging_url" || "$use_local_evms" == "true" ]]
-then bash "$root/ops/start-global.sh"
+if [[ -z "$messaging_url" ]]
+then bash "$root/ops/start-messaging.sh"
 fi
+if [[ "$use_local_evms" == "true" ]]
+then bash "$root/ops/start-chains.sh"
+fi
+
+echo
+echo "Preparing to launch node w config:"
+echo " - chain_providers=$chain_providers"
+echo " - messaging_url=$messaging_url"
+echo " - production=$production"
+echo " - public_port=$public_port"
+echo " - version=$version"
+
+########################################
+# Chain config
 
 # If no custom ethproviders are given, configure mnemonic/addresses from local evms
 if [[ "$use_local_evms" == "true" ]]
 then
   eth_mnemonic="${mnemonic:-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat}"
-  chain_addresses=$(cat "$root/.chaindata/chain-addresses.json")
-  config=$(echo "$config" '{"chainAddresses":'"$chain_addresses"'}' | jq -s '.[0] + .[1]')
+  config=$(
+    echo "$config" '{"chainAddresses":'"$(cat "$root/.chaindata/chain-addresses.json")"'}' \
+    | jq -s '.[0] + .[1]'
+  )
 
 else
   echo "Connecting to external services: messaging=$messaging_url | chain_providers=$chain_providers"
   if [[ -n "$mnemonic" ]]
-  then
-    eth_mnemonic="$mnemonic"
-  else
-    echo "No mnemonic provided for external ethprovider"
-    exit 1
+  then eth_mnemonic="$mnemonic"
+  else echo "No mnemonic provided for external ethprovider" && exit 1
   fi
+fi
+
+########################################
+## Database config (sqlite)
+
+# Hardhat ethprovider can't persist data between restarts
+# If we're using local evms, the node shouldn't perist data either
+if [[ "$use_local_evms" == "true" ]]
+then
+  internal_db_file="/tmp/store.sqlite"
+  mount_db=""
+else
+  local_db_file="$root/.node.sqlite"
+  internal_db_file="/data/store.sqlite"
+  touch "$local_db_file"
+  mount_db="--volume=$local_db_file:$internal_db_file"
 fi
 
 ########################################
@@ -105,22 +127,6 @@ fi
 
 node_image_name="${project}_node:$version"
 bash "$root/ops/pull-images.sh" "$node_image_name" > /dev/null
-
-########################################
-## Sqlite config
-
-# Hardhat ethprovider can't persist data between restarts
-# If we're using local evms, the node shouldn't perist data either
-if [[ "$use_local_evms" == "true" ]]
-then
-  internal_db_file="/tmp/store.sqlite"
-  mount_db=""
-else
-  local_db_file="$root/.node.sqlite"
-  internal_db_file="/data/store.sqlite"
-  touch "$local_db_file"
-  mount_db="--volume=$local_db_file:$internal_db_file"
-fi
 
 ####################
 # Launch node
