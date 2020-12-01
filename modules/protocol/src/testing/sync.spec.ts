@@ -684,12 +684,6 @@ describe("inbound", () => {
 });
 
 describe("outbound", () => {
-  // FIXME: These are blocking tests!
-  it.skip("should fail if update to sync is single signed", async () => {});
-  it.skip("should fail if the channel is not saved to store", async () => {});
-  it.skip("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {});
-  // .. see other skipped tests at bottom ..
-
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const providerUrl = Object.values(chainProviders)[0] as string;
@@ -710,7 +704,6 @@ describe("outbound", () => {
   let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   let outboundValidationStub: Sinon.SinonStub;
-  let inboundValidationStub: Sinon.SinonStub;
   let generationStub: Sinon.SinonStub;
 
   beforeEach(async () => {
@@ -725,7 +718,6 @@ describe("outbound", () => {
 
     // Set the validation + generation mock
     outboundValidationStub = Sinon.stub(vectorValidation, "validateUpdateParams").resolves(Result.ok(undefined));
-    inboundValidationStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
     generationStub = Sinon.stub(vectorUpdate, "generateAndApplyUpdate");
 
     // Stub out all signature validation
@@ -735,6 +727,61 @@ describe("outbound", () => {
   afterEach(() => {
     // Always restore stubs after tests
     Sinon.restore();
+  });
+
+  it.only("should fail if update to sync is single signed", async () => {
+    const singleSignedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+      aliceSignature: mkSig("0xaaabbb"),
+      bobSignature: undefined,
+      nonce: 1,
+    });
+
+    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, singleSignedUpdate);
+    outboundValidationStub.resolves(Result.fail(error));
+
+    const result = await outbound(
+      singleSignedUpdate,
+      store,
+      chainService,
+      messaging,
+      externalValidation,
+      signers[0],
+      logger,
+    );
+
+    expect(result.isError).to.be.true;
+    expect(result.getError()).to.be.deep.eq(error);
+  });
+
+  // TODO: Current code doesn't throwing error stored state is empty.
+  it.skip("should fail if the channel is not saved to store", async () => {
+    store.getChannelState.resolves(undefined);
+
+    const params = createTestUpdateParams(UpdateType.setup, {
+      channelAddress,
+      details: { counterpartyIdentifier: signers[1].publicIdentifier },
+    });
+
+    const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+    expect(result.isError).to.be.true;
+    const error = result.getError()!;
+    expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
+  });
+
+  // TODO: Current code doesn't sync the state before validation.
+  it.skip("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {
+    store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 2 }));
+
+    const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
+
+    // Stub the validation function
+    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
+    outboundValidationStub.resolves(Result.fail(error));
+
+    const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+    expect(result.isError).to.be.true;
   });
 
   it("should fail if it fails to validate the update", async () => {
@@ -836,7 +883,6 @@ describe("outbound", () => {
     // Verify sync happened
     expect(generationStub.callCount).to.be.eq(1);
     expect(outboundValidationStub.callCount).to.be.eq(1);
-    expect(inboundValidationStub.callCount).to.be.eq(0);
     expect(store.saveChannelState.callCount).to.be.eq(1);
   });
 
