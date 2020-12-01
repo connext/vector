@@ -126,7 +126,7 @@ export const TChannelUpdate = Type.Object({
   nonce: Type.Number(),
   balance: TBalance,
   assetId: TAddress,
-  details: TCreateUpdateDetails,
+  details: TChannelUpdateDetails,
   aliceSignature: Type.Optional(TSignature),
   bobSignature: Type.Optional(TSignature),
 });
