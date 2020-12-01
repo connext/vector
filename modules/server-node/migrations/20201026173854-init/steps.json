@@ -286,7 +286,7 @@
       "model": "Channel",
       "field": "latestUpdate",
       "type": "Update",
-      "arity": "Required"
+      "arity": "Optional"
     },
     {
       "tag": "CreateField",
