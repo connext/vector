@@ -338,7 +338,7 @@ type InboundValidationResult = Result<
   InboundChannelUpdateError
 >;
 async function validateAndApplyChannelUpdate<T extends UpdateType>(
-  counterpartyUpdate: ChannelUpdate<T>,
+  proposedUpdate: ChannelUpdate<T>,
   previousState: FullChannelState | undefined,
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
@@ -351,19 +351,14 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     context: any = {},
   ): InboundValidationResult => {
     return Result.fail(
-      new InboundChannelUpdateError(
-        InboundChannelUpdateError.reasons.InboundValidationFailed,
-        counterpartyUpdate,
-        state,
-        {
-          error: validationError,
-          ...context,
-        },
-      ),
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InboundValidationFailed, proposedUpdate, state, {
+        error: validationError,
+        ...context,
+      }),
     );
   };
 
-  if (!previousState && counterpartyUpdate.type !== UpdateType.setup) {
+  if (!previousState && proposedUpdate.type !== UpdateType.setup) {
     return returnError(InboundChannelUpdateError.reasons.ChannelNotFound);
   }
 
@@ -371,7 +366,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     return returnError(ValidationError.reasons.InDispute);
   }
 
-  const { channelAddress, details, type } = counterpartyUpdate;
+  const { channelAddress, details, type } = proposedUpdate;
   // Get the active transfers for the channel
   const activeTransfers = await storeService.getActiveTransfers(channelAddress);
 
@@ -491,7 +486,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   }
 
   // All default validation is performed, now perform external validation
-  const externalRes = await externalValidation.validateInbound(counterpartyUpdate, previousState, storedTransfer);
+  const externalRes = await externalValidation.validateInbound(proposedUpdate, previousState, storedTransfer);
   if (externalRes.isError) {
     return returnError(ValidationError.reasons.ExternalValidationFailed, previousState, {
       validationError: externalRes.getError()!.message,
@@ -499,7 +494,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   }
 
   // Apply the update
-  const applyRes = await applyUpdate(counterpartyUpdate, previousState, activeTransfers, finalTransferBalance);
+  const applyRes = await applyUpdate(proposedUpdate, previousState, activeTransfers, finalTransferBalance);
   if (applyRes.isError) {
     // Returns an inbound channel error, so don't use helper to preserve
     // apply error
