@@ -729,61 +729,6 @@ describe("outbound", () => {
     Sinon.restore();
   });
 
-  it("should fail if update to sync is single signed", async () => {
-    const singleSignedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-      aliceSignature: mkSig("0xaaabbb"),
-      bobSignature: undefined,
-      nonce: 1,
-    });
-
-    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, singleSignedUpdate);
-    outboundValidationStub.resolves(Result.fail(error));
-
-    const result = await outbound(
-      singleSignedUpdate,
-      store,
-      chainService,
-      messaging,
-      externalValidation,
-      signers[0],
-      logger,
-    );
-
-    expect(result.isError).to.be.true;
-    expect(result.getError()).to.be.deep.eq(error);
-  });
-
-  // TODO: Current code doesn't throwing error stored state is empty.
-  it.skip("should fail if the channel is not saved to store", async () => {
-    store.getChannelState.resolves(undefined);
-
-    const params = createTestUpdateParams(UpdateType.setup, {
-      channelAddress,
-      details: { counterpartyIdentifier: signers[1].publicIdentifier },
-    });
-
-    const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
-
-    expect(result.isError).to.be.true;
-    const error = result.getError()!;
-    expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
-  });
-
-  // TODO: Current code doesn't sync the state before validation.
-  it.skip("IFF update is invalid and channel is out of sync, should fail on retry, but sync properly", async () => {
-    store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.setup, { nonce: 2 }));
-
-    const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
-
-    // Stub the validation function
-    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
-    outboundValidationStub.resolves(Result.fail(error));
-
-    const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
-
-    expect(result.isError).to.be.true;
-  });
-
   it("should fail if it fails to validate the update", async () => {
     const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
 
@@ -886,11 +831,67 @@ describe("outbound", () => {
     expect(store.saveChannelState.callCount).to.be.eq(1);
   });
 
-  describe("should sync channel and retry update IFF update nonce === state nonce", async () => {
-    describe.skip("initiator trying setup", () => {
-      it("missed setup, should sync without retrying", async () => {});
+  it("should fail if update to sync is single signed", async () => {
+    const singleSignedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+      aliceSignature: mkSig("0xaaabbb"),
+      bobSignature: undefined,
+      nonce: 1,
     });
 
+    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, singleSignedUpdate);
+    outboundValidationStub.resolves(Result.fail(error));
+
+    const result = await outbound(
+      singleSignedUpdate,
+      store,
+      chainService,
+      messaging,
+      externalValidation,
+      signers[0],
+      logger,
+    );
+
+    expect(result.isError).to.be.true;
+    expect(result.getError()).to.be.deep.eq(error);
+  });
+
+  it.only("should fail if the channel is not saved to store", async () => {
+    store.saveChannelState.resolves(Result.fail(new Error("fail")) as any);
+
+    const params = createTestUpdateParams(UpdateType.setup, {
+      channelAddress,
+      details: { counterpartyIdentifier: signers[1].publicIdentifier },
+    });
+
+    const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+    expect(result.isError).to.be.true;
+    const error = result.getError()!;
+    expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
+  });
+
+  it.only("IFF update is valid and channel is out of sync, sync properly and should fail if update is invalid for synced channel", async () => {
+    store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.resolve, { nonce: 2 }));
+
+    const params: UpdateParams<typeof UpdateType.resolve> = createTestUpdateParams(UpdateType.resolve, {
+      channelAddress,
+    });
+
+    // Stub the validation function
+    outboundValidationStub.onFirstCall().resolves(Result.ok({ updatedChannel: { nonce: 2, latestUpdate: {} as any } }));
+
+    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
+    outboundValidationStub.onSecondCall().resolves(Result.fail(error));
+
+    const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+    expect(result.isError).to.be.true;
+    expect(outboundValidationStub.callCount).to.be.eq(2);
+  });
+
+  // responder nonce n, proposed update nonce by initiator is at n too.
+  // then if update is valid for synced channel then initiator nonce is n+1
+  describe("should sync channel and retry update IFF update from responder nonce === stored nonce for update initiator", async () => {
     describe("initiator trying deposit", () => {
       // Assume the initiator is Alice, and she is always trying to reconcile
       // a deposit. Generate test constants
