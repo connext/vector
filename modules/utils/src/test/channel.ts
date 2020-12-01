@@ -267,7 +267,7 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
   const details: any = {};
   if (type === UpdateType.create) {
     details.transferInitialState = createTestHashlockTransferState({
-      ...((((overrides as unknown) as ChannelUpdate<"create">).details.transferInitialState ??
+      ...((((overrides as unknown) as ChannelUpdate<"create">).details?.transferInitialState ??
         {}) as HashlockTransferState),
     });
   }
