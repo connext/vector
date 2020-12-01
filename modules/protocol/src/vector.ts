@@ -24,16 +24,13 @@ import {
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
-import Ajv from "ajv";
 import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
-import { getParamsFromUpdate } from "./utils";
+import { getParamsFromUpdate, validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
-
-const ajv = new Ajv();
 
 export class Vector implements IVectorProtocol {
   private evts: EvtContainer = {
@@ -342,11 +339,10 @@ export class Vector implements IVectorProtocol {
   }
 
   private validateParams(params: any, schema: any): undefined | OutboundChannelUpdateError {
-    const validate = ajv.compile(schema);
-    const valid = validate(params);
-    if (!valid) {
+    const error = validateSchema(params, schema);
+    if (error) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
-        errors: validate.errors?.map((e) => e.message).join(),
+        error,
       });
     }
     return undefined;
