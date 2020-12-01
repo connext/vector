@@ -136,6 +136,7 @@ export async function outbound(
       activeTransfers,
       storeService,
       chainReader,
+      externalValidationService,
       signer,
       logger,
     );
@@ -395,6 +396,7 @@ const syncStateAndRecreateUpdate = async (
   activeTransfers: FullTransferState[] | undefined,
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
+  externalValidationService: IExternalValidation,
   signer: IChannelSigner,
   logger: pino.BaseLogger,
 ): Promise<Result<OutboundSync, OutboundChannelUpdateError>> => {
@@ -514,6 +516,25 @@ const syncStateAndRecreateUpdate = async (
         error: `Failed to save channel: ${e.message}`,
       }),
     );
+  }
+
+  const method = "syncStateAndRecreateUpdate from outbound";
+  // Ensure parameters are valid for the synced channel state, and action can be taken
+  const validationRes = await validateUpdateParams(
+    signer,
+    externalValidationService,
+    attemptedParams,
+    previousState,
+    activeTransfers,
+    syncedTransfer,
+  );
+  if (validationRes.isError) {
+    logger.error({
+      method,
+      error: validationRes.getError()?.message,
+      context: validationRes.getError()?.context,
+    });
+    return Result.fail(validationRes.getError()!);
   }
 
   // Channel successfully synced from counterparty, now
