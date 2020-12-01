@@ -343,6 +343,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
+  signer: IChannelSigner,
 ): Promise<InboundValidationResult> {
   // Create a helper to handle errors properly
   const returnError = (
@@ -366,17 +367,54 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     return returnError(ValidationError.reasons.InDispute);
   }
 
-  const { channelAddress, details, type } = proposedUpdate;
+  // If the previous state is undefined here, it must be a setup update. This
+  // means the person performing the inbound validation will always be bob in
+  // the channel
+  const isAlice = signer.publicIdentifier === previousState?.aliceIdentifier;
+
+  const {
+    channelAddress,
+    details,
+    type,
+    fromIdentifier,
+    toIdentifier,
+    nonce,
+    balance,
+    assetId,
+    aliceSignature,
+    bobSignature,
+  } = proposedUpdate;
+
   // Get the active transfers for the channel
-  const activeTransfers = await storeService.getActiveTransfers(channelAddress);
+  // TODO: change API of this function to extract values from store properly
+  // in the sync function where the previous state is pulled
+  let activeTransfers: FullTransferState[];
+  try {
+    activeTransfers = await storeService.getActiveTransfers(channelAddress);
+  } catch (e) {
+    return returnError(ValidationError.reasons.StoreFailure, previousState, {
+      error: e.message,
+      storeMethod: "getActiveTransfers",
+    });
+  }
 
   // Perform all common update validation -- see note above
   // calling function
   // Ensure the toIdentifier is ours
+  if (signer.publicIdentifier !== toIdentifier) {
+    return returnError(ValidationError.reasons.InvalidToIdentifier);
+  }
 
   // Ensure the fromIdentifier is the counterparties
+  if (previousState && fromIdentifier !== previousState[isAlice ? "bobIdentifier" : "aliceIdentifier"]) {
+    return returnError(ValidationError.reasons.InvalidToIdentifier);
+  }
 
   // Ensure the nonce == previousState.nonce + 1
+  const stateNonce = previousState?.nonce ?? 0;
+  if (nonce !== stateNonce + 1) {
+    return returnError(ValidationError.reasons.InvalidUpdateNonce);
+  }
 
   // Ensure the assetId is valid
 
