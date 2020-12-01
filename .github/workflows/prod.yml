@@ -21,16 +21,23 @@ jobs:
 
   ssh:
     env:
-      DOMAINNAME: testnet-vector.connext.network
+      MESSAGING_DOMAINNAME: messaging.connext.network
+      TESTNET_DOMAINNAME: testnet-vector.connext.network
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: test connection to messaging server
+        uses: ./ops/ssh-action/
+        with:
+          HOST: ubuntu@${{ env.MESSAGING_DOMAINNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          CMD: 'echo "Successfully connected to $MESSAGING_DOMAINNAME: `hostname`";'
       - name: test connection to testnet server
         uses: ./ops/ssh-action/
         with:
-          HOST: ubuntu@${{ env.DOMAINNAME }}
+          HOST: ubuntu@${{ env.TESTNET_DOMAINNAME }}
           SSH_KEY: ${{ secrets.SSH_KEY }}
-          CMD: 'echo "Successfully connected to $DOMAINNAME: `hostname`";'
+          CMD: 'echo "Successfully connected to $TESTNET_DOMAINNAME: `hostname`";'
 
   docs:
     runs-on: ubuntu-latest
