@@ -53,11 +53,11 @@ fi
 ####################
 # Start up dependencies
 
-if [[ -z "$messaging_url" ]]
-then bash "$root/ops/start-messaging.sh"
-fi
 if [[ "$use_local_evms" == "true" ]]
 then bash "$root/ops/start-chains.sh"
+fi
+if [[ -z "$messaging_url" ]]
+then bash "$root/ops/start-messaging.sh"
 fi
 
 echo
