@@ -13,7 +13,6 @@ import {
   IVectorChainReader,
   FullTransferState,
   IExternalValidation,
-  ResolveUpdateDetails,
   Balance,
 } from "@connext/vector-types";
 import pino from "pino";
@@ -61,7 +60,7 @@ export async function outbound(
     storeMethod = "getTransferState";
     transfer =
       params.type === UpdateType.resolve
-        ? await storeService.getTransferState((params.details as ResolveUpdateDetails).transferId)
+        ? await storeService.getTransferState((params.details as ResolveTransferParams).transferId)
         : undefined;
   } catch (e) {
     return Result.fail(
@@ -235,8 +234,6 @@ export async function inbound(
     InboundChannelUpdateError
   >
 > {
-  const channelFromStore = await storeService.getChannelState(update.channelAddress);
-
   // Create a helper to handle errors so the message is sent
   // properly to the counterparty
   const returnError = async (
@@ -253,6 +250,24 @@ export async function inbound(
     await messagingService.respondWithProtocolError(inbox, error);
     return Result.fail(error);
   };
+
+  // Pull channel from the store to proceed with update
+  // TODO: refactor to pull *all* information from the store here
+  let channelFromStore: FullChannelState | undefined;
+  try {
+    // will always need the previous state
+    channelFromStore = await storeService.getChannelState(update.channelAddress);
+  } catch (e) {
+    return returnError(
+      InboundChannelUpdateError.reasons.StoreFailure,
+      channelFromStore?.latestUpdate,
+      channelFromStore,
+      {
+        storeMethod: "getChannelState",
+        storeError: e.message,
+      },
+    );
+  }
 
   // Now that you have a valid starting state, you can try to apply the
   // update, and sync if necessary.
