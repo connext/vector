@@ -25,12 +25,28 @@ import {
   TDepositUpdateDetails,
   TCreateUpdateDetails,
   TResolveUpdateDetails,
+  SetupUpdateDetails,
 } from "@connext/vector-types";
+import {
+  getSignerAddressFromPublicIdentifier,
+  getTransferId,
+  hashCoreTransferState,
+  hashTransferState,
+  safeJsonStringify,
+} from "@connext/vector-utils";
+import { keccak256 } from "@ethersproject/keccak256";
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
+import MerkleTree from "merkletreejs";
 
 import { applyUpdate } from "./update";
-import { generateSignedChannelCommitment, validateChannelUpdateSignatures, validateSchema } from "./utils";
+import {
+  generateSignedChannelCommitment,
+  getUpdatedChannelBalance,
+  reconcileDeposit,
+  validateChannelUpdateSignatures,
+  validateSchema,
+} from "./utils";
 
 // This function performs all update *initiator* side validation
 // and is called from within the `sync.outbound` function.
@@ -176,8 +192,9 @@ export async function validateUpdateParams<T extends UpdateType = any>(
 
       // Verify there is sufficient balance of the asset to create transfer
       const isAlice = signer.address === previousState!.alice;
-      const channelBalance = BigNumber.from(previousState!.balances[assetIdx].amount[isAlice ? 0 : 1]);
-      if (channelBalance.lt(balance.amount[0])) {
+      const signerBalance = BigNumber.from(previousState!.balances[assetIdx].amount[isAlice ? 0 : 1]);
+      const counterpartyBalance = BigNumber.from(previousState!.balances[assetIdx].amount[isAlice ? 1 : 0]);
+      if (signerBalance.lt(balance.amount[0]) || counterpartyBalance.lt(balance.amount[1])) {
         return handleError(ValidationError.reasons.InsufficientFunds);
       }
 
@@ -282,7 +299,14 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   >
 > {
   // Validate + apply the update
-  const res = await validateAndApplyChannelUpdate(update, previousState, storeService, chainReader, externalValidation);
+  const res = await validateAndApplyChannelUpdate(
+    update,
+    previousState,
+    storeService,
+    chainReader,
+    externalValidation,
+    signer,
+  );
   if (res.isError) {
     return Result.fail(res.getError()!);
   }
@@ -363,10 +387,12 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     );
   };
 
+  // Must have previous state if not setup
   if (!previousState && proposedUpdate.type !== UpdateType.setup) {
     return returnError(InboundChannelUpdateError.reasons.ChannelNotFound);
   }
 
+  // TODO: dispute recovery
   if (previousState && previousState.inDispute) {
     return returnError(ValidationError.reasons.InDispute);
   }
@@ -376,37 +402,36 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   // the channel
   const isAlice = signer.publicIdentifier === previousState?.aliceIdentifier;
 
-  const {
-    channelAddress,
-    details,
-    type,
-    fromIdentifier,
-    toIdentifier,
-    nonce,
-    balance,
-    assetId,
-    aliceSignature,
-    bobSignature,
-  } = proposedUpdate;
+  const { channelAddress, details, type, fromIdentifier, toIdentifier, nonce, balance, assetId } = proposedUpdate;
 
   // Get the active transfers for the channel
   // TODO: change API of this function to extract values from store properly
   // in the sync function where the previous state is pulled
-  let activeTransfers: FullTransferState[];
+  let activeTransfers: FullTransferState[] | undefined;
+  let storedTransfer: FullTransferState | undefined;
+  let storeMethod = "getActiveTransfers";
+  const isTransferUpdate = type === UpdateType.create || type === UpdateType.resolve;
   try {
-    activeTransfers = await storeService.getActiveTransfers(channelAddress);
+    storeMethod = "getActiveTransfers";
+    activeTransfers = isTransferUpdate ? await storeService.getActiveTransfers(channelAddress) : undefined;
+    storeMethod = "getTransferState";
+    storedTransfer = isTransferUpdate
+      ? await storeService.getTransferState((details as CreateUpdateDetails | ResolveUpdateDetails).transferId)
+      : undefined;
   } catch (e) {
     return returnError(ValidationError.reasons.StoreFailure, previousState, {
       error: e.message,
-      storeMethod: "getActiveTransfers",
+      storeMethod,
     });
   }
 
-  // Perform all common update validation -- see note above
-  // calling function
   // Ensure the toIdentifier is ours
   if (signer.publicIdentifier !== toIdentifier) {
     return returnError(ValidationError.reasons.InvalidToIdentifier);
+  }
+
+  if (fromIdentifier === signer.publicIdentifier) {
+    return returnError(ValidationError.reasons.InvalidCounterparty);
   }
 
   // Ensure the fromIdentifier is the counterparties
@@ -420,16 +445,13 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     return returnError(ValidationError.reasons.InvalidUpdateNonce);
   }
 
-  // Ensure the assetId is valid
+  // Signature verification done after update applied in calling function
 
   // Perform update-type specific validation
 
   // You will need the final transfer balance when applying the
   // resolve update. See note in `applyUpdate`.
   let finalTransferBalance: Balance | undefined = undefined;
-  // You will also need access to the stored transfer for any
-  // external validation when resolving
-  let storedTransfer: FullTransferState | undefined = undefined;
   switch (type) {
     case UpdateType.setup: {
       // Verify details are properly structured
@@ -438,11 +460,38 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         return returnError(ValidationError.reasons.MalformedDetails, previousState, { invalid });
       }
 
+      const { networkContext, timeout } = details as SetupUpdateDetails;
+
+      // Should not have a previous state with that multisig
+      if (previousState) {
+        return returnError(ValidationError.reasons.ChannelAlreadySetup);
+      }
+
       // Ensure the channelAddress is correctly generated
+      const calculated = await chainReader.getChannelAddress(
+        signer.publicIdentifier,
+        fromIdentifier,
+        networkContext.channelFactoryAddress,
+        networkContext.chainId,
+      );
+      if (calculated.isError) {
+        return returnError(calculated.getError()!.message);
+      }
+      if (channelAddress !== calculated.getValue()) {
+        return returnError(ValidationError.reasons.InvalidChannelAddress);
+      }
 
-      // Ensure the timeout is reasonable
+      // Make sure the timeout is valid:
+      // - should be above min (24hrs)
+      // - should be below max (96hrs)
+      const timeoutBN = BigNumber.from(timeout);
+      if (timeoutBN.lt(MINIMUM_CHANNEL_TIMEOUT)) {
+        return returnError(ValidationError.reasons.ShortChannelTimeout);
+      }
+      if (timeoutBN.gt(MAXIMUM_CHANNEL_TIMEOUT)) {
+        return returnError(ValidationError.reasons.LongChannelTimeout);
+      }
 
-      // TODO: https://github.com/connext/vector/issues/51
       break;
     }
 
@@ -452,10 +501,45 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       if (invalid) {
         return returnError(ValidationError.reasons.MalformedDetails, previousState, { invalid });
       }
-      // Ensure the balance has been correctly reconciled
 
+      // Make sure that the array values all have the same length
+      // TODO: is this the best place for this? (this *is* where new array
+      // values would be added)
+      const length = previousState!.assetIds.length;
+      if (
+        previousState!.defundNonces.length !== length ||
+        previousState!.balances.length !== length ||
+        previousState!.processedDepositsA.length !== length ||
+        previousState!.processedDepositsB.length !== length
+      ) {
+        return returnError(ValidationError.reasons.InvalidArrayLength);
+      }
+
+      // Ensure the balance has been correctly reconciled
+      const idx = previousState!.assetIds.includes(assetId)
+        ? previousState!.assetIds.findIndex((a) => a === assetId)
+        : previousState!.assetIds.length;
+
+      const reconcileRes = await reconcileDeposit(
+        channelAddress,
+        previousState!.networkContext.chainId,
+        previousState!.balances[idx] ?? { to: [previousState!.alice, previousState!.bob], amount: ["0", "0"] },
+        previousState!.processedDepositsA[idx] ?? "0",
+        previousState!.processedDepositsB[idx] ?? "0",
+        assetId,
+        chainReader,
+      );
+
+      if (reconcileRes.isError) {
+        return returnError(reconcileRes.getError()!.message);
+      }
+
+      if (safeJsonStringify(balance) !== safeJsonStringify(reconcileRes.getValue())) {
+        return returnError(ValidationError.reasons.ImproperlyReconciled);
+      }
       break;
     }
+
     case UpdateType.create: {
       // Verify details are properly structured
       const invalid = validateSchema(details, TCreateUpdateDetails);
@@ -464,83 +548,230 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       }
       const {
         transferId,
+        balance: transferBalance,
         transferDefinition,
         transferTimeout,
         transferInitialState,
         transferEncodings,
+        merkleProofData,
+        merkleRoot,
         meta,
       } = details as CreateUpdateDetails;
-      // Ensure the transferId is properly formatted
 
-      // Ensure the transferDefinition is properly formatted
+      // Should not have transfer
+      if (storedTransfer) {
+        return returnError(ValidationError.reasons.DuplicateTransferId, previousState, {
+          transferId: storedTransfer.transferId,
+        });
+      }
 
-      // If present, ensure the meta is an object
+      // Get the registry info
+      const registryInfo = await chainReader.getRegisteredTransferByDefinition(
+        transferDefinition,
+        previousState!.networkContext.transferRegistryAddress,
+        previousState!.networkContext!.chainId,
+      );
+      if (registryInfo.isError) {
+        return returnError(registryInfo.getError()!.message);
+      }
 
-      // Ensure the transferTimeout is above the minimum
+      // Ensure correct encodings
+      const { stateEncoding, resolverEncoding } = registryInfo.getValue();
+      if (stateEncoding !== transferEncodings[0] || resolverEncoding !== transferEncodings[1]) {
+        return returnError(ValidationError.reasons.InvalidTransferEncodings, previousState, {
+          transferEncodings,
+          stateEncoding,
+          resolverEncoding,
+        });
+      }
 
-      // Ensure the transferInitialState is correctly structured
+      // Ensure the transferId is properly calculated
+      const calculated = getTransferId(
+        previousState!.channelAddress,
+        previousState!.nonce.toString(),
+        transferDefinition,
+        transferTimeout,
+      );
+      if (calculated !== transferId) {
+        return returnError(ValidationError.reasons.MiscalculatedTransferId, previousState, { transferId, calculated });
+      }
 
-      // Ensure there is sufficient balance in the channel for the
-      // proposed transfer for the appropriate asset
+      // Verify timeout is valid:
+      // - must be above min
+      // - must be below max
+      // - must be below channel timeout
+      const timeoutBN = BigNumber.from(transferTimeout);
+      if (timeoutBN.gte(previousState!.timeout)) {
+        return returnError(ValidationError.reasons.TransferTimeoutAboveChannel);
+      }
+      if (timeoutBN.lt(MINIMUM_TRANSFER_TIMEOUT)) {
+        return returnError(ValidationError.reasons.TransferTimeoutBelowMin);
+      }
+      if (timeoutBN.gt(MAXIMUM_TRANSFER_TIMEOUT)) {
+        return returnError(ValidationError.reasons.TransferTimeoutAboveMax);
+      }
 
-      // Ensure the transferEncoding is correct for the state
-      // TODO: https://github.com/connext/vector/issues/51
+      // Verify initial state is valid onchain
+      const validRes = await chainReader.create(
+        transferInitialState,
+        transferBalance,
+        transferDefinition,
+        previousState!.networkContext.transferRegistryAddress,
+        previousState!.networkContext.chainId,
+      );
+      if (validRes.isError) {
+        return returnError(validRes.getError()!.message);
+      }
+      if (!validRes.getValue()) {
+        return returnError(ValidationError.reasons.InvalidInitialState);
+      }
+
+      // Verify the assetId is in the channel (and get index)
+      const assetIdx = previousState!.assetIds.findIndex((a) => a === assetId);
+      if (assetIdx < 0) {
+        return returnError(ValidationError.reasons.AssetNotFound);
+      }
+
+      // Verify there is sufficient balance of the asset to create transfer
+      const isAlice = signer.address === previousState!.alice;
+      const signerBalance = BigNumber.from(previousState!.balances[assetIdx].amount[isAlice ? 0 : 1]);
+      const counterpartyBalance = BigNumber.from(previousState!.balances[assetIdx].amount[isAlice ? 1 : 0]);
+      if (signerBalance.lt(balance.amount[1]) || counterpartyBalance.lt(balance.amount[0])) {
+        return returnError(ValidationError.reasons.InsufficientFunds);
+      }
+
+      // Verify the update balance is correct
+      const calculatedBalance = getUpdatedChannelBalance(
+        UpdateType.create,
+        assetId,
+        transferBalance,
+        previousState!,
+        getSignerAddressFromPublicIdentifier(fromIdentifier),
+      );
+      if (safeJsonStringify(calculatedBalance) !== safeJsonStringify(balance)) {
+        return returnError(ValidationError.reasons.MiscalculatedChannelBalance);
+      }
 
       // Update the active transfers
+      const transfer: FullTransferState = {
+        balance: transferBalance,
+        assetId,
+        transferId,
+        channelAddress,
+        transferDefinition,
+        transferEncodings,
+        transferTimeout,
+        initialStateHash: hashTransferState(transferInitialState, stateEncoding),
+        transferState: transferInitialState,
+        channelFactoryAddress: previousState!.networkContext.channelFactoryAddress,
+        chainId: previousState!.networkContext.chainId,
+        transferResolver: undefined,
+        initiator: signer.address === previousState!.alice ? previousState!.bob : previousState!.alice,
+        responder: signer.address,
+        meta,
+        inDispute: false,
+      };
 
       // Recreate the merkle tree
+      const transferHash = hashCoreTransferState(transfer);
+      const updatedTransfers = [...activeTransfers!, transfer];
+      const hashes = updatedTransfers.map((state) => {
+        return hashCoreTransferState(state);
+      });
+      const merkle = new MerkleTree(hashes, keccak256);
 
       // Ensure the merkleProofData is correct
+      if (merkle.getHexProof(Buffer.from(transferHash)) !== merkleProofData) {
+        return returnError(ValidationError.reasons.MiscalculatedMerkleProof, previousState, {
+          active: updatedTransfers.map((t) => t.transferId),
+          transferId,
+        });
+      }
 
       // Ensure the same merkleRoot is generated
+      if (merkleRoot !== merkle.getHexRoot()) {
+        return returnError(ValidationError.reasons.MiscalculatedMerkleRoot, previousState, {
+          active: updatedTransfers.map((t) => t.transferId),
+        });
+      }
       break;
     }
+
     case UpdateType.resolve: {
       // Verify details are properly structured
       const invalid = validateSchema(details, TResolveUpdateDetails);
       if (invalid) {
         return returnError(ValidationError.reasons.MalformedDetails, previousState, { invalid });
       }
-      const { transferId, transferResolver } = details as ResolveUpdateDetails;
+      const { transferId, transferResolver, transferDefinition, merkleRoot } = details as ResolveUpdateDetails;
 
       // Ensure transfer exists in store / retrieve for validation
-      storedTransfer = await storeService.getTransferState(transferId);
       if (!storedTransfer) {
         return returnError(ValidationError.reasons.TransferNotFound);
       }
 
+      // Ensure transfer definition is correct
+      if (transferDefinition !== storedTransfer.transferDefinition) {
+        return returnError(ValidationError.reasons.InvalidTransferDefinition, previousState, {
+          transferDefinition,
+          storedTransferDefinition: storedTransfer.transferDefinition,
+          transferId,
+        });
+      }
+
+      // Ensure update.assetId == transfer.assetId
+      if (assetId !== storedTransfer.assetId) {
+        return returnError(ValidationError.reasons.InvalidAssetId, previousState, {
+          assetId,
+          stored: storedTransfer.assetId,
+        });
+      }
+
       // Ensure the transfer is active
-      if (!activeTransfers.find((t) => t.transferId === transferId)) {
+      const transferIdx = activeTransfers!.findIndex((t) => t.transferId === transferId);
+      if (transferIdx < 0) {
         return returnError(ValidationError.reasons.TransferNotActive, previousState, {
-          activeTransfers: activeTransfers.map((t) => t.transferId).join(","),
+          activeTransfers: activeTransfers!.map((t) => t.transferId).join(","),
         });
       }
 
       // Get the final transfer balance from contract
+      // TODO: add bytecode
       const transferBalanceResult = await chainReader.resolve(
         { ...storedTransfer, transferResolver },
         previousState!.networkContext.chainId,
       );
-
       if (transferBalanceResult.isError) {
-        throw transferBalanceResult.getError()!;
+        return returnError(transferBalanceResult.getError()!.message);
       }
-      finalTransferBalance = transferBalanceResult.getValue()!;
+      finalTransferBalance = transferBalanceResult.getValue();
 
-      // Ensure the transfer exists within the active transfers
+      // Verify the update balance is correct
+      const calculatedBalance = getUpdatedChannelBalance(
+        UpdateType.resolve,
+        assetId,
+        finalTransferBalance,
+        previousState!,
+        storedTransfer.initiator,
+      );
+      if (safeJsonStringify(calculatedBalance) !== safeJsonStringify(balance)) {
+        return returnError(ValidationError.reasons.MiscalculatedChannelBalance);
+      }
 
-      // Ensure the initiators transfer information is the same as ours:
-      // - transferDefintion
-      // - transferEncodings
+      // Recreate the merkle tree + verify root
+      const updatedTransfers = activeTransfers!.filter((t) => t.transferId === transferId);
+      const hashes = updatedTransfers.map((state) => {
+        return hashCoreTransferState(state);
+      });
+      const merkle = new MerkleTree(hashes, keccak256);
 
-      // Verify the balance is the same from update initiator
-      // and chain service
+      // Ensure the same merkleRoot is generated
+      if (merkleRoot !== merkle.getHexRoot()) {
+        return returnError(ValidationError.reasons.MiscalculatedMerkleRoot, previousState, {
+          active: updatedTransfers.map((t) => t.transferId),
+        });
+      }
 
-      // Regenerate the merkle tree
-
-      // Verify the merkle root is correct
-
-      // If exists, verify the meta is an object
       break;
     }
     default: {
