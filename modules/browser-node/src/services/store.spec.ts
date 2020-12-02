@@ -59,28 +59,28 @@ describe("store", () => {
   });
 
   describe("getTransferByRoutingId", () => {
-    it("should work", async () => {
-      const channel = createTestChannelState("create");
-      const meta = { routingId: getRandomBytes32() };
-      channel.latestUpdate.details.meta = meta;
-      const transfer = createTestFullHashlockTransferState({
-        chainId: channel.networkContext.chainId,
-        channelFactoryAddress: channel.networkContext.channelFactoryAddress,
-        channelAddress: channel.channelAddress,
-        meta,
-        transferState: channel.latestUpdate.details.transferInitialState,
-        transferTimeout: channel.latestUpdate.details.transferTimeout,
-        initiator: channel.latestUpdate.fromIdentifier === channel.aliceIdentifier ? channel.alice : channel.bob,
-        responder: channel.latestUpdate.fromIdentifier === channel.aliceIdentifier ? channel.bob : channel.alice,
-        transferEncodings: channel.latestUpdate.details.transferEncodings,
-        transferResolver: undefined,
-        transferId: channel.latestUpdate.details.transferId,
+    it("should return all channel states", async () => {
+      const c1 = createTestChannelState("deposit", {
+        channelAddress: mkAddress("0xccc1111"),
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        alice: mkAddress("0xa"),
       });
-      await store.saveChannelState(channel, transfer);
-
-      expect(await store.getTransferByRoutingId(channel.channelAddress, transfer.meta!.routingId)).to.be.deep.eq(
-        transfer,
+      c1.latestUpdate.channelAddress = mkAddress("0xccc1111");
+      const c2 = createTestChannelState("deposit", {
+        channelAddress: mkAddress("0xccc2222"),
+        aliceIdentifier: mkPublicIdentifier("vectorB"),
+        alice: mkAddress("0xb"),
+      });
+      c2.latestUpdate.channelAddress = mkAddress("0xccc2222");
+      await Promise.all(
+        [c1, c2].map((c) => {
+          return store.saveChannelState(c);
+        }),
       );
+      const retrieved = await store.getChannelStates();
+      expect(retrieved).to.be.deep.include(c1);
+      expect(retrieved).to.be.deep.include(c2);
+      expect(retrieved.length).to.be.eq(2);
     });
   });
 

@@ -86,15 +86,26 @@ describe("store", () => {
 
   describe("getChannelStates", () => {
     it("should return all channel states", async () => {
-      const c1 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc1111") });
-      const c2 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc2222") });
+      const c1 = createTestChannelState("deposit", {
+        channelAddress: mkAddress("0xccc1111"),
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        alice: mkAddress("0xa"),
+      });
+      c1.latestUpdate.channelAddress = mkAddress("0xccc1111");
+      const c2 = createTestChannelState("deposit", {
+        channelAddress: mkAddress("0xccc2222"),
+        aliceIdentifier: mkPublicIdentifier("vectorB"),
+        alice: mkAddress("0xb"),
+      });
+      c2.latestUpdate.channelAddress = mkAddress("0xccc2222");
       await Promise.all(
         [c1, c2].map((c) => {
           return store.saveChannelState(c);
         }),
       );
       const retrieved = await store.getChannelStates();
-      expect(retrieved.sort()).to.be.deep.eq([c1, c2].sort());
+      expect(retrieved).to.be.deep.include(c1);
+      expect(retrieved).to.be.deep.include(c2);
       expect(retrieved.length).to.be.eq(2);
     });
   });
