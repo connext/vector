@@ -18,16 +18,12 @@ import {
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import {
-  BalanceCreateWithoutChannelInput,
-  BalanceUpsertWithWhereUniqueWithoutChannelInput,
+  Prisma,
   Channel,
   PrismaClient,
   Update,
   Balance as BalanceEntity,
-  UpdateCreateInput,
   Transfer,
-  TransferUpdateManyWithoutChannelInput,
-  TransferCreateWithoutChannelInput,
   OnchainTransaction,
 } from "@prisma/client";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -81,7 +77,7 @@ const convertOnchainTransactionEntityToTransaction = (
 const convertChannelEntityToFullChannelState = (
   channelEntity: Channel & {
     balances: BalanceEntity[];
-    latestUpdate: Update;
+    latestUpdate: Update | null;
   },
 ): FullChannelState => {
   // use the inputted assetIds to preserve order
@@ -91,13 +87,13 @@ const convertChannelEntityToFullChannelState = (
   const processedDepositsA: string[] = [];
   const processedDepositsB: string[] = [];
   const defundNonces: string[] = [];
-  const balances: Balance[] = assetIds.map(assetId => {
+  const balances: Balance[] = assetIds.map((assetId) => {
     const balanceA = channelEntity.balances.find(
-      bal => bal.assetId === assetId && bal.participant === channelEntity.participantA,
+      (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantA,
     );
     processedDepositsA.push(balanceA?.processedDeposit ?? "0");
     const balanceB = channelEntity.balances.find(
-      bal => bal.assetId === assetId && bal.participant === channelEntity.participantB,
+      (bal) => bal.assetId === assetId && bal.participant === channelEntity.participantB,
     );
     defundNonces.push(balanceA?.defundNonce ?? "1");
     processedDepositsB.push(balanceB?.processedDeposit ?? "0");
@@ -175,19 +171,19 @@ const convertChannelEntityToFullChannelState = (
     bobIdentifier: channelEntity.publicIdentifierB,
     timeout: channelEntity.timeout,
     latestUpdate: {
-      assetId: channelEntity.latestUpdate.assetId,
+      assetId: channelEntity.latestUpdate!.assetId,
       balance: {
-        amount: [channelEntity.latestUpdate.amountA, channelEntity.latestUpdate.amountB],
-        to: [channelEntity.latestUpdate.toA, channelEntity.latestUpdate.toB],
+        amount: [channelEntity.latestUpdate!.amountA, channelEntity.latestUpdate!.amountB],
+        to: [channelEntity.latestUpdate!.toA, channelEntity.latestUpdate!.toB],
       },
       channelAddress: channelEntity.channelAddress,
       details,
-      fromIdentifier: channelEntity.latestUpdate.fromIdentifier,
-      nonce: channelEntity.latestUpdate.nonce,
-      aliceSignature: channelEntity.latestUpdate.signatureA ?? undefined,
-      bobSignature: channelEntity.latestUpdate.signatureB ?? undefined,
-      toIdentifier: channelEntity.latestUpdate.toIdentifier,
-      type: channelEntity.latestUpdate.type,
+      fromIdentifier: channelEntity.latestUpdate!.fromIdentifier,
+      nonce: channelEntity.latestUpdate!.nonce,
+      aliceSignature: channelEntity.latestUpdate!.signatureA ?? undefined,
+      bobSignature: channelEntity.latestUpdate!.signatureB ?? undefined,
+      toIdentifier: channelEntity.latestUpdate!.toIdentifier,
+      type: channelEntity.latestUpdate!.type,
     },
     inDispute: channelEntity.inDispute,
   };
@@ -254,7 +250,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getTransactionByHash(transactionHash: string): Promise<StoredTransaction | undefined> {
-    const entity = await this.prisma.onchainTransaction.findOne({
+    const entity = await this.prisma.onchainTransaction.findUnique({
       where: { transactionHash },
       include: { channel: true },
     });
@@ -360,7 +356,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getWithdrawalCommitment(transferId: string): Promise<WithdrawCommitmentJson | undefined> {
-    const entity = await this.prisma.transfer.findOne({
+    const entity = await this.prisma.transfer.findUnique({
       where: { transferId },
       include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
@@ -383,9 +379,7 @@ export class PrismaStore implements IServerNodeStore {
       bob: entity.channel!.participantB,
       recipient: initialState.balance.to[0],
       assetId: entity.createUpdate!.assetId,
-      amount: BigNumber.from(initialState.balance.amount[0])
-        .sub(initialState.fee)
-        .toString(),
+      amount: BigNumber.from(initialState.balance.amount[0]).sub(initialState.fee).toString(),
       nonce: initialState.nonce,
       callData: initialState.callTo,
       callTo: initialState.callData,
@@ -419,7 +413,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined> {
-    const sub = await this.prisma.eventSubscription.findOne({
+    const sub = await this.prisma.eventSubscription.findUnique({
       where: { publicIdentifier_event: { publicIdentifier, event } },
     });
     return sub ? sub.url : undefined;
@@ -450,7 +444,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
-    const channelEntity = await this.prisma.channel.findOne({
+    const channelEntity = await this.prisma.channel.findUnique({
       where: { channelAddress },
       include: { balances: true, latestUpdate: true },
     });
@@ -496,7 +490,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
-    const createTransferEntity: TransferCreateWithoutChannelInput | undefined =
+    const createTransferEntity: Prisma.TransferCreateWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
             inDispute: false,
@@ -511,7 +505,7 @@ export class PrismaStore implements IServerNodeStore {
           }
         : undefined;
 
-    const activeTransfers: TransferUpdateManyWithoutChannelInput | undefined =
+    const activeTransfers: Prisma.TransferUpdateManyWithoutChannelInput | undefined =
       channelState.latestUpdate.type === UpdateType.create
         ? {
             connectOrCreate: {
@@ -529,7 +523,7 @@ export class PrismaStore implements IServerNodeStore {
           }
         : undefined;
     // create the latest update db structure from the input data
-    let latestUpdateModel: UpdateCreateInput | undefined;
+    let latestUpdateModel: Prisma.UpdateCreateInput | undefined;
     if (channelState.latestUpdate) {
       latestUpdateModel = {
         channelAddressId: channelState.channelAddress,
@@ -629,7 +623,7 @@ export class PrismaStore implements IServerNodeStore {
         timeout: channelState.timeout,
         balances: {
           create: channelState.assetIds.reduce(
-            (create: BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
+            (create: Prisma.BalanceCreateWithoutChannelInput[], assetId: string, index: number) => {
               return [
                 ...create,
                 {
@@ -676,7 +670,7 @@ export class PrismaStore implements IServerNodeStore {
         },
         balances: {
           upsert: channelState.assetIds.reduce(
-            (upsert: BalanceUpsertWithWhereUniqueWithoutChannelInput[], assetId: string, index: number) => {
+            (upsert: Prisma.BalanceUpsertWithWhereUniqueWithoutChannelInput[], assetId: string, index: number) => {
               return [
                 ...upsert,
                 {
@@ -745,7 +739,7 @@ export class PrismaStore implements IServerNodeStore {
 
   async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
     // should be only 1, verify this is always true
-    const transfer = await this.prisma.transfer.findOne({
+    const transfer = await this.prisma.transfer.findUnique({
       where: { transferId },
       include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
@@ -756,7 +750,7 @@ export class PrismaStore implements IServerNodeStore {
 
     // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
     if (!transfer.channel) {
-      const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+      const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
       transfer.channel = channel;
     }
 
@@ -764,7 +758,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getTransferByRoutingId(channelAddress: string, routingId: string): Promise<FullTransferState | undefined> {
-    const transfer = await this.prisma.transfer.findOne({
+    const transfer = await this.prisma.transfer.findUnique({
       where: { routingId_channelAddressId: { routingId, channelAddressId: channelAddress } },
       include: { channel: true, createUpdate: true, resolveUpdate: true },
     });
@@ -775,7 +769,7 @@ export class PrismaStore implements IServerNodeStore {
 
     // not ideal, but if the channel has been detatched we need to re-attach it separatedly... todo: use join queries
     if (!transfer.channel) {
-      const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+      const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
       transfer.channel = channel;
     }
 
@@ -794,7 +788,7 @@ export class PrismaStore implements IServerNodeStore {
 
     for (const transfer of transfers) {
       if (!transfer.channel) {
-        const channel = await this.prisma.channel.findOne({ where: { channelAddress: transfer.channelAddressId } });
+        const channel = await this.prisma.channel.findUnique({ where: { channelAddress: transfer.channelAddressId } });
         transfer.channel = channel;
       }
     }
@@ -818,7 +812,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getMnemonic(): Promise<string | undefined> {
-    const config = await this.prisma.configuration.findOne({ where: { id: 0 } });
+    const config = await this.prisma.configuration.findUnique({ where: { id: 0 } });
     if (!config) {
       return undefined;
     }
