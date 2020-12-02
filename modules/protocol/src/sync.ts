@@ -517,7 +517,7 @@ const syncStateAndRecreateUpdate = async (
     );
   }
 
-  const method = "syncStateAndRecreateUpdate from outbound";
+  const method = "syncStateAndRecreateUpdate";
   // Ensure parameters are valid for the synced channel state, and action can be taken
   const validationRes = await validateUpdateParams(
     signer,
