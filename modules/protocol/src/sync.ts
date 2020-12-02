@@ -201,7 +201,6 @@ export async function outbound(
       updatedTransfer,
     });
   } catch (e) {
-    logger.error("e", e.message);
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.SaveChannelFailed,
@@ -459,7 +458,7 @@ const syncStateAndRecreateUpdate = async (
   let finalTransferBalance: Balance | undefined;
   if (counterpartyUpdate.type === UpdateType.resolve) {
     // Get the final transfer balance from chain
-    const transfer = activeTransfers!.find(t => t.transferId === counterpartyUpdate.details.transferId);
+    const transfer = activeTransfers!.find((t) => t.transferId === counterpartyUpdate.details.transferId);
     // FIXME: add bytecode!
     if (!transfer) {
       return Result.fail(
