@@ -14,7 +14,18 @@ then
   export VECTOR_PG_PASSWORD
 fi
 
-export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+if [[ -n $VECTOR_DATABASE_URL ]]
+then
+  echo "Using provided database url env var"
+
+elif [[ -n $VECTOR_PG_HOST ]]
+then
+  export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
+
+else
+  echo "Fatal: No VECTOR_DATABASE_URL or VECTOR_PG_* env vars provided"
+  exit 1
+fi
 
 ########################################
 # Wait for dependencies to wake up
