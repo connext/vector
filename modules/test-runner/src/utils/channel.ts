@@ -46,8 +46,20 @@ export const deposit = async (
   const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
 
-  const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: amount });
-  await tx.wait();
+  if (depositorAliceOrBob === "alice") {
+    const tx = await depositor.sendDepositTx({
+      amount: amount.toString(),
+      assetId,
+      chainId,
+      channelAddress,
+      publicIdentifier: depositor.publicIdentifier,
+    });
+    console.log("tx: ", tx.getError());
+    await provider.waitForTransaction(tx.getValue().txHash);
+  } else {
+    const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: amount });
+    await tx.wait();
+  }
 
   const depositRes = await depositor.reconcileDeposit({
     assetId,
@@ -71,9 +83,9 @@ export const deposit = async (
     })
   ).getValue()!;
 
-  const carolAfter = getBalanceForAssetId(depositorChannel, assetId, "bob");
+  const depositorAfter = getBalanceForAssetId(depositorChannel, assetId, depositorAliceOrBob);
   expect(depositorChannel).to.deep.eq(counterpartyChannel);
-  expect(BigNumber.from(depositorBefore).add(amount)).to.eq(carolAfter);
+  expect(BigNumber.from(depositorBefore).add(amount)).to.eq(depositorAfter);
   return depositorChannel;
 };
 
@@ -96,8 +108,12 @@ export const transfer = async (
   const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
   const routingId = getRandomBytes32();
 
-  const senderCreatePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
-  const receiverCreatePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
+  const senderCreatePromise = sender
+    .waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000)
+    .then((data) => console.log("senderCreatePromise: ", data));
+  const receiverCreatePromise = receiver
+    .waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000)
+    .then((data) => console.log("receiverCreatePromise: ", data));
   const transferRes = await sender.conditionalTransfer({
     publicIdentifier: sender.publicIdentifier,
     amount: amount.toString(),
@@ -124,6 +140,8 @@ export const transfer = async (
   const senderBalanceAfterTransfer = getBalanceForAssetId(senderChannelAfterTransfer, assetId, senderAliceOrBob);
   expect(senderBalanceAfterTransfer).to.be.eq(BigNumber.from(senderBefore).sub(amount));
   const [senderCreate, receiverCreate] = await Promise.all([senderCreatePromise, receiverCreatePromise]);
+  console.log("receiverCreate: ", receiverCreate);
+  console.log("senderCreate: ", senderCreate);
   expect(senderCreate).to.be.ok;
   expect(receiverCreate).to.be.ok;
 
