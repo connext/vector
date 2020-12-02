@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_messaging_proxy:latest,$(project)_iframe_app"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_messaging_proxy:latest,$(project)_iframe_app"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -42,7 +42,7 @@ messaging: auth-js ethprovider messaging-proxy nats
 messaging-prod: auth-img messaging-proxy nats
 
 node: messaging server-node-img
-node-prod: messaging-prod database server-node-img
+node-prod: messaging-prod server-node-img
 
 router: node router-js
 router-prod: node-prod router-img
@@ -131,7 +131,7 @@ reset: stop-all
 	rm -rf .chaindata
 
 reset-images:
-	rm -f .flags/*-img .flags/database .flags/ethprovider .flags/*proxy .flags/nats
+	rm -f .flags/*-img .flags/ethprovider .flags/*proxy .flags/nats
 
 purge: clean reset
 
@@ -388,12 +388,6 @@ test-runner-img: test-runner-bundle $(shell find modules/test-runner/ops $(find_
 
 ########################################
 # Build More Docker Images
-
-database: $(shell find ops/database $(find_options))
-	$(log_start)
-	docker build --file ops/database/Dockerfile $(image_cache) --tag $(project)_database ops/database
-	docker tag $(project)_database $(project)_database:$(commit)
-	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 nats: $(shell find ops/nats $(find_options))
 	$(log_start)
