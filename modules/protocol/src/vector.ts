@@ -232,7 +232,7 @@ export class Vector implements IVectorProtocol {
     // connected, we must check this on startup
     // TODO: is there a better way to do this?
     await Promise.all(
-      channels.map(async channel => {
+      channels.map(async (channel) => {
         const currBlock = await this.chainReader.getBlockNumber(channel.networkContext.chainId);
         const disputeRes = await this.chainReader.getChannelDispute(
           channel.channelAddress,
@@ -271,41 +271,19 @@ export class Vector implements IVectorProtocol {
         // Register listeners to update all disputes while the protocol is
         // online and actively connected
         const contract = new Contract(channel.channelAddress, VectorChannel.abi, this.signer);
-        contract.on(contract.filters.ChannelDisputed(), async event => {
+        contract.on(contract.filters.ChannelDisputed(), async (event) => {
           await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, event.dispute);
         });
         // contract.on(contract.filters.ChannelDefunded(), async event => {
         //   await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, event.dispute);
         // });
-        contract.on(contract.filters.TransferDisputed(), async event => {
+        contract.on(contract.filters.TransferDisputed(), async (event) => {
           await this.storeService.saveChannelDispute(
             { ...channel, inDispute: true },
             { ...event.dispute, transferId: event.transferId },
           );
         });
       }),
-    );
-    await Promise.all(
-      channels.map(channel =>
-        sync
-          .outbound(
-            getParamsFromUpdate(channel.latestUpdate, this.signer),
-            this.storeService,
-            this.chainReader,
-            this.messagingService,
-            this.externalValidationService,
-            this.signer,
-            this.logger,
-          )
-          .then(res => {
-            if (res.isError) {
-              this.logger.warn(
-                { channel: channel.channelAddress, error: res.getError()!.message! },
-                "Failed to sync on start",
-              );
-            }
-          }),
-      ),
     );
     return this;
   }
@@ -315,7 +293,7 @@ export class Vector implements IVectorProtocol {
     const valid = validate(params);
     if (!valid) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
-        errors: validate.errors?.map(e => e.message).join(),
+        errors: validate.errors?.map((e) => e.message).join(),
       });
     }
     return undefined;
@@ -498,7 +476,7 @@ export class Vector implements IVectorProtocol {
       return;
     }
 
-    Object.values(this.evts).forEach(evt => evt.detach());
+    Object.values(this.evts).forEach((evt) => evt.detach());
     await this.messagingService.disconnect();
   }
 }
