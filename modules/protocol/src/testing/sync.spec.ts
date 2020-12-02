@@ -855,19 +855,32 @@ describe("outbound", () => {
     expect(result.getError()).to.be.deep.eq(error);
   });
 
-  it.only("should fail if the channel is not saved to store", async () => {
-    store.saveChannelState.resolves(Result.fail(new Error("fail")) as any);
+  it("should fail if the channel is not saved to store", async () => {
+    // Stub save method to fail
+    store.saveChannelState.rejects("Failed to save channel");
 
-    const params = createTestUpdateParams(UpdateType.setup, {
+    const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { counterpartyIdentifier: signers[1].publicIdentifier },
     });
+
+    // Stub the generation results
+    generationStub.resolves(
+      Result.ok({
+        update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
+        updatedTransfer: undefined,
+        updatedActiveTransfers: undefined,
+        updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit),
+      }),
+    );
+
+    // Set the messaging mocks to return the proper update from the counterparty
+    messaging.sendProtocolMessage.onFirstCall().resolves(Result.ok({ update: {}, previousUpdate: {} } as any));
 
     const result = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
+    expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.SaveChannelFailed);
   });
 
   it.only("IFF update is valid and channel is out of sync, sync properly and should fail if update is invalid for synced channel", async () => {
