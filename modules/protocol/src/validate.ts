@@ -240,9 +240,9 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       }
 
       // Ensure the transfer is active
-      if (!activeTransfers.find(t => t.transferId === transferId)) {
+      if (!activeTransfers.find((t) => t.transferId === transferId)) {
         return returnError(ValidationError.reasons.TransferNotActive, previousState, {
-          activeTransfers: activeTransfers.map(t => t.transferId).join(","),
+          activeTransfers: activeTransfers.map((t) => t.transferId).join(","),
         });
       }
 
