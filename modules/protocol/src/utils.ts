@@ -249,3 +249,49 @@ export const reconcileDeposit = async (
     totalDepositsBob: totalDepositsBob.toString(),
   });
 };
+
+export const getUpdatedChannelBalance = (
+  type: typeof UpdateType.create | typeof UpdateType.resolve,
+  assetId: string,
+  balanceToReconcile: Balance,
+  state: FullChannelState,
+  initiator: string,
+): Balance => {
+  // Get the existing balances to update
+  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  if (assetIdx === -1) {
+    throw new Error(`Asset id not found in channel ${assetId}`);
+  }
+  const existing = state.balances[assetIdx] || { to: [state.alice, state.bob], amount: ["0", "0"] };
+
+  // Create a helper to update some existing balance amount
+  // based on the transfer amount using the update type
+  const updateExistingAmount = (existingBalance: string, transferBalance: string): string => {
+    return type === UpdateType.create
+      ? BigNumber.from(existingBalance).sub(transferBalance).toString()
+      : BigNumber.from(existingBalance).add(transferBalance).toString();
+  };
+
+  // NOTE: in the transfer.balance, there is no guarantee that the
+  // `transfer.to` corresponds to the `channel.balances[assetIdx].to`
+  // (i.e. an external withdrawal recipient). However, the transfer
+  // will always have an initiator and responder that will correspond
+  // to the values of `channel.balances[assetIdx].to`
+
+  // Get the transfer amounts that correspond to channel participants
+  const aliceTransferAmount = initiator === state.alice ? balanceToReconcile.amount[0] : balanceToReconcile.amount[1];
+  const bobTransferAmount = initiator === state.bob ? balanceToReconcile.amount[0] : balanceToReconcile.amount[1];
+
+  // Return the updated channel balance object
+  // NOTE: you should *always* use the existing balance because you are
+  // reconciling a transfer balance with a channel balance. The reconciled
+  // balance `to` ordering should correspond to the existing state ordering
+  // not the transfer.to ordering
+  return {
+    to: [...existing.to],
+    amount: [
+      updateExistingAmount(existing.amount[0], aliceTransferAmount),
+      updateExistingAmount(existing.amount[1], bobTransferAmount),
+    ],
+  };
+};
