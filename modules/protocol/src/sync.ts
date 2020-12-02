@@ -14,6 +14,7 @@ import {
   FullTransferState,
   IExternalValidation,
   Balance,
+  ResolveTransferParams,
 } from "@connext/vector-types";
 import pino from "pino";
 
