@@ -705,6 +705,7 @@ describe("outbound", () => {
   let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   let outboundValidationStub: Sinon.SinonStub;
+  let outboundSignatureStub: Sinon.SinonStub;
   let generationStub: Sinon.SinonStub;
   let applyStub: Sinon.SinonStub;
 
@@ -724,7 +725,7 @@ describe("outbound", () => {
     applyStub = Sinon.stub(vectorUpdate, "applyUpdate");
 
     // Stub out all signature validation
-    Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(Result.ok(undefined));
+    outboundSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(Result.ok(undefined));
   });
 
   afterEach(() => {
@@ -943,19 +944,13 @@ describe("outbound", () => {
 
   // responder nonce n, proposed update nonce by initiator is at n too.
   // then if update is valid for synced channel then initiator nonce is n+1
-  describe("should sync channel and retry update IFF update from responder nonce === stored nonce for update initiator", async () => {
+  describe.only("should sync channel and retry update IFF update from responder nonce === stored nonce for update initiator", async () => {
     describe("initiator trying deposit", () => {
       // Assume the initiator is Alice, and she is always trying to reconcile
       // a deposit. Generate test constants
       const assetId = AddressZero;
       const userBBalance = BigNumber.from(9);
-      const missedUpdateNonce = 2;
       const depositAAmt = BigNumber.from(14);
-      const depositANonce = BigNumber.from(1);
-      const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
-        channelAddress,
-        details: { assetId },
-      });
 
       beforeEach(() => {
         // Set the chain service mock
@@ -968,18 +963,35 @@ describe("outbound", () => {
       });
 
       it("missed deposit, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+
+        const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
+          channelAddress,
+          details: { assetId },
+        });
+
         // Assume initiator missed a user deposit
         // Create the missed update
         const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-          nonce: missedUpdateNonce,
+          nonce: 2,
         });
 
         // Create the expected final double signed update state
         const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
           aliceSignature: mkSig("0xaaabbb"),
           bobSignature: mkSig("0xcccddd"),
-          nonce: missedUpdateNonce + 1,
+          nonce: 3,
         });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
 
         // Set messaging mocks:
         // - first call should return an error
@@ -988,38 +1000,37 @@ describe("outbound", () => {
           InboundChannelUpdateError.reasons.StaleUpdate,
           missedUpdate,
         );
-        messaging.sendProtocolMessage.onCall(0).resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
         messaging.sendProtocolMessage
-          .onCall(1)
+          .onSecondCall()
           .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
 
         // Stub the generation results
-        generationStub.onCall(0).resolves(
+        generationStub.onFirstCall().resolves(
           Result.ok({
-            update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: missedUpdateNonce }),
+            update: missedUpdate,
             updatedTransfer: undefined,
             updatedActiveTransfers: undefined,
-            updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-              nonce: missedUpdateNonce,
-            }),
+            updatedChannel: missedUpdate,
           }),
         );
-        generationStub.onCall(1).resolves(
+        generationStub.onSecondCall().resolves(
           Result.ok({
-            update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: missedUpdateNonce + 1 }),
+            update: signedUpdate,
             updatedTransfer: undefined,
             updatedActiveTransfers: undefined,
-            updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit, {
-              nonce: missedUpdateNonce + 1,
-            }),
+            updatedChannel: signedUpdate,
           }),
         );
-
-        // Generate the initiators stale channel, and set store mock
-        const staleChannel = createTestChannelStateWithSigners(signers, UpdateType.setup, {
-          nonce: missedUpdateNonce - 1,
-        });
-        store.getChannelState.resolves(staleChannel);
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: signedUpdate,
+          }),
+        );
 
         // Call the outbound function
         const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
@@ -1033,22 +1044,702 @@ describe("outbound", () => {
         });
         expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
         expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
       });
 
-      it.skip("missed create, should work", async () => {});
-      it.skip("missed resolve, should work", async () => {});
+      it("missed create, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+
+        const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
+          channelAddress,
+          details: { assetId },
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
+          nonce: 2,
+        });
+
+        // Create the expected final double signed update state
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+          aliceSignature: mkSig("0xaaabbb"),
+          bobSignature: mkSig("0xcccddd"),
+          nonce: 3,
+        });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
+
+      it("missed resolve, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+
+        const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
+          channelAddress,
+          details: { assetId },
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
+          nonce: 2,
+        });
+
+        // Create the expected final double signed update state
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+          aliceSignature: mkSig("0xaaabbb"),
+          bobSignature: mkSig("0xcccddd"),
+          nonce: 3,
+        });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: undefined,
+            updatedActiveTransfers: undefined,
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
     });
 
-    describe.skip("initiator trying create", () => {
-      it("missed deposit, should work", async () => {});
-      it("missed create, should work", async () => {});
-      it("missed resolve, should work", async () => {});
+    describe("initiator trying create", () => {
+      it("missed deposit, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+
+        const params: UpdateParams<typeof UpdateType.create> = createTestUpdateParams(UpdateType.create, {
+          channelAddress,
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+          nonce: 2,
+        });
+
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 3 });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
+      it("missed create, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+
+        const params: UpdateParams<typeof UpdateType.create> = createTestUpdateParams(UpdateType.create, {
+          channelAddress,
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
+          nonce: 2,
+        });
+
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 3 });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
+      it("missed resolve, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+
+        const params: UpdateParams<typeof UpdateType.create> = createTestUpdateParams(UpdateType.create, {
+          channelAddress,
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
+          nonce: 2,
+        });
+
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, { nonce: 3 });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
     });
 
-    describe.skip("initiator trying resolve", () => {
-      it("missed deposit, should work", async () => {});
-      it("missed create, should work", async () => {});
-      it("missed resolve, should work", async () => {});
+    describe("initiator trying resolve", () => {
+      it("missed deposit, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+
+        const params: UpdateParams<typeof UpdateType.resolve> = createTestUpdateParams(UpdateType.resolve, {
+          channelAddress,
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
+          nonce: 2,
+        });
+
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 3 });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
+      it("missed create, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+
+        const params: UpdateParams<typeof UpdateType.resolve> = createTestUpdateParams(UpdateType.resolve, {
+          channelAddress,
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.create, {
+          nonce: 2,
+        });
+
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 3 });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
+      it("missed resolve, should work", async () => {
+        // Generate the initiators stale channel, and set store mock
+        store.getChannelState.resolves(
+          createTestChannelStateWithSigners(signers, UpdateType.setup, {
+            nonce: 1,
+          }),
+        );
+        store.getActiveTransfers.resolves([]);
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+
+        const params: UpdateParams<typeof UpdateType.resolve> = createTestUpdateParams(UpdateType.resolve, {
+          channelAddress,
+        });
+
+        // Assume initiator missed a user deposit
+        // Create the missed update
+        const missedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, {
+          nonce: 2,
+        });
+
+        const signedUpdate = createTestChannelUpdateWithSigners(signers, UpdateType.resolve, { nonce: 3 });
+
+        // Stub the validation function
+        // Should have invalid params the second time called
+        outboundValidationStub.onFirstCall().resolves(Result.ok(undefined));
+        outboundValidationStub.onSecondCall().resolves(Result.ok(undefined));
+
+        // Set messaging mocks:
+        // - first call should return an error
+        // - second call should return a final channel state
+        const counterpartyError = new InboundChannelUpdateError(
+          InboundChannelUpdateError.reasons.StaleUpdate,
+          missedUpdate,
+        );
+        messaging.sendProtocolMessage.onFirstCall().resolves(Result.fail(counterpartyError));
+        messaging.sendProtocolMessage
+          .onSecondCall()
+          .resolves(Result.ok({ update: signedUpdate, previousUpdate: missedUpdate }));
+
+        // Stub the generation results
+        generationStub.onFirstCall().resolves(
+          Result.ok({
+            update: missedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: missedUpdate,
+          }),
+        );
+        generationStub.onSecondCall().resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Called on the second time through the sync protocol
+        applyStub.resolves(
+          Result.ok({
+            update: signedUpdate,
+            updatedTransfer: transfer,
+            updatedActiveTransfers: [transfer],
+            updatedChannel: signedUpdate,
+          }),
+        );
+
+        // Call the outbound function
+        const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], logger);
+
+        // Verify the update was successfully sent + retried
+        expect(res.getError()).to.be.undefined;
+        expect(res.getValue().updatedChannel).to.be.containSubset({
+          nonce: signedUpdate.nonce,
+          latestUpdate: signedUpdate,
+          channelAddress,
+        });
+        expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
+        expect(store.saveChannelState.callCount).to.be.eq(2);
+        expect(outboundValidationStub.callCount).to.be.eq(2);
+        expect(generationStub.callCount).to.be.eq(2);
+        expect(applyStub.callCount).to.be.eq(1);
+        expect(outboundSignatureStub.callCount).to.be.eq(2);
+      });
     });
   });
 });
