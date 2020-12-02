@@ -97,6 +97,7 @@ export class ValidationError extends VectorError {
     InvalidToIdentifier: "Update `toIdentifier` is invalid",
     InvalidUpdateNonce: "Update nonce must be previousState.nonce + 1",
     LongChannelTimeout: `Channel timeout above maximum of ${MAXIMUM_CHANNEL_TIMEOUT.toString()}s`,
+    MalformedDetails: "Channel update details are malformed",
     NoActiveTransfers: "Active transfers are undefined",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
     ShortChannelTimeout: `Channel timeout below minimum of ${MINIMUM_CHANNEL_TIMEOUT.toString()}s`,

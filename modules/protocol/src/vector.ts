@@ -18,20 +18,19 @@ import {
   Result,
   UpdateParams,
   UpdateType,
+  InboundChannelUpdateError,
+  TChannelUpdate,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
-import Ajv from "ajv";
 import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
-import { getParamsFromUpdate } from "./utils";
+import { getParamsFromUpdate, validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
-
-const ajv = new Ajv();
 
 export class Vector implements IVectorProtocol {
   private evts: EvtContainer = {
@@ -170,52 +169,81 @@ export class Vector implements IVectorProtocol {
     //  - validate and save state
     //  - send back message or error to specified inbox
     //  - publish updated state event
-    await this.messagingService.onReceiveProtocolMessage(this.publicIdentifier, async (msg, from, inbox) => {
-      if (from === this.publicIdentifier) {
-        return;
-      }
-      this.logger.info({ method: "onReceiveProtocolMessage" }, "Received message");
+    await this.messagingService.onReceiveProtocolMessage(
+      this.publicIdentifier,
+      async (
+        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, InboundChannelUpdateError>,
+        from: string,
+        inbox: string,
+      ) => {
+        if (from === this.publicIdentifier) {
+          return;
+        }
+        const method = "onReceiveProtocolMessage";
+        this.logger.info({ method }, "Received message");
 
-      if (msg.isError) {
-        this.logger.error(
-          { method: "inbound", error: msg.getError()?.message },
-          "Error received from counterparty's initial message, this shouldn't happen",
+        if (msg.isError) {
+          this.logger.error(
+            { method, error: msg.getError()?.message },
+            "Error received from counterparty's initial message, this shouldn't happen",
+          );
+          return;
+        }
+
+        const received = msg.getValue();
+
+        // Verify that the message has the correct structure
+        const keys = Object.keys(received);
+        if (!keys.includes("update") || !keys.includes("previousUpdate")) {
+          console.warn({ method, received: Object.keys(received) }, "Message malformed");
+          return;
+        }
+        const receivedError = this.validateParams(received.update, TChannelUpdate);
+        if (receivedError) {
+          console.warn({ method, update: received.update, error: receivedError }, "Received malformed proposed update");
+          return;
+        }
+        // Previous update may be undefined, but if it exists, validate
+        const previousError = this.validateParams(received.previousUpdate, TChannelUpdate);
+        if (previousError && received.previousUpdate) {
+          console.warn(
+            { method, update: received.previousUpdate, error: receivedError },
+            "Received malformed previous update",
+          );
+          return;
+        }
+
+        if (received.update.fromIdentifier === this.publicIdentifier) {
+          this.logger.debug({ method }, "Received update from ourselves, doing nothing");
+          return;
+        }
+
+        // validate and save
+        const inboundRes = await sync.inbound(
+          received.update,
+          received.previousUpdate,
+          inbox,
+          this.chainReader,
+          this.storeService,
+          this.messagingService,
+          this.externalValidationService,
+          this.signer,
+          this.logger,
         );
-        return;
-      }
+        if (inboundRes.isError) {
+          this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
+          return;
+        }
 
-      const received = msg.getValue();
+        const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
 
-      if (received.update.fromIdentifier === this.publicIdentifier) {
-        this.logger.debug({ method: "onReceiveProtocolMessage" }, "Received update from ourselves, doing nothing");
-        return;
-      }
-
-      // validate and save
-      const inboundRes = await sync.inbound(
-        received.update,
-        received.previousUpdate,
-        inbox,
-        this.chainReader,
-        this.storeService,
-        this.messagingService,
-        this.externalValidationService,
-        this.signer,
-        this.logger,
-      );
-      if (inboundRes.isError) {
-        this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
-        return;
-      }
-
-      const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
-
-      this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        updatedChannelState: updatedChannel,
-        updatedTransfers: updatedActiveTransfers,
-        updatedTransfer: updatedTransfer,
-      });
-    });
+        this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
+          updatedChannelState: updatedChannel,
+          updatedTransfers: updatedActiveTransfers,
+          updatedTransfer: updatedTransfer,
+        });
+      },
+    );
 
     // TODO: https://github.com/connext/vector/issues/54
 
@@ -311,11 +339,10 @@ export class Vector implements IVectorProtocol {
   }
 
   private validateParams(params: any, schema: any): undefined | OutboundChannelUpdateError {
-    const validate = ajv.compile(schema);
-    const valid = validate(params);
-    if (!valid) {
+    const error = validateSchema(params, schema);
+    if (error) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
-        errors: validate.errors?.map((e) => e.message).join(),
+        error,
       });
     }
     return undefined;

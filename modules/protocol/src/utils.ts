@@ -19,6 +19,19 @@ import {
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
+import Ajv from "ajv";
+
+const ajv = new Ajv();
+
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export const validateSchema = (obj: any, schema: any): undefined | string => {
+  const validate = ajv.compile(schema);
+  const valid = validate(obj);
+  if (!valid) {
+    return validate.errors?.map((e) => e.message).join();
+  }
+  return undefined;
+};
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
 // must be converted to the `UpdateParams<T> when syncing
