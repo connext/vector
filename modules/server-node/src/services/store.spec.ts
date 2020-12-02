@@ -43,6 +43,51 @@ describe("store", () => {
     await store.disconnect();
   });
 
+  describe("getChannelStateByParticipants", () => {
+    it("should work (regardless of order)", async () => {
+      const channel = createTestChannelState("deposit");
+      await store.saveChannelState(channel);
+
+      expect(
+        await store.getChannelStateByParticipants(channel.alice, channel.bob, channel.networkContext.chainId),
+      ).to.be.deep.eq(channel);
+
+      expect(
+        await store.getChannelStateByParticipants(channel.bob, channel.alice, channel.networkContext.chainId),
+      ).to.be.deep.eq(channel);
+    });
+  });
+
+  describe("getTransferByRoutingId", () => {
+    it("should work", async () => {
+      const channel = createTestChannelState("create");
+      const transfer = createTestFullHashlockTransferState({
+        channelAddress: channel.channelAddress,
+        meta: { routingId: getRandomBytes32() },
+      });
+      await store.saveChannelState(channel, transfer);
+
+      expect(await store.getTransferByRoutingId(channel.channelAddress, transfer.meta!.routingId)).to.be.deep.eq(
+        transfer,
+      );
+    });
+  });
+
+  describe("getChannelStates", () => {
+    it("should return all channel states", async () => {
+      const c1 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc1111") });
+      const c2 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc2222") });
+      await Promise.all(
+        [c1, c2].map((c) => {
+          return store.saveChannelState(c);
+        }),
+      );
+      const retrieved = await store.getChannelStates();
+      expect(retrieved.sort()).to.be.deep.eq([c1, c2].sort());
+      expect(retrieved.length).to.be.eq(2);
+    });
+  });
+
   it("should save transaction responses and receipts", async () => {
     // Load store with channel
     const setupState = createTestChannelState("setup");
@@ -280,8 +325,8 @@ describe("store", () => {
     const transfers = await store.getActiveTransfers(createState.channelAddress);
 
     expect(transfers.length).eq(2);
-    const t1 = transfers.find(t => t.transferId === transfer1.transferId);
-    const t2 = transfers.find(t => t.transferId === transfer2.transferId);
+    const t1 = transfers.find((t) => t.transferId === transfer1.transferId);
+    const t2 = transfers.find((t) => t.transferId === transfer2.transferId);
     expect(t1).to.deep.eq(transfer1);
     expect(t2).to.deep.eq(transfer2);
   });
@@ -386,8 +431,8 @@ describe("store", () => {
     const transfers = await store.getTransfersByRoutingId(routingId);
     expect(transfers.length).to.eq(2);
 
-    const t1 = transfers.find(t => t.transferId === transfer1.transferId);
-    const t2 = transfers.find(t => t.transferId === transfer2.transferId);
+    const t1 = transfers.find((t) => t.transferId === transfer1.transferId);
+    const t2 = transfers.find((t) => t.transferId === transfer2.transferId);
     expect(t1).to.deep.eq(transfer1);
     expect(t2).to.deep.eq(transfer2);
   });
