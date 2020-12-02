@@ -37,7 +37,8 @@ class VectorIndexedDBDatabase extends Dexie {
     }
     super("VectorIndexedDBDatabase", options);
     this.version(1).stores({
-      channels: "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId]",
+      channels:
+        "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId]",
       transfers: "transferId,[routingId+channelAddress],createUpdateNonce,resolveUpdateNonce,transferResolver",
       transactions: "transactionHash",
       withdrawCommitment: "transferId",
@@ -140,9 +141,9 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
     const channel = await this.db.channels
-      .where("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
+      .where("[alice+bob+networkContext.chainId]")
       .equals([participantA, participantB, chainId])
-      .or("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
+      .or("[alice+bob+networkContext.chainId]")
       .equals([participantB, participantA, chainId])
       .first();
     return channel;
