@@ -435,6 +435,18 @@ const syncStateAndRecreateUpdate = async (
     );
   }
 
+  // Only sync if the nonces is ahead by 1
+  if (counterpartyUpdate.nonce !== previousState!.nonce + 1) {
+    return Result.fail(
+      new OutboundChannelUpdateError(
+        OutboundChannelUpdateError.reasons.SyncFailure,
+        counterpartyUpdate,
+        previousState,
+        { error: "Can only sync by 1" },
+      ),
+    );
+  }
+
   // Apply the update + validate the signatures (NOTE: full validation is not
   // needed here because the update is already signed)
 
