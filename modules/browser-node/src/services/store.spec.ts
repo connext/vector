@@ -61,9 +61,20 @@ describe("store", () => {
   describe("getTransferByRoutingId", () => {
     it("should work", async () => {
       const channel = createTestChannelState("create");
+      const meta = { routingId: getRandomBytes32() };
+      channel.latestUpdate.details.meta = meta;
       const transfer = createTestFullHashlockTransferState({
+        chainId: channel.networkContext.chainId,
+        channelFactoryAddress: channel.networkContext.channelFactoryAddress,
         channelAddress: channel.channelAddress,
-        meta: { routingId: getRandomBytes32() },
+        meta,
+        transferState: channel.latestUpdate.details.transferInitialState,
+        transferTimeout: channel.latestUpdate.details.transferTimeout,
+        initiator: channel.latestUpdate.fromIdentifier === channel.aliceIdentifier ? channel.alice : channel.bob,
+        responder: channel.latestUpdate.fromIdentifier === channel.aliceIdentifier ? channel.bob : channel.alice,
+        transferEncodings: channel.latestUpdate.details.transferEncodings,
+        transferResolver: undefined,
+        transferId: channel.latestUpdate.details.transferId,
       });
       await store.saveChannelState(channel, transfer);
 
