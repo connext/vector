@@ -1057,7 +1057,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
           channelAddress,
@@ -1147,7 +1148,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
+        const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.deposit> = createTestUpdateParams(UpdateType.deposit, {
           channelAddress,
@@ -1239,8 +1241,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
         const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.create> = createTestUpdateParams(UpdateType.create, {
           channelAddress,
@@ -1323,8 +1325,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
         const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.create> = createTestUpdateParams(UpdateType.create, {
           channelAddress,
@@ -1407,8 +1409,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
         const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.create> = createTestUpdateParams(UpdateType.create, {
           channelAddress,
@@ -1494,8 +1496,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
         const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.resolve> = createTestUpdateParams(UpdateType.resolve, {
           channelAddress,
@@ -1578,9 +1580,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
-
         const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.resolve> = createTestUpdateParams(UpdateType.resolve, {
           channelAddress,
@@ -1663,8 +1664,8 @@ describe("outbound", () => {
             nonce: 1,
           }),
         );
-        store.getActiveTransfers.resolves([]);
         const transfer = createTestFullHashlockTransferState({ channelAddress });
+        store.getActiveTransfers.resolves([transfer]);
 
         const params: UpdateParams<typeof UpdateType.resolve> = createTestUpdateParams(UpdateType.resolve, {
           channelAddress,
