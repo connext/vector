@@ -62,8 +62,7 @@ export async function applyUpdate<T extends UpdateType>(
 
   const assetIdx = (previousState?.assetIds ?? []).findIndex((a) => a === assetId);
 
-  // Sanity check (this is not necessary, since this function is called
-  // after validation) so we can force unwrap safely
+  // Sanity check data presence so it is safe to force-unwrap
   if (!previousState && type !== UpdateType.setup) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
@@ -72,6 +71,14 @@ export async function applyUpdate<T extends UpdateType>(
     );
   }
   if (!finalTransferBalance && type === UpdateType.resolve) {
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
+        applyError: "No final transfer balance on resolve",
+      }),
+    );
+  }
+  const needsActive = type === UpdateType.create || type === UpdateType.resolve;
+  if (needsActive && !previousActiveTransfers) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
         applyError: "No final transfer balance on resolve",
@@ -176,7 +183,14 @@ export async function applyUpdate<T extends UpdateType>(
     case UpdateType.resolve: {
       const { merkleRoot, transferId, transferResolver, meta } = details as ResolveUpdateDetails;
       // Safe to force unwrap because the validation has been performed
-      const transfer = previousActiveTransfers!.find((t) => t.transferId === transferId)!;
+      const transfer = previousActiveTransfers!.find((t) => t.transferId === transferId);
+      if (!transfer) {
+        return Result.fail(
+          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.TransferNotFound, update, previousState, {
+            applyError: "No transfer found in activeTransfers",
+          }),
+        );
+      }
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
       const updatedChannel = {
         ...previousState!,

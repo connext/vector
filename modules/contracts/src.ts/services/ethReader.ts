@@ -34,7 +34,7 @@ export class EthereumChainReader implements IVectorChainReader {
   private transferRegistries: Map<string, RegisteredTransfer[]> = new Map();
   constructor(
     public readonly chainProviders: { [chainId: string]: JsonRpcProvider },
-    public readonly log: pino.BaseLogger = pino(),
+    public readonly log: pino.BaseLogger,
   ) {}
 
   getChainProviders(): Result<ChainProviders, ChainError> {
@@ -81,6 +81,14 @@ export class EthereumChainReader implements IVectorChainReader {
     }
 
     try {
+      const code = await this.getCode(channelAddress, chainId);
+      if (code.isError) {
+        return Result.fail(code.getError()!);
+      }
+      if (code.getValue() === "0x") {
+        // channel is not deployed
+        return Result.ok(undefined);
+      }
       const dispute = await new Contract(channelAddress, VectorChannel.abi, provider).getChannelDispute();
       if (dispute.channelStateHash === HashZero) {
         return Result.ok(undefined);
@@ -94,7 +102,7 @@ export class EthereumChainReader implements IVectorChainReader {
         defundNonce: dispute.defundNonce.toString(),
       });
     } catch (e) {
-      return Result.fail(e as any);
+      return Result.fail(e);
     }
   }
 

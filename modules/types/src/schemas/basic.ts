@@ -126,7 +126,7 @@ export const TChannelUpdate = Type.Object({
   nonce: Type.Number(),
   balance: TBalance,
   assetId: TAddress,
-  details: TChannelUpdateDetails,
+  details: Type.Any(), // specific detail structure asserted in validation
   aliceSignature: Type.Optional(TSignature),
   bobSignature: Type.Optional(TSignature),
 });
