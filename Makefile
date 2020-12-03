@@ -36,7 +36,8 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 default: dev
 dev: messaging node router duet trio test-runner-js
 prod: messaging-prod node-prod router-prod test-runner
-all: dev prod iframe-app
+arm: server-node-arm
+all: dev prod iframe-app arm
 
 messaging: auth-js ethprovider messaging-proxy nats
 messaging-prod: auth-img messaging-proxy nats
@@ -342,6 +343,11 @@ server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_
 	$(log_start)
 	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/server-node
 	docker tag $(project)_node $(project)_node:$(commit)
+	$(log_finish) && mv -f $(totalTime) .flags/$@
+server-node-arm: server-node-bundle $(shell find modules/server-node/ops $(find_options))
+	$(log_start)
+	DOCKER_TARGET_PLATFORM=linux/arm/v7 docker build --file modules/server-node/ops/arm.Dockerfile $(image_cache) --tag $(project)_node_arm modules/server-node
+	docker tag $(project)_node_arm $(project)_node_arm:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 
