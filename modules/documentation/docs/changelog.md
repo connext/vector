@@ -2,6 +2,9 @@
 
 ## Next Release
 
+- add `sync` unit tests
+- clean `sync` code
+
 ## 0.0.21
 
 - fix `iframe-app` docker image to not override env vars on start
