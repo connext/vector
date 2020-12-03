@@ -1,4 +1,4 @@
-name: Feature Branch
+name: ARM
 
 on: push
 
