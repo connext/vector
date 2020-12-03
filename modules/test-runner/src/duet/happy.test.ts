@@ -40,6 +40,7 @@ describe(testName, () => {
 
     const aliceBobPostSetup = await setup(bobService, aliceService, chainId);
 
+    // alice deposit
     await deposit(aliceService, bobService, aliceBobPostSetup.channelAddress, assetId, depositAmt);
     // alice to bob
     await transfer(
@@ -50,6 +51,7 @@ describe(testName, () => {
       assetId,
       transferAmt,
     );
+    // bob deposit
     await deposit(bobService, aliceService, aliceBobPostSetup.channelAddress, assetId, depositAmt);
     // bob to alice
     await transfer(
