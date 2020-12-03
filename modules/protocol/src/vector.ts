@@ -195,19 +195,22 @@ export class Vector implements IVectorProtocol {
         // Verify that the message has the correct structure
         const keys = Object.keys(received);
         if (!keys.includes("update") || !keys.includes("previousUpdate")) {
-          console.warn({ method, received: Object.keys(received) }, "Message malformed");
+          this.logger.warn({ method, received: Object.keys(received) }, "Message malformed");
           return;
         }
         const receivedError = this.validateParams(received.update, TChannelUpdate);
         if (receivedError) {
-          console.warn({ method, update: received.update, error: receivedError }, "Received malformed proposed update");
+          this.logger.warn(
+            { method, update: received.update, error: receivedError },
+            "Received malformed proposed update",
+          );
           return;
         }
         // Previous update may be undefined, but if it exists, validate
         const previousError = this.validateParams(received.previousUpdate, TChannelUpdate);
         if (previousError && received.previousUpdate) {
-          console.warn(
-            { method, update: received.previousUpdate, error: receivedError },
+          this.logger.warn(
+            { method, update: received.previousUpdate, error: previousError },
             "Received malformed previous update",
           );
           return;
