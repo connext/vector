@@ -124,7 +124,6 @@ describe("Vector", () => {
           params: { ...validParams, counterpartyIdentifier: undefined },
           error: "should have required property 'counterpartyIdentifier'",
         },
-
         {
           name: "should fail if there is an invalid counterparty",
           params: { ...validParams, counterpartyIdentifier: "fail" },
@@ -198,7 +197,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const error = ret.getError();
           expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(error?.context?.errors).to.include(t.error);
+          expect(error?.context?.error).to.include(t.error);
         });
       }
     });
@@ -214,7 +213,6 @@ describe("Vector", () => {
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }));
 
       vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
-      console.log("CONNECTED");
     });
 
     it("should work", async () => {
@@ -261,7 +259,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.errors).to.include(error);
+          expect(err?.context?.error).to.include(error);
         });
       }
     });
@@ -361,7 +359,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.errors).to.include(error);
+          expect(err?.context?.error).to.include(error);
         });
       }
     });
@@ -430,7 +428,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.errors).to.include(error);
+          expect(err?.context?.error).to.include(error);
         });
       }
     });
