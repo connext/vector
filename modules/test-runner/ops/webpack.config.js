@@ -6,7 +6,7 @@ module.exports = {
 
   entry: {
     duet: path.join(__dirname, "../src/duet/index.ts"),
-    global: path.join(__dirname, "../src/global/index.ts"),
+    messaging: path.join(__dirname, "../src/messaging/index.ts"),
     node: path.join(__dirname, "../src/node/index.ts"),
     router: path.join(__dirname, "../src/router/index.ts"),
     trio: path.join(__dirname, "../src/trio/index.ts"),

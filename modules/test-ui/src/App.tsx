@@ -53,7 +53,8 @@ function App() {
       if (_channel) {
         const channelRes = await client.getStateChannel({ channelAddress: _channel });
         console.log("Channel found in store:", channelRes.getValue());
-        setChannel(channelRes.getValue());
+        const channelVal = channelRes.getValue() as FullChannelState;
+        setChannel(channelVal);
       }
       setNode(client);
       client.on(EngineEvents.DEPOSIT_RECONCILED, async (data) => {

@@ -29,7 +29,7 @@ function wait_for {
   wait-for -q -t 60 "$host" 2>&1 | sed '/nc: bad address/d'
 }
 
-if [[ "$stack" == "global" ]]
+if [[ "$stack" == "messaging" ]]
 then
   wait_for "messaging" "$VECTOR_MESSAGING_URL"
 

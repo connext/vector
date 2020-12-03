@@ -91,12 +91,7 @@ export class BrowserNode implements INodeService {
         src: config.iframeSrc!,
         id: "connext-iframe",
       });
-      const rpc: EngineParams.RpcRequest = {
-        id: Date.now(),
-        jsonrpc: "2.0",
-        method: "connext_authenticate",
-        params: {},
-      };
+      const rpc = constructRpcRequest("connext_authenticate", {});
       const auth = await node.channelProvider.send(rpc);
       config.logger.info({ method: "connect", response: auth }, "Received response from auth method");
       const [nodeConfig] = await node.getConfig();
@@ -111,22 +106,12 @@ export class BrowserNode implements INodeService {
   }
 
   async getConfig(): Promise<NodeResponses.GetConfig> {
-    const rpc: EngineParams.RpcRequest = {
-      id: Date.now(),
-      jsonrpc: "2.0",
-      method: "chan_getConfig",
-      params: undefined,
-    };
+    const rpc = constructRpcRequest("chan_getConfig", undefined);
     return this.send(rpc);
   }
 
   async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
-    const rpc: EngineParams.RpcRequest = {
-      id: Date.now(),
-      jsonrpc: "2.0",
-      method: "chan_getStatus",
-      params: undefined,
-    };
+    const rpc = constructRpcRequest("chan_getStatus", undefined);
     try {
       const res = await this.send(rpc);
       return Result.ok(res);

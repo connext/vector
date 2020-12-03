@@ -14,7 +14,7 @@ commit=$(shell git rev-parse HEAD | head -c 8)
 id=$(shell if [[ "`uname`" == "Darwin" ]]; then echo 0:0; else echo "`id -u`:`id -g`"; fi)
 
 # Pool of images to pull cached layers from during docker build steps
-image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_global_proxy:latest,$(project)_iframe_app"; else echo ""; fi)
+image_cache=$(shell if [[ -n "${GITHUB_WORKFLOW}" ]]; then echo "--cache-from=$(project)_builder:latest,$(project)_database:latest,$(project)_ethprovider:latest,$(project)_server-node:latest,$(project)_router:latest,$(project)_messaging_proxy:latest,$(project)_iframe_app"; else echo ""; fi)
 
 interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo ""; fi)
 
@@ -34,21 +34,21 @@ log_finish=@echo $$((`date "+%s"` - `cat $(startTime)`)) > $(totalTime); rm $(st
 # Build Shortcuts
 
 default: dev
-dev: global node router duet trio test-runner-js
-prod: global-prod node-prod router-prod test-runner
+dev: messaging node router duet trio test-runner-js
+prod: messaging-prod node-prod router-prod test-runner
 all: dev prod iframe-app
 
-global: auth-js ethprovider global-proxy nats
-global-prod: auth-img global-proxy nats
+messaging: auth-js ethprovider messaging-proxy nats
+messaging-prod: auth-img messaging-proxy nats
 
-node: global server-node-img
-node-prod: global-prod database server-node-img
+node: messaging server-node-img
+node-prod: messaging-prod database server-node-img
 
 router: node router-js
 router-prod: node-prod router-img
 
-duet: global server-node-js
-trio: global server-node-js router-js
+duet: messaging server-node-js
+trio: messaging server-node-js router-js
 
 ########################################
 # Command & Control Shortcuts
@@ -85,12 +85,19 @@ restart-trio: stop-trio
 stop-trio:
 	@bash ops/stop.sh trio
 
-start-global: global
-	@bash ops/start-global.sh
-restart-global: stop-global
-	@bash ops/start-global.sh
-stop-global:
-	@bash ops/stop.sh global
+start-chains: ethprovider
+	@bash ops/start-chains.sh
+restart-chains: stop-chains
+	@bash ops/start-chains.sh
+stop-chains:
+	@bash ops/stop.sh chains
+
+start-messaging: messaging
+	@bash ops/start-messaging.sh
+restart-messaging: stop-messaging
+	@bash ops/start-messaging.sh
+stop-messaging:
+	@bash ops/stop.sh messaging
 
 start-test-ui: browser-node
 	@bash ops/start-test-ui.sh
@@ -104,6 +111,8 @@ stop-all:
 	@bash ops/stop.sh duet
 	@bash ops/stop.sh node
 	@bash ops/stop.sh global
+	@bash ops/stop.sh messaging
+	@bash ops/stop.sh chains
 	@bash ops/stop.sh evm
 
 clean: stop-all
@@ -147,13 +156,13 @@ lint:
 	bash ops/lint.sh
 
 config:
-	cp -n ops/config/global.default.json global.config.json
+	cp -n ops/config/messaging.default.json messaging.config.json
 	cp -n ops/config/node.default.json node.config.json
 	cp -n ops/config/router.default.json router.config.json
 	cp -n ops/config/browser.default.json browser.config.json
 
 reset-config:
-	cp -f ops/config/global.default.json global.config.json
+	cp -f ops/config/messaging.default.json messaging.config.json
 	cp -f ops/config/node.default.json node.config.json
 	cp -f ops/config/router.default.json router.config.json
 	cp -f ops/config/browser.default.json browser.config.json
@@ -162,7 +171,7 @@ reset-config:
 # Test Commands
 
 test-units: test-utils test-contracts test-protocol test-engine test-router
-test-integrations: test-global test-duet test-trio test-node
+test-integrations: test-messaging test-duet test-trio test-node
 test-all: test-units test-integrations
 
 # Unit Tests
@@ -188,10 +197,10 @@ watch-engine: contracts-bundle protocol
 	bash ops/test-unit.sh engine watch 1341
 
 test-server-node: server-node-js
-	bash ops/start-global.sh
+	bash ops/start-messaging.sh
 	bash ops/test-unit.sh server-node test
 watch-server-node: engine
-	bash ops/start-global.sh
+	bash ops/start-messaging.sh
 	bash ops/test-unit.sh server-node watch
 
 test-browser-node: browser-node
@@ -206,19 +215,19 @@ watch-router: engine
 
 # Integration Tests
 
-test-global: global test-runner-js
-	bash ops/test-integration.sh global test
-watch-global: global test-runner-js
-	bash ops/test-integration.sh global watch
+test-messaging: messaging test-runner
+	bash ops/test-integration.sh messaging test
+watch-messaging: messaging test-runner
+	bash ops/test-integration.sh messaging watch
 
-test-duet: test-runner-js duet
+test-duet: test-runner duet
 	bash ops/test-integration.sh duet test
-watch-duet: test-runner-js duet
+watch-duet: test-runner duet
 	bash ops/test-integration.sh duet watch
 
 test-trio: test-runner trio
 	bash ops/test-integration.sh trio test
-watch-trio: test-runner-js trio
+watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
 
 test-load: test-runner trio
@@ -227,14 +236,14 @@ test-load: test-runner trio
 test-concurrency: test-runner trio
 	bash ops/test-load.sh concurrency 3
 	
-test-node: node test-runner-js
+test-node: node test-runner
 	bash ops/test-integration.sh node test
-watch-node: node test-runner-js
+watch-node: node test-runner
 	bash ops/test-integration.sh node watch
 
-test-routing-node: router test-runner-js
+test-routing-node: router test-runner
 	bash ops/test-integration.sh router test
-watch-routing-node: router test-runner-js
+watch-routing-node: router test-runner
 	bash ops/test-integration.sh router watch
 
 
@@ -392,10 +401,10 @@ nats: $(shell find ops/nats $(find_options))
 	docker tag $(project)_nats $(project)_nats:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-global-proxy: $(shell find ops/proxy $(find_options))
+messaging-proxy: $(shell find ops/proxy $(find_options))
 	$(log_start)
-	docker build $(image_cache) --tag $(project)_global_proxy ops/proxy/global
-	docker tag $(project)_global_proxy $(project)_global_proxy:$(commit)
+	docker build $(image_cache) --tag $(project)_messaging_proxy ops/proxy
+	docker tag $(project)_messaging_proxy $(project)_messaging_proxy:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
 ssh-action: $(shell find ops/ssh-action $(find_options))

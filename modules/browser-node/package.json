@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-browser-node",
-  "version": "0.0.19",
+  "version": "0.0.25",
   "author": "",
   "license": "ISC",
   "description": "",
@@ -17,10 +17,10 @@
     "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.0.19",
-    "@connext/vector-engine": "0.0.19",
-    "@connext/vector-types": "0.0.19",
-    "@connext/vector-utils": "0.0.19",
+    "@connext/vector-contracts": "0.0.25",
+    "@connext/vector-engine": "0.0.25",
+    "@connext/vector-types": "0.0.25",
+    "@connext/vector-utils": "0.0.25",
     "@sinclair/typebox": "0.11.0",
     "ajv": "6.12.6",
     "axios": "0.21.0",

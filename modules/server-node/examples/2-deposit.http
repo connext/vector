@@ -4,7 +4,7 @@
 @daveUrl = http://localhost:8006
 @rogerUrl = http://localhost:8007
 @aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
-@carolRogerChannel = 0xEd985dC74648f968F9B42Ef2CCF2ed98777f4C3A
+@carolRogerChannel = 0x08d324c5CA1CC52c185f9b026a7ed50994632167
 @daveRogerChannel = 0x05b2FFe2814240aa788FcD38Fe0DB29354E6d789
 @adminToken = cxt1234
 @alicePublicIdentifier = vector8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
@@ -33,22 +33,22 @@ Content-Type: application/json
 
 ##############
 ### Reconcile Deposit
-POST {{bobUrl}}/deposit
+POST {{carolUrl}}/deposit
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceBobChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000",
-  "publicIdentifier": "{{bobPublicIdentifier}}",
+  "channelAddress": "{{carolRogerChannel}}",
+  "assetId": "0x8cdaf0cd259887258bc13a92c0a6da92698644c0",
+  "publicIdentifier": "{{carolPublicIdentifier}}"
 }
 
 ##############
 ### Request Collateral
-POST {{daveUrl}}/request-collateral
+POST {{carolUrl}}/request-collateral
 Content-Type: application/json
 
 {
-  "channelAddress": "{{daveRogerChannel}}",
-  "assetId": "0x0000000000000000000000000000000000000000",
-  "publicIdentifier": "{{davePublicIdentifier}}"
+  "channelAddress": "{{carolRogerChannel}}",
+  "assetId": "0x8cdaf0cd259887258bc13a92c0a6da92698644c0",
+  "publicIdentifier": "{{carolPublicIdentifier}}"
 }

@@ -18,20 +18,19 @@ import {
   Result,
   UpdateParams,
   UpdateType,
+  InboundChannelUpdateError,
+  TChannelUpdate,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
-import Ajv from "ajv";
 import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
-import { getParamsFromUpdate } from "./utils";
+import { getParamsFromUpdate, validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
-
-const ajv = new Ajv();
 
 export class Vector implements IVectorProtocol {
   private evts: EvtContainer = {
@@ -135,11 +134,6 @@ export class Vector implements IVectorProtocol {
       method: "executeUpdate",
       step: "start",
       params,
-    });
-    this.logger.info({
-      method: "executeUpdate",
-      step: "start",
-      type: params.type,
       channelAddress: params.channelAddress,
       updateSender: this.publicIdentifier,
     });
@@ -170,52 +164,84 @@ export class Vector implements IVectorProtocol {
     //  - validate and save state
     //  - send back message or error to specified inbox
     //  - publish updated state event
-    await this.messagingService.onReceiveProtocolMessage(this.publicIdentifier, async (msg, from, inbox) => {
-      if (from === this.publicIdentifier) {
-        return;
-      }
-      this.logger.info({ method: "onReceiveProtocolMessage" }, "Received message");
+    await this.messagingService.onReceiveProtocolMessage(
+      this.publicIdentifier,
+      async (
+        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, InboundChannelUpdateError>,
+        from: string,
+        inbox: string,
+      ) => {
+        if (from === this.publicIdentifier) {
+          return;
+        }
+        const method = "onReceiveProtocolMessage";
+        this.logger.debug({ method }, "Received message");
 
-      if (msg.isError) {
-        this.logger.error(
-          { method: "inbound", error: msg.getError()?.message },
-          "Error received from counterparty's initial message, this shouldn't happen",
+        if (msg.isError) {
+          this.logger.error(
+            { method, error: msg.getError()?.message },
+            "Error received from counterparty's initial message, this shouldn't happen",
+          );
+          return;
+        }
+
+        const received = msg.getValue();
+
+        // Verify that the message has the correct structure
+        const keys = Object.keys(received);
+        if (!keys.includes("update") || !keys.includes("previousUpdate")) {
+          this.logger.warn({ method, received: Object.keys(received) }, "Message malformed");
+          return;
+        }
+        const receivedError = this.validateParams(received.update, TChannelUpdate);
+        if (receivedError) {
+          this.logger.warn(
+            { method, update: received.update, error: receivedError },
+            "Received malformed proposed update",
+          );
+          return;
+        }
+        // Previous update may be undefined, but if it exists, validate
+        const previousError = this.validateParams(received.previousUpdate, TChannelUpdate);
+        if (previousError && received.previousUpdate) {
+          this.logger.warn(
+            { method, update: received.previousUpdate, error: previousError },
+            "Received malformed previous update",
+          );
+          return;
+        }
+
+        if (received.update.fromIdentifier === this.publicIdentifier) {
+          this.logger.debug({ method }, "Received update from ourselves, doing nothing");
+          return;
+        }
+
+        // validate and save
+        const inboundRes = await sync.inbound(
+          received.update,
+          received.previousUpdate,
+          inbox,
+          this.chainReader,
+          this.storeService,
+          this.messagingService,
+          this.externalValidationService,
+          this.signer,
+          this.logger,
         );
-        return;
-      }
+        if (inboundRes.isError) {
+          this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
+          return;
+        }
 
-      const received = msg.getValue();
+        const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
 
-      if (received.update.fromIdentifier === this.publicIdentifier) {
-        this.logger.debug({ method: "onReceiveProtocolMessage" }, "Received update from ourselves, doing nothing");
-        return;
-      }
-
-      // validate and save
-      const inboundRes = await sync.inbound(
-        received.update,
-        received.previousUpdate,
-        inbox,
-        this.chainReader,
-        this.storeService,
-        this.messagingService,
-        this.externalValidationService,
-        this.signer,
-        this.logger,
-      );
-      if (inboundRes.isError) {
-        this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
-        return;
-      }
-
-      const { updatedChannel, updatedActiveTransfers, updatedTransfer } = inboundRes.getValue();
-
-      this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
-        updatedChannelState: updatedChannel,
-        updatedTransfers: updatedActiveTransfers,
-        updatedTransfer: updatedTransfer,
-      });
-    });
+        this.evts[ProtocolEventName.CHANNEL_UPDATE_EVENT].post({
+          updatedChannelState: updatedChannel,
+          updatedTransfers: updatedActiveTransfers,
+          updatedTransfer: updatedTransfer,
+        });
+      },
+    );
 
     // TODO: https://github.com/connext/vector/issues/54
 
@@ -232,7 +258,7 @@ export class Vector implements IVectorProtocol {
     // connected, we must check this on startup
     // TODO: is there a better way to do this?
     await Promise.all(
-      channels.map(async channel => {
+      channels.map(async (channel) => {
         const currBlock = await this.chainReader.getBlockNumber(channel.networkContext.chainId);
         const disputeRes = await this.chainReader.getChannelDispute(
           channel.channelAddress,
@@ -271,13 +297,13 @@ export class Vector implements IVectorProtocol {
         // Register listeners to update all disputes while the protocol is
         // online and actively connected
         const contract = new Contract(channel.channelAddress, VectorChannel.abi, this.signer);
-        contract.on(contract.filters.ChannelDisputed(), async event => {
+        contract.on(contract.filters.ChannelDisputed(), async (event) => {
           await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, event.dispute);
         });
         // contract.on(contract.filters.ChannelDefunded(), async event => {
         //   await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, event.dispute);
         // });
-        contract.on(contract.filters.TransferDisputed(), async event => {
+        contract.on(contract.filters.TransferDisputed(), async (event) => {
           await this.storeService.saveChannelDispute(
             { ...channel, inDispute: true },
             { ...event.dispute, transferId: event.transferId },
@@ -285,37 +311,14 @@ export class Vector implements IVectorProtocol {
         });
       }),
     );
-    await Promise.all(
-      channels.map(channel =>
-        sync
-          .outbound(
-            getParamsFromUpdate(channel.latestUpdate, this.signer),
-            this.storeService,
-            this.chainReader,
-            this.messagingService,
-            this.externalValidationService,
-            this.signer,
-            this.logger,
-          )
-          .then(res => {
-            if (res.isError) {
-              this.logger.warn(
-                { channel: channel.channelAddress, error: res.getError()!.message! },
-                "Failed to sync on start",
-              );
-            }
-          }),
-      ),
-    );
     return this;
   }
 
   private validateParams(params: any, schema: any): undefined | OutboundChannelUpdateError {
-    const validate = ajv.compile(schema);
-    const valid = validate(params);
-    if (!valid) {
+    const error = validateSchema(params, schema);
+    if (error) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
-        errors: validate.errors?.map(e => e.message).join(),
+        error,
       });
     }
     return undefined;
@@ -498,7 +501,7 @@ export class Vector implements IVectorProtocol {
       return;
     }
 
-    Object.values(this.evts).forEach(evt => evt.detach());
+    Object.values(this.evts).forEach((evt) => evt.detach());
     await this.messagingService.disconnect();
   }
 }
