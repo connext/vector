@@ -23,6 +23,9 @@ fi
 if [[ -n $VECTOR_DATABASE_URL ]]
 then
   echo "Using provided database url env var"
+  if [[ "$VECTOR_DATABASE_URL" == sqlite://* ]]
+  then touch "${VECTOR_DATABASE_URL#sqlite://}"
+  fi
 
 elif [[ -n $VECTOR_PG_HOST ]]
 then
