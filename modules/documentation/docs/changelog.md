@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- add `sync` unit tests
+- clean `sync` code
 - remove syncing attempts on protocol startup
 
 ## 0.0.21

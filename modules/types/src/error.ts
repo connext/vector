@@ -162,6 +162,7 @@ export class InboundChannelUpdateError extends VectorError {
     StaleUpdate: "Update does not progress channel nonce",
     StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
     SaveChannelFailed: "Failed to save channel",
+    StoreFailure: "Failed to execute store method",
     SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
     SyncFailure: "Failed to sync channel from counterparty update",
     TransferNotFound: "No transfer found in storage",
