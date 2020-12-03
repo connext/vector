@@ -346,7 +346,7 @@ server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 server-node-arm: server-node-bundle $(shell find modules/server-node/ops $(find_options))
 	$(log_start)
-	DOCKER_TARGET_PLATFORM=linux/arm/v7 docker build --file modules/server-node/ops/arm.Dockerfile $(image_cache) --tag $(project)_node_arm modules/server-node
+	export DOCKER_TARGET_PLATFORM=linux/arm/v7; docker build --file modules/server-node/ops/arm.Dockerfile $(image_cache) --tag $(project)_node_arm modules/server-node
 	docker tag $(project)_node_arm $(project)_node_arm:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
