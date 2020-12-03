@@ -37,7 +37,7 @@ model Channel {
   transferRegistryAddress  String
   chainId                  String
   providerUrl              String
-  latestUpdate             Update
+  latestUpdate             Update?
   defundNonce              String
   inDispute                Boolean
 
