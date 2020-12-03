@@ -1,8 +1,8 @@
 import {
   getSignerAddressFromPublicIdentifier,
-  hashCoreTransferState,
   hashTransferState,
   getTransferId,
+  generateMerkleTreeData,
 } from "@connext/vector-utils";
 import {
   UpdateType,
@@ -22,9 +22,7 @@ import {
   ResolveUpdateDetails,
 } from "@connext/vector-types";
 import { HashZero, AddressZero } from "@ethersproject/constants";
-import { keccak256 } from "@ethersproject/keccak256";
 import pino from "pino";
-import { MerkleTree } from "merkletreejs";
 
 import { generateSignedChannelCommitment, getUpdatedChannelBalance, reconcileDeposit } from "./utils";
 
@@ -487,16 +485,12 @@ async function generateCreateUpdate(
     meta,
     inDispute: false,
   };
-  const transferHash = hashCoreTransferState(transferState);
-  const updatedTransfers = [...transfers, transferState];
-  const hashes = updatedTransfers.map((state) => {
-    return hashCoreTransferState(state);
-  });
-  const merkle = new MerkleTree(hashes, keccak256);
+  console.log("******* trying to create root + proof");
+  const { proof, root } = generateMerkleTreeData([...transfers, transferState], transferState);
+  console.log("******* successfully created root + proof");
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
-  const root = merkle.getHexRoot();
   const unsigned: ChannelUpdate<"create"> = {
     ...generateBaseUpdate(state, params, signer),
     balance: channelBalance,
@@ -508,8 +502,8 @@ async function generateCreateUpdate(
       balance,
       transferInitialState,
       transferEncodings: [stateEncoding, resolverEncoding],
-      merkleProofData: merkle.getHexProof(Buffer.from(transferHash)),
-      merkleRoot: root === "0x" ? HashZero : root,
+      merkleProofData: proof!,
+      merkleRoot: root,
       meta,
     },
   };
@@ -542,11 +536,7 @@ async function generateResolveUpdate(
   if (!transferToResolve) {
     return Result.fail(new Error(OutboundChannelUpdateError.reasons.TransferNotActive));
   }
-  const updatedTransfers = transfers.filter((x) => x.transferId !== transferId);
-  const hashes = updatedTransfers.map((state) => {
-    return hashCoreTransferState(state);
-  });
-  const merkle = new MerkleTree(hashes, keccak256);
+  const { root } = generateMerkleTreeData(transfers.filter((x) => x.transferId !== transferId));
 
   // Get the final transfer balance from contract
   const transferBalanceResult = await chainService.resolve(
@@ -577,7 +567,6 @@ async function generateResolveUpdate(
   );
 
   // Generate the unsigned update from the params
-  const root = merkle.getHexRoot();
   logger.info(
     {
       method: "generateResolveUpdate",
@@ -594,7 +583,7 @@ async function generateResolveUpdate(
       transferId,
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
-      merkleRoot: root === "0x" ? HashZero : root,
+      merkleRoot: root,
       meta,
     },
   };
