@@ -25,6 +25,8 @@ import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
 
+import { version } from "../package.json";
+
 import { InvalidTransferType } from "./errors";
 import {
   convertConditionalTransferParams,
@@ -137,7 +139,7 @@ export class VectorEngine implements IVectorEngine {
       }),
     );
     return Result.ok({
-      version: "x.x.x",
+      version,
       publicIdentifier: this.publicIdentifier,
       signerAddress: this.signerAddress,
       providerSyncing,
