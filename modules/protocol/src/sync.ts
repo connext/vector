@@ -18,7 +18,7 @@ import {
 } from "@connext/vector-types";
 import pino from "pino";
 
-import { validateChannelUpdateSignatures } from "./utils";
+import { extractContextFromStore, validateChannelUpdateSignatures } from "./utils";
 import { applyUpdate, generateAndApplyUpdate } from "./update";
 import { validateAndApplyInboundUpdate, validateUpdateParams } from "./validate";
 
@@ -43,34 +43,23 @@ export async function outbound(
   const method = "outbound";
 
   // First, pull all information out from the store
-  let activeTransfers: FullTransferState[] | undefined;
-  let previousState: FullChannelState | undefined;
-  let transfer: FullTransferState | undefined;
-  let storeMethod = "unknown";
-  try {
-    // will always need the previous state
-    storeMethod = "getChannelState";
-    previousState = await storeService.getChannelState(params.channelAddress);
-    // will only need active transfers for create/resolve
-    storeMethod = "getActiveTransfers";
-    activeTransfers =
-      params.type === UpdateType.resolve || params.type === UpdateType.create
-        ? await storeService.getActiveTransfers(params.channelAddress)
-        : undefined;
-    // will only need transfer for resolve
-    storeMethod = "getTransferState";
-    transfer =
-      params.type === UpdateType.resolve
-        ? await storeService.getTransferState((params.details as ResolveUpdateDetails).transferId)
-        : undefined;
-  } catch (e) {
+  const storeRes = await extractContextFromStore(
+    storeService,
+    params.type,
+    params.channelAddress,
+    params.type === UpdateType.resolve ? (params.details as ResolveUpdateDetails).transferId : undefined,
+  );
+  if (storeRes.isError) {
     return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.StoreFailure, params, previousState, {
-        message: e.message,
-        storeMethod,
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.StoreFailure, params, undefined, {
+        message: storeRes.getError()?.message,
+        method,
       }),
     );
   }
+
+  // eslint-disable-next-line prefer-const
+  let { activeTransfers, storedState: previousState, transfer } = storeRes.getValue();
 
   // Ensure parameters are valid, and action can be taken
   const validationRes = await validateUpdateParams(
@@ -82,11 +71,6 @@ export async function outbound(
     transfer,
   );
   if (validationRes.isError) {
-    logger.error({
-      method,
-      error: validationRes.getError()?.message,
-      context: validationRes.getError()?.context,
-    });
     return Result.fail(validationRes.getError()!);
   }
   logger.info({ method }, "Validated proposed parameters");
@@ -234,8 +218,6 @@ export async function inbound(
     InboundChannelUpdateError
   >
 > {
-  const channelFromStore = await storeService.getChannelState(update.channelAddress);
-
   // Create a helper to handle errors so the message is sent
   // properly to the counterparty
   const returnError = async (
@@ -252,6 +234,19 @@ export async function inbound(
     await messagingService.respondWithProtocolError(inbox, error);
     return Result.fail(error);
   };
+
+  const storeRes = await extractContextFromStore(
+    storeService,
+    update.type,
+    update.channelAddress,
+    update.type === UpdateType.resolve ? (update.details as ResolveUpdateDetails).transferId : undefined,
+  );
+  if (storeRes.isError) {
+    return returnError(InboundChannelUpdateError.reasons.StoreFailure);
+  }
+
+  // eslint-disable-next-line prefer-const
+  let { activeTransfers, storedState: channelFromStore, transfer } = storeRes.getValue();
 
   // Now that you have a valid starting state, you can try to apply the
   // update, and sync if necessary.
@@ -312,19 +307,22 @@ export async function inbound(
     }
 
     // Validate, apply, and cosign the update to sync
+    // TODO: remove validation here -- adds unnecessary overhead when an update
+    // is already double signed
     const validateRes = await validateAndApplyInboundUpdate(
-      previousUpdate,
-      previousState,
-      storeService,
       chainReader,
       externalValidation,
       signer,
+      previousUpdate,
+      previousState,
+      activeTransfers,
+      transfer,
     );
     if (validateRes.isError) {
       return returnError(validateRes.getError()!.message, previousUpdate, previousState);
     }
 
-    const { updatedChannel: syncedChannel, updatedTransfer } = validateRes.getValue()!;
+    const { updatedChannel: syncedChannel, updatedTransfer, updatedActiveTransfers } = validateRes.getValue()!;
 
     // Save the newly signed update to your channel
     try {
@@ -337,17 +335,20 @@ export async function inbound(
 
     // Set the previous state to the synced state
     previousState = syncedChannel;
+    activeTransfers = updatedActiveTransfers;
+    transfer = updatedTransfer;
   }
 
   // We now have the latest state for the update, and should be
   // able to play it on top of the update
   const validateRes = await validateAndApplyInboundUpdate(
-    update,
-    previousState,
-    storeService,
     chainReader,
     externalValidation,
     signer,
+    update,
+    previousState,
+    activeTransfers,
+    transfer,
   );
   if (validateRes.isError) {
     return returnError(validateRes.getError()!.message, update, previousState);

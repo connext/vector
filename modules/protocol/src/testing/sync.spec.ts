@@ -410,8 +410,8 @@ describe("inbound", () => {
         expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
         expect(store.saveChannelState.callCount).to.be.eq(2);
         expect(validationStub.callCount).to.be.eq(2);
-        expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
-        expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+        expect(validationStub.firstCall.args[3].nonce).to.be.eq(2);
+        expect(validationStub.secondCall.args[3].nonce).to.be.eq(3);
       };
 
       for (const proposalType of Object.keys(UpdateType)) {
@@ -472,8 +472,8 @@ describe("inbound", () => {
     const error = result.getError()!;
     expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.InboundValidationFailed);
     expect(validationStub.callCount).to.be.eq(2);
-    expect(validationStub.firstCall.args[0].nonce).to.be.eq(1);
-    expect(validationStub.secondCall.args[0].nonce).to.be.eq(2);
+    expect(validationStub.firstCall.args[3].nonce).to.be.eq(1);
+    expect(validationStub.secondCall.args[3].nonce).to.be.eq(2);
     // Make sure the calls were correctly performed
     expect(store.saveChannelState.callCount).to.be.eq(1);
     expect(messaging.respondToProtocolMessage.callCount).to.be.eq(0);
@@ -541,12 +541,12 @@ describe("inbound", () => {
     expect(messaging.respondWithProtocolError.callCount).to.be.eq(0);
     expect(store.saveChannelState.callCount).to.be.eq(2);
     expect(validationStub.callCount).to.be.eq(2);
-    expect(validationStub.firstCall.args[0].nonce).to.be.eq(2);
-    expect(validationStub.secondCall.args[0].nonce).to.be.eq(3);
+    expect(validationStub.firstCall.args[3].nonce).to.be.eq(2);
+    expect(validationStub.secondCall.args[3].nonce).to.be.eq(3);
   });
 });
 
-describe("outbound", () => {
+describe.only("outbound", () => {
   const chainProviders = env.chainProviders;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const providerUrl = Object.values(chainProviders)[0] as string;
@@ -618,7 +618,7 @@ describe("outbound", () => {
         expect(result.isError).to.be.eq(true);
         const error = result.getError()!;
         expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
-        expect(error.context.storeMethod).to.be.eq(method);
+        expect(error.context.message).to.include(method);
       });
     }
   });
