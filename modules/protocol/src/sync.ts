@@ -14,12 +14,11 @@ import {
   FullTransferState,
   IExternalValidation,
   ResolveUpdateDetails,
-  Balance,
 } from "@connext/vector-types";
 import pino from "pino";
 
 import { extractContextFromStore, validateChannelUpdateSignatures } from "./utils";
-import { applyUpdate, generateAndApplyUpdate } from "./update";
+import { generateAndApplyUpdate } from "./update";
 import { validateAndApplyInboundUpdate, validateUpdateParams } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
@@ -300,43 +299,37 @@ export async function inbound(
       return returnError(InboundChannelUpdateError.reasons.StaleChannel, previousUpdate, previousState);
     }
 
-    // Only sync an update IFF it is double signed
-    // NOTE: validation will ensure the signatures present are valid
-    if (!previousUpdate.aliceSignature || !previousUpdate.bobSignature) {
-      return returnError(InboundChannelUpdateError.reasons.SyncSingleSigned, previousUpdate, previousState);
-    }
-
-    // Validate, apply, and cosign the update to sync
-    // TODO: remove validation here -- adds unnecessary overhead when an update
-    // is already double signed
-    const validateRes = await validateAndApplyInboundUpdate(
+    const syncRes = await syncState(
+      previousUpdate,
+      previousState!,
+      activeTransfers,
+      undefined,
+      (message: string) =>
+        Result.fail(
+          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, previousUpdate, previousState, {
+            message,
+          }),
+        ),
+      storeService,
       chainReader,
       externalValidation,
       signer,
-      previousUpdate,
-      previousState,
-      activeTransfers,
-      transfer,
     );
-    if (validateRes.isError) {
-      return returnError(validateRes.getError()!.message, previousUpdate, previousState);
+    if (syncRes.isError) {
+      const error = syncRes.getError() as InboundChannelUpdateError;
+      return returnError(error.message, error.update, error.state, error.context);
     }
 
-    const { updatedChannel: syncedChannel, updatedTransfer, updatedActiveTransfers } = validateRes.getValue()!;
-
-    // Save the newly signed update to your channel
-    try {
-      await storeService.saveChannelState(syncedChannel, updatedTransfer);
-    } catch (e) {
-      return returnError(InboundChannelUpdateError.reasons.SaveChannelFailed, update, previousState, {
-        error: e.message,
-      });
-    }
+    const {
+      updatedTransfer: syncedTransfer,
+      updatedChannel: syncedChannel,
+      updatedActiveTransfers: syncedActiveTransfers,
+    } = syncRes.getValue();
 
     // Set the previous state to the synced state
     previousState = syncedChannel;
-    activeTransfers = updatedActiveTransfers;
-    transfer = updatedTransfer;
+    activeTransfers = syncedActiveTransfers;
+    transfer = syncedTransfer;
   }
 
   // We now have the latest state for the update, and should be
@@ -406,151 +399,47 @@ const syncStateAndRecreateUpdate = async (
   // parameters.
 
   const counterpartyUpdate = receivedError.update;
-  // NOTE: We do not want to sync a setup update here, because it is a
-  // bit of a pain -- the only time it is valid is if we are trying to
-  // send a setup update (otherwise validation would not allow you to
-  // get here), and we receive a setup update to sync. To sync the setup
-  // channel properly, we will have to handle the retry in the calling
-  // function, so just ignore for now.
-  if (counterpartyUpdate.type === UpdateType.setup) {
-    return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-        error: "Cannot sync setup update",
-        counterpartyError: receivedError.message,
-      }),
-    );
-  }
-
-  // As you receive an update to sync, it should *always* be double signed.
-  // If the update is not double signed, and the channel is out of sync,
-  // this is indicative of a different issue (perhaps lock failure?).
-  // Present signatures are already asserted to be valid via the validation,
-  // here simply assert the length
-  if (!counterpartyUpdate.aliceSignature || !counterpartyUpdate.bobSignature) {
-    return Result.fail(
-      new OutboundChannelUpdateError(
-        OutboundChannelUpdateError.reasons.SyncSingleSigned,
-        counterpartyUpdate,
-        previousState,
+  const syncRes = await syncState(
+    counterpartyUpdate,
+    previousState,
+    activeTransfers,
+    undefined,
+    (message: string) =>
+      Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
+          message,
+        }),
       ),
-    );
+    storeService,
+    chainReader,
+    externalValidationService,
+    signer,
+  );
+  if (syncRes.isError) {
+    return Result.fail(syncRes.getError() as OutboundChannelUpdateError);
   }
 
-  // Only sync if the nonces is ahead by 1
-  if (counterpartyUpdate.nonce !== previousState!.nonce + 1) {
-    return Result.fail(
-      new OutboundChannelUpdateError(
-        OutboundChannelUpdateError.reasons.SyncFailure,
-        counterpartyUpdate,
-        previousState,
-        { error: "Can only sync by 1" },
-      ),
-    );
-  }
-
-  // Apply the update + validate the signatures (NOTE: full validation is not
-  // needed here because the update is already signed)
-
-  // First, get active transfers from store if they were not retrieved. They
-  // will only be defined IFF the attemptedParams.type === create or resolve
-  // (this is done to save a store call). If the counterparty update is create
-  // or resolve, they must be fed into the `applyUpdate` function
-  const needTransfers = counterpartyUpdate.type === UpdateType.create || counterpartyUpdate.type === UpdateType.resolve;
-  if (!activeTransfers && needTransfers) {
-    try {
-      activeTransfers = await storeService.getActiveTransfers(previousState.channelAddress);
-    } catch (e) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-          error: "Failed to get active transfers",
-        }),
-      );
-    }
-  }
-  // Get final transfer balance IFF resolve
-  let finalTransferBalance: Balance | undefined;
-  if (counterpartyUpdate.type === UpdateType.resolve) {
-    // Get the final transfer balance from chain
-    const transfer = activeTransfers!.find((t) => t.transferId === counterpartyUpdate.details.transferId);
-    // FIXME: add bytecode!
-    if (!transfer) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-          transferId: counterpartyUpdate.details.transferId,
-          message: "Transfer not active",
-        }),
-      );
-    }
-    const resolveResult = await chainReader.resolve(transfer, previousState.networkContext.chainId);
-    if (resolveResult.isError) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-          message: "Failed to resolve",
-          error: resolveResult.getError()!.message,
-        }),
-      );
-    }
-    finalTransferBalance = resolveResult.getValue();
-  }
-  const applyRes = await applyUpdate(counterpartyUpdate, previousState, activeTransfers, finalTransferBalance);
-  if (applyRes.isError) {
-    return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-        error: applyRes.getError()!.message,
-      }),
-    );
-  }
   const {
     updatedTransfer: syncedTransfer,
     updatedChannel: syncedChannel,
     updatedActiveTransfers: syncedActiveTransfers,
-  } = applyRes.getValue();
-  const validSigsRes = await validateChannelUpdateSignatures(
-    syncedChannel,
-    counterpartyUpdate.aliceSignature,
-    counterpartyUpdate.bobSignature,
-    "both",
-  );
-  if (validSigsRes.isError) {
-    return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-        error: validSigsRes.getError()!.message,
-      }),
-    );
-  }
+  } = syncRes.getValue();
 
-  // Save the synced channel so your store is in sync
-  try {
-    await storeService.saveChannelState(syncedChannel, syncedTransfer);
-  } catch (e) {
-    return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-        error: `Failed to save channel: ${e.message}`,
-      }),
-    );
-  }
-
-  const method = "syncStateAndRecreateUpdate";
-  // Ensure parameters are valid for the synced channel state, and action can be taken
+  // Regenerate the proposed update
+  // Must go through validation again to ensure it is still a valid update
+  // against the newly synced channel
   const validationRes = await validateUpdateParams(
     signer,
     externalValidationService,
     attemptedParams,
-    previousState,
-    activeTransfers,
+    syncedChannel,
+    syncedActiveTransfers,
     syncedTransfer,
   );
   if (validationRes.isError) {
-    logger.error({
-      method,
-      error: validationRes.getError()?.message,
-      context: validationRes.getError()?.context,
-    });
     return Result.fail(validationRes.getError()!);
   }
 
-  // Channel successfully synced from counterparty, now
-  // regenerate the proposed update to send
   const generateRes = await generateAndApplyUpdate(
     signer,
     chainReader,
@@ -575,4 +464,83 @@ const syncStateAndRecreateUpdate = async (
   }
   // Return the updated channel state and the regenerated update
   return Result.ok({ ...generateRes.getValue(), syncedChannel });
+};
+
+const syncState = async (
+  toSync: ChannelUpdate,
+  previousState: FullChannelState,
+  activeTransfers: FullTransferState[] | undefined,
+  transfer: FullTransferState | undefined,
+  handleError: (message: string) => Result<any, OutboundChannelUpdateError | InboundChannelUpdateError>,
+  storeService: IVectorStore,
+  chainReader: IVectorChainReader,
+  externalValidation: IExternalValidation,
+  signer: IChannelSigner,
+) => {
+  // NOTE: We do not want to sync a setup update here, because it is a
+  // bit of a pain -- the only time it is valid is if we are trying to
+  // send a setup update (otherwise validation would not allow you to
+  // get here), and we receive a setup update to sync. To sync the setup
+  // channel properly, we will have to handle the retry in the calling
+  // function, so just ignore for now.
+  if (toSync.type === UpdateType.setup) {
+    return handleError("Cannot sync setup update");
+  }
+
+  // As you receive an update to sync, it should *always* be double signed.
+  // If the update is not double signed, and the channel is out of sync,
+  // this is indicative of a different issue (perhaps lock failure?).
+  // Present signatures are already asserted to be valid via the validation,
+  // here simply assert the length
+  if (!toSync.aliceSignature || !toSync.bobSignature) {
+    return handleError("Cannot sync single signed state");
+  }
+
+  // Only sync if the nonces is ahead by 1
+  if (toSync.nonce !== previousState.nonce + 1) {
+    return handleError("Can only sync by 1");
+  }
+
+  // Apply the update + validate the signatures (NOTE: full validation is not
+  // needed here because the update is already signed)
+
+  // First, get active transfers + required transfer if they do not exist.
+  // Done like this to avoid excess store calls during sync
+  const needTransfers = toSync.type === UpdateType.create || toSync.type === UpdateType.resolve;
+  if (needTransfers) {
+    try {
+      activeTransfers = activeTransfers || (await storeService.getActiveTransfers(previousState.channelAddress));
+    } catch (e) {
+      return handleError("Failed to get active transfers");
+    }
+  }
+
+  transfer =
+    toSync.type === UpdateType.resolve
+      ? transfer ?? activeTransfers?.find((t) => t.transferId === (toSync.details as ResolveUpdateDetails).transferId)
+      : undefined;
+
+  const validateRes = await validateAndApplyInboundUpdate(
+    chainReader,
+    externalValidation,
+    signer,
+    toSync,
+    previousState,
+    activeTransfers,
+    transfer,
+  );
+  if (validateRes.isError) {
+    return handleError(validateRes.getError()!.message);
+  }
+
+  // Save synced state
+  const { updatedChannel: syncedChannel, updatedTransfer } = validateRes.getValue()!;
+  try {
+    await storeService.saveChannelState(syncedChannel, updatedTransfer);
+  } catch (e) {
+    return handleError(e.message);
+  }
+
+  // Return synced state
+  return Result.ok(validateRes.getValue());
 };
