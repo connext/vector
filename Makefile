@@ -37,7 +37,7 @@ default: dev
 dev: messaging node router duet trio test-runner-js
 prod: messaging-prod node-prod router-prod test-runner
 arm: server-node-arm
-all: dev prod iframe-app arm
+all: dev prod iframe-app
 
 messaging: auth-js ethprovider messaging-proxy nats
 messaging-prod: auth-img messaging-proxy nats
