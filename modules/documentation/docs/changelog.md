@@ -2,6 +2,18 @@
 
 ## Next Release
 
+## 0.0.23
+
+- add `sync` unit tests
+- clean `sync` code
+- remove syncing attempts on protocol startup
+- add message schema validation to inbound protocol updates
+- bring images and packages back in sync
+
+## 0.0.21
+
+- fix `iframe-app` docker image to not override env vars on start
+
 ## 0.0.20
 
 - fix allowance bug in `chainReader` for token deposits

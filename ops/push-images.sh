@@ -7,7 +7,7 @@ registry=$(grep -m 1 '"registry":' "$root/package.json" | cut -d '"' -f 4)
 release=$(grep -m 1 '"version":' "$root/package.json" | cut -d '"' -f 4)
 commit=$(git rev-parse HEAD | head -c 8)
 
-images="auth builder database ethprovider global_proxy nats node node_proxy router router_proxy test_runner iframe_app"
+images="auth builder database ethprovider messaging_proxy nats node node_proxy router router_proxy test_runner iframe_app"
 
 # Also push a semver-tagged image if we're on prod
 if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" || "${GITHUB_REF##*/}" == "prod" ]]

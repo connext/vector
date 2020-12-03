@@ -61,10 +61,9 @@ export async function applyUpdate<T extends UpdateType>(
 > {
   const { type, details, channelAddress, fromIdentifier, toIdentifier, balance, assetId, nonce } = update;
 
-  const assetIdx = (previousState?.assetIds ?? []).findIndex(a => a === assetId);
+  const assetIdx = (previousState?.assetIds ?? []).findIndex((a) => a === assetId);
 
-  // Sanity check (this is not necessary, since this function is called
-  // after validation) so we can force unwrap safely
+  // Sanity check data presence so it is safe to force-unwrap
   if (!previousState && type !== UpdateType.setup) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
@@ -73,6 +72,14 @@ export async function applyUpdate<T extends UpdateType>(
     );
   }
   if (!finalTransferBalance && type === UpdateType.resolve) {
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
+        applyError: "No final transfer balance on resolve",
+      }),
+    );
+  }
+  const needsActive = type === UpdateType.create || type === UpdateType.resolve;
+  if (needsActive && !previousActiveTransfers) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
         applyError: "No final transfer balance on resolve",
@@ -177,7 +184,14 @@ export async function applyUpdate<T extends UpdateType>(
     case UpdateType.resolve: {
       const { merkleRoot, transferId, transferResolver, meta } = details as ResolveUpdateDetails;
       // Safe to force unwrap because the validation has been performed
-      const transfer = previousActiveTransfers!.find(t => t.transferId === transferId)!;
+      const transfer = previousActiveTransfers!.find((t) => t.transferId === transferId);
+      if (!transfer) {
+        return Result.fail(
+          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.TransferNotFound, update, previousState, {
+            applyError: "No transfer found in activeTransfers",
+          }),
+        );
+      }
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
       const updatedChannel = {
         ...previousState!,
@@ -198,7 +212,7 @@ export async function applyUpdate<T extends UpdateType>(
       return Result.ok({
         updatedChannel,
         updatedTransfer: resolvedTransfer,
-        updatedActiveTransfers: previousActiveTransfers!.filter(t => t.transferId !== transferId),
+        updatedActiveTransfers: previousActiveTransfers!.filter((t) => t.transferId !== transferId),
       });
     }
     default: {
@@ -381,7 +395,7 @@ async function generateDepositUpdate(
   // Determine the locked value and existing balance using the
   // assetIdx
   const { assetId } = params.details;
-  const assetIdx = state.assetIds.findIndex(a => a === assetId);
+  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
   const existingChannelBalance =
     assetIdx === -1 ? { to: [state.alice, state.bob], amount: ["0", "0"] } : state.balances[assetIdx];
   const processedDepositsAOfAssetId = assetIdx === -1 ? "0" : state.processedDepositsA[assetIdx];
@@ -476,7 +490,7 @@ async function generateCreateUpdate(
   };
   const transferHash = hashCoreTransferState(transferState);
   const updatedTransfers = [...transfers, transferState];
-  const hashes = updatedTransfers.map(state => {
+  const hashes = updatedTransfers.map((state) => {
     return hashCoreTransferState(state);
   });
   const merkle = new MerkleTree(hashes, keccak256);
@@ -521,7 +535,7 @@ async function generateResolveUpdate(
   const { transferId, transferResolver, meta } = params.details;
 
   // First generate latest merkle tree data
-  const transferToResolve = transfers.find(x => x.transferId === transferId);
+  const transferToResolve = transfers.find((x) => x.transferId === transferId);
   logger.info(
     { method: "generateResolveUpdate", numTransfers: transfers.length, channelAddress: state.channelAddress },
     "Generating resolve update",
@@ -529,8 +543,8 @@ async function generateResolveUpdate(
   if (!transferToResolve) {
     return Result.fail(new Error(OutboundChannelUpdateError.reasons.TransferNotActive));
   }
-  const updatedTransfers = transfers.filter(x => x.transferId !== transferId);
-  const hashes = updatedTransfers.map(state => {
+  const updatedTransfers = transfers.filter((x) => x.transferId !== transferId);
+  const hashes = updatedTransfers.map((state) => {
     return hashCoreTransferState(state);
   });
   const merkle = new MerkleTree(hashes, keccak256);
@@ -615,7 +629,7 @@ function getUpdatedChannelBalance(
   initiator: string,
 ): Balance {
   // Get the existing balances to update
-  const assetIdx = state.assetIds.findIndex(a => a === assetId);
+  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
   if (assetIdx === -1) {
     throw new Error(`Asset id not found in channel ${assetId}`);
   }
@@ -625,12 +639,8 @@ function getUpdatedChannelBalance(
   // based on the transfer amount using the update type
   const updateExistingAmount = (existingBalance: string, transferBalance: string): string => {
     return type === UpdateType.create
-      ? BigNumber.from(existingBalance)
-          .sub(transferBalance)
-          .toString()
-      : BigNumber.from(existingBalance)
-          .add(transferBalance)
-          .toString();
+      ? BigNumber.from(existingBalance).sub(transferBalance).toString()
+      : BigNumber.from(existingBalance).add(transferBalance).toString();
   };
 
   // NOTE: in the transfer.balance, there is no guarantee that the
@@ -666,7 +676,7 @@ function reconcileBalanceWithExisting(
   assetIds: string[],
 ): Balance[] {
   // Update the balances array at the appropriate index
-  const assetIdx = assetIds.findIndex(a => a === assetToReconcile);
+  const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
   if (assetIdx === -1) {
     // Add new balance to array (new asset id)
     return [...existing, balanceToReconcile];
@@ -687,7 +697,7 @@ function reconcileProcessedDepositsWithExisting(
   assetIds: string[],
 ): { processedDepositsA: string[]; processedDepositsB: string[] } {
   // Update the arrays at the appropriate index
-  const assetIdx = assetIds.findIndex(a => a === assetToReconcile);
+  const assetIdx = assetIds.findIndex((a) => a === assetToReconcile);
   if (assetIdx === -1) {
     // Add new deposit to array (new asset id)
     return {

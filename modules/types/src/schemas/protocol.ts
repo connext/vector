@@ -2,14 +2,7 @@ import { Static, Type } from "@sinclair/typebox";
 
 import { TBytes32, TransferResolverSchema, TransferStateSchema } from "../schemas";
 
-import {
-  TAddress,
-  TBalance,
-  TBasicMeta,
-  TIntegerString,
-  TPublicIdentifier,
-  TSetupUpdateDetails,
-} from "./basic";
+import { TAddress, TBalance, TBasicMeta, TIntegerString, TPublicIdentifier, TSetupUpdateDetails } from "./basic";
 
 ////////////////////////////////////////
 // Protocol API Parameter schemas
