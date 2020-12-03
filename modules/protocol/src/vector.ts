@@ -134,11 +134,6 @@ export class Vector implements IVectorProtocol {
       method: "executeUpdate",
       step: "start",
       params,
-    });
-    this.logger.info({
-      method: "executeUpdate",
-      step: "start",
-      type: params.type,
       channelAddress: params.channelAddress,
       updateSender: this.publicIdentifier,
     });

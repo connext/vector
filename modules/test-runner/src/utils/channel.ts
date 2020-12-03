@@ -212,7 +212,7 @@ export const withdraw = async (
   expect(withdrawalRes.getError()).to.be.undefined;
   const { transactionHash } = withdrawalRes.getValue()!;
   expect(transactionHash).to.be.ok;
-  await provider1.waitForTransaction(transactionHash!);
+  await provider.waitForTransaction(transactionHash!);
 
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue();
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
