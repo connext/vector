@@ -3,7 +3,6 @@ name: Feature Branch
 on: push
 
 jobs:
-  jobs:
   build:
     runs-on: ubuntu-20.04
     env:
