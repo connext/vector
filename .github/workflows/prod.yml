@@ -10,7 +10,7 @@ jobs:
     env:
       DOCKER_USER: ${{ secrets.DOCKER_USER }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -23,7 +23,7 @@ jobs:
     env:
       MESSAGING_DOMAINNAME: messaging.connext.network
       TESTNET_DOMAINNAME: testnet-vector.connext.network
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - name: test connection to messaging server
@@ -40,7 +40,7 @@ jobs:
           CMD: 'echo "Successfully connected to $TESTNET_DOMAINNAME: `hostname`";'
 
   docs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -50,49 +50,49 @@ jobs:
       - run: cd modules/documentation && mkdocs gh-deploy --force && cd ../..
 
   utils:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make test-utils
 
   contracts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make test-contracts
 
   protocol:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make test-protocol
 
   engine:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make test-engine
 
   server-node:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make test-server-node
 
   browser-node:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make test-browser-node
 
   router:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make test-router
 
   messaging:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -104,7 +104,7 @@ jobs:
         run: docker service logs --tail 200 messaging_auth
 
   duet:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -118,7 +118,7 @@ jobs:
           docker service logs --tail 200 trio_bob
 
   trio:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -134,7 +134,7 @@ jobs:
           docker service logs --tail 200 trio_dave
 
   node:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -146,7 +146,7 @@ jobs:
         run: docker service logs --tail 200 node_node
 
   routing-node:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -160,7 +160,7 @@ jobs:
           docker service logs --tail 200 router_router
 
   messaging-prod:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [build]
     steps:
       - uses: actions/checkout@v1
@@ -173,7 +173,7 @@ jobs:
         run: docker service ls && docker service logs --tail 200 messaging_auth
 
   routing-node-prod:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [build]
     steps:
       - uses: actions/checkout@v1
@@ -190,7 +190,7 @@ jobs:
     env:
       DOMAINNAME: messaging.connext.network
     needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - name: deploy messaging service to production
@@ -210,7 +210,7 @@ jobs:
       DOMAINNAME: testnet-vector.connext.network
       MESSAGING_URL: https://messaging.connext.network
     needs: [ssh, utils, contracts, protocol, engine, server-node, browser-node, router, messaging, duet, trio, node, routing-node, messaging-prod, routing-node-prod]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
       - name: deploy testnet node to prod server
