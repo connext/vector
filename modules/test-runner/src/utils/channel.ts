@@ -54,7 +54,6 @@ export const deposit = async (
       channelAddress,
       publicIdentifier: depositor.publicIdentifier,
     });
-    console.log("tx: ", tx.getError());
     await provider.waitForTransaction(tx.getValue().txHash);
   } else {
     const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: amount });
@@ -108,12 +107,8 @@ export const transfer = async (
   const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
   const routingId = getRandomBytes32();
 
-  const senderCreatePromise = sender
-    .waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000)
-    .then((data) => console.log("senderCreatePromise: ", data));
-  const receiverCreatePromise = receiver
-    .waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000)
-    .then((data) => console.log("receiverCreatePromise: ", data));
+  const senderCreatePromise = sender.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
+  const receiverCreatePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 30_000);
   const transferRes = await sender.conditionalTransfer({
     publicIdentifier: sender.publicIdentifier,
     amount: amount.toString(),
@@ -140,8 +135,6 @@ export const transfer = async (
   const senderBalanceAfterTransfer = getBalanceForAssetId(senderChannelAfterTransfer, assetId, senderAliceOrBob);
   expect(senderBalanceAfterTransfer).to.be.eq(BigNumber.from(senderBefore).sub(amount));
   const [senderCreate, receiverCreate] = await Promise.all([senderCreatePromise, receiverCreatePromise]);
-  console.log("receiverCreate: ", receiverCreate);
-  console.log("senderCreate: ", senderCreate);
   expect(senderCreate).to.be.ok;
   expect(receiverCreate).to.be.ok;
 
@@ -192,7 +185,9 @@ export const withdraw = async (
 
   const preWithdrawCarol = getBalanceForAssetId(preWithdrawChannel, assetId, withdrawerAliceOrBob);
   const preWithdrawMultisig = await getOnchainBalance(assetId, preWithdrawChannel.channelAddress);
+  console.log("preWithdrawMultisig: ", preWithdrawMultisig.toString());
   const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
+  console.log("preWithdrawRecipient: ", preWithdrawRecipient.toString());
 
   // Perform withdrawal
   const withdrawalRes = await withdrawer.withdraw({
@@ -202,7 +197,7 @@ export const withdraw = async (
     assetId,
     recipient: withdrawRecipient,
     fee: "0",
-    meta: { reason: "Test withdrawing" },
+    meta: { reason: "Test withdrawal" },
   });
   expect(withdrawalRes.getError()).to.be.undefined;
   const { transactionHash } = withdrawalRes.getValue()!;
@@ -212,11 +207,19 @@ export const withdraw = async (
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue();
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
   const postWithdrawMultisig = await getOnchainBalance(assetId, channelAddress);
+  console.log("postWithdrawMultisig: ", postWithdrawMultisig.toString());
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
+  console.log("postWithdrawRecipient: ", postWithdrawRecipient.toString());
 
   // Verify balance changes
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
   expect(postWithdrawMultisig).to.be.eq(BigNumber.from(preWithdrawMultisig).sub(amount));
-  expect(postWithdrawRecipient).to.be.eq(amount.add(preWithdrawRecipient));
+  if (withdrawerAliceOrBob === "alice") {
+    // use "above" because Alice sends withdrawal for Bob
+    // TODO: calculate gas
+    expect(postWithdrawRecipient).to.be.above(preWithdrawRecipient as any); // chai matchers arent getting this
+  } else {
+    expect(postWithdrawRecipient).to.be.eq(amount.add(preWithdrawRecipient));
+  }
   return postWithdrawChannel;
 };

@@ -42,7 +42,7 @@ describe(testName, () => {
 
     await deposit(aliceService, bobService, aliceBobPostSetup.channelAddress, assetId, depositAmt);
     // alice to bob
-    const postTransfer1 = await transfer(
+    await transfer(
       aliceService,
       bobService,
       aliceBobPostSetup.channelAddress,
@@ -50,9 +50,7 @@ describe(testName, () => {
       assetId,
       transferAmt,
     );
-    console.log("postTransfer1: ", JSON.stringify(postTransfer1, null, 2));
-    const postDeposit2 = await deposit(bobService, aliceService, aliceBobPostSetup.channelAddress, assetId, depositAmt);
-    console.log("postDeposit2: ", JSON.stringify(postDeposit2, null, 2));
+    await deposit(bobService, aliceService, aliceBobPostSetup.channelAddress, assetId, depositAmt);
     // bob to alice
     await transfer(
       bobService,
