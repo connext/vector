@@ -14,18 +14,29 @@ then
   export VECTOR_PG_PASSWORD
 fi
 
+
+########################################
+# Config database url
+
 if [[ -n $VECTOR_DATABASE_URL ]]
 then
   echo "Using provided database url env var"
+  if [[ "$VECTOR_DATABASE_URL" == sqlite://* ]]
+  then touch "${VECTOR_DATABASE_URL#sqlite://}"
+  fi
 
 elif [[ -n $VECTOR_PG_HOST ]]
 then
+  echo "Using configured Postgres store at $VECTOR_PG_HOST"
   export VECTOR_DATABASE_URL="postgresql://$VECTOR_PG_USERNAME:$VECTOR_PG_PASSWORD@${VECTOR_PG_HOST}:$VECTOR_PG_PORT/$VECTOR_PG_DATABASE"
 
 else
-  echo "Fatal: No VECTOR_DATABASE_URL or VECTOR_PG_* env vars provided"
-  exit 1
+  sqlite_file=${VECTOR_SQLITE_FILE:-/tmp/store.sqlite}
+  echo "Using SQLite store at $sqlite_file"
+  touch "$sqlite_file"
+  export VECTOR_DATABASE_URL="sqlite://$sqlite_file"
 fi
+echo "VECTOR_DATABASE_URL: $VECTOR_DATABASE_URL"
 
 ########################################
 # Wait for dependencies to wake up
