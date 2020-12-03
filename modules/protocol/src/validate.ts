@@ -2,7 +2,6 @@ import {
   UpdateType,
   ChannelUpdate,
   FullChannelState,
-  IVectorStore,
   Result,
   IChannelSigner,
   UpdateParams,
@@ -53,12 +52,13 @@ export async function validateUpdateParams<T extends UpdateType = any>(
 // by `sync.inbound` (primarily), which is registered on a messaging
 // callback.
 export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
-  update: ChannelUpdate<T>,
-  previousState: FullChannelState | undefined,
-  storeService: IVectorStore,
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
+  update: ChannelUpdate<T>,
+  previousState: FullChannelState | undefined,
+  activeTransfers: FullTransferState[] | undefined,
+  transfer: FullTransferState | undefined,
 ): Promise<
   Result<
     {
@@ -69,20 +69,41 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     InboundChannelUpdateError
   >
 > {
-  // Validate + apply the update
-  const res = await validateAndApplyChannelUpdate(update, previousState, storeService, chainReader, externalValidation);
-  if (res.isError) {
-    return Result.fail(res.getError()!);
+  // Apply update and validate signatures before validating the actual update.
+  // By doing it in this order, we can exit early if both signatures on the
+  // update are present and valid
+
+  // Apply the proposed update
+  let finalTransferBalance: Balance | undefined = undefined;
+  if (update.type === UpdateType.resolve) {
+    // Resolve updates require the final transfer balance from the chainReader
+    const transferBalanceResult = await chainReader.resolve(
+      { ...transfer!, transferResolver: (update.details as ResolveUpdateDetails).transferResolver },
+      previousState!.networkContext.chainId,
+    );
+
+    if (transferBalanceResult.isError) {
+      return Result.fail(
+        new InboundChannelUpdateError(transferBalanceResult.getError()!.message as any, update, previousState),
+      );
+    }
+    finalTransferBalance = transferBalanceResult.getValue();
   }
 
-  const { updatedChannel, updatedTransfer, updatedActiveTransfers } = res.getValue();
+  const applyRes = await applyUpdate(update, previousState, activeTransfers, finalTransferBalance);
+  if (applyRes.isError) {
+    return Result.fail(applyRes.getError()!);
+  }
 
-  // Verify at least one signature exists (and any present are valid)
+  const { updatedChannel, updatedTransfer, updatedActiveTransfers } = applyRes.getValue();
+
+  // Check the signatures
+  const doubleSigned = update.aliceSignature && update.bobSignature;
   const sigRes = await validateChannelUpdateSignatures(
     updatedChannel,
     update.aliceSignature,
     update.bobSignature,
-    signer.address === updatedChannel.bob ? "alice" : "bob",
+    doubleSigned ? "both" : signer.address === updatedChannel.bob ? "alice" : "bob",
   );
   if (sigRes.isError) {
     return Result.fail(
@@ -90,6 +111,35 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
         error: sigRes.getError().message,
       }),
     );
+  }
+
+  // If the update is double signed, return without further validation
+  if (doubleSigned) {
+    return Result.ok({
+      updatedChannel: {
+        ...updatedChannel,
+        latestUpdate: {
+          ...updatedChannel.latestUpdate,
+          aliceSignature: update.aliceSignature,
+          bobSignature: update.bobSignature,
+        },
+      },
+      updatedActiveTransfers,
+      updatedTransfer,
+    });
+  }
+
+  // Validate the update before adding signature
+  const res = await validateAndApplyChannelUpdate(
+    chainReader,
+    externalValidation,
+    update,
+    previousState,
+    activeTransfers,
+    transfer,
+  );
+  if (res.isError) {
+    return Result.fail(res.getError()!);
   }
 
   // Generate the cosigned commitment
@@ -121,20 +171,14 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
 
 // This function will take in a requested update from the counterparty,
 // validate it, and apply it.
-type InboundValidationResult = Result<
-  {
-    updatedChannel: FullChannelState;
-    updatedActiveTransfers?: FullTransferState[];
-    updatedTransfer?: FullTransferState;
-  },
-  InboundChannelUpdateError
->;
+type InboundValidationResult = Result<void, InboundChannelUpdateError>;
 async function validateAndApplyChannelUpdate<T extends UpdateType>(
-  counterpartyUpdate: ChannelUpdate<T>,
-  previousState: FullChannelState | undefined,
-  storeService: IVectorStore,
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
+  counterpartyUpdate: ChannelUpdate<T>,
+  previousState: FullChannelState | undefined,
+  activeTransfers: FullTransferState[] | undefined,
+  transfer: FullTransferState | undefined,
 ): Promise<InboundValidationResult> {
   // Create a helper to handle errors properly
   const returnError = (
@@ -164,8 +208,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   }
 
   const { channelAddress, details, type } = counterpartyUpdate;
-  // Get the active transfers for the channel
-  const activeTransfers = await storeService.getActiveTransfers(channelAddress);
 
   // Perform all common update validation -- see note above
   // calling function
@@ -179,12 +221,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
 
   // Perform update-type specific validation
 
-  // You will need the final transfer balance when applying the
-  // resolve update. See note in `applyUpdate`.
-  let finalTransferBalance: Balance | undefined = undefined;
-  // You will also need access to the stored transfer for any
-  // external validation when resolving
-  let storedTransfer: FullTransferState | undefined = undefined;
   switch (type) {
     case UpdateType.setup: {
       // Verify details are properly structured
@@ -259,28 +295,16 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       const { transferId, transferResolver } = details as ResolveUpdateDetails;
 
       // Ensure transfer exists in store / retrieve for validation
-      storedTransfer = await storeService.getTransferState(transferId);
-      if (!storedTransfer) {
+      if (!transfer) {
         return returnError(ValidationError.reasons.TransferNotFound);
       }
 
       // Ensure the transfer is active
-      if (!activeTransfers.find((t) => t.transferId === transferId)) {
+      if (!activeTransfers!.find((t) => t.transferId === transferId)) {
         return returnError(ValidationError.reasons.TransferNotActive, previousState, {
-          activeTransfers: activeTransfers.map((t) => t.transferId).join(","),
+          activeTransfers: activeTransfers!.map((t) => t.transferId).join(","),
         });
       }
-
-      // Get the final transfer balance from contract
-      const transferBalanceResult = await chainReader.resolve(
-        { ...storedTransfer, transferResolver },
-        previousState!.networkContext.chainId,
-      );
-
-      if (transferBalanceResult.isError) {
-        throw transferBalanceResult.getError()!;
-      }
-      finalTransferBalance = transferBalanceResult.getValue()!;
 
       // Ensure the transfer exists within the active transfers
 
@@ -304,19 +328,12 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   }
 
   // All default validation is performed, now perform external validation
-  const externalRes = await externalValidation.validateInbound(counterpartyUpdate, previousState, storedTransfer);
+  const externalRes = await externalValidation.validateInbound(counterpartyUpdate, previousState, transfer);
   if (externalRes.isError) {
     return returnError(ValidationError.reasons.ExternalValidationFailed, previousState, {
       validationError: externalRes.getError()!.message,
     });
   }
 
-  // Apply the update
-  const applyRes = await applyUpdate(counterpartyUpdate, previousState, activeTransfers, finalTransferBalance);
-  if (applyRes.isError) {
-    // Returns an inbound channel error, so don't use helper to preserve
-    // apply error
-    return Result.fail(applyRes.getError()!);
-  }
-  return Result.ok(applyRes.getValue());
+  return Result.ok(undefined);
 }

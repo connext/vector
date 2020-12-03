@@ -313,28 +313,6 @@ export class Vector implements IVectorProtocol {
         });
       }),
     );
-    await Promise.all(
-      channels.map((channel) =>
-        sync
-          .outbound(
-            getParamsFromUpdate(channel.latestUpdate, this.signer),
-            this.storeService,
-            this.chainReader,
-            this.messagingService,
-            this.externalValidationService,
-            this.signer,
-            this.logger,
-          )
-          .then((res) => {
-            if (res.isError) {
-              this.logger.warn(
-                { channel: channel.channelAddress, error: res.getError()!.message! },
-                "Failed to sync on start",
-              );
-            }
-          }),
-      ),
-    );
     return this;
   }
 

@@ -6,8 +6,10 @@ import {
   CreateUpdateDetails,
   DepositParams,
   FullChannelState,
+  FullTransferState,
   IChannelSigner,
   IVectorChainReader,
+  IVectorStore,
   ResolveTransferParams,
   ResolveUpdateDetails,
   Result,
@@ -31,6 +33,45 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
     return validate.errors?.map((e) => e.message).join();
   }
   return undefined;
+};
+
+export const extractContextFromStore = async (
+  storeService: IVectorStore,
+  type: UpdateType,
+  channelAddress: string,
+  transferId?: string,
+): Promise<
+  Result<
+    {
+      activeTransfers: FullTransferState[] | undefined;
+      storedState: FullChannelState | undefined;
+      transfer: FullTransferState | undefined;
+    },
+    Error
+  >
+> => {
+  // First, pull all information out from the store
+  let activeTransfers: FullTransferState[] | undefined;
+  let storedState: FullChannelState | undefined;
+  let transfer: FullTransferState | undefined;
+  let storeMethod = "getChannelState";
+  try {
+    // will always need the previous state
+    storedState = await storeService.getChannelState(channelAddress);
+    // will only need active transfers for create/resolve
+    storeMethod = "getActiveTransfers";
+    activeTransfers =
+      type === UpdateType.resolve || type === UpdateType.create
+        ? await storeService.getActiveTransfers(channelAddress)
+        : undefined;
+    // will only need transfer for resolve
+    storeMethod = "getTransferState";
+    transfer = type === UpdateType.resolve ? await storeService.getTransferState(transferId!) : undefined;
+  } catch (e) {
+    return Result.fail(new Error(`${storeMethod} failed: ${e.message}`));
+  }
+
+  return Result.ok({ activeTransfers, storedState, transfer });
 };
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which

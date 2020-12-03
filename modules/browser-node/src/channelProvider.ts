@@ -25,7 +25,7 @@ export interface IframeOptions {
 
 export function renderElement(name: string, attr: any, target: HTMLElement): HTMLElement {
   const elm = document.createElement(name);
-  Object.keys(attr).forEach(key => {
+  Object.keys(attr).forEach((key) => {
     elm[key] = attr[key];
   });
   target.appendChild(elm);
@@ -62,7 +62,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   static async connect(opts: IframeOptions): Promise<IframeChannelProvider> {
     const cp = new IframeChannelProvider(opts);
-    await new Promise(async res => {
+    await new Promise(async (res) => {
       if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", async () => {
           await cp.open();
@@ -95,15 +95,12 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       if (this.iframe.contentWindow === null) {
         throw new Error("iframe inner page not loaded!");
       }
-      this.events.once(`${rpc.id}`, response => {
-        if (response?.result) {
-          resolve(response?.result);
+      this.events.once(`${rpc.id}`, (response) => {
+        if (response?.error?.message) {
+          console.error("response.error: ", response.error);
+          reject(new Error(response.error.message));
         } else {
-          if (response?.error?.message) {
-            reject(new Error(response.error.message));
-          } else {
-            reject(new Error(`Failed request for method: ${rpc.method}`));
-          }
+          resolve(response?.result);
         }
       });
       this.iframe.contentWindow.postMessage(JSON.stringify(rpc), "*");
@@ -116,7 +113,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
         event,
         once: false,
       });
-      return this.send(rpc).then(id => {
+      return this.send(rpc).then((id) => {
         this.events.on(id, listener);
       });
     }
@@ -129,7 +126,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
         event,
         once: true,
       });
-      return this.send(rpc).then(id => {
+      return this.send(rpc).then((id) => {
         this.events.once(id, listener);
       });
     }
@@ -154,7 +151,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     if (window.document.getElementById(this.opts.id)) {
       return Promise.resolve(); // already exists
     }
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       this.events.on("iframe-initialized", () => {
         this.onConnect();
         resolve();
