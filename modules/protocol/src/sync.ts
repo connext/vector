@@ -13,7 +13,6 @@ import {
   IVectorChainReader,
   FullTransferState,
   IExternalValidation,
-  ResolveUpdateDetails,
 } from "@connext/vector-types";
 import pino from "pino";
 
@@ -42,12 +41,7 @@ export async function outbound(
   const method = "outbound";
 
   // First, pull all information out from the store
-  const storeRes = await extractContextFromStore(
-    storeService,
-    params.type,
-    params.channelAddress,
-    params.type === UpdateType.resolve ? (params.details as ResolveUpdateDetails).transferId : undefined,
-  );
+  const storeRes = await extractContextFromStore(storeService, params.channelAddress);
   if (storeRes.isError) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.StoreFailure, params, undefined, {
@@ -58,7 +52,7 @@ export async function outbound(
   }
 
   // eslint-disable-next-line prefer-const
-  let { activeTransfers, storedState: previousState, transfer } = storeRes.getValue();
+  let { activeTransfers, channelState: previousState } = storeRes.getValue();
 
   // Ensure parameters are valid, and action can be taken
   const validationRes = await validateUpdateParams(
@@ -68,7 +62,6 @@ export async function outbound(
     params,
     previousState,
     activeTransfers,
-    transfer,
   );
   if (validationRes.isError) {
     return Result.fail(validationRes.getError()!);
@@ -233,18 +226,13 @@ export async function inbound(
     return Result.fail(error);
   };
 
-  const storeRes = await extractContextFromStore(
-    storeService,
-    update.type,
-    update.channelAddress,
-    update.type === UpdateType.resolve ? (update.details as ResolveUpdateDetails).transferId : undefined,
-  );
+  const storeRes = await extractContextFromStore(storeService, update.channelAddress);
   if (storeRes.isError) {
     return returnError(InboundChannelUpdateError.reasons.StoreFailure);
   }
 
   // eslint-disable-next-line prefer-const
-  let { activeTransfers, storedState: channelFromStore, transfer } = storeRes.getValue();
+  let { activeTransfers, channelState: channelFromStore } = storeRes.getValue();
 
   // Now that you have a valid starting state, you can try to apply the
   // update, and sync if necessary.
@@ -302,7 +290,6 @@ export async function inbound(
       previousUpdate,
       previousState!,
       activeTransfers,
-      undefined,
       (message: string) =>
         Result.fail(
           new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, previousUpdate, previousState, {
@@ -319,16 +306,11 @@ export async function inbound(
       return returnError(error.message, error.update, error.state, error.context);
     }
 
-    const {
-      updatedTransfer: syncedTransfer,
-      updatedChannel: syncedChannel,
-      updatedActiveTransfers: syncedActiveTransfers,
-    } = syncRes.getValue();
+    const { updatedChannel: syncedChannel, updatedActiveTransfers: syncedActiveTransfers } = syncRes.getValue();
 
     // Set the previous state to the synced state
     previousState = syncedChannel;
     activeTransfers = syncedActiveTransfers;
-    transfer = syncedTransfer;
   }
 
   // We now have the latest state for the update, and should be
@@ -340,7 +322,6 @@ export async function inbound(
     update,
     previousState,
     activeTransfers,
-    transfer,
   );
   if (validateRes.isError) {
     return returnError(validateRes.getError()!.message, update, previousState);
@@ -385,7 +366,7 @@ const syncStateAndRecreateUpdate = async (
   receivedError: InboundChannelUpdateError,
   attemptedParams: UpdateParams<any>,
   previousState: FullChannelState,
-  activeTransfers: FullTransferState[] | undefined,
+  activeTransfers: FullTransferState[],
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
   externalValidationService: IExternalValidation,
@@ -402,7 +383,6 @@ const syncStateAndRecreateUpdate = async (
     counterpartyUpdate,
     previousState,
     activeTransfers,
-    undefined,
     (message: string) =>
       Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
@@ -418,11 +398,7 @@ const syncStateAndRecreateUpdate = async (
     return Result.fail(syncRes.getError() as OutboundChannelUpdateError);
   }
 
-  const {
-    updatedTransfer: syncedTransfer,
-    updatedChannel: syncedChannel,
-    updatedActiveTransfers: syncedActiveTransfers,
-  } = syncRes.getValue();
+  const { updatedChannel: syncedChannel, updatedActiveTransfers: syncedActiveTransfers } = syncRes.getValue();
 
   // Regenerate the proposed update
   // Must go through validation again to ensure it is still a valid update
@@ -434,7 +410,6 @@ const syncStateAndRecreateUpdate = async (
     attemptedParams,
     syncedChannel,
     syncedActiveTransfers,
-    syncedTransfer,
   );
   if (validationRes.isError) {
     return Result.fail(validationRes.getError()!);
@@ -469,8 +444,7 @@ const syncStateAndRecreateUpdate = async (
 const syncState = async (
   toSync: ChannelUpdate,
   previousState: FullChannelState,
-  activeTransfers: FullTransferState[] | undefined,
-  transfer: FullTransferState | undefined,
+  activeTransfers: FullTransferState[],
   handleError: (message: string) => Result<any, OutboundChannelUpdateError | InboundChannelUpdateError>,
   storeService: IVectorStore,
   chainReader: IVectorChainReader,
@@ -503,23 +477,6 @@ const syncState = async (
 
   // Apply the update + validate the signatures (NOTE: full validation is not
   // needed here because the update is already signed)
-
-  // First, get active transfers + required transfer if they do not exist.
-  // Done like this to avoid excess store calls during sync
-  const needTransfers = toSync.type === UpdateType.create || toSync.type === UpdateType.resolve;
-  if (needTransfers) {
-    try {
-      activeTransfers = activeTransfers || (await storeService.getActiveTransfers(previousState.channelAddress));
-    } catch (e) {
-      return handleError("Failed to get active transfers");
-    }
-  }
-
-  transfer =
-    toSync.type === UpdateType.resolve
-      ? transfer ?? activeTransfers?.find((t) => t.transferId === (toSync.details as ResolveUpdateDetails).transferId)
-      : undefined;
-
   const validateRes = await validateAndApplyInboundUpdate(
     chainReader,
     externalValidation,
@@ -527,7 +484,6 @@ const syncState = async (
     toSync,
     previousState,
     activeTransfers,
-    transfer,
   );
   if (validateRes.isError) {
     return handleError(validateRes.getError()!.message);

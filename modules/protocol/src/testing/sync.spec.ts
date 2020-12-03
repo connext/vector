@@ -48,9 +48,9 @@ describe("inbound", () => {
     testName: "inbound",
   });
   const externalValidation = {
-    validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+    validateOutbound: (params: UpdateParams<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
       Promise.resolve(Result.ok(undefined)),
-    validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+    validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
       Promise.resolve(Result.ok(undefined)),
   };
 
@@ -519,9 +519,9 @@ describe("outbound", () => {
   const { log } = getTestLoggers("outbound", env.logLevel);
   const channelAddress = mkAddress("0xccc");
   const externalValidation = {
-    validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+    validateOutbound: (params: UpdateParams<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
       Promise.resolve(Result.ok(undefined)),
-    validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+    validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
       Promise.resolve(Result.ok(undefined)),
   };
 
@@ -562,7 +562,7 @@ describe("outbound", () => {
   });
 
   describe("should fail if .getChannelState / .getActiveTransfers / .getTransferState fails", () => {
-    const methods = ["getChannelState", "getActiveTransfers", "getTransferState"];
+    const methods = ["getChannelState", "getActiveTransfers"];
 
     for (const method of methods) {
       it(method, async () => {
@@ -875,51 +875,6 @@ describe("outbound", () => {
       // Verify error
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
       expect(result.getError()?.context.error).to.be.eq("Can only sync by 1");
-      // Verify update was not retried
-      expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel was not updated
-      expect(store.saveChannelState.callCount).to.be.eq(0);
-    });
-
-    it("should fail if it cannot get active transfers from store (i.e. trying to deposit, missed a resolve)", async () => {
-      // Set store mocks
-      store.getActiveTransfers.rejects("fail");
-      store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
-
-      // Set generation mock
-      generationStub.resolves(
-        Result.ok({
-          update: createTestChannelUpdate(UpdateType.deposit),
-          updatedChannel: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
-        }),
-      );
-
-      // Stub counterparty return
-      messaging.sendProtocolMessage.resolves(
-        Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.create, {
-              nonce: 3,
-            }),
-          ),
-        ),
-      );
-
-      // Send request
-      const result = await outbound(
-        createTestUpdateParams(UpdateType.deposit),
-        store,
-        chainService,
-        messaging,
-        externalValidation,
-        signers[0],
-        log,
-      );
-
-      // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.error).to.be.eq("Failed to get active transfers");
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
       // Verify channel was not updated

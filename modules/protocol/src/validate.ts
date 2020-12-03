@@ -57,8 +57,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
   externalValidationService: IExternalValidation,
   params: UpdateParams<T>,
   previousState: FullChannelState | undefined, // Undefined IFF setup
-  activeTransfers: FullTransferState[] | undefined, // Defined IFF create/resolve
-  transfer: FullTransferState | undefined, // Defined IFF resolve
+  activeTransfers: FullTransferState[], // Defined IFF create/resolve
 ): Promise<OutboundValidationResult> {
   // Create a helper to handle errors properly
   const handleError = (
@@ -83,11 +82,6 @@ export async function validateUpdateParams<T extends UpdateType = any>(
   const isTransferUpdate = params.type === UpdateType.create || params.type === UpdateType.resolve;
   if (isTransferUpdate && !activeTransfers) {
     return handleError(ValidationError.reasons.NoActiveTransfers);
-  }
-
-  // Make sure transfer is provided if resolving
-  if (params.type === UpdateType.resolve && !transfer) {
-    return handleError(ValidationError.reasons.TransferNotFound);
   }
 
   // TODO: add in resuming from dispute
@@ -236,13 +230,9 @@ export async function validateUpdateParams<T extends UpdateType = any>(
         return handleError(ValidationError.reasons.NoActiveTransfers);
       }
 
-      // Make sure the transfer is present
-      if (!transfer || transfer.transferId !== transferId) {
-        return handleError(ValidationError.reasons.TransferNotFound);
-      }
-
       // Make sure the transfer is active
-      if (activeTransfers.findIndex((t) => t.transferId === transferId) < 0) {
+      const transfer = activeTransfers.find((t) => t.transferId === transferId);
+      if (!transfer) {
         return handleError(ValidationError.reasons.TransferNotActive);
       }
 
@@ -260,7 +250,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
   }
 
   // Perform external validation
-  const externalRes = await externalValidationService.validateOutbound(params, previousState, transfer);
+  const externalRes = await externalValidationService.validateOutbound(params, previousState, activeTransfers);
   if (externalRes.isError) {
     return handleError(externalRes.getError()!.message);
   }
@@ -284,8 +274,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   signer: IChannelSigner,
   update: ChannelUpdate<T>,
   previousState: FullChannelState | undefined,
-  activeTransfers: FullTransferState[] | undefined,
-  transfer: FullTransferState | undefined,
+  activeTransfers: FullTransferState[],
 ): Promise<
   Result<
     {
@@ -304,6 +293,9 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   let finalTransferBalance: Balance | undefined = undefined;
   if (update.type === UpdateType.resolve) {
     // Resolve updates require the final transfer balance from the chainReader
+    const transfer = (activeTransfers ?? []).find(
+      (t) => t.transferId === (update.details as ResolveUpdateDetails).transferId ?? "",
+    );
     const transferBalanceResult = await chainReader.resolve(
       { ...transfer!, transferResolver: (update.details as ResolveUpdateDetails).transferResolver },
       previousState!.networkContext.chainId,
@@ -364,7 +356,6 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     update,
     previousState,
     activeTransfers,
-    transfer,
   );
   if (res.isError) {
     return Result.fail(res.getError()!);
@@ -406,8 +397,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   externalValidation: IExternalValidation,
   proposedUpdate: ChannelUpdate<T>,
   previousState: FullChannelState | undefined,
-  activeTransfers: FullTransferState[] | undefined,
-  transfer: FullTransferState | undefined,
+  activeTransfers: FullTransferState[],
 ): Promise<InboundValidationResult> {
   // Create a helper to handle errors properly
   const returnError = (
@@ -568,9 +558,9 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       } = details as CreateUpdateDetails;
 
       // Should not have transfer
-      if (transfer) {
+      if (activeTransfers.find((t) => t.transferId === transferId)) {
         return returnError(ValidationError.reasons.DuplicateTransferId, previousState, {
-          transferId: transfer.transferId,
+          existing: activeTransfers.map((t) => t.transferId),
         });
       }
 
@@ -711,6 +701,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       const { transferId, transferResolver, transferDefinition, merkleRoot } = details as ResolveUpdateDetails;
 
       // Ensure transfer exists in store / retrieve for validation
+      const transfer = activeTransfers.find((t) => t.transferId === transferId);
       if (!transfer) {
         return returnError(ValidationError.reasons.TransferNotFound);
       }
@@ -757,7 +748,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
   }
 
   // All default validation is performed, now perform external validation
-  const externalRes = await externalValidation.validateInbound(proposedUpdate, previousState, transfer);
+  const externalRes = await externalValidation.validateInbound(proposedUpdate, previousState, activeTransfers);
   if (externalRes.isError) {
     return returnError(ValidationError.reasons.ExternalValidationFailed, previousState, {
       validationError: externalRes.getError()!.message,

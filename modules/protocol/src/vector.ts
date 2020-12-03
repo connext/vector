@@ -62,10 +62,10 @@ export class Vector implements IVectorProtocol {
     // additional validation
     const externalValidation = validationService ?? {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      validateOutbound: (params: UpdateParams<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
         Promise.resolve(Result.ok(undefined)),
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
         Promise.resolve(Result.ok(undefined)),
     };
 
