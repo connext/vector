@@ -76,6 +76,7 @@ export class ValidationError extends VectorError {
     BadUpdateType: "Unrecognized update type",
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
+    MalformedDetails: "Channel update details are malformed",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
     TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",

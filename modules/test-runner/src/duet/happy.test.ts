@@ -74,7 +74,7 @@ describe(testName, () => {
     });
     const channel = channelRes.getValue()!;
 
-    let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    let assetIdx = channel.assetIds.findIndex((_assetId) => _assetId === assetId);
     const aliceBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[0];
 
     const depositTxRes = await aliceService.sendDepositTx({
@@ -104,7 +104,7 @@ describe(testName, () => {
       await bobService.getStateChannel({ channelAddress: channel.channelAddress, publicIdentifier: bobIdentifier })
     ).getValue()!;
 
-    assetIdx = aliceChannel.assetIds.findIndex(_assetId => _assetId === assetId);
+    assetIdx = aliceChannel.assetIds.findIndex((_assetId) => _assetId === assetId);
     const aliceAfter = aliceChannel.balances[assetIdx].amount[0];
     expect(aliceChannel).to.deep.eq(bobChannel);
 
@@ -121,7 +121,7 @@ describe(testName, () => {
     });
     const channel = channelRes.getValue()!;
 
-    let assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    let assetIdx = channel.assetIds.findIndex((_assetId) => _assetId === assetId);
     const bobBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
 
     const tx = await wallet.sendTransaction({ to: channel.channelAddress, value: depositAmt });
@@ -143,7 +143,7 @@ describe(testName, () => {
       await bobService.getStateChannel({ channelAddress: channel.channelAddress, publicIdentifier: bobIdentifier })
     ).getValue()!;
 
-    assetIdx = bobChannel.assetIds.findIndex(_assetId => _assetId === assetId);
+    assetIdx = bobChannel.assetIds.findIndex((_assetId) => _assetId === assetId);
     const bobAfter = bobChannel.balances[assetIdx].amount[1];
     expect(aliceChannel).to.deep.eq(bobChannel);
 
@@ -160,7 +160,7 @@ describe(testName, () => {
     });
     const channel = channelRes.getValue()!;
 
-    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const assetIdx = channel.assetIds.findIndex((_assetId) => _assetId === assetId);
     const aliceBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[0];
     const bobBefore = assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1];
 
@@ -213,7 +213,7 @@ describe(testName, () => {
     });
     const channel = channelRes.getValue()!;
 
-    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const assetIdx = channel.assetIds.findIndex((_assetId) => _assetId === assetId);
 
     const preImage = getRandomBytes32();
     const lockHash = utils.soliditySha256(["bytes32"], [preImage]);
@@ -246,7 +246,7 @@ describe(testName, () => {
       publicIdentifier: aliceIdentifier,
     });
     const channel = channelRes.getValue()!;
-    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const assetIdx = channel.assetIds.findIndex((_assetId) => _assetId === assetId);
     const [preWithdrawAlice, preWithdrawBob] = channel.balances[assetIdx].amount;
     const preWithdrawMultisig = await provider.getBalance(channel.channelAddress);
     const preWithdrawWallet = await provider.getBalance(alice);
@@ -295,7 +295,7 @@ describe(testName, () => {
       publicIdentifier: bobIdentifier,
     });
     const channel = channelRes.getValue()!;
-    const assetIdx = channel.assetIds.findIndex(_assetId => _assetId === assetId);
+    const assetIdx = channel.assetIds.findIndex((_assetId) => _assetId === assetId);
     const [preWithdrawAlice, preWithdrawBob] = channel.balances[assetIdx].amount;
     const preWithdrawMultisig = await provider.getBalance(channel.channelAddress);
 
