@@ -431,6 +431,7 @@ const syncStateAndRecreateUpdate = async (
   // against the newly synced channel
   const validationRes = await validateUpdateParams(
     signer,
+    chainReader,
     externalValidationService,
     attemptedParams,
     syncedChannel,

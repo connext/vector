@@ -29,14 +29,12 @@ import {
 import {
   getSignerAddressFromPublicIdentifier,
   getTransferId,
-  hashCoreTransferState,
   hashTransferState,
   safeJsonStringify,
+  generateMerkleTreeData,
 } from "@connext/vector-utils";
-import { keccak256 } from "@ethersproject/keccak256";
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
-import MerkleTree from "merkletreejs";
 
 import { applyUpdate } from "./update";
 import {
@@ -110,8 +108,8 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       // Make sure the calculated channel address is the same as the one
       // derived from chain
       const calculated = await chainReader.getChannelAddress(
-        signer.publicIdentifier,
-        counterpartyIdentifier,
+        signer.address,
+        getSignerAddressFromPublicIdentifier(counterpartyIdentifier),
         networkContext.channelFactoryAddress,
         networkContext.chainId,
       );
@@ -360,6 +358,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
 
   // Validate the update before adding signature
   const res = await validateAndApplyChannelUpdate(
+    signer,
     chainReader,
     externalValidation,
     update,
@@ -479,8 +478,8 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
 
       // Ensure the channelAddress is correctly generated
       const calculated = await chainReader.getChannelAddress(
-        signer.publicIdentifier,
-        fromIdentifier,
+        getSignerAddressFromPublicIdentifier(fromIdentifier),
+        signer.address,
         networkContext.channelFactoryAddress,
         networkContext.chainId,
       );
@@ -544,7 +543,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         return returnError(reconcileRes.getError()!.message);
       }
 
-      if (safeJsonStringify(balance) !== safeJsonStringify(reconcileRes.getValue())) {
+      if (safeJsonStringify({ balance, ...details }) !== safeJsonStringify(reconcileRes.getValue())) {
         return returnError(ValidationError.reasons.ImproperlyReconciled);
       }
       break;
@@ -569,9 +568,9 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       } = details as CreateUpdateDetails;
 
       // Should not have transfer
-      if (storedTransfer) {
+      if (transfer) {
         return returnError(ValidationError.reasons.DuplicateTransferId, previousState, {
-          transferId: storedTransfer.transferId,
+          transferId: transfer.transferId,
         });
       }
 
@@ -663,7 +662,7 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       }
 
       // Update the active transfers
-      const transfer: FullTransferState = {
+      const newTransfer: FullTransferState = {
         balance: transferBalance,
         assetId,
         transferId,
@@ -683,25 +682,21 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       };
 
       // Recreate the merkle tree
-      const transferHash = hashCoreTransferState(transfer);
-      const updatedTransfers = [...activeTransfers!, transfer];
-      const hashes = updatedTransfers.map((state) => {
-        return hashCoreTransferState(state);
-      });
-      const merkle = new MerkleTree(hashes, keccak256);
+      const { proof, root } = generateMerkleTreeData([...activeTransfers!, newTransfer], newTransfer);
 
       // Ensure the merkleProofData is correct
-      if (merkle.getHexProof(Buffer.from(transferHash)) !== merkleProofData) {
+      if (proof!.join(",") !== merkleProofData.join(",")) {
         return returnError(ValidationError.reasons.MiscalculatedMerkleProof, previousState, {
-          active: updatedTransfers.map((t) => t.transferId),
+          existing: activeTransfers!.map((t) => t.transferId),
           transferId,
         });
       }
 
       // Ensure the same merkleRoot is generated
-      if (merkleRoot !== merkle.getHexRoot()) {
+      if (merkleRoot !== root) {
         return returnError(ValidationError.reasons.MiscalculatedMerkleRoot, previousState, {
-          active: updatedTransfers.map((t) => t.transferId),
+          existing: activeTransfers!.map((t) => t.transferId),
+          transferId,
         });
       }
       break;
@@ -746,16 +741,11 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
       }
 
       // Recreate the merkle tree + verify root
-      const updatedTransfers = activeTransfers!.filter((t) => t.transferId === transferId);
-      const hashes = updatedTransfers.map((state) => {
-        return hashCoreTransferState(state);
-      });
-      const merkle = new MerkleTree(hashes, keccak256);
+      const { root } = generateMerkleTreeData(activeTransfers!.filter((x) => x.transferId !== transferId));
 
-      // Ensure the same merkleRoot is generated
-      if (merkleRoot !== merkle.getHexRoot()) {
+      if (merkleRoot !== root) {
         return returnError(ValidationError.reasons.MiscalculatedMerkleRoot, previousState, {
-          active: updatedTransfers.map((t) => t.transferId),
+          active: activeTransfers!.map((t) => t.transferId),
         });
       }
 

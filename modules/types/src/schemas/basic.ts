@@ -92,7 +92,8 @@ export const TCreateUpdateDetails = Type.Object({
   transferDefinition: TAddress,
   transferTimeout: TIntegerString,
   transferInitialState: TransferStateSchema,
-  merkleProofData: Type.Array(TBytes),
+  transferEncodings: Type.Array(Type.String()),
+  merkleProofData: Type.Array(Type.String()),
   merkleRoot: TBytes32,
   meta: TBasicMeta,
 });

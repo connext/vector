@@ -485,9 +485,7 @@ async function generateCreateUpdate(
     meta,
     inDispute: false,
   };
-  console.log("******* trying to create root + proof");
   const { proof, root } = generateMerkleTreeData([...transfers, transferState], transferState);
-  console.log("******* successfully created root + proof");
 
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);

@@ -28,7 +28,7 @@ import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
-import { getParamsFromUpdate, validateSchema } from "./utils";
+import { validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 

@@ -6,10 +6,10 @@ import {
   IMessagingService,
   IVectorProtocol,
   IVectorStore,
-  DEFAULT_TRANSFER_TIMEOUT,
   IVectorChainReader,
   SetupParams,
   UpdateType,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -85,7 +85,7 @@ export const createVectorInstances = async (
 export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState<any>> => {
   const setupParams: SetupParams = {
     counterpartyIdentifier: bob.publicIdentifier,
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
     networkContext: {
       chainId,
       providerUrl: Object.values(env.chainProviders)[0] as string,
@@ -173,8 +173,8 @@ export const depositInChannel = async (
         ChannelFactory.abi,
         depositorSigner,
       );
-      const created = new Promise<string>(res => {
-        factory.once(factory.filters.ChannelCreation(), data => {
+      const created = new Promise<string>((res) => {
+        factory.once(factory.filters.ChannelCreation(), (data) => {
           res(data);
         });
       });
@@ -224,8 +224,8 @@ export const depositInChannel = async (
         ChannelFactory.abi,
         depositorSigner,
       );
-      const created = new Promise<string>(res => {
-        factory.once(factory.filters.ChannelCreation(), data => {
+      const created = new Promise<string>((res) => {
+        factory.once(factory.filters.ChannelCreation(), (data) => {
           res(data);
         });
       });
@@ -258,7 +258,7 @@ export const depositInChannel = async (
   expect(postDeposit).to.containSubset({
     assetIds: [...new Set(channel!.assetIds.concat(assetId))],
   });
-  const assetIdx = postDeposit!.assetIds.findIndex(a => a === assetId);
+  const assetIdx = postDeposit!.assetIds.findIndex((a) => a === assetId);
   if (isDepositA) {
     expect(value.add(channel!.processedDepositsA[assetIdx] || "0")).to.equal(
       BigNumber.from(postDeposit.processedDepositsA[0]),
