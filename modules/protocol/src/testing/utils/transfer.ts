@@ -34,15 +34,18 @@ export const createTransfer = async (
   payee: IVectorProtocol,
   assetId: string = AddressZero,
   amount: BigNumberish = 10,
+  outsiderPayee?: string | undefined,
 ): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
   // Create the transfer information
   const preImage = getRandomBytes32();
   const lockHash = createlockHash(preImage);
+  const payorAddress = payor.signerAddress;
+  const payeeAddress = outsiderPayee ? outsiderPayee : payee.signerAddress;
+
   const balance = {
-    to: [payor.signerAddress, payee.signerAddress],
+    to: [payorAddress, payeeAddress],
     amount: [amount.toString(), "0"],
   };
-
   const transferInitialState = createTestHashlockTransferState({ lockHash });
   const params: CreateTransferParams = {
     channelAddress,

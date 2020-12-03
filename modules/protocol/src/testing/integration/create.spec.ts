@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { getTestLoggers, expect } from "@connext/vector-utils";
+import { getTestLoggers, expect, mkAddress } from "@connext/vector-utils";
 import { IVectorProtocol, IChannelSigner, IVectorStore, ProtocolEventName } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 
@@ -75,9 +75,49 @@ describe(testName, () => {
     expect(await alice.getTransferState(transfer.transferId)).to.containSubset(sanitized);
   });
 
-  it.skip("should work for alice creating transfer out of channel", async () => {});
-  it.skip("should work for bob creating transfer out of channel", async () => {});
+  it("should work for alice creating transfer out of channel", async () => {
+    // Set test constants
+    const assetId = AddressZero;
+    const transferAmount = "7";
+    const outsiderPayee = mkAddress("0xc");
+    const { channel, transfer } = await createTransfer(
+      abChannelAddress,
+      alice,
+      bob,
+      assetId,
+      transferAmount,
+      outsiderPayee,
+    );
+    const { transferResolver, ...sanitized } = transfer;
+    expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await alice.getTransferState(transfer.transferId)).to.containSubset(sanitized);
+    expect(await alice.getActiveTransfers(channel.channelAddress)).to.containSubset([sanitized]);
+    expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await bob.getTransferState(transfer.transferId)).to.containSubset(sanitized);
+    expect(await bob.getActiveTransfers(channel.channelAddress)).to.containSubset([sanitized]);
+  });
 
+  it("should work for bob creating transfer out of channel", async () => {
+    // Set test constants
+    const assetId = AddressZero;
+    const transferAmount = "7";
+    const outsiderPayee = mkAddress("0xc");
+    const { channel, transfer } = await createTransfer(
+      abChannelAddress,
+      bob,
+      alice,
+      assetId,
+      transferAmount,
+      outsiderPayee,
+    );
+    const { transferResolver, ...sanitized } = transfer;
+    expect(await alice.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await alice.getTransferState(transfer.transferId)).to.containSubset(sanitized);
+    expect(await alice.getActiveTransfers(channel.channelAddress)).to.containSubset([sanitized]);
+    expect(await bob.getChannelState(channel.channelAddress)).to.containSubset(channel);
+    expect(await bob.getTransferState(transfer.transferId)).to.containSubset(sanitized);
+    expect(await bob.getActiveTransfers(channel.channelAddress)).to.containSubset([sanitized]);
+  });
   it("should work for concurrent transfers from alice to bob", async () => {
     // Set transfer constants
     const transferAmount = "7";
