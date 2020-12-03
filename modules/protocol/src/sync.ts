@@ -307,7 +307,7 @@ export async function inbound(
       (message: string) =>
         Result.fail(
           new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, previousUpdate, previousState, {
-            message,
+            error: message,
           }),
         ),
       storeService,
@@ -407,7 +407,7 @@ const syncStateAndRecreateUpdate = async (
     (message: string) =>
       Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-          message,
+          error: message,
         }),
       ),
     storeService,
