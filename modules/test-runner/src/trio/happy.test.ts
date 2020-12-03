@@ -1,10 +1,10 @@
-import { RestServerNodeService } from "@connext/vector-utils";
+import { expect, RestServerNodeService } from "@connext/vector-utils";
 import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
 import { INodeService } from "@connext/vector-types";
 
 import { env, fundIfBelow, getRandomIndex } from "../utils";
-import { chainId, deposit, setup, transfer, wallet, withdraw } from "../utils/channel";
+import { chainId1, chainId2, deposit, setup, transfer, wallet1, wallet2, withdraw } from "../utils/channel";
 
 import { carolEvts, daveEvts } from "./eventSetup";
 
@@ -39,7 +39,10 @@ describe(testName, () => {
       undefined,
       0,
     );
-    await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(10), wallet);
+    await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(10), wallet1);
+    if (wallet2) {
+      await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(10), wallet2);
+    }
   });
 
   it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
@@ -48,8 +51,8 @@ describe(testName, () => {
     const transferAmt = utils.parseEther("0.005");
     const withdrawAmt = utils.parseEther("0.005");
 
-    const carolRogerPostSetup = await setup(carolService, rogerService, chainId);
-    const daveRogerPostSetup = await setup(daveService, rogerService, chainId);
+    const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
+    const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
 
     await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
     await transfer(
@@ -60,6 +63,36 @@ describe(testName, () => {
       assetId,
       transferAmt,
     );
+    // withdraw to signing address
+    await withdraw(carolService, carolRogerPostSetup.channelAddress, assetId, withdrawAmt, carolService.signerAddress);
+    // withdraw to delegated recipient
+    await withdraw(daveService, daveRogerPostSetup.channelAddress, assetId, withdrawAmt, Wallet.createRandom().address);
+  });
+
+  it("cross-chain: deposit, transfer C -> R -> D, withdraw", async () => {
+    if (!chainId2) {
+      expect(true, "chainId2 not configured").to.be.true;
+      return;
+    }
+    const assetId = constants.AddressZero;
+    const depositAmt = utils.parseEther("0.1");
+    const transferAmt = utils.parseEther("0.005");
+    const withdrawAmt = utils.parseEther("0.005");
+
+    const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
+    const daveRogerPostSetup = await setup(daveService, rogerService, chainId2);
+
+    await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
+    await transfer(
+      carolService,
+      daveService,
+      carolRogerPostSetup.channelAddress,
+      daveRogerPostSetup.channelAddress,
+      assetId,
+      transferAmt,
+      chainId2,
+    );
+
     // withdraw to signing address
     await withdraw(carolService, carolRogerPostSetup.channelAddress, assetId, withdrawAmt, carolService.signerAddress);
     // withdraw to delegated recipient

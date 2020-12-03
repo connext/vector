@@ -4,7 +4,7 @@ import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
 
 import { env, getRandomIndex } from "../utils";
-import { chainId, deposit, setup, transfer, wallet, withdraw } from "../utils/channel";
+import { chainId1, deposit, setup, transfer, wallet1, withdraw } from "../utils/channel";
 
 import { aliceEvts, bobEvts } from "./eventSetup";
 
@@ -23,12 +23,12 @@ describe(testName, () => {
       aliceEvts,
       randomIndex,
     );
-    const aliceTx = await wallet.sendTransaction({ to: aliceService.signerAddress, value: utils.parseEther("0.5") });
+    const aliceTx = await wallet1.sendTransaction({ to: aliceService.signerAddress, value: utils.parseEther("0.5") });
     await aliceTx.wait();
 
     bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), bobEvts, randomIndex);
 
-    const bobTx = await wallet.sendTransaction({ to: bobService.signerAddress, value: utils.parseEther("0.1") });
+    const bobTx = await wallet1.sendTransaction({ to: bobService.signerAddress, value: utils.parseEther("0.1") });
     await bobTx.wait();
   });
 
@@ -38,7 +38,7 @@ describe(testName, () => {
     const transferAmt = utils.parseEther("0.005");
     const withdrawAmt = utils.parseEther("0.005");
 
-    const aliceBobPostSetup = await setup(bobService, aliceService, chainId);
+    const aliceBobPostSetup = await setup(bobService, aliceService, chainId1);
 
     // alice deposit
     await deposit(aliceService, bobService, aliceBobPostSetup.channelAddress, assetId, depositAmt);
