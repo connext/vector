@@ -13,7 +13,7 @@ const serverBase = `http://${env.testerName}:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
-export const carolEvts = {
+export const aliceEvts = {
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
@@ -21,19 +21,19 @@ export const carolEvts = {
   [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
-    url: `${serverBase}${conditionalTransferCreatedPath}-carol`,
+    url: `${serverBase}${conditionalTransferCreatedPath}-alice`,
   },
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
-    url: `${serverBase}${conditionalTransferResolvedPath}-carol`,
+    url: `${serverBase}${conditionalTransferResolvedPath}-alice`,
   },
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
-    url: `${serverBase}${depositReconciledPath}-carol`,
+    url: `${serverBase}${depositReconciledPath}-alice`,
   },
 };
 
-export const daveEvts = {
+export const bobEvts = {
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
@@ -41,15 +41,15 @@ export const daveEvts = {
   [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
-    url: `${serverBase}${conditionalTransferCreatedPath}-dave`,
+    url: `${serverBase}${conditionalTransferCreatedPath}-bob`,
   },
   [EngineEvents.CONDITIONAL_TRANSFER_RESOLVED]: {
     evt: Evt.create<ConditionalTransferResolvedPayload>(),
-    url: `${serverBase}${conditionalTransferResolvedPath}-dave`,
+    url: `${serverBase}${conditionalTransferResolvedPath}-bob`,
   },
   [EngineEvents.DEPOSIT_RECONCILED]: {
     evt: Evt.create<DepositReconciledPayload>(),
-    url: `${serverBase}${depositReconciledPath}-dave`,
+    url: `${serverBase}${depositReconciledPath}-bob`,
   },
 };
 
@@ -59,33 +59,33 @@ server.get("/ping", async () => {
   return "pong\n";
 });
 
-server.post(`${conditionalTransferCreatedPath}-carol`, async (request, response) => {
-  carolEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
+server.post(`${conditionalTransferCreatedPath}-alice`, async (request, response) => {
+  aliceEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
   return response.status(200).send({ message: "success" });
 });
 
-server.post(`${conditionalTransferResolvedPath}-carol`, async (request, response) => {
-  carolEvts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+server.post(`${conditionalTransferResolvedPath}-alice`, async (request, response) => {
+  aliceEvts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
   return response.status(200).send({ message: "success" });
 });
 
-server.post(`${depositReconciledPath}-carol`, async (request, response) => {
-  carolEvts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
+server.post(`${depositReconciledPath}-alice`, async (request, response) => {
+  aliceEvts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
   return response.status(200).send({ message: "success" });
 });
 
-server.post(`${conditionalTransferCreatedPath}-dave`, async (request, response) => {
-  daveEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
+server.post(`${conditionalTransferCreatedPath}-bob`, async (request, response) => {
+  bobEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
   return response.status(200).send({ message: "success" });
 });
 
-server.post(`${conditionalTransferResolvedPath}-dave`, async (request, response) => {
-  daveEvts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
+server.post(`${conditionalTransferResolvedPath}-bob`, async (request, response) => {
+  bobEvts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].evt.post(request.body as ConditionalTransferResolvedPayload);
   return response.status(200).send({ message: "success" });
 });
 
-server.post(`${depositReconciledPath}-dave`, async (request, response) => {
-  daveEvts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
+server.post(`${depositReconciledPath}-bob`, async (request, response) => {
+  bobEvts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
   return response.status(200).send({ message: "success" });
 });
 

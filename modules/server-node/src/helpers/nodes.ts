@@ -86,7 +86,7 @@ export const createNode = async (index: number, store: IServerNodeStore, mnemoni
           const response = await Axios.post(url, data);
           logger.info({ url, event, response: response.data }, "Successfully relayed event");
         } catch (error) {
-          // logAxiosError(logger, error, { event, url }, "Error sending event to listener");
+          logAxiosError(logger, error, { event, url }, "Error sending event to listener");
         }
       }
     });

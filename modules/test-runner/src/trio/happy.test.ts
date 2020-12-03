@@ -5,7 +5,8 @@ import { INodeService } from "@connext/vector-types";
 
 import { env, fundIfBelow, getRandomIndex } from "../utils";
 import { chainId, deposit, setup, transfer, wallet, withdraw } from "../utils/channel";
-import { carolEvts, daveEvts } from "../duet/eventSetup";
+
+import { carolEvts, daveEvts } from "./eventSetup";
 
 const logger = pino({ level: env.logLevel });
 const testName = "Trio Happy";

@@ -5,7 +5,7 @@ import pino from "pino";
 
 import { env } from "../utils";
 
-import { carolEvts, daveEvts } from "../duet/eventSetup";
+import { carolEvts, daveEvts } from "./eventSetup";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);

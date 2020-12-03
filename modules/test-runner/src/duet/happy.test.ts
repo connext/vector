@@ -3,11 +3,10 @@ import { RestServerNodeService } from "@connext/vector-utils";
 import { Wallet, utils, constants } from "ethers";
 import pino from "pino";
 
-import { carolEvts } from "../load/helpers/setupServer";
 import { env, getRandomIndex } from "../utils";
 import { chainId, deposit, setup, transfer, wallet, withdraw } from "../utils/channel";
 
-import { daveEvts } from "./eventSetup";
+import { aliceEvts, bobEvts } from "./eventSetup";
 
 const logger = pino({ level: env.logLevel });
 const testName = "Duet Happy";
@@ -16,18 +15,18 @@ describe(testName, () => {
   let aliceService: INodeService;
   let bobService: INodeService;
 
-  before(async () => {
+  beforeEach(async () => {
     const randomIndex = getRandomIndex();
     aliceService = await RestServerNodeService.connect(
       env.aliceUrl,
       logger.child({ testName }),
-      carolEvts,
+      aliceEvts,
       randomIndex,
     );
     const aliceTx = await wallet.sendTransaction({ to: aliceService.signerAddress, value: utils.parseEther("0.5") });
     await aliceTx.wait();
 
-    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), daveEvts, randomIndex);
+    bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), bobEvts, randomIndex);
 
     const bobTx = await wallet.sendTransaction({ to: bobService.signerAddress, value: utils.parseEther("0.1") });
     await bobTx.wait();
