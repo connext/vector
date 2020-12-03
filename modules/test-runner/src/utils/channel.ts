@@ -185,9 +185,7 @@ export const withdraw = async (
 
   const preWithdrawCarol = getBalanceForAssetId(preWithdrawChannel, assetId, withdrawerAliceOrBob);
   const preWithdrawMultisig = await getOnchainBalance(assetId, preWithdrawChannel.channelAddress);
-  console.log("preWithdrawMultisig: ", preWithdrawMultisig.toString());
   const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
-  console.log("preWithdrawRecipient: ", preWithdrawRecipient.toString());
 
   // Perform withdrawal
   const withdrawalRes = await withdrawer.withdraw({
@@ -207,9 +205,7 @@ export const withdraw = async (
   const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue();
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
   const postWithdrawMultisig = await getOnchainBalance(assetId, channelAddress);
-  console.log("postWithdrawMultisig: ", postWithdrawMultisig.toString());
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient);
-  console.log("postWithdrawRecipient: ", postWithdrawRecipient.toString());
 
   // Verify balance changes
   expect(BigNumber.from(preWithdrawCarol).sub(amount)).to.be.eq(postWithdrawBalance);
