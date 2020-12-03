@@ -65,7 +65,67 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     InboundChannelUpdateError
   >
 > {
-  // Validate + apply the update
+  // Apply update and validate signatures before validating the actual update.
+  // By doing it in this order, we can exit early if both signatures on the
+  // update are present and valid
+
+  // Apply the proposed update
+  let finalTransferBalance: Balance | undefined = undefined;
+  if (update.type === UpdateType.resolve) {
+    // Resolve updates require the final transfer balance from the chainReader
+    const transferBalanceResult = await chainReader.resolve(
+      { ...transfer!, transferResolver: (update.details as ResolveUpdateDetails).transferResolver },
+      previousState!.networkContext.chainId,
+    );
+
+    if (transferBalanceResult.isError) {
+      return Result.fail(
+        new InboundChannelUpdateError(transferBalanceResult.getError()!.message as any, update, previousState),
+      );
+    }
+    finalTransferBalance = transferBalanceResult.getValue();
+  }
+
+  const applyRes = await applyUpdate(update, previousState, activeTransfers, finalTransferBalance);
+  if (applyRes.isError) {
+    return Result.fail(applyRes.getError()!);
+  }
+
+  const { updatedChannel, updatedTransfer, updatedActiveTransfers } = applyRes.getValue();
+
+  // Check the signatures
+  const doubleSigned = update.aliceSignature && update.bobSignature;
+  const sigRes = await validateChannelUpdateSignatures(
+    updatedChannel,
+    update.aliceSignature,
+    update.bobSignature,
+    doubleSigned ? "both" : signer.address === updatedChannel.bob ? "alice" : "bob",
+  );
+  if (sigRes.isError) {
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, updatedChannel, {
+        error: sigRes.getError().message,
+      }),
+    );
+  }
+
+  // If the update is double signed, return without further validation
+  if (doubleSigned) {
+    return Result.ok({
+      updatedChannel: {
+        ...updatedChannel,
+        latestUpdate: {
+          ...updatedChannel.latestUpdate,
+          aliceSignature: update.aliceSignature,
+          bobSignature: update.bobSignature,
+        },
+      },
+      updatedActiveTransfers,
+      updatedTransfer,
+    });
+  }
+
+  // Validate the update before adding signature
   const res = await validateAndApplyChannelUpdate(
     chainReader,
     externalValidation,
@@ -76,23 +136,6 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   );
   if (res.isError) {
     return Result.fail(res.getError()!);
-  }
-
-  const { updatedChannel, updatedTransfer, updatedActiveTransfers } = res.getValue();
-
-  // Verify at least one signature exists (and any present are valid)
-  const sigRes = await validateChannelUpdateSignatures(
-    updatedChannel,
-    update.aliceSignature,
-    update.bobSignature,
-    signer.address === updatedChannel.bob ? "alice" : "bob",
-  );
-  if (sigRes.isError) {
-    return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, updatedChannel, {
-        error: sigRes.getError().message,
-      }),
-    );
   }
 
   // Generate the cosigned commitment
@@ -124,14 +167,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
 
 // This function will take in a requested update from the counterparty,
 // validate it, and apply it.
-type InboundValidationResult = Result<
-  {
-    updatedChannel: FullChannelState;
-    updatedActiveTransfers?: FullTransferState[];
-    updatedTransfer?: FullTransferState;
-  },
-  InboundChannelUpdateError
->;
+type InboundValidationResult = Result<void, InboundChannelUpdateError>;
 async function validateAndApplyChannelUpdate<T extends UpdateType>(
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
@@ -181,11 +217,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
 
   // Perform update-type specific validation
 
-  // You will need the final transfer balance when applying the
-  // resolve update. See note in `applyUpdate`.
-  let finalTransferBalance: Balance | undefined = undefined;
-  // You will also need access to the stored transfer for any
-  // external validation when resolving
   switch (type) {
     case UpdateType.setup: {
       // Ensure the channelAddress is correctly generated
@@ -250,17 +281,6 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
         });
       }
 
-      // Get the final transfer balance from contract
-      const transferBalanceResult = await chainReader.resolve(
-        { ...transfer!, transferResolver },
-        previousState!.networkContext.chainId,
-      );
-
-      if (transferBalanceResult.isError) {
-        throw transferBalanceResult.getError()!;
-      }
-      finalTransferBalance = transferBalanceResult.getValue()!;
-
       // Ensure the transfer exists within the active transfers
 
       // Ensure the initiators transfer information is the same as ours:
@@ -290,12 +310,5 @@ async function validateAndApplyChannelUpdate<T extends UpdateType>(
     });
   }
 
-  // Apply the update
-  const applyRes = await applyUpdate(counterpartyUpdate, previousState, activeTransfers, finalTransferBalance);
-  if (applyRes.isError) {
-    // Returns an inbound channel error, so don't use helper to preserve
-    // apply error
-    return Result.fail(applyRes.getError()!);
-  }
-  return Result.ok(applyRes.getValue());
+  return Result.ok(undefined);
 }
