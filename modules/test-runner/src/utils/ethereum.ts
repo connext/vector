@@ -1,15 +1,15 @@
 import { ERC20Abi } from "@connext/vector-types";
 import { BigNumber, constants, Contract, providers, Wallet } from "ethers";
 
-import { env } from "./env";
-
 export const MAX_PATH_INDEX = 2147483647;
 
 export const getRandomIndex = (): number => Math.floor(Math.random() * MAX_PATH_INDEX);
 
-export const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {
-  const chainId = parseInt(Object.keys(env.chainProviders)[0]);
-  const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
+export const getOnchainBalance = async (
+  assetId: string,
+  address: string,
+  provider: providers.Provider,
+): Promise<BigNumber> => {
   return assetId === constants.AddressZero
     ? provider.getBalance(address)
     : new Contract(assetId, ERC20Abi, provider).balanceOf(address);
@@ -21,11 +21,11 @@ export const fundIfBelow = async (
   fundAmount: BigNumber,
   funder: Wallet,
 ): Promise<void> => {
-  const balance = await getOnchainBalance(assetId, address);
+  const balance = await getOnchainBalance(assetId, address, funder.provider);
   if (balance.gte(fundAmount)) {
     return;
   }
-  const funderBal = await getOnchainBalance(assetId, funder.address);
+  const funderBal = await getOnchainBalance(assetId, funder.address, funder.provider);
   if (funderBal.lt(fundAmount)) {
     throw new Error(
       `${

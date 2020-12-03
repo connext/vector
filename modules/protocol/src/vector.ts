@@ -134,11 +134,6 @@ export class Vector implements IVectorProtocol {
       method: "executeUpdate",
       step: "start",
       params,
-    });
-    this.logger.info({
-      method: "executeUpdate",
-      step: "start",
-      type: params.type,
       channelAddress: params.channelAddress,
       updateSender: this.publicIdentifier,
     });
@@ -180,7 +175,7 @@ export class Vector implements IVectorProtocol {
           return;
         }
         const method = "onReceiveProtocolMessage";
-        this.logger.info({ method }, "Received message");
+        this.logger.debug({ method }, "Received message");
 
         if (msg.isError) {
           this.logger.error(

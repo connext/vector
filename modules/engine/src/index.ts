@@ -644,8 +644,6 @@ export class VectorEngine implements IVectorEngine {
     if (typeof this[methodName] !== "function") {
       throw new Error(`Invalid method: ${methodName}`);
     }
-    console.log("trying to call", methodName);
-    this.logger.info({ methodName }, "Method called");
 
     // every method must be a result type
     const res = await this[methodName](payload.params);
