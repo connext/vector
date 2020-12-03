@@ -536,7 +536,7 @@ async function generateResolveUpdate(
 
   // First generate latest merkle tree data
   const transferToResolve = transfers.find((x) => x.transferId === transferId);
-  logger.info(
+  logger.debug(
     { method: "generateResolveUpdate", numTransfers: transfers.length, channelAddress: state.channelAddress },
     "Generating resolve update",
   );
@@ -559,7 +559,7 @@ async function generateResolveUpdate(
     return Result.fail(transferBalanceResult.getError()!);
   }
   const transferBalance = transferBalanceResult.getValue();
-  logger.info(
+  logger.debug(
     {
       method: "generateResolveUpdate",
       channelAddress: state.channelAddress,
@@ -579,7 +579,7 @@ async function generateResolveUpdate(
 
   // Generate the unsigned update from the params
   const root = merkle.getHexRoot();
-  logger.info(
+  logger.debug(
     {
       method: "generateResolveUpdate",
       channelAddress: state.channelAddress,
