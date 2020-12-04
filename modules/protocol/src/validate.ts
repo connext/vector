@@ -234,12 +234,14 @@ export async function validateUpdateParams<T extends UpdateType = any>(
     }
   }
 
-  // Perform external validation
-  const externalRes = await externalValidationService.validateOutbound(params, previousState, activeTransfers);
-  if (externalRes.isError) {
-    return handleError(ValidationError.reasons.ExternalValidationFailed, previousState, {
-      error: externalRes.getError()!.message,
-    });
+  // Perform external validation iff you are update sender
+  if (initiatorIdentifier === signer.publicIdentifier) {
+    const externalRes = await externalValidationService.validateOutbound(params, previousState, activeTransfers);
+    if (externalRes.isError) {
+      return handleError(ValidationError.reasons.ExternalValidationFailed, previousState, {
+        error: externalRes.getError()!.message,
+      });
+    }
   }
 
   return Result.ok(undefined);
