@@ -1,9 +1,0 @@
-{
-  "name": "ethprovider",
-  "description": "This is only used to install a few packages into the ethprovider docker container",
-  "dependencies": {
-    "ethers": "5.0.21",
-    "hardhat": "2.0.2",
-    "pino-pretty": "4.3.0"
-  }
-}
