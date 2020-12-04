@@ -108,14 +108,16 @@ export class ValidationError extends VectorError {
     MiscalculatedMerkleRoot: "Merkle root in update was miscalculated",
     MiscalculatedMerkleProof: "Merkle proof in update was miscalculated",
     NoActiveTransfers: "Active transfers are undefined",
+    OnlyResponderCanInitiateResolve: "Only transfer responder may initiate resolve update",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
     ShortChannelTimeout: `Channel timeout below minimum of ${MINIMUM_CHANNEL_TIMEOUT.toString()}s`,
     StoreFailure: "Failed to pull data from store",
     TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
+    TransferResolved: "Transfer has already been resolved",
     TransferTimeoutAboveChannel: `Transfer timeout must be less than the channel timeout`,
-    TransferTimeoutBelowMin: `Transfer timeout below minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
-    TransferTimeoutAboveMax: `Transfer timeout below minimum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    TransferTimeoutBelowMin: `Transfer timeout above minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    TransferTimeoutAboveMax: `Transfer timeout below maximum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
     UnrecognizedType: "Unrecognized update type",
   } as const;
 

@@ -25,7 +25,7 @@ import {
   TDepositUpdateDetails,
   TResolveUpdateDetails,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/vector-utils";
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 
@@ -71,6 +71,20 @@ export async function validateUpdateParams<T extends UpdateType = any>(
   }
 
   const { type, channelAddress, details } = params;
+
+  if (previousState && channelAddress !== previousState.channelAddress) {
+    return handleError(ValidationError.reasons.InvalidChannelAddress);
+  }
+
+  const length = (previousState?.assetIds ?? []).length;
+  if (
+    (previousState?.defundNonces ?? []).length !== length ||
+    (previousState?.balances ?? []).length !== length ||
+    (previousState?.processedDepositsA ?? []).length !== length ||
+    (previousState?.processedDepositsB ?? []).length !== length
+  ) {
+    return handleError(ValidationError.reasons.InvalidArrayLength);
+  }
 
   switch (type) {
     case UpdateType.setup: {
@@ -126,19 +140,6 @@ export async function validateUpdateParams<T extends UpdateType = any>(
         return handleError(ValidationError.reasons.InvalidAssetId);
       }
 
-      // Make sure that the array values all have the same length
-      // TODO: is this the best place for this? (this *is* where new array
-      // values would be added)
-      const length = previousState!.assetIds.length;
-      if (
-        previousState!.defundNonces.length !== length ||
-        previousState!.balances.length !== length ||
-        previousState!.processedDepositsA.length !== length ||
-        previousState!.processedDepositsB.length !== length
-      ) {
-        return handleError(ValidationError.reasons.InvalidArrayLength);
-      }
-
       break;
     }
 
@@ -151,15 +152,21 @@ export async function validateUpdateParams<T extends UpdateType = any>(
         timeout,
       } = details as UpdateParamsMap[typeof UpdateType.create];
 
-      // Make sure the active transfers array is present
-      if (!activeTransfers) {
-        return handleError(ValidationError.reasons.NoActiveTransfers);
-      }
-
       // Verify the assetId is in the channel (and get index)
       const assetIdx = previousState!.assetIds.findIndex((a) => a === assetId);
       if (assetIdx < 0) {
         return handleError(ValidationError.reasons.AssetNotFound);
+      }
+
+      // NOTE: verifying that a transfer is not active is done in `generateUpdate`
+      const transferId = getTransferId(
+        previousState!.channelAddress,
+        previousState!.nonce.toString(),
+        transferDefinition,
+        timeout,
+      );
+      if (activeTransfers.find((t) => t.transferId === transferId)) {
+        return handleError(ValidationError.reasons.DuplicateTransferId);
       }
 
       // Verify there is sufficient balance of the asset to create transfer
@@ -210,11 +217,6 @@ export async function validateUpdateParams<T extends UpdateType = any>(
     case UpdateType.resolve: {
       const { transferId, transferResolver } = details as UpdateParamsMap[typeof UpdateType.resolve];
 
-      // Make sure the active transfers array is present
-      if (!activeTransfers) {
-        return handleError(ValidationError.reasons.NoActiveTransfers);
-      }
-
       // Make sure the transfer is active
       const transfer = activeTransfers.find((t) => t.transferId === transferId);
       if (!transfer) {
@@ -224,6 +226,16 @@ export async function validateUpdateParams<T extends UpdateType = any>(
       // Make sure transfer resolver is an object
       if (typeof transferResolver !== "object") {
         return handleError(ValidationError.reasons.InvalidResolver);
+      }
+
+      // Should fail if initiator is not transfer responder
+      if (getSignerAddressFromPublicIdentifier(initiatorIdentifier) !== transfer.responder) {
+        return handleError(ValidationError.reasons.OnlyResponderCanInitiateResolve);
+      }
+
+      // Should fail if transfer has resolver
+      if (transfer.transferResolver) {
+        return handleError(ValidationError.reasons.TransferResolved);
       }
 
       break;

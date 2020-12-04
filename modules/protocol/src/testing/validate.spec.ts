@@ -29,6 +29,9 @@ import {
   IChannelSigner,
   DEFAULT_CHANNEL_TIMEOUT,
   DEFAULT_TRANSFER_TIMEOUT,
+  MAXIMUM_TRANSFER_TIMEOUT,
+  MINIMUM_TRANSFER_TIMEOUT,
+  MAXIMUM_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
@@ -37,7 +40,7 @@ import * as vectorUtils from "../utils";
 import * as validation from "../validate";
 import * as vectorUpdate from "../update";
 
-describe.only("validateUpdateParams", () => {
+describe("validateUpdateParams", () => {
   // Test values
   const [initiator, responder] = Array(2)
     .fill(0)
@@ -99,14 +102,14 @@ describe.only("validateUpdateParams", () => {
       channelAddress,
       initiator: initiator.address,
       responder: responder.address,
-      transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+      transferTimeout: MINIMUM_TRANSFER_TIMEOUT.toString(),
       transferDefinition: mkAddress("0xdef"),
       assetId: AddressZero,
       transferId: getTransferId(
         channelAddress,
         previousState.nonce.toString(),
         mkAddress("0xdef"),
-        DEFAULT_TRANSFER_TIMEOUT.toString(),
+        MINIMUM_TRANSFER_TIMEOUT.toString(),
       ),
       balance: { to: [initiator.address, responder.address], amount: ["3", "0"] },
     });
@@ -162,7 +165,7 @@ describe.only("validateUpdateParams", () => {
     return {
       previousState,
       activeTransfers: [transfer],
-      initiatorIdentifier: initiator.publicIdentifier,
+      initiatorIdentifier: responder.publicIdentifier,
       params,
       transfer,
     };
@@ -210,10 +213,106 @@ describe.only("validateUpdateParams", () => {
     Sinon.restore();
   });
 
-  it("should fail if no previous state and is not a setup update", async () => {});
+  it("should fail if no previous state and is not a setup update", async () => {
+    const { activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+    await callAndVerifyError(
+      initiator,
+      params,
+      undefined,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.ChannelNotFound,
+    );
+  });
 
-  it("should fail if previous state is in dispute", async () => {});
-  it("should fail if externalValidation.validateOutbound fails and signer is initiator", async () => {});
+  it("should fail if previous state is in dispute", async () => {
+    const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+    previousState.inDispute = true;
+    await callAndVerifyError(
+      initiator,
+      params,
+      previousState,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.InDispute,
+    );
+  });
+
+  it("should fail if params.channelAddress !== previousState.channelAddress", async () => {
+    const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+    previousState.channelAddress = mkAddress("0xddddcccc33334444");
+    await callAndVerifyError(
+      initiator,
+      params,
+      previousState,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.InvalidChannelAddress,
+    );
+  });
+
+  it("should fail if defundNonces.length !== assetIds.length", async () => {
+    const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+    previousState.defundNonces = [...previousState.defundNonces, "1"];
+    await callAndVerifyError(
+      initiator,
+      params,
+      previousState,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.InvalidArrayLength,
+    );
+  });
+  it("should fail if balances.length !== assetIds.length", async () => {
+    const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+    previousState.balances = [];
+    await callAndVerifyError(
+      initiator,
+      params,
+      previousState,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.InvalidArrayLength,
+    );
+  });
+  it("should fail if processedDepositsA.length !== assetIds.length", async () => {
+    const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+    previousState.processedDepositsA = [...previousState.processedDepositsA, "1"];
+    await callAndVerifyError(
+      initiator,
+      params,
+      previousState,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.InvalidArrayLength,
+    );
+  });
+  it("should fail if defundNonces.processedDepositsB !== assetIds.length", async () => {
+    const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+    previousState.processedDepositsB = [...previousState.processedDepositsB, "1"];
+    await callAndVerifyError(
+      initiator,
+      params,
+      previousState,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.InvalidArrayLength,
+    );
+  });
+
+  it("should fail if externalValidation.validateOutbound fails and signer is initiator", async () => {
+    const { previousState, activeTransfers, initiatorIdentifier, params } = createValidSetupContext();
+    externalValidationStub.validateOutbound.resolves(Result.fail(new Error("fail")));
+    await callAndVerifyError(
+      initiator,
+      params,
+      previousState,
+      activeTransfers,
+      initiatorIdentifier,
+      ValidationError.reasons.ExternalValidationFailed,
+      { error: "fail" },
+    );
+  });
 
   describe("setup params", () => {
     it("should work for the initiator", async () => {
@@ -247,6 +346,70 @@ describe.only("validateUpdateParams", () => {
       expect(chainReader.getChannelAddress.callCount).to.be.eq(1);
       expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
     });
+    it("should fail if there is a previous state", async () => {
+      const { activeTransfers, initiatorIdentifier, params } = createValidSetupContext();
+      await callAndVerifyError(
+        initiator,
+        params,
+        createTestChannelState(UpdateType.setup),
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.ChannelAlreadySetup,
+      );
+    });
+    it("should fail if chainReader.getChannelAddress fails", async () => {
+      const { activeTransfers, initiatorIdentifier, params, previousState } = createValidSetupContext();
+      chainReader.getChannelAddress.resolves(Result.fail(new ChainError("fail")));
+      await callAndVerifyError(initiator, params, previousState, activeTransfers, initiatorIdentifier, "fail");
+    });
+    it("should fail if channelAddress is miscalculated", async () => {
+      const { activeTransfers, initiatorIdentifier, params, previousState } = createValidSetupContext();
+      chainReader.getChannelAddress.resolves(Result.ok(mkAddress("0x55555")));
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.InvalidChannelAddress,
+      );
+    });
+    it("should fail if timeout is below min", async () => {
+      const { activeTransfers, initiatorIdentifier, params, previousState } = createValidSetupContext();
+      params.details.timeout = "1";
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.ShortChannelTimeout,
+      );
+    });
+    it("should fail if timeout is above max", async () => {
+      const { activeTransfers, initiatorIdentifier, params, previousState } = createValidSetupContext();
+      params.details.timeout = "10000000000000000000";
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.LongChannelTimeout,
+      );
+    });
+    it("should fail if counterparty === initiator", async () => {
+      const { activeTransfers, initiatorIdentifier, params, previousState } = createValidSetupContext();
+      params.details.counterpartyIdentifier = initiatorIdentifier;
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.InvalidCounterparty,
+      );
+    });
   });
 
   describe("deposit params", () => {
@@ -279,6 +442,18 @@ describe.only("validateUpdateParams", () => {
       expect(result.getError()).to.be.undefined;
       expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
     });
+    it("should fail if it is an invalid assetId", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+      params.details.assetId = "fail";
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.InvalidAssetId,
+      );
+    });
   });
 
   describe("create params", () => {
@@ -297,6 +472,7 @@ describe.only("validateUpdateParams", () => {
       expect(chainReader.create.callCount).to.be.eq(1);
       expect(externalValidationStub.validateOutbound.callCount).to.be.eq(1);
     });
+
     it("should work for responder", async () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
       const result = await validation.validateUpdateParams(
@@ -311,6 +487,163 @@ describe.only("validateUpdateParams", () => {
       expect(result.getError()).to.be.undefined;
       expect(chainReader.create.callCount).to.be.eq(1);
       expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
+    });
+
+    it("should fail if assetId is not in channel", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      params.details.assetId = mkAddress("0xddddd555555");
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.AssetNotFound,
+      );
+    });
+
+    it("should fail if transfer with that id is already active", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params, transfer } = createValidCreateContext();
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        [...activeTransfers, transfer],
+        initiatorIdentifier,
+        ValidationError.reasons.DuplicateTransferId,
+      );
+    });
+
+    it("should fail if initiator calling, initiator out of funds", async () => {
+      const { previousState, activeTransfers, params } = createValidCreateContext();
+      previousState.balances[0] = { to: [initiator.address, responder.address], amount: ["5", "3"] };
+      params.details.assetId = previousState.assetIds[0];
+      params.details.balance = { to: [initiator.address, responder.address], amount: ["7", "1"] };
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiator.publicIdentifier,
+        ValidationError.reasons.InsufficientFunds,
+      );
+    });
+
+    it("should fail if initiator calling, responder out of funds", async () => {
+      const { previousState, activeTransfers, params } = createValidCreateContext();
+      previousState.balances[0] = { to: [initiator.address, responder.address], amount: ["15", "3"] };
+      params.details.assetId = previousState.assetIds[0];
+      params.details.balance = { to: [initiator.address, responder.address], amount: ["7", "7"] };
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiator.publicIdentifier,
+        ValidationError.reasons.InsufficientFunds,
+      );
+    });
+
+    it("should fail if responder calling, initiator out of funds", async () => {
+      const { previousState, activeTransfers, params } = createValidCreateContext();
+      previousState.balances[0] = { to: [initiator.address, responder.address], amount: ["5", "3"] };
+      params.details.assetId = previousState.assetIds[0];
+      params.details.balance = { to: [initiator.address, responder.address], amount: ["7", "2"] };
+      await callAndVerifyError(
+        responder,
+        params,
+        previousState,
+        activeTransfers,
+        initiator.publicIdentifier,
+        ValidationError.reasons.InsufficientFunds,
+      );
+    });
+
+    it("should fail if responder calling, responder out of funds", async () => {
+      const { previousState, activeTransfers, params } = createValidCreateContext();
+      previousState.balances[0] = { to: [initiator.address, responder.address], amount: ["15", "3"] };
+      params.details.assetId = previousState.assetIds[0];
+      params.details.balance = { to: [initiator.address, responder.address], amount: ["7", "12"] };
+      await callAndVerifyError(
+        responder,
+        params,
+        previousState,
+        activeTransfers,
+        initiator.publicIdentifier,
+        ValidationError.reasons.InsufficientFunds,
+      );
+    });
+
+    it("should fail if timeout is below min", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      params.details.timeout = "1";
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.TransferTimeoutBelowMin,
+      );
+    });
+
+    it("should fail if timeout is above max", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      previousState.timeout = MAXIMUM_CHANNEL_TIMEOUT.toString();
+      params.details.timeout = (MAXIMUM_TRANSFER_TIMEOUT + 10).toString();
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.TransferTimeoutAboveMax,
+      );
+    });
+
+    it("should fail if timeout equal to channel timeout", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      params.details.timeout = previousState.timeout;
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.TransferTimeoutAboveChannel,
+      );
+    });
+
+    it("should fail if timeout greater than channel timeout", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      params.details.timeout = (parseInt(previousState.timeout) + 1).toString();
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.TransferTimeoutAboveChannel,
+      );
+    });
+
+    it("should fail if chainReader.create fails", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      chainReader.create.resolves(Result.fail(new ChainError("fail")));
+      await callAndVerifyError(initiator, params, previousState, activeTransfers, initiatorIdentifier, "fail");
+    });
+
+    it("should fail if chainReader.create returns false", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      chainReader.create.resolves(Result.ok(false));
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.InvalidInitialState,
+      );
     });
   });
 
@@ -327,8 +660,9 @@ describe.only("validateUpdateParams", () => {
         initiatorIdentifier,
       );
       expect(result.getError()).to.be.undefined;
-      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(1);
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
     });
+
     it("should work for responder", async () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidResolveContext();
       const result = await validation.validateUpdateParams(
@@ -341,7 +675,57 @@ describe.only("validateUpdateParams", () => {
         initiatorIdentifier,
       );
       expect(result.getError()).to.be.undefined;
-      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(1);
+    });
+
+    it("should fail if transfer is not active", async () => {
+      const { previousState, initiatorIdentifier, params } = createValidResolveContext();
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        [],
+        initiatorIdentifier,
+        ValidationError.reasons.TransferNotActive,
+      );
+    });
+
+    it("should fail if transferResolver is not an object", async () => {
+      const { previousState, initiatorIdentifier, params, activeTransfers } = createValidResolveContext();
+      params.details.transferResolver = "fail";
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+        ValidationError.reasons.InvalidResolver,
+      );
+    });
+
+    it("should fail if initiator is transfer responder", async () => {
+      const { previousState, params, activeTransfers } = createValidResolveContext();
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        activeTransfers,
+        initiator.publicIdentifier,
+        ValidationError.reasons.OnlyResponderCanInitiateResolve,
+      );
+    });
+
+    it("should fail if the transfer has an associated resolver", async () => {
+      const { previousState, initiatorIdentifier, params, transfer } = createValidResolveContext();
+      transfer.transferResolver = { preImage: getRandomBytes32() };
+      await callAndVerifyError(
+        initiator,
+        params,
+        previousState,
+        [transfer],
+        initiatorIdentifier,
+        ValidationError.reasons.TransferResolved,
+      );
     });
   });
 });
