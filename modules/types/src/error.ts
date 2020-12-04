@@ -102,6 +102,7 @@ export class ValidationError extends VectorError {
     InvalidUpdateNonce: "Update nonce must be previousState.nonce + 1",
     LongChannelTimeout: `Channel timeout above maximum of ${MAXIMUM_CHANNEL_TIMEOUT.toString()}s`,
     MalformedDetails: "Channel update details are malformed",
+    MalformedUpdate: "Channel update is malformed",
     MiscalculatedTransferId: "Calculated transfer ID is different than provided transferId",
     MiscalculatedChannelBalance: "Channel balance for update is miscalculated",
     MiscalculatedMerkleRoot: "Merkle root in update was miscalculated",

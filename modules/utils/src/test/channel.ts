@@ -17,7 +17,7 @@ import {
 import { ChannelSigner } from "../channelSigner";
 
 import { createTestHashlockTransferState } from "./transfers";
-import { mkAddress, mkPublicIdentifier, mkBytes32, mkHash } from "./util";
+import { mkAddress, mkPublicIdentifier, mkBytes32, mkHash, mkSig } from "./util";
 
 // Helper partial types for test helpers
 export type PartialChannelUpdate<T extends UpdateType> = Partial<
@@ -112,8 +112,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
     channelAddress: mkAddress("0xccc"),
     fromIdentifier: mkPublicIdentifier("vectorA"),
     nonce: 1,
-    aliceSignature: mkBytes32("0x0001"),
-    bobSignature: mkBytes32("0x0002"),
+    aliceSignature: mkSig("0x0001"),
+    bobSignature: mkSig("0x0002"),
     toIdentifier: mkPublicIdentifier("vectorB"),
     type,
   };
@@ -129,6 +129,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
         networkContext: {
           chainId: 1337,
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
+          transferRegistryAddress: mkAddress("0xffffeeeeeecccc"),
           providerUrl: "http://localhost:8545",
         },
         timeout: "1",
@@ -143,9 +144,9 @@ export function createTestChannelUpdate<T extends UpdateType>(
     case UpdateType.create:
       const createDeets: CreateUpdateDetails = {
         merkleProofData: [mkBytes32("0xproof")],
-        merkleRoot: mkBytes32("0xroot"),
+        merkleRoot: mkBytes32("0xeeeeaaaaa333344444"),
         transferDefinition: mkAddress("0xdef"),
-        transferId: mkBytes32("0xid"),
+        transferId: mkBytes32("0xaaaeee"),
         transferEncodings: ["state", "resolver"],
         balance: { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["7", "0"] },
         transferInitialState: {
@@ -158,9 +159,9 @@ export function createTestChannelUpdate<T extends UpdateType>(
       break;
     case UpdateType.resolve:
       const resolveDetails: ResolveUpdateDetails = {
-        merkleRoot: mkBytes32("0xroot1"),
+        merkleRoot: mkBytes32("0xeeeaaa32333"),
         transferDefinition: mkAddress("0xdef"),
-        transferId: mkBytes32("id"),
+        transferId: mkBytes32("0xeee3332222111"),
         transferResolver: { preImage: mkBytes32("0xpre") },
       };
       details = { ...resolveDetails };
@@ -274,7 +275,7 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
 
   const signerOverrides = {
     balance: {
-      to: signers.map(s => s.address),
+      to: signers.map((s) => s.address),
       amount: ["1", "0"],
     },
     fromIdentifier: signers[0].publicIdentifier,

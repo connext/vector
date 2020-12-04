@@ -19,6 +19,7 @@ import {
   MAXIMUM_CHANNEL_TIMEOUT,
   MAXIMUM_TRANSFER_TIMEOUT,
   UpdateParamsMap,
+  TChannelUpdate,
   TCreateUpdateDetails,
   TSetupUpdateDetails,
   TDepositUpdateDetails,
@@ -320,7 +321,15 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     InboundChannelUpdateError
   >
 > {
-  // Make sure details have proper structure before proceeding
+  // Make sure update + details have proper structure before proceeding
+  const invalidUpdate = validateSchema(update, TChannelUpdate);
+  if (invalidUpdate) {
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.MalformedUpdate, update, previousState, {
+        error: invalidUpdate,
+      }),
+    );
+  }
   const schemas = {
     [UpdateType.create]: TCreateUpdateDetails,
     [UpdateType.setup]: TSetupUpdateDetails,
@@ -355,8 +364,15 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
       const transfer = activeTransfers.find(
         (t) => t.transferId === (update.details as ResolveUpdateDetails).transferId,
       );
+      if (!transfer) {
+        return Result.fail(
+          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.TransferNotFound, update, previousState, {
+            existing: activeTransfers.map((t) => t.transferId),
+          }),
+        );
+      }
       const transferBalanceResult = await chainReader.resolve(
-        { ...transfer!, transferResolver: (update.details as ResolveUpdateDetails).transferResolver },
+        { ...(transfer! ?? {}), transferResolver: (update.details as ResolveUpdateDetails).transferResolver },
         previousState!.networkContext.chainId,
       );
 
