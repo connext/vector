@@ -34,6 +34,12 @@ export async function convertConditionalTransferParams(
   const recipientAssetId = params.recipientAssetId ?? params.assetId;
   const channelCounterparty = signer.address === channel.alice ? channel.bob : channel.alice;
 
+  // TODO: Compare recipientChainId with signerChainId
+  if (recipient === signer.publicIdentifier) {
+    // If signer is also the receipient on same chain/network
+    throw new Error(`Invalid initiator cannot be receiver on same chain`);
+  }
+
   // If the recipient is the channel counterparty, no default routing
   // meta needs to be created, otherwise create the default routing meta.
   // NOTE: While the engine and protocol do not care about the structure
@@ -113,11 +119,7 @@ export async function convertWithdrawParams(
   const { channelAddress, assetId, recipient, fee, callTo, callData } = params;
 
   // If there is a fee being charged, add the fee to the amount.
-  const amount = fee
-    ? BigNumber.from(params.amount)
-        .add(fee)
-        .toString()
-    : params.amount;
+  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,

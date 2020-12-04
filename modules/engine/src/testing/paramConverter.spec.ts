@@ -37,6 +37,8 @@ import {
 import { env } from "./env";
 
 describe("ParamConverter", () => {
+  it.skip("should fail if initiator is receiver for same chain/network");
+
   const chainId = parseInt(Object.keys(env.chainProviders)[0]);
   const providerUrl = env.chainProviders[chainId];
   const signerA = getRandomChannelSigner(providerUrl);
@@ -282,12 +284,7 @@ describe("ParamConverter", () => {
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(params.fee)
-              .toString(),
-            "0",
-          ],
+          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
           to: [params.recipient, channelState.bob],
         },
         assetId: params.assetId,
@@ -328,12 +325,7 @@ describe("ParamConverter", () => {
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(params.fee)
-              .toString(),
-            "0",
-          ],
+          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
           to: [params.recipient, channelState.alice],
         },
         assetId: params.assetId,
