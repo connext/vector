@@ -72,7 +72,6 @@ export async function outbound(
   if (validationRes.isError) {
     return Result.fail(validationRes.getError()!);
   }
-  logger.info({ method }, "Validated proposed parameters");
   logger.debug({ method, channel: previousState?.channelAddress, params }, "Validated proposed parameters");
 
   // Generate the update from the user supplied parameters, returning
@@ -83,7 +82,6 @@ export async function outbound(
   }
   // Get all the properly updated values
   let { update, updatedChannel, updatedTransfer, updatedActiveTransfers } = updateRes.getValue();
-  logger.info({ method }, "Generated update");
   logger.debug(
     {
       method,
@@ -95,7 +93,7 @@ export async function outbound(
   );
 
   // Send and wait for response
-  logger.info({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
+  logger.debug({ method, to: update.toIdentifier, type: update.type }, "Sending protocol message");
   let counterpartyResult = await messagingService.sendProtocolMessage(update, previousState?.latestUpdate);
 
   // IFF the result failed because the update is stale, our channel is behind
@@ -154,7 +152,7 @@ export async function outbound(
     );
   }
 
-  logger.info({ method, to: update.toIdentifier, type: update.type }, "Received protocol response");
+  logger.debug({ method, to: update.toIdentifier, type: update.type }, "Received protocol response");
 
   const { update: counterpartyUpdate } = counterpartyResult.getValue();
 

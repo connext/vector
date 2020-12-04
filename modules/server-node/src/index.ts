@@ -19,7 +19,7 @@ import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 
 export const logger = pino();
-const server = fastify({ logger, pluginTimeout: 120_000 });
+const server = fastify({ logger, pluginTimeout: 120_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
   origin: "*",
   methods: ["GET", "PUT", "POST", "OPTIONS"],

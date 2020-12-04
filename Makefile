@@ -216,19 +216,19 @@ watch-router: engine
 
 # Integration Tests
 
-test-messaging: messaging test-runner-js
+test-messaging: messaging test-runner
 	bash ops/test-integration.sh messaging test
-watch-messaging: messaging test-runner-js
+watch-messaging: messaging test-runner
 	bash ops/test-integration.sh messaging watch
 
-test-duet: test-runner-js duet
+test-duet: test-runner duet
 	bash ops/test-integration.sh duet test
-watch-duet: test-runner-js duet
+watch-duet: test-runner duet
 	bash ops/test-integration.sh duet watch
 
 test-trio: test-runner trio
 	bash ops/test-integration.sh trio test
-watch-trio: test-runner-js trio
+watch-trio: test-runner trio
 	bash ops/test-integration.sh trio watch
 
 test-load: test-runner trio
@@ -237,14 +237,14 @@ test-load: test-runner trio
 test-concurrency: test-runner trio
 	bash ops/test-load.sh concurrency 3
 	
-test-node: node test-runner-js
+test-node: node test-runner
 	bash ops/test-integration.sh node test
-watch-node: node test-runner-js
+watch-node: node test-runner
 	bash ops/test-integration.sh node watch
 
-test-routing-node: router test-runner-js
+test-routing-node: router test-runner
 	bash ops/test-integration.sh router test
-watch-routing-node: router test-runner-js
+watch-routing-node: router test-runner
 	bash ops/test-integration.sh router watch
 
 
