@@ -1,3 +1,6 @@
+# Derived from:
+# https://medium.com/swlh/using-github-actions-to-build-arm-based-docker-images-413a8d498ee
+
 name: ARM
 
 on: push
@@ -24,7 +27,7 @@ jobs:
       run: |
         echo ::set-output name=docker_platform::${DOCKER_TARGET_PLATFORM}
         echo ::set-output name=docker_image::${DOCKER_REGISTRY}/${DOCKER_IMAGE}
-        echo ::set-output name=version::${GITHUB_RUN_NUMBER}
+        echo ::set-output name=version::${GITHUB_SHA:0:8}
     - name: Docker Login
       if: success()
       run: |
@@ -35,4 +38,4 @@ jobs:
     - name: Run Buildx (push image)
       if: success()
       run: |
-        docker buildx build --platform ${{ steps.prepare.outputs.docker_platform }} --tag ${{ steps.prepare.outputs.docker_image }}:${{ steps.prepare.outputs.version }} --file ./Dockerfile --output type=image,push=true .
+        docker buildx build --platform ${{ steps.prepare.outputs.docker_platform }} --tag ${{ steps.prepare.outputs.docker_image }}:${{ steps.prepare.outputs.version }} --file modules/server-node/ops/Dockerfile --output type=image,push=true modules/server-node
