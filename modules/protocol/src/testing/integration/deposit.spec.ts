@@ -101,7 +101,7 @@ describe(testName, () => {
   });
 
   // TODO: This test is failing
-  it.only("should work after multiple deposits", async () => {
+  it("should work after multiple deposits", async () => {
     await bobSigner.sendTransaction({ value: depositAmount.div(4), to: preDepositChannel.channelAddress });
     const bobChannel = new Contract(assetIdErc20, TestToken.abi, bobSigner);
     const tx = await bobChannel.transfer(preDepositChannel.channelAddress, depositAmount.div(4));
