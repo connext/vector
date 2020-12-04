@@ -5,7 +5,7 @@ import pino from "pino";
 
 import { env } from "../utils";
 
-import { carolEvts, daveEvts } from "./setup";
+import { carolEvts, daveEvts } from "./eventSetup";
 
 const chainId = parseInt(Object.keys(env.chainProviders)[0]);
 const provider = new providers.JsonRpcProvider(env.chainProviders[chainId]);
@@ -98,7 +98,7 @@ describe.skip(testName, () => {
   });
 
   it("carol can transfer ETH back and forth", () => {
-    return new Promise(async resolve => {
+    return new Promise(async (resolve) => {
       const assetId = constants.AddressZero;
       const depositAmt = utils.parseEther("0.25");
       const channelRes = await carolService.getStateChannelByParticipants({
@@ -146,7 +146,7 @@ describe.skip(testName, () => {
       let paymentsReceived = 0;
       await carolService.on(
         EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-        async data => {
+        async (data) => {
           paymentsReceived += 1;
           logger.info(`Carol received transfer: ${data.transfer.meta?.routingId} NUM_PAYMENTS: ${paymentsReceived}`);
           if (paymentsReceived > NUM_PAYMENTS) {
@@ -189,12 +189,12 @@ describe.skip(testName, () => {
           expect(transferRes.getError()).to.not.be.ok;
           logger.info(`Carol sent transfer to Dave: ${newRoutingId}`);
         },
-        data => data.transfer.initiator !== carol,
+        (data) => data.transfer.initiator !== carol,
       );
 
       await daveService.on(
         EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-        async data => {
+        async (data) => {
           logger.info(`Dave received transfer: ${data.transfer.meta?.routingId}`);
           // resolve transfer
           const routingId = (data.transfer.meta as RouterSchemas.RouterMeta).routingId;
@@ -233,7 +233,7 @@ describe.skip(testName, () => {
           expect(transferRes.getError()).to.not.be.ok;
           logger.info(`Dave sent transfer to Carol: ${newRoutingId}`);
         },
-        data => data.transfer.initiator !== dave,
+        (data) => data.transfer.initiator !== dave,
       );
 
       const transferRes = await carolService.conditionalTransfer({
