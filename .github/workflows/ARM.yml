@@ -6,8 +6,8 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     env:
-      DOCKER_REGISTRY: kemansel.azurecr.io
-      DOCKER_IMAGE: kmansel/express-me
+      DOCKER_REGISTRY: docker.io
+      DOCKER_IMAGE: vector_node
       DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       DOCKER_TARGET_PLATFORM: linux/arm/v7
@@ -29,6 +29,9 @@ jobs:
       if: success()
       run: |
         echo "${DOCKER_PASSWORD}" | docker login ${DOCKER_REGISTRY} --username "${DOCKER_USERNAME}" --password-stdin
+    - name: Build all the things
+      if: success()
+      run: make arm
     - name: Run Buildx (push image)
       if: success()
       run: |
