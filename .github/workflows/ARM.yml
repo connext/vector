@@ -6,11 +6,11 @@ name: ARM
 on: push
 
 jobs:
-  build:
+  build-arm:
     runs-on: ubuntu-20.04
     env:
       DOCKER_REGISTRY: docker.io
-      DOCKER_IMAGE: vector_node
+      DOCKER_IMAGE: vector_node_arm
       DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       DOCKER_TARGET_PLATFORM: linux/arm/v7
