@@ -26,11 +26,28 @@ import * as vectorUtils from "../utils";
 import * as validation from "../validate";
 import * as vectorUpdate from "../update";
 
-describe("validateUpdateParams", () => {
+describe.only("validateUpdateParams", () => {
   // Test values
 
   // Declare all mocks
-  beforeEach(() => {});
+  let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+  let externalValidationStub: {
+    validateInbound: Sinon.SinonStub;
+    validateOutbound: Sinon.SinonStub;
+  };
+
+  beforeEach(() => {
+    // Set mocks (default to no error)
+    chainReader = Sinon.createStubInstance(VectorChainReader, {
+      getChannelAddress: Sinon.stub().resolves(Result.ok(undefined)),
+      create: Sinon.stub().resolves(Result.ok(undefined)),
+      resolve: Sinon.stub().resolves(Result.ok(undefined)),
+    });
+    externalValidationStub = {
+      validateInbound: Sinon.stub().resolves(Result.ok(undefined)),
+      validateOutbound: Sinon.stub().resolves(Result.ok(undefined)),
+    };
+  });
 
   afterEach(() => {
     Sinon.restore();
