@@ -156,10 +156,11 @@ export const depositInChannel = async (
     // Call deposit on the multisig
     try {
       const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const totalDepositsAlice = await channel.getTotalDepositsAlice(assetId);
+      const preDepositAliceBalance = await channel.getTotalDepositsAlice(assetId);
       const tx = await channel.depositAlice(assetId, value, { value });
       await tx.wait();
-      expect(await channel.getTotalDepositsAlice(assetId)).to.equal(totalDepositsAlice.add(value));
+      const postDepositAliceBalance = await channel.getTotalDepositsAlice(assetId);
+      expect(postDepositAliceBalance).to.equal(preDepositAliceBalance.add(value));
     } catch (e) {
       // Assume this happened because it wasn't deployed
       await depositorSigner.connectProvider(provider);
@@ -173,11 +174,18 @@ export const depositInChannel = async (
         ChannelFactory.abi,
         depositorSigner,
       );
-      const created = new Promise<string>(res => {
-        factory.once(factory.filters.ChannelCreation(), data => {
+      const created = new Promise<string>((res) => {
+        factory.once(factory.filters.ChannelCreation(), (data) => {
           res(data);
         });
       });
+
+      if (assetId !== AddressZero) {
+        await new Contract(assetId, TestToken.abi, depositorSigner).approve(
+          env.chainAddresses[chainId].channelFactoryAddress,
+          value
+        );
+      }
       const tx = await factory.createChannelAndDepositAlice(
         depositorSigner.address,
         counterparty.signerAddress,
@@ -194,14 +202,13 @@ export const depositInChannel = async (
         VectorChannel.abi,
         depositorSigner,
       ).getTotalDepositsAlice(assetId);
-      expect(totalDepositsAlice).to.be.eq(value);
-      expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
+      expect(totalDepositsAlice).to.be.eq(value.add(prev));
     }
   } else {
     try {
       // This call will fail if the channel isn't created
       const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const totalDepositsBob = await channel.getTotalDepositsBob(assetId);
+      const preDepositBobBalance = await channel.getTotalDepositsBob(assetId);
       // Deposit onchain
       const tx =
         assetId === AddressZero
@@ -209,7 +216,8 @@ export const depositInChannel = async (
           : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
       await tx.wait();
       // Verify onchain values updated
-      expect(await channel.getTotalDepositsBob(assetId)).to.be.eq(totalDepositsBob.add(value));
+      const postDepositBobBalance = await channel.getTotalDepositsBob(assetId);
+      expect(postDepositBobBalance).to.be.eq(preDepositBobBalance.add(value));
     } catch (e) {
       if (e.message.includes("Expected")) {
         throw e;
@@ -224,8 +232,8 @@ export const depositInChannel = async (
         ChannelFactory.abi,
         depositorSigner,
       );
-      const created = new Promise<string>(res => {
-        factory.once(factory.filters.ChannelCreation(), data => {
+      const created = new Promise<string>((res) => {
+        factory.once(factory.filters.ChannelCreation(), (data) => {
           res(data);
         });
       });
@@ -242,8 +250,7 @@ export const depositInChannel = async (
       const totalDepositsBob = await new Contract(deployedAddr, VectorChannel.abi, depositorSigner).getTotalDepositsBob(
         assetId,
       );
-      expect(totalDepositsBob).to.be.eq(value);
-      expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
+      expect(totalDepositsBob).to.be.eq(value.add(prev));
     }
   }
   // Reconcile with channel
@@ -258,7 +265,7 @@ export const depositInChannel = async (
   expect(postDeposit).to.containSubset({
     assetIds: [...new Set(channel!.assetIds.concat(assetId))],
   });
-  const assetIdx = postDeposit!.assetIds.findIndex(a => a === assetId);
+  const assetIdx = postDeposit!.assetIds.findIndex((a) => a === assetId);
   if (isDepositA) {
     expect(value.add(channel!.processedDepositsA[assetIdx] || "0")).to.equal(
       BigNumber.from(postDeposit.processedDepositsA[0]),
