@@ -149,7 +149,7 @@ jobs:
       - uses: actions/checkout@v1
       - run: make pull
       - run: jq '.production = true' ops/config/messaging.default.json > messaging.config.json
-      - run: jq '.production = true' ops/config/router.default.json > router.config.json
+      - run: jq '.production = true | .databaseUrl = "sqlite:///tmp/store.sqlite"' ops/config/router.default.json > router.config.json
       - run: make restart-router
       - run: bash ops/test-integration.sh router
       - name: Print logs
