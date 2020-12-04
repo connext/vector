@@ -8,6 +8,11 @@ import {
   mkSig,
   createTestFullHashlockTransferState,
   createTestUpdateParams,
+  mkAddress,
+  createTestChannelStateWithSigners,
+  getTransferId,
+  generateMerkleTreeData,
+  getRandomBytes32,
 } from "@connext/vector-utils";
 import {
   ChainError,
@@ -19,8 +24,14 @@ import {
   Result,
   UpdateType,
   Values,
+  ValidationError,
+  UpdateParams,
+  IChannelSigner,
+  DEFAULT_CHANNEL_TIMEOUT,
+  DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
 import Sinon from "sinon";
+import { AddressZero } from "@ethersproject/constants";
 
 import * as vectorUtils from "../utils";
 import * as validation from "../validate";
@@ -28,6 +39,10 @@ import * as vectorUpdate from "../update";
 
 describe.only("validateUpdateParams", () => {
   // Test values
+  const [initiator, responder] = Array(2)
+    .fill(0)
+    .map((_) => getRandomChannelSigner());
+  const channelAddress = mkAddress("0xccc");
 
   // Declare all mocks
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -36,13 +51,155 @@ describe.only("validateUpdateParams", () => {
     validateOutbound: Sinon.SinonStub;
   };
 
+  // Create helpers to create valid contexts
+  const createValidSetupContext = () => {
+    const previousState = undefined;
+    const activeTransfers = [];
+    const initiatorIdentifier = initiator.publicIdentifier;
+    const params = createTestUpdateParams(UpdateType.setup, {
+      channelAddress,
+      details: { counterpartyIdentifier: responder.publicIdentifier, timeout: DEFAULT_CHANNEL_TIMEOUT.toString() },
+    });
+    return { previousState, activeTransfers, initiatorIdentifier, params };
+  };
+
+  const createValidDepositContext = () => {
+    const activeTransfers = [];
+    const initiatorIdentifier = initiator.publicIdentifier;
+    const previousState = createTestChannelStateWithSigners([initiator, responder], UpdateType.setup, {
+      channelAddress,
+      nonce: 1,
+      timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+    });
+    const params = createTestUpdateParams(UpdateType.deposit, {
+      channelAddress,
+      details: {
+        assetId: AddressZero,
+      },
+    });
+    return { previousState, activeTransfers, initiatorIdentifier, params };
+  };
+
+  const createValidCreateContext = () => {
+    const activeTransfers = [];
+    const initiatorIdentifier = initiator.publicIdentifier;
+    const previousState = createTestChannelStateWithSigners([initiator, responder], UpdateType.deposit, {
+      channelAddress,
+      nonce: 4,
+      timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+      balances: [
+        { to: [initiator.address, responder.address], amount: ["7", "17"] },
+        { to: [initiator.address, responder.address], amount: ["14", "12"] },
+      ],
+      assetIds: [AddressZero, mkAddress("0xaaa")],
+      processedDepositsA: ["10", "6"],
+      processedDepositsB: ["14", "20"],
+    });
+    const transfer = createTestFullHashlockTransferState({
+      channelAddress,
+      initiator: initiator.address,
+      responder: responder.address,
+      transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+      transferDefinition: mkAddress("0xdef"),
+      assetId: AddressZero,
+      transferId: getTransferId(
+        channelAddress,
+        previousState.nonce.toString(),
+        mkAddress("0xdef"),
+        DEFAULT_TRANSFER_TIMEOUT.toString(),
+      ),
+      balance: { to: [initiator.address, responder.address], amount: ["3", "0"] },
+    });
+    const params = createTestUpdateParams(UpdateType.create, {
+      channelAddress,
+      details: {
+        balance: { ...transfer.balance },
+        assetId: transfer.assetId,
+        transferDefinition: transfer.transferDefinition,
+        transferInitialState: { ...transfer.transferState },
+        timeout: transfer.transferTimeout,
+      },
+    });
+    return { previousState, activeTransfers, initiatorIdentifier, params, transfer };
+  };
+
+  const createValidResolveContext = () => {
+    const nonce = 4;
+    const transfer = createTestFullHashlockTransferState({
+      channelAddress,
+      initiator: initiator.address,
+      responder: responder.address,
+      transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+      transferDefinition: mkAddress("0xdef"),
+      assetId: AddressZero,
+      transferId: getTransferId(
+        channelAddress,
+        nonce.toString(),
+        mkAddress("0xdef"),
+        DEFAULT_TRANSFER_TIMEOUT.toString(),
+      ),
+      balance: { to: [initiator.address, responder.address], amount: ["3", "0"] },
+      transferResolver: undefined,
+    });
+    const { root } = generateMerkleTreeData([transfer]);
+    const previousState = createTestChannelStateWithSigners([initiator, responder], UpdateType.deposit, {
+      channelAddress,
+      nonce,
+      timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+      balances: [
+        { to: [initiator.address, responder.address], amount: ["7", "17"] },
+        { to: [initiator.address, responder.address], amount: ["14", "12"] },
+      ],
+      assetIds: [AddressZero, mkAddress("0xaaa")],
+      processedDepositsA: ["10", "6"],
+      processedDepositsB: ["14", "20"],
+      merkleRoot: root,
+    });
+    const params = createTestUpdateParams(UpdateType.resolve, {
+      channelAddress,
+      details: { transferId: transfer.transferId, transferResolver: { preImage: getRandomBytes32() } },
+    });
+    return {
+      previousState,
+      activeTransfers: [transfer],
+      initiatorIdentifier: initiator.publicIdentifier,
+      params,
+      transfer,
+    };
+  };
+
+  const callAndVerifyError = async (
+    signer: IChannelSigner,
+    params: UpdateParams<any>,
+    state: FullChannelState | undefined,
+    activeTransfers: FullTransferState[],
+    initiatorIdentifier: string,
+    message: Values<typeof ValidationError.reasons>,
+    context: any = {},
+  ) => {
+    const result = await validation.validateUpdateParams(
+      signer,
+      chainReader,
+      externalValidationStub,
+      params,
+      state,
+      activeTransfers,
+      initiatorIdentifier,
+    );
+    const error = result.getError();
+    expect(error).to.be.ok;
+    expect(error).to.be.instanceOf(ValidationError);
+    expect(error?.message).to.be.eq(message);
+    expect(error?.context ?? {}).to.containSubset(context ?? {});
+    expect(error?.state).to.be.deep.eq(state);
+    expect(error?.params).to.be.deep.eq(params);
+  };
+
   beforeEach(() => {
     // Set mocks (default to no error)
-    chainReader = Sinon.createStubInstance(VectorChainReader, {
-      getChannelAddress: Sinon.stub().resolves(Result.ok(undefined)),
-      create: Sinon.stub().resolves(Result.ok(undefined)),
-      resolve: Sinon.stub().resolves(Result.ok(undefined)),
-    });
+    chainReader = Sinon.createStubInstance(VectorChainReader);
+    chainReader.getChannelAddress.resolves(Result.ok(channelAddress));
+    chainReader.create.resolves(Result.ok(true));
     externalValidationStub = {
       validateInbound: Sinon.stub().resolves(Result.ok(undefined)),
       validateOutbound: Sinon.stub().resolves(Result.ok(undefined)),
@@ -53,7 +210,140 @@ describe.only("validateUpdateParams", () => {
     Sinon.restore();
   });
 
-  it("", async () => {});
+  it("should fail if no previous state and is not a setup update", async () => {});
+
+  it("should fail if previous state is in dispute", async () => {});
+  it("should fail if externalValidation.validateOutbound fails and signer is initiator", async () => {});
+
+  describe("setup params", () => {
+    it("should work for the initiator", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidSetupContext();
+      const result = await validation.validateUpdateParams(
+        initiator,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(chainReader.getChannelAddress.callCount).to.be.eq(1);
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(1);
+    });
+
+    it("should work for the responder", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidSetupContext();
+      const result = await validation.validateUpdateParams(
+        responder,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(chainReader.getChannelAddress.callCount).to.be.eq(1);
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
+    });
+  });
+
+  describe("deposit params", () => {
+    it("should work for initiator", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+      const result = await validation.validateUpdateParams(
+        initiator,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(1);
+    });
+
+    it("should work for responder", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidDepositContext();
+      const result = await validation.validateUpdateParams(
+        responder,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
+    });
+  });
+
+  describe("create params", () => {
+    it("should work for initiator", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      const result = await validation.validateUpdateParams(
+        initiator,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(chainReader.create.callCount).to.be.eq(1);
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(1);
+    });
+    it("should work for responder", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
+      const result = await validation.validateUpdateParams(
+        responder,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(chainReader.create.callCount).to.be.eq(1);
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
+    });
+  });
+
+  describe("resolve params", () => {
+    it("should work for initiator", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidResolveContext();
+      const result = await validation.validateUpdateParams(
+        initiator,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(1);
+    });
+    it("should work for responder", async () => {
+      const { previousState, activeTransfers, initiatorIdentifier, params } = createValidResolveContext();
+      const result = await validation.validateUpdateParams(
+        responder,
+        chainReader,
+        externalValidationStub,
+        params,
+        previousState,
+        activeTransfers,
+        initiatorIdentifier,
+      );
+      expect(result.getError()).to.be.undefined;
+      expect(externalValidationStub.validateOutbound.callCount).to.be.eq(0);
+    });
+  });
 });
 
 // TODO: validUpdateParamsStub is not working
