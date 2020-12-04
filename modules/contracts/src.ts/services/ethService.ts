@@ -348,7 +348,13 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     // alice needs to deploy the multisig
     if (multisigCode === `0x` && sender === channelState.alice) {
       this.log.info(
-        { method, channelAddress: channelState.channelAddress, assetId, amount },
+        {
+          method,
+          channelAddress: channelState.channelAddress,
+          assetId,
+          amount,
+          senderAddress: await signer.getAddress(),
+        },
         `Deploying channel with deposit`,
       );
       return this.sendDeployChannelTx(channelState, { amount, assetId });
