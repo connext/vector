@@ -7,6 +7,7 @@ import {
   createTestChannelState,
   mkSig,
   createTestFullHashlockTransferState,
+  createTestUpdateParams,
 } from "@connext/vector-utils";
 import {
   ChainError,
@@ -14,6 +15,7 @@ import {
   FullChannelState,
   FullTransferState,
   InboundChannelUpdateError,
+  OutboundChannelUpdateError,
   Result,
   UpdateType,
   Values,
@@ -24,9 +26,87 @@ import * as vectorUtils from "../utils";
 import * as validation from "../validate";
 import * as vectorUpdate from "../update";
 
-describe("validateUpdateParams", () => {});
+describe("validateUpdateParams", () => {
+  // Test values
 
-describe("validateParamsAndApplyUpdate", () => {});
+  // Declare all mocks
+  beforeEach(() => {});
+
+  afterEach(() => {
+    Sinon.restore();
+  });
+
+  it("", async () => {});
+});
+
+// TODO: validUpdateParamsStub is not working
+describe.skip("validateParamsAndApplyUpdate", () => {
+  // Test values
+  const signer = getRandomChannelSigner();
+  const params = createTestUpdateParams(UpdateType.create);
+  const previousState = createTestChannelState(UpdateType.deposit);
+  const activeTransfers = [];
+
+  // Declare all mocks
+  let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+  let externalValidationStub: {
+    validateInbound: Sinon.SinonStub;
+    validateOutbound: Sinon.SinonStub;
+  };
+  let validateUpdateParamsStub: Sinon.SinonStub;
+  let generateAndApplyUpdateStub: Sinon.SinonStub;
+
+  beforeEach(() => {
+    // Set mocks
+    chainReader = Sinon.createStubInstance(VectorChainReader);
+    externalValidationStub = {
+      validateInbound: Sinon.stub().resolves(Result.ok(undefined)),
+      validateOutbound: Sinon.stub().resolves(Result.ok(undefined)),
+    };
+
+    validateUpdateParamsStub = Sinon.stub(validation, "validateUpdateParams");
+    generateAndApplyUpdateStub = Sinon.stub(vectorUpdate, "generateAndApplyUpdate");
+  });
+
+  afterEach(() => {
+    Sinon.restore();
+  });
+
+  it("should fail if validateUpdateParams fails", async () => {
+    validateUpdateParamsStub.resolves(Result.fail(new Error("fail")));
+    const result = await validation.validateParamsAndApplyUpdate(
+      signer,
+      chainReader,
+      externalValidationStub,
+      params,
+      previousState,
+      activeTransfers,
+      signer.publicIdentifier,
+    );
+    expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.OutboundValidationFailed);
+    expect(result.getError()?.params).to.be.deep.eq(params);
+    expect(result.getError()?.state).to.be.deep.eq(previousState);
+    expect(result.getError()?.context.error).to.be.eq("fail");
+    expect(result.isError).to.be.true;
+  });
+
+  it("should work", async () => {
+    generateAndApplyUpdateStub.resolves(Result.ok("pass"));
+    validateUpdateParamsStub.resolves(Result.ok(undefined));
+    const result = await validation.validateParamsAndApplyUpdate(
+      signer,
+      chainReader,
+      externalValidationStub,
+      params,
+      previousState,
+      activeTransfers,
+      signer.publicIdentifier,
+    );
+    expect(result.getError()).to.be.undefined;
+    expect(result.isError).to.be.false;
+    expect(result.getValue()).to.be.eq("pass");
+  });
+});
 
 describe("validateAndApplyInboundUpdate", () => {
   // Test values
