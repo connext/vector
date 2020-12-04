@@ -69,11 +69,8 @@ export const extractContextFromStore = async (
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
 // must be converted to the `UpdateParams<T> when syncing
-export function getParamsFromUpdate<T extends UpdateType = any>(
-  update: ChannelUpdate<T>,
-  signer: IChannelSigner,
-): UpdateParams<T> {
-  const { channelAddress, type, details, fromIdentifier, toIdentifier, assetId } = update;
+export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelUpdate<T>): UpdateParams<T> {
+  const { channelAddress, type, details, toIdentifier, assetId } = update;
   let paramDetails: SetupParams | DepositParams | CreateTransferParams | ResolveTransferParams;
   switch (type) {
     case "setup": {
@@ -81,7 +78,7 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
       const params: SetupParams = {
         networkContext: { ...networkContext },
         timeout,
-        counterpartyIdentifier: signer.publicIdentifier === fromIdentifier ? toIdentifier : fromIdentifier,
+        counterpartyIdentifier: toIdentifier,
       };
       paramDetails = params;
       break;

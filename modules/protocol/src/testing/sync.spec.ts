@@ -32,7 +32,6 @@ import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
 // Import as full module for easy sinon function mocking
-import * as vectorUpdate from "../update";
 import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
@@ -530,10 +529,10 @@ describe("outbound", () => {
   let messaging: Sinon.SinonStubbedInstance<MemoryMessagingService>;
   let chainService: Sinon.SinonStubbedInstance<VectorChainReader>;
 
-  let paramValidationStub: Sinon.SinonStub;
   let validateUpdateSignatureStub: Sinon.SinonStub;
-  let generationStub: Sinon.SinonStub;
-  let applyStub: Sinon.SinonStub;
+  let validateParamsAndApplyStub: Sinon.SinonStub;
+  // called during sync
+  let validateAndApplyInboundStub: Sinon.SinonStub;
 
   beforeEach(async () => {
     signers = Array(2)
@@ -546,9 +545,8 @@ describe("outbound", () => {
     chainService = Sinon.createStubInstance(VectorChainReader);
 
     // Set the validation + generation mock
-    paramValidationStub = Sinon.stub(vectorValidation, "validateUpdateParams").resolves(Result.ok(undefined));
-    generationStub = Sinon.stub(vectorUpdate, "generateAndApplyUpdate");
-    applyStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
+    validateParamsAndApplyStub = Sinon.stub(vectorValidation, "validateParamsAndApplyUpdate");
+    validateAndApplyInboundStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
 
     // Stub out all signature validation
     validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(
@@ -589,26 +587,14 @@ describe("outbound", () => {
     }
   });
 
-  it("should fail if it fails to validate the update", async () => {
+  it("should fail if it fails to validate and apply the update", async () => {
     const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
 
     // Stub the validation function
     const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
-    paramValidationStub.resolves(Result.fail(error));
+    validateParamsAndApplyStub.resolves(Result.fail(error));
 
     const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], log);
-    expect(res.getError()).to.be.deep.eq(error);
-  });
-
-  it("should fail if it fails to generate the update", async () => {
-    const params = createTestUpdateParams(UpdateType.deposit, { channelAddress: "0xfail" });
-
-    // Stub the generate update function
-    const error = new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params);
-    generationStub.resolves(Result.fail(error));
-
-    const res = await outbound(params, store, chainService, messaging, externalValidation, signers[0], log);
-    expect(res.isError).to.be.true;
     expect(res.getError()).to.be.deep.eq(error);
   });
 
@@ -623,7 +609,7 @@ describe("outbound", () => {
     messaging.sendProtocolMessage.resolves(Result.fail(counterpartyError));
 
     // Stub the generation function
-    generationStub.resolves(
+    validateParamsAndApplyStub.resolves(
       Result.ok({
         update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
         updatedTransfer: undefined,
@@ -646,7 +632,7 @@ describe("outbound", () => {
 
   it("should fail if it the signature validation fails", async () => {
     // Stub generation function
-    generationStub.resolves(
+    validateParamsAndApplyStub.resolves(
       Result.ok({
         update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
         updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit),
@@ -683,7 +669,7 @@ describe("outbound", () => {
     });
 
     // Stub the generation results
-    generationStub.resolves(
+    validateParamsAndApplyStub.resolves(
       Result.ok({
         update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
         updatedTransfer: undefined,
@@ -720,7 +706,7 @@ describe("outbound", () => {
     chainService.getChannelOnchainBalance.resolves(Result.ok(depositBAmt));
 
     // Stub the generation results
-    generationStub.onFirstCall().resolves(
+    validateParamsAndApplyStub.onFirstCall().resolves(
       Result.ok({
         update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
         updatedTransfer: undefined,
@@ -744,8 +730,7 @@ describe("outbound", () => {
     // Verify message only sent once by initiator w/update to sync
     expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
     // Verify sync happened
-    expect(generationStub.callCount).to.be.eq(1);
-    expect(paramValidationStub.callCount).to.be.eq(1);
+    expect(validateParamsAndApplyStub.callCount).to.be.eq(1);
     expect(store.saveChannelState.callCount).to.be.eq(1);
   });
 
@@ -754,7 +739,7 @@ describe("outbound", () => {
       const proposedParams = createTestUpdateParams(UpdateType.deposit);
 
       // Set generation stub
-      generationStub.resolves(
+      validateParamsAndApplyStub.resolves(
         Result.ok({
           update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
           updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit),
@@ -795,7 +780,7 @@ describe("outbound", () => {
       const proposedParams = createTestUpdateParams(UpdateType.deposit);
 
       // Set generation stub
-      generationStub.resolves(
+      validateParamsAndApplyStub.resolves(
         Result.ok({
           update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit),
           updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit),
@@ -835,58 +820,12 @@ describe("outbound", () => {
       expect(store.saveChannelState.callCount).to.be.eq(0);
     });
 
-    it("should fail if the update to sync is not exactly 1 ahead", async () => {
-      const proposedParams = createTestUpdateParams(UpdateType.deposit);
-
-      // Set store stub
-      store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
-
-      // Set generation stub
-      generationStub.resolves(
-        Result.ok({
-          update: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
-          updatedChannel: createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
-        }),
-      );
-
-      // Stub counterparty return
-      messaging.sendProtocolMessage.resolves(
-        Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-              nonce: 2,
-            }),
-          ),
-        ),
-      );
-
-      // Send request
-      const result = await outbound(
-        proposedParams,
-        store,
-        chainService,
-        messaging,
-        externalValidation,
-        signers[0],
-        log,
-      );
-
-      // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.error).to.be.eq("Can only sync by 1");
-      // Verify update was not retried
-      expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel was not updated
-      expect(store.saveChannelState.callCount).to.be.eq(0);
-    });
-
-    it("should fail if validateAndApplyUpdate fails", async () => {
+    it("should fail if it fails to apply the inbound update", async () => {
       // Set store mocks
       store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
 
       // Set generation mock
-      generationStub.resolves(
+      validateParamsAndApplyStub.resolves(
         Result.ok({
           update: createTestChannelUpdate(UpdateType.deposit),
           updatedChannel: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
@@ -905,8 +844,8 @@ describe("outbound", () => {
         ),
       );
 
-      // Stub the apply function
-      applyStub.resolves(Result.fail(new Error("fail")));
+      // Stub the sync inbound function
+      validateAndApplyInboundStub.resolves(Result.fail(new Error("fail")));
 
       // Send request
       const result = await outbound(
@@ -940,7 +879,7 @@ describe("outbound", () => {
       store.saveChannelState.rejects("fail");
 
       // Set generation mock
-      generationStub.resolves(Result.ok(applyRet));
+      validateParamsAndApplyStub.resolves(Result.ok(applyRet));
 
       // Stub counterparty return
       messaging.sendProtocolMessage.resolves(
@@ -955,7 +894,7 @@ describe("outbound", () => {
       );
 
       // Stub the apply function
-      applyStub.resolves(Result.ok(applyRet));
+      validateAndApplyInboundStub.resolves(Result.ok(applyRet));
 
       // Send request
       const result = await outbound(
@@ -987,7 +926,8 @@ describe("outbound", () => {
       store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
 
       // Set generation mock
-      generationStub.resolves(Result.ok(applyRet));
+      validateParamsAndApplyStub.onFirstCall().resolves(Result.ok(applyRet));
+      validateParamsAndApplyStub.onSecondCall().resolves(Result.fail(new Error("fail")));
 
       // Stub counterparty return
       messaging.sendProtocolMessage.resolves(
@@ -1001,60 +941,8 @@ describe("outbound", () => {
         ),
       );
 
-      // Stub the apply function
-      applyStub.resolves(Result.ok(applyRet));
-
-      // Stub the param validation function
-      paramValidationStub.onFirstCall().resolves(Result.ok(undefined));
-      paramValidationStub.onSecondCall().resolves(Result.fail(new Error("fail")));
-
-      // Send request
-      const result = await outbound(
-        createTestUpdateParams(UpdateType.deposit),
-        store,
-        chainService,
-        messaging,
-        externalValidation,
-        signers[0],
-        log,
-      );
-
-      // Verify error
-      expect(result.getError()?.message).to.be.eq("fail");
-      // Verify update was not retried
-      expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
-      // Verify channel save was called
-      expect(store.saveChannelState.callCount).to.be.eq(1);
-    });
-
-    it("should fail if it cannot generate update", async () => {
-      // Set the apply/update return value
-      const applyRet = {
-        update: createTestChannelUpdate(UpdateType.deposit),
-        updatedChannel: createTestChannelUpdateWithSigners(signers, UpdateType.deposit, { nonce: 3 }),
-      };
-
-      // Set store mocks
-      store.getChannelState.resolves(createTestChannelStateWithSigners(signers, UpdateType.deposit, { nonce: 2 }));
-
-      // Set generation mock
-      generationStub.onFirstCall().resolves(Result.ok(applyRet));
-      generationStub.onSecondCall().resolves(Result.fail(new Error("fail")));
-
-      // Stub counterparty return
-      messaging.sendProtocolMessage.resolves(
-        Result.fail(
-          new InboundChannelUpdateError(
-            InboundChannelUpdateError.reasons.StaleUpdate,
-            createTestChannelUpdateWithSigners(signers, UpdateType.deposit, {
-              nonce: 3,
-            }),
-          ),
-        ),
-      );
-
-      // Stub the apply function
-      applyStub.resolves(Result.ok(applyRet));
+      // Stub the sync function
+      validateAndApplyInboundStub.resolves(Result.ok(applyRet));
 
       // Send request
       const result = await outbound(
@@ -1132,7 +1020,7 @@ describe("outbound", () => {
           .resolves(Result.ok({ update: postSyncUpdate, previousUpdate: toSync }));
 
         // Stub apply-sync results
-        applyStub.resolves(
+        validateAndApplyInboundStub.resolves(
           Result.ok({
             update: toSync,
             updatedChannel: createUpdatedState(toSync),
@@ -1140,7 +1028,7 @@ describe("outbound", () => {
         );
 
         // Stub the generation results post-sync
-        generationStub.onSecondCall().resolves(
+        validateParamsAndApplyStub.onSecondCall().resolves(
           Result.ok({
             update: postSyncUpdate,
             updatedChannel: createUpdatedState(postSyncUpdate),
@@ -1163,9 +1051,8 @@ describe("outbound", () => {
         });
         expect(messaging.sendProtocolMessage.callCount).to.be.eq(2);
         expect(store.saveChannelState.callCount).to.be.eq(2);
-        expect(paramValidationStub.callCount).to.be.eq(2);
-        expect(generationStub.callCount).to.be.eq(2);
-        expect(applyStub.callCount).to.be.eq(1);
+        expect(validateParamsAndApplyStub.callCount).to.be.eq(2);
+        expect(validateAndApplyInboundStub.callCount).to.be.eq(1);
         expect(validateUpdateSignatureStub.callCount).to.be.eq(1);
       };
 
@@ -1183,15 +1070,12 @@ describe("outbound", () => {
           store.getChannelState.resolves(preSyncState);
 
           // Set the apply values on the first call
-          generationStub.onFirstCall().resolves(
+          validateParamsAndApplyStub.onFirstCall().resolves(
             Result.ok({
               update: preSyncUpdate,
               updatedChannel: preSyncUpdatedState,
             }),
           );
-
-          // Ensure generated params always valid
-          paramValidationStub.resolves(Result.ok(undefined));
         });
 
         afterEach(() => {
@@ -1224,15 +1108,12 @@ describe("outbound", () => {
           store.getChannelState.resolves(preSyncState);
 
           // Set the apply values on the first call
-          generationStub.onFirstCall().resolves(
+          validateParamsAndApplyStub.onFirstCall().resolves(
             Result.ok({
               update: preSyncUpdate,
               updatedChannel: preSyncUpdatedState,
             }),
           );
-
-          // Ensure generated params always valid
-          paramValidationStub.resolves(Result.ok(undefined));
         });
 
         afterEach(() => {
@@ -1265,15 +1146,12 @@ describe("outbound", () => {
           store.getChannelState.resolves(preSyncState);
 
           // Set the apply values on the first call
-          generationStub.onFirstCall().resolves(
+          validateParamsAndApplyStub.onFirstCall().resolves(
             Result.ok({
               update: preSyncUpdate,
               updatedChannel: preSyncUpdatedState,
             }),
           );
-
-          // Ensure generated params always valid
-          paramValidationStub.resolves(Result.ok(undefined));
         });
 
         afterEach(() => {

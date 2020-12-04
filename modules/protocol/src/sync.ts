@@ -17,8 +17,7 @@ import {
 import pino from "pino";
 
 import { extractContextFromStore, validateChannelUpdateSignatures } from "./utils";
-import { generateAndApplyUpdate } from "./update";
-import { validateAndApplyInboundUpdate, validateUpdateParams } from "./validate";
+import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
 // These updates will be single signed, the function should dispatch the
@@ -55,25 +54,23 @@ export async function outbound(
   let { activeTransfers, channelState: previousState } = storeRes.getValue();
 
   // Ensure parameters are valid, and action can be taken
-  const validationRes = await validateUpdateParams(
+  const updateRes = await validateParamsAndApplyUpdate(
     signer,
     chainReader,
     externalValidationService,
     params,
     previousState,
     activeTransfers,
+    signer.publicIdentifier,
   );
-  if (validationRes.isError) {
-    return Result.fail(validationRes.getError()!);
-  }
-  logger.debug({ method, channel: previousState?.channelAddress, params }, "Validated proposed parameters");
-
-  // Generate the update from the user supplied parameters, returning
-  // any fields that may be updated during this generation
-  const updateRes = await generateAndApplyUpdate(signer, chainReader, params, previousState, activeTransfers, logger);
   if (updateRes.isError) {
+    logger.warn(
+      { error: updateRes.getError()?.message, context: updateRes.getError()?.context },
+      "Failed to apply proposed update",
+    );
     return Result.fail(updateRes.getError()!);
   }
+
   // Get all the properly updated values
   let { update, updatedChannel, updatedTransfer, updatedActiveTransfers } = updateRes.getValue();
   logger.debug(
@@ -113,7 +110,6 @@ export async function outbound(
       chainReader,
       externalValidationService,
       signer,
-      logger,
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
@@ -324,7 +320,7 @@ export async function inbound(
     activeTransfers,
   );
   if (validateRes.isError) {
-    return returnError(validateRes.getError()!.message, update, previousState);
+    return returnError(validateRes.getError()!.message, update, previousState, validateRes.getError()?.context);
   }
 
   const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue();
@@ -371,7 +367,6 @@ const syncStateAndRecreateUpdate = async (
   chainReader: IVectorChainReader,
   externalValidationService: IExternalValidation,
   signer: IChannelSigner,
-  logger: pino.BaseLogger,
 ): Promise<Result<OutboundSync, OutboundChannelUpdateError>> => {
   // When receiving an update to sync from your counterparty, you
   // must make sure you can safely apply the update to your existing
@@ -403,42 +398,31 @@ const syncStateAndRecreateUpdate = async (
   // Regenerate the proposed update
   // Must go through validation again to ensure it is still a valid update
   // against the newly synced channel
-  const validationRes = await validateUpdateParams(
+  const validationRes = await validateParamsAndApplyUpdate(
     signer,
     chainReader,
     externalValidationService,
     attemptedParams,
     syncedChannel,
     syncedActiveTransfers,
+    signer.publicIdentifier,
   );
-  if (validationRes.isError) {
-    return Result.fail(validationRes.getError()!);
-  }
 
-  const generateRes = await generateAndApplyUpdate(
-    signer,
-    chainReader,
-    attemptedParams,
-    syncedChannel,
-    attemptedParams.type === UpdateType.create || attemptedParams.type == UpdateType.resolve
-      ? syncedActiveTransfers
-      : undefined,
-    logger,
-  );
-  if (generateRes.isError) {
+  if (validationRes.isError) {
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.RegenerateUpdateFailed,
         attemptedParams,
         syncedChannel,
         {
-          error: generateRes.getError()!.message,
+          error: validationRes.getError()!.message,
         },
       ),
     );
   }
+
   // Return the updated channel state and the regenerated update
-  return Result.ok({ ...generateRes.getValue(), syncedChannel });
+  return Result.ok({ ...validationRes.getValue(), syncedChannel });
 };
 
 const syncState = async (
@@ -468,11 +452,6 @@ const syncState = async (
   // here simply assert the length
   if (!toSync.aliceSignature || !toSync.bobSignature) {
     return handleError("Cannot sync single signed state");
-  }
-
-  // Only sync if the nonces is ahead by 1
-  if (toSync.nonce !== previousState.nonce + 1) {
-    return handleError("Can only sync by 1");
   }
 
   // Apply the update + validate the signatures (NOTE: full validation is not

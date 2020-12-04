@@ -492,7 +492,7 @@ describe("generateAndApplyUpdate", () => {
     signer: IChannelSigner,
     params: UpdateParams<"create" | "deposit" | "resolve" | "setup">,
     previousState: FullChannelState<any> | undefined,
-    activeTransfers: FullTransferState[] | undefined,
+    activeTransfers: FullTransferState[],
     expected: any,
     isError = false,
   ) => {
@@ -503,7 +503,7 @@ describe("generateAndApplyUpdate", () => {
       params,
       previousState,
       activeTransfers,
-      log,
+      signer.publicIdentifier,
     );
 
     // Verify results
@@ -550,7 +550,7 @@ describe("generateAndApplyUpdate", () => {
       },
     });
     const previousState = undefined;
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = aliceSigner;
 
     // Create expected return values
@@ -585,7 +585,7 @@ describe("generateAndApplyUpdate", () => {
       processedDepositsA: [],
       processedDepositsB: [],
     });
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = bobSigner;
 
     // Set mocks
@@ -632,7 +632,7 @@ describe("generateAndApplyUpdate", () => {
       processedDepositsA: [],
       processedDepositsB: [],
     });
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = aliceSigner;
 
     // Set mocks
@@ -924,7 +924,7 @@ describe("generateAndApplyUpdate", () => {
       processedDepositsA: [],
       processedDepositsB: [],
     });
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = bobSigner;
 
     // Set mocks

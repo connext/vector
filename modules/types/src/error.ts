@@ -116,7 +116,6 @@ export class ValidationError extends VectorError {
     TransferTimeoutBelowMin: `Transfer timeout below minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
     TransferTimeoutAboveMax: `Transfer timeout below minimum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
     UnrecognizedType: "Unrecognized update type",
-    ValidationFailed: "Outbound validation failed",
   } as const;
 
   constructor(
@@ -142,6 +141,7 @@ export class OutboundChannelUpdateError extends VectorError {
     Create2Failed: "Failed to get create2 address",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
+    OutboundValidationFailed: "Failed to validate incoming update",
     RestoreNeeded: "Channel too far out of sync, must be restored",
     RegenerateUpdateFailed: "Failed to regenerate update after sync",
     SaveChannelFailed: "Failed to save channel",

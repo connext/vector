@@ -22,7 +22,6 @@ import {
   ResolveUpdateDetails,
 } from "@connext/vector-types";
 import { HashZero, AddressZero } from "@ethersproject/constants";
-import pino from "pino";
 
 import { generateSignedChannelCommitment, getUpdatedChannelBalance, reconcileDeposit } from "./utils";
 
@@ -41,20 +40,18 @@ import { generateSignedChannelCommitment, getUpdatedChannelBalance, reconcileDep
 // *before* this function is called, both parties will pass in the final
 // transferState to the function to make sure the operation is called only
 // once by both parties.
-export async function applyUpdate<T extends UpdateType>(
+export function applyUpdate<T extends UpdateType>(
   update: ChannelUpdate<T>,
   previousState: FullChannelState | undefined, // undefined only on setup
-  previousActiveTransfers: FullTransferState[] | undefined, // defined on create/resolve
+  previousActiveTransfers: FullTransferState[],
   finalTransferBalance: Balance | undefined, // defined only on resolve
-): Promise<
-  Result<
-    {
-      updatedChannel: FullChannelState<T>;
-      updatedActiveTransfers?: FullTransferState[];
-      updatedTransfer?: FullTransferState;
-    },
-    InboundChannelUpdateError
-  >
+): Result<
+  {
+    updatedChannel: FullChannelState<T>;
+    updatedActiveTransfers?: FullTransferState[];
+    updatedTransfer?: FullTransferState;
+  },
+  InboundChannelUpdateError
 > {
   const { type, details, channelAddress, fromIdentifier, toIdentifier, balance, assetId, nonce } = update;
 
@@ -69,14 +66,6 @@ export async function applyUpdate<T extends UpdateType>(
     );
   }
   if (!finalTransferBalance && type === UpdateType.resolve) {
-    return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
-        applyError: "No final transfer balance on resolve",
-      }),
-    );
-  }
-  const needsActive = type === UpdateType.create || type === UpdateType.resolve;
-  if (needsActive && !previousActiveTransfers) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
         applyError: "No final transfer balance on resolve",
@@ -231,8 +220,8 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   chainReader: IVectorChainReader,
   params: UpdateParams<T>,
   previousState: FullChannelState | undefined, // undefined IFF setup
-  activeTransfers: FullTransferState[] | undefined, // defined IFF create/resolve
-  logger: pino.BaseLogger,
+  activeTransfers: FullTransferState[],
+  initiatorIdentifier: string,
 ): Promise<
   Result<
     {
@@ -253,7 +242,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   let finalTransferBalance: Balance | undefined = undefined;
   switch (params.type) {
     case UpdateType.setup: {
-      proposedUpdate = generateSetupUpdate(params as UpdateParams<"setup">, signer);
+      proposedUpdate = generateSetupUpdate(params as UpdateParams<"setup">, initiatorIdentifier);
       break;
     }
     case UpdateType.deposit: {
@@ -262,7 +251,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         params as UpdateParams<"deposit">,
         signer,
         chainReader,
-        logger,
+        initiatorIdentifier,
       );
       if (depositRes.isError) {
         return Result.fail(
@@ -279,6 +268,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         signer,
         activeTransfers!,
         chainReader,
+        initiatorIdentifier,
       );
       if (createRes.isError) {
         return Result.fail(new OutboundChannelUpdateError(createRes.getError()!.message as any, params, previousState));
@@ -295,7 +285,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         signer,
         activeTransfers!,
         chainReader,
-        logger,
+        initiatorIdentifier,
       );
       if (resolveRes.isError) {
         return Result.fail(
@@ -316,7 +306,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
 
   // Create a signed commitment for the new state. `applyUpdate` will also
   // return any updated transfers/active transfers
-  const applyUpdateRes = await applyUpdate(proposedUpdate, previousState, activeTransfers, finalTransferBalance);
+  const applyUpdateRes = applyUpdate(proposedUpdate, previousState, activeTransfers, finalTransferBalance);
   if (applyUpdateRes.isError) {
     const inboundError = applyUpdateRes.getError()!;
     return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, previousState));
@@ -340,11 +330,11 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
 
 function generateSetupUpdate(
   params: UpdateParams<"setup">, // already validated
-  signer: IChannelSigner,
+  initiatorIdentifier: string,
 ): ChannelUpdate<"setup"> {
   // During channel creation, you have no channel state, so create
   // the base values
-  const publicIdentifiers = [signer.publicIdentifier, params.details.counterpartyIdentifier];
+  const publicIdentifiers = [initiatorIdentifier, params.details.counterpartyIdentifier];
   const participants: string[] = publicIdentifiers.map(getSignerAddressFromPublicIdentifier);
 
   // Create the channel update from the params
@@ -353,7 +343,7 @@ function generateSetupUpdate(
     nonce: 1,
     channelAddress: params.channelAddress,
     type: UpdateType.setup,
-    fromIdentifier: signer.publicIdentifier,
+    fromIdentifier: initiatorIdentifier,
     toIdentifier: params.details.counterpartyIdentifier,
     // should have the to field filled out
     balance: { to: participants, amount: ["0", "0"] },
@@ -373,9 +363,8 @@ async function generateDepositUpdate(
   params: UpdateParams<"deposit">,
   signer: IChannelSigner,
   chainReader: IVectorChainReader,
-  logger: pino.BaseLogger,
+  initiatorIdentifier: string,
 ): Promise<Result<ChannelUpdate<"deposit">, Error>> {
-  logger.debug(params, "Generating deposit update from params");
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
   // - balances
@@ -414,7 +403,7 @@ async function generateDepositUpdate(
   const { balance, totalDepositsAlice, totalDepositsBob } = reconcileRes.getValue();
 
   const unsigned = {
-    ...generateBaseUpdate(state, params, signer),
+    ...generateBaseUpdate(state, params, signer, initiatorIdentifier),
     balance,
     processedDepositsA: totalDepositsAlice,
     processedDepositsB: totalDepositsBob,
@@ -431,6 +420,7 @@ async function generateCreateUpdate(
   signer: IChannelSigner,
   transfers: FullTransferState[],
   chainReader: IVectorChainReader,
+  initiatorIdentifier: string,
 ): Promise<Result<ChannelUpdate<"create">, OutboundChannelUpdateError>> {
   const {
     details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
@@ -467,6 +457,7 @@ async function generateCreateUpdate(
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
   const initialStateHash = hashTransferState(transferInitialState, stateEncoding);
+  const counterpartyAddr = signer.address === state.alice ? state.bob : state.alice;
   const transferState: FullTransferState = {
     balance,
     assetId,
@@ -480,8 +471,8 @@ async function generateCreateUpdate(
     channelFactoryAddress: state.networkContext.channelFactoryAddress,
     chainId: state.networkContext.chainId,
     transferResolver: undefined,
-    initiator: signer.address,
-    responder: signer.address === state.alice ? state.bob : state.alice,
+    initiator: getSignerAddressFromPublicIdentifier(initiatorIdentifier),
+    responder: signer.publicIdentifier === initiatorIdentifier ? counterpartyAddr : signer.address,
     meta,
     inDispute: false,
   };
@@ -490,7 +481,7 @@ async function generateCreateUpdate(
   // Create the update from the user provided params
   const channelBalance = getUpdatedChannelBalance(UpdateType.create, assetId, balance, state, transferState.initiator);
   const unsigned: ChannelUpdate<"create"> = {
-    ...generateBaseUpdate(state, params, signer),
+    ...generateBaseUpdate(state, params, signer, initiatorIdentifier),
     balance: channelBalance,
     assetId,
     details: {
@@ -515,7 +506,7 @@ async function generateResolveUpdate(
   signer: IChannelSigner,
   transfers: FullTransferState[],
   chainService: IVectorChainReader,
-  logger: pino.BaseLogger,
+  initiatorIdentifier: string,
 ): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, Error>> {
   // A transfer resolution update can effect the following
   // channel fields:
@@ -527,10 +518,6 @@ async function generateResolveUpdate(
 
   // First generate latest merkle tree data
   const transferToResolve = transfers.find((x) => x.transferId === transferId);
-  logger.debug(
-    { method: "generateResolveUpdate", numTransfers: transfers.length, channelAddress: state.channelAddress },
-    "Generating resolve update",
-  );
   if (!transferToResolve) {
     return Result.fail(new Error(OutboundChannelUpdateError.reasons.TransferNotActive));
   }
@@ -546,14 +533,6 @@ async function generateResolveUpdate(
     return Result.fail(transferBalanceResult.getError()!);
   }
   const transferBalance = transferBalanceResult.getValue();
-  logger.debug(
-    {
-      method: "generateResolveUpdate",
-      channelAddress: state.channelAddress,
-      transferBalance,
-    },
-    "Generated transfer resolution",
-  );
 
   // Convert transfer balance to channel update balance
   const balance = getUpdatedChannelBalance(
@@ -564,17 +543,8 @@ async function generateResolveUpdate(
     transferToResolve.initiator,
   );
 
-  // Generate the unsigned update from the params
-  logger.debug(
-    {
-      method: "generateResolveUpdate",
-      channelAddress: state.channelAddress,
-      root,
-    },
-    "Generated new merkle root",
-  );
   const unsigned: ChannelUpdate<"resolve"> = {
-    ...generateBaseUpdate(state, params, signer),
+    ...generateBaseUpdate(state, params, signer, initiatorIdentifier),
     balance,
     assetId: transferToResolve.assetId,
     details: {
@@ -597,13 +567,16 @@ function generateBaseUpdate<T extends UpdateType>(
   state: FullChannelState,
   params: UpdateParams<T>,
   signer: IChannelSigner,
+  initiatorIdentifier: string,
 ): Pick<ChannelUpdate<T>, "channelAddress" | "nonce" | "fromIdentifier" | "toIdentifier" | "type"> {
+  const isInitiator = signer.publicIdentifier === initiatorIdentifier;
+  const counterparty = signer.publicIdentifier === state.bobIdentifier ? state.aliceIdentifier : state.bobIdentifier;
   return {
     nonce: state.nonce + 1,
     channelAddress: state.channelAddress,
     type: params.type,
-    fromIdentifier: signer.publicIdentifier,
-    toIdentifier: signer.publicIdentifier === state.bobIdentifier ? state.aliceIdentifier : state.bobIdentifier,
+    fromIdentifier: initiatorIdentifier,
+    toIdentifier: isInitiator ? counterparty : signer.publicIdentifier,
   };
 }
 
