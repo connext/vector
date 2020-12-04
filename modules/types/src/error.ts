@@ -186,6 +186,7 @@ export class InboundChannelUpdateError extends VectorError {
     BadSignatures: "Could not recover signers",
     DifferentIdentifiers: "Update changes channel publicIdentifiers",
     DifferentChannelAddress: "Update changes channelAddress",
+    ExternalValidationFailed: "Failed to externally validate incoming update",
     InboundValidationFailed: "Failed to validate incoming update",
     InvalidAssetId: "Update `assetId` is invalid address",
     InvalidChannelAddress: "Update `channelAddress` is invalid",

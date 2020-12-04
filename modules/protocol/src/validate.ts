@@ -385,7 +385,11 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     }
     const applyRes = applyUpdate(update, previousState, activeTransfers, finalTransferBalance);
     if (applyRes.isError) {
-      return Result.fail(applyRes.getError()!);
+      return Result.fail(
+        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
+          error: applyRes.getError()!.message,
+        }),
+      );
     }
     const { updatedChannel, updatedActiveTransfers, updatedTransfer } = applyRes.getValue();
     const sigRes = await validateChannelUpdateSignatures(
@@ -396,7 +400,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     );
     if (sigRes.isError) {
       return Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, updatedChannel, {
+        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, previousState, {
           error: sigRes.getError().message,
         }),
       );
@@ -414,6 +418,16 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
       updatedActiveTransfers,
       updatedTransfer,
     });
+  }
+
+  // Always perform external validation on single signed updates
+  const outboundRes = await externalValidation.validateInbound(update, previousState, activeTransfers);
+  if (outboundRes.isError) {
+    return Result.fail(
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, previousState, {
+        error: outboundRes.getError()?.message,
+      }),
+    );
   }
 
   // Update is single signed, validate params + regenerate/apply
@@ -447,7 +461,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   );
   if (sigRes.isError) {
     return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, updatedChannel, {
+      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, previousState, {
         error: sigRes.getError().message,
       }),
     );
@@ -461,7 +475,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     update.bobSignature,
   );
   if (signedRes.isError) {
-    return Result.fail(new InboundChannelUpdateError(signedRes.getError()?.message as any, update, updatedChannel));
+    return Result.fail(new InboundChannelUpdateError(signedRes.getError()?.message as any, update, previousState));
   }
   const signed = signedRes.getValue();
 

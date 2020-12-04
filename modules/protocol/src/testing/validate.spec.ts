@@ -2,15 +2,17 @@ import { VectorChainReader } from "@connext/vector-contracts";
 import {
   ChannelSigner,
   createTestChannelUpdate,
-  createTestChannelUpdateWithSigners,
   expect,
   getRandomChannelSigner,
+  createTestChannelState,
+  mkSig,
+  createTestFullHashlockTransferState,
 } from "@connext/vector-utils";
 import {
+  ChainError,
   ChannelUpdate,
   FullChannelState,
   FullTransferState,
-  IExternalValidation,
   InboundChannelUpdateError,
   Result,
   UpdateType,
@@ -26,12 +28,14 @@ describe("validateUpdateParams", () => {});
 
 describe("validateParamsAndApplyUpdate", () => {});
 
-describe.only("validateAndApplyInboundUpdate", () => {
+describe("validateAndApplyInboundUpdate", () => {
   // Test values
   let signers: ChannelSigner[];
   let previousState: FullChannelState;
   let update: ChannelUpdate;
   let activeTransfers: FullTransferState[];
+  const aliceSignature = mkSig("0x11");
+  const bobSignature = mkSig("0x22");
 
   // Declare all mocks
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
@@ -39,16 +43,17 @@ describe.only("validateAndApplyInboundUpdate", () => {
   let validateChannelUpdateSignaturesStub: Sinon.SinonStub;
   let generateSignedChannelCommitmentStub: Sinon.SinonStub;
   let applyUpdateStub: Sinon.SinonStub;
-  let externalValidationStub: IExternalValidation;
+  let externalValidationStub: {
+    validateInbound: Sinon.SinonStub;
+    validateOutbound: Sinon.SinonStub;
+  };
 
   // Create helper to run test
   const runErrorTest = async (
-    setup: () => void, // should set any mocks/needed values
     errorMessage: Values<typeof InboundChannelUpdateError.reasons>,
     signer: ChannelSigner = signers[0],
     context: any = {},
   ) => {
-    setup();
     const result = await validation.validateAndApplyInboundUpdate(
       chainReader,
       externalValidationStub,
@@ -62,8 +67,37 @@ describe.only("validateAndApplyInboundUpdate", () => {
     expect(result.isError).to.be.true;
     expect(error?.message).to.be.eq(errorMessage);
     expect(error?.state).to.be.deep.eq(previousState);
-    expect(error?.context).to.containSubset(context);
+    expect(error?.context ?? {}).to.containSubset(context);
     return;
+  };
+
+  // Create helper to generate successful env for mocks
+  // (can be overridden in individual tests)
+  const prepEnv = () => {
+    const updatedChannel = createTestChannelState(UpdateType.setup);
+    const updatedActiveTransfers = undefined;
+    const updatedTransfer = undefined;
+
+    // Need for double signed and single signed
+    validateChannelUpdateSignaturesStub.resolves(Result.ok(undefined));
+
+    // Needed for double signed
+    chainReader.resolve.resolves(Result.ok({ to: [updatedChannel.alice, updatedChannel.bob], amount: ["10", "2"] }));
+    applyUpdateStub.returns(
+      Result.ok({
+        updatedActiveTransfers,
+        updatedTransfer,
+        updatedChannel,
+      }),
+    );
+
+    // Needed for single signed
+    externalValidationStub.validateInbound.resolves(Result.ok(undefined));
+
+    validateParamsAndApplyUpdateStub.resolves(Result.ok({ updatedChannel, updatedActiveTransfers, updatedTransfer }));
+
+    generateSignedChannelCommitmentStub.resolves(Result.ok({ aliceSignature, bobSignature }));
+    return { aliceSignature, bobSignature, updatedChannel, updatedTransfer, updatedActiveTransfers };
   };
 
   beforeEach(() => {
@@ -181,10 +215,8 @@ describe.only("validateAndApplyInboundUpdate", () => {
       ];
       for (const test of tests) {
         it(test.name, async () => {
-          const setup = () => {
-            update = { ...valid, ...(test.overrides ?? {}) } as any;
-          };
-          await runErrorTest(setup, InboundChannelUpdateError.reasons.MalformedUpdate, signers[0], {
+          update = { ...valid, ...(test.overrides ?? {}) } as any;
+          await runErrorTest(InboundChannelUpdateError.reasons.MalformedUpdate, signers[0], {
             error: test.error,
           });
         });
@@ -252,16 +284,14 @@ describe.only("validateAndApplyInboundUpdate", () => {
       ];
       for (const test of tests) {
         it(test.name, async () => {
-          const setup = () => {
-            update = {
-              ...valid,
-              details: {
-                ...valid.details,
-                ...test.overrides,
-              },
-            };
+          update = {
+            ...valid,
+            details: {
+              ...valid.details,
+              ...test.overrides,
+            },
           };
-          await runErrorTest(setup, InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
             error: test.error,
           });
         });
@@ -294,16 +324,14 @@ describe.only("validateAndApplyInboundUpdate", () => {
       ];
       for (const test of tests) {
         it(test.name, async () => {
-          const setup = () => {
-            update = {
-              ...valid,
-              details: {
-                ...valid.details,
-                ...test.overrides,
-              },
-            };
+          update = {
+            ...valid,
+            details: {
+              ...valid.details,
+              ...test.overrides,
+            },
           };
-          await runErrorTest(setup, InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
             error: test.error,
           });
         });
@@ -401,16 +429,14 @@ describe.only("validateAndApplyInboundUpdate", () => {
       ];
       for (const test of tests) {
         it(test.name, async () => {
-          const setup = () => {
-            update = {
-              ...valid,
-              details: {
-                ...valid.details,
-                ...test.overrides,
-              },
-            };
+          update = {
+            ...valid,
+            details: {
+              ...valid.details,
+              ...test.overrides,
+            },
           };
-          await runErrorTest(setup, InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
             error: test.error,
           });
         });
@@ -468,34 +494,234 @@ describe.only("validateAndApplyInboundUpdate", () => {
       ];
       for (const test of tests) {
         it(test.name, async () => {
-          const setup = () => {
-            update = {
-              ...valid,
-              details: {
-                ...valid.details,
-                ...test.overrides,
-              },
-            };
+          update = {
+            ...valid,
+            details: {
+              ...valid.details,
+              ...test.overrides,
+            },
           };
-          await runErrorTest(setup, InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
+          await runErrorTest(InboundChannelUpdateError.reasons.MalformedDetails, signers[0], {
             error: test.error,
           });
         });
       }
     });
   });
+
   describe("should handle double signed update", () => {
-    it("should work without hitting validation for UpdateType.resolve", async () => {});
-    it("should work without hitting validation for all other update types", async () => {});
-    it("should fail if chainReader.resolve fails", async () => {});
-    it("should fail if transfer is inactive", async () => {});
-    it("should fail if applyUpdate fails", async () => {});
-    it("should fail if validateChannelUpdateSignatures fails", async () => {});
+    const updateNonce = 3;
+
+    beforeEach(() => {
+      previousState = createTestChannelState(UpdateType.deposit, { nonce: 2 });
+    });
+
+    it("should work without hitting validation for UpdateType.resolve", async () => {
+      const { updatedActiveTransfers, updatedChannel, updatedTransfer } = prepEnv();
+      update = createTestChannelUpdate(UpdateType.resolve, {
+        aliceSignature: mkSig("0xaaa"),
+        bobSignature: mkSig("0xbbb"),
+        nonce: updateNonce,
+      });
+
+      // Run test
+      const result = await validation.validateAndApplyInboundUpdate(
+        chainReader,
+        externalValidationStub,
+        signers[0],
+        update,
+        previousState,
+        [createTestFullHashlockTransferState({ transferId: update.details.transferId })],
+      );
+      expect(result.isError).to.be.false;
+      const returned = result.getValue();
+      expect(returned).to.containSubset({
+        updatedChannel: {
+          ...updatedChannel,
+          latestUpdate: {
+            ...updatedChannel.latestUpdate,
+            aliceSignature: update.aliceSignature,
+            bobSignature: update.bobSignature,
+          },
+        },
+        updatedActiveTransfers,
+        updatedTransfer,
+      });
+
+      // Verify call stack
+      expect(applyUpdateStub.callCount).to.be.eq(1);
+      expect(chainReader.resolve.callCount).to.be.eq(1);
+      expect(validateChannelUpdateSignaturesStub.callCount).to.be.eq(1);
+      expect(validateParamsAndApplyUpdateStub.callCount).to.be.eq(0);
+      expect(generateSignedChannelCommitmentStub.callCount).to.be.eq(0);
+      expect(externalValidationStub.validateInbound.callCount).to.be.eq(0);
+    });
+
+    it("should work without hitting validation for all other update types", async () => {
+      const { updatedActiveTransfers, updatedChannel, updatedTransfer } = prepEnv();
+      update = createTestChannelUpdate(UpdateType.create, {
+        aliceSignature: mkSig("0xaaa"),
+        bobSignature: mkSig("0xbbb"),
+        nonce: updateNonce,
+      });
+
+      // Run test
+      const result = await validation.validateAndApplyInboundUpdate(
+        chainReader,
+        externalValidationStub,
+        signers[0],
+        update,
+        previousState,
+        [],
+      );
+      expect(result.isError).to.be.false;
+      const returned = result.getValue();
+      expect(returned).to.containSubset({
+        updatedChannel: {
+          ...updatedChannel,
+          latestUpdate: {
+            ...updatedChannel.latestUpdate,
+            aliceSignature: update.aliceSignature,
+            bobSignature: update.bobSignature,
+          },
+        },
+        updatedActiveTransfers,
+        updatedTransfer,
+      });
+
+      // Verify call stack
+      expect(applyUpdateStub.callCount).to.be.eq(1);
+      expect(validateChannelUpdateSignaturesStub.callCount).to.be.eq(1);
+      expect(chainReader.resolve.callCount).to.be.eq(0);
+      expect(validateParamsAndApplyUpdateStub.callCount).to.be.eq(0);
+      expect(generateSignedChannelCommitmentStub.callCount).to.be.eq(0);
+      expect(externalValidationStub.validateInbound.callCount).to.be.eq(0);
+    });
+
+    it("should fail if chainReader.resolve fails", async () => {
+      prepEnv();
+
+      // Set failing stub
+      chainReader.resolve.resolves(Result.fail(new ChainError("fail")));
+
+      // Create update
+      update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
+      activeTransfers = [createTestFullHashlockTransferState({ transferId: update.details.transferId })];
+      await runErrorTest("fail");
+    });
+
+    it("should fail if transfer is inactive", async () => {
+      prepEnv();
+
+      // Create update
+      update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
+      activeTransfers = [];
+      await runErrorTest(InboundChannelUpdateError.reasons.TransferNotFound, signers[0], { existing: [] });
+    });
+
+    it("should fail if applyUpdate fails", async () => {
+      prepEnv();
+
+      // Set failing stub
+      applyUpdateStub.returns(Result.fail(new Error("fail")));
+
+      // Create update
+      update = createTestChannelUpdate(UpdateType.setup, { aliceSignature, bobSignature, nonce: updateNonce });
+      activeTransfers = [];
+      await runErrorTest(InboundChannelUpdateError.reasons.ApplyUpdateFailed, signers[0], { error: "fail" });
+    });
+
+    it("should fail if validateChannelUpdateSignatures fails", async () => {
+      prepEnv();
+
+      // Set failing stub
+      validateChannelUpdateSignaturesStub.resolves(Result.fail(new Error("fail")));
+
+      // Create update
+      update = createTestChannelUpdate(UpdateType.setup, { aliceSignature, bobSignature, nonce: updateNonce });
+      activeTransfers = [];
+      await runErrorTest(InboundChannelUpdateError.reasons.BadSignatures, signers[0], { error: "fail" });
+    });
   });
-  it("should fail if update.nonce is not exactly one greater than previous", async () => {});
-  it("should fail if validateParamsAndApplyUpdate fails", async () => {});
-  it("should fail if single signed + invalid sig", async () => {});
-  it("should fail if double signed + invalid sig", async () => {});
-  it("should fail if generateSignedChannelCommitment fails", async () => {});
-  it("should work for a single signed update", async () => {});
+
+  it("should fail if update.nonce is not exactly one greater than previous", async () => {
+    // Set a passing mocked env
+    prepEnv();
+    update = createTestChannelUpdate(UpdateType.setup, { nonce: 2 });
+    await runErrorTest(InboundChannelUpdateError.reasons.InvalidUpdateNonce, signers[0]);
+  });
+
+  it("should fail if externalValidation.validateInbound fails", async () => {
+    // Set a passing mocked env
+    prepEnv();
+
+    externalValidationStub.validateInbound.resolves(Result.fail(new Error("fail")));
+
+    update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
+    await runErrorTest(InboundChannelUpdateError.reasons.ExternalValidationFailed, signers[0], { error: "fail" });
+  });
+
+  it("should fail if validateParamsAndApplyUpdate fails", async () => {
+    // Set a passing mocked env
+    prepEnv();
+
+    validateParamsAndApplyUpdateStub.resolves(Result.fail(new Error("fail")));
+
+    update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
+    await runErrorTest(InboundChannelUpdateError.reasons.InboundValidationFailed, signers[0], { error: "fail" });
+  });
+
+  it("should fail if single signed + invalid sig", async () => {
+    // Set a passing mocked env
+    prepEnv();
+
+    validateChannelUpdateSignaturesStub.resolves(Result.fail(new Error("fail")));
+
+    update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
+    await runErrorTest(InboundChannelUpdateError.reasons.BadSignatures, signers[0], { error: "fail" });
+  });
+
+  it("should fail if generateSignedChannelCommitment fails", async () => {
+    // Set a passing mocked env
+    prepEnv();
+
+    generateSignedChannelCommitmentStub.resolves(Result.fail(new Error("fail")));
+
+    update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
+    await runErrorTest("fail" as any, signers[0]);
+  });
+
+  it("should work for a single signed update", async () => {
+    // Set a passing mocked env
+    const { updatedActiveTransfers, updatedChannel, updatedTransfer, aliceSignature, bobSignature } = prepEnv();
+
+    update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
+
+    const result = await validation.validateAndApplyInboundUpdate(
+      chainReader,
+      externalValidationStub,
+      signers[0],
+      update,
+      previousState,
+      activeTransfers ?? [],
+    );
+    expect(result.isError).to.be.false;
+    const returned = result.getValue();
+    expect(returned).to.containSubset({
+      updatedChannel: {
+        ...updatedChannel,
+        latestUpdate: { ...updatedChannel.latestUpdate, aliceSignature, bobSignature },
+      },
+      updatedActiveTransfers,
+      updatedTransfer,
+    });
+
+    // Verify call stack
+    expect(validateParamsAndApplyUpdateStub.callCount).to.be.eq(1);
+    expect(validateChannelUpdateSignaturesStub.callCount).to.be.eq(1);
+    expect(generateSignedChannelCommitmentStub.callCount).to.be.eq(1);
+    expect(externalValidationStub.validateInbound.callCount).to.be.eq(1);
+    expect(applyUpdateStub.callCount).to.be.eq(0);
+    expect(chainReader.resolve.callCount).to.be.eq(0);
+  });
 });
