@@ -14,41 +14,46 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
+@nodeUrl = {{carolUrl}}
+@nodePublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+@channel = {{carolRogerChannel}}
+
 
 # 0.1 ETH
 @ethAmount = 10000000000000000
 
 ##############
 ### Send Deposit Tx
-POST {{aliceUrl}}/send-deposit-tx
+POST {{nodeUrl}}/send-deposit-tx
 Content-Type: application/json
 
 {
-  "channelAddress": "{{aliceBobChannel}}",
+  "channelAddress": "{{channel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
   "chainId": "{{chainId}}",
-  "publicIdentifier": "{{alicePublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
 }
 
 ##############
 ### Reconcile Deposit
-POST {{carolUrl}}/deposit
+POST {{nodeUrl}}/deposit
 Content-Type: application/json
 
 {
-  "channelAddress": "{{carolRogerChannel}}",
-  "assetId": "0x8cdaf0cd259887258bc13a92c0a6da92698644c0",
-  "publicIdentifier": "{{carolPublicIdentifier}}"
+  "channelAddress": "{{channel}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{nodePublicIdentifier}}"
 }
 
 ##############
 ### Request Collateral
-POST {{carolUrl}}/request-collateral
+POST {{nodeUrl}}/request-collateral
 Content-Type: application/json
 
 {
-  "channelAddress": "{{carolRogerChannel}}",
-  "assetId": "0x8cdaf0cd259887258bc13a92c0a6da92698644c0",
-  "publicIdentifier": "{{carolPublicIdentifier}}"
+  "channelAddress": "{{channel}}",
+  "assetId": "0x0000000000000000000000000000000000000000",
+  "publicIdentifier": "{{nodePublicIdentifier}}"
 }
