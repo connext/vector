@@ -223,13 +223,16 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     channelAddress,
     latestUpdate,
     merkleRoot: mkHash(),
-    networkContext: {
-      chainId: 1337,
-      channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
-      transferRegistryAddress: mkAddress("0xcc22233323132"),
-      providerUrl: "http://localhost:8545",
-      ...(networkContext ?? {}),
-    },
+    networkContext:
+      type === UpdateType.setup
+        ? { ...(latestUpdate.details as SetupUpdateDetails).networkContext }
+        : {
+            chainId: 1337,
+            channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
+            transferRegistryAddress: mkAddress("0xcc22233323132"),
+            providerUrl: "http://localhost:8545",
+            ...(networkContext ?? {}),
+          },
     nonce,
     alice: participants[0],
     bob: participants[1],
