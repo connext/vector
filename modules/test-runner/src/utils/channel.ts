@@ -1,5 +1,11 @@
 import { expect, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
-import { EngineEvents, FullChannelState, INodeService, TransferNames } from "@connext/vector-types";
+import {
+  DEFAULT_CHANNEL_TIMEOUT,
+  EngineEvents,
+  FullChannelState,
+  INodeService,
+  TransferNames,
+} from "@connext/vector-types";
 import { BigNumber, providers, utils, Wallet } from "ethers";
 
 import { env } from "./env";
@@ -25,7 +31,7 @@ export const setup = async (
   const channelRes = await bobService.setup({
     counterpartyIdentifier: aliceService.publicIdentifier,
     chainId,
-    timeout: "360000",
+    timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
   });
   const channel = channelRes.getValue();
   expect(channel.channelAddress).to.be.ok;
