@@ -339,7 +339,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferInitialState is undefined",
           params: { ...validParams, transferInitialState: undefined },
-          error: "should have required property '.transferInitialState'",
+          error: "should have required property 'transferInitialState'",
         },
         {
           name: "should fail if timeout is undefined",
@@ -418,7 +418,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferResolver is undefined",
           params: { ...validParams, transferResolver: undefined },
-          error: "should have required property '.transferResolver'",
+          error: "should have required property 'transferResolver'",
         },
       ];
 
