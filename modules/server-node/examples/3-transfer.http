@@ -42,6 +42,11 @@ Content-Type: application/json
   "details": {
     "lockHash": "{{lockHash}}",
     "expiry": "0"
+  },
+  "recipient": "{{bobPublicIdentifier}}",
+  "meta": {
+    "routingId": "{{routingId}}",
+    "hello": "world"
   }
 }
 
