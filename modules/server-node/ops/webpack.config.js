@@ -66,10 +66,6 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         {
-          from: path.join(__dirname, "../../../node_modules/@connext/pure-evm-wasm/pure-evm_bg.wasm"),
-          to: path.join(__dirname, "../dist/pure-evm_bg.wasm"),
-        },
-        {
           from: path.join(__dirname, "../schema.prisma"),
           to: path.join(__dirname, "../dist/schema.prisma"),
         },
