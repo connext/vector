@@ -23,36 +23,36 @@
 @routingId = 0x5e7af61c2bd7243ea005c3f350dbee1eeac55fef120e47db2cfa6e5394bd6942
 @transferId = 0x
 
+@nodeUrl = {{carolUrl}}
+@nodePublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+@channel = {{carolRogerChannel}}
+
 ##############
 ### Create Transfer ETH
-POST {{carolUrl}}/transfers/create
+POST {{nodeUrl}}/transfers/create
 Content-Type: application/json
 
 {
   "type": "HashlockTransfer",
-  "publicIdentifier": "{{carolPublicIdentifier}}",
-  "channelAddress": "{{carolRogerChannel}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "channelAddress": "{{channel}}",
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
   "details": {
     "lockHash": "{{lockHash}}",
     "expiry": "0"
-  },
-  "recipient": "{{bobPublicIdentifier}}",
-  "meta": {
-    "routingId": "{{routingId}}",
-    "hello": "world"
   }
 }
 
 ##############
 ### Resolve Transfer
-POST {{bobUrl}}/transfers/resolve
+POST {{nodeUrl}}/transfers/resolve
 Content-Type: application/json
 
 {
-  "publicIdentifier": "{{bobPublicIdentifier}}",
-  "channelAddress": "{{aliceBobChannel}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "channelAddress": "{{channel}}",
   "transferId": "{{transferId}}",
   "transferResolver": {
     "preImage": "{{preImage}}"
@@ -61,12 +61,12 @@ Content-Type: application/json
 
 ##############
 ### Cancel Transfer
-POST {{bobUrl}}/transfers/resolve
+POST {{nodeUrl}}/transfers/resolve
 Content-Type: application/json
 
 {
-  "publicIdentifier": "{{bobPublicIdentifier}}",
-  "channelAddress": "{{aliceBobChannel}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "channelAddress": "{{channel}}",
   "transferId": "{{transferId}}",
   "transferResolver": {
     "preImage": "0x0000000000000000000000000000000000000000000000000000000000000000"
