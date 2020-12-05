@@ -125,7 +125,7 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
           requireOnline: false,
-          routingId: params.meta.routingId,
+          routingId: params.meta!.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -133,7 +133,7 @@ describe("ParamConverter", () => {
               recipient: params.recipient,
             },
           ],
-          ...params.meta,
+          ...params.meta!,
         },
       });
     });
@@ -166,7 +166,7 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
           requireOnline: false,
-          routingId: params.meta.routingId,
+          routingId: params.meta!.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -282,12 +282,7 @@ describe("ParamConverter", () => {
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(params.fee)
-              .toString(),
-            "0",
-          ],
+          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
           to: [params.recipient, channelState.bob],
         },
         assetId: params.assetId,
@@ -328,12 +323,7 @@ describe("ParamConverter", () => {
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(params.fee)
-              .toString(),
-            "0",
-          ],
+          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
           to: [params.recipient, channelState.alice],
         },
         assetId: params.assetId,
