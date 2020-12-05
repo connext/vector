@@ -26,11 +26,12 @@ export const fundIfBelow = async (
     return;
   }
   const funderBal = await getOnchainBalance(assetId, funder.address, funder.provider);
+  const chain = await funder.getChainId();
   if (funderBal.lt(fundAmount)) {
     throw new Error(
       `${
         funder.address
-      } has insufficient funds to gift to ${address} (requested: ${fundAmount.toString()}, balance: ${funderBal.toString()})`,
+      } has insufficient funds to gift to ${address} (requested: ${fundAmount.toString()}, balance: ${funderBal.toString()}, chain: ${chain})`,
     );
   }
   const tx =
