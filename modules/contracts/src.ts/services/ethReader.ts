@@ -117,15 +117,16 @@ export class EthereumChainReader implements IVectorChainReader {
       return Result.fail(new ChainError(ChainError.reasons.ProviderNotFound));
     }
 
+    let registry = this.transferRegistries.get(chainId.toString())!;
     if (!this.transferRegistries.has(chainId.toString())) {
       // Registry for chain not loaded, load into memory
       const loadRes = await this.loadRegistry(transferRegistry, chainId, bytecode);
       if (loadRes.isError) {
         return Result.fail(loadRes.getError()!);
       }
+      registry = loadRes.getValue();
     }
 
-    const registry = this.transferRegistries.get(chainId.toString())!;
     const info = registry.find((r) => r.definition === definition);
     if (!info) {
       return Result.fail(

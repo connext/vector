@@ -14,14 +14,18 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
+@nodeUrl = {{carolUrl}}
+@nodePublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+
 ##############
 ### Setup Channel
-POST {{carolUrl}}/setup
+POST {{nodeUrl}}/setup
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{rogerPublicIdentifier}}",
-  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "counterpartyIdentifier": "{{counterpartyPublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
   "chainId": "{{chainId}}",
   "timeout": "36000"
 }
