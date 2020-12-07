@@ -17,7 +17,7 @@ import {
   EngineParams,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
-import { BaseLogger } from "pino";
+import pino, { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
@@ -27,7 +27,7 @@ export type BrowserNodeConfig = {
   natsUrl?: string;
   authUrl?: string;
   messagingUrl?: string;
-  logger: BaseLogger;
+  logger?: BaseLogger;
   signer?: IChannelSigner;
   chainProviders?: ChainProviders;
   chainAddresses?: ChainAddresses;
@@ -41,6 +41,9 @@ export class BrowserNode implements INodeService {
 
   static async connect(config: BrowserNodeConfig): Promise<BrowserNode> {
     let node: BrowserNode;
+    if (!config.logger) {
+      config.logger = pino();
+    }
     if (config.signer) {
       config.logger.info(
         { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },

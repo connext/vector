@@ -1,11 +1,11 @@
 {
   "name": "@connext/vector-engine",
-  "version": "0.0.23",
+  "version": "0.0.26",
   "description": "",
   "author": "Arjun Bhuptani",
   "license": "MIT",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "directories": {
     "test": "tests"
   },
@@ -14,10 +14,10 @@
     "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-contracts": "0.0.23",
-    "@connext/vector-protocol": "0.0.23",
-    "@connext/vector-types": "0.0.23",
-    "@connext/vector-utils": "0.0.23",
+    "@connext/vector-contracts": "0.0.26",
+    "@connext/vector-protocol": "0.0.26",
+    "@connext/vector-types": "0.0.26",
+    "@connext/vector-utils": "0.0.26",
     "@ethersproject/bignumber": "5.0.10",
     "@ethersproject/bytes": "5.0.6",
     "@ethersproject/constants": "5.0.6",
