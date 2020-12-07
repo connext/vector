@@ -259,7 +259,6 @@ export class Vector implements IVectorProtocol {
     // TODO: is there a better way to do this?
     await Promise.all(
       channels.map(async (channel) => {
-        const currBlock = await this.chainReader.getBlockNumber(channel.networkContext.chainId);
         const disputeRes = await this.chainReader.getChannelDispute(
           channel.channelAddress,
           channel.networkContext.chainId,
