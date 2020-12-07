@@ -1,20 +1,42 @@
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-typechain";
+import { getEthProvider } from "@connext/vector-utils";
+import { Wallet } from "@ethersproject/wallet";
 import { task } from "hardhat/config";
 import { HardhatUserConfig } from "hardhat/types";
 
+import { getAddressBook } from "./src.ts/addressBook";
+import { migrate } from "./src.ts/actions/migrate";
 import * as packageJson from "./package.json";
 
-const apiKey = process.env.API_KEY ??  "";
+////////////////////////////////////////
+/// Parse Env
 
+// TODO: how do we get network details here?
+const ethProviderUrl = process.env.ETH_PROVIDER_URL ??  "http://localhost:8545";
+
+const apiKey = process.env.API_KEY ??  "abc123";
+const addressBookPath = process.env.ADDRESS_BOOK ??  "/tmp/address-book.json";
 const mnemonic =
   process.env.SUGAR_DADDY ??
   process.env.MNEMONIC ??
   "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
+////////////////////////////////////////
+/// Define Tasks
+
 task("migrate", "Migrates vector contracts").setAction(async () => {
-  console.log("Migrating..");
+  const wallet = Wallet.fromMnemonic(mnemonic).connect(getEthProvider(ethProviderUrl));
+  const addressBook = getAddressBook(
+    addressBookPath,
+    (await wallet.provider.getNetwork()).chainId.toString(),
+  );
+  await migrate(wallet, addressBook);
+
 });
+
+////////////////////////////////////////
+/// Export Config
 
 const config: HardhatUserConfig = {
   paths: {

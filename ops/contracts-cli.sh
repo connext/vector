@@ -18,6 +18,9 @@ bash "$root/ops/pull-images.sh" "$ethprovider_image" > /dev/null
 
 docker run \
   --entrypoint=hardhat \
+  --env="API_KEY=${API_KEY}" \
+  --env="ETH_PROVIDER_URL=${ETH_PROVIDER_URL}" \
+  --env="MNEMONIC=${MNEMONIC}" \
   --interactive \
   --name="${project}_contract_cli" \
   --network="${project}" \
@@ -25,4 +28,6 @@ docker run \
   --tmpfs="/tmp" \
   --tty \
   --volume="$root/address-book.json:/data/address-book.json" \
-  "$ethprovider_image" "${args[@]}"
+  --volume="$root:/root" \
+  --workdir="/root/modules/contracts" \
+  "$ethprovider_image" --config dist/hardhat.config.js "${args[@]}"

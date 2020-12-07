@@ -8,6 +8,6 @@
     "esModuleInterop": true,
     "allowJs": true
   },
-  "exclude": ["dist", "node_modules", "package.json"],
+  "exclude": ["dist", "node_modules"],
   "include": ["hardhat.config.ts", "src.ts/**/*.ts"]
 }

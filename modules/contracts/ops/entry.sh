@@ -16,11 +16,10 @@ export MNEMONIC="${MNEMONIC:-candy maple cake sugar pudding cream honey rich smo
 mkdir -p /data /tmp
 touch "$ADDRESS_BOOK"
 
+# rm these early so we can use their presence to indicate when migrations finish
 config_file="/tmp/hardhat.config.js"
 chain_addresses="$(dirname "$ADDRESS_BOOK")/chain-addresses.json"
-
-# rm this early so we can use it's presence to indicate when migrations finish
-rm -f "$chain_addresses"
+rm -f "$chain_addresses" "$config_file"
 
 ## Start hardhat testnet
 
@@ -47,7 +46,7 @@ wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
 ## Run contract migrations
 
 echo "Migrating contracts.."
-node "./dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONIC" | pino-pretty --colorize --translateTime --ignore pid,level,hostname
+hardhat --config dist/hardhat.config.js migrate | pino-pretty --colorize --translateTime --ignore pid,level,hostname
 
 ## Expose the address book in a more accessible format
 
