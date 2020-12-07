@@ -9,6 +9,7 @@ import {
   mkPublicIdentifier,
   RestServerNodeService,
 } from "@connext/vector-utils";
+import { VectorChainReader } from "@connext/vector-contracts";
 import { AddressZero } from "@ethersproject/constants";
 import pino from "pino";
 import Sinon from "sinon";
@@ -21,9 +22,11 @@ import { mockProvider } from "./utils/mocks";
 
 const hydratedProviders = { 1337: mockProvider };
 
+const logger = pino({ level: config.logLevel });
+const chainReader = new VectorChainReader(hydratedProviders, logger);
+
 describe("Forwarding", () => {
   describe("transferCreation", () => {
-    const logger = pino({ level: config.logLevel });
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<RouterStore>;
 
@@ -49,6 +52,8 @@ describe("Forwarding", () => {
         transfer,
         channelBalance,
         conditionType,
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
       };
     };
 
@@ -94,6 +99,7 @@ describe("Forwarding", () => {
           mkPublicIdentifier("vectorBBB"),
           mkAddress("0xb"),
           node as INodeService,
+          chainReader,
           store,
           logger,
           hydratedProviders,
