@@ -18,7 +18,7 @@ import {
   expect,
 } from "@connext/vector-utils";
 import { defaultAbiCoder } from "@ethersproject/abi";
-import { BigNumberish } from "@ethersproject/bignumber";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
 import { env } from "../env";
@@ -26,8 +26,6 @@ import { chainId } from "../constants";
 
 // Will create a hashlock transfer in the channel, and return the full
 // transfer state (including the necessary resolver)
-// TODO: Should be improved to create any type of state, though maybe
-// this is out of scope for integration test utils
 export const createTransfer = async (
   channelAddress: string,
   creator: IVectorProtocol,
@@ -57,6 +55,12 @@ export const createTransfer = async (
     assetId,
   };
 
+  const preCreateChannel = await creator.getChannelState(channelAddress);
+  const assetIdx = (preCreateChannel?.assetIds ?? []).findIndex((a) => a === assetId);
+  const isAlice = creator.signerAddress === preCreateChannel?.alice;
+  const initCreatorBalance = preCreateChannel?.balances[assetIdx].amount[isAlice ? 0 : 1];
+  const initResolverBalance = preCreateChannel?.balances[assetIdx].amount[isAlice ? 1 : 0];
+
   const ret = await creator.create(params);
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
@@ -84,6 +88,12 @@ export const createTransfer = async (
   const decoded = defaultAbiCoder.decode([transfer!.transferEncodings[1]], encoding)[0];
   expect(decoded.preImage).to.be.deep.eq(preImage);
   expect(transfer!.transferEncodings.length).to.be.eq(2);
+
+  // Ensure the balance was properly decremented
+  const finalCreatorBalance = channel?.balances[assetIdx].amount[isAlice ? 0 : 1];
+  const finalResolverBalance = channel?.balances[assetIdx].amount[isAlice ? 1 : 0];
+  expect(BigNumber.from(finalCreatorBalance)).to.be.eq(BigNumber.from(initCreatorBalance).sub(balance.amount[0]));
+  expect(BigNumber.from(finalResolverBalance)).to.be.eq(BigNumber.from(initResolverBalance).sub(balance.amount[1]));
 
   return {
     channel,
