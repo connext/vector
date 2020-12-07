@@ -4,6 +4,12 @@ set -e
 package="$1"
 version="$2"
 
+# set sed flags so that they're valid on either linux or mac
+if [[ "$(uname)" == "Darwin" ]]
+then sedFlag='-i=".bk"'
+else sedFlag='-i'
+fi
+
 if [[ -z "$version" ]]
 then version=$(npm info "$package" version)
 fi
@@ -22,7 +28,7 @@ find modules/*/package.json modules/*/ops/package.json package.json \
   -type f \
   -not -path "*/node_modules/*" \
   -not -path "*/dist/*" \
-  -exec sed -i -E 's|"'"$package"'": "[a-z0-9.^-]+"|"'"$package"'": "'"$version"'"|g' {} \;
+  -exec sed "$sedFlag" -E 's|"'"$package"'": "[a-z0-9.^-]+"|"'"$package"'": "'"$version"'"|g' {} \;
 
 echo "After:"
 grep -r '"'"$package"'": "' modules/*/package.json modules/*/ops/package.json package.json
