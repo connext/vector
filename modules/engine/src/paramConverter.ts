@@ -113,11 +113,7 @@ export async function convertWithdrawParams(
   const { channelAddress, assetId, recipient, fee, callTo, callData } = params;
 
   // If there is a fee being charged, add the fee to the amount.
-  const amount = fee
-    ? BigNumber.from(params.amount)
-        .add(fee)
-        .toString()
-    : params.amount;
+  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,

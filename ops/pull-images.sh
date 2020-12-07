@@ -8,7 +8,7 @@ release=$(grep -m 1 '"version":' "$root/package.json" | cut -d '"' -f 4)
 commit=$(git rev-parse HEAD | head -c 8)
 
 default_images=$(
-  echo 'auth builder database ethprovider messaging_proxy nats node node_proxy router router_proxy test_runner' |\
+  echo 'auth builder database ethprovider messaging_proxy nats node router test_runner' |\
     sed "s/^/${project}_/g" |\
     sed "s/ / ${project}_/g"
 )
