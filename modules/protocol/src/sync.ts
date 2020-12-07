@@ -355,7 +355,7 @@ type OutboundSync = {
   syncedChannel: FullChannelState<any>;
   updatedChannel: FullChannelState<any>;
   updatedTransfer?: FullTransferState;
-  updatedActiveTransfers?: FullTransferState[];
+  updatedActiveTransfers: FullTransferState[];
 };
 
 const syncStateAndRecreateUpdate = async (

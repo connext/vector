@@ -142,7 +142,7 @@ describe(testName, () => {
     ]);
   });
 
-  it.only("should work if initiator channel is out of sync", async () => {
+  it("should work if initiator channel is out of sync", async () => {
     const initial = await aliceStore.getChannelState(abChannelAddress);
     await depositInChannel(abChannelAddress, alice, aliceSigner, bob, assetId, depositAmount);
 
@@ -150,6 +150,7 @@ describe(testName, () => {
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
 
     await runTest(channel, transfer);
+    expect(channel.nonce).to.be.eq(initial!.nonce + 2);
   });
   it("should work if responder channel is out of sync", async () => {
     const initial = await aliceStore.getChannelState(abChannelAddress);
