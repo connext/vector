@@ -99,7 +99,6 @@ describe("Forwarding", () => {
           mkPublicIdentifier("vectorBBB"),
           mkAddress("0xb"),
           node as INodeService,
-          chainReader,
           store,
           logger,
           hydratedProviders,
