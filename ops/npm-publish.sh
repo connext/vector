@@ -24,6 +24,8 @@ if [[ ! "$(pwd | sed 's|.*/\(.*\)|\1|')" =~ $project ]]
 then echo "Aborting: Make sure you're in the $project project root" && exit 1
 fi
 
+make all
+
 echo "Did you update the changelog.md before publishing (y/n)?"
 read -p "> " -r
 echo
@@ -32,8 +34,6 @@ target_version="$REPLY" # get version from user input
 if [[ ! "$REPLY" =~ ^[Yy]$ ]]
 then echo "Be the change you want to see in the world -- write some documentation." && exit 1 # abort!
 fi
-
-make all
 
 package_names=""
 package_versions=""

@@ -10,6 +10,8 @@ import {
   TRANSFER_DECREMENT,
   INodeService,
   NodeError,
+  IVectorChainReader,
+  FullChannelState,
 } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
@@ -30,6 +32,7 @@ export class ForwardTransferError extends VectorError {
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     ErrorForwardingTransfer: "Error forwarding transfer",
     UnableToCollateralize: "Could not collateralize receiver channel",
+    InvalidTransferDefinition: "Could not find transfer definition",
   } as const;
 
   constructor(
@@ -63,6 +66,7 @@ export async function forwardTransferCreation(
   routerPublicIdentifier: string,
   signerAddress: string,
   nodeService: INodeService,
+  chainReader: IVectorChainReader,
   store: IRouterStore,
   logger: BaseLogger,
   chainProviders: ChainJsonProviders,
@@ -104,7 +108,7 @@ export async function forwardTransferCreation(
       channelAddress: senderChannelAddress,
       initiator,
       transferTimeout,
-      transferDefinition,
+      transferDefinition: senderTransferDefinition,
     },
   } = data;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
@@ -125,7 +129,7 @@ export async function forwardTransferCreation(
       ),
     );
   }
-  const senderChannel = senderChannelRes.getValue();
+  const senderChannel = senderChannelRes.getValue() as FullChannelState;
   if (!senderChannel) {
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
@@ -143,7 +147,8 @@ export async function forwardTransferCreation(
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
-  if (recipientAssetId !== senderAssetId) {
+  let recipientTransferType = senderTransferDefinition;
+  if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
     logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
     const swapRes = await getSwappedAmount(
       senderAmount,
@@ -156,11 +161,41 @@ export async function forwardTransferCreation(
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.UnableToCalculateSwap, {
           message: swapRes.getError()?.message,
+          context: swapRes.getError()?.context,
         }),
       );
     }
     recipientAmount = swapRes.getValue();
-    logger.warn({ method, recipientAssetId, recipientAmount, recipientChainId }, "Inflight swap calculated");
+
+    // we need to get the proper transfer definition address
+    if (recipientChainId !== senderChainId) {
+      const senderTransferInfoRes = await chainReader.getRegisteredTransferByDefinition(
+        senderTransferDefinition,
+        senderChannel.networkContext.transferRegistryAddress,
+        senderChainId,
+      );
+      if (senderTransferInfoRes.isError) {
+        return Result.fail(
+          new ForwardTransferError(ForwardTransferError.reasons.InvalidTransferDefinition, {
+            message: swapRes.getError()?.message,
+          }),
+        );
+      }
+      const senderTransferInfo = senderTransferInfoRes.getValue();
+      recipientTransferType = senderTransferInfo.name;
+    }
+
+    logger.warn(
+      {
+        method,
+        recipientAssetId,
+        recipientAmount,
+        recipientChainId,
+        senderTransferDefinition,
+        recipientTransferDefinition: recipientTransferType,
+      },
+      "Inflight swap calculated",
+    );
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
@@ -225,10 +260,8 @@ export async function forwardTransferCreation(
     channelAddress: recipientChannel.channelAddress,
     amount: recipientAmount,
     assetId: recipientAssetId,
-    timeout: BigNumber.from(transferTimeout)
-      .sub(TRANSFER_DECREMENT)
-      .toString(),
-    type: transferDefinition,
+    timeout: BigNumber.from(transferTimeout).sub(TRANSFER_DECREMENT).toString(),
+    type: recipientTransferType,
     publicIdentifier: routerPublicIdentifier,
     details,
     meta: {
@@ -244,11 +277,11 @@ export async function forwardTransferCreation(
       // store transfer
       const type = "TransferCreation";
       await store.queueUpdate(type, {
-        channelAddress: recipientChannel.channelAddress,
-        amount: recipientAmount,
-        assetId: recipientAssetId,
+        channelAddress: params.channelAddress,
+        amount: params.amount,
+        assetId: params.assetId,
         routingId,
-        transferDefinition,
+        type: params.type,
         details,
       });
     }
@@ -294,7 +327,7 @@ export async function forwardTransferResolution(
   }
 
   // find transfer where node is responder
-  const incomingTransfer = transfersRes.getValue().find(transfer => transfer.responder === signerAddress);
+  const incomingTransfer = transfersRes.getValue().find((transfer) => transfer.responder === signerAddress);
 
   if (!incomingTransfer) {
     return Result.fail(
