@@ -9,8 +9,8 @@ fi
 
 # set sed flags so that they're valid on either linux or mac
 if [[ "$(uname)" == "Darwin" ]]
-then sedFlag='-i=".bk"'
-else sedFlag='-i'
+then sedFlag=(-i '')
+else sedFlag=(-i)
 fi
 
 echo "Before:"
@@ -38,7 +38,7 @@ then
     modules/*/src.ts \
     modules/server-node/schema.prisma \
     ops \
-    -type f -not -name "*.swp" -exec sed "$sedFlag" "s|$old|$new|g" {} \;
+    -type f -not -name "*.swp" -exec sed "${sedFlag[@]}" "s|$old|$new|g" {} \;
 
 else echo "Goodbye"
 fi

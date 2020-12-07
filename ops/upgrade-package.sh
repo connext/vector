@@ -6,8 +6,8 @@ version="$2"
 
 # set sed flags so that they're valid on either linux or mac
 if [[ "$(uname)" == "Darwin" ]]
-then sedFlag='-i=".bk"'
-else sedFlag='-i'
+then sedFlag=(-i '')
+else sedFlag=(-i)
 fi
 
 if [[ -z "$version" ]]
@@ -28,7 +28,7 @@ find modules/*/package.json modules/*/ops/package.json package.json \
   -type f \
   -not -path "*/node_modules/*" \
   -not -path "*/dist/*" \
-  -exec sed "$sedFlag" -E 's|"'"$package"'": "[a-z0-9.^-]+"|"'"$package"'": "'"$version"'"|g' {} \;
+  -exec sed "${sedFlag[@]}" -E 's|"'"$package"'": "[a-z0-9.^-]+"|"'"$package"'": "'"$version"'"|g' {} \;
 
 echo "After:"
 grep -r '"'"$package"'": "' modules/*/package.json modules/*/ops/package.json package.json
