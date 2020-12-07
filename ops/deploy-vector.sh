@@ -75,6 +75,13 @@ fi
 tag=$project-$version
 echo "Let's go, deploying: $tag"
 
+# First, npm publish
+bash ops/npm-publish.sh <<EOF
+y
+$version
+y
+EOF
+
 git checkout prod
 git merge --no-ff main -m "Deploy $tag"
 

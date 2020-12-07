@@ -14,29 +14,34 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
+@nodeUrl = {{carolUrl}}
+@nodePublicIdentifier = {{carolPublicIdentifier}}
+@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
+@channel = {{carolRogerChannel}}
+
 ##############
 ### GET CONFIG
-GET {{carolUrl}}/config
+GET {{nodeUrl}}/config
 
 ##############
 ### GET STATUS
-GET {{carolUrl}}/{{carolPublicIdentifier}}/status
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/status
 
 ##############
 ### GET CHANNELS
-GET {{carolUrl}}/{{carolPublicIdentifier}}/channels
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels
 
 ##############
 ### GET CHANNEL
-GET {{carolUrl}}/{{carolPublicIdentifier}}/channels/{{carolRogerChannel}}
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/{{channel}}
 
 ##############
 ### GET CHANNEL BY PARTICIPANTS
-GET {{carolUrl}}/{{carolPublicIdentifier}}/channels/counterparty/{{rogerPublicIdentifier}}/chain-id/{{chainId}}
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/channels/counterparty/{{counterpartyPublicIdentifier}}/chain-id/{{chainId}}
 
 ##############
 ### CLEAR STORE
-POST {{aliceUrl}}/clear-store
+POST {{nodeUrl}}/clear-store
 Content-Type: application/json
 
 {
@@ -45,7 +50,7 @@ Content-Type: application/json
 
 ##############
 ### CREATE NODE
-POST {{carolUrl}}/node
+POST {{nodeUrl}}/node
 Content-Type: application/json
 
 {
