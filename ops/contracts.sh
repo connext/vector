@@ -9,7 +9,6 @@ docker swarm init 2> /dev/null || true
 docker network create --attachable --driver overlay "$project" 2> /dev/null || true
 
 args=("$@");
-
 if [[ "${#@}" == "0" ]]
 then args=(--help);
 fi
@@ -26,4 +25,4 @@ docker run \
   --tmpfs="/tmp" \
   --tty \
   --volume="$root/address-book.json:/data/address-book.json" \
-  "$ethprovider_image" migrate "${args[@]}"
+  "$ethprovider_image" "${args[@]}"

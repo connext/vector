@@ -1,13 +1,20 @@
 import "@nomiclabs/hardhat-waffle";
-import { HardhatUserConfig } from "hardhat/types";
 import "hardhat-typechain";
+import { task } from "hardhat/config";
+import { HardhatUserConfig } from "hardhat/types";
 
 import * as packageJson from "./package.json";
+
+const apiKey = process.env.API_KEY ??  "";
 
 const mnemonic =
   process.env.SUGAR_DADDY ??
   process.env.MNEMONIC ??
   "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
+
+task("migrate", "Migrates vector contracts").setAction(async () => {
+  console.log("Migrating..");
+});
 
 const config: HardhatUserConfig = {
   paths: {
@@ -33,6 +40,11 @@ const config: HardhatUserConfig = {
         mnemonic,
         accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       },
+    },
+    rinkeby: {
+      chainId: 4,
+      url: `https://eth-rinkeby.alchemyapi.io/jsonrpc/${apiKey}`,
+      accounts: { mnemonic },
     },
     matic: {
       chainId: 80001,
