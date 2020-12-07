@@ -147,7 +147,7 @@ export async function forwardTransferCreation(
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
-  let recipientTransferDefinition = senderTransferDefinition;
+  let recipientTransferType = senderTransferDefinition;
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
     logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
     const swapRes = await getSwappedAmount(
@@ -182,7 +182,7 @@ export async function forwardTransferCreation(
         );
       }
       const senderTransferInfo = senderTransferInfoRes.getValue();
-      recipientTransferDefinition = senderTransferInfo.name;
+      recipientTransferType = senderTransferInfo.name;
     }
 
     logger.warn(
@@ -192,7 +192,7 @@ export async function forwardTransferCreation(
         recipientAmount,
         recipientChainId,
         senderTransferDefinition,
-        recipientTransferDefinition,
+        recipientTransferDefinition: recipientTransferType,
       },
       "Inflight swap calculated",
     );
@@ -261,7 +261,7 @@ export async function forwardTransferCreation(
     amount: recipientAmount,
     assetId: recipientAssetId,
     timeout: BigNumber.from(transferTimeout).sub(TRANSFER_DECREMENT).toString(),
-    type: recipientTransferDefinition,
+    type: recipientTransferType,
     publicIdentifier: routerPublicIdentifier,
     details,
     meta: {
@@ -277,11 +277,11 @@ export async function forwardTransferCreation(
       // store transfer
       const type = "TransferCreation";
       await store.queueUpdate(type, {
-        channelAddress: recipientChannel.channelAddress,
-        amount: recipientAmount,
-        assetId: recipientAssetId,
+        channelAddress: params.channelAddress,
+        amount: params.amount,
+        assetId: params.assetId,
         routingId,
-        transferDefinition: senderTransferDefinition,
+        type: params.type,
         details,
       });
     }
