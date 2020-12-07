@@ -37,50 +37,40 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
 
 export const extractContextFromStore = async (
   storeService: IVectorStore,
-  type: UpdateType,
   channelAddress: string,
-  transferId?: string,
 ): Promise<
   Result<
     {
-      activeTransfers: FullTransferState[] | undefined;
-      storedState: FullChannelState | undefined;
-      transfer: FullTransferState | undefined;
+      activeTransfers: FullTransferState[];
+      channelState: FullChannelState | undefined;
     },
     Error
   >
 > => {
   // First, pull all information out from the store
-  let activeTransfers: FullTransferState[] | undefined;
-  let storedState: FullChannelState | undefined;
-  let transfer: FullTransferState | undefined;
+  let activeTransfers: FullTransferState[];
+  let channelState: FullChannelState | undefined;
   let storeMethod = "getChannelState";
   try {
     // will always need the previous state
-    storedState = await storeService.getChannelState(channelAddress);
+    channelState = await storeService.getChannelState(channelAddress);
     // will only need active transfers for create/resolve
     storeMethod = "getActiveTransfers";
-    activeTransfers =
-      type === UpdateType.resolve || type === UpdateType.create
-        ? await storeService.getActiveTransfers(channelAddress)
-        : undefined;
-    // will only need transfer for resolve
-    storeMethod = "getTransferState";
-    transfer = type === UpdateType.resolve ? await storeService.getTransferState(transferId!) : undefined;
+    activeTransfers = await storeService.getActiveTransfers(channelAddress);
   } catch (e) {
     return Result.fail(new Error(`${storeMethod} failed: ${e.message}`));
   }
 
-  return Result.ok({ activeTransfers, storedState, transfer });
+  return Result.ok({
+    activeTransfers,
+    channelState,
+  });
 };
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
 // must be converted to the `UpdateParams<T> when syncing
-export function getParamsFromUpdate<T extends UpdateType = any>(
-  update: ChannelUpdate<T>,
-  signer: IChannelSigner,
-): UpdateParams<T> {
-  const { channelAddress, type, details, fromIdentifier, toIdentifier, assetId } = update;
+export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelUpdate<T>): UpdateParams<T> {
+  const { channelAddress, type, details, toIdentifier, assetId } = update;
   let paramDetails: SetupParams | DepositParams | CreateTransferParams | ResolveTransferParams;
   switch (type) {
     case "setup": {
@@ -88,7 +78,7 @@ export function getParamsFromUpdate<T extends UpdateType = any>(
       const params: SetupParams = {
         networkContext: { ...networkContext },
         timeout,
-        counterpartyIdentifier: signer.publicIdentifier === fromIdentifier ? toIdentifier : fromIdentifier,
+        counterpartyIdentifier: toIdentifier,
       };
       paramDetails = params;
       break;
@@ -289,4 +279,50 @@ export const reconcileDeposit = async (
     totalDepositsAlice: totalDepositsAlice.toString(),
     totalDepositsBob: totalDepositsBob.toString(),
   });
+};
+
+export const getUpdatedChannelBalance = (
+  type: typeof UpdateType.create | typeof UpdateType.resolve,
+  assetId: string,
+  balanceToReconcile: Balance,
+  state: FullChannelState,
+  initiator: string,
+): Balance => {
+  // Get the existing balances to update
+  const assetIdx = state.assetIds.findIndex((a) => a === assetId);
+  if (assetIdx === -1) {
+    throw new Error(`Asset id not found in channel ${assetId}`);
+  }
+  const existing = state.balances[assetIdx] || { to: [state.alice, state.bob], amount: ["0", "0"] };
+
+  // Create a helper to update some existing balance amount
+  // based on the transfer amount using the update type
+  const updateExistingAmount = (existingBalance: string, transferBalance: string): string => {
+    return type === UpdateType.create
+      ? BigNumber.from(existingBalance).sub(transferBalance).toString()
+      : BigNumber.from(existingBalance).add(transferBalance).toString();
+  };
+
+  // NOTE: in the transfer.balance, there is no guarantee that the
+  // `transfer.to` corresponds to the `channel.balances[assetIdx].to`
+  // (i.e. an external withdrawal recipient). However, the transfer
+  // will always have an initiator and responder that will correspond
+  // to the values of `channel.balances[assetIdx].to`
+
+  // Get the transfer amounts that correspond to channel participants
+  const aliceTransferAmount = initiator === state.alice ? balanceToReconcile.amount[0] : balanceToReconcile.amount[1];
+  const bobTransferAmount = initiator === state.bob ? balanceToReconcile.amount[0] : balanceToReconcile.amount[1];
+
+  // Return the updated channel balance object
+  // NOTE: you should *always* use the existing balance because you are
+  // reconciling a transfer balance with a channel balance. The reconciled
+  // balance `to` ordering should correspond to the existing state ordering
+  // not the transfer.to ordering
+  return {
+    to: [...existing.to],
+    amount: [
+      updateExistingAmount(existing.amount[0], aliceTransferAmount),
+      updateExistingAmount(existing.amount[1], bobTransferAmount),
+    ],
+  };
 };

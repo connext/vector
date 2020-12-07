@@ -43,7 +43,7 @@ export async function convertConditionalTransferParams(
   if (recipient && getSignerAddressFromPublicIdentifier(recipient) !== channelCounterparty) {
     baseRoutingMeta = {
       requireOnline: false, // TODO: change with more transfer types?
-      routingId: providedMeta.routingId ?? getRandomBytes32(),
+      routingId: providedMeta?.routingId ?? getRandomBytes32(),
       path: [{ recipient, recipientChainId, recipientAssetId }],
     };
   }

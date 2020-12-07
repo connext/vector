@@ -3,11 +3,11 @@ import {
   FullTransferState,
   IVectorProtocol,
   CreateTransferParams,
-  DEFAULT_TRANSFER_TIMEOUT,
   ChannelUpdate,
   UpdateType,
   ResolveTransferParams,
   TransferResolver,
+  DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
 import {
   createlockHash,
