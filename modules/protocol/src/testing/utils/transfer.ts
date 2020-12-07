@@ -30,17 +30,17 @@ import { chainId } from "../constants";
 // this is out of scope for integration test utils
 export const createTransfer = async (
   channelAddress: string,
-  payor: IVectorProtocol,
-  payee: IVectorProtocol,
+  creator: IVectorProtocol,
+  resolver: IVectorProtocol,
   assetId: string = AddressZero,
   amount: BigNumberish = 10,
-  outsiderPayee?: string | undefined,
+  outsiderPayee?: string,
 ): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
   // Create the transfer information
   const preImage = getRandomBytes32();
   const lockHash = createlockHash(preImage);
-  const payorAddress = payor.signerAddress;
-  const payeeAddress = outsiderPayee ? outsiderPayee : payee.signerAddress;
+  const payorAddress = creator.signerAddress;
+  const payeeAddress = outsiderPayee ?? resolver.signerAddress;
 
   const balance = {
     to: [payorAddress, payeeAddress],
@@ -57,13 +57,13 @@ export const createTransfer = async (
     assetId,
   };
 
-  const ret = await payor.create(params);
+  const ret = await creator.create(params);
   expect(ret.getError()).to.be.undefined;
   const channel = ret.getValue();
-  expect(await payee.getChannelState(channelAddress)).to.be.deep.eq(channel);
+  expect(await resolver.getChannelState(channelAddress)).to.be.deep.eq(channel);
 
   const { transferId } = (channel.latestUpdate as ChannelUpdate<typeof UpdateType.create>).details;
-  const transfer = await payee.getTransferState(transferId);
+  const transfer = await resolver.getTransferState(transferId);
   expect(transfer).to.containSubset({
     balance,
     assetId,

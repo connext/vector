@@ -3,6 +3,7 @@ import { getTestLoggers, expect, mkAddress } from "@connext/vector-utils";
 import { IVectorProtocol, IChannelSigner, IVectorStore, ProtocolEventName } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
+
 import { env } from "../env";
 import { createTransfer, getFundedChannel, depositInChannel } from "../utils";
 
@@ -72,17 +73,16 @@ describe(testName, () => {
     const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
 
-    runTest(channel, transfer);
-    const aliceEvent = await alicePromise;
+    const [_, aliceEvent, bobEvent] = await Promise.all([runTest(channel, transfer), alicePromise, bobPromise]);
+
     expect(aliceEvent.updatedTransfers?.length).to.eq(1);
-    const bobEvent = await bobPromise;
     expect(aliceEvent).to.deep.eq(bobEvent);
   });
 
   it("should create an eth transfer from bob -> alice", async () => {
     const { channel, transfer } = await createTransfer(abChannelAddress, bob, alice, assetId, transferAmount);
 
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
   });
 
   it("should work for alice creating transfer out of channel", async () => {
@@ -95,7 +95,7 @@ describe(testName, () => {
       transferAmount,
       outsiderPayee,
     );
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
   });
 
   it("should work for bob creating transfer out of channel", async () => {
@@ -108,7 +108,7 @@ describe(testName, () => {
       transferAmount,
       outsiderPayee,
     );
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
   });
   it("should work for concurrent transfers from alice to bob", async () => {
     // Create two transfers from alice to bob
@@ -142,20 +142,23 @@ describe(testName, () => {
     ]);
   });
 
-  it("should work if initiator channel is out of sync", async () => {
-    const preChannelState = await depositInChannel(abChannelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+  it.only("should work if initiator channel is out of sync", async () => {
+    const initial = await aliceStore.getChannelState(abChannelAddress);
+    await depositInChannel(abChannelAddress, alice, aliceSigner, bob, assetId, depositAmount);
 
-    aliceStore.saveChannelState(preChannelState);
+    await aliceStore.saveChannelState(initial!);
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
 
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
   });
   it("should work if responder channel is out of sync", async () => {
-    const preChannelState = await depositInChannel(abChannelAddress, bob, bobSigner, alice, assetId, depositAmount);
+    const initial = await aliceStore.getChannelState(abChannelAddress);
+    await depositInChannel(abChannelAddress, bob, bobSigner, alice, assetId, depositAmount);
 
-    bobStore.saveChannelState(preChannelState);
+    await bobStore.saveChannelState(initial!);
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
 
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
+    expect(channel.nonce).to.be.eq(initial!.nonce + 2);
   });
 });
