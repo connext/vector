@@ -1,4 +1,10 @@
 import { ChannelUpdate, FullChannelState, UpdateParams } from "./channel";
+import {
+  MAXIMUM_CHANNEL_TIMEOUT,
+  MAXIMUM_TRANSFER_TIMEOUT,
+  MINIMUM_CHANNEL_TIMEOUT,
+  MINIMUM_TRANSFER_TIMEOUT,
+} from "./constants";
 
 export class Result<T, Y = any> {
   private value?: T;
@@ -73,15 +79,46 @@ export class ValidationError extends VectorError {
   readonly type = VectorError.errors.ValidationError;
 
   static readonly reasons = {
+    AssetNotFound: "Asset is not found in channel",
     BadUpdateType: "Unrecognized update type",
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
+    DuplicateTransferId: "Transfer with matching transferId already stored",
+    ExternalValidationFailed: "Failed external validation",
+    ImproperlyReconciled: "Deposit was not properly reconciled",
+    InDispute: "Channel currently in dispute",
+    InsufficientFunds: "Insufficient funds in channel",
+    InvalidArrayLength:
+      "Channel array values have mismatching lengths (balances, assetIds, defundNonces, processedDepositsA/B)",
+    InvalidAssetId: "Asset ID is invalid",
+    InvalidChannelAddress: "Provided channel address is invalid",
+    InvalidCounterparty: "Channel counterparty is invalid",
+    InvalidFromIdentifier: "Update `fromIdentifier` is invalid",
+    InvalidInitialState: "Initial transfer state is invalid",
+    InvalidResolver: "Transfer resolver must be an object",
+    InvalidTransferDefinition: "Transfer definition is incorrect",
+    InvalidTransferEncodings: "Transfer encodings do not match regisry",
+    InvalidToIdentifier: "Update `toIdentifier` is invalid",
+    InvalidUpdateNonce: "Update nonce must be previousState.nonce + 1",
+    LongChannelTimeout: `Channel timeout above maximum of ${MAXIMUM_CHANNEL_TIMEOUT.toString()}s`,
     MalformedDetails: "Channel update details are malformed",
+    MalformedUpdate: "Channel update is malformed",
+    MiscalculatedTransferId: "Calculated transfer ID is different than provided transferId",
+    MiscalculatedChannelBalance: "Channel balance for update is miscalculated",
+    MiscalculatedMerkleRoot: "Merkle root in update was miscalculated",
+    MiscalculatedMerkleProof: "Merkle proof in update was miscalculated",
+    NoActiveTransfers: "Active transfers are undefined",
+    OnlyResponderCanInitiateResolve: "Only transfer responder may initiate resolve update",
     SetupTimeoutInvalid: "Provided state timeout is invalid",
+    ShortChannelTimeout: `Channel timeout below minimum of ${MINIMUM_CHANNEL_TIMEOUT.toString()}s`,
+    StoreFailure: "Failed to pull data from store",
     TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
-    ExternalValidationFailed: "Failed external validation",
-    InDispute: "Channel currently in dispute",
+    TransferResolved: "Transfer has already been resolved",
+    TransferTimeoutAboveChannel: `Transfer timeout must be less than the channel timeout`,
+    TransferTimeoutBelowMin: `Transfer timeout above minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    TransferTimeoutAboveMax: `Transfer timeout below maximum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    UnrecognizedType: "Unrecognized update type",
   } as const;
 
   constructor(
@@ -100,15 +137,14 @@ export class OutboundChannelUpdateError extends VectorError {
   readonly type = VectorError.errors.OutboundChannelUpdateError;
 
   static readonly reasons = {
+    ...ValidationError.reasons,
     ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
-    BadUpdateType: "Unrecognized update type",
-    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     CounterpartyFailure: "Counterparty failed to apply update",
     Create2Failed: "Failed to get create2 address",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
-    OutboundValidationFailed: "Requested update is invalid",
+    OutboundValidationFailed: "Failed to validate incoming update",
     RestoreNeeded: "Channel too far out of sync, must be restored",
     RegenerateUpdateFailed: "Failed to regenerate update after sync",
     SaveChannelFailed: "Failed to save channel",
@@ -147,12 +183,12 @@ export class InboundChannelUpdateError extends VectorError {
   readonly type = VectorError.errors.InboundChannelUpdateError;
 
   static readonly reasons = {
+    ...ValidationError.reasons,
     ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
-    BadUpdateType: "Unrecognized update type",
-    ChannelNotFound: "No channel found in storage", // See note in `processChannel`
     DifferentIdentifiers: "Update changes channel publicIdentifiers",
     DifferentChannelAddress: "Update changes channelAddress",
+    ExternalValidationFailed: "Failed to externally validate incoming update",
     InboundValidationFailed: "Failed to validate incoming update",
     InvalidAssetId: "Update `assetId` is invalid address",
     InvalidChannelAddress: "Update `channelAddress` is invalid",

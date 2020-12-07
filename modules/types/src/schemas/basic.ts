@@ -24,7 +24,7 @@ export const TBalance = Type.Object({
   amount: Type.Array(TIntegerString),
 });
 
-export const TBasicMeta = Type.Optional(Type.Any());
+export const TBasicMeta = Type.Optional(Type.Object(Type.Any()));
 
 export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
@@ -47,8 +47,8 @@ export const TNetworkContext = Type.Intersect([
 // risk to not validating these using the schema validation. Instead,
 // use relaxed schema validation for all transfer types to make it easier
 // to support generic transfer types (since no schemas have to be updated)
-export const TransferStateSchema = Type.Any();
-export const TransferResolverSchema = Type.Any();
+export const TransferStateSchema = Type.Object(Type.Any());
+export const TransferResolverSchema = Type.Object(Type.Any());
 export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
 export const TransferNameSchema = Type.String();
 
@@ -92,7 +92,8 @@ export const TCreateUpdateDetails = Type.Object({
   transferDefinition: TAddress,
   transferTimeout: TIntegerString,
   transferInitialState: TransferStateSchema,
-  merkleProofData: Type.Array(TBytes),
+  transferEncodings: Type.Array(Type.String()),
+  merkleProofData: Type.Array(Type.String()),
   merkleRoot: TBytes32,
   meta: TBasicMeta,
 });

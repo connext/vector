@@ -63,8 +63,8 @@ describe("applyUpdate", () => {
     .map(() => getRandomChannelSigner(providerUrl));
 
   // Generate test constants
-  const participants = signers.map(s => s.address);
-  const publicIdentifiers = signers.map(s => s.publicIdentifier);
+  const participants = signers.map((s) => s.address);
+  const publicIdentifiers = signers.map((s) => s.publicIdentifier);
   const channelAddress = mkAddress("0xccc");
   const networkContext: NetworkContext = {
     chainId,
@@ -80,7 +80,7 @@ describe("applyUpdate", () => {
     responder: participants[1],
     balance: { to: participants, amount: ["0", transferAmount.toString()] },
     chainId,
-    channelFactoryAddress: mkAddress("0xaaabbbcccc"),
+    channelFactoryAddress: networkContext.channelFactoryAddress,
   });
   const sampleCreatedTransfer = {
     ...sampleResolvedTransfer,
@@ -382,15 +382,20 @@ describe("applyUpdate", () => {
       const previousState =
         updateType === UpdateType.setup
           ? undefined
-          : createTestChannelStateWithSigners(signers, stateOverrides?.latestUpdate?.type ?? UpdateType.setup, {
+          : createTestChannelStateWithSigners(signers, stateOverrides?.latestUpdate?.type ?? UpdateType.deposit, {
               channelAddress,
-              networkContext,
+              networkContext: { ...networkContext },
               ...stateOverrides,
             });
 
       // Generate the active transfer ids
-      const activeTransfers = (activeTransfersOverrides ?? []).map(overrides =>
-        createTestFullHashlockTransferState(overrides),
+      const activeTransfers = (activeTransfersOverrides ?? []).map((overrides) =>
+        createTestFullHashlockTransferState({
+          chainId: networkContext.chainId,
+          channelFactoryAddress: networkContext.channelFactoryAddress,
+          channelAddress: previousState?.channelAddress,
+          ...overrides,
+        }),
       );
 
       // Generate the final transfer balance
@@ -403,7 +408,7 @@ describe("applyUpdate", () => {
           : undefined;
 
       // Run the function
-      const applyResult = await vectorUpdate.applyUpdate(update, previousState, activeTransfers, finalTransferBalance);
+      const applyResult = vectorUpdate.applyUpdate(update, previousState, activeTransfers, finalTransferBalance);
 
       // Validate result
       if (error) {
@@ -433,9 +438,9 @@ describe("applyUpdate", () => {
           const { initialStateHash, ...sanitizedTransfer } = expected.transfer!;
           expect(updatedTransfer).to.containSubset({
             ...sanitizedTransfer,
-            chainId: previousState?.networkContext.chainId,
+            chainId: networkContext.chainId,
             assetId: update.assetId,
-            channelFactoryAddress: previousState?.networkContext.channelFactoryAddress,
+            channelFactoryAddress: networkContext.channelFactoryAddress,
             initiator:
               updateType === UpdateType.create
                 ? getSignerAddressFromPublicIdentifier(update.fromIdentifier)
@@ -446,7 +451,7 @@ describe("applyUpdate", () => {
                 : activeTransfers[0].responder,
             transferResolver: updateType === UpdateType.resolve ? update.details.transferResolver : undefined,
           });
-          expect(updatedActiveTransfers!.map(t => t.transferId).includes(update.details.transferId)).to.be.eq(
+          expect(updatedActiveTransfers!.map((t) => t.transferId).includes(update.details.transferId)).to.be.eq(
             updateType === UpdateType.create,
           );
         }
@@ -492,7 +497,7 @@ describe("generateAndApplyUpdate", () => {
     signer: IChannelSigner,
     params: UpdateParams<"create" | "deposit" | "resolve" | "setup">,
     previousState: FullChannelState<any> | undefined,
-    activeTransfers: FullTransferState[] | undefined,
+    activeTransfers: FullTransferState[],
     expected: any,
     isError = false,
   ) => {
@@ -503,7 +508,7 @@ describe("generateAndApplyUpdate", () => {
       params,
       previousState,
       activeTransfers,
-      log,
+      signer.publicIdentifier,
     );
 
     // Verify results
@@ -550,7 +555,7 @@ describe("generateAndApplyUpdate", () => {
       },
     });
     const previousState = undefined;
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = aliceSigner;
 
     // Create expected return values
@@ -560,7 +565,7 @@ describe("generateAndApplyUpdate", () => {
         timeout: params.details.timeout,
         networkContext: params.details.networkContext,
       },
-      balance: { to: signers.map(s => s.address), amount: ["0", "0"] },
+      balance: { to: signers.map((s) => s.address), amount: ["0", "0"] },
       assetId: mkAddress(),
     };
 
@@ -576,7 +581,7 @@ describe("generateAndApplyUpdate", () => {
     // Set test params
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { channelAddress, assetId },
+      details: { assetId },
     });
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       channelAddress,
@@ -585,11 +590,11 @@ describe("generateAndApplyUpdate", () => {
       processedDepositsA: [],
       processedDepositsB: [],
     });
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = bobSigner;
 
     // Set mocks
-    const balance = { to: signers.map(s => s.address), amount: ["0", depositAmt.toString()] };
+    const balance = { to: signers.map((s) => s.address), amount: ["0", depositAmt.toString()] };
     const totalDepositsBob = depositAmt.toString();
     const totalDepositsAlice = "0";
     reconcileDeposit.resolves(
@@ -623,7 +628,7 @@ describe("generateAndApplyUpdate", () => {
     // Set test params
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { channelAddress, assetId },
+      details: { assetId },
     });
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       channelAddress,
@@ -632,11 +637,11 @@ describe("generateAndApplyUpdate", () => {
       processedDepositsA: [],
       processedDepositsB: [],
     });
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = aliceSigner;
 
     // Set mocks
-    const balance = { to: signers.map(s => s.address), amount: [depositAmt.toString(), "0"] };
+    const balance = { to: signers.map((s) => s.address), amount: [depositAmt.toString(), "0"] };
     const totalDepositsAlice = depositAmt.toString();
     const totalDepositsBob = "0";
     reconcileDeposit.resolves(
@@ -672,7 +677,6 @@ describe("generateAndApplyUpdate", () => {
     const params = createTestUpdateParams(UpdateType.create, {
       channelAddress,
       details: {
-        channelAddress,
         balance: transferBalance,
         assetId: transferAsset,
         transferDefinition: mkAddress(),
@@ -683,7 +687,7 @@ describe("generateAndApplyUpdate", () => {
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       channelAddress,
       assetIds: [transferAsset],
-      balances: [{ to: signers.map(s => s.address), amount: ["14", "23"] }],
+      balances: [{ to: signers.map((s) => s.address), amount: ["14", "23"] }],
       processedDepositsA: ["37"],
       processedDepositsB: ["0"],
     });
@@ -702,7 +706,7 @@ describe("generateAndApplyUpdate", () => {
     // Set expected value
     const expectedUpdate = {
       ...generateBaseExpectedUpdate(signer, params, previousState),
-      balance: { to: signers.map(s => s.address), amount: ["7", "23"] },
+      balance: { to: signers.map((s) => s.address), amount: ["7", "23"] },
       assetId: params.details.assetId,
       details: {
         transferId: getTransferId(
@@ -734,7 +738,6 @@ describe("generateAndApplyUpdate", () => {
     const params = createTestUpdateParams(UpdateType.create, {
       channelAddress,
       details: {
-        channelAddress,
         balance: transferBalance,
         assetId: transferAsset,
         transferDefinition: mkAddress(),
@@ -745,7 +748,7 @@ describe("generateAndApplyUpdate", () => {
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       channelAddress,
       assetIds: [transferAsset],
-      balances: [{ to: signers.map(s => s.address), amount: ["14", "23"] }],
+      balances: [{ to: signers.map((s) => s.address), amount: ["14", "23"] }],
       processedDepositsA: ["37"],
       processedDepositsB: ["0"],
     });
@@ -764,7 +767,7 @@ describe("generateAndApplyUpdate", () => {
     // Set expected value
     const expectedUpdate = {
       ...generateBaseExpectedUpdate(signer, params, previousState),
-      balance: { to: signers.map(s => s.address), amount: ["14", "16"] },
+      balance: { to: signers.map((s) => s.address), amount: ["14", "16"] },
       assetId: params.details.assetId,
       details: {
         transferId: getTransferId(
@@ -813,7 +816,7 @@ describe("generateAndApplyUpdate", () => {
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.create, {
       channelAddress,
       assetIds: [transferAsset],
-      balances: [{ to: signers.map(s => s.address), amount: ["14", "16"] }],
+      balances: [{ to: signers.map((s) => s.address), amount: ["14", "16"] }],
       processedDepositsA: ["37"],
       processedDepositsB: ["0"],
     });
@@ -833,7 +836,7 @@ describe("generateAndApplyUpdate", () => {
     // Set expected value
     const expectedUpdate = {
       ...generateBaseExpectedUpdate(signer, params, previousState),
-      balance: { to: signers.map(s => s.address), amount: ["21", "16"] },
+      balance: { to: signers.map((s) => s.address), amount: ["21", "16"] },
       assetId: transfer.assetId,
       details: {
         transferId: transfer.transferId,
@@ -875,7 +878,7 @@ describe("generateAndApplyUpdate", () => {
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.create, {
       channelAddress,
       assetIds: [transferAsset],
-      balances: [{ to: signers.map(s => s.address), amount: ["14", "16"] }],
+      balances: [{ to: signers.map((s) => s.address), amount: ["14", "16"] }],
       processedDepositsA: ["37"],
       processedDepositsB: ["0"],
     });
@@ -895,7 +898,7 @@ describe("generateAndApplyUpdate", () => {
     // Set expected value
     const expectedUpdate = {
       ...generateBaseExpectedUpdate(signer, params, previousState),
-      balance: { to: signers.map(s => s.address), amount: ["14", "23"] },
+      balance: { to: signers.map((s) => s.address), amount: ["14", "23"] },
       assetId: transfer.assetId,
       details: {
         transferId: transfer.transferId,
@@ -917,7 +920,7 @@ describe("generateAndApplyUpdate", () => {
     // Set test params
     const params = createTestUpdateParams(UpdateType.deposit, {
       channelAddress,
-      details: { channelAddress, assetId },
+      details: { assetId },
     });
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       channelAddress,
@@ -926,7 +929,7 @@ describe("generateAndApplyUpdate", () => {
       processedDepositsA: [],
       processedDepositsB: [],
     });
-    const activeTransfers = undefined;
+    const activeTransfers = [];
     const signer = bobSigner;
 
     // Set mocks
@@ -964,7 +967,7 @@ describe("generateAndApplyUpdate", () => {
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.create, {
       channelAddress,
       assetIds: [transferAsset],
-      balances: [{ to: signers.map(s => s.address), amount: ["14", "16"] }],
+      balances: [{ to: signers.map((s) => s.address), amount: ["14", "16"] }],
       processedDepositsA: ["37"],
       processedDepositsB: ["0"],
     });
@@ -1019,7 +1022,7 @@ describe("generateAndApplyUpdate", () => {
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.create, {
       channelAddress,
       assetIds: [transferAsset],
-      balances: [{ to: signers.map(s => s.address), amount: ["14", "16"] }],
+      balances: [{ to: signers.map((s) => s.address), amount: ["14", "16"] }],
       processedDepositsA: ["37"],
       processedDepositsB: ["0"],
     });
@@ -1044,7 +1047,6 @@ describe("generateAndApplyUpdate", () => {
     const params = createTestUpdateParams(UpdateType.create, {
       channelAddress,
       details: {
-        channelAddress,
         balance: transferBalance,
         assetId: transferAsset,
         transferDefinition: mkAddress(),
@@ -1055,7 +1057,7 @@ describe("generateAndApplyUpdate", () => {
     const previousState = createTestChannelStateWithSigners(signers, UpdateType.setup, {
       channelAddress,
       assetIds: [transferAsset],
-      balances: [{ to: signers.map(s => s.address), amount: ["14", "23"] }],
+      balances: [{ to: signers.map((s) => s.address), amount: ["14", "23"] }],
       processedDepositsA: ["37"],
       processedDepositsB: ["0"],
     });

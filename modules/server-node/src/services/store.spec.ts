@@ -186,6 +186,7 @@ describe("store", () => {
       nonce: setupState.nonce + 1,
       defundNonces: setupState.defundNonces,
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
+      networkContext: setupState.networkContext,
     });
     await store.saveChannelState(depositState);
 
@@ -199,7 +200,11 @@ describe("store", () => {
     });
     const createState = createTestChannelState("create", {
       channelAddress: transfer.channelAddress,
-      networkContext: { channelFactoryAddress: transfer.channelFactoryAddress, chainId: transfer.chainId },
+      networkContext: {
+        channelFactoryAddress: transfer.channelFactoryAddress,
+        chainId: transfer.chainId,
+        transferRegistryAddress: setupState.networkContext.transferRegistryAddress,
+      },
       nonce: depositState.nonce + 1,
       defundNonces: setupState.defundNonces,
       latestUpdate: {
@@ -223,6 +228,7 @@ describe("store", () => {
     const resolveState = createTestChannelState("resolve", {
       nonce: createState.nonce + 1,
       defundNonces: setupState.defundNonces,
+      networkContext: setupState.networkContext,
       latestUpdate: {
         nonce: createState.nonce + 1,
         details: {

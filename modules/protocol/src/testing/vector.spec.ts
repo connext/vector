@@ -217,7 +217,7 @@ describe("Vector", () => {
 
     it("should work", async () => {
       const { details } = createTestUpdateParams(UpdateType.deposit, { channelAddress });
-      const result = await vector.deposit(details);
+      const result = await vector.deposit({ ...details, channelAddress });
       expect(result.getError()).to.be.undefined;
       expect(lockService.acquireLock.callCount).to.be.eq(1);
       expect(lockService.releaseLock.callCount).to.be.eq(1);
@@ -279,7 +279,7 @@ describe("Vector", () => {
 
     it("should work", async () => {
       const { details } = createTestUpdateParams(UpdateType.create, { channelAddress });
-      const result = await vector.create(details);
+      const result = await vector.create({ ...details, channelAddress });
       expect(result.getError()).to.be.undefined;
       expect(lockService.acquireLock.callCount).to.be.eq(1);
       expect(lockService.releaseLock.callCount).to.be.eq(1);
@@ -339,7 +339,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferInitialState is undefined",
           params: { ...validParams, transferInitialState: undefined },
-          error: "should have required property '.transferInitialState'",
+          error: "should have required property 'transferInitialState'",
         },
         {
           name: "should fail if timeout is undefined",
@@ -379,7 +379,7 @@ describe("Vector", () => {
 
     it("should work", async () => {
       const { details } = createTestUpdateParams(UpdateType.resolve, { channelAddress });
-      const result = await vector.resolve(details);
+      const result = await vector.resolve({ ...details, channelAddress });
       expect(result.getError()).to.be.undefined;
       expect(lockService.acquireLock.callCount).to.be.eq(1);
       expect(lockService.releaseLock.callCount).to.be.eq(1);
@@ -418,7 +418,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferResolver is undefined",
           params: { ...validParams, transferResolver: undefined },
-          error: "should have required property '.transferResolver'",
+          error: "should have required property 'transferResolver'",
         },
       ];
 

@@ -112,6 +112,7 @@ const convertChannelEntityToFullChannelState = (
           networkContext: {
             chainId: BigNumber.from(channelEntity.chainId).toNumber(),
             channelFactoryAddress: channelEntity.channelFactoryAddress,
+            transferRegistryAddress: channelEntity.transferRegistryAddress,
             providerUrl: channelEntity.providerUrl,
           },
           timeout: channelEntity.timeout,
