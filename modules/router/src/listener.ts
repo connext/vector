@@ -4,6 +4,7 @@ import {
   INodeService,
   ConditionalTransferCreatedPayload,
   FullChannelState,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
@@ -72,6 +73,7 @@ export async function setupListeners(
   publicIdentifier: string,
   signerAddress: string,
   nodeService: INodeService,
+  chainReader: IVectorChainReader,
   store: IRouterStore,
   logger: BaseLogger,
   register: Registry,
@@ -80,7 +82,7 @@ export async function setupListeners(
   const { failed, successful, attempts, activeTransfers, transferSendTime } = configureMetrics(register);
 
   // Set up listener to handle transfer creation
-  await nodeService.on(
+  nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_CREATED,
     async (data: ConditionalTransferCreatedPayload) => {
       const meta = data.transfer.meta as RouterSchemas.RouterMeta;
@@ -91,6 +93,7 @@ export async function setupListeners(
         publicIdentifier,
         signerAddress,
         nodeService,
+        chainReader,
         store,
         logger,
         chainProviders,
@@ -118,7 +121,7 @@ export async function setupListeners(
             transferId: data.transfer.transferId,
             routingId: meta.routingId,
             channelAddress: data.channelAddress,
-            errors: validate.errors?.map(err => err.message),
+            errors: validate.errors?.map((err) => err.message),
           },
           "Not forwarding non-routing transfer",
         );
@@ -142,7 +145,7 @@ export async function setupListeners(
   );
 
   // Set up listener to handle transfer resolution
-  await nodeService.on(
+  nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
     async (data: ConditionalTransferCreatedPayload) => {
       const res = await forwardTransferResolution(data, publicIdentifier, signerAddress, nodeService, store, logger);
@@ -163,7 +166,7 @@ export async function setupListeners(
           {
             transferId: data.transfer.transferId,
             channelAddress: data.channelAddress,
-            errors: validate.errors?.map(err => err.message),
+            errors: validate.errors?.map((err) => err.message),
           },
           "Not forwarding non-routing transfer",
         );
@@ -194,7 +197,7 @@ export async function setupListeners(
     },
   );
 
-  await nodeService.on(EngineEvents.REQUEST_COLLATERAL, async data => {
+  nodeService.on(EngineEvents.REQUEST_COLLATERAL, async (data) => {
     logger.info({ data }, "Received request collateral event");
     const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress, publicIdentifier });
     if (channelRes.isError) {
