@@ -178,6 +178,7 @@ export async function forwardTransferCreation(
         return Result.fail(
           new ForwardTransferError(ForwardTransferError.reasons.InvalidTransferDefinition, {
             message: swapRes.getError()?.message,
+            context: swapRes.getError()?.context,
           }),
         );
       }
