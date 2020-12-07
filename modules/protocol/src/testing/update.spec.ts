@@ -80,7 +80,7 @@ describe("applyUpdate", () => {
     responder: participants[1],
     balance: { to: participants, amount: ["0", transferAmount.toString()] },
     chainId,
-    channelFactoryAddress: mkAddress("0xaaabbbcccc"),
+    channelFactoryAddress: networkContext.channelFactoryAddress,
   });
   const sampleCreatedTransfer = {
     ...sampleResolvedTransfer,
@@ -382,15 +382,20 @@ describe("applyUpdate", () => {
       const previousState =
         updateType === UpdateType.setup
           ? undefined
-          : createTestChannelStateWithSigners(signers, stateOverrides?.latestUpdate?.type ?? UpdateType.setup, {
+          : createTestChannelStateWithSigners(signers, stateOverrides?.latestUpdate?.type ?? UpdateType.deposit, {
               channelAddress,
-              networkContext,
+              networkContext: { ...networkContext },
               ...stateOverrides,
             });
 
       // Generate the active transfer ids
       const activeTransfers = (activeTransfersOverrides ?? []).map((overrides) =>
-        createTestFullHashlockTransferState(overrides),
+        createTestFullHashlockTransferState({
+          chainId: networkContext.chainId,
+          channelFactoryAddress: networkContext.channelFactoryAddress,
+          channelAddress: previousState?.channelAddress,
+          ...overrides,
+        }),
       );
 
       // Generate the final transfer balance
@@ -403,7 +408,7 @@ describe("applyUpdate", () => {
           : undefined;
 
       // Run the function
-      const applyResult = await vectorUpdate.applyUpdate(update, previousState, activeTransfers, finalTransferBalance);
+      const applyResult = vectorUpdate.applyUpdate(update, previousState, activeTransfers, finalTransferBalance);
 
       // Validate result
       if (error) {
@@ -433,9 +438,9 @@ describe("applyUpdate", () => {
           const { initialStateHash, ...sanitizedTransfer } = expected.transfer!;
           expect(updatedTransfer).to.containSubset({
             ...sanitizedTransfer,
-            chainId: previousState?.networkContext.chainId,
+            chainId: networkContext.chainId,
             assetId: update.assetId,
-            channelFactoryAddress: previousState?.networkContext.channelFactoryAddress,
+            channelFactoryAddress: networkContext.channelFactoryAddress,
             initiator:
               updateType === UpdateType.create
                 ? getSignerAddressFromPublicIdentifier(update.fromIdentifier)
