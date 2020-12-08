@@ -1,5 +1,4 @@
 import {
-  ChainAddresses,
   CreateTransferParams,
   DEFAULT_TRANSFER_TIMEOUT,
   EngineParams,
@@ -11,6 +10,7 @@ import {
   Result,
   TransferNames,
   ChainError,
+  UpdateType,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -41,12 +41,7 @@ describe("ParamConverter", () => {
   const providerUrl = env.chainProviders[chainId];
   const signerA = getRandomChannelSigner(providerUrl);
   const signerB = getRandomChannelSigner(providerUrl);
-  const chainAddresses: ChainAddresses = {
-    [chainId]: {
-      channelFactoryAddress: env.chainAddresses[chainId].channelFactoryAddress,
-      transferRegistryAddress: env.chainAddresses[chainId].transferRegistryAddress,
-    },
-  };
+  const chainAddresses = { ...env.chainAddresses };
   const withdrawRegisteredInfo: RegisteredTransfer = {
     definition: mkAddress("0xdef"),
     resolverEncoding: "resolve",
@@ -63,7 +58,6 @@ describe("ParamConverter", () => {
 
   beforeEach(() => {
     chainReader = Sinon.createStubInstance(VectorChainReader);
-
     chainReader.getBlockNumber.resolves(Result.ok<number>(110));
   });
 
@@ -99,7 +93,7 @@ describe("ParamConverter", () => {
 
     it("should work for A", async () => {
       const params = generateParams();
-      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
@@ -125,7 +119,7 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
           requireOnline: false,
-          routingId: params.meta.routingId,
+          routingId: params.meta!.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -133,14 +127,14 @@ describe("ParamConverter", () => {
               recipient: params.recipient,
             },
           ],
-          ...params.meta,
+          ...params.meta!,
         },
       });
     });
 
     it("should work for B", async () => {
       const params = generateParams();
-      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
@@ -166,7 +160,7 @@ describe("ParamConverter", () => {
         timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
         meta: {
           requireOnline: false,
-          routingId: params.meta.routingId,
+          routingId: params.meta!.routingId,
           path: [
             {
               recipientAssetId: params.recipientAssetId,
@@ -184,7 +178,7 @@ describe("ParamConverter", () => {
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
-      const channelState: FullChannelState = createTestChannelState("setup", {
+      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
@@ -265,7 +259,7 @@ describe("ParamConverter", () => {
 
     it("should work for A", async () => {
       const params = generateParams();
-      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
@@ -282,12 +276,7 @@ describe("ParamConverter", () => {
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(params.fee)
-              .toString(),
-            "0",
-          ],
+          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
           to: [params.recipient, channelState.bob],
         },
         assetId: params.assetId,
@@ -311,7 +300,7 @@ describe("ParamConverter", () => {
 
     it("should work for B", async () => {
       const params = generateParams();
-      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
@@ -328,12 +317,7 @@ describe("ParamConverter", () => {
       expect(ret).to.deep.eq({
         channelAddress: channelState.channelAddress,
         balance: {
-          amount: [
-            BigNumber.from(params.amount)
-              .add(params.fee)
-              .toString(),
-            "0",
-          ],
+          amount: [BigNumber.from(params.amount).add(params.fee).toString(), "0"],
           to: [params.recipient, channelState.alice],
         },
         assetId: params.assetId,

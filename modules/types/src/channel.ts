@@ -47,9 +47,9 @@ export const UpdateType = {
 export type UpdateType = typeof UpdateType[keyof typeof UpdateType];
 
 export interface UpdateParamsMap {
-  [UpdateType.create]: CreateTransferParams;
-  [UpdateType.deposit]: DepositParams;
-  [UpdateType.resolve]: ResolveTransferParams;
+  [UpdateType.create]: Omit<CreateTransferParams, "channelAddress">;
+  [UpdateType.deposit]: Omit<DepositParams, "channelAddress">;
+  [UpdateType.resolve]: Omit<ResolveTransferParams, "channelAddress">;
   [UpdateType.setup]: SetupParams;
 }
 

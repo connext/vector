@@ -63,14 +63,11 @@ server.addHook("onReady", async () => {
     evts,
     0,
   );
-  const providers = hydrateProviders(config.chainProviders);
-  const chainReader = new VectorChainReader(providers, logger.child({ module: "VectorChainReader" }));
   router = await Router.connect(
     nodeService.publicIdentifier,
     nodeService.signerAddress,
     nodeService,
     store,
-    chainReader,
     logger,
     register,
   );
