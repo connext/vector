@@ -30,8 +30,9 @@ jobs:
           architecture: 'x64'
       - name: Build and push
         run: |
-          make node-prod
-          docker buildx build --platform=linux/arm/v7 --tag ${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
+          make server-node-bundle
+          echo "image name: ${IMAGE_NAME}:${GITHUB_SHA::8}"
+          docker buildx build --platform=linux/arm/v7 --tag ${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile modules/server-node
           docker image ls
           docker tag $IMAGE_NAME:${GITHUB_SHA::8} connextproject/$IMAGE_NAME:${GITHUB_SHA::8}
           docker push connextproject/$IMAGE_NAME:${GITHUB_SHA::8}
