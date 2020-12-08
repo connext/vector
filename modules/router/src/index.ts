@@ -2,7 +2,8 @@ import fastify from "fastify";
 import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
-import { EventCallbackConfig, RestServerNodeService } from "@connext/vector-utils";
+import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
@@ -46,7 +47,8 @@ const evts: EventCallbackConfig = {
 };
 
 const logger = pino();
-const server = fastify({ logger });
+logger.info({ config }, "Loaded config from environment");
+const server = fastify({ logger, disableRequestLogging: config.logLevel !== "debug" });
 
 const register = new Registry();
 server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });

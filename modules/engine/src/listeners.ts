@@ -53,8 +53,8 @@ export async function setupEngineListeners(
   // Set up listener for channel setup
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async event => await handleSetup(event, signer, vector, evts, logger),
-    event => {
+    async (event) => await handleSetup(event, signer, vector, evts, logger),
+    (event) => {
       const {
         updatedChannelState: {
           latestUpdate: { type },
@@ -67,8 +67,8 @@ export async function setupEngineListeners(
   // Set up listener for deposit reconciliations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async event => await handleDepositReconciliation(event, signer, vector, evts, logger),
-    event => {
+    async (event) => await handleDepositReconciliation(event, signer, vector, evts, logger),
+    (event) => {
       const {
         updatedChannelState: {
           latestUpdate: { type },
@@ -81,8 +81,8 @@ export async function setupEngineListeners(
   // Set up listener for conditional transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async event => await handleConditionalTransferCreation(event, store, chainService, chainAddresses, evts, logger),
-    event => {
+    async (event) => await handleConditionalTransferCreation(event, store, chainService, chainAddresses, evts, logger),
+    (event) => {
       const {
         updatedChannelState: {
           latestUpdate: { type },
@@ -95,8 +95,9 @@ export async function setupEngineListeners(
   // Set up listener for conditional transfer resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async event => await handleConditionalTransferResolution(event, chainAddresses, store, chainService, evts, logger),
-    event => {
+    async (event) =>
+      await handleConditionalTransferResolution(event, chainAddresses, store, chainService, evts, logger),
+    (event) => {
       const {
         updatedChannelState: {
           latestUpdate: { type },
@@ -109,9 +110,9 @@ export async function setupEngineListeners(
   // Set up listener for withdrawal transfer creations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async event =>
+    async (event) =>
       await handleWithdrawalTransferCreation(event, signer, vector, store, evts, chainAddresses, chainService, logger),
-    event => {
+    (event) => {
       const {
         updatedChannelState: {
           latestUpdate: { type },
@@ -124,9 +125,9 @@ export async function setupEngineListeners(
   // Set up listener for withdrawal resolutions
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async event =>
+    async (event) =>
       await handleWithdrawalTransferResolution(event, signer, store, evts, chainAddresses, chainService, logger),
-    event => {
+    (event) => {
       const {
         updatedChannelState: {
           latestUpdate: { type },
@@ -224,7 +225,7 @@ async function handleDepositReconciliation(
     bobIdentifier,
     channelAddress,
     assetId,
-    channelBalance: balances[assetIds.findIndex(a => a === assetId)],
+    channelBalance: balances[assetIds.findIndex((a) => a === assetId)],
   };
   evts[EngineEvents.DEPOSIT_RECONCILED].post(payload);
 }
@@ -277,7 +278,7 @@ async function handleConditionalTransferCreation(
     conditionType = registryInfo.getValue().name;
   }
 
-  const assetIdx = assetIds.findIndex(a => a === assetId);
+  const assetIdx = assetIds.findIndex((a) => a === assetId);
   const payload: ConditionalTransferCreatedPayload = {
     aliceIdentifier,
     bobIdentifier,
@@ -285,7 +286,7 @@ async function handleConditionalTransferCreation(
     channelBalance: balances[assetIdx],
     transfer,
     conditionType,
-    activeTransferIds: event.updatedTransfers?.map(t => t.transferId),
+    activeTransferIds: event.updatedTransfers?.map((t) => t.transferId),
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].post(payload);
 
@@ -343,10 +344,10 @@ async function handleConditionalTransferResolution(
     aliceIdentifier,
     bobIdentifier,
     channelAddress,
-    channelBalance: balances[assetIds.findIndex(a => a === assetId)],
+    channelBalance: balances[assetIds.findIndex((a) => a === assetId)],
     transfer: transfer!,
     conditionType,
-    activeTransferIds: event.updatedTransfers?.map(t => t.transferId),
+    activeTransferIds: event.updatedTransfers?.map((t) => t.transferId),
   };
   evts[EngineEvents.CONDITIONAL_TRANSFER_RESOLVED].post(payload);
 }
@@ -399,7 +400,7 @@ async function handleWithdrawalTransferCreation(
   logger.debug({ withdrawalAmount: withdrawalAmount.toString(), initiator, responder, fee }, "Withdrawal info");
 
   // Post to evt
-  const assetIdx = assetIds.findIndex(a => a === assetId);
+  const assetIdx = assetIds.findIndex((a) => a === assetId);
   const payload: WithdrawalCreatedPayload = {
     aliceIdentifier,
     bobIdentifier,
@@ -556,7 +557,7 @@ async function handleWithdrawalTransferResolution(
   );
 
   // Post to evt
-  const assetIdx = assetIds.findIndex(a => a === assetId);
+  const assetIdx = assetIds.findIndex((a) => a === assetId);
   const payload: WithdrawalResolvedPayload = {
     aliceIdentifier,
     bobIdentifier,

@@ -10,14 +10,16 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 
 @eventName = CONDITIONAL_TRANSFER_CREATED
+@nodeUrl = {{bobUrl}}
+@nodePublicIdentifier = {{bobPublicIdentifier}}
 
 ###############
 ### Create Event Subscription
-POST {{carolUrl}}/event/subscribe
+POST {{nodeUrl}}/event/subscribe
 Content-Type: application/json
 
 {
-  "publicIdentifier": "{{carolPublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}",
   "events": {
     "{{eventName}}": "http://localhost:1234"
   }
@@ -25,7 +27,7 @@ Content-Type: application/json
 
 ###############
 ### Get Event Subscription
-GET {{carolUrl}}/{{carolPublicIdentifier}}/event/{{eventName}}
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/event/{{eventName}}
 
 ### Get Event Subscriptions
-GET {{carolUrl}}/{{carolPublicIdentifier}}/event
+GET {{nodeUrl}}/{{nodePublicIdentifier}}/event

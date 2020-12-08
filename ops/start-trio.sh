@@ -69,19 +69,6 @@ echo
 echo "Preparing to launch $stack stack"
 
 ########################################
-## Database config
-
-database_image="postgres:12.3-alpine"
-bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
-
-pg_port="5432"
-
-database_env="environment:
-      POSTGRES_DB: '$project'
-      POSTGRES_PASSWORD: '$project'
-      POSTGRES_USER: '$project'"
-
-########################################
 ## Node config
 
 internal_node_port="8000"
@@ -99,7 +86,6 @@ echo "$stack.dave will be exposed on *:$dave_node_port"
 
 roger_node_port="8007"
 roger_prisma="5557"
-roger_database="database_r"
 roger_mnemonic="spice notable wealth rail voyage depth barely thumb skill rug panel blush"
 echo "$stack.roger will be exposed on *:$roger_node_port"
 
@@ -212,11 +198,6 @@ services:
     $common
     $node_image
     $node_env
-      VECTOR_PG_HOST: '$roger_database'
-      VECTOR_PG_DATABASE: '$project'
-      VECTOR_PG_PASSWORD: '$project'
-      VECTOR_PG_PORT: '$pg_port'
-      VECTOR_PG_USERNAME: '$project'
       VECTOR_MNEMONIC: '$roger_mnemonic'
     ports:
       - '$roger_node_port:$internal_node_port'
@@ -228,19 +209,7 @@ services:
     environment:
       VECTOR_CONFIG: '$config'
       VECTOR_NODE_URL: 'http://roger:$internal_node_port'
-      VECTOR_PG_DATABASE: '$project'
-      VECTOR_PG_HOST: '$roger_database'
-      VECTOR_PG_PASSWORD: '$project'
-      VECTOR_PG_PORT: '$pg_port'
-      VECTOR_PG_USERNAME: '$project'
       VECTOR_PORT: '$router_port'
-
-  $roger_database:
-    $common
-    image: '$database_image'
-    $database_env
-    ports:
-      - '$pg_port:$pg_port'
 
   $observability_services
 

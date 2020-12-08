@@ -43,7 +43,7 @@ export async function convertConditionalTransferParams(
   if (recipient && getSignerAddressFromPublicIdentifier(recipient) !== channelCounterparty) {
     baseRoutingMeta = {
       requireOnline: false, // TODO: change with more transfer types?
-      routingId: providedMeta.routingId ?? getRandomBytes32(),
+      routingId: providedMeta?.routingId ?? getRandomBytes32(),
       path: [{ recipient, recipientChainId, recipientAssetId }],
     };
   }
@@ -113,11 +113,7 @@ export async function convertWithdrawParams(
   const { channelAddress, assetId, recipient, fee, callTo, callData } = params;
 
   // If there is a fee being charged, add the fee to the amount.
-  const amount = fee
-    ? BigNumber.from(params.amount)
-        .add(fee)
-        .toString()
-    : params.amount;
+  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,

@@ -43,7 +43,7 @@ describe(testName, () => {
 
     // Resolve transfer
     log.info("Resolving transfer", { transferId: transfer.transferId, resolver: transfer.transferResolver });
-    await resolveTransfer(channel.channelAddress, transfer, alice, bob);
+    await resolveTransfer(channel.channelAddress, transfer, bob, alice);
     await alice.off();
     await bob.off();
   });

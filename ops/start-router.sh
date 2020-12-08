@@ -37,12 +37,13 @@ function getConfig {
 }
 
 admin_token=$(getConfig adminToken)
-messaging_url=$(getConfig messagingUrl)
 aws_access_id=$(getConfig awsAccessId)
 aws_access_key=$(getConfig awsAccessKey)
+database_url=$(getConfig databaseUrl)
+messaging_url=$(getConfig messagingUrl)
+mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)
 public_port=$(getConfig port)
-mnemonic=$(getConfig mnemonic)
 
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
 default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
@@ -320,6 +321,7 @@ services:
       VECTOR_PROD: '$production'
       VECTOR_MNEMONIC: '$eth_mnemonic'
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
+      VECTOR_DATABASE_URL: '$database_url'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: 'database'
       VECTOR_PG_PASSWORD: '$pg_password'
@@ -334,6 +336,7 @@ services:
       VECTOR_CONFIG: '$(echo "$config" | tr -d '\n\r')'
       VECTOR_PROD: '$production'
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
+      VECTOR_DATABASE_URL: '$database_url'
       VECTOR_PG_DATABASE: '$pg_db'
       VECTOR_PG_HOST: 'database'
       VECTOR_PG_PASSWORD: '$pg_password'

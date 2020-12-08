@@ -6,10 +6,10 @@ import {
   IMessagingService,
   IVectorProtocol,
   IVectorStore,
-  DEFAULT_TRANSFER_TIMEOUT,
   IVectorChainReader,
   SetupParams,
   UpdateType,
+  DEFAULT_CHANNEL_TIMEOUT,
 } from "@connext/vector-types";
 import {
   getRandomChannelSigner,
@@ -85,7 +85,7 @@ export const createVectorInstances = async (
 export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState<any>> => {
   const setupParams: SetupParams = {
     counterpartyIdentifier: bob.publicIdentifier,
-    timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+    timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
     networkContext: {
       chainId,
       providerUrl: Object.values(env.chainProviders)[0] as string,
@@ -126,6 +126,66 @@ export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol)
   return channel;
 };
 
+export const deployChannelIfNeeded = async (
+  channelAddress: string,
+  bobAddr: string,
+  aliceAddr: string,
+  deployerSigner: IChannelSigner,
+): Promise<void> => {
+  const code = await deployerSigner.provider?.getCode(channelAddress);
+  if (code !== "0x") {
+    // already deployed to channel addr
+    return;
+  }
+  const factory = new Contract(env.chainAddresses[chainId].channelFactoryAddress, ChannelFactory.abi, deployerSigner);
+  const created = new Promise<string>((res) => {
+    factory.once(factory.filters.ChannelCreation(), (data) => {
+      res(data);
+    });
+  });
+  const createTx = await factory.createChannel(aliceAddr, bobAddr);
+  await createTx.wait();
+  const deployedAddr = await created;
+  expect(deployedAddr).to.equal(channelAddress);
+};
+
+export const depositOnchain = async (
+  assetId: string,
+  value: BigNumberish,
+  channelAddress: string,
+  aliceIdentifier: string,
+  depositor: IChannelSigner,
+): Promise<void> => {
+  const isDepositA = aliceIdentifier === depositor.publicIdentifier;
+  const multisig = new Contract(channelAddress, VectorChannel.abi, depositor);
+  if (isDepositA) {
+    // Call deposit on multisig
+    // Approve tokens
+    if (assetId !== AddressZero) {
+      const approval = await new Contract(assetId, TestToken.abi, depositor).approve(channelAddress, value);
+      await approval.wait();
+    }
+    const preDepositAliceBalance = await multisig.getTotalDepositsAlice(assetId);
+    const tx = await multisig.depositAlice(assetId, value, {
+      value: assetId === AddressZero ? value : BigNumber.from(0),
+    });
+    await tx.wait();
+    const postDepositAliceBalance = await multisig.getTotalDepositsAlice(assetId);
+    expect(postDepositAliceBalance).to.equal(preDepositAliceBalance.add(value));
+    return;
+  }
+  const preDepositBobBalance = await multisig.getTotalDepositsBob(assetId);
+  // Deposit onchain
+  const tx =
+    assetId === AddressZero
+      ? await depositor.sendTransaction({ value, to: channelAddress })
+      : await new Contract(assetId, TestToken.abi, depositor).transfer(channelAddress, value);
+  await tx.wait();
+  // Verify onchain values updated
+  const postDepositBobBalance = await multisig.getTotalDepositsBob(assetId);
+  expect(postDepositBobBalance).to.be.eq(preDepositBobBalance.add(value));
+};
+
 export const depositInChannel = async (
   channelAddress: string,
   depositor: IVectorProtocol,
@@ -147,105 +207,11 @@ export const depositInChannel = async (
   const value = BigNumber.from(amount);
   // Deploy multsig if needed
   const channel = await depositor.getChannelState(channelAddress);
-  const isDepositA = channel!.aliceIdentifier === depositor.publicIdentifier;
-  // NOTE: sometimes deposit fails, and it seems like its because it is
-  // not detecting depositA properly, only happens sometimes so leave
-  // this log for now!
-  if (isDepositA) {
-    const value = BigNumber.from(amount);
-    // Call deposit on the multisig
-    try {
-      const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const totalDepositsAlice = await channel.getTotalDepositsAlice(assetId);
-      const tx = await channel.depositAlice(assetId, value, { value });
-      await tx.wait();
-      expect(await channel.getTotalDepositsAlice(assetId)).to.equal(totalDepositsAlice.add(value));
-    } catch (e) {
-      // Assume this happened because it wasn't deployed
-      await depositorSigner.connectProvider(provider);
-      // Get the previous balance before deploying
-      const prev =
-        assetId === AddressZero
-          ? await depositorSigner.provider!.getBalance(channelAddress)
-          : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-      const factory = new Contract(
-        env.chainAddresses[chainId].channelFactoryAddress,
-        ChannelFactory.abi,
-        depositorSigner,
-      );
-      const created = new Promise<string>(res => {
-        factory.once(factory.filters.ChannelCreation(), data => {
-          res(data);
-        });
-      });
-      const tx = await factory.createChannelAndDepositAlice(
-        depositorSigner.address,
-        counterparty.signerAddress,
-        assetId,
-        value,
-        { value },
-      );
-      await tx.wait();
-      const deployedAddr = await created;
-      expect(deployedAddr).to.be.eq(channelAddress);
-      // Verify onchain values updated
-      const totalDepositsAlice = await new Contract(
-        channelAddress,
-        VectorChannel.abi,
-        depositorSigner,
-      ).getTotalDepositsAlice(assetId);
-      expect(totalDepositsAlice).to.be.eq(value);
-      expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
-    }
-  } else {
-    try {
-      // This call will fail if the channel isn't created
-      const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const totalDepositsBob = await channel.getTotalDepositsBob(assetId);
-      // Deposit onchain
-      const tx =
-        assetId === AddressZero
-          ? await depositorSigner.sendTransaction({ value, to: channelAddress })
-          : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
-      await tx.wait();
-      // Verify onchain values updated
-      expect(await channel.getTotalDepositsBob(assetId)).to.be.eq(totalDepositsBob.add(value));
-    } catch (e) {
-      if (e.message.includes("Expected")) {
-        throw e;
-      }
-      // If not assertion fail, assume we threw because channel isn't deployed
-      const prev =
-        assetId === AddressZero
-          ? await depositorSigner.provider!.getBalance(channelAddress)
-          : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-      const factory = new Contract(
-        env.chainAddresses[chainId].channelFactoryAddress,
-        ChannelFactory.abi,
-        depositorSigner,
-      );
-      const created = new Promise<string>(res => {
-        factory.once(factory.filters.ChannelCreation(), data => {
-          res(data);
-        });
-      });
-      const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address);
-      await createTx.wait();
-      const deployedAddr = await created;
-      expect(deployedAddr).to.equal(channelAddress);
-      const tx =
-        assetId === AddressZero
-          ? await depositorSigner.sendTransaction({ value, to: deployedAddr })
-          : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(deployedAddr, value);
-      await tx.wait();
-      // Verify onchain values updated
-      const totalDepositsBob = await new Contract(deployedAddr, VectorChannel.abi, depositorSigner).getTotalDepositsBob(
-        assetId,
-      );
-      expect(totalDepositsBob).to.be.eq(value);
-      expect(await depositorSigner.provider!.getBalance(channelAddress)).to.be.eq(value.add(prev));
-    }
-  }
+  await deployChannelIfNeeded(channelAddress, channel!.bob, channel!.alice, depositorSigner);
+
+  // Deposit onchain
+  await depositOnchain(assetId, value, channelAddress, channel!.aliceIdentifier, depositorSigner);
+
   // Reconcile with channel
   const ret = await depositor.deposit({
     assetId,
@@ -258,14 +224,23 @@ export const depositInChannel = async (
   expect(postDeposit).to.containSubset({
     assetIds: [...new Set(channel!.assetIds.concat(assetId))],
   });
-  const assetIdx = postDeposit!.assetIds.findIndex(a => a === assetId);
-  if (isDepositA) {
-    expect(value.add(channel!.processedDepositsA[assetIdx] || "0")).to.equal(
-      BigNumber.from(postDeposit.processedDepositsA[0]),
+  const assetIdx = postDeposit!.assetIds.findIndex((a) => a === assetId);
+  const aliceDeposit = depositorSigner.address === postDeposit.alice;
+  // NOTE: at.least comparisons used to ensure additional deposits that
+  // were not reconciled to use this utility
+  if (aliceDeposit) {
+    // bob didnt change
+    expect(postDeposit.processedDepositsB[assetIdx]).to.be.eq(channel?.processedDepositsB[assetIdx] ?? "0");
+    // alice increments by at least value
+    expect(BigNumber.from(postDeposit.processedDepositsA[assetIdx]).toNumber()).to.be.at.least(
+      value.add(channel?.processedDepositsA[assetIdx] ?? "0").toNumber(),
     );
   } else {
-    expect(value.add(channel!.processedDepositsB[assetIdx] || "0")).to.equal(
-      BigNumber.from(postDeposit.processedDepositsB[assetIdx]),
+    // alice didnt change
+    expect(postDeposit.processedDepositsA[assetIdx]).to.be.eq(channel?.processedDepositsA[assetIdx] ?? "0");
+    // bob increments by at least value
+    expect(BigNumber.from(postDeposit.processedDepositsB[assetIdx]).toNumber()).to.be.at.least(
+      value.add(channel?.processedDepositsB[assetIdx] ?? "0").toNumber(),
     );
   }
   return postDeposit;

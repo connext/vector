@@ -3,6 +3,7 @@ import { getTestLoggers, expect, mkAddress } from "@connext/vector-utils";
 import { IVectorProtocol, IChannelSigner, IVectorStore, ProtocolEventName } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
+
 import { env } from "../env";
 import { createTransfer, getFundedChannel, depositInChannel } from "../utils";
 
@@ -72,17 +73,16 @@ describe(testName, () => {
     const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
 
-    runTest(channel, transfer);
-    const aliceEvent = await alicePromise;
+    const [_, aliceEvent, bobEvent] = await Promise.all([runTest(channel, transfer), alicePromise, bobPromise]);
+
     expect(aliceEvent.updatedTransfers?.length).to.eq(1);
-    const bobEvent = await bobPromise;
     expect(aliceEvent).to.deep.eq(bobEvent);
   });
 
   it("should create an eth transfer from bob -> alice", async () => {
     const { channel, transfer } = await createTransfer(abChannelAddress, bob, alice, assetId, transferAmount);
 
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
   });
 
   it("should work for alice creating transfer out of channel", async () => {
@@ -95,7 +95,7 @@ describe(testName, () => {
       transferAmount,
       outsiderPayee,
     );
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
   });
 
   it("should work for bob creating transfer out of channel", async () => {
@@ -108,14 +108,23 @@ describe(testName, () => {
       transferAmount,
       outsiderPayee,
     );
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
   });
   it("should work for concurrent transfers from alice to bob", async () => {
     // Create two transfers from alice to bob
+    const preTransfer = await aliceStore.getChannelState(abChannelAddress);
+    const assetIdx = preTransfer!.assetIds.findIndex((a) => a === assetId);
+    const [initAlice, initBob] = preTransfer!.balances[assetIdx].amount;
     const concurrentResult = await Promise.all([
-      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount),
-      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount),
+      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount, undefined, undefined, true),
+      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount, undefined, undefined, true),
     ]);
+    const postTransfer = await aliceStore.getChannelState(abChannelAddress);
+    const [finalAlice, finalBob] = postTransfer!.balances[assetIdx].amount;
+    const transferred = BigNumber.from(transferAmount).mul(2);
+    expect(finalAlice).to.be.eq(BigNumber.from(initAlice).sub(transferred));
+    expect(finalBob).to.be.eq(BigNumber.from(initBob));
+
     log.info(concurrentResult);
   });
 
@@ -133,29 +142,65 @@ describe(testName, () => {
     );
     const carol = setup.bob.protocol;
     const acChannelAddress = setup.channel.channelAddress;
+    // Get balances
+    const preTransferAC = await aliceStore.getChannelState(acChannelAddress);
+    const assetIdx = preTransferAC!.assetIds.findIndex((a) => a === assetId);
+    const [initAliceC, initCarol] = preTransferAC!.balances[assetIdx].amount;
+
+    const preTransferAB = await aliceStore.getChannelState(abChannelAddress);
+    const assetIdxAB = preTransferAB!.assetIds.findIndex((a) => a === assetId);
+    const [initAliceB, initBob] = preTransferAB!.balances[assetIdxAB].amount;
+
     // Create two transfers from alice to bob/carol
     await Promise.all([
-      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount),
-      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount),
-      createTransfer(acChannelAddress, alice, carol, assetId, transferAmount),
-      createTransfer(acChannelAddress, alice, carol, assetId, transferAmount),
+      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount, undefined, undefined, true),
+      createTransfer(abChannelAddress, alice, bob, assetId, transferAmount, undefined, undefined, true),
+      createTransfer(acChannelAddress, alice, carol, assetId, transferAmount, undefined, undefined, true),
+      createTransfer(acChannelAddress, alice, carol, assetId, transferAmount, undefined, undefined, true),
     ]);
+
+    // Verify transfers
+    const postTransferAB = await aliceStore.getChannelState(abChannelAddress);
+    const [finalAliceB, finalBob] = postTransferAB!.balances[assetIdxAB].amount;
+
+    const postTransferAC = await aliceStore.getChannelState(acChannelAddress);
+    const [finalAliceC, finalCarol] = postTransferAC!.balances[assetIdx].amount;
+
+    const transferred = BigNumber.from(transferAmount).mul(2);
+    expect(finalAliceB).to.be.eq(BigNumber.from(initAliceB).sub(transferred));
+    expect(finalAliceC).to.be.eq(BigNumber.from(initAliceC).sub(transferred));
+    expect(finalBob).to.be.eq(BigNumber.from(initBob));
+    expect(finalCarol).to.be.eq(BigNumber.from(initCarol));
   });
 
   it("should work if initiator channel is out of sync", async () => {
-    const preChannelState = await depositInChannel(abChannelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+    const initial = await aliceStore.getChannelState(abChannelAddress);
+    const latest = await depositInChannel(abChannelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+    const assetIdx = latest.assetIds.findIndex((a) => a == assetId);
 
-    aliceStore.saveChannelState(preChannelState);
-    const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
+    await aliceStore.saveChannelState(initial!);
+    const { channel, transfer } = await createTransfer(
+      abChannelAddress,
+      alice,
+      bob,
+      assetId,
+      transferAmount,
+      undefined,
+      latest.balances[assetIdx],
+    );
 
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
+    expect(channel.nonce).to.be.eq(initial!.nonce + 2);
   });
-  it("should work if responder channel is out of sync", async () => {
-    const preChannelState = await depositInChannel(abChannelAddress, bob, bobSigner, alice, assetId, depositAmount);
 
-    bobStore.saveChannelState(preChannelState);
+  it("should work if responder channel is out of sync", async () => {
+    const initial = await aliceStore.getChannelState(abChannelAddress);
+    await depositInChannel(abChannelAddress, bob, bobSigner, alice, assetId, depositAmount);
+
+    await bobStore.saveChannelState(initial!);
     const { channel, transfer } = await createTransfer(abChannelAddress, alice, bob, assetId, transferAmount);
 
-    runTest(channel, transfer);
+    await runTest(channel, transfer);
+    expect(channel.nonce).to.be.eq(initial!.nonce + 2);
   });
 });
