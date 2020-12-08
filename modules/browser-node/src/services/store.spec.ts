@@ -173,7 +173,9 @@ describe("store", () => {
     const updatedBalanceForDeposit: Balance = { amount: ["10", "20"], to: setupState.balances[0].to };
     const depositState = createTestChannelState("deposit", {
       nonce: setupState.nonce + 1,
+      defundNonces: setupState.defundNonces,
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
+      networkContext: setupState.networkContext,
     });
     await store.saveChannelState(depositState);
 
@@ -187,10 +189,16 @@ describe("store", () => {
     });
     const createState = createTestChannelState("create", {
       channelAddress: transfer.channelAddress,
-      networkContext: { channelFactoryAddress: transfer.channelFactoryAddress, chainId: transfer.chainId },
+      networkContext: {
+        channelFactoryAddress: transfer.channelFactoryAddress,
+        chainId: transfer.chainId,
+        transferRegistryAddress: setupState.networkContext.transferRegistryAddress,
+      },
       nonce: depositState.nonce + 1,
+      defundNonces: setupState.defundNonces,
       latestUpdate: {
         details: {
+          balance: transfer.balance,
           transferInitialState: transfer.transferState,
           transferId: transfer.transferId,
           meta: transfer.meta,
@@ -208,6 +216,8 @@ describe("store", () => {
 
     const resolveState = createTestChannelState("resolve", {
       nonce: createState.nonce + 1,
+      defundNonces: setupState.defundNonces,
+      networkContext: setupState.networkContext,
       latestUpdate: {
         nonce: createState.nonce + 1,
         details: {
@@ -278,7 +288,10 @@ describe("store", () => {
     });
     const createState = createTestChannelState("create", {
       channelAddress: transfer1.channelAddress,
-      networkContext: { channelFactoryAddress: transfer1.channelFactoryAddress, chainId: transfer1.chainId },
+      networkContext: {
+        channelFactoryAddress: transfer1.channelFactoryAddress,
+        chainId: transfer1.chainId,
+      },
       latestUpdate: {
         details: {
           transferInitialState: transfer1.transferState,

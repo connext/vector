@@ -25,6 +25,8 @@ import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
 
+import { version } from "../package.json";
+
 import { InvalidTransferType } from "./errors";
 import {
   convertConditionalTransferParams,
@@ -137,7 +139,7 @@ export class VectorEngine implements IVectorEngine {
       }),
     );
     return Result.ok({
-      version: "x.x.x",
+      version,
       publicIdentifier: this.publicIdentifier,
       signerAddress: this.signerAddress,
       providerSyncing,
@@ -644,8 +646,6 @@ export class VectorEngine implements IVectorEngine {
     if (typeof this[methodName] !== "function") {
       throw new Error(`Invalid method: ${methodName}`);
     }
-    console.log("trying to call", methodName);
-    this.logger.info({ methodName }, "Method called");
 
     // every method must be a result type
     const res = await this[methodName](payload.params);

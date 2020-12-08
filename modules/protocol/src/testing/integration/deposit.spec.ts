@@ -94,18 +94,8 @@ describe(testName, () => {
     ]);
     expect(finalAlice).to.be.deep.eq(finalBob);
     expect(finalAlice).to.containSubset({
-      processedDepositsA: [
-        depositAmount
-          .div(4)
-          .add(processedDepositsA[0])
-          .toString(),
-      ],
-      processedDepositsB: [
-        depositAmount
-          .div(4)
-          .add(processedDepositsB[0])
-          .toString(),
-      ],
+      processedDepositsA: [depositAmount.div(4).add(processedDepositsA[0]).toString()],
+      processedDepositsB: [depositAmount.div(4).add(processedDepositsB[0]).toString()],
     });
   });
 

@@ -28,7 +28,7 @@ import { Evt } from "evt";
 import pino from "pino";
 
 import * as sync from "./sync";
-import { getParamsFromUpdate, validateSchema } from "./utils";
+import { validateSchema } from "./utils";
 
 type EvtContainer = { [K in keyof ProtocolEventPayloadsMap]: Evt<ProtocolEventPayloadsMap[K]> };
 
@@ -62,10 +62,10 @@ export class Vector implements IVectorProtocol {
     // additional validation
     const externalValidation = validationService ?? {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      validateOutbound: (params: UpdateParams<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      validateOutbound: (params: UpdateParams<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
         Promise.resolve(Result.ok(undefined)),
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, transfer?: FullTransferState) =>
+      validateInbound: (update: ChannelUpdate<any>, state: FullChannelState, activeTransfers: FullTransferState[]) =>
         Promise.resolve(Result.ok(undefined)),
     };
 
@@ -134,11 +134,6 @@ export class Vector implements IVectorProtocol {
       method: "executeUpdate",
       step: "start",
       params,
-    });
-    this.logger.info({
-      method: "executeUpdate",
-      step: "start",
-      type: params.type,
       channelAddress: params.channelAddress,
       updateSender: this.publicIdentifier,
     });
@@ -180,7 +175,7 @@ export class Vector implements IVectorProtocol {
           return;
         }
         const method = "onReceiveProtocolMessage";
-        this.logger.info({ method }, "Received message");
+        this.logger.debug({ method }, "Received message");
 
         if (msg.isError) {
           this.logger.error(
@@ -198,7 +193,7 @@ export class Vector implements IVectorProtocol {
           this.logger.warn({ method, received: Object.keys(received) }, "Message malformed");
           return;
         }
-        const receivedError = this.validateParams(received.update, TChannelUpdate);
+        const receivedError = this.validateParamSchema(received.update, TChannelUpdate);
         if (receivedError) {
           this.logger.warn(
             { method, update: received.update, error: receivedError },
@@ -207,7 +202,7 @@ export class Vector implements IVectorProtocol {
           return;
         }
         // Previous update may be undefined, but if it exists, validate
-        const previousError = this.validateParams(received.previousUpdate, TChannelUpdate);
+        const previousError = this.validateParamSchema(received.previousUpdate, TChannelUpdate);
         if (previousError && received.previousUpdate) {
           this.logger.warn(
             { method, update: received.previousUpdate, error: previousError },
@@ -264,7 +259,6 @@ export class Vector implements IVectorProtocol {
     // TODO: is there a better way to do this?
     await Promise.all(
       channels.map(async (channel) => {
-        const currBlock = await this.chainReader.getBlockNumber(channel.networkContext.chainId);
         const disputeRes = await this.chainReader.getChannelDispute(
           channel.channelAddress,
           channel.networkContext.chainId,
@@ -281,16 +275,8 @@ export class Vector implements IVectorProtocol {
           return;
         }
         try {
-          // if the dispute has expired, save that the channel is no
-          // longer in dispute
-          if (BigNumber.from(currBlock).lte(dispute.defundExpiry)) {
-            // make store call IFF needed
-            if (channel.inDispute) {
-              await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, dispute);
-            }
-            return;
-          }
-          // otherwise, save dispute record
+          // save dispute record
+          // TODO: implement recovery from dispute
           await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
         } catch (e) {
           this.logger.error(
@@ -298,28 +284,12 @@ export class Vector implements IVectorProtocol {
             "Failed to update dispute on startup",
           );
         }
-
-        // Register listeners to update all disputes while the protocol is
-        // online and actively connected
-        const contract = new Contract(channel.channelAddress, VectorChannel.abi, this.signer);
-        contract.on(contract.filters.ChannelDisputed(), async (event) => {
-          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, event.dispute);
-        });
-        // contract.on(contract.filters.ChannelDefunded(), async event => {
-        //   await this.storeService.saveChannelDispute({ ...channel, inDispute: false }, event.dispute);
-        // });
-        contract.on(contract.filters.TransferDisputed(), async (event) => {
-          await this.storeService.saveChannelDispute(
-            { ...channel, inDispute: true },
-            { ...event.dispute, transferId: event.transferId },
-          );
-        });
       }),
     );
     return this;
   }
 
-  private validateParams(params: any, schema: any): undefined | OutboundChannelUpdateError {
+  private validateParamSchema(params: any, schema: any): undefined | OutboundChannelUpdateError {
     const error = validateSchema(params, schema);
     if (error) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
@@ -351,7 +321,7 @@ export class Vector implements IVectorProtocol {
 
   public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all parameters
-    const error = this.validateParams(params, ProtocolParams.SetupSchema);
+    const error = this.validateParamSchema(params, ProtocolParams.SetupSchema);
     if (error) {
       this.logger.error({ method: "setup", params, error });
       return Result.fail(error);
@@ -391,7 +361,7 @@ export class Vector implements IVectorProtocol {
   // Adds a deposit that has *already occurred* onchain into the multisig
   public async deposit(params: ProtocolParams.Deposit): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all input
-    const error = this.validateParams(params, ProtocolParams.DepositSchema);
+    const error = this.validateParamSchema(params, ProtocolParams.DepositSchema);
     if (error) {
       return Result.fail(error);
     }
@@ -408,7 +378,7 @@ export class Vector implements IVectorProtocol {
 
   public async create(params: ProtocolParams.Create): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all input
-    const error = this.validateParams(params, ProtocolParams.CreateSchema);
+    const error = this.validateParamSchema(params, ProtocolParams.CreateSchema);
     if (error) {
       return Result.fail(error);
     }
@@ -425,7 +395,7 @@ export class Vector implements IVectorProtocol {
 
   public async resolve(params: ProtocolParams.Resolve): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all input
-    const error = this.validateParams(params, ProtocolParams.ResolveSchema);
+    const error = this.validateParamSchema(params, ProtocolParams.ResolveSchema);
     if (error) {
       return Result.fail(error);
     }
