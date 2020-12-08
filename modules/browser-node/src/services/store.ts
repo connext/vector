@@ -41,7 +41,7 @@ class VectorIndexedDBDatabase extends Dexie {
         "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId]",
       transfers:
         "transferId,[routingId+channelAddress],[createUpdateNonce+channelAddress],[resolveUpdateNonce+channelAddress],[transferResolver+channelAddress]",
-      transactions: "[transactionHash+chainId]",
+      transactions: "transactionHash",
       withdrawCommitment: "transferId",
       values: "key",
     });
