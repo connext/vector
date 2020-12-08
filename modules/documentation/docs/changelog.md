@@ -2,6 +2,10 @@
 
 ## Next Release
 
+- use receiver payment name instead of transfer definition
+- add protocol-level validation
+- add `create` protocol integration tests
+
 ## 0.0.26
 
 - fix cross-chain transfer bug

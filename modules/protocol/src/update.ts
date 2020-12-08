@@ -48,7 +48,7 @@ export function applyUpdate<T extends UpdateType>(
 ): Result<
   {
     updatedChannel: FullChannelState<T>;
-    updatedActiveTransfers?: FullTransferState[];
+    updatedActiveTransfers: FullTransferState[];
     updatedTransfer?: FullTransferState;
   },
   InboundChannelUpdateError
@@ -77,6 +77,7 @@ export function applyUpdate<T extends UpdateType>(
     case UpdateType.setup: {
       const { timeout, networkContext } = details as SetupUpdateDetails;
       return Result.ok({
+        updatedActiveTransfers: [...previousActiveTransfers],
         updatedChannel: {
           nonce: 1,
           channelAddress,
@@ -110,6 +111,7 @@ export function applyUpdate<T extends UpdateType>(
         previousState!.assetIds,
       );
       return Result.ok({
+        updatedActiveTransfers: [...previousActiveTransfers],
         updatedChannel: {
           ...previousState!,
           balances,
@@ -164,7 +166,7 @@ export function applyUpdate<T extends UpdateType>(
       return Result.ok({
         updatedChannel,
         updatedTransfer: createdTransfer,
-        updatedActiveTransfers: [...previousActiveTransfers!, createdTransfer],
+        updatedActiveTransfers: [...previousActiveTransfers, createdTransfer],
       });
     }
     case UpdateType.resolve: {
@@ -198,7 +200,7 @@ export function applyUpdate<T extends UpdateType>(
       return Result.ok({
         updatedChannel,
         updatedTransfer: resolvedTransfer,
-        updatedActiveTransfers: previousActiveTransfers!.filter((t) => t.transferId !== transferId),
+        updatedActiveTransfers: previousActiveTransfers.filter((t) => t.transferId !== transferId),
       });
     }
     default: {
@@ -227,7 +229,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
     {
       update: ChannelUpdate<T>;
       updatedChannel: FullChannelState<T>;
-      updatedActiveTransfers: FullTransferState[] | undefined;
+      updatedActiveTransfers: FullTransferState[];
       updatedTransfer: FullTransferState | undefined;
     },
     OutboundChannelUpdateError
@@ -266,7 +268,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         previousState!,
         params as UpdateParams<"create">,
         signer,
-        activeTransfers!,
+        activeTransfers,
         chainReader,
         initiatorIdentifier,
       );
@@ -283,7 +285,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         previousState!,
         params as UpdateParams<"resolve">,
         signer,
-        activeTransfers!,
+        activeTransfers,
         chainReader,
         initiatorIdentifier,
       );
