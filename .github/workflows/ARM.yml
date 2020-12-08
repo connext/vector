@@ -7,6 +7,8 @@ on: push
 jobs:
   build-arm64:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: vector_node_arm:${GITHUB_SHA:0:8}
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -27,4 +29,8 @@ jobs:
           python-version: '3.9'
           architecture: 'x64'
       - name: Build and push
-        run: make node-prod && docker buildx build --platform=linux/arm/v7 --tag vector_node_arm:${GITHUB_SHA:0:8} --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
+        run: |
+          make node-prod
+          docker buildx build --platform=linux/arm/v7 --tag ${IMAGE_NAME} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
+          docker tag $IMAGE_NAME connextproject/$IMAGE_NAME
+          docker push connextproject/$IMAGE_NAME
