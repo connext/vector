@@ -185,7 +185,7 @@ describe("ParamConverter", () => {
           chainId,
           providerUrl,
         },
-      });
+      }).channel;
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));

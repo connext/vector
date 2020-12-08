@@ -144,7 +144,7 @@ describe("utils", () => {
     const aliceSigner = getRandomChannelSigner();
     const bobSigner = getRandomChannelSigner();
     const wrongSigner = getRandomChannelSigner();
-    const state = createTestChannelState("create", { alice: aliceSigner.address, bob: bobSigner.address });
+    const state = createTestChannelState("create", { alice: aliceSigner.address, bob: bobSigner.address }).channel;
     const { networkContext, ...core } = state;
 
     const tests = [
