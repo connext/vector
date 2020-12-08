@@ -66,7 +66,6 @@ export async function forwardTransferCreation(
   routerPublicIdentifier: string,
   signerAddress: string,
   nodeService: INodeService,
-  chainReader: IVectorChainReader,
   store: IRouterStore,
   logger: BaseLogger,
   chainProviders: ChainJsonProviders,
@@ -110,6 +109,7 @@ export async function forwardTransferCreation(
       transferTimeout,
       transferDefinition: senderTransferDefinition,
     },
+    conditionType,
   } = data;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
   const { routingId } = meta;
@@ -147,7 +147,6 @@ export async function forwardTransferCreation(
   // Below, we figure out the correct params needed for the receiver's channel. This includes
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
-  let recipientTransferType = senderTransferDefinition;
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
     logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
     const swapRes = await getSwappedAmount(
@@ -167,25 +166,6 @@ export async function forwardTransferCreation(
     }
     recipientAmount = swapRes.getValue();
 
-    // we need to get the proper transfer definition address
-    if (recipientChainId !== senderChainId) {
-      const senderTransferInfoRes = await chainReader.getRegisteredTransferByDefinition(
-        senderTransferDefinition,
-        senderChannel.networkContext.transferRegistryAddress,
-        senderChainId,
-      );
-      if (senderTransferInfoRes.isError) {
-        return Result.fail(
-          new ForwardTransferError(ForwardTransferError.reasons.InvalidTransferDefinition, {
-            message: swapRes.getError()?.message,
-            context: swapRes.getError()?.context,
-          }),
-        );
-      }
-      const senderTransferInfo = senderTransferInfoRes.getValue();
-      recipientTransferType = senderTransferInfo.name;
-    }
-
     logger.warn(
       {
         method,
@@ -193,7 +173,7 @@ export async function forwardTransferCreation(
         recipientAmount,
         recipientChainId,
         senderTransferDefinition,
-        recipientTransferDefinition: recipientTransferType,
+        conditionType,
       },
       "Inflight swap calculated",
     );
@@ -262,7 +242,7 @@ export async function forwardTransferCreation(
     amount: recipientAmount,
     assetId: recipientAssetId,
     timeout: BigNumber.from(transferTimeout).sub(TRANSFER_DECREMENT).toString(),
-    type: recipientTransferType,
+    type: conditionType,
     publicIdentifier: routerPublicIdentifier,
     details,
     meta: {
