@@ -32,5 +32,6 @@ jobs:
         run: |
           make node-prod
           docker buildx build --platform=linux/arm/v7 --tag ${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
+          docker image ls
           docker tag $IMAGE_NAME:${GITHUB_SHA::8} connextproject/$IMAGE_NAME:${GITHUB_SHA::8}
           docker push connextproject/$IMAGE_NAME:${GITHUB_SHA::8}
