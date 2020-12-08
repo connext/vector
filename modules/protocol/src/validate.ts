@@ -272,7 +272,7 @@ export const validateParamsAndApplyUpdate = async (
     {
       update: ChannelUpdate;
       updatedChannel: FullChannelState;
-      updatedActiveTransfers: FullTransferState[] | undefined;
+      updatedActiveTransfers: FullTransferState[];
       updatedTransfer: FullTransferState | undefined;
     },
     OutboundChannelUpdateError
@@ -329,7 +329,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   Result<
     {
       updatedChannel: FullChannelState<T>;
-      updatedActiveTransfers?: FullTransferState[];
+      updatedActiveTransfers: FullTransferState[];
       updatedTransfer?: FullTransferState;
     },
     InboundChannelUpdateError
@@ -435,11 +435,11 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   }
 
   // Always perform external validation on single signed updates
-  const outboundRes = await externalValidation.validateInbound(update, previousState, activeTransfers);
-  if (outboundRes.isError) {
+  const inboundRes = await externalValidation.validateInbound(update, previousState, activeTransfers);
+  if (inboundRes.isError) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, previousState, {
-        error: outboundRes.getError()?.message,
+        error: inboundRes.getError()?.message,
       }),
     );
   }
