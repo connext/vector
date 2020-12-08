@@ -221,7 +221,7 @@ describe(testName, () => {
     );
   });
 
-  it("should work concurrently", async () => {
+  it.only("should work concurrently", async () => {
     // Perform an alice deposit to make sure multisig is deployed
     await deployChannelIfNeeded(
       preDepositChannel.channelAddress,
