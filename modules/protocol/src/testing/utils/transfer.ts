@@ -8,6 +8,7 @@ import {
   ResolveTransferParams,
   TransferResolver,
   DEFAULT_TRANSFER_TIMEOUT,
+  Balance,
 } from "@connext/vector-types";
 import {
   createlockHash,
@@ -33,6 +34,8 @@ export const createTransfer = async (
   assetId: string = AddressZero,
   amount: BigNumberish = 10,
   outsiderPayee?: string,
+  channelInitialBalance?: Balance,
+  skipBalanceVerification = false, // use true if testing concurrency
 ): Promise<{ channel: FullChannelState; transfer: FullTransferState }> => {
   // Create the transfer information
   const preImage = getRandomBytes32();
@@ -57,9 +60,10 @@ export const createTransfer = async (
 
   const preCreateChannel = await creator.getChannelState(channelAddress);
   const assetIdx = (preCreateChannel?.assetIds ?? []).findIndex((a) => a === assetId);
+  const preCreateBalance = channelInitialBalance ?? preCreateChannel!.balances[assetIdx];
   const isAlice = creator.signerAddress === preCreateChannel?.alice;
-  const initCreatorBalance = preCreateChannel?.balances[assetIdx].amount[isAlice ? 0 : 1];
-  const initResolverBalance = preCreateChannel?.balances[assetIdx].amount[isAlice ? 1 : 0];
+  const initCreatorBalance = preCreateBalance.amount[isAlice ? 0 : 1];
+  const initResolverBalance = preCreateBalance.amount[isAlice ? 1 : 0];
 
   const ret = await creator.create(params);
   expect(ret.getError()).to.be.undefined;
@@ -89,11 +93,14 @@ export const createTransfer = async (
   expect(decoded.preImage).to.be.deep.eq(preImage);
   expect(transfer!.transferEncodings.length).to.be.eq(2);
 
-  // Ensure the balance was properly decremented
-  const finalCreatorBalance = channel?.balances[assetIdx].amount[isAlice ? 0 : 1];
-  const finalResolverBalance = channel?.balances[assetIdx].amount[isAlice ? 1 : 0];
-  expect(BigNumber.from(finalCreatorBalance)).to.be.eq(BigNumber.from(initCreatorBalance).sub(balance.amount[0]));
-  expect(BigNumber.from(finalResolverBalance)).to.be.eq(BigNumber.from(initResolverBalance).sub(balance.amount[1]));
+  // Ensure the balance was properly decremented for creator && not touched for
+  // resolver
+  if (!skipBalanceVerification) {
+    const finalCreatorBalance = channel?.balances[assetIdx].amount[isAlice ? 0 : 1];
+    const finalResolverBalance = channel?.balances[assetIdx].amount[isAlice ? 1 : 0];
+    expect(BigNumber.from(finalCreatorBalance)).to.be.eq(BigNumber.from(initCreatorBalance).sub(balance.amount[0]));
+    expect(BigNumber.from(finalResolverBalance)).to.be.eq(BigNumber.from(initResolverBalance).sub(balance.amount[1]));
+  }
 
   return {
     channel,

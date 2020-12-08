@@ -424,7 +424,7 @@ describe("applyUpdate", () => {
           // the transfer should be undefined, and the active transfers
           // should not change
           expect(updatedTransfer).to.be.undefined;
-          expect(updatedActiveTransfers).to.be.undefined;
+          expect(updatedActiveTransfers.length).to.be.gte(0);
         } else {
           // On resolve:
           // - transfer balance === final balance
@@ -521,12 +521,11 @@ describe("generateAndApplyUpdate", () => {
     expect(update).to.containSubset(expected);
     expect(update[signer.address === aliceSigner.address ? "aliceSignature" : "bobSignature"]).to.be.ok;
     expect(updatedChannel).to.be.ok;
+    expect(updatedActiveTransfers).to.be.ok;
     if (params.type === UpdateType.create || params.type === UpdateType.resolve) {
-      expect(updatedActiveTransfers).to.be.ok;
       expect(updatedTransfer).to.be.ok;
       return;
     }
-    expect(updatedActiveTransfers).to.be.undefined;
     expect(updatedTransfer).to.be.undefined;
   };
 
