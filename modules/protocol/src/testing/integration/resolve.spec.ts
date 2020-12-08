@@ -18,19 +18,16 @@ const { log } = getTestLoggers(testName, env.logLevel);
 describe(testName, () => {
   let alice: IVectorProtocol;
   let bob: IVectorProtocol;
+
   let channelAddress: string;
-  let aliceStore: IVectorStore;
-  let bobStore: IVectorStore;
   let aliceSigner: IChannelSigner;
   let bobSigner: IChannelSigner;
+  let aliceStore: IVectorStore;
+  let bobStore: IVectorStore;
+  
   let assetId: string;
   let assetIdErc20: string;
   let transferAmount: any;
-
-  afterEach(async () => {
-    await alice.off();
-    await bob.off();
-  });
 
   beforeEach(async () => {
     const setup = await getFundedChannel(testName, [
@@ -62,6 +59,11 @@ describe(testName, () => {
     });
   });
 
+  afterEach(async () => {
+    await alice.off();
+    await bob.off();
+  });
+
   const resolveTransferAlice = async (transfer: FullTransferState): Promise<void> => {
     const alicePromise = alice.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
     const bobPromise = bob.waitFor(ProtocolEventName.CHANNEL_UPDATE_EVENT, 10_000);
@@ -84,52 +86,51 @@ describe(testName, () => {
     expect(aliceEvent.updatedTransfer!.transferResolver.preImage).to.be.a("string");
   };
 
-  // We need this to test whether resolve still works if the funds in the transfer are burned
   it("should work for alice resolving an eth transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
-    resolveTransferAlice(transfer);
+    await resolveTransferAlice(transfer);
   });
 
   it("should work for alice resolving a token transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetIdErc20, transferAmount);
 
-    resolveTransferAlice(transfer);
+    await resolveTransferAlice(transfer);
   });
 
   it("should work for alice resolving an eth transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount, outsiderPayee);
-    resolveTransferAlice(transfer);
+    await resolveTransferAlice(transfer);
   });
 
   it("should work for alice resolving a token transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetIdErc20, transferAmount, outsiderPayee);
-    resolveTransferAlice(transfer);
+    await resolveTransferAlice(transfer);
   });
 
   it("should work for bob resolving an eth transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount);
 
-    resolveTransferBob(transfer);
+    await resolveTransferBob(transfer);
   });
 
   it("should work for bob resolving an eth transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount, outsiderPayee);
-    resolveTransferBob(transfer);
+    await resolveTransferBob(transfer);
   });
 
   it("should work for bob resolving a token transfer", async () => {
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetIdErc20, transferAmount);
-    resolveTransferBob(transfer);
+    await resolveTransferBob(transfer);
   });
 
   it("should work for bob resolving a token transfer out of channel", async () => {
     const outsiderPayee = mkAddress("0xc");
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetIdErc20, transferAmount, outsiderPayee);
-    resolveTransferBob(transfer);
+    await resolveTransferBob(transfer);
   });
 
   it("should work concurrently", async () => {
@@ -149,9 +150,9 @@ describe(testName, () => {
     const preChannelState = await depositInChannel(channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
     const { transfer } = await createTransfer(channelAddress, alice, bob, assetId, transferAmount);
 
-    aliceStore.saveChannelState(preChannelState);
+    await aliceStore.saveChannelState(preChannelState);
 
-    resolveTransferAlice(transfer);
+    await resolveTransferAlice(transfer);
   });
 
   it("should work if responder channel is out of sync", async () => {
@@ -159,8 +160,8 @@ describe(testName, () => {
     const preChannelState = await depositInChannel(channelAddress, bob, bobSigner, alice, assetId, depositAmount);
     const { transfer } = await createTransfer(channelAddress, bob, alice, assetId, transferAmount);
 
-    bobStore.saveChannelState(preChannelState);
+    await bobStore.saveChannelState(preChannelState);
 
-    resolveTransferBob(transfer);
+    await resolveTransferBob(transfer);
   });
 });
