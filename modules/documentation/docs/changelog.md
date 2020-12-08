@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.0.27
+
 - use receiver payment name instead of transfer definition
 - add protocol-level validation
 - add `create` protocol integration tests
