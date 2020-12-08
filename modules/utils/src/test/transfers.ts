@@ -6,6 +6,7 @@ import {
   HashlockTransferState,
   HashlockTransferStateEncoding,
   HashlockTransferResolverEncoding,
+  FullChannelState,
 } from "@connext/vector-types";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 
@@ -63,6 +64,7 @@ type TestHashlockTransferOptions = {
 
 export function createTestFullHashlockTransferState(
   overrides: Partial<TestHashlockTransferOptions> = {},
+  channel?: FullChannelState<"create"> | FullChannelState<"resolve">,
 ): FullTransferState {
   // get overrides/defaults values
   const { assetId, preImage, expiry, meta, ...core } = overrides;
@@ -95,8 +97,17 @@ export function createTestFullHashlockTransferState(
     inDispute: false,
   };
 
+  const channelOverrides = channel
+    ? {
+        inDispute: channel.inDispute,
+        ...channel.networkContext,
+        ...channel.latestUpdate,
+      }
+    : {};
+
   return {
     ...defaults,
     ...core,
+    ...channelOverrides,
   };
 }

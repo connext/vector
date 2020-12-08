@@ -188,7 +188,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     overrides.bobIdentifier ?? mkPublicIdentifier("vectorB"),
   ];
   const participants = [overrides.alice ?? mkAddress("0xaaa"), overrides.bob ?? mkAddress("0xbbb")];
-  const channelAddress = mkAddress("0xccc");
+  const channelAddress = overrides.channelAddress ?? mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
   const nonce = overrides.nonce ?? 1;
   const defundNonces = overrides.defundNonces ?? ["1", "1"];
