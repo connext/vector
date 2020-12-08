@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- fix browser node store issue
+
 ## 0.0.28
 
 - use receiver payment name instead of transfer definition
