@@ -32,7 +32,7 @@ jobs:
         run: |
           make server-node-bundle
           echo "image name: ${IMAGE_NAME}:${GITHUB_SHA::8}"
-          docker buildx build --platform=linux/arm/v7 --tag ${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile --output=image,push modules/server-node
+          docker buildx build --platform=linux/arm/v7 --tag ${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
           docker image ls
           docker tag $IMAGE_NAME:${GITHUB_SHA::8} connextproject/$IMAGE_NAME:${GITHUB_SHA::8}
           docker push connextproject/$IMAGE_NAME:${GITHUB_SHA::8}
