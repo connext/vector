@@ -27,4 +27,4 @@ jobs:
           python-version: '3.9'
           architecture: 'x64'
       - name: Build and push
-        run: docker buildx build --platform=linux/arm/v7 --tag vector_node_arm:${GITHUB_SHA:0:8} --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
+        run: make node-prod && docker buildx build --platform=linux/arm/v7 --tag vector_node_arm:${GITHUB_SHA:0:8} --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
