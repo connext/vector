@@ -1,6 +1,7 @@
 import "@nomiclabs/hardhat-waffle";
-import { HardhatUserConfig } from "hardhat/types";
+import "hardhat-deploy";
 import "hardhat-typechain";
+import { HardhatUserConfig } from "hardhat/types";
 
 import * as packageJson from "./package.json";
 
@@ -11,9 +12,11 @@ const mnemonic =
 
 const config: HardhatUserConfig = {
   paths: {
+    artifacts: "./artifacts",
+    deploy: "./src.ts/deploy",
+    deployments: "deployments",
     sources: "./src.sol",
     tests: "./src.ts",
-    artifacts: "./artifacts",
   },
   solidity: {
     version: packageJson.devDependencies.solc,
