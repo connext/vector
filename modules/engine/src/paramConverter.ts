@@ -37,7 +37,7 @@ export async function convertConditionalTransferParams(
   // TODO: Compare recipientChainId with signerChainId
   if (recipient === signer.publicIdentifier) {
     // If signer is also the receipient on same chain/network
-    throw new Error(`Invalid initiator cannot be receiver on same chain`);
+    return Result.fail(new InvalidTransferType("self: an initiator cannot be a receiver on the same chain"));
   }
 
   // If the recipient is the channel counterparty, no default routing
