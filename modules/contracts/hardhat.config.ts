@@ -5,6 +5,8 @@ import { HardhatUserConfig } from "hardhat/types";
 
 import * as packageJson from "./package.json";
 
+const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
+
 const mnemonic =
   process.env.SUGAR_DADDY ??
   process.env.MNEMONIC ??
@@ -14,7 +16,7 @@ const config: HardhatUserConfig = {
   paths: {
     artifacts: "./artifacts",
     deploy: "./src.ts/deploy",
-    deployments: "deployments",
+    deployments: "./deployments",
     sources: "./src.sol",
     tests: "./src.ts",
   },
@@ -30,7 +32,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      chainId: parseInt(process.env.CHAIN_ID ?? "1337"),
+      chainId,
       loggingEnabled: false,
       accounts: {
         mnemonic,

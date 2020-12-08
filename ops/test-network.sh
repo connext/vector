@@ -35,7 +35,6 @@ fi
 docker run \
   "${interactive[@]}" \
   --entrypoint="bash" \
-  --env="EVM=$evm" \
   --env="LOG_LEVEL=$LOG_LEVEL" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --env="CHAIN_PROVIDERS=$chain_providers" \

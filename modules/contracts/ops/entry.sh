@@ -39,15 +39,16 @@ echo 'module.exports = {
     },
   },
 }' > "$config_file"
-hardhat node --config $config_file --hostname 0.0.0.0 --port 8545 > /tmp/evm.log &
+hardhat node --hostname 0.0.0.0 --port 8545 | pino-pretty --colorize --translateTime --ignore pid,level,hostname &
 pid=$!
 echo "Waiting for testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
+echo "Good morning!"
 
 ## Run contract migrations
-
-echo "Migrating contracts.."
-node "./dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONIC" | pino-pretty --colorize --translateTime --ignore pid,level,hostname
+## Nvmd, this should happen automatically thanks to the hardhat-deploy plugin
+#echo "Migrating contracts.."
+#hardhat deploy | pino-pretty --colorize --translateTime --ignore pid,level,hostname
 
 ## Expose the address book in a more accessible format
 
@@ -55,13 +56,19 @@ node "./dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONI
 jq '
   map_values(
     map_values(.address) |
-    to_entries |
+   to_entries |
     map(.key = "\(.key)Address") |
     map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
     from_entries
-  )
+ )
 ' < "$ADDRESS_BOOK" > "$chain_addresses"
 
 ## exit iff our evm exits
 
+# Wait around & respond to signals
+function goodbye {
+  echo "Received kill signal, goodbye"
+  exit
+}
+trap goodbye SIGTERM SIGINT
 wait $pid

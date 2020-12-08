@@ -14,7 +14,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const mnemonic = process.env.MNEMONIC || "";
   const provider = hre.waffle.provider;
-  const addressBookPath = "/tmp/address-book.json";
+  const addressBookPath = process.env.ADDRESS_BOOK || "/data/address-book.json";
   const silent = false; 
 
   const wallet = Wallet.fromMnemonic(mnemonic).connect(provider);
@@ -30,7 +30,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const nonce = await wallet.getTransactionCount();
   const providerUrl = (wallet.provider as JsonRpcProvider).connection.url;
 
-  log.info(`Preparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
+  log.info(`Preparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId} (addressBook at ${addressBookPath})`);
   log.info(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);
 
   if (balance.eq(Zero)) {
