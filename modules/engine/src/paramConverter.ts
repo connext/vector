@@ -34,10 +34,9 @@ export async function convertConditionalTransferParams(
   const recipientAssetId = params.recipientAssetId ?? params.assetId;
   const channelCounterparty = signer.address === channel.alice ? channel.bob : channel.alice;
 
-  // TODO: Compare recipientChainId with signerChainId
-  if (recipient === signer.publicIdentifier) {
+  if (recipient === signer.publicIdentifier && recipientChainId === channel.networkContext.chainId) {
     // If signer is also the receipient on same chain/network
-    return Result.fail(new InvalidTransferType("self: an initiator cannot be a receiver on the same chain"));
+    return Result.fail(new InvalidTransferType("An initiator cannot be a receiver on the same chain"));
   }
 
   // If the recipient is the channel counterparty, no default routing
