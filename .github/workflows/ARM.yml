@@ -5,7 +5,7 @@ name: ARM
 on: push
 
 jobs:
-j build-arm64:
+  build-arm64:
     runs-on: ubuntu-latest
     steps:
       - name: Set up QEMU

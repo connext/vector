@@ -4,6 +4,7 @@ on:
   push:
     branches-ignore:
       - prod
+      - 217-build-for-arm
 
 jobs:
   build:
