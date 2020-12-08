@@ -30,7 +30,7 @@ export interface IExternalValidation {
   validateInbound<T extends UpdateType = any>(
     update: ChannelUpdate<T>,
     state: FullChannelState | undefined,
-    transfer?: FullTransferState,
+    activeTransfers: FullTransferState[],
   ): Promise<Result<void | Error>>;
 
   // This is called when you are *proposing* an update to
@@ -39,6 +39,6 @@ export interface IExternalValidation {
   validateOutbound<T extends UpdateType = any>(
     params: UpdateParams<T>,
     state: FullChannelState | undefined,
-    transfer?: FullTransferState,
+    activeTransfers: FullTransferState[],
   ): Promise<Result<void | Error>>;
 }

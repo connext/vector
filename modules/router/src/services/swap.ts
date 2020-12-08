@@ -12,7 +12,7 @@ export const getSwappedAmount = async (
   toChainId: number,
 ): Promise<Result<string, ForwardTransferError>> => {
   let swap = config.allowedSwaps.find(
-    s =>
+    (s) =>
       s.fromAssetId === fromAssetId &&
       s.fromChainId === fromChainId &&
       s.toAssetId === toAssetId &&
@@ -23,7 +23,7 @@ export const getSwappedAmount = async (
   if (!swap) {
     // search other way around swap
     swap = config.allowedSwaps.find(
-      s =>
+      (s) =>
         s.toAssetId === fromAssetId &&
         s.toChainId === fromChainId &&
         s.fromAssetId === toAssetId &&
@@ -40,6 +40,7 @@ export const getSwappedAmount = async (
         fromChainId,
         toAssetId,
         toChainId,
+        details: "Swap not found in allowed swaps config",
       }),
     );
   }

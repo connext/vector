@@ -1,13 +1,11 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
-import { VectorChannel } from "@connext/vector-contracts";
 import { expect, getTestLoggers } from "@connext/vector-utils";
-import { FullChannelState, IChannelSigner, IVectorProtocol } from "@connext/vector-types";
+import { FullChannelState, IChannelSigner, IVectorProtocol, IVectorStore } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
-import { Contract } from "@ethersproject/contracts";
 import { AddressZero } from "@ethersproject/constants";
 
-import { depositInChannel, getSetupChannel } from "../utils";
+import { deployChannelIfNeeded, depositInChannel, depositOnchain, getSetupChannel } from "../utils";
 import { env } from "../env";
+import { chainId } from "../constants";
 
 const testName = "Deposit Integrations";
 const { log } = getTestLoggers(testName, env.logLevel);
@@ -18,7 +16,13 @@ describe(testName, () => {
   let preDepositChannel: FullChannelState;
 
   let aliceSigner: IChannelSigner;
+  let aliceStore: IVectorStore;
   let bobSigner: IChannelSigner;
+  let bobStore: IVectorStore;
+
+  let depositAmount: BigNumber;
+  let assetId: string;
+  let assetIdErc20: string;
 
   afterEach(async () => {
     await alice.off();
@@ -31,7 +35,13 @@ describe(testName, () => {
     bob = setup.bob.protocol;
     preDepositChannel = setup.channel;
     aliceSigner = setup.alice.signer;
+    aliceStore = setup.alice.store;
     bobSigner = setup.bob.signer;
+    bobStore = setup.alice.store;
+
+    depositAmount = BigNumber.from("1000");
+    assetId = AddressZero;
+    assetIdErc20 = env.chainAddresses[chainId].testTokenAddress;
 
     log.info({
       alice: alice.publicIdentifier,
@@ -39,52 +49,207 @@ describe(testName, () => {
     });
   });
 
-  it("should deposit eth for Alice (depositA)", async () => {
-    const depositAmount = BigNumber.from("1000");
-    const assetId = AddressZero;
+  describe("should work if there have been no deposits onchain", () => {
+    it("should deposit eth for Alice (depositA)", async () => {
+      await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+    });
 
-    await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+    it("should deposit eth for Bob (multisig deposit)", async () => {
+      await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
+    });
+
+    it("should deposit tokens for alice", async () => {
+      await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetIdErc20, depositAmount);
+    });
+
+    it("should deposit tokens for bob", async () => {
+      await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetIdErc20, depositAmount);
+    });
   });
 
-  it("should deposit eth for Bob (multisig deposit)", async () => {
-    const depositAmount = BigNumber.from("1000");
-    const assetId = AddressZero;
+  describe("should work if there have been single deposits onchain", () => {
+    beforeEach(async () => {
+      // Deploy multisig
+      await deployChannelIfNeeded(
+        preDepositChannel.channelAddress,
+        preDepositChannel.bob,
+        preDepositChannel.alice,
+        aliceSigner,
+      );
+    });
 
-    await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
+    it("should deposit eth for Alice (depositA)", async () => {
+      // Send alice deposits
+      await depositOnchain(
+        AddressZero,
+        depositAmount,
+        preDepositChannel.channelAddress,
+        preDepositChannel.aliceIdentifier,
+        aliceSigner,
+      );
+      const finalChannel = await depositInChannel(
+        preDepositChannel.channelAddress,
+        alice,
+        aliceSigner,
+        bob,
+        AddressZero,
+        depositAmount,
+      );
+      expect(finalChannel.balances[0].amount[0]).to.be.eq(BigNumber.from(depositAmount.mul(2)));
+    });
+
+    it("should deposit eth for Bob (multisig deposit)", async () => {
+      await depositOnchain(
+        AddressZero,
+        depositAmount,
+        preDepositChannel.channelAddress,
+        preDepositChannel.aliceIdentifier,
+        bobSigner,
+      );
+      const finalChannel = await depositInChannel(
+        preDepositChannel.channelAddress,
+        bob,
+        bobSigner,
+        alice,
+        AddressZero,
+        depositAmount,
+      );
+      expect(finalChannel.balances[0].amount[1]).to.be.eq(BigNumber.from(depositAmount.mul(2)));
+    });
+
+    it("should deposit tokens for alice", async () => {
+      await depositOnchain(
+        assetIdErc20,
+        depositAmount,
+        preDepositChannel.channelAddress,
+        preDepositChannel.aliceIdentifier,
+        aliceSigner,
+      );
+      const finalChannel = await depositInChannel(
+        preDepositChannel.channelAddress,
+        alice,
+        aliceSigner,
+        bob,
+        assetIdErc20,
+        depositAmount,
+      );
+      expect(finalChannel.balances[0].amount[0]).to.be.eq(BigNumber.from(depositAmount.mul(2)));
+    });
+
+    it("should deposit tokens for bob", async () => {
+      await depositOnchain(
+        assetIdErc20,
+        depositAmount,
+        preDepositChannel.channelAddress,
+        preDepositChannel.aliceIdentifier,
+        bobSigner,
+      );
+      const finalChannel = await depositInChannel(
+        preDepositChannel.channelAddress,
+        bob,
+        bobSigner,
+        alice,
+        assetIdErc20,
+        depositAmount,
+      );
+      expect(finalChannel.balances[0].amount[1]).to.be.eq(BigNumber.from(depositAmount.mul(2)));
+    });
   });
 
-  it.skip("should deposit tokens for alice", async () => {});
-  it.skip("should deposit tokens for bob", async () => {});
-  it.skip("should work after multiple deposits", async () => {});
-  it.skip("should work if there have been no deposits onchain", async () => {});
+  it("should work after multiple deposits", async () => {
+    // Deploy multisig
+    await deployChannelIfNeeded(
+      preDepositChannel.channelAddress,
+      preDepositChannel.bob,
+      preDepositChannel.alice,
+      aliceSigner,
+    );
 
-  it("should work concurrently", async () => {
-    const depositAmount = BigNumber.from("1000");
-    const assetId = AddressZero;
+    // Send alice deposits
+    await depositOnchain(
+      AddressZero,
+      depositAmount,
+      preDepositChannel.channelAddress,
+      preDepositChannel.aliceIdentifier,
+      aliceSigner,
+    );
+    await depositOnchain(
+      assetIdErc20,
+      depositAmount,
+      preDepositChannel.channelAddress,
+      preDepositChannel.aliceIdentifier,
+      aliceSigner,
+    );
+    // Send bob deposits
+    await depositOnchain(
+      AddressZero,
+      depositAmount,
+      preDepositChannel.channelAddress,
+      preDepositChannel.aliceIdentifier,
+      bobSigner,
+    );
+    await depositOnchain(
+      assetIdErc20,
+      depositAmount,
+      preDepositChannel.channelAddress,
+      preDepositChannel.aliceIdentifier,
+      bobSigner,
+    );
 
-    // Perform an alice deposit to make sure multisig is deployed
-    const initialDeposit = await depositInChannel(
+    // Simply reconcile
+    await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, AddressZero);
+    const finalChannel = await depositInChannel(
       preDepositChannel.channelAddress,
       alice,
       aliceSigner,
       bob,
-      assetId,
-      depositAmount,
+      assetIdErc20,
+    );
+    const ethIdx = 0;
+    const tokenIdx = 1;
+    expect(finalChannel.balances[ethIdx].amount[0]).to.be.eq(
+      BigNumber.from(preDepositChannel.balances[ethIdx]?.amount[0] ?? 0).add(depositAmount),
+    );
+    expect(finalChannel.balances[ethIdx].amount[1]).to.be.eq(
+      BigNumber.from(preDepositChannel.balances[ethIdx]?.amount[1] ?? 0).add(depositAmount),
+    );
+    expect(finalChannel.balances[tokenIdx].amount[0]).to.be.eq(
+      BigNumber.from(preDepositChannel.balances[tokenIdx]?.amount[0] ?? 0).add(depositAmount),
+    );
+    expect(finalChannel.balances[tokenIdx].amount[1]).to.be.eq(
+      BigNumber.from(preDepositChannel.balances[tokenIdx]?.amount[1] ?? 0).add(depositAmount),
+    );
+  });
+
+  it("should work concurrently", async () => {
+    // Perform an alice deposit to make sure multisig is deployed
+    await deployChannelIfNeeded(
+      preDepositChannel.channelAddress,
+      preDepositChannel.bob,
+      preDepositChannel.alice,
+      aliceSigner,
     );
 
     // Have both parties deposit onchain
-    await bobSigner.sendTransaction({ value: depositAmount.div(4), to: preDepositChannel.channelAddress });
+    await depositOnchain(
+      AddressZero,
+      depositAmount,
+      preDepositChannel.channelAddress,
+      preDepositChannel.aliceIdentifier,
+      aliceSigner,
+    );
+    await depositOnchain(
+      AddressZero,
+      depositAmount,
+      preDepositChannel.channelAddress,
+      preDepositChannel.aliceIdentifier,
+      bobSigner,
+    );
 
-    const channel = new Contract(preDepositChannel.channelAddress, VectorChannel.abi, aliceSigner);
-    const tx = await channel.depositAlice(assetId, depositAmount.div(4), { value: depositAmount.div(4) });
-    await tx.wait();
-
-    // Get the predeposit values
-    const { processedDepositsA, processedDepositsB } = initialDeposit;
-
+    // Both parties reconcile the same asset id simultaneously
     await Promise.all([
-      depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId),
-      depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId),
+      depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, AddressZero),
+      depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, AddressZero),
     ]);
 
     // Make sure both deposits were accounted for
@@ -94,21 +259,47 @@ describe(testName, () => {
     ]);
     expect(finalAlice).to.be.deep.eq(finalBob);
     expect(finalAlice).to.containSubset({
-      processedDepositsA: [
-        depositAmount
-          .div(4)
-          .add(processedDepositsA[0])
-          .toString(),
+      nonce: preDepositChannel.nonce + 2,
+      assetIds: [AddressZero],
+      balances: [
+        {
+          to: [preDepositChannel.alice, preDepositChannel.bob],
+          amount: [depositAmount.toString(), depositAmount.toString()],
+        },
       ],
-      processedDepositsB: [
-        depositAmount
-          .div(4)
-          .add(processedDepositsB[0])
-          .toString(),
-      ],
+      processedDepositsA: [depositAmount.toString()],
+      processedDepositsB: [depositAmount.toString()],
     });
   });
 
-  it.skip("should work if initiator channel is out of sync", async () => {});
-  it.skip("should work if responder channel is out of sync", async () => {});
+  it("should work if initiator channel is out of sync", async () => {
+    await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
+
+    await aliceStore.saveChannelState(preDepositChannel);
+    const final = await depositInChannel(
+      preDepositChannel.channelAddress,
+      alice,
+      aliceSigner,
+      bob,
+      assetId,
+      depositAmount,
+    );
+    expect(final.nonce).to.be.eq(preDepositChannel.nonce + 2);
+  });
+
+  it("should work if responder channel is out of sync", async () => {
+    await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
+
+    await bobStore.saveChannelState(preDepositChannel);
+
+    const final = await depositInChannel(
+      preDepositChannel.channelAddress,
+      bob,
+      bobSigner,
+      alice,
+      assetId,
+      depositAmount,
+    );
+    expect(final.nonce).to.be.eq(preDepositChannel.nonce + 2);
+  });
 });

@@ -3,6 +3,8 @@
 @alice = 0x119a11d0D1686C7330cA0650E26Fd6889Fbeb832
 @bob = 0x95B7e93A3aF19AcAE95aD120d4D8307bF1a6Be63
 @roger = 0x9CD130fE9aC1EF5173eEBE0C163C7a19f3E4ed2B
+@dave = 0x1b1968cAfFB691191CC05164d250a4bEF4aFaA65
+@carol = 0x65b70DfFdAEc7d8818F16f3caD4E86FaDD03993e
 
 # 1 ETH
 @amount = 0xDE0B6B3A7640000 
@@ -16,7 +18,7 @@ Content-Type: application/json
   "method":"eth_sendTransaction",
   "params":[{
     "from": "{{sugarDaddy}}",
-    "to": "{{alice}}",
+    "to": "{{roger}}",
     "value": "{{amount}}"
   }],
   "id":1

@@ -1,6 +1,6 @@
 import { FullChannelState, FullTransferState, HashlockTransferStateEncoding } from "@connext/vector-types";
 import {
-  bufferify,
+  generateMerkleTreeData,
   ChannelSigner,
   createlockHash,
   createTestChannelStateWithSigners,
@@ -115,9 +115,8 @@ describe("CMCAdjudicator.sol", async function () {
 
   // Get merkle proof of transfer
   const getMerkleProof = (cts: FullTransferState = transferState) => {
-    const hash = hashCoreTransferState(cts);
-    const merkle = new MerkleTree([bufferify(hash)], keccak256);
-    return merkle.getHexProof(bufferify(hash));
+    const { proof } = generateMerkleTreeData([cts], cts);
+    return proof;
   };
 
   // Helper to dispute transfers + bring to defund phase

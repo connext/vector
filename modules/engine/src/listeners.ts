@@ -453,7 +453,6 @@ async function handleWithdrawalTransferCreation(
   // via injected validation)
   let transactionHash: string | undefined = undefined;
   if (signer.address === alice) {
-    console.log(">>>>>>>>> SUBMITTING WITHDRAWAL");
     // Submit withdrawal to chain
     logger.info(
       { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },
