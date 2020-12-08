@@ -71,54 +71,61 @@ describe(testName, () => {
   });
 
   // TODO: This test is failing
-  describe("should work if there have been single deposits onchain", () => {
-    it("should deposit eth for Alice (depositA)", async () => {
-      const aliceChannel = new Contract(preDepositChannel.channelAddress, VectorChannel.abi, aliceSigner);
-      const tx = await aliceChannel.depositAlice(assetId, depositAmount.div(4), { value: depositAmount.div(4) });
-      await tx.wait();
-      await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
-    });
+  describe.only("should work if there have been deposits onchain", () => {});
+  it.only("should deposit eth for Alice (depositA)", async () => {
+    const aliceChannel = new Contract(preDepositChannel.channelAddress, VectorChannel.abi, aliceSigner);
+    const tx = await aliceChannel.depositAlice(assetId, depositAmount.div(4), { value: depositAmount.div(4) });
+    const event = await tx.wait();
 
-    it("should deposit eth for Bob (multisig deposit)", async () => {
-      await bobSigner.sendTransaction({ value: depositAmount.div(4), to: preDepositChannel.channelAddress });
-
-      await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
-    });
-
-    it("should deposit tokens for alice", async () => {
-      const aliceChannel = new Contract(preDepositChannel.channelAddress, VectorChannel.abi, aliceSigner);
-      const tx = await aliceChannel.depositAlice(assetIdErc20, depositAmount.div(4), { value: depositAmount.div(4) });
-      await tx.wait();
-      await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetIdErc20, depositAmount);
-    });
-
-    it("should deposit tokens for bob", async () => {
-      const bobChannel = new Contract(assetIdErc20, TestToken.abi, bobSigner);
-      const tx = bobChannel.transfer(preDepositChannel.channelAddress, depositAmount.div(4));
-
-      await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetIdErc20, depositAmount);
-    });
+    await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
   });
 
-  // TODO: This test is failing
-  it("should work after multiple deposits", async () => {
-    await bobSigner.sendTransaction({ value: depositAmount.div(4), to: preDepositChannel.channelAddress });
+  it.only("should deposit eth for Bob (multisig deposit)", async () => {
+    const tx = await bobSigner.sendTransaction({ value: depositAmount.div(4), to: preDepositChannel.channelAddress });
+    await tx.wait();
+
+    await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetId, depositAmount);
+  });
+
+  it.only("should deposit tokens for alice", async () => {
+    const aliceChannel = new Contract(preDepositChannel.channelAddress, VectorChannel.abi, aliceSigner);
+    const tx = await aliceChannel.depositAlice(assetIdErc20, depositAmount.div(4), { value: depositAmount.div(4) });
+    await tx.wait();
+    await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetIdErc20, depositAmount);
+  });
+
+  it.only("should deposit tokens for bob", async () => {
     const bobChannel = new Contract(assetIdErc20, TestToken.abi, bobSigner);
     const tx = await bobChannel.transfer(preDepositChannel.channelAddress, depositAmount.div(4));
     await tx.wait();
 
+    await depositInChannel(preDepositChannel.channelAddress, bob, bobSigner, alice, assetIdErc20, depositAmount);
+  });
+
+  // TODO: This test is failing
+  it.only("should work after multiple deposits", async () => {
+    const firstTxB = await bobSigner.sendTransaction({
+      value: depositAmount.div(4),
+      to: preDepositChannel.channelAddress,
+    });
+    await firstTxB.wait();
+
+    const bobChannel = new Contract(assetIdErc20, TestToken.abi, bobSigner);
+    const secondTxB = await bobChannel.transfer(preDepositChannel.channelAddress, depositAmount.div(4));
+    await secondTxB.wait();
+
     const aliceChannel = new Contract(preDepositChannel.channelAddress, VectorChannel.abi, aliceSigner);
-    const firstTx = await aliceChannel.depositAlice(assetId, depositAmount.div(4), { value: depositAmount.div(4) });
-    await firstTx.wait();
-    const SecondTx = await aliceChannel.depositAlice(assetIdErc20, depositAmount.div(4), {
+    const firstTxA = await aliceChannel.depositAlice(assetId, depositAmount.div(4), { value: depositAmount.div(4) });
+    await firstTxA.wait();
+    const SecondTxA = await aliceChannel.depositAlice(assetIdErc20, depositAmount.div(4), {
       value: depositAmount.div(4),
     });
-    await SecondTx.wait();
+    await SecondTxA.wait();
 
     await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetIdErc20, depositAmount);
   });
 
-  it("should work concurrently", async () => {
+  it.only("should work concurrently", async () => {
     // Perform an alice deposit to make sure multisig is deployed
     const initialDeposit = await depositInChannel(
       preDepositChannel.channelAddress,
@@ -156,7 +163,7 @@ describe(testName, () => {
     });
   });
 
-  it("should work if initiator channel is out of sync", async () => {
+  it.only("should work if initiator channel is out of sync", async () => {
     const preChannelState = await depositInChannel(
       preDepositChannel.channelAddress,
       alice,
@@ -170,7 +177,7 @@ describe(testName, () => {
     await depositInChannel(preDepositChannel.channelAddress, alice, aliceSigner, bob, assetId, depositAmount);
   });
 
-  it("should work if responder channel is out of sync", async () => {
+  it.only("should work if responder channel is out of sync", async () => {
     const preChannelState = await depositInChannel(
       preDepositChannel.channelAddress,
       bob,

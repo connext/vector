@@ -151,108 +151,18 @@ export const depositInChannel = async (
   // NOTE: sometimes deposit fails, and it seems like its because it is
   // not detecting depositA properly, only happens sometimes so leave
   // this log for now!
-  if (isDepositA) {
-    const value = BigNumber.from(amount);
-    // Call deposit on the multisig
-    try {
-      const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const preDepositAliceBalance = await channel.getTotalDepositsAlice(assetId);
-      const tx = await channel.depositAlice(assetId, value, { value });
-      await tx.wait();
-      const postDepositAliceBalance = await channel.getTotalDepositsAlice(assetId);
-      expect(postDepositAliceBalance).to.equal(preDepositAliceBalance.add(value));
-    } catch (e) {
-      // Assume this happened because it wasn't deployed
-      await depositorSigner.connectProvider(provider);
-      // Get the previous balance before deploying
-      const prev =
-        assetId === AddressZero
-          ? await depositorSigner.provider!.getBalance(channelAddress)
-          : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-      const factory = new Contract(
-        env.chainAddresses[chainId].channelFactoryAddress,
-        ChannelFactory.abi,
-        depositorSigner,
-      );
-      const created = new Promise<string>((res) => {
-        factory.once(factory.filters.ChannelCreation(), (data) => {
-          res(data);
-        });
-      });
 
-      if (assetId !== AddressZero) {
-        await new Contract(assetId, TestToken.abi, depositorSigner).approve(
-          env.chainAddresses[chainId].channelFactoryAddress,
-          value
-        );
-      }
-      const tx = await factory.createChannelAndDepositAlice(
-        depositorSigner.address,
-        counterparty.signerAddress,
-        assetId,
-        value,
-        { value },
-      );
-      await tx.wait();
-      const deployedAddr = await created;
-      expect(deployedAddr).to.be.eq(channelAddress);
-      // Verify onchain values updated
-      const totalDepositsAlice = await new Contract(
-        channelAddress,
-        VectorChannel.abi,
-        depositorSigner,
-      ).getTotalDepositsAlice(assetId);
-      expect(totalDepositsAlice).to.be.eq(value.add(prev));
+  try {
+    // Call deposit on the multisig
+    await deposit(isDepositA, channelAddress, depositorSigner, assetId, value);
+  } catch (e) {
+    if (e.message.includes("Expected")) {
+      throw e;
     }
-  } else {
-    try {
-      // This call will fail if the channel isn't created
-      const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
-      const preDepositBobBalance = await channel.getTotalDepositsBob(assetId);
-      // Deposit onchain
-      const tx =
-        assetId === AddressZero
-          ? await depositorSigner.sendTransaction({ value, to: channelAddress })
-          : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
-      await tx.wait();
-      // Verify onchain values updated
-      const postDepositBobBalance = await channel.getTotalDepositsBob(assetId);
-      expect(postDepositBobBalance).to.be.eq(preDepositBobBalance.add(value));
-    } catch (e) {
-      if (e.message.includes("Expected")) {
-        throw e;
-      }
-      // If not assertion fail, assume we threw because channel isn't deployed
-      const prev =
-        assetId === AddressZero
-          ? await depositorSigner.provider!.getBalance(channelAddress)
-          : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
-      const factory = new Contract(
-        env.chainAddresses[chainId].channelFactoryAddress,
-        ChannelFactory.abi,
-        depositorSigner,
-      );
-      const created = new Promise<string>((res) => {
-        factory.once(factory.filters.ChannelCreation(), (data) => {
-          res(data);
-        });
-      });
-      const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address);
-      await createTx.wait();
-      const deployedAddr = await created;
-      expect(deployedAddr).to.equal(channelAddress);
-      const tx =
-        assetId === AddressZero
-          ? await depositorSigner.sendTransaction({ value, to: deployedAddr })
-          : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(deployedAddr, value);
-      await tx.wait();
-      // Verify onchain values updated
-      const totalDepositsBob = await new Contract(deployedAddr, VectorChannel.abi, depositorSigner).getTotalDepositsBob(
-        assetId,
-      );
-      expect(totalDepositsBob).to.be.eq(value.add(prev));
-    }
+    // Deploy Channel and then deposit funds
+    await createChannelAndDeposit(isDepositA, channelAddress, depositorSigner, counterparty, assetId, value);
   }
+
   // Reconcile with channel
   const ret = await depositor.deposit({
     assetId,
@@ -276,6 +186,104 @@ export const depositInChannel = async (
     );
   }
   return postDeposit;
+};
+
+export const deposit = async (
+  isDepositA: boolean,
+  channelAddress: string,
+  depositorSigner: IChannelSigner,
+  assetId: string = AddressZero,
+  value: BigNumber,
+): Promise<void> => {
+  const channel = new Contract(channelAddress, VectorChannel.abi, depositorSigner);
+  if (isDepositA) {
+    const preDepositAliceBalance = await channel.getTotalDepositsAlice(assetId);
+    const tx = await channel.depositAlice(assetId, value, { value });
+    await tx.wait();
+    const postDepositAliceBalance = await channel.getTotalDepositsAlice(assetId);
+    console.log("deposit ", postDepositAliceBalance.toNumber(), preDepositAliceBalance.toNumber());
+    expect(postDepositAliceBalance).to.equal(preDepositAliceBalance.add(value));
+  } else {
+    // This call will fail if the channel isn't created
+    const preDepositBobBalance = await channel.getTotalDepositsBob(assetId);
+    // Deposit onchain
+    const tx =
+      assetId === AddressZero
+        ? await depositorSigner.sendTransaction({ value, to: channelAddress })
+        : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
+    await tx.wait();
+    // Verify onchain values updated
+    const postDepositBobBalance = await channel.getTotalDepositsBob(assetId);
+    console.log(postDepositBobBalance.toNumber(), preDepositBobBalance.toNumber());
+    expect("deposit ",postDepositBobBalance).to.be.eq(preDepositBobBalance.add(value));
+  }
+};
+
+export const createChannelAndDeposit = async (
+  isDepositA: boolean,
+  channelAddress: string,
+  depositorSigner: IChannelSigner,
+  counterparty: IVectorProtocol,
+  assetId: string = AddressZero,
+  value: BigNumber,
+): Promise<void> => {
+  // connect to provider
+  await depositorSigner.connectProvider(provider);
+  // Get the previous balance before deploying
+  const prev =
+    assetId === AddressZero
+      ? await depositorSigner.provider!.getBalance(channelAddress)
+      : await new Contract(assetId, TestToken.abi, depositorSigner).balanceOf(channelAddress);
+  const factory = new Contract(env.chainAddresses[chainId].channelFactoryAddress, ChannelFactory.abi, depositorSigner);
+  const created = new Promise<string>((res) => {
+    factory.once(factory.filters.ChannelCreation(), (data) => {
+      res(data);
+    });
+  });
+
+  if (isDepositA) {
+    // approve factory address for ERC20 Tokens
+    if (assetId !== AddressZero) {
+      await new Contract(assetId, TestToken.abi, depositorSigner).approve(
+        env.chainAddresses[chainId].channelFactoryAddress,
+        value,
+      );
+    }
+    const tx = await factory.createChannelAndDepositAlice(
+      depositorSigner.address,
+      counterparty.signerAddress,
+      assetId,
+      value,
+      { value },
+    );
+    await tx.wait();
+    const deployedAddr = await created;
+    expect(deployedAddr).to.be.eq(channelAddress);
+    // Verify onchain values updated
+    const totalDepositsAlice = await new Contract(
+      channelAddress,
+      VectorChannel.abi,
+      depositorSigner,
+    ).getTotalDepositsAlice(assetId);
+    console.log("createChannelAndDeposit ", totalDepositsAlice.toNumber(), prev.toNumber());
+    expect(totalDepositsAlice).to.be.eq(value.add(prev));
+  } else {
+    const createTx = await factory.createChannel(counterparty.signerAddress, depositorSigner.address);
+    await createTx.wait();
+    const deployedAddr = await created;
+    expect(deployedAddr).to.equal(channelAddress);
+    const tx =
+      assetId === AddressZero
+        ? await depositorSigner.sendTransaction({ value, to: channelAddress })
+        : await new Contract(assetId, TestToken.abi, depositorSigner).transfer(channelAddress, value);
+    await tx.wait();
+    // Verify onchain values updated
+    const totalDepositsBob = await new Contract(deployedAddr, VectorChannel.abi, depositorSigner).getTotalDepositsBob(
+      assetId,
+    );
+    console.log("createChannelAndDeposit ", totalDepositsBob.toNumber(), prev.toNumber());
+    expect(totalDepositsBob).to.be.eq(value.add(prev));
+  }
 };
 
 // This function will return a setup channel between two participants
