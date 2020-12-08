@@ -1,13 +1,30 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "noImplicitAny": true,
-    "outDir": "dist",
-    "resolveJsonModule": true,
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDecoratorMetadata": true,
     "esModuleInterop": true,
-    "allowJs": true
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["es2017", "dom", "esnext.asynciterable", "ES2019"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noLib": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "outDir": "dist",
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2017",
+    "typeRoots": ["../../node_modules/@types"]
   },
-  "exclude": ["dist", "node_modules", "package.json"],
+  "exclude": ["dist", "node_modules"],
   "include": ["hardhat.config.ts", "src.ts/**/*.ts"]
 }
