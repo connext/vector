@@ -70,7 +70,7 @@ describe("ParamConverter", () => {
       chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
     });
 
-    const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
+    const generateParams = (bIsRecipient = false, receipientChainId?: number): EngineParams.ConditionalTransfer => {
       const hashlockState: Omit<HashlockTransferState, "balance"> = {
         lockHash: getRandomBytes32(),
         expiry: "45000",
@@ -80,7 +80,7 @@ describe("ParamConverter", () => {
         amount: "8",
         assetId: mkAddress("0x0"),
         recipient: bIsRecipient ? signerB.publicIdentifier : getRandomIdentifier(),
-        recipientChainId: 1,
+        recipientChainId: receipientChainId ?? 1,
         recipientAssetId: mkAddress("0x1"),
         type: TransferNames.HashlockTransfer,
         details: hashlockState,
@@ -90,6 +90,23 @@ describe("ParamConverter", () => {
         },
       };
     };
+
+    it("should fail if initiator is receiver for same chain/network", async () => {
+      const params = generateParams(true, chainId);
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+
+      const ret = await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
+
+      expect(ret.isError).to.be.true;
+      expect(ret.getError()).to.contain(new InvalidTransferType("An initiator cannot be a receiver on the same chain"));
+    });
 
     it("should work for A", async () => {
       const params = generateParams();
