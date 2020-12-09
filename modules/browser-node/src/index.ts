@@ -131,10 +131,14 @@ export class BrowserNode implements INodeService {
       "Checking for existing channels",
     );
     for (const chainId of this.supportedChains) {
-      let channel = await this.getStateChannelByParticipants({
+      const channelRes = await this.getStateChannelByParticipants({
         chainId,
         counterparty: this.routerPublicIdentifier!,
       });
+      if (channelRes.isError) {
+        throw channelRes.getError();
+      }
+      let channel = channelRes.getValue();
       if (!channel) {
         this.logger.info({ chainId }, "Setting up channel");
         const address = await this.setup({
