@@ -37,8 +37,8 @@ describe("utils", () => {
   describe("generateSignedChannelCommitment", () => {
     const signer = getRandomChannelSigner();
     const counterpartyAddress = mkAddress();
-    const aliceState = createTestChannelState("create", { alice: signer.address, bob: counterpartyAddress });
-    const bobState = createTestChannelState("create", { alice: counterpartyAddress, bob: signer.address });
+    const aliceState = createTestChannelState("create", { alice: signer.address, bob: counterpartyAddress }).channel;
+    const bobState = createTestChannelState("create", { alice: counterpartyAddress, bob: signer.address }).channel;
 
     const tests: any = [
       {
