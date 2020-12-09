@@ -21,11 +21,11 @@
     "@connext/vector-engine": "0.0.30",
     "@connext/vector-types": "0.0.30",
     "@connext/vector-utils": "0.0.30",
+    "@ethersproject/solidity": "5.0.6",
     "@sinclair/typebox": "0.11.0",
     "ajv": "6.12.6",
     "axios": "0.21.0",
     "dexie": "3.0.2",
-    "ethers": "5.0.21",
     "merkletreejs": "0.2.9",
     "pino": "6.7.0",
     "ts-nats": "1.2.15"
