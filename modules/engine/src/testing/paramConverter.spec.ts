@@ -71,7 +71,7 @@ describe("ParamConverter", () => {
       chainReader.getRegisteredTransferByDefinition.resolves(Result.ok<RegisteredTransfer>(transferRegisteredInfo));
     });
 
-    const generateParams = (bIsRecipient = false): EngineParams.ConditionalTransfer => {
+    const generateParams = (bIsRecipient = false, receipientChainId?: number): EngineParams.ConditionalTransfer => {
       const hashlockState: Omit<HashlockTransferState, "balance"> = {
         lockHash: getRandomBytes32(),
         expiry: "45000",
@@ -81,7 +81,7 @@ describe("ParamConverter", () => {
         amount: "8",
         assetId: mkAddress("0x0"),
         recipient: bIsRecipient ? signerB.publicIdentifier : getRandomIdentifier(),
-        recipientChainId: 1,
+        recipientChainId: receipientChainId ?? 1,
         recipientAssetId: mkAddress("0x1"),
         type: TransferNames.HashlockTransfer,
         details: hashlockState,
@@ -97,7 +97,11 @@ describe("ParamConverter", () => {
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
-      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {
+      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {});
+    });
+    it("should fail if initiator is receiver for same chain/network", async () => {
+      const params = generateParams(true, chainId);
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
