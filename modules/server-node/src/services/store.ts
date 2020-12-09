@@ -458,21 +458,21 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getChannelStateByParticipants(
-    participantA: string,
-    participantB: string,
+    publicIdentifierA: string,
+    publicIdentifierB: string,
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
     const [channelEntity] = await this.prisma.channel.findMany({
       where: {
         OR: [
           {
-            participantA,
-            participantB,
+            publicIdentifierA,
+            publicIdentifierB,
             chainId: chainId.toString(),
           },
           {
-            participantA: participantB,
-            participantB: participantA,
+            publicIdentifierA: publicIdentifierB,
+            publicIdentifierB: publicIdentifierA,
             chainId: chainId.toString(),
           },
         ],
