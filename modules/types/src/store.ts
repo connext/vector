@@ -17,8 +17,8 @@ export interface IVectorStore {
   getChannelStates(): Promise<FullChannelState[]>;
   getChannelState(channelAddress: string): Promise<FullChannelState | undefined>;
   getChannelStateByParticipants(
-    aliceIdentifier: string,
-    bobIdentifier: string,
+    publicIdentifierA: string,
+    publicIdentifierB: string,
     chainId: number,
   ): Promise<FullChannelState | undefined>;
   // Should return all initial transfer state data needed to
