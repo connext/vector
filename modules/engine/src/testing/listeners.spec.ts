@@ -118,6 +118,44 @@ describe(testName, () => {
     evt.detach();
   });
 
+  describe.skip("setup", () => {
+    it("should work", async () => {});
+    it("should not emit for other events", () => {});
+  });
+  describe.skip("deposit", () => {
+    it("should work", async () => {});
+    it("should not emit for other events", () => {});
+  });
+  describe.skip("transfer creation", () => {
+    it("should not emit if there is no transfer", () => {});
+    it("should not handle withdrawals", () => {});
+    it("should work if chainService.getRegisteredTransferByDefinition fails", () => {});
+  });
+  describe.skip("transfer resolution", () => {
+    it("should work", () => {});
+    it("should not handle withdrawals", () => {});
+    it("should work if chainService.getRegisteredTransferByDefinition fails", () => {});
+  });
+  describe.skip("withdrawal creation", () => {
+    it("should not handle transfers", () => {});
+    it("should fail if getting transfer from store fails", () => {});
+    it("should work for initiator", () => {});
+    it("should fail if responder cannot sign commitment", () => {});
+    it("should fail if responder cannot save signed commitment", () => {});
+    it("should work if responder is alice (submit withdraw to chain + resolve transfer)", () => {});
+    it("should work if responder is bob (DONT submit withdraw to chain + resolve transfer)", () => {});
+  });
+  describe.skip("withdrawal resolution", () => {
+    it("should not handle transfers", () => {});
+    it("should fail if getting transfer from store fails", () => {});
+    it("should fail if there is no transfer in store", () => {});
+    it("should work for initiator", () => {});
+    it("should fail if responder cannot addSignatures to commitment", () => {});
+    it("should fail if responder cannot save commitment", () => {});
+    it("should should work if responder is alice (submit withdraw to chain)", () => {});
+    it("should should work if responder is bob (DONT submit withdraw to chain)", () => {});
+  });
+
   describe("withdrawals", () => {
     // Create a helper to generate withdrawal test constants
     const getWithdrawalCommitment = async (
