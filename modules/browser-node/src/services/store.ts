@@ -144,7 +144,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     const channel = await this.db.channels
       .where("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
       .equals([publicIdentifierA, publicIdentifierB, chainId])
-      .or("[alice+bobIdentifier+networkContext.chainId]")
+      .or("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
       .equals([publicIdentifierB, publicIdentifierA, chainId])
       .first();
     return channel;
