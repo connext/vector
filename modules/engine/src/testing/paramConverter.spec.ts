@@ -97,7 +97,7 @@ describe("ParamConverter", () => {
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
-      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
@@ -115,7 +115,7 @@ describe("ParamConverter", () => {
       const params: any = generateParams();
       // Set incorrect type
       params.type = getRandomAddress();
-      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
