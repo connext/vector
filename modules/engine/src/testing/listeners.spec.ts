@@ -234,7 +234,7 @@ describe(testName, () => {
               fromIdentifier: responder.publicIdentifier,
               toIdentifier: withdrawer.publicIdentifier,
             },
-          }),
+          }).channel,
         ),
       );
 
@@ -249,8 +249,8 @@ describe(testName, () => {
 
       // Create a promise that will resolve once the event is emitted
       // + some time for the handler to complete
-      const createdEvent = new Promise<WithdrawalCreatedPayload>(resolve =>
-        container[WITHDRAWAL_CREATED_EVENT].attachOnce(5000, data => delay(500).then(() => resolve(data))),
+      const createdEvent = new Promise<WithdrawalCreatedPayload>((resolve) =>
+        container[WITHDRAWAL_CREATED_EVENT].attachOnce(5000, (data) => delay(500).then(() => resolve(data))),
       );
 
       // Post to the evt
@@ -267,7 +267,7 @@ describe(testName, () => {
         fee: transfer.transferState.fee,
         transfer,
         channelBalance:
-          updatedChannelState.balances[updatedChannelState.assetIds.findIndex(a => a === commitment.assetId)],
+          updatedChannelState.balances[updatedChannelState.assetIds.findIndex((a) => a === commitment.assetId)],
         channelAddress: updatedChannelState.channelAddress,
       });
 
@@ -356,8 +356,8 @@ describe(testName, () => {
 
       // Create a promise that will resolve once the event is emitted
       // + some time for the handler to complete
-      const resolvedEvent = new Promise<WithdrawalCreatedPayload>(resolve =>
-        container[WITHDRAWAL_RESOLVED_EVENT].attachOnce(5000, data => delay(500).then(() => resolve(data))),
+      const resolvedEvent = new Promise<WithdrawalCreatedPayload>((resolve) =>
+        container[WITHDRAWAL_RESOLVED_EVENT].attachOnce(5000, (data) => delay(500).then(() => resolve(data))),
       );
 
       // Post to the evt
@@ -374,7 +374,7 @@ describe(testName, () => {
         fee: transfer.transferState.fee,
         transfer: { ...transfer, transferResolver: resolver },
         channelBalance:
-          updatedChannelState.balances[updatedChannelState.assetIds.findIndex(a => a === commitment.assetId)],
+          updatedChannelState.balances[updatedChannelState.assetIds.findIndex((a) => a === commitment.assetId)],
         channelAddress: updatedChannelState.channelAddress,
       });
 

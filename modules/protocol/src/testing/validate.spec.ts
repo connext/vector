@@ -351,7 +351,7 @@ describe("validateUpdateParams", () => {
       await callAndVerifyError(
         initiator,
         params,
-        createTestChannelState(UpdateType.setup),
+        createTestChannelState(UpdateType.setup).channel,
         activeTransfers,
         initiatorIdentifier,
         ValidationError.reasons.ChannelAlreadySetup,
@@ -735,7 +735,7 @@ describe.skip("validateParamsAndApplyUpdate", () => {
   // Test values
   const signer = getRandomChannelSigner();
   const params = createTestUpdateParams(UpdateType.create);
-  const previousState = createTestChannelState(UpdateType.deposit);
+  const previousState = createTestChannelState(UpdateType.deposit).channel;
   const activeTransfers = [];
 
   // Declare all mocks
@@ -845,7 +845,7 @@ describe("validateAndApplyInboundUpdate", () => {
   // Create helper to generate successful env for mocks
   // (can be overridden in individual tests)
   const prepEnv = () => {
-    const updatedChannel = createTestChannelState(UpdateType.setup);
+    const updatedChannel = createTestChannelState(UpdateType.setup).channel;
     const updatedActiveTransfers = undefined;
     const updatedTransfer = undefined;
 
@@ -1284,7 +1284,7 @@ describe("validateAndApplyInboundUpdate", () => {
     const updateNonce = 3;
 
     beforeEach(() => {
-      previousState = createTestChannelState(UpdateType.deposit, { nonce: 2 });
+      previousState = createTestChannelState(UpdateType.deposit, { nonce: 2 }).channel;
     });
 
     it("should work without hitting validation for UpdateType.resolve", async () => {
