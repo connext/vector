@@ -46,7 +46,7 @@ describe("Vector", () => {
     storeService.getChannelStates.resolves([]);
     // Mock sync outbound
     Sinon.stub(vectorSync, "outbound").resolves(
-      Result.ok({ updatedChannel: createTestChannelState(UpdateType.setup) }),
+      Result.ok({ updatedChannel: createTestChannelState(UpdateType.setup).channel }),
     );
   });
 
@@ -210,7 +210,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
 
-      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }));
+      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
       vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
@@ -272,7 +272,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
 
-      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }));
+      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
       vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });
@@ -372,7 +372,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
 
-      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }));
+      storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
       vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
     });

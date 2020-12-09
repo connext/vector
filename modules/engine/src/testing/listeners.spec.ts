@@ -272,7 +272,7 @@ describe(testName, () => {
               fromIdentifier: responder.publicIdentifier,
               toIdentifier: withdrawer.publicIdentifier,
             },
-          }),
+          }).channel,
         ),
       );
 
