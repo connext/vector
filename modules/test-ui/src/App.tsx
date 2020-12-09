@@ -368,7 +368,7 @@ function App() {
               <Form layout="horizontal" name="selectChannel" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
                 <Form.Item label="Channels">
                   <Select
-                    value={selectedChannel.channelAddress}
+                    value={selectedChannel?.channelAddress}
                     onChange={(newChannel) => {
                       const c = channels.find((chan) => chan.channelAddress === newChannel);
                       setSelectedChannel(c);
