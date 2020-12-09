@@ -29,7 +29,6 @@ export const ChannelRpcMethods = {
   chan_defundTransfer: "chan_defundTransfer",
   chan_decrypt: "chan_decrypt",
   chan_subscription: "chan_subscription",
-  chan_sign: "chan_sign"
 } as const;
 export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
