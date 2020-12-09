@@ -93,7 +93,7 @@ describe("ParamConverter", () => {
 
     it("should fail if initiator is receiver for same chain/network", async () => {
       const params = generateParams(true, chainId);
-      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "deposit", {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
