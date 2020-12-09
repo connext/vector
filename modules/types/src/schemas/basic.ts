@@ -56,6 +56,7 @@ export const TFullTransferState = Type.Object({
   balance: TBalance,
   assetId: TAddress,
   channelAddress: TAddress,
+  inDispute: Type.Boolean(),
   transferId: TBytes32,
   transferDefinition: TAddress,
   transferTimeout: TIntegerString,
@@ -66,7 +67,7 @@ export const TFullTransferState = Type.Object({
   chainId: TChainId,
   transferEncodings: TransferEncodingSchema, // Initial state encoding, resolver encoding
   transferState: TransferStateSchema,
-  transferResolver: Type.Optional(Type.Any()), // undefined iff not resolved
+  transferResolver: Type.Optional(TransferResolverSchema), // undefined iff not resolved
   meta: TBasicMeta,
 });
 
