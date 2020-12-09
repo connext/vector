@@ -4,6 +4,7 @@
 
 - fix browser node store issue
 - fix `TFullTransferState` schema
+- make sure all rpc queries properly return `Result` types in error cases
 
 ## 0.0.28
 

@@ -63,4 +63,41 @@ describe("VectorEngine", () => {
     );
     expect(engine).to.be.instanceOf(VectorEngine);
   });
+
+  // TODO: all methods should have tests that ensure every failure can be hit
+  // below outlines only the most important (i.e. functions with the most
+  // complex logic within the index file of the module)
+
+  describe("setup", () => {
+    it("should fail if it cannot get chainProviders", async () => {});
+    it("should fail if vector.setup fails", async () => {});
+    it("should work when signer is bob", async () => {});
+    describe("should work when signer is alice", () => {
+      it("should work without deploying contract", async () => {});
+      it("should try to deploy channel on autodeployable chain", async () => {});
+    });
+  });
+
+  describe("withdraw", () => {
+    it("should fail if getting channel fails", async () => {});
+    it("should fail if the channel is undefined", async () => {});
+    it("should fail if it cannot convert the params", async () => {});
+    it("should fail if vector.create fails", async () => {});
+    it("should resolve with the transactionHash once the withdrawal is reconciled", async () => {});
+    it("should resolve without the transactionHash once the withdrawal is reconciled if no event is emitted", async () => {});
+  });
+
+  // NOTE: if any of these change we have broken the rpc interface!
+  describe.skip("should properly parse rpc request schema", () => {
+    it("should fail if it has no request.id", () => {});
+    it("should fail if it has invalid request.id", () => {});
+    it("should fail if it has no request.jsonrpc", () => {});
+    it("should fail if it has invalid request.jsonrpc", () => {});
+    it("should fail if it has no request.method", () => {});
+    it("should fail if it has invalid request.method", () => {});
+    describe("should fail if it has invalid request.params", () => {
+      // TODO: all channel method RPC validation params should be tested
+      // for `invalid` fields or nonexistent fields
+    });
+  });
 });
