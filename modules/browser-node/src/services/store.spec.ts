@@ -46,98 +46,112 @@ describe("store", () => {
   describe("getActiveTransfers", () => {
     it("should get active transfers for different channels", async () => {
       const channel1 = mkAddress("0xaaa");
-      const transfer1State = createTestChannelState("create", {
-        channelAddress: channel1,
-      });
-      const transfer1 = createTestFullHashlockTransferState({}, transfer1State);
-      transfer1.transferId = mkHash("0x123");
-      await store.saveChannelState(transfer1State, transfer1);
+      const transfer1State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+        },
+        { transferId: mkHash("0x123"), meta: { routingId: mkHash("0x123") } },
+      );
+      await store.saveChannelState(transfer1State.channel, transfer1State.transfer);
 
-      const transfer2State = createTestChannelState("create", {
-        channelAddress: channel1,
-      });
-      const transfer2 = createTestFullHashlockTransferState({}, transfer2State);
-      transfer2.transferId = mkHash("0x456");
-      await store.saveChannelState(transfer2State, transfer2);
+      const transfer2State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+          nonce: transfer1State.channel.nonce + 1,
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await store.saveChannelState(transfer2State.channel, transfer2State.transfer);
 
       const channel2 = mkAddress("0xbbb");
-      const transfer3State = createTestChannelState("create", {
-        channelAddress: channel2,
-      });
-      const transfer3 = createTestFullHashlockTransferState({}, transfer3State);
-      transfer3.transferId = mkHash("0x789");
-      await store.saveChannelState(transfer3State, transfer3);
+      const transfer3State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel2,
+          bob: mkAddress("0xbaba"),
+          bobIdentifier: mkPublicIdentifier("vectorABCD"),
+        },
+        { transferId: mkHash("0x789"), meta: { routingId: mkHash("0x789") } },
+      );
+      await store.saveChannelState(transfer3State.channel, transfer3State.transfer);
 
-      const channelFromStore = await store.getChannelState(transfer1State.channelAddress);
-      expect(channelFromStore).to.deep.eq(transfer2State);
+      const channelFromStore = await store.getChannelState(transfer1State.channel.channelAddress);
+      expect(channelFromStore).to.deep.eq(transfer2State.channel);
 
-      const transfersChannel1 = await store.getActiveTransfers(transfer1State.channelAddress);
+      const transfersChannel1 = await store.getActiveTransfers(transfer1State.channel.channelAddress);
       expect(transfersChannel1.length).eq(2);
-      const t1 = transfersChannel1.find((t) => t.transferId === transfer1.transferId);
-      const t2 = transfersChannel1.find((t) => t.transferId === transfer2.transferId);
-      expect(t1).to.deep.eq(transfer1);
-      expect(t2).to.deep.eq(transfer2);
+      const t1 = transfersChannel1.find((t) => t.transferId === transfer1State.transfer.transferId);
+      const t2 = transfersChannel1.find((t) => t.transferId === transfer2State.transfer.transferId);
+      expect(t1).to.deep.eq(transfer1State.transfer);
+      expect(t2).to.deep.eq(transfer2State.transfer);
 
-      const transfersChannel2 = await store.getActiveTransfers(transfer3State.channelAddress);
-      const t3 = transfersChannel2.find((t) => t.transferId === transfer3.transferId);
-      expect(t3).to.deep.eq(transfer3);
+      const transfersChannel2 = await store.getActiveTransfers(transfer3State.channel.channelAddress);
+      const t3 = transfersChannel2.find((t) => t.transferId === transfer3State.transfer.transferId);
+      expect(t3).to.deep.eq(transfer3State.transfer);
     });
 
     it("should consider resolved transfers", async () => {
       const channel1 = mkAddress("0xaaa");
-      const transfer1State = createTestChannelState("create", {
-        channelAddress: channel1,
-      });
-      const transfer1 = createTestFullHashlockTransferState({}, transfer1State);
-      transfer1.transferId = mkHash("0x123");
-      transfer1State.latestUpdate.details.transferId = mkHash("0x123");
-      await store.saveChannelState(transfer1State, transfer1);
+      const transfer1State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+        },
+        { transferId: mkHash("0x123"), meta: { routingId: mkHash("0x123") } },
+      );
+      await store.saveChannelState(transfer1State.channel, transfer1State.transfer);
 
-      const transfer2Create = createTestChannelState("create", {
-        channelAddress: channel1,
-        nonce: transfer1State.nonce + 1,
-      });
-      transfer2Create.latestUpdate.nonce = transfer2Create.nonce;
-      let transfer2 = createTestFullHashlockTransferState({}, transfer2Create);
-      transfer2.transferId = mkHash("0x456");
-      transfer2Create.latestUpdate.details.transferId = mkHash("0x456");
-      await store.saveChannelState(transfer2Create, transfer2);
+      const transfer2Create = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel1,
+          nonce: transfer1State.channel.nonce + 1,
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await store.saveChannelState(transfer2Create.channel, transfer2Create.transfer);
 
-      const transfer2Resolve = createTestChannelState("resolve", {
-        channelAddress: channel1,
-        nonce: transfer2Create.nonce + 1,
-      });
-      transfer2Resolve.latestUpdate.nonce = transfer2Resolve.nonce;
-      transfer2 = createTestFullHashlockTransferState({}, transfer2Resolve);
-      transfer2.transferId = mkHash("0x456");
-      transfer2Resolve.latestUpdate.details.transferId = mkHash("0x456");
-      await store.saveChannelState(transfer2Resolve, transfer2);
+      const transfer2Resolve = createTestChannelState(
+        "resolve",
+        {
+          channelAddress: channel1,
+          nonce: transfer2Create.channel.nonce + 1,
+        },
+        { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
+      );
+      await store.saveChannelState(transfer2Resolve.channel, transfer2Resolve.transfer);
 
       const channel2 = mkAddress("0xbbb");
-      const transfer3State = createTestChannelState("create", {
-        channelAddress: channel2,
-      });
-      const transfer3 = createTestFullHashlockTransferState({}, transfer3State);
-      transfer3.transferId = mkHash("0x789");
-      await store.saveChannelState(transfer3State, transfer3);
+      const transfer3State = createTestChannelState(
+        "create",
+        {
+          channelAddress: channel2,
+          bob: mkAddress("0xbaba"),
+          bobIdentifier: mkPublicIdentifier("vectorABCD"),
+        },
+        { transferId: mkHash("0x789"), meta: { routingId: mkHash("0x789") } },
+      );
+      await store.saveChannelState(transfer3State.channel, transfer3State.transfer);
 
-      const channelFromStore = await store.getChannelState(transfer1State.channelAddress);
-      expect(channelFromStore).to.deep.eq(transfer2Resolve);
+      const channelFromStore = await store.getChannelState(transfer1State.channel.channelAddress);
+      expect(channelFromStore).to.deep.eq(transfer2Resolve.channel);
 
-      const transfersChannel1 = await store.getActiveTransfers(transfer1State.channelAddress);
+      const transfersChannel1 = await store.getActiveTransfers(transfer1State.channel.channelAddress);
       expect(transfersChannel1.length).eq(1);
-      const t1 = transfersChannel1.find((t) => t.transferId === transfer1.transferId);
-      expect(t1).to.deep.eq(transfer1);
+      const t1 = transfersChannel1.find((t) => t.transferId === transfer1State.transfer.transferId);
+      expect(t1).to.deep.eq(transfer1State.transfer);
 
-      const transfersChannel2 = await store.getActiveTransfers(transfer3State.channelAddress);
-      const t3 = transfersChannel2.find((t) => t.transferId === transfer3.transferId);
-      expect(t3).to.deep.eq(transfer3);
+      const transfersChannel2 = await store.getActiveTransfers(transfer3State.channel.channelAddress);
+      const t3 = transfersChannel2.find((t) => t.transferId === transfer3State.transfer.transferId);
+      expect(t3).to.deep.eq(transfer3State.transfer);
     });
   });
 
   describe("getChannelStateByParticipants", () => {
     it("should work (regardless of order)", async () => {
-      const channel = createTestChannelState("deposit");
+      const channel = createTestChannelState("deposit").channel;
       await store.saveChannelState(channel);
 
       expect(
@@ -151,35 +165,20 @@ describe("store", () => {
   });
 
   describe("getTransferByRoutingId", () => {
-    it("should return all channel states", async () => {
-      const c1 = createTestChannelState("deposit", {
-        channelAddress: mkAddress("0xccc1111"),
-        aliceIdentifier: mkPublicIdentifier("vectorA"),
-        alice: mkAddress("0xa"),
-      });
-      c1.latestUpdate.channelAddress = mkAddress("0xccc1111");
-      const c2 = createTestChannelState("deposit", {
-        channelAddress: mkAddress("0xccc2222"),
-        aliceIdentifier: mkPublicIdentifier("vectorB"),
-        alice: mkAddress("0xb"),
-      });
-      c2.latestUpdate.channelAddress = mkAddress("0xccc2222");
-      await Promise.all(
-        [c1, c2].map((c) => {
-          return store.saveChannelState(c);
-        }),
-      );
-      const retrieved = await store.getChannelStates();
-      expect(retrieved).to.be.deep.include(c1);
-      expect(retrieved).to.be.deep.include(c2);
-      expect(retrieved.length).to.be.eq(2);
+    it("should work", async () => {
+      const state = createTestChannelState("create", {}, { meta: { routingId: getRandomBytes32() } });
+      await store.saveChannelState(state.channel, state.transfer);
+
+      expect(
+        await store.getTransferByRoutingId(state.channel.channelAddress, state.transfer.meta!.routingId),
+      ).to.be.deep.eq(state.transfer);
     });
   });
 
   describe("getChannelStates", () => {
     it("should return all channel states", async () => {
-      const c1 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc1111") });
-      const c2 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc2222") });
+      const c1 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc1111") }).channel;
+      const c2 = createTestChannelState("deposit", { channelAddress: mkAddress("0xccc2222") }).channel;
       await Promise.all(
         [c1, c2].map((c) => {
           return store.saveChannelState(c);
@@ -193,7 +192,7 @@ describe("store", () => {
 
   it("should save transaction responses and receipts", async () => {
     // Load store with channel
-    const setupState = createTestChannelState("setup");
+    const setupState = createTestChannelState("setup").channel;
     await store.saveChannelState(setupState);
 
     const response = createTestTxResponse();
@@ -256,7 +255,7 @@ describe("store", () => {
   });
 
   it("should save and retrieve all update types and keep updating the channel", async () => {
-    const setupState = createTestChannelState("setup");
+    const setupState = createTestChannelState("setup").channel;
     await store.saveChannelState(setupState);
 
     let fromStore = await store.getChannelState(setupState.channelAddress);
@@ -268,7 +267,7 @@ describe("store", () => {
       defundNonces: setupState.defundNonces,
       balances: [updatedBalanceForDeposit, setupState.balances[0]],
       networkContext: setupState.networkContext,
-    });
+    }).channel;
     await store.saveChannelState(depositState);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
@@ -300,7 +299,7 @@ describe("store", () => {
         },
         nonce: depositState.nonce + 1,
       },
-    });
+    }).channel;
     await store.saveChannelState(createState, transfer);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
@@ -316,7 +315,7 @@ describe("store", () => {
           transferId: transfer.transferId,
         },
       },
-    });
+    }).channel;
     await store.saveChannelState(resolveState);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
@@ -332,7 +331,7 @@ describe("store", () => {
       aliceIdentifier: alice,
       bobIdentifier: bob,
       latestUpdate: { details: { transferId, meta }, fromIdentifier: alice, toIdentifier: bob },
-    });
+    }).channel;
     const transfer: FullTransferState = createTestFullHashlockTransferState({
       transferId,
       preImage: HashZero,
@@ -394,7 +393,7 @@ describe("store", () => {
           transferTimeout: transfer1.transferTimeout,
         },
       },
-    });
+    }).channel;
 
     transfer1.transferResolver = undefined;
 
@@ -421,7 +420,7 @@ describe("store", () => {
         nonce: createState.latestUpdate.nonce + 1,
       },
       nonce: createState.latestUpdate.nonce + 1,
-    });
+    }).channel;
 
     await store.saveChannelState(updatedState, transfer2);
 
@@ -455,7 +454,7 @@ describe("store", () => {
           transferTimeout: transfer1.transferTimeout,
         },
       },
-    });
+    }).channel;
 
     transfer1.transferResolver = undefined;
 
@@ -484,7 +483,7 @@ describe("store", () => {
           transferTimeout: transfer2.transferTimeout,
         },
       },
-    });
+    }).channel;
 
     await store.saveChannelState(createState2, transfer2);
 

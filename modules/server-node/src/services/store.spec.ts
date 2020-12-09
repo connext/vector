@@ -92,7 +92,7 @@ describe("store", () => {
       expect(t3).to.deep.eq(transfer3State.transfer);
     });
 
-    it.only("should consider resolved transfers", async () => {
+    it("should consider resolved transfers", async () => {
       const channel1 = mkAddress("0xaaa");
       const transfer1State = createTestChannelState(
         "create",
@@ -121,7 +121,7 @@ describe("store", () => {
         },
         { transferId: mkHash("0x456"), meta: { routingId: mkHash("0x456") } },
       );
-      await store.saveChannelState(transfer2Create.channel, transfer2Create.transfer);
+      await store.saveChannelState(transfer2Resolve.channel, transfer2Resolve.transfer);
 
       const channel2 = mkAddress("0xbbb");
       const transfer3State = createTestChannelState(
@@ -136,8 +136,6 @@ describe("store", () => {
       await store.saveChannelState(transfer3State.channel, transfer3State.transfer);
 
       const channelFromStore = await store.getChannelState(transfer1State.channel.channelAddress);
-      console.log("channelFromStore: ", JSON.stringify(channelFromStore, null, 2));
-      console.log("transfer2Resolve.channel: ", JSON.stringify(transfer2Resolve.channel, null, 2));
       expect(channelFromStore).to.deep.eq(transfer2Resolve.channel);
 
       const transfersChannel1 = await store.getActiveTransfers(transfer1State.channel.channelAddress);
@@ -168,27 +166,12 @@ describe("store", () => {
 
   describe("getTransferByRoutingId", () => {
     it("should work", async () => {
-      const channel = createTestChannelState("create").channel;
-      const meta = { routingId: getRandomBytes32() };
-      channel.latestUpdate.details.meta = meta;
-      const transfer = createTestFullHashlockTransferState({
-        chainId: channel.networkContext.chainId,
-        channelFactoryAddress: channel.networkContext.channelFactoryAddress,
-        channelAddress: channel.channelAddress,
-        meta,
-        transferState: channel.latestUpdate.details.transferInitialState,
-        transferTimeout: channel.latestUpdate.details.transferTimeout,
-        initiator: channel.latestUpdate.fromIdentifier === channel.aliceIdentifier ? channel.alice : channel.bob,
-        responder: channel.latestUpdate.fromIdentifier === channel.aliceIdentifier ? channel.bob : channel.alice,
-        transferEncodings: channel.latestUpdate.details.transferEncodings,
-        transferResolver: undefined,
-        transferId: channel.latestUpdate.details.transferId,
-      });
-      await store.saveChannelState(channel, transfer);
+      const state = createTestChannelState("create", {}, { meta: { routingId: getRandomBytes32() } });
+      await store.saveChannelState(state.channel, state.transfer);
 
-      expect(await store.getTransferByRoutingId(channel.channelAddress, transfer.meta!.routingId)).to.be.deep.eq(
-        transfer,
-      );
+      expect(
+        await store.getTransferByRoutingId(state.channel.channelAddress, state.transfer.meta!.routingId),
+      ).to.be.deep.eq(state.transfer);
     });
   });
 
@@ -301,170 +284,95 @@ describe("store", () => {
     fromStore = await store.getChannelState(setupState.channelAddress);
     expect(fromStore).to.deep.eq(depositState);
 
-    const transfer = createTestFullHashlockTransferState({
-      transferId: mkHash("0x111"),
-      meta: { routingId: mkBytes32("0xddd") },
-      chainId: depositState.networkContext.chainId,
-    });
-    const createState = createTestChannelState("create", {
-      channelAddress: transfer.channelAddress,
-      networkContext: {
-        channelFactoryAddress: transfer.channelFactoryAddress,
-        chainId: transfer.chainId,
-        transferRegistryAddress: setupState.networkContext.transferRegistryAddress,
-      },
-      nonce: depositState.nonce + 1,
-      defundNonces: setupState.defundNonces,
-      latestUpdate: {
-        details: {
-          balance: transfer.balance,
-          transferInitialState: transfer.transferState,
-          transferId: transfer.transferId,
-          meta: transfer.meta,
-          transferDefinition: transfer.transferDefinition,
-          transferEncodings: transfer.transferEncodings,
-          transferTimeout: transfer.transferTimeout,
-        },
+    const createState = createTestChannelState(
+      "create",
+      {
+        channelAddress: setupState.channelAddress,
         nonce: depositState.nonce + 1,
+        defundNonces: setupState.defundNonces,
+        networkContext: setupState.networkContext,
       },
-    }).channel;
-    await store.saveChannelState(createState, transfer);
+      {
+        transferId: mkHash("0x111"),
+        meta: { routingId: mkBytes32("0xddd") },
+      },
+    );
+    await store.saveChannelState(createState.channel, createState.transfer);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
-    expect(fromStore).to.deep.eq(createState);
+    expect(fromStore).to.deep.eq(createState.channel);
 
-    const resolveState = createTestChannelState("resolve", {
-      nonce: createState.nonce + 1,
-      defundNonces: setupState.defundNonces,
-      networkContext: setupState.networkContext,
-      latestUpdate: {
-        nonce: createState.nonce + 1,
-        details: {
-          transferId: transfer.transferId,
-        },
+    const resolveState = createTestChannelState(
+      "resolve",
+      {
+        nonce: createState.channel.nonce + 1,
+        defundNonces: setupState.defundNonces,
+        networkContext: setupState.networkContext,
       },
-    }).channel;
-    await store.saveChannelState(resolveState);
+      {
+        transferId: mkHash("0x111"),
+      },
+    );
+    await store.saveChannelState(resolveState.channel, resolveState.transfer);
 
     fromStore = await store.getChannelState(setupState.channelAddress);
-    expect(fromStore).to.deep.eq(resolveState);
+    expect(fromStore).to.deep.eq(resolveState.channel);
   });
 
   it("should update transfer resolver", async () => {
     const transferId = mkBytes32("0xabcde");
-    const alice = mkPublicIdentifier("vectorA");
-    const bob = mkPublicIdentifier("vectorB");
-    const meta = { hello: "world" };
-    const createState = createTestChannelState("create", {
-      aliceIdentifier: alice,
-      bobIdentifier: bob,
-      latestUpdate: { details: { transferId, meta }, fromIdentifier: alice, toIdentifier: bob },
-    }).channel;
-    const transfer: FullTransferState = createTestFullHashlockTransferState({
-      transferId,
-      preImage: HashZero,
-      channelAddress: createState.channelAddress,
-      channelFactoryAddress: createState.networkContext.channelFactoryAddress,
-      chainId: createState.networkContext.chainId,
-      initiator: createState.alice,
-      responder: createState.bob,
-      meta,
-      transferEncodings: createState.latestUpdate.details.transferEncodings,
-      transferResolver: undefined,
-      transferTimeout: createState.latestUpdate.details.transferTimeout,
-      transferState: createState.latestUpdate.details.transferInitialState,
-    });
-    await store.saveChannelState(createState, transfer);
-    let transferFromStore = await store.getTransferState(transfer.transferId);
-    expect(transferFromStore).to.deep.eq(transfer);
+    const createState = createTestChannelState("create", {}, { transferId });
+    await store.saveChannelState(createState.channel, createState.transfer);
+    let transferFromStore = await store.getTransferState(createState.transfer.transferId);
+    expect(transferFromStore).to.deep.eq(createState.transfer);
 
-    const resolveState: FullChannelState = createState;
-    resolveState.latestUpdate.details = {
-      transferId,
-      transferDefinition: transfer.transferDefinition,
-      transferResolver: { preImage: mkBytes32("0xaabbcc") },
-      merkleRoot: mkHash("0xbbbeee"),
-    } as ResolveUpdateDetails;
-    resolveState.latestUpdate.details.transferResolver = { preImage: mkBytes32("0xaabbcc") };
-    resolveState.latestUpdate.type = UpdateType.resolve;
-    resolveState.nonce = createState.nonce + 1;
-    (resolveState.defundNonces = createState.defundNonces),
-      (resolveState.latestUpdate.nonce = createState.latestUpdate.nonce + 1);
+    const resolveState = createTestChannelState("resolve", { nonce: createState.channel.nonce + 1 }, { transferId });
 
-    await store.saveChannelState(resolveState);
-    const fromStore = await store.getChannelState(resolveState.channelAddress);
-    expect(fromStore).to.deep.eq(resolveState);
+    await store.saveChannelState(resolveState.channel, resolveState.transfer);
+    const fromStore = await store.getChannelState(resolveState.channel.channelAddress);
+    expect(fromStore).to.deep.eq(resolveState.channel);
 
-    transferFromStore = await store.getTransferState(transfer.transferId);
-    expect(transferFromStore?.transferResolver).to.deep.eq(
-      (resolveState.latestUpdate.details as ResolveUpdateDetails).transferResolver,
+    transferFromStore = await store.getTransferState(resolveState.transfer.transferId);
+    expect(transferFromStore!.transferResolver).to.deep.eq(
+      (resolveState.channel.latestUpdate.details as ResolveUpdateDetails).transferResolver,
     );
   });
 
   it("should create multiple active transfers", async () => {
-    const transfer1 = createTestFullHashlockTransferState({
-      transferId: mkHash("0x111"),
-      meta: { routingId: mkBytes32("0xddd") },
-      balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
-    });
-    const createState = createTestChannelState("create", {
-      channelAddress: transfer1.channelAddress,
-      networkContext: { channelFactoryAddress: transfer1.channelFactoryAddress, chainId: transfer1.chainId },
-      latestUpdate: {
-        details: {
-          balance: transfer1.balance,
-          transferInitialState: transfer1.transferState,
-          transferId: transfer1.transferId,
-          meta: transfer1.meta,
-          transferDefinition: transfer1.transferDefinition,
-          transferEncodings: transfer1.transferEncodings,
-          transferTimeout: transfer1.transferTimeout,
-        },
+    const createState = createTestChannelState(
+      "create",
+      {},
+      {
+        transferId: mkHash("0x111"),
+        meta: { routingId: mkBytes32("0xddd") },
+        balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
       },
-    }).channel;
+    );
+    await store.saveChannelState(createState.channel, createState.transfer);
 
-    transfer1.transferResolver = undefined;
-
-    await store.saveChannelState(createState, transfer1);
-
-    const transfer2 = createTestFullHashlockTransferState({
-      channelAddress: createState.channelAddress,
-      meta: { routingId: mkBytes32("0xeee") },
-      balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
-    });
-    transfer2.transferResolver = undefined;
-
-    const updatedState = createTestChannelState("create", {
-      channelAddress: transfer2.channelAddress,
-      networkContext: { channelFactoryAddress: transfer2.channelFactoryAddress, chainId: transfer2.chainId },
-      latestUpdate: {
-        details: {
-          balance: transfer2.balance,
-          transferInitialState: transfer2.transferState,
-          transferId: transfer2.transferId,
-          meta: transfer2.meta,
-          transferDefinition: transfer2.transferDefinition,
-          transferEncodings: transfer2.transferEncodings,
-          transferTimeout: transfer2.transferTimeout,
-        },
-        nonce: createState.latestUpdate.nonce + 1,
+    const updatedState = createTestChannelState(
+      "create",
+      {
+        nonce: createState.channel.nonce + 1,
       },
-      nonce: createState.latestUpdate.nonce + 1,
-      defundNonces: createState.defundNonces,
-    }).channel;
+      {
+        transferId: mkHash("0x112"),
+        meta: { routingId: mkBytes32("0xeee") },
+        balance: { to: [mkAddress("0xaaa"), mkAddress("0xbbb")], amount: ["5", "0"] },
+      },
+    );
+    await store.saveChannelState(updatedState.channel, updatedState.transfer);
 
-    await store.saveChannelState(updatedState, transfer2);
+    const channelFromStore = await store.getChannelState(createState.channel.channelAddress);
+    expect(channelFromStore).to.deep.eq(updatedState.channel);
 
-    const channelFromStore = await store.getChannelState(createState.channelAddress);
-    expect(channelFromStore).to.deep.eq(updatedState);
-
-    const transfers = await store.getActiveTransfers(createState.channelAddress);
+    const transfers = await store.getActiveTransfers(createState.channel.channelAddress);
 
     expect(transfers.length).eq(2);
-    const t1 = transfers.find((t) => t.transferId === transfer1.transferId);
-    const t2 = transfers.find((t) => t.transferId === transfer2.transferId);
-    expect(t1).to.deep.eq(transfer1);
-    expect(t2).to.deep.eq(transfer2);
+    const t1 = transfers.find((t) => t.transferId === createState.transfer.transferId);
+    const t2 = transfers.find((t) => t.transferId === updatedState.transfer.transferId);
+    expect(t1).to.deep.eq(createState.transfer);
+    expect(t2).to.deep.eq(updatedState.transfer);
   });
 
   it("should create an event subscription", async () => {
@@ -491,85 +399,58 @@ describe("store", () => {
     const routingId = mkBytes32("0xddd");
     const alice = getRandomIdentifier();
     const bob1 = getRandomIdentifier();
-    const transfer1 = createTestFullHashlockTransferState({
-      transferId: mkHash("0x111"),
-      meta: { routingId },
-      balance: {
-        to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(bob1)],
-        amount: ["7", "0"],
+    const createState = createTestChannelState(
+      "create",
+      {
+        aliceIdentifier: alice,
+        alice: getSignerAddressFromPublicIdentifier(alice),
+        bobIdentifier: bob1,
+        bob: getSignerAddressFromPublicIdentifier(bob1),
       },
-      responder: getSignerAddressFromPublicIdentifier(alice),
-      initiator: getSignerAddressFromPublicIdentifier(bob1),
-    });
-    const createState = createTestChannelState("create", {
-      aliceIdentifier: alice,
-      alice: getSignerAddressFromPublicIdentifier(alice),
-      bobIdentifier: bob1,
-      bob: getSignerAddressFromPublicIdentifier(bob1),
-      channelAddress: transfer1.channelAddress,
-      networkContext: { channelFactoryAddress: transfer1.channelFactoryAddress, chainId: transfer1.chainId },
-      latestUpdate: {
-        fromIdentifier: bob1,
-        toIdentifier: alice,
-        details: {
-          balance: transfer1.balance,
-          transferInitialState: transfer1.transferState,
-          transferId: transfer1.transferId,
-          meta: transfer1.meta,
-          transferDefinition: transfer1.transferDefinition,
-          transferEncodings: transfer1.transferEncodings,
-          transferTimeout: transfer1.transferTimeout,
+      {
+        transferId: mkHash("0x111"),
+        meta: { routingId },
+        balance: {
+          to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(bob1)],
+          amount: ["7", "0"],
         },
+        responder: getSignerAddressFromPublicIdentifier(alice),
+        initiator: getSignerAddressFromPublicIdentifier(bob1),
       },
-    }).channel;
+    );
 
-    transfer1.transferResolver = undefined;
-
-    await store.saveChannelState(createState, transfer1);
+    await store.saveChannelState(createState.channel, createState.transfer);
 
     const newBob = getRandomIdentifier();
-    const transfer2 = createTestFullHashlockTransferState({
-      transferId: mkHash("0x122"),
-      meta: { routingId },
-      balance: {
-        to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(newBob)],
-        amount: ["7", "0"],
+    const createState2 = createTestChannelState(
+      "create",
+      {
+        aliceIdentifier: alice,
+        alice: getSignerAddressFromPublicIdentifier(alice),
+        channelAddress: getRandomBytes32(),
+        bob: getSignerAddressFromPublicIdentifier(newBob),
+        bobIdentifier: newBob,
       },
-      channelAddress: getRandomBytes32(),
-      initiator: getSignerAddressFromPublicIdentifier(alice),
-      responder: getSignerAddressFromPublicIdentifier(newBob),
-    });
-    transfer2.transferResolver = undefined;
-    const createState2 = createTestChannelState("create", {
-      aliceIdentifier: alice,
-      alice: getSignerAddressFromPublicIdentifier(alice),
-      channelAddress: transfer2.channelAddress,
-      bob: getSignerAddressFromPublicIdentifier(newBob),
-      bobIdentifier: newBob,
-      networkContext: { channelFactoryAddress: transfer2.channelFactoryAddress, chainId: transfer2.chainId },
-      latestUpdate: {
-        fromIdentifier: alice,
-        toIdentifier: newBob,
-        details: {
-          balance: transfer2.balance,
-          transferInitialState: transfer2.transferState,
-          transferId: transfer2.transferId,
-          meta: transfer2.meta,
-          transferDefinition: transfer2.transferDefinition,
-          transferEncodings: transfer2.transferEncodings,
-          transferTimeout: transfer2.transferTimeout,
+      {
+        transferId: mkHash("0x122"),
+        meta: { routingId },
+        balance: {
+          to: [getSignerAddressFromPublicIdentifier(alice), getSignerAddressFromPublicIdentifier(newBob)],
+          amount: ["7", "0"],
         },
+        initiator: getSignerAddressFromPublicIdentifier(alice),
+        responder: getSignerAddressFromPublicIdentifier(newBob),
       },
-    }).channel;
+    );
 
-    await store.saveChannelState(createState2, transfer2);
+    await store.saveChannelState(createState2.channel, createState2.transfer);
 
     const transfers = await store.getTransfersByRoutingId(routingId);
     expect(transfers.length).to.eq(2);
 
-    const t1 = transfers.find((t) => t.transferId === transfer1.transferId);
-    const t2 = transfers.find((t) => t.transferId === transfer2.transferId);
-    expect(t1).to.deep.eq(transfer1);
-    expect(t2).to.deep.eq(transfer2);
+    const t1 = transfers.find((t) => t.transferId === createState.transfer.transferId);
+    const t2 = transfers.find((t) => t.transferId === createState2.transfer.transferId);
+    expect(t1).to.deep.eq(createState.transfer);
+    expect(t2).to.deep.eq(createState2.transfer);
   });
 });

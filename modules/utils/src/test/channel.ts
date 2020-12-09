@@ -229,7 +229,9 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   if (type === "create" || type === "resolve") {
     transfer = createTestFullHashlockTransferState();
     transfer.balance = latestUpdate.balance ?? transfer.balance;
-    transfer.meta = (latestUpdate.details as any).meta ?? transfer.meta;
+    transfer.meta = type === "create" ? (latestUpdate.details as any).meta : undefined;
+    (latestUpdate.details as CreateUpdateDetails).meta =
+      type === "create" ? (latestUpdate.details as any).meta : undefined;
     transfer.channelFactoryAddress = networkContext.channelFactoryAddress ?? transfer.channelFactoryAddress;
     transfer.inDispute = inDispute ?? transfer.inDispute;
     transfer.initiator = participants[0];
