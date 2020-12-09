@@ -2,15 +2,11 @@ import {
   Balance,
   EngineEvent,
   EngineEvents,
-  FullChannelState,
-  FullTransferState,
   ResolveUpdateDetails,
   StoredTransactionStatus,
   TransactionReason,
-  UpdateType,
 } from "@connext/vector-types";
 import {
-  createTestFullHashlockTransferState,
   createTestChannelState,
   mkBytes32,
   mkHash,
@@ -22,7 +18,6 @@ import {
   mkAddress,
   mkPublicIdentifier,
 } from "@connext/vector-utils";
-import { HashZero } from "@ethersproject/constants";
 
 import { config } from "../config";
 
