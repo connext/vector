@@ -137,15 +137,15 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async getChannelStateByParticipants(
-    participantA: string,
-    participantB: string,
+    publicIdentifierA: string,
+    publicIdentifierB: string,
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
     const channel = await this.db.channels
-      .where("[alice+bob+networkContext.chainId]")
-      .equals([participantA, participantB, chainId])
-      .or("[alice+bob+networkContext.chainId]")
-      .equals([participantB, participantA, chainId])
+      .where("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
+      .equals([publicIdentifierA, publicIdentifierB, chainId])
+      .or("[alice+bobIdentifier+networkContext.chainId]")
+      .equals([publicIdentifierB, publicIdentifierA, chainId])
       .first();
     return channel;
   }
