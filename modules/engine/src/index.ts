@@ -248,7 +248,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
     try {
-      const channel = await this.store.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
+      const channel = await this.vector.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
       return Result.ok(channel);
     } catch (e) {
       return Result.fail(e);
