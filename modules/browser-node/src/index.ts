@@ -39,7 +39,7 @@ export class BrowserNode implements INodeService {
   public publicIdentifier = "";
   public signerAddress = "";
 
-  static async connect(config: BrowserNodeConfig): Promise<BrowserNode> {
+  static async connect(config: BrowserNodeConfig = {}): Promise<BrowserNode> {
     let node: BrowserNode;
     if (!config.logger) {
       config.logger = pino();
@@ -91,7 +91,7 @@ export class BrowserNode implements INodeService {
       config.logger.info({ method: "connect", iframeSrc }, "Connecting with iframe provider");
       node = new BrowserNode();
       node.channelProvider = await IframeChannelProvider.connect({
-        src: config.iframeSrc!,
+        src: iframeSrc!,
         id: "connext-iframe",
       });
       const rpc = constructRpcRequest("connext_authenticate", {});
