@@ -1,4 +1,3 @@
-import { VectorChannel } from "@connext/vector-contracts";
 import {
   ChannelUpdate,
   ChannelUpdateEvent,
@@ -21,9 +20,7 @@ import {
   InboundChannelUpdateError,
   TChannelUpdate,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
-import { BigNumber } from "@ethersproject/bignumber";
-import { Contract } from "@ethersproject/contracts";
+import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -246,8 +243,6 @@ export class Vector implements IVectorProtocol {
     // TODO: https://github.com/connext/vector/issues/54
 
     // TODO: https://github.com/connext/vector/issues/52
-
-    // TODO: https://github.com/connext/vector/issues/53
 
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
