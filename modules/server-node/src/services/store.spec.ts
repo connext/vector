@@ -150,11 +150,19 @@ describe("store", () => {
       await store.saveChannelState(channel);
 
       expect(
-        await store.getChannelStateByParticipants(channel.alice, channel.bob, channel.networkContext.chainId),
+        await store.getChannelStateByParticipants(
+          channel.aliceIdentifier,
+          channel.bobIdentifier,
+          channel.networkContext.chainId,
+        ),
       ).to.be.deep.eq(channel);
 
       expect(
-        await store.getChannelStateByParticipants(channel.bob, channel.alice, channel.networkContext.chainId),
+        await store.getChannelStateByParticipants(
+          channel.bobIdentifier,
+          channel.aliceIdentifier,
+          channel.networkContext.chainId,
+        ),
       ).to.be.deep.eq(channel);
     });
   });
