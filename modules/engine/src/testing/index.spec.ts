@@ -68,7 +68,8 @@ describe("VectorEngine", () => {
   // below outlines only the most important (i.e. functions with the most
   // complex logic within the index file of the module)
 
-  describe("setup", () => {
+  // NOTE: these are nice-to-haves
+  describe.skip("setup", () => {
     it("should fail if it cannot get chainProviders", async () => {});
     it("should fail if vector.setup fails", async () => {});
     it("should work when signer is bob", async () => {});
@@ -78,7 +79,8 @@ describe("VectorEngine", () => {
     });
   });
 
-  describe("withdraw", () => {
+  // NOTE: these are nice-to-haves
+  describe.skip("withdraw", () => {
     it("should fail if getting channel fails", async () => {});
     it("should fail if the channel is undefined", async () => {});
     it("should fail if it cannot convert the params", async () => {});
@@ -97,7 +99,9 @@ describe("VectorEngine", () => {
     it("should fail if it has invalid request.method", () => {});
     describe("should fail if it has invalid request.params", () => {
       // TODO: all channel method RPC validation params should be tested
-      // for `invalid` fields or nonexistent fields
+      // for `invalid` fields or nonexistent fields. See vector.spec.ts
+      // or `validate.spec.ts::describe("should properly validate update
+      // schema")` for examples of types of tests + suggested test structure
     });
   });
 });
