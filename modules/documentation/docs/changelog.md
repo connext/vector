@@ -2,6 +2,9 @@
 
 ## Next Release
 
+- fix browser node store issue
+- fix `TFullTransferState` schema
+
 ## 0.0.28
 
 - use receiver payment name instead of transfer definition
