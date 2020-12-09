@@ -97,11 +97,7 @@ describe("ParamConverter", () => {
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
-      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {});
-    });
-    it("should fail if initiator is receiver for same chain/network", async () => {
-      const params = generateParams(true, chainId);
-      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "setup", {
+      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {
         channelAddress: params.channelAddress,
         networkContext: {
           ...chainAddresses[chainId],
@@ -113,6 +109,7 @@ describe("ParamConverter", () => {
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
     });
+
     it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
       chainReader.getRegisteredTransferByDefinition.resolves(Result.fail(new ChainError("Failure")));
       const params: any = generateParams();
@@ -129,6 +126,23 @@ describe("ParamConverter", () => {
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
+    });
+
+    it("should fail if initiator is receiver for same chain/network", async () => {
+      const params = generateParams(true, chainId);
+      const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "deposit", {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+
+      const ret = await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
+
+      expect(ret.isError).to.be.true;
+      expect(ret.getError()).to.contain(new InvalidTransferType("An initiator cannot be a receiver on the same chain"));
     });
 
     describe.skip("should work for A", () => {
