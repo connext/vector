@@ -49,6 +49,18 @@ export class BrowserNode implements INodeService {
   private routerPublicIdentifier?: string;
   private iframeSrc?: string;
 
+  constructor(params: {
+    logger?: pino.BaseLogger;
+    routerPublicIdentifier?: string;
+    supportedChains?: number[];
+    iframeSrc?: string;
+  }) {
+    this.logger = params.logger || pino();
+    this.routerPublicIdentifier = params.routerPublicIdentifier;
+    this.supportedChains = params.supportedChains || [];
+    this.iframeSrc = params.iframeSrc;
+  }
+
   // method for signer-based connections
   static async connect(config: BrowserNodeSignerConfig): Promise<BrowserNode> {
     if (!config.logger) {
@@ -94,18 +106,6 @@ export class BrowserNode implements INodeService {
     node.publicIdentifier = config.signer.publicIdentifier;
     node.signerAddress = config.signer.address;
     return node;
-  }
-
-  constructor(params: {
-    logger?: pino.BaseLogger;
-    routerPublicIdentifier?: string;
-    supportedChains?: number[];
-    iframeSrc?: string;
-  }) {
-    this.logger = params.logger || pino();
-    this.routerPublicIdentifier = params.routerPublicIdentifier;
-    this.supportedChains = params.supportedChains || [];
-    this.iframeSrc = params.iframeSrc;
   }
 
   // method for non-signer based apps to connect to iframe
