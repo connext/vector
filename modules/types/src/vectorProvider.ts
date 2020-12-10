@@ -3,6 +3,7 @@ import { EngineParams, NodeResponses } from "./schemas";
 import { RegisteredTransfer } from "./transferDefinitions";
 
 export const ChannelRpcMethods = {
+  chan_ethSignMessage: "chan_ethSignMessage",
   chan_getConfig: "chan_getConfig",
   chan_getStatus: "chan_getStatus",
   chan_getChannelState: "chan_getChannelState",
@@ -33,6 +34,7 @@ export const ChannelRpcMethods = {
 export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcMethods];
 
 export type ChannelRpcMethodsPayloadMap = {
+  [ChannelRpcMethods.chan_ethSignMessage]: EngineParams.EthSignMessage;
   [ChannelRpcMethods.chan_getConfig]: undefined;
   [ChannelRpcMethods.chan_getStatus]: undefined;
   [ChannelRpcMethods.chan_getChannelState]: EngineParams.GetChannelState;
@@ -65,6 +67,7 @@ export type ChannelRpcMethodsPayloadMap = {
 };
 
 export type ChannelRpcMethodsResponsesMap = {
+  [ChannelRpcMethods.chan_ethSignMessage]: string;
   [ChannelRpcMethods.chan_getConfig]: NodeResponses.GetConfig;
   [ChannelRpcMethods.chan_getStatus]: NodeResponses.GetStatus;
   [ChannelRpcMethods.chan_getChannelState]: FullChannelState | undefined;

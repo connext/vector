@@ -21,6 +21,7 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
+import { Wallet } from "@ethersproject/wallet";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
@@ -557,6 +558,20 @@ export class VectorEngine implements IVectorEngine {
     try {
       const res = await this.signer.decrypt(encrypted);
       return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  private async ethSignMessage(params: EngineParams.EthSignMessage): Promise<Result<string, Error>> {
+    const validate = ajv.compile(EngineParams.EthSignMessageSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+    }
+    try {
+      const sig = await new Wallet(params.privateKey).signMessage(params.message);
+      return Result.ok(sig);
     } catch (e) {
       return Result.fail(e);
     }
