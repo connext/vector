@@ -139,9 +139,8 @@ const DefundTransferParamsSchema = Type.Object({
 });
 
 // Eth-sign a message
-const EthSignMessageParamsSchema = Type.Object({
+const SignUtilityMessageParamsSchema = Type.Object({
   message: Type.String(),
-  privateKey: Type.String(), // TODO: proper formatting?
 });
 
 // Rpc request schema
@@ -164,8 +163,8 @@ export namespace EngineParams {
   export const RpcRequestSchema = RpcRequestEngineParamsSchema;
   export type RpcRequest = Static<typeof RpcRequestEngineParamsSchema>;
 
-  export const EthSignMessageSchema = EthSignMessageParamsSchema;
-  export type EthSignMessage = Static<typeof EthSignMessageParamsSchema>;
+  export const SignUtilityMessageSchema = SignUtilityMessageParamsSchema;
+  export type SignUtilityMessage = Static<typeof SignUtilityMessageParamsSchema>;
 
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;

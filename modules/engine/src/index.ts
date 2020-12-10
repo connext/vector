@@ -563,14 +563,14 @@ export class VectorEngine implements IVectorEngine {
     }
   }
 
-  private async ethSignMessage(params: EngineParams.EthSignMessage): Promise<Result<string, Error>> {
-    const validate = ajv.compile(EngineParams.EthSignMessageSchema);
+  private async signUtilityMessage(params: EngineParams.SignUtilityMessage): Promise<Result<string, Error>> {
+    const validate = ajv.compile(EngineParams.SignUtilityMessageSchema);
     const valid = validate(params);
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
     try {
-      const sig = await new Wallet(params.privateKey).signMessage(params.message);
+      const sig = await this.signer.signUtilityMessage(params.message);
       return Result.ok(sig);
     } catch (e) {
       return Result.fail(e);
