@@ -499,6 +499,20 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async signUtilityMessage(
+    params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
+  ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_signUtilityMessage">(ChannelRpcMethods.chan_signUtilityMessage, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok({
+        signedMessage: res,
+      });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async send(payload: EngineParams.RpcRequest): Promise<any> {
     return this.channelProvider!.send(payload);
   }

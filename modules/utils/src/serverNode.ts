@@ -310,6 +310,17 @@ export class RestServerNodeService implements INodeService {
     return this.executeHttpRequest<NodeResponses.Withdraw>(`withdraw`, "post", params, NodeParams.WithdrawSchema);
   }
 
+  signUtilityMessage(
+    params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
+  ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>> {
+    return this.executeHttpRequest<NodeResponses.SignUtilityMessage>(
+      `sign-utility-message`,
+      "post",
+      params,
+      NodeParams.SignUtilityMessageSchema,
+    );
+  }
+
   public once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
