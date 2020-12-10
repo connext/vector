@@ -16,6 +16,7 @@ import {
   createTestChannelState,
   createTestChannelStateWithSigners,
   createTestFullHashlockTransferState,
+  getRandomAddress,
   getRandomBytes32,
   getRandomChannelSigner,
   getRandomIdentifier,
@@ -91,6 +92,42 @@ describe("ParamConverter", () => {
       };
     };
 
+    it("should fail if params.type is a name and chainReader.getRegisteredTransferByName fails", async () => {
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
+      const params: any = generateParams();
+      // Set incorrect type
+      params.conditionType = "FailingTest";
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
+      expect(ret.isError).to.be.true;
+      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
+    });
+
+    it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
+      chainReader.getRegisteredTransferByDefinition.resolves(Result.fail(new ChainError("Failure")));
+      const params: any = generateParams();
+      // Set incorrect type
+      params.type = getRandomAddress();
+      const { channel: channelState } = createTestChannelState(UpdateType.deposit, {
+        channelAddress: params.channelAddress,
+        networkContext: {
+          ...chainAddresses[chainId],
+          chainId,
+          providerUrl,
+        },
+      });
+      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
+      expect(ret.isError).to.be.true;
+      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
+    });
+
     it("should fail if initiator is receiver for same chain/network", async () => {
       const params = generateParams(true, chainId);
       const channelState: FullChannelState = createTestChannelStateWithSigners([signerA, signerB], "deposit", {
@@ -106,6 +143,33 @@ describe("ParamConverter", () => {
 
       expect(ret.isError).to.be.true;
       expect(ret.getError()).to.contain(new InvalidTransferType("An initiator cannot be a receiver on the same chain"));
+    });
+
+    describe.skip("should work for A", () => {
+      it("should work with provided params.recipientChainId", async () => {});
+      it("should work with default params.recipientChainId", async () => {});
+      it("should work with provided params.timeout", async () => {});
+      it("should work with default params.timeout", async () => {});
+      it("should work with provided params.recipientAssetId", async () => {});
+      it("should work with provided params.assetId", async () => {});
+      it("should work with in-channel recipient", async () => {});
+      it("should work with out-of-channel recipient", async () => {});
+      it("should work for A with out-of-channel recipient and given routingId", async () => {});
+      it("should work when params.type is a name", async () => {});
+      it("should work when params.type is an address (transferDefinition)", async () => {});
+    });
+    describe.skip("should work for B", () => {
+      it("should work with provided params.recipientChainId", async () => {});
+      it("should work with default params.recipientChainId", async () => {});
+      it("should work with provided params.timeout", async () => {});
+      it("should work with default params.timeout", async () => {});
+      it("should work with provided params.recipientAssetId", async () => {});
+      it("should work with provided params.assetId", async () => {});
+      it("should work with in-channel recipient", async () => {});
+      it("should work with out-of-channel recipient", async () => {});
+      it("should work for A with out-of-channel recipient and given routingId", async () => {});
+      it("should work when params.type is a name", async () => {});
+      it("should work when params.type is an address (transferDefinition)", async () => {});
     });
 
     it("should work for A", async () => {
@@ -189,24 +253,6 @@ describe("ParamConverter", () => {
         },
       });
     });
-
-    it("should fail if invalid type", async () => {
-      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
-      const params: any = generateParams();
-      // Set incorrect type
-      params.conditionType = "FailingTest";
-      const channelState: FullChannelState = createTestChannelState(UpdateType.deposit, {
-        channelAddress: params.channelAddress,
-        networkContext: {
-          ...chainAddresses[chainId],
-          chainId,
-          providerUrl,
-        },
-      });
-      const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
-      expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
-    });
   });
 
   describe("convertResolveConditionParams", () => {
@@ -273,6 +319,25 @@ describe("ParamConverter", () => {
       );
       return commitment.hashToSign();
     };
+
+    it.skip("should fail if signer fails to sign message", async () => {});
+    it.skip("should fail if it cannot get registry information", async () => {});
+    describe.skip("should work for A", async () => {
+      it("should work with provided params.fee", async () => {});
+      it("should work without provided params.fee", async () => {});
+      it("should work with provided params.callTo", async () => {});
+      it("should work without provided params.callTo", async () => {});
+      it("should work with provided params.callData", async () => {});
+      it("should work without provided params.callData", async () => {});
+    });
+    describe.skip("should work for B", async () => {
+      it("should work with provided params.fee", async () => {});
+      it("should work without provided params.fee", async () => {});
+      it("should work with provided params.callTo", async () => {});
+      it("should work without provided params.callTo", async () => {});
+      it("should work with provided params.callData", async () => {});
+      it("should work without provided params.callData", async () => {});
+    });
 
     it("should work for A", async () => {
       const params = generateParams();

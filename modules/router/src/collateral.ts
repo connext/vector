@@ -67,7 +67,7 @@ export const requestCollateral = async (
 
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
-  const assetIdx = channel.assetIds.findIndex(assetId => assetId === assetId);
+  const assetIdx = channel.assetIds.findIndex((assetId) => assetId === assetId);
   const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
 
   if (myBalance.gte(target)) {
@@ -88,7 +88,7 @@ export const requestCollateral = async (
   }
 
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
-  logger.info({ amountToDeposit }, "Deposit amount calculated, submitting deposit tx");
+  logger.info({ amountToDeposit: amountToDeposit.toString() }, "Deposit amount calculated, submitting deposit tx");
   const txRes = await node.sendDepositTx({
     amount: amountToDeposit.toString(),
     assetId: assetId,
