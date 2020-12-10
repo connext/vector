@@ -569,6 +569,10 @@ function App() {
                         values.withdrawalAddress,
                       )
                     }
+                    initialValues={{
+                      fromAssetId: constants.AddressZero,
+                      toAssetId: constants.AddressZero,
+                    }}
                     onFinishFailed={onFinishFailed}
                     form={transferForm}
                   >
@@ -577,13 +581,7 @@ function App() {
                     </Form.Item>
 
                     <Form.Item label="From Asset ID" name="fromAssetId">
-                      <Select defaultActiveFirstOption={true}>
-                        {Array.from(new Set(channels.flatMap((channel) => channel.assetIds))).map((assetId) => (
-                          <Select.Option value={assetId} key={assetId}>
-                            {assetId}
-                          </Select.Option>
-                        ))}
-                      </Select>
+                      <Input />
                     </Form.Item>
 
                     <Form.Item label="From Chain ID" name="fromChainId">
@@ -597,13 +595,7 @@ function App() {
                     </Form.Item>
 
                     <Form.Item label="To Asset ID" name="toAssetId">
-                      <Select defaultActiveFirstOption={true}>
-                        {Array.from(new Set(channels.flatMap((channel) => channel.assetIds))).map((assetId) => (
-                          <Select.Option value={assetId} key={assetId}>
-                            {assetId}
-                          </Select.Option>
-                        ))}
-                      </Select>
+                      <Input />
                     </Form.Item>
 
                     <Form.Item label="To Chain ID" name="toChainId">
