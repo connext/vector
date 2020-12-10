@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.0.31
+
 - fix browser node store issue
 - fix `TFullTransferState` schema
 - store `getChannelStateByParticipants` accepts identifiers instead of addresses
