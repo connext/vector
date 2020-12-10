@@ -15,94 +15,266 @@ import {
   NodeParams,
   NodeResponses,
   EngineParams,
+  FullChannelState,
+  TransferNames,
+  EngineEvents,
 } from "@connext/vector-types";
-import { constructRpcRequest, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
+import { constructRpcRequest, getRandomBytes32, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
+import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 import pino, { BaseLogger } from "pino";
 
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
 
-export type BrowserNodeConfig = {
+export type BrowserNodeSignerConfig = {
   natsUrl?: string;
   authUrl?: string;
   messagingUrl?: string;
   logger?: BaseLogger;
-  signer?: IChannelSigner;
-  chainProviders?: ChainProviders;
-  chainAddresses?: ChainAddresses;
-  iframeSrc?: string;
+  signer: IChannelSigner;
+  chainProviders: ChainProviders;
+  chainAddresses: ChainAddresses;
 };
 
 export class BrowserNode implements INodeService {
   public channelProvider: IRpcChannelProvider | undefined;
   public publicIdentifier = "";
   public signerAddress = "";
+  private readonly logger: pino.BaseLogger;
 
-  static async connect(config: BrowserNodeConfig = {}): Promise<BrowserNode> {
-    let node: BrowserNode;
+  // SDK specific config
+  private supportedChains: number[] = [];
+  private routerPublicIdentifier?: string;
+  private iframeSrc?: string;
+
+  constructor(params: {
+    logger?: pino.BaseLogger;
+    routerPublicIdentifier?: string;
+    supportedChains?: number[];
+    iframeSrc?: string;
+  }) {
+    this.logger = params.logger || pino();
+    this.routerPublicIdentifier = params.routerPublicIdentifier;
+    this.supportedChains = params.supportedChains || [];
+    this.iframeSrc = params.iframeSrc;
+  }
+
+  // method for signer-based connections
+  static async connect(config: BrowserNodeSignerConfig): Promise<BrowserNode> {
     if (!config.logger) {
       config.logger = pino();
     }
-    if (config.signer) {
-      config.logger.info(
-        { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
-        "Connecting with provided signer",
-      );
-      const chainJsonProviders = hydrateProviders(config.chainProviders!);
-      const messaging = new NatsMessagingService({
-        logger: config.logger.child({ module: "MessagingService" }),
-        messagingUrl: config.messagingUrl,
-        natsUrl: config.natsUrl,
-        authUrl: config.authUrl,
-        signer: config.signer,
-      });
-      await messaging.connect();
-      const store = new BrowserStore(config.logger.child({ module: "BrowserStore" }));
-      const lock = new BrowserLockService(
-        config.signer.publicIdentifier,
-        messaging,
-        config.logger.child({ module: "BrowserLockService" }),
-      );
-      const chainService = new VectorChainService(
-        store,
-        chainJsonProviders,
-        config.signer,
-        config.logger.child({ module: "VectorChainService" }),
-      );
-      const engine = await VectorEngine.connect(
-        messaging,
-        lock,
-        store,
-        config.signer,
-        chainService,
-        config.chainAddresses!,
-        config.logger.child({ module: "VectorEngine" }),
-      );
-      node = new BrowserNode();
-      node.channelProvider = new DirectProvider(engine);
-      node.publicIdentifier = config.signer.publicIdentifier;
-      node.signerAddress = config.signer.address;
-    } else {
-      let iframeSrc = config.iframeSrc;
-      if (!config.iframeSrc) {
-        iframeSrc = "https://wallet.connext.network";
-      }
-      config.logger.info({ method: "connect", iframeSrc }, "Connecting with iframe provider");
-      node = new BrowserNode();
-      node.channelProvider = await IframeChannelProvider.connect({
-        src: iframeSrc!,
-        id: "connext-iframe",
-      });
-      const rpc = constructRpcRequest("connext_authenticate", {});
-      const auth = await node.channelProvider.send(rpc);
-      config.logger.info({ method: "connect", response: auth }, "Received response from auth method");
-      const [nodeConfig] = await node.getConfig();
-      node.publicIdentifier = nodeConfig.publicIdentifier;
-      node.signerAddress = nodeConfig.signerAddress;
-    }
+    const node = new BrowserNode({ logger: config.logger });
+    // TODO: validate schema
+    config.logger.info(
+      { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
+      "Connecting with provided signer",
+    );
+    const chainJsonProviders = hydrateProviders(config.chainProviders!);
+    const messaging = new NatsMessagingService({
+      logger: config.logger.child({ module: "MessagingService" }),
+      messagingUrl: config.messagingUrl,
+      natsUrl: config.natsUrl,
+      authUrl: config.authUrl,
+      signer: config.signer,
+    });
+    await messaging.connect();
+    const store = new BrowserStore(config.logger.child({ module: "BrowserStore" }));
+    const lock = new BrowserLockService(
+      config.signer.publicIdentifier,
+      messaging,
+      config.logger.child({ module: "BrowserLockService" }),
+    );
+    const chainService = new VectorChainService(
+      store,
+      chainJsonProviders,
+      config.signer,
+      config.logger.child({ module: "VectorChainService" }),
+    );
+    const engine = await VectorEngine.connect(
+      messaging,
+      lock,
+      store,
+      config.signer,
+      chainService,
+      config.chainAddresses!,
+      config.logger.child({ module: "VectorEngine" }),
+    );
+    node.channelProvider = new DirectProvider(engine);
+    node.publicIdentifier = config.signer.publicIdentifier;
+    node.signerAddress = config.signer.address;
     return node;
   }
+
+  // method for non-signer based apps to connect to iframe
+  async init(): Promise<void> {
+    // TODO: validate config
+    let iframeSrc = this.iframeSrc;
+    if (!iframeSrc) {
+      iframeSrc = "https://wallet.connext.network";
+    }
+    this.logger.info({ method: "connect", iframeSrc }, "Connecting with iframe provider");
+    this.channelProvider = await IframeChannelProvider.connect({
+      src: iframeSrc!,
+      id: "connext-iframe",
+    });
+    const rpc = constructRpcRequest("connext_authenticate", {});
+    const auth = await this.channelProvider.send(rpc);
+    this.logger.info({ method: "connect", response: auth }, "Received response from auth method");
+    const [nodeConfig] = await this.getConfig();
+    this.publicIdentifier = nodeConfig.publicIdentifier;
+    this.signerAddress = nodeConfig.signerAddress;
+    this.logger.info(
+      { supportedChains: this.supportedChains, routerPublicIdentifier: this.routerPublicIdentifier },
+      "Checking for existing channels",
+    );
+    for (const chainId of this.supportedChains) {
+      const channelRes = await this.getStateChannelByParticipants({
+        chainId,
+        counterparty: this.routerPublicIdentifier!,
+      });
+      if (channelRes.isError) {
+        throw channelRes.getError();
+      }
+      let channel = channelRes.getValue();
+      if (!channel) {
+        this.logger.info({ chainId }, "Setting up channel");
+        const address = await this.setup({
+          chainId,
+          counterpartyIdentifier: this.routerPublicIdentifier!,
+          timeout: "100000",
+        });
+        if (address.isError) {
+          throw address.getError();
+        }
+        channel = await this.getStateChannel(address.getValue());
+      }
+      this.logger.info({ channel, chainId });
+    }
+  }
+
+  // IFRAME SPECIFIC
+  async crossChainTransfer(params: {
+    amount: string;
+    fromChainId: number;
+    fromAssetId: string;
+    toChainId: number;
+    toAssetId: string;
+    reconcileDeposit?: boolean;
+    withdrawalAddress?: string;
+  }): Promise<void> {
+    const senderChannelRes = await this.getStateChannelByParticipants({
+      counterparty: this.routerPublicIdentifier!,
+      chainId: params.fromChainId,
+    });
+    if (senderChannelRes.isError) {
+      throw senderChannelRes.getError();
+    }
+    const receiverChannelRes = await this.getStateChannelByParticipants({
+      counterparty: this.routerPublicIdentifier!,
+      chainId: params.toChainId,
+    });
+    if (receiverChannelRes.isError) {
+      throw receiverChannelRes.getError();
+    }
+    const senderChannel = senderChannelRes.getValue() as FullChannelState;
+    const receiverChannel = receiverChannelRes.getValue() as FullChannelState;
+    if (!senderChannel || !receiverChannel) {
+      throw new Error(
+        `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${
+          this.routerPublicIdentifier
+        }`,
+      );
+    }
+
+    if (params.reconcileDeposit) {
+      const depositRes = await this.reconcileDeposit({
+        assetId: params.fromAssetId,
+        channelAddress: senderChannel.channelAddress,
+      });
+      if (depositRes.isError) {
+        throw depositRes.getError();
+      }
+      const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
+      this.logger.info({ updated }, "Deposit reconciled");
+    }
+
+    const preImage = getRandomBytes32();
+    const lockHash = soliditySha256(["bytes32"], [preImage]);
+    this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
+    const transferParams = {
+      amount: params.amount,
+      assetId: params.fromAssetId,
+      channelAddress: senderChannel.channelAddress,
+      details: {
+        lockHash,
+        expiry: "0",
+      },
+      type: TransferNames.HashlockTransfer,
+      recipient: this.publicIdentifier,
+      recipientAssetId: params.toAssetId,
+      recipientChainId: params.toChainId,
+      meta: { ...params, reason: "Cross-chain transfer" },
+    };
+    const transferRes = await this.conditionalTransfer(transferParams);
+    if (transferRes.isError) {
+      throw transferRes.getError();
+    }
+    const senderTransfer = transferRes.getValue();
+    this.logger.warn({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
+    const receiverTransferData = await this.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 60000, (data) => {
+      if (
+        data.transfer.meta.routingId === senderTransfer.routingId &&
+        data.channelAddress === receiverChannel.channelAddress
+      ) {
+        return true;
+      }
+      return false;
+    });
+    if (!receiverTransferData) {
+      this.logger.error(
+        { routingId: senderTransfer.routingId, channelAddress: receiverChannel.channelAddress },
+        "Failed to get receiver event",
+      );
+      return;
+    }
+
+    this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
+    const resolveParams = {
+      channelAddress: receiverChannel.channelAddress,
+      transferId: receiverTransferData.transfer.transferId,
+      transferResolver: {
+        preImage,
+      },
+    };
+    const resolveRes = await this.resolveTransfer(resolveParams);
+    if (resolveRes.isError) {
+      throw resolveRes.getError();
+    }
+    const resolvedTransfer = resolveRes.getValue();
+    this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
+
+    if (params.withdrawalAddress) {
+      const withdrawalAmount = receiverTransferData.transfer.balance.amount[1];
+      this.logger.info(
+        { withdrawalAddress: params.withdrawalAddress, withdrawalAmount },
+        "Withdrawing to configured address",
+      );
+      const withdrawRes = await this.withdraw({
+        amount: withdrawalAmount, // bob is receiver
+        assetId: params.toAssetId,
+        channelAddress: receiverChannel.channelAddress,
+        recipient: params.withdrawalAddress,
+      });
+      if (withdrawRes.isError) {
+        throw withdrawRes.getError();
+      }
+      const withdrawal = withdrawRes.getValue();
+      this.logger.info({ withdrawal }, "Withdrawal completed");
+    }
+  }
+  //////////////////
 
   createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>> {
     return Promise.resolve(Result.fail(new NodeError(NodeError.reasons.MultinodeProhibitted, { params })));
