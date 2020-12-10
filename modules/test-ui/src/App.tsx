@@ -10,6 +10,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { constants } from "ethers";
 import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs } from "antd";
+import { CopyToClipboard } from "react-copy-to-clipboard";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
@@ -28,6 +29,7 @@ function App() {
   const [withdrawLoading, setWithdrawLoading] = useState<boolean>(false);
 
   const [connectError, setConnectError] = useState<string>();
+  const [copied, setCopied] = useState<boolean>(false);
 
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
@@ -36,6 +38,13 @@ function App() {
     const effect = async () => {};
     effect();
   }, []);
+
+  const copyChannelAddress = () => {
+    this.textArea.select();
+    document.execCommand("copy");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 5000);
+  };
 
   const connectNode = async (
     iframeSrc: string,
@@ -382,6 +391,17 @@ function App() {
                   </Select>
                 </Form.Item>
               </Form>
+            </Col>
+            <Col>
+              <CopyToClipboard
+                text={selectedChannel?.channelAddress}
+                onCopy={() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 5000);
+                }}
+              >
+                <Button>{copied ? "Copied!" : "Copy"}</Button>
+              </CopyToClipboard>
             </Col>
           </Row>
 
