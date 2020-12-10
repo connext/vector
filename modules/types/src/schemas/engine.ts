@@ -138,12 +138,19 @@ const DefundTransferParamsSchema = Type.Object({
   transferId: TBytes32,
 });
 
+// Eth-sign a message
+const SignUtilityMessageParamsSchema = Type.Object({
+  message: Type.String(),
+});
+
 // Rpc request schema
 const RpcRequestEngineParamsSchema = Type.Object({
   id: Type.Number({ minimum: 1 }),
   jsonrpc: Type.Literal("2.0"),
   method: Type.Union(
-    Object.values(ChannelRpcMethods).map(methodName => Type.Literal(methodName)) as [TStringLiteral<ChannelRpcMethod>],
+    Object.values(ChannelRpcMethods).map((methodName) => Type.Literal(methodName)) as [
+      TStringLiteral<ChannelRpcMethod>,
+    ],
   ),
   params: Type.Optional(Type.Any()),
   // NOTE: Safe to make params an object here, in engine the
@@ -155,6 +162,9 @@ const RpcRequestEngineParamsSchema = Type.Object({
 export namespace EngineParams {
   export const RpcRequestSchema = RpcRequestEngineParamsSchema;
   export type RpcRequest = Static<typeof RpcRequestEngineParamsSchema>;
+
+  export const SignUtilityMessageSchema = SignUtilityMessageParamsSchema;
+  export type SignUtilityMessage = Static<typeof SignUtilityMessageParamsSchema>;
 
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;
