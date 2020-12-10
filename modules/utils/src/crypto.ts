@@ -22,8 +22,8 @@ import {
 
 import { getAddressError, getHexStringError, isValidHexString } from "./hexStrings";
 
-export const VECTOR_SIGN_PREFIX = "\x15Vector Signed Message:\n";
-export const UTILITY_SIGN_PREFIX = "\x15Utility Signed Message:\n";
+export const VECTOR_SIGN_PREFIX = "\x16Vector Signed Message:\n";
+export const UTILITY_SIGN_PREFIX = "\x17Utility Signed Message:\n";
 
 ////////////////////////////////////////
 // Misc

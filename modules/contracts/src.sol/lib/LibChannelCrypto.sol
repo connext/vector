@@ -35,7 +35,7 @@ library LibChannelCrypto {
         // 32 is the length in bytes of hash,
         // enforced by the type signature above
         return
-            keccak256(abi.encodePacked("\x15Vector Signed Message:\n32", hash));
+            keccak256(abi.encodePacked("\x16Vector Signed Message:\n32", hash));
     }
 
     function checkUtilitySignature(
@@ -63,6 +63,6 @@ library LibChannelCrypto {
         // 32 is the length in bytes of hash,
         // enforced by the type signature above
         return
-            keccak256(abi.encodePacked("\x15Utility Signed Message:\n32", hash));
+            keccak256(abi.encodePacked("\x17Utility Signed Message:\n32", hash));
     }
 }
