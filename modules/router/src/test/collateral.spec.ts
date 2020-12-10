@@ -38,7 +38,7 @@ describe("Collateral", () => {
 
   it("should request collateral without a target", async () => {
     const assetId = AddressZero;
-    const channel = createTestChannelState("create");
+    const channel = createTestChannelState("create").channel;
     const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
@@ -47,9 +47,7 @@ describe("Collateral", () => {
 
     expect(
       node.sendDepositTx.calledWith({
-        amount: BigNumber.from(profile.target)
-          .sub(getBalanceForAssetId(channel, assetId, "alice"))
-          .toString(),
+        amount: BigNumber.from(profile.target).sub(getBalanceForAssetId(channel, assetId, "alice")).toString(),
         assetId,
         chainId: channel.networkContext.chainId,
         channelAddress: channel.channelAddress,
@@ -60,7 +58,7 @@ describe("Collateral", () => {
 
   it("should request collateral with a requested amount higher than the target", async () => {
     const assetId = AddressZero;
-    const channel = createTestChannelState("create");
+    const channel = createTestChannelState("create").channel;
     const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
@@ -78,9 +76,7 @@ describe("Collateral", () => {
 
     expect(
       node.sendDepositTx.calledWith({
-        amount: BigNumber.from(requestedAmount)
-          .sub(getBalanceForAssetId(channel, assetId, "alice"))
-          .toString(),
+        amount: BigNumber.from(requestedAmount).sub(getBalanceForAssetId(channel, assetId, "alice")).toString(),
         assetId,
         chainId: channel.networkContext.chainId,
         channelAddress: channel.channelAddress,
@@ -91,7 +87,7 @@ describe("Collateral", () => {
 
   it("should request collateral with a requested amount lower than the target", async () => {
     const assetId = AddressZero;
-    const channel = createTestChannelState("create");
+    const channel = createTestChannelState("create").channel;
     const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
@@ -109,9 +105,7 @@ describe("Collateral", () => {
 
     expect(
       node.sendDepositTx.calledWith({
-        amount: BigNumber.from(requestedAmount)
-          .sub(getBalanceForAssetId(channel, assetId, "alice"))
-          .toString(),
+        amount: BigNumber.from(requestedAmount).sub(getBalanceForAssetId(channel, assetId, "alice")).toString(),
         assetId,
         chainId: channel.networkContext.chainId,
         channelAddress: channel.channelAddress,
@@ -122,7 +116,7 @@ describe("Collateral", () => {
 
   it("should error on request collateral with a requested amount higher than reclaim threshold", async () => {
     const assetId = AddressZero;
-    const channel = createTestChannelState("create");
+    const channel = createTestChannelState("create").channel;
     const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
@@ -141,7 +135,7 @@ describe("Collateral", () => {
 
   it("should request collateral with a transfer amount higher than the threshold", async () => {
     const assetId = AddressZero;
-    const channel = createTestChannelState("create");
+    const channel = createTestChannelState("create").channel;
     const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
