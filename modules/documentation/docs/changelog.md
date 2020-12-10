@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.33
+
+- add sign method to browser node
+
 ## 0.0.32
 
 - add utility sign method

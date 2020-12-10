@@ -77,6 +77,10 @@ export interface INodeService {
     params: OptionalPublicIdentifier<NodeParams.ResolveTransfer>,
   ): Promise<Result<NodeResponses.ResolveTransfer, NodeError>>;
 
+  signUtilityMessage(
+    params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
+  ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>>;
+
   // Dispute methods
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
