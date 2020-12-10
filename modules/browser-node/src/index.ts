@@ -18,7 +18,6 @@ import {
   FullChannelState,
   TransferNames,
   EngineEvents,
-  ConditionalTransferCreatedPayload,
 } from "@connext/vector-types";
 import { constructRpcRequest, getRandomBytes32, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
@@ -203,8 +202,8 @@ export class BrowserNode implements INodeService {
 
     const preImage = getRandomBytes32();
     const lockHash = soliditySha256(["bytes32"], [preImage]);
-    this.logger.info({ preImage, lockHash }, "Starting sender transfer");
-    const transferRes = await this.conditionalTransfer({
+    this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
+    const transferParams = {
       amount: params.amount,
       assetId: params.fromAssetId,
       channelAddress: senderChannel.channelAddress,
@@ -216,30 +215,40 @@ export class BrowserNode implements INodeService {
       recipient: this.publicIdentifier,
       recipientAssetId: params.toAssetId,
       recipientChainId: params.toChainId,
-    });
+      meta: { ...params, reason: "Cross-chain transfer" },
+    };
+    const transferRes = await this.conditionalTransfer(transferParams);
     if (transferRes.isError) {
       throw transferRes.getError();
     }
     const senderTransfer = transferRes.getValue();
-    this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
-    const receiverTransferData: ConditionalTransferCreatedPayload = await new Promise((res) =>
-      this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
-        if (
-          data.transfer.meta.routingId === senderTransfer.routingId &&
-          data.channelAddress === receiverChannel.channelAddress
-        ) {
-          res(data);
-        }
-      }),
-    );
+    this.logger.warn({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
+    const receiverTransferData = await this.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 60000, (data) => {
+      if (
+        data.transfer.meta.routingId === senderTransfer.routingId &&
+        data.channelAddress === receiverChannel.channelAddress
+      ) {
+        return true;
+      }
+      return false;
+    });
+    if (!receiverTransferData) {
+      this.logger.error(
+        { routingId: senderTransfer.routingId, channelAddress: receiverChannel.channelAddress },
+        "Failed to get receiver event",
+      );
+      return;
+    }
+
     this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
-    const resolveRes = await this.resolveTransfer({
+    const resolveParams = {
       channelAddress: receiverChannel.channelAddress,
       transferId: receiverTransferData.transfer.transferId,
       transferResolver: {
         preImage,
       },
-    });
+    };
+    const resolveRes = await this.resolveTransfer(resolveParams);
     if (resolveRes.isError) {
       throw resolveRes.getError();
     }

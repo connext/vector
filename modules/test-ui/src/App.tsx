@@ -30,6 +30,7 @@ function App() {
 
   const [connectError, setConnectError] = useState<string>();
   const [copied, setCopied] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"HashlockTransfer" | "CrossChainTransfer">("HashlockTransfer");
 
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
@@ -87,14 +88,16 @@ function App() {
       // await delay(10);
       client.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, async (data) => {
         console.log("Received EngineEvents.CONDITIONAL_TRANSFER_CREATED: ", data);
-        if (data.transfer.meta.path[0].recipient !== client.publicIdentifier) {
-          console.log("We are the sender");
+        if (data.transfer.responder !== client.signerAddress) {
+          console.log("We are not the responder");
           return;
         }
-        console.log(data.transfer.meta.encryptedPreImage);
+        if (!data.transfer.meta?.encryptedPreImage) {
+          console.log("No encrypted preImage attached", data.transfer);
+          return;
+        }
         const rpc = constructRpcRequest<"chan_decrypt">("chan_decrypt", data.transfer.meta.encryptedPreImage);
         const decryptedPreImage = await client.send(rpc);
-        console.log("decryptedPreImage: ", decryptedPreImage);
 
         const requestRes = await client.resolveTransfer({
           channelAddress: data.transfer.channelAddress,
@@ -192,7 +195,7 @@ function App() {
       meta: submittedMeta,
     });
     if (requestRes.isError) {
-      console.error("Error transferring", requestRes.getError());
+      console.error("Error hashlock transferring", requestRes.getError());
     }
     setTransferLoading(false);
   };
@@ -218,7 +221,7 @@ function App() {
       });
       console.log(`Cross chain transfer complete!`);
     } catch (e) {
-      console.error("Error transferring", e);
+      console.error("Error cross chain transferring", e);
     }
     setTransferLoading(false);
   };
@@ -468,7 +471,7 @@ function App() {
           <Divider orientation="left">Transfer</Divider>
           <Row gutter={16}>
             <Col span={24}>
-              <Tabs defaultActiveKey="HashlockTransfer">
+              <Tabs defaultActiveKey={activeTab} onChange={(active) => setActiveTab(active as any)}>
                 <Tabs.TabPane tab="Hashlock Transfer" key="HashlockTransfer">
                   <Form
                     layout="horizontal"
@@ -499,7 +502,9 @@ function App() {
                     <Form.Item
                       label="Recipient"
                       name="recipient"
-                      rules={[{ required: true, message: "Please input recipient address" }]}
+                      rules={[
+                        { required: activeTab === "HashlockTransfer", message: "Please input recipient address" },
+                      ]}
                     >
                       <Input />
                     </Form.Item>
@@ -583,6 +588,16 @@ function App() {
 
                     <Form.Item label="From Chain ID" name="fromChainId">
                       <Select defaultActiveFirstOption={true}>
+                        {Array.from(new Set(channels.map((channel) => channel.networkContext.chainId))).map((chain) => (
+                          <Select.Option value={chain} key={chain}>
+                            {chain}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+
+                    <Form.Item label="To Asset ID" name="toAssetId">
+                      <Select defaultActiveFirstOption={true}>
                         {Array.from(new Set(channels.flatMap((channel) => channel.assetIds))).map((assetId) => (
                           <Select.Option value={assetId} key={assetId}>
                             {assetId}
@@ -591,24 +606,12 @@ function App() {
                       </Select>
                     </Form.Item>
 
-                    <Form.Item label="To Asset ID" name="toAssetId">
-                      <Select defaultActiveFirstOption={true}>
-                        {Array.from(new Set(channels.map((channel) => channel.networkContext.chainId))).map(
-                          (assetId) => (
-                            <Select.Option value={assetId} key={assetId}>
-                              {assetId}
-                            </Select.Option>
-                          ),
-                        )}
-                      </Select>
-                    </Form.Item>
-
                     <Form.Item label="To Chain ID" name="toChainId">
                       <Select defaultActiveFirstOption={true}>
                         {Array.from(new Set(channels.map((channel) => channel.networkContext.chainId))).map(
-                          (assetId) => (
-                            <Select.Option value={assetId} key={assetId}>
-                              {assetId}
+                          (chainId) => (
+                            <Select.Option value={chainId} key={chainId}>
+                              {chainId}
                             </Select.Option>
                           ),
                         )}
