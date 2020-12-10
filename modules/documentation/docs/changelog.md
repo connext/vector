@@ -6,6 +6,7 @@
 - fix `TFullTransferState` schema
 - store `getChannelStateByParticipants` accepts identifiers instead of addresses
 - make sure all rpc queries properly return `Result` types in error cases
+- add `crossChainTransfer` to iframe
 
 ## 0.0.28
 
