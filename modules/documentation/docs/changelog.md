@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.32
+
+- add utility sign method
+
 ## 0.0.31
 
 - fix browser node store issue
