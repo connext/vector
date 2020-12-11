@@ -4,8 +4,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, One } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
 import { getTestChannel } from "../utils";
@@ -18,12 +18,8 @@ describe("CMCDeposit.sol", function() {
   let reentrantToken: Contract;
 
   beforeEach(async () => {
+    await deployments.fixture(); // Start w fresh deployments
     channel = await getTestChannel();
-
-    await deployContracts(alice.address, [
-      ["FailingToken", []],
-      ["ReentrantToken", [channel.address]],
-    ]);
     failingToken = await getContract("FailingToken", alice);
     reentrantToken = await getContract("ReentrantToken", alice);
     // mint failing token

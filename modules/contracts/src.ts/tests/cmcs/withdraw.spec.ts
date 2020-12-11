@@ -5,9 +5,10 @@ import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
+import { deployments } from "hardhat";
 
 import { getTestChannel, alice } from "..";
-import { deployContracts, WithdrawCommitment } from "../..";
+import { WithdrawCommitment } from "../..";
 import { getContract } from "../../utils";
 import { bob, provider } from "../constants";
 
@@ -19,9 +20,9 @@ describe("CMCWithdraw.sol", function() {
   let failingToken: Contract;
 
   beforeEach(async () => {
+    await deployments.fixture(); // Start w fresh deployments
     channel = await getTestChannel();
 
-    await deployContracts(alice.address, [["FailingToken", []]]);
     failingToken = await getContract("FailingToken", alice);
     await failingToken.mint(alice.address, parseEther("0.001"));
 
@@ -102,7 +103,6 @@ describe("CMCWithdraw.sol", function() {
   });
 
   it("should work for missing-return-value-bug tokens", async () => {
-    await deployContracts(alice.address, [["NonconformingToken", []]]);
     const nonconformingToken = await getContract("NonconformingToken");
     await nonconformingToken.mint(alice.address, parseEther("0.001"));
 

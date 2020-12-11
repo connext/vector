@@ -21,9 +21,9 @@ import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
+import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { bob, alice, networkName, provider, rando } from "../constants";
 import { advanceBlocktime, getOnchainBalance, getTestChannel } from "../utils";
@@ -193,10 +193,7 @@ describe("CMCAdjudicator.sol", async function () {
   };
 
   beforeEach(async () => {
-    await deployContracts(alice.address, [
-      ["TestToken", []],
-      ["HashlockTransfer", []],
-    ]);
+    await deployments.fixture(); // Start w fresh deployments
     token = await getContract("TestToken", alice);
     transferDefinition = await getContract("HashlockTransfer", alice);
     // mint token to alice/bob

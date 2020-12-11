@@ -9,10 +9,10 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { ethers } from "hardhat";
+import { deployments, ethers } from "hardhat";
 import pino from "pino";
 
-import { createChannel, deployContracts } from "../actions";
+import { createChannel } from "../actions";
 import { ChannelMastercopy } from "../artifacts";
 import { VectorChainReader } from "../services";
 import { getContract } from "../utils";
@@ -29,10 +29,7 @@ describe("ChannelFactory", function () {
   let channelMastercopy: Contract;
 
   beforeEach(async () => {
-    await deployContracts(alice.address, [
-      ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy", Zero]],
-    ]);
+    await deployments.fixture(); // Start w fresh deployments
     channelMastercopy = await getContract("ChannelMastercopy", alice);
     channelFactory = await getContract("ChannelFactory", alice);
     chainId = await chainIdReq;

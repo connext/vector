@@ -5,8 +5,8 @@ import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../..";
 import { getContract } from "../../utils";
 import { alice, bob, rando } from "../constants";
 import { getTestChannel } from "../utils";
@@ -20,12 +20,7 @@ describe("CMCAsset", function () {
   let nonconformingToken: Contract;
 
   beforeEach(async () => {
-    await deployContracts(bob.address, [
-      ["CMCAsset", []],
-      ["TestToken", []],
-      ["FailingToken", []],
-      ["NonconformingToken", []],
-    ]);
+    await deployments.fixture(); // Start w fresh deployments
     assetTransfer = await getContract("CMCAsset", alice);
     // NOTE: safe to do because of inheritance pattern
     channel = await getTestChannel();

@@ -20,8 +20,8 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
 
@@ -30,7 +30,7 @@ describe("Withdraw", function() {
   let withdraw: Contract;
 
   before(async () => {
-    await deployContracts(alice.address, [["Withdraw", []]]);
+    await deployments.fixture(); // Start w fresh deployments
     withdraw = await getContract("Withdraw", alice);
   });
 

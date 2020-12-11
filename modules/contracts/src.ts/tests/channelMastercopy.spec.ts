@@ -1,8 +1,8 @@
 import { expect } from "@connext/vector-utils";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../actions";
 import { getContract } from "../utils";
 
 import { alice } from "./constants";
@@ -12,7 +12,7 @@ describe("ChannelMastercopy", function () {
   let mastercopy: Contract;
 
   beforeEach(async () => {
-    await deployContracts(alice.address, [["ChannelMastercopy", []]]);
+    await deployments.fixture(); // Start w fresh deployments
     mastercopy = await getContract("ChannelMastercopy", alice);
   });
 

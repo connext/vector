@@ -2,9 +2,10 @@ import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 import pino from "pino";
 
-import { deployContracts, registerTransfer } from "../actions";
+import { registerTransfer } from "../actions";
 import { alice, bob, chainIdReq, getTestChannel, provider } from "../tests";
 import { getContract } from "../utils";
 
@@ -22,12 +23,7 @@ describe("EthereumChainReader", function () {
   let transferRegistry: Contract;
 
   before(async () => {
-    await deployContracts(alice.address, [
-      ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy", Zero]],
-      ["TransferRegistry", []],
-      ["Withdraw", []],
-    ]);
+    await deployments.fixture(); // Start w fresh deployments
 
     factory = await getContract("ChannelFactory", alice);
     transferRegistry = await getContract("TransferRegistry", alice);

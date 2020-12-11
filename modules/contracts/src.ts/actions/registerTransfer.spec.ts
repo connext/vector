@@ -1,11 +1,11 @@
 import { TransferNames } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 
 import { alice } from "../tests";
 import { getContract } from "../utils";
 
-import { deployContracts } from "./deployContracts";
 import { registerTransfer } from "./registerTransfer";
 
 describe("registerTransfer", function() {
@@ -13,10 +13,7 @@ describe("registerTransfer", function() {
   let registry: Contract;
 
   beforeEach(async () => {
-    await deployContracts(alice.address, [
-      ["HashlockTransfer", []],
-      ["TransferRegistry", []],
-    ]);
+    await deployments.fixture(); // Start w fresh deployments
     registry = await getContract("TransferRegistry", alice);
   });
 

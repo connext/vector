@@ -17,9 +17,9 @@ import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
+import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { deployContracts } from "../actions";
 import { logger } from "../constants";
 import {
   advanceBlocktime,
@@ -48,11 +48,8 @@ describe("EthereumChainService", function () {
   let chainId: number;
 
   beforeEach(async () => {
+    await deployments.fixture(); // Start w fresh deployments
     chainId = await chainIdReq;
-    await deployContracts(alice.address, [
-      ["TestToken", []],
-      ["HashlockTransfer", []],
-    ]);
     channel = await getTestChannel();
     channelFactory = await getContract("ChannelFactory", alice);
     chainService = new EthereumChainService(

@@ -19,8 +19,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { alice, provider } from "../constants";
 
@@ -29,7 +29,7 @@ describe("HashlockTransfer", function() {
   let transfer: Contract;
 
   before(async () => {
-    await deployContracts(alice.address, [["HashlockTransfer", []]]);
+    await deployments.fixture(); // Start w fresh deployments
     transfer = await getContract("HashlockTransfer", alice);
   });
 

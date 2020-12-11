@@ -1,14 +1,13 @@
 import { EtherSymbol, Zero } from "@ethersproject/constants";
 import { formatEther } from "@ethersproject/units";
-import { deployments, ethers, getNamedAccounts, getChainId } from "hardhat";
+import { ethers, getNamedAccounts, getChainId } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import { deployContracts } from "../actions/deployContracts";
 import { logger } from "../constants";
 
 const func: DeployFunction = async () => {
-
-  const log = logger.child({ level: "info" });
+  const log = logger.child({ module: "Deploy" });
   const chainId = await getChainId();
   const provider = ethers.provider;
   const { deployer } = await getNamedAccounts();
@@ -36,12 +35,25 @@ const func: DeployFunction = async () => {
     await deployContracts(
       deployer,
       [
-        ["TestToken", []],
-        ["ChannelMastercopy", []],
-        ["ChannelFactory", ["ChannelMastercopy", Zero]],
+        // Libs
         ["HashlockTransfer", []],
         ["Withdraw", []],
         ["TransferRegistry", []],
+        ["TestLibIterableMapping", []],
+
+        // Real Channel
+        ["ChannelMastercopy", []],
+        ["ChannelFactory", ["ChannelMastercopy", Zero]],
+
+        // Test Channel
+        ["TestChannel", []],
+        ["TestChannelFactory", ["TestChannel", Zero]],
+
+        // Test Tokens
+        ["TestToken", []],
+        ["FailingToken", []],
+        ["NonconformingToken", []],
+        ["ReentrantToken", ["TestChannel"]],
       ],
       log,
     );

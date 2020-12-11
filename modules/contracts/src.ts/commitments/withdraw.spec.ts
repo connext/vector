@@ -3,8 +3,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../actions";
 import { bob, alice, getTestChannel, provider } from "../tests";
 import { getContract } from "../utils";
 
@@ -17,7 +17,7 @@ describe("withdrawCommitment", function() {
   const amount = "50";
 
   beforeEach(async () => {
-    await deployContracts(alice.address, [["TestToken", []]]);
+    await deployments.fixture(); // Start w fresh deployments
     token = await getContract("TestToken", alice);
     channel = await getTestChannel();
     await (

@@ -3,12 +3,12 @@ import { RegisteredTransfer } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { alice } from "../constants";
 
-describe.only("LibIterableMapping.sol", function() {
+describe("LibIterableMapping.sol", function() {
   this.timeout(120_000);
   let mapping: Contract;
   let transferDefs: Contract[];
@@ -24,14 +24,15 @@ describe.only("LibIterableMapping.sol", function() {
   };
 
   beforeEach(async () => {
-    await deployContracts(alice.address, [
-      ["TestLibIterableMapping", []],
-      ["HashlockTransfer", []],
-      ["Withdraw", []],
-    ]);
+    await deployments.fixture(); // Start w fresh deployments
     mapping = await getContract("TestLibIterableMapping", alice);
     expect(mapping.address).to.be.a("string");
-    transferDefs = [await getContract("HashlockTransfer", alice), await getContract("Withdraw", alice)];
+    transferDefs = [
+      await getContract("HashlockTransfer", alice),
+      await getContract("Withdraw", alice),
+    ];
+    expect(transferDefs[0].address).to.be.a("string");
+    expect(transferDefs[1].address).to.be.a("string");
   });
 
   describe("stringEqual", () => {

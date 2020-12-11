@@ -1,26 +1,18 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero, Zero } from "@ethersproject/constants";
+import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 
-import { createChannel, deployContracts } from "../actions";
+import { createChannel } from "../actions";
 import { TestChannel, TestToken } from "../artifacts";
 import { getContract } from "../utils";
 
 import { alice, bob, provider } from "./constants";
 
 export const getTestChannel = async (): Promise<Contract> => {
-  await deployContracts(alice.address, [
-    ["TestChannel", []],
-    ["ChannelFactory", ["TestChannel", Zero]],
-  ]);
   return createChannel(bob.address, alice, undefined, true);
 };
 
 export const getUnsetupChannel = async (): Promise<Contract> => {
-  await deployContracts(alice.address, [
-    ["TestChannel", []],
-    ["TestChannelFactory", ["TestChannel", Zero]],
-  ]);
   const testFactory = await getContract("TestChannelFactory", alice);
   const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
   const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
