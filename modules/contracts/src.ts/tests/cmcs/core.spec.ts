@@ -13,9 +13,12 @@ describe("CMCCore.sol", function() {
   this.timeout(120_000);
   let channel: Contract;
 
+  beforeEach(async () => {
+    await deployments.fixture(); // Start w fresh deployments
+  });
+
   describe("setup", async () => {
     beforeEach(async () => {
-      await deployments.fixture(); // Start w fresh deployments
       channel = await getUnsetupChannel();
     });
 

@@ -4,9 +4,9 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, One } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
-import { deployments, getNamedAccounts } from "hardhat";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions/deployContracts";
+import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
 import { getTestChannel } from "../utils";
@@ -25,8 +25,7 @@ describe("CMCDeposit.sol", function() {
     failingToken = await getContract("FailingToken", alice);
     await (await failingToken.mint(alice.address, parseEther("0.001"))).wait();
     // setup reentrant token
-    const { deployer } = await getNamedAccounts();
-    await deployContracts(deployer, [["ReentrantToken", [channel.address]]]);
+    await deployContracts(alice.address, [["ReentrantToken", [channel.address]]]);
     reentrantToken = await getContract("ReentrantToken", alice);
     await (await reentrantToken.mint(alice.address, parseEther("0.01"))).wait();
   });

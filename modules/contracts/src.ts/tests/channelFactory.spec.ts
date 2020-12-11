@@ -68,18 +68,16 @@ describe("ChannelFactory", function () {
 
   it("should create a channel with a deposit", async () => {
     // Use funded account for alice
-    const created = new Promise<string>((res) => {
-      channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
-        res(data);
-      });
-    });
     const value = BigNumber.from("1000");
-    const tx = await channelFactory
-      .connect(alice)
-      .createChannelAndDepositAlice(alice.address, bob.address, AddressZero, value, { value });
+    const tx = await (await (channelFactory.connect(alice).createChannelAndDepositAlice(
+      alice.address,
+      bob.address,
+      AddressZero,
+      value,
+      { value },
+    ))).wait();
     expect(tx.hash).to.be.a("string");
-    await tx.wait();
-    const channelAddress = await created;
+    const channelAddress = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr = await getCreate2MultisigAddress(
       alicePubId,
       bobPubId,
@@ -104,25 +102,14 @@ describe("ChannelFactory", function () {
 
   it("should create a different channel with a different mastercopy address", async () => {
     const channel = await createChannel(bob.address, alice);
-
-    const ChannelMastercopy = await ethers.getContractFactory("ChannelMastercopy", alice);
-    const newMastercopy = await ChannelMastercopy.deploy();
-    await newMastercopy.deployed();
-
-    const ChannelFactory = await ethers.getContractFactory("ChannelFactory", alice);
-    const newFactory = await ChannelFactory.deploy(newMastercopy.address, Zero);
-    await newFactory.deployed();
-
-    const created = new Promise<string>((res) => {
-      newFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
-        res(data);
-      });
-    });
-    const newChannelAddress = await newFactory.getChannelAddress(alice.address, bob.address);
-    const tx = await newFactory.createChannel(alice.address, bob.address);
-    await tx.wait();
-    const newCreatedAddress = await created;
-    expect(newCreatedAddress).to.eq(newChannelAddress);
-    expect(channel.address).to.not.eq(newCreatedAddress);
+    const newChannelMastercopy = await (await (
+      await ethers.getContractFactory("ChannelMastercopy", alice)
+    ).deploy()).deployed();
+    const newChannelFactory = await (await (
+      await ethers.getContractFactory("ChannelFactory", alice)
+    ).deploy(newChannelMastercopy.address, Zero)).deployed();
+    const newChannelAddress = await newChannelFactory.getChannelAddress(alice.address, bob.address);
+    await (await newChannelFactory.createChannel(alice.address, bob.address)).wait();
+    expect(channel.address).to.not.eq(newChannelAddress);
   });
 });

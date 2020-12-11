@@ -28,7 +28,7 @@ describe("HashlockTransfer", function() {
   this.timeout(120_000);
   let transfer: Contract;
 
-  before(async () => {
+  beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     transfer = await getContract("HashlockTransfer", alice);
   });
