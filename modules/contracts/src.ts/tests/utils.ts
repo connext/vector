@@ -15,8 +15,7 @@ export const getTestChannel = async (): Promise<Contract> => {
 export const getUnsetupChannel = async (): Promise<Contract> => {
   const testFactory = await getContract("TestChannelFactory", alice);
   const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
-  const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
-  await tx.wait();
+  await (await testFactory.createChannelWithoutSetup(alice.address, bob.address)).wait();
   return new Contract(channelAddress, TestChannel.abi, alice);
 };
 

@@ -2,6 +2,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
+import { deployments } from "hardhat";
 
 import { getTestChannel, alice, bob, getUnsetupChannel } from "..";
 
@@ -14,6 +15,7 @@ describe("CMCCore.sol", function() {
 
   describe("setup", async () => {
     beforeEach(async () => {
+      await deployments.fixture(); // Start w fresh deployments
       channel = await getUnsetupChannel();
     });
 
