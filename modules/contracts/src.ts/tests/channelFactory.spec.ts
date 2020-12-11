@@ -69,14 +69,13 @@ describe("ChannelFactory", function () {
   it("should create a channel with a deposit", async () => {
     // Use funded account for alice
     const value = BigNumber.from("1000");
-    const tx = await (await (channelFactory.connect(alice).createChannelAndDepositAlice(
+    await (await (channelFactory.connect(alice).createChannelAndDepositAlice(
       alice.address,
       bob.address,
       AddressZero,
       value,
       { value },
     ))).wait();
-    expect(tx.hash).to.be.a("string");
     const channelAddress = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr = await getCreate2MultisigAddress(
       alicePubId,
