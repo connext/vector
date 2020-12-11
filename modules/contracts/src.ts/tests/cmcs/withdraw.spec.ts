@@ -9,6 +9,7 @@ import { Wallet } from "@ethersproject/wallet";
 import { getTestAddressBook, getTestChannel, alice } from "..";
 import { deployContracts, WithdrawCommitment } from "../..";
 import { AddressBook } from "../../addressBook";
+import { getContract } from "../../utils";
 import { bob, provider } from "../constants";
 
 describe("CMCWithdraw.sol", function() {
@@ -24,7 +25,7 @@ describe("CMCWithdraw.sol", function() {
     channel = await getTestChannel(addressBook);
 
     await deployContracts(alice.address, [["FailingToken", []]]);
-    failingToken = addressBook.getContract("FailingToken");
+    failingToken = await getContract("FailingToken", alice);
     await failingToken.mint(alice.address, parseEther("0.001"));
 
     // Send tokens and eth to channel
@@ -105,7 +106,7 @@ describe("CMCWithdraw.sol", function() {
 
   it("should work for missing-return-value-bug tokens", async () => {
     await deployContracts(alice.address, [["NonconformingToken", []]]);
-    const nonconformingToken = addressBook.getContract("NonconformingToken");
+    const nonconformingToken = await getContract("NonconformingToken");
     await nonconformingToken.mint(alice.address, parseEther("0.001"));
 
     // Send tokens to channel

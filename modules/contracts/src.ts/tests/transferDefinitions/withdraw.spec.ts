@@ -23,6 +23,7 @@ import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
+import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
 import { getTestAddressBook } from "../utils";
 
@@ -34,7 +35,7 @@ describe("Withdraw", function() {
   before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [["Withdraw", []]]);
-    withdraw = addressBook.getContract("Withdraw");
+    withdraw = await getContract("Withdraw", alice);
   });
 
   const createInitialState = async (

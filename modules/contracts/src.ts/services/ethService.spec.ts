@@ -32,6 +32,7 @@ import {
   provider,
   rando,
 } from "../tests";
+import { getContract } from "../utils";
 
 import { EthereumChainService } from "./ethService";
 
@@ -57,15 +58,15 @@ describe("EthereumChainService", function () {
       ["HashlockTransfer", []],
     ]);
     channel = await getTestChannel(addressBook);
-    channelFactory = addressBook.getContract("ChannelFactory");
+    channelFactory = await getContract("ChannelFactory", alice);
     chainService = new EthereumChainService(
       new MemoryStoreService(),
       { [chainId]: provider },
       alice.privateKey,
       logger,
     );
-    token = addressBook.getContract("TestToken");
-    transferDefinition = addressBook.getContract("HashlockTransfer");
+    token = await getContract("TestToken", alice);
+    transferDefinition = await getContract("HashlockTransfer", alice);
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();
     const preImage = getRandomBytes32();

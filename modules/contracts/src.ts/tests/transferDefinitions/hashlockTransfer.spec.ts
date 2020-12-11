@@ -22,6 +22,7 @@ import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
+import { getContract } from "../../utils";
 import { alice, provider } from "../constants";
 import { getTestAddressBook } from "../utils";
 
@@ -33,7 +34,7 @@ describe("HashlockTransfer", function() {
   before(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [["HashlockTransfer", []]]);
-    transfer = addressBook.getContract("HashlockTransfer");
+    transfer = await getContract("HashlockTransfer", alice);
   });
 
   const createlockHash = (preImage: string): string => soliditySha256(["bytes32"], [preImage]);

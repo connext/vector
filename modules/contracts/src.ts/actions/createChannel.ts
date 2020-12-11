@@ -6,6 +6,7 @@ import { Argv } from "yargs";
 import { AddressBook, getAddressBook } from "../addressBook";
 import { TestChannel, VectorChannel } from "../artifacts";
 import { cliOpts, logger } from "../constants";
+import { getContract } from "../utils";
 
 export const createChannel = async (
   bobAddress: string,
@@ -15,17 +16,15 @@ export const createChannel = async (
   test = false,
 ): Promise<Contract> => {
   log.info(`Preparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
-  const channelFactory = addressBook.getContract("ChannelFactory");
+  const channelFactory = await getContract("ChannelFactory", alice);
   const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress);
-  const tx = await channelFactory.createChannel(alice.address, bobAddress);
-  await tx.wait();
-  log.info(`Successfully created a channel at ${channelAddress}`);
-  // Save this channel address in case we need it later
-  addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bobAddress.substring(2, 6)}`, {
-    address: channelAddress,
-    args: [alice.address, bobAddress],
-    txHash: tx.hash,
-  });
+  const channelCode = await alice.provider.getCode(channelAddress);
+  if (channelCode !== "0x" && channelCode !== "0x00" ) {
+    await (await channelFactory.createChannel(alice.address, bobAddress)).wait();
+    log.info(`Successfully created a channel at ${channelAddress}`);
+  } else {
+    log.info(`Channel already exists at ${channelAddress}`);
+  }
   return test
     ? new Contract(channelAddress, TestChannel.abi, alice)
     : new Contract(channelAddress, VectorChannel.abi, alice);

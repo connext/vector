@@ -5,10 +5,11 @@ import { expect } from "chai";
 
 import { deployContracts } from "..";
 import { AddressBook } from "../addressBook";
+import { getContract } from "../utils";
 
-import { rando } from "./constants";
+import { alice, rando } from "./constants";
 
-import { getTestAddressBook, alice } from ".";
+import { getTestAddressBook } from ".";
 
 describe("TransferRegistry.sol", function() {
   this.timeout(120_000);
@@ -23,8 +24,8 @@ describe("TransferRegistry.sol", function() {
       ["HashlockTransfer", []],
       ["TransferRegistry", []],
     ]);
-    registry = addressBook.getContract("TransferRegistry");
-    transfer = addressBook.getContract("HashlockTransfer");
+    registry = await getContract("TransferRegistry", alice);
+    transfer = await getContract("HashlockTransfer", alice);
     registryInfo = await transfer.getRegistryInformation();
   });
 

@@ -5,6 +5,7 @@ import { Argv } from "yargs";
 
 import { AddressBook, getAddressBook } from "../addressBook";
 import { cliOpts, logger } from "../constants";
+import { getContract } from "../utils";
 
 export const registerTransfer = async (
   transferName: string,
@@ -14,8 +15,8 @@ export const registerTransfer = async (
 ): Promise<void> => {
   log.info(`Preparing to add ${transferName} to registry (Sender=${wallet.address})`);
 
-  const registry = addressBook.getContract("TransferRegistry").connect(wallet);
-  const transfer = addressBook.getContract(transferName).connect(wallet);
+  const registry = await getContract("TransferRegistry", wallet);
+  const transfer = await getContract(transferName, wallet);
 
   const registered = await registry.getTransferDefinitions();
   const transferInfo = await transfer.getRegistryInformation();

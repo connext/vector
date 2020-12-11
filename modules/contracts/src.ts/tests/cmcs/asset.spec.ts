@@ -8,7 +8,8 @@ import { expect } from "chai";
 
 import { deployContracts } from "../..";
 import { AddressBook } from "../../addressBook";
-import { bob, rando } from "../constants";
+import { getContract } from "../../utils";
+import { alice, bob, rando } from "../constants";
 import { getTestAddressBook, getTestChannel } from "../utils";
 
 describe("CMCAsset", function () {
@@ -28,20 +29,20 @@ describe("CMCAsset", function () {
       ["FailingToken", []],
       ["NonconformingToken", []],
     ]);
-    assetTransfer = addressBook.getContract("CMCAsset");
+    assetTransfer = await getContract("CMCAsset", alice);
     // NOTE: safe to do because of inheritance pattern
     channel = await getTestChannel(addressBook);
 
     // Fund with all tokens
-    token = addressBook.getContract("TestToken");
+    token = await getContract("TestToken", alice);
     const mint = await token.mint(bob.address, parseEther("1"));
     await mint.wait();
 
-    failingToken = addressBook.getContract("FailingToken");
+    failingToken = await getContract("FailingToken", alice);
     const mintFailure = await failingToken.mint(bob.address, parseEther("1"));
     await mintFailure.wait();
 
-    nonconformingToken = addressBook.getContract("NonconformingToken");
+    nonconformingToken = await getContract("NonconformingToken", alice);
     const mintNonconforming = await nonconformingToken.mint(bob.address, parseEther("1"));
     await mintNonconforming.wait();
   });

@@ -4,6 +4,7 @@ import { Contract } from "@ethersproject/contracts";
 
 import { AddressBook } from "../addressBook";
 import { alice, getTestAddressBook } from "../tests";
+import { getContract } from "../utils";
 
 import { deployContracts } from "./deployContracts";
 import { registerTransfer } from "./registerTransfer";
@@ -19,7 +20,7 @@ describe("registerTransfer", function() {
       ["HashlockTransfer", []],
       ["TransferRegistry", []],
     ]);
-    registry = addressBook.getContract("TransferRegistry");
+    registry = await getContract("TransferRegistry", alice);
   });
 
   it("should registry a new transfer", async () => {

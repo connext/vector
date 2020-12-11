@@ -5,6 +5,7 @@ import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 
 import { deployContracts } from "../../actions";
+import { getContract } from "../../utils";
 import { alice } from "../constants";
 import { getTestAddressBook } from "../utils";
 
@@ -30,9 +31,9 @@ describe("LibIterableMapping.sol", function() {
       ["HashlockTransfer", []],
       ["Withdraw", []],
     ]);
-    mapping = addressBook.getContract("TestLibIterableMapping");
+    mapping = await getContract("TestLibIterableMapping", alice);
     expect(mapping.address).to.be.a("string");
-    transferDefs = [addressBook.getContract("HashlockTransfer"), addressBook.getContract("Withdraw")];
+    transferDefs = [await getContract("HashlockTransfer", alice), await getContract("Withdraw", alice)];
   });
 
   describe("stringEqual", () => {

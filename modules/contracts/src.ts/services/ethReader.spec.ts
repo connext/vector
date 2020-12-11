@@ -7,6 +7,7 @@ import pino from "pino";
 import { deployContracts, registerTransfer } from "../actions";
 import { AddressBook } from "../addressBook";
 import { alice, bob, chainIdReq, getTestAddressBook, getTestChannel, provider } from "../tests";
+import { getContract } from "../utils";
 
 import { EthereumChainReader } from "./ethReader";
 
@@ -30,8 +31,10 @@ describe("EthereumChainReader", function () {
       ["TransferRegistry", []],
       ["Withdraw", []],
     ]);
-    transferRegistry = addressBook.getContract("TransferRegistry");
-    factory = addressBook.getContract("ChannelFactory");
+
+    factory = await getContract("ChannelFactory", alice);
+    transferRegistry = await getContract("TransferRegistry", alice);
+
     await registerTransfer("Withdraw", alice, addressBook);
     channel = (await getTestChannel()).connect(alice);
     chainId = await chainIdReq;

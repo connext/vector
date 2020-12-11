@@ -1,7 +1,7 @@
 import { HDNode } from "@ethersproject/hdnode";
 import { Wallet } from "@ethersproject/wallet";
 import { JsonRpcProvider } from "@ethersproject/providers";
-import { network, waffle }from "hardhat";
+import { network, ethers }from "hardhat";
 
 // Get defaults from env
 const chainProviders = JSON.parse(process.env.CHAIN_PROVIDERS ?? "{}");
@@ -13,7 +13,7 @@ export const networkName = network.name;
 
 export const provider = url
   ? new JsonRpcProvider(url as string, parseInt(chainId))
-  : waffle.provider;
+  : ethers.provider;
 
 const hdNode = HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
 

@@ -25,6 +25,7 @@ import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
 import { AddressBook } from "../../addressBook";
+import { getContract } from "../../utils";
 import { bob, alice, networkName, provider, rando } from "../constants";
 import { advanceBlocktime, getOnchainBalance, getTestAddressBook, getTestChannel } from "../utils";
 
@@ -199,8 +200,8 @@ describe("CMCAdjudicator.sol", async function () {
       ["TestToken", []],
       ["HashlockTransfer", []],
     ]);
-    token = addressBook.getContract("TestToken");
-    transferDefinition = addressBook.getContract("HashlockTransfer");
+    token = await getContract("TestToken", alice);
+    transferDefinition = await getContract("HashlockTransfer", alice);
     // mint token to alice/bob
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();

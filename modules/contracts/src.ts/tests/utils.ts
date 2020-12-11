@@ -6,6 +6,7 @@ import { final } from "pino";
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
 import { TestChannel, TestToken } from "../artifacts";
+import { getContract } from "../utils";
 
 import { alice, bob, provider } from "./constants";
 
@@ -28,7 +29,7 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
     ["TestChannel", []],
     ["TestChannelFactory", ["TestChannel", Zero]],
   ]);
-  const testFactory = addressBook.getContract("TestChannelFactory");
+  const testFactory = await getContract("TestChannelFactory", alice);
   const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
   const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
   await tx.wait();

@@ -7,6 +7,7 @@ import { parseEther } from "@ethersproject/units";
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
 import { bob, alice, getTestChannel, getTestAddressBook, provider } from "../tests";
+import { getContract } from "../utils";
 
 import { WithdrawCommitment } from "./withdraw";
 
@@ -20,7 +21,7 @@ describe("withdrawCommitment", function() {
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [["TestToken", []]]);
-    token = addressBook.getContract("TestToken");
+    token = await getContract("TestToken", alice);
     channel = await getTestChannel(addressBook);
     await (
       await alice.sendTransaction({

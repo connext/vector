@@ -16,6 +16,7 @@ import { createChannel, deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
 import { ChannelMastercopy } from "../artifacts";
 import { VectorChainReader } from "../services";
+import { getContract } from "../utils";
 
 import { alice, bob, chainIdReq, provider } from "./constants";
 import { getTestAddressBook } from "./utils";
@@ -36,8 +37,8 @@ describe("ChannelFactory", function () {
       ["ChannelMastercopy", []],
       ["ChannelFactory", ["ChannelMastercopy", Zero]],
     ]);
-    channelMastercopy = addressBook.getContract("ChannelMastercopy");
-    channelFactory = addressBook.getContract("ChannelFactory");
+    channelMastercopy = await getContract("ChannelMastercopy", alice);
+    channelFactory = await getContract("ChannelFactory", alice);
     chainId = await chainIdReq;
     const network = await provider.getNetwork();
     const chainProviders = { [network.chainId]: provider };
@@ -111,11 +112,11 @@ describe("ChannelFactory", function () {
   it("should create a different channel with a different mastercopy address", async () => {
     const channel = await createChannel(bob.address, alice, addressBook);
 
-    const ChannelMastercopy = await ethers.getContractFactory("ChannelMastercopy");
+    const ChannelMastercopy = await ethers.getContractFactory("ChannelMastercopy", alice);
     const newMastercopy = await ChannelMastercopy.deploy();
     await newMastercopy.deployed();
 
-    const ChannelFactory = await ethers.getContractFactory("ChannelFactory");
+    const ChannelFactory = await ethers.getContractFactory("ChannelFactory", alice);
     const newFactory = await ChannelFactory.deploy(newMastercopy.address, Zero);
     await newFactory.deployed();
 

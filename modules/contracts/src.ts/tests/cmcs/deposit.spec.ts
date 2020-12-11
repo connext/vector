@@ -6,6 +6,7 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 
 import { deployContracts } from "../../actions";
+import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
 import { getTestAddressBook, getTestChannel } from "../utils";
 
@@ -24,8 +25,8 @@ describe("CMCDeposit.sol", function() {
       ["FailingToken", []],
       ["ReentrantToken", [channel.address]],
     ]);
-    failingToken = addressBook.getContract("FailingToken");
-    reentrantToken = addressBook.getContract("ReentrantToken");
+    failingToken = await getContract("FailingToken", alice);
+    reentrantToken = await getContract("ReentrantToken", alice);
     // mint failing token
     const tx = await failingToken.mint(alice.address, parseEther("0.001"));
     await tx.wait();

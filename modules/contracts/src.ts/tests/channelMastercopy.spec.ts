@@ -4,6 +4,7 @@ import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../actions";
 import { AddressBook } from "../addressBook";
+import { getContract } from "../utils";
 
 import { alice } from "./constants";
 import { getTestAddressBook } from "./utils";
@@ -16,7 +17,7 @@ describe("ChannelMastercopy", function () {
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [["ChannelMastercopy", []]]);
-    mastercopy = addressBook.getContract("ChannelMastercopy");
+    mastercopy = await getContract("ChannelMastercopy", alice);
   });
 
   it("should deploy without error", async () => {
