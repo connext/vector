@@ -129,7 +129,7 @@ describe("HashlockTransfer", function() {
     it("should fail create if expiry is nonzero and expired", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
-      state.expiry = Math.floor((Date.now() - 10000) / 1000).toString();
+      state.expiry = Math.floor((Date.now() - 1000000) / 1000).toString();
       await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: EXPIRED_TIMELOCK");
     });
 
