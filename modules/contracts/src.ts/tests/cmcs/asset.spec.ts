@@ -7,14 +7,12 @@ import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
 
 import { deployContracts } from "../..";
-import { AddressBook } from "../../addressBook";
 import { getContract } from "../../utils";
 import { alice, bob, rando } from "../constants";
-import { getTestAddressBook, getTestChannel } from "../utils";
+import { getTestChannel } from "../utils";
 
 describe("CMCAsset", function () {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let assetTransfer: Contract;
   let channel: Contract;
   let token: Contract;
@@ -22,7 +20,6 @@ describe("CMCAsset", function () {
   let nonconformingToken: Contract;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(bob.address, [
       ["CMCAsset", []],
       ["TestToken", []],
@@ -31,7 +28,7 @@ describe("CMCAsset", function () {
     ]);
     assetTransfer = await getContract("CMCAsset", alice);
     // NOTE: safe to do because of inheritance pattern
-    channel = await getTestChannel(addressBook);
+    channel = await getTestChannel();
 
     // Fund with all tokens
     token = await getContract("TestToken", alice);

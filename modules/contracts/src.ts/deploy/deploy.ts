@@ -1,12 +1,9 @@
 import { EtherSymbol, Zero } from "@ethersproject/constants";
 import { formatEther } from "@ethersproject/units";
 import { deployments, ethers, getNamedAccounts, getChainId } from "hardhat";
-// import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-// import { getAddressBook } from "../addressBook";
 import { deployContracts } from "../actions/deployContracts";
-// import { registerTransfer } from "../actions/registerTransfer";
 import { logger } from "../constants";
 
 const func: DeployFunction = async () => {
@@ -48,45 +45,6 @@ const func: DeployFunction = async () => {
       ],
       log,
     );
-    // await registerTransfer("Withdraw", deployer, null, log);
-    // await registerTransfer("HashlockTransfer", deployer, null, log);
-
-    /*
-    for (const scheme of [
-      ["TestToken", []],
-      ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy", Zero]],
-      ["HashlockTransfer", []],
-      ["Withdraw", []],
-      ["TransferRegistry", []],
-    ]) {
-      const [name, args] = scheme;
-      await deployments.deploy(name, {
-        from: deployer,
-        args,
-      });
-      log.info(`Deployed ${name} to ${(await deployments.get(name)).address}!`);
-    }
-    */
-
-    /*
-    await deployments.deploy("TestToken", {
-      from: deployer,
-      args: [],
-    });
-    log.info(`Deployed TestToken to ${(await deployments.get("TestToken")).address}!`);
-    await deployments.deploy("ChannelMastercopy", {
-      from: deployer,
-      args: [],
-    });
-    const mastercopyAddress = (await deployments.get("ChannelMastercopy")).address;
-    log.info(`Deployed ChannelMastercopy to ${mastercopyAddress}!`);
-    await deployments.deploy("ChannelFactory", {
-      from: deployer,
-      args: [mastercopyAddress, Zero],
-    });
-    log.info(`Deployed ChannelFactory to ${(await deployments.get("ChannelFactory")).address}!`);
-    */
 
   }
 

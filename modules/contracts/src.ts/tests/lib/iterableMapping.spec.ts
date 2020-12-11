@@ -7,9 +7,8 @@ import { expect } from "chai";
 import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { alice } from "../constants";
-import { getTestAddressBook } from "../utils";
 
-describe("LibIterableMapping.sol", function() {
+describe.only("LibIterableMapping.sol", function() {
   this.timeout(120_000);
   let mapping: Contract;
   let transferDefs: Contract[];
@@ -25,7 +24,6 @@ describe("LibIterableMapping.sol", function() {
   };
 
   beforeEach(async () => {
-    const addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [
       ["TestLibIterableMapping", []],
       ["HashlockTransfer", []],

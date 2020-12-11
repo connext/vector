@@ -22,18 +22,14 @@ import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../../actions";
-import { AddressBook } from "../../addressBook";
 import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
-import { getTestAddressBook } from "../utils";
 
 describe("Withdraw", function() {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let withdraw: Contract;
 
   before(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [["Withdraw", []]]);
     withdraw = await getContract("Withdraw", alice);
   });

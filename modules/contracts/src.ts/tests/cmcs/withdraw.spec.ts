@@ -6,9 +6,8 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 
-import { getTestAddressBook, getTestChannel, alice } from "..";
+import { getTestChannel, alice } from "..";
 import { deployContracts, WithdrawCommitment } from "../..";
-import { AddressBook } from "../../addressBook";
 import { getContract } from "../../utils";
 import { bob, provider } from "../constants";
 
@@ -18,11 +17,9 @@ describe("CMCWithdraw.sol", function() {
 
   let channel: Contract;
   let failingToken: Contract;
-  let addressBook: AddressBook;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
-    channel = await getTestChannel(addressBook);
+    channel = await getTestChannel();
 
     await deployContracts(alice.address, [["FailingToken", []]]);
     failingToken = await getContract("FailingToken", alice);

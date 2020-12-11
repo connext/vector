@@ -20,14 +20,12 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../actions";
-import { AddressBook } from "../addressBook";
 import { logger } from "../constants";
 import {
   advanceBlocktime,
   alice,
   bob,
   chainIdReq,
-  getTestAddressBook,
   getTestChannel,
   provider,
   rando,
@@ -40,7 +38,6 @@ describe("EthereumChainService", function () {
   this.timeout(120_000);
   const aliceSigner = new ChannelSigner(alice.privateKey);
   const bobSigner = new ChannelSigner(bob.privateKey);
-  let addressBook: AddressBook;
   let channel: Contract;
   let channelFactory: Contract;
   let transferDefinition: Contract;
@@ -51,13 +48,12 @@ describe("EthereumChainService", function () {
   let chainId: number;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
     chainId = await chainIdReq;
     await deployContracts(alice.address, [
       ["TestToken", []],
       ["HashlockTransfer", []],
     ]);
-    channel = await getTestChannel(addressBook);
+    channel = await getTestChannel();
     channelFactory = await getContract("ChannelFactory", alice);
     chainService = new EthereumChainService(
       new MemoryStoreService(),

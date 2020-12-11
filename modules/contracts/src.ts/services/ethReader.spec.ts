@@ -5,8 +5,7 @@ import { Contract } from "@ethersproject/contracts";
 import pino from "pino";
 
 import { deployContracts, registerTransfer } from "../actions";
-import { AddressBook } from "../addressBook";
-import { alice, bob, chainIdReq, getTestAddressBook, getTestChannel, provider } from "../tests";
+import { alice, bob, chainIdReq, getTestChannel, provider } from "../tests";
 import { getContract } from "../utils";
 
 import { EthereumChainReader } from "./ethReader";
@@ -16,7 +15,6 @@ describe("EthereumChainReader", function () {
   this.timeout(120_000);
   const assetId = AddressZero;
   const transfer = {} as any; // TODO
-  let addressBook: AddressBook;
   let chainId: number;
   let chainReader: EthereumChainReader;
   let channel: Contract;
@@ -24,7 +22,6 @@ describe("EthereumChainReader", function () {
   let transferRegistry: Contract;
 
   before(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [
       ["ChannelMastercopy", []],
       ["ChannelFactory", ["ChannelMastercopy", Zero]],
@@ -35,7 +32,7 @@ describe("EthereumChainReader", function () {
     factory = await getContract("ChannelFactory", alice);
     transferRegistry = await getContract("TransferRegistry", alice);
 
-    await registerTransfer("Withdraw", alice, addressBook);
+    await registerTransfer("Withdraw", alice);
     channel = (await getTestChannel()).connect(alice);
     chainId = await chainIdReq;
     chainReader = new EthereumChainReader({ [chainId]: provider }, pino());

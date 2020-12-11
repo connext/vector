@@ -3,19 +3,15 @@ import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 
 import { deployContracts } from "../actions";
-import { AddressBook } from "../addressBook";
 import { getContract } from "../utils";
 
 import { alice } from "./constants";
-import { getTestAddressBook } from "./utils";
 
 describe("ChannelMastercopy", function () {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let mastercopy: Contract;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [["ChannelMastercopy", []]]);
     mastercopy = await getContract("ChannelMastercopy", alice);
   });

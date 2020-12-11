@@ -5,13 +5,12 @@ import { formatEther } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 import { Argv } from "yargs";
 
-import { AddressBook, getAddressBook } from "../addressBook";
 import { cliOpts, logger } from "../constants";
 
 import { deployContracts } from "./deployContracts";
 import { registerTransfer } from "./registerTransfer";
 
-export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = logger.child({})): Promise<void> => {
+export const migrate = async (wallet: Wallet, log = logger.child({})): Promise<void> => {
   // Setup env & log initial state
   const chainId = ((await wallet.provider.getNetwork()).chainId).toString();
   const balance = await wallet.getBalance();
@@ -46,8 +45,8 @@ export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = lo
       ],
       log,
     );
-    await registerTransfer("Withdraw", wallet, addressBook, log);
-    await registerTransfer("HashlockTransfer", wallet, addressBook, log);
+    await registerTransfer("Withdraw", wallet, log);
+    await registerTransfer("HashlockTransfer", wallet, log);
   }
 
   ////////////////////////////////////////
@@ -63,18 +62,13 @@ export const migrateCommand = {
   describe: "Migrate contracts",
   builder: (yargs: Argv): Argv => {
     return yargs
-      .option("a", cliOpts.addressBook)
       .option("m", cliOpts.mnemonic)
       .option("p", cliOpts.ethProvider)
       .option("s", cliOpts.silent);
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const addressBook = getAddressBook(
-      argv.addressBook,
-      (await wallet.provider.getNetwork()).chainId.toString(),
-    );
     const level = argv.silent ? "silent" : "info";
-    await migrate(wallet, addressBook, logger.child({ level }));
+    await migrate(wallet, logger.child({ level }));
   },
 };

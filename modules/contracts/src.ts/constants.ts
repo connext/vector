@@ -11,16 +11,9 @@ export const defaults = {
   mnemonic:
     "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
   providerUrl: "http://localhost:8545",
-  addressBookPath: "./address-book.json",
 };
 
 export const cliOpts = {
-  addressBook: {
-    alias: "address-book",
-    description: "The path to your address book file",
-    type: "string",
-    default: defaults.addressBookPath,
-  },
   bobAddress: {
     alias: "bob",
     description: "The counterparty to create a channel with",

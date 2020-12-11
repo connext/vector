@@ -3,14 +3,12 @@ import { getEthProvider } from "@connext/vector-utils";
 import { Wallet } from "@ethersproject/wallet";
 import { Argv } from "yargs";
 
-import { AddressBook, getAddressBook } from "../addressBook";
 import { cliOpts, logger } from "../constants";
 import { getContract } from "../utils";
 
 export const registerTransfer = async (
   transferName: string,
   wallet: Wallet,
-  addressBook: AddressBook,
   log = logger.child({}),
 ): Promise<void> => {
   log.info(`Preparing to add ${transferName} to registry (Sender=${wallet.address})`);
@@ -64,15 +62,13 @@ export const registerTransferCommand = {
   builder: (yargs: Argv): Argv => {
     return yargs
       .option("t", cliOpts.transferName)
-      .option("a", cliOpts.addressBook)
       .option("m", cliOpts.mnemonic)
       .option("p", cliOpts.ethProvider)
       .option("s", cliOpts.silent);
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const addressBook = getAddressBook(argv.addressBook, (await wallet.provider.getNetwork()).chainId.toString());
     const level = argv.silent ? "silent" : "info";
-    await registerTransfer(argv.transferName, wallet, addressBook, logger.child({ level }));
+    await registerTransfer(argv.transferName, wallet, logger.child({ level }));
   },
 };

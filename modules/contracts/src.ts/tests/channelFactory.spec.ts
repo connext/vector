@@ -13,26 +13,22 @@ import { ethers } from "hardhat";
 import pino from "pino";
 
 import { createChannel, deployContracts } from "../actions";
-import { AddressBook } from "../addressBook";
 import { ChannelMastercopy } from "../artifacts";
 import { VectorChainReader } from "../services";
 import { getContract } from "../utils";
 
 import { alice, bob, chainIdReq, provider } from "./constants";
-import { getTestAddressBook } from "./utils";
 
 describe("ChannelFactory", function () {
   this.timeout(120_000);
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
   const bobPubId = getPublicIdentifierFromPublicKey(bob.publicKey);
-  let addressBook: AddressBook;
   let chainId: number;
   let chainReader: VectorChainReader;
   let channelFactory: Contract;
   let channelMastercopy: Contract;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [
       ["ChannelMastercopy", []],
       ["ChannelFactory", ["ChannelMastercopy", Zero]],
@@ -58,7 +54,7 @@ describe("ChannelFactory", function () {
   });
 
   it("should create a channel and calculated addresses should match actual one", async () => {
-    const channel = await createChannel(bob.address, alice, addressBook);
+    const channel = await createChannel(bob.address, alice);
     const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr2 = await getCreate2MultisigAddress(
       alicePubId,
@@ -110,7 +106,7 @@ describe("ChannelFactory", function () {
   });
 
   it("should create a different channel with a different mastercopy address", async () => {
-    const channel = await createChannel(bob.address, alice, addressBook);
+    const channel = await createChannel(bob.address, alice);
 
     const ChannelMastercopy = await ethers.getContractFactory("ChannelMastercopy", alice);
     const newMastercopy = await ChannelMastercopy.deploy();

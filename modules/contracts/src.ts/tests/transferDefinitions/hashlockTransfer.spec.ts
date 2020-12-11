@@ -21,18 +21,14 @@ import { Contract } from "@ethersproject/contracts";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 
 import { deployContracts } from "../../actions";
-import { AddressBook } from "../../addressBook";
 import { getContract } from "../../utils";
 import { alice, provider } from "../constants";
-import { getTestAddressBook } from "../utils";
 
 describe("HashlockTransfer", function() {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let transfer: Contract;
 
   before(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [["HashlockTransfer", []]]);
     transfer = await getContract("HashlockTransfer", alice);
   });

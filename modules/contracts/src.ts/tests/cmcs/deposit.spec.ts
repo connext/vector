@@ -8,7 +8,7 @@ import { parseEther } from "@ethersproject/units";
 import { deployContracts } from "../../actions";
 import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
-import { getTestAddressBook, getTestChannel } from "../utils";
+import { getTestChannel } from "../utils";
 
 describe("CMCDeposit.sol", function() {
   this.timeout(120_000);
@@ -18,8 +18,7 @@ describe("CMCDeposit.sol", function() {
   let reentrantToken: Contract;
 
   beforeEach(async () => {
-    const addressBook = await getTestAddressBook();
-    channel = await getTestChannel(addressBook);
+    channel = await getTestChannel();
 
     await deployContracts(alice.address, [
       ["FailingToken", []],

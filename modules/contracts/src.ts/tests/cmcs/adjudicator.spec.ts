@@ -24,10 +24,9 @@ import { parseEther } from "@ethersproject/units";
 import { MerkleTree } from "merkletreejs";
 
 import { deployContracts } from "../../actions";
-import { AddressBook } from "../../addressBook";
 import { getContract } from "../../utils";
 import { bob, alice, networkName, provider, rando } from "../constants";
-import { advanceBlocktime, getOnchainBalance, getTestAddressBook, getTestChannel } from "../utils";
+import { advanceBlocktime, getOnchainBalance, getTestChannel } from "../utils";
 
 describe("CMCAdjudicator.sol", async function () {
   this.timeout(120_000);
@@ -40,7 +39,6 @@ describe("CMCAdjudicator.sol", async function () {
   let channel: Contract;
   let token: Contract;
   let transferDefinition: Contract;
-  let addressBook: AddressBook;
   let channelState: FullChannelState;
   let transferState: FullTransferState;
   let aliceSignature: string;
@@ -195,7 +193,6 @@ describe("CMCAdjudicator.sol", async function () {
   };
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [
       ["TestToken", []],
       ["HashlockTransfer", []],
@@ -205,7 +202,7 @@ describe("CMCAdjudicator.sol", async function () {
     // mint token to alice/bob
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();
-    channel = await getTestChannel(addressBook);
+    channel = await getTestChannel();
     const preImage = getRandomBytes32();
     const state = {
       lockHash: createlockHash(preImage),

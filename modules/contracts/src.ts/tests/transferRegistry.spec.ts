@@ -4,22 +4,17 @@ import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 
 import { deployContracts } from "..";
-import { AddressBook } from "../addressBook";
 import { getContract } from "../utils";
 
 import { alice, rando } from "./constants";
 
-import { getTestAddressBook } from ".";
-
 describe("TransferRegistry.sol", function() {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let transfer: Contract;
   let registry: Contract;
   let registryInfo: RegisteredTransfer;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
     await deployContracts(alice.address, [
       ["HashlockTransfer", []],
       ["TransferRegistry", []],

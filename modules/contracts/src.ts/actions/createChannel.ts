@@ -3,7 +3,6 @@ import { Contract } from "@ethersproject/contracts";
 import { Wallet } from "@ethersproject/wallet";
 import { Argv } from "yargs";
 
-import { AddressBook, getAddressBook } from "../addressBook";
 import { TestChannel, VectorChannel } from "../artifacts";
 import { cliOpts, logger } from "../constants";
 import { getContract } from "../utils";
@@ -11,7 +10,6 @@ import { getContract } from "../utils";
 export const createChannel = async (
   bobAddress: string,
   alice: Wallet,
-  addressBook: AddressBook,
   log = logger.child({}),
   test = false,
 ): Promise<Contract> => {
@@ -35,7 +33,6 @@ export const createChannelCommand = {
   describe: "Creates a new channel for the two counterparties",
   builder: (yargs: Argv): Argv => {
     return yargs
-      .option("a", cliOpts.addressBook)
       .option("c", cliOpts.bobAddress)
       .option("m", cliOpts.mnemonic)
       .option("p", cliOpts.ethProvider)
@@ -43,11 +40,7 @@ export const createChannelCommand = {
   },
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const addressBook = getAddressBook(
-      argv.addressBook,
-      (await wallet.provider.getNetwork()).chainId.toString(),
-    );
     const level = argv.silent ? "silent" : "info";
-    await createChannel(argv.transferName, wallet, addressBook, logger.child({ level }));
+    await createChannel(argv.transferName, wallet, logger.child({ level }));
   },
 };

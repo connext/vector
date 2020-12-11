@@ -1,30 +1,22 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { final } from "pino";
 
 import { createChannel, deployContracts } from "../actions";
-import { AddressBook, getAddressBook } from "../addressBook";
 import { TestChannel, TestToken } from "../artifacts";
 import { getContract } from "../utils";
 
 import { alice, bob, provider } from "./constants";
 
-// Returns a different address book every time
-export const getTestAddressBook = async (): Promise<AddressBook> =>
-  getAddressBook(`/tmp/address-book.${Date.now()}.json`, (await provider.getNetwork()).chainId.toString(), alice);
-
-export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contract> => {
-  const addressBook = _addressBook || (await getTestAddressBook());
+export const getTestChannel = async (): Promise<Contract> => {
   await deployContracts(alice.address, [
     ["TestChannel", []],
     ["ChannelFactory", ["TestChannel", Zero]],
   ]);
-  return createChannel(bob.address, alice, addressBook, undefined, true);
+  return createChannel(bob.address, alice, undefined, true);
 };
 
-export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Contract> => {
-  const addressBook = _addressBook || (await getTestAddressBook());
+export const getUnsetupChannel = async (): Promise<Contract> => {
   await deployContracts(alice.address, [
     ["TestChannel", []],
     ["TestChannelFactory", ["TestChannel", Zero]],
@@ -33,13 +25,6 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
   const channelAddress = await testFactory.getChannelAddress(alice.address, bob.address);
   const tx = await testFactory.createChannelWithoutSetup(alice.address, bob.address);
   await tx.wait();
-  // Save this channel address in case we need it later
-  addressBook.setEntry(`VectorChannel-${alice.address.substring(2, 6)}-${bob.address.substring(2, 6)}`, {
-    address: channelAddress,
-    args: [alice.address, bob.address],
-    txHash: tx.hash,
-  });
-
   return new Contract(channelAddress, TestChannel.abi, alice);
 };
 
