@@ -103,7 +103,7 @@ describe("CMCWithdraw.sol", function() {
   });
 
   it("should work for missing-return-value-bug tokens", async () => {
-    const nonconformingToken = await getContract("NonconformingToken");
+    const nonconformingToken = await getContract("NonconformingToken", alice);
     await nonconformingToken.mint(alice.address, parseEther("0.001"));
 
     // Send tokens to channel
