@@ -32,7 +32,6 @@ export const concurrencyTest = async (): Promise<void> => {
   const queuedPayments = 25; // added to queue
 
   // Get agent manager
-  console.log("****** trying to connect to agent service", env.carolUrl);
   let agentService: RestServerNodeService;
   try {
     agentService = await RestServerNodeService.connect(
@@ -45,7 +44,6 @@ export const concurrencyTest = async (): Promise<void> => {
     process.exit(1);
   }
   logger.info({ agentUrl: env.carolUrl }, "Agent service connected");
-  console.log("****** agent connected, trying to connect to manager");
   let manager: AgentManager;
   try {
     manager = await AgentManager.connect(agentService);
@@ -53,35 +51,36 @@ export const concurrencyTest = async (): Promise<void> => {
     logger.error({ ...e }, "Failed to connect manager service");
     process.exit(1);
   }
-  console.log("****** manager connected");
 
   // Preload manager with preImages + routingIds for payments
-  const paymentData = Array(queuedPayments)
-    .fill(0)
-    .map((_) => {
-      const [routingId, preImage] = [getRandomBytes32(), getRandomBytes32()];
-      manager.preImages[routingId] = preImage;
-      return [routingId, preImage];
-    });
+  const createPaymentData = () =>
+    Array(queuedPayments)
+      .fill(0)
+      .map((_) => {
+        const [routingId, preImage] = [getRandomBytes32(), getRandomBytes32()];
+        manager.preImages[routingId] = preImage;
+        return [routingId, preImage];
+      });
 
   // Create tasks to fill queue with (25 random payments)
-  const tasks = Array(queuedPayments)
-    .fill(0)
-    .map((_, idx) => {
-      return async () => {
-        // Get random sender + receiver
-        const sender = manager.getRandomAgent();
-        const receiver = manager.getRandomAgent(sender);
+  const createTasks = () => {
+    const paymentData = createPaymentData();
+    return Array(queuedPayments)
+      .fill(0)
+      .map((_, idx) => {
+        return async () => {
+          // Get random sender + receiver
+          const sender = manager.getRandomAgent();
+          const receiver = manager.getRandomAgent(sender);
 
-        // Save payment secrets to manager before creating
-        // payment
-        const [routingId, preImage] = paymentData[idx];
-        await sender.createHashlockTransfer(receiver.publicIdentifier, constants.AddressZero, preImage, routingId);
-        // NOTE: receiver will automatically resolve
-      };
-    });
-
-  console.log("****** generated tasks, starting test");
+          // Save payment secrets to manager before creating
+          // payment
+          const [routingId, preImage] = paymentData[idx];
+          await sender.createHashlockTransfer(receiver.publicIdentifier, constants.AddressZero, preImage, routingId);
+          // NOTE: receiver will automatically resolve
+        };
+      });
+  };
   let concurrency = 1;
   for (const _ of Array(maxConcurrency).fill(0)) {
     // For loop runs one iteration of the test, with increasing
@@ -91,9 +90,11 @@ export const concurrencyTest = async (): Promise<void> => {
     const queue = new PriorityQueue({ concurrency });
     concurrency += 1;
 
-    const promises = tasks.map((t) => queue.add(t));
+    const promises = createTasks().map((t) => queue.add(t));
 
     await Promise.all(promises);
     logger.info({}, "Test complete, increasing concurrency");
   }
+  logger.info({ concurrency: maxConcurrency, queuedPayments }, "Tests finished");
+  process.exit(0);
 };

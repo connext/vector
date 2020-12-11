@@ -307,84 +307,79 @@ export class AgentManager {
       indices = registeredAgents.map((r) => r.index).concat(Array(toCreate).fill(0).map(getRandomIndex));
       // indices = Array(config.numAgents).fill(0).map(getRandomIndex);
     }
-    console.log("****** trying to create", indices.length, "agents");
 
     const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
-
-    console.log("****** agents created successfully");
 
     // Create the manager
     const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
 
     // Automatically resolve any created transfers
-    await manager.setupAutomaticResolve();
+    manager.setupAutomaticResolve();
 
     return manager;
   }
 
-  private async setupAutomaticResolve(): Promise<void> {
-    this.agentService.on(
-      EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-      async (data) => {
-        logger.debug({ ...data }, "Got conditional transfer created event");
-        // First find the agent with the proper channel address
-        const { channelAddress, transfer } = data;
+  private setupAutomaticResolve(): void {
+    this.agents.map((agent) => {
+      const ret = this.agentService.on(
+        EngineEvents.CONDITIONAL_TRANSFER_CREATED,
+        async (data) => {
+          logger.debug({ ...data, agent: agent.publicIdentifier }, "Got conditional transfer created event");
 
-        // Find the agent from the recipient in routing meta
-        const { routingId } = transfer.meta;
-        // Make sure there is a routingID
-        if (!routingId) {
-          logger.warn({ ...(transfer.meta ?? {}) }, "No routingID");
-          return;
-        }
+          const {
+            channelAddress,
+            transfer: { meta, initiator, transferId },
+          } = data;
+          const { routingId } = meta ?? {};
+          // Make sure there is a routingID
+          if (!routingId) {
+            logger.warn({ ...(meta ?? {}) }, "No routingID");
+            return;
+          }
+          if (agent.channelAddress !== channelAddress) {
+            logger.error(
+              { agent: agent.channelAddress, channelAddress },
+              "Agent does not match data, should not happen!",
+            );
+            process.exit(1);
+          }
 
-        const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
-        if (!agent) {
-          logger.error(
-            { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
-            "No agent found to resolve",
-          );
-          process.exit(1);
-        }
+          if (agent.signerAddress === initiator) {
+            // Agent is initiator, nothing to resolve
+            logger.debug({ transfer: transferId, agent: agent.signerAddress }, "Agent is initiator, doing nothing");
+            return;
+          }
 
-        if (agent.signerAddress === transfer.initiator) {
-          // Agent is initiator, nothing to resolve
-          logger.debug(
-            { transfer: transfer.transferId, agent: agent.signerAddress },
-            "Agent is initiator, doing nothing",
-          );
-          return;
-        }
+          // Creation comes from router forwarding, agent is responder
+          // Find the preImage
+          const preImage = this.preImages[routingId];
+          if (!preImage) {
+            logger.error(
+              { channelAddress, transferId, routingId, preImages: JSON.stringify(this.preImages), preImage },
+              "No preImage",
+            );
+            process.exit(1);
+          }
 
-        // Creation comes from router forwarding, agent is responder
-        // Find the preImage
-        const preImage = this.preImages[routingId];
-        if (!preImage) {
-          logger.error(
-            { channelAddress, transferId: transfer.transferId, routingId, preImages: JSON.stringify(this.preImages) },
-            "No preImage",
-          );
-          process.exit(1);
-        }
+          // Resolve the transfer
+          try {
+            logger.debug({ agent: agent.signerAddress, preImage, transfer: transferId }, "Resolving transfer");
+            await agent.resolveHashlockTransfer(transferId, preImage);
+            logger.info({ transferId, channelAddress, agent: agent.publicIdentifier }, "Resolved transfer");
+          } catch (e) {
+            logger.error(
+              { transferId, channelAddress, agent: agent.publicIdentifier, error: e.message },
+              "Failed to resolve transfer",
+            );
+            process.exit(1);
+          }
 
-        // Resolve the transfer
-        try {
-          logger.debug({ agent: agent.signerAddress, preImage, transfer: transfer.transferId }, "Resolving transfer");
-          await agent.resolveHashlockTransfer(transfer.transferId, preImage);
-          logger.info(
-            { transferId: transfer.transferId, channelAddress, agent: agent.publicIdentifier },
-            "Resolved transfer",
-          );
-        } catch (e) {
-          logger.error(
-            { transferId: transfer.transferId, channelAddress, agent: agent.publicIdentifier, error: e.message },
-            "Failed to resolve transfer",
-          );
-          process.exit(1);
-        }
-      },
-      (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
-    );
+          return ret;
+        },
+        (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
+        agent.publicIdentifier,
+      );
+    });
   }
 
   // Should return function to kill cyclical transfers

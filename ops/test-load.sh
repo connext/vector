@@ -67,6 +67,7 @@ bash "$root/ops/start-trio.sh"
 ########################################
 ## Launch test runner
 
+tester_name=${project}_load_test_runner
 common=(
   ${interactive[@]}
   "--env=NODE_TLS_REJECT_UNAUTHORIZED=0"
@@ -81,7 +82,8 @@ common=(
   "--env=VECTOR_ROUTER_URL=http://router:8000"
   "--env=VECTOR_NUM_AGENTS=${num_agents}"
   "--env=VECTOR_PROD=${production}"
-  "--name=${project}_load_test_runner"
+  "--env=VECTOR_TESTER_NAME=$tester_name"
+  "--name=$tester_name"
   "--network=$project"
   "--rm"
   "--tmpfs=/tmp"
