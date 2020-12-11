@@ -54,9 +54,6 @@ function getConfig {
   fi
 }
 
-database_url=$(getConfig databaseUrl)
-messaging_url=$(getConfig messagingUrl)
-mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)
 chain_addresses=$(echo "$config" | jq '.chainAddresses' | tr -d '\n\r ')
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
@@ -64,11 +61,8 @@ chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
 #################
 ## Start Deps
 
-# Start router
-bash "$root/ops/start-router.sh"
-
-# Start node with postgres db
-DATABASE_DRIVER="postgres" bash "$root/ops/start-node.sh"
+# Start trio
+bash "$root/ops/start-trio.sh"
 
 ########################################
 ## Launch test runner
@@ -77,18 +71,14 @@ common=(
   ${interactive[@]}
   "--env=NODE_TLS_REJECT_UNAUTHORIZED=0"
   "--env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN"
-  "--env=VECTOR_ALICE_URL=http://alice:8000"
-  "--env=VECTOR_BOB_URL=http://bob:8000"
   "--env=VECTOR_CAROL_URL=http://carol:8000"
   "--env=VECTOR_CHAIN_ADDRESSES=$chain_addresses"
   "--env=VECTOR_CHAIN_PROVIDERS=$chain_providers"
   "--env=VECTOR_DAVE_URL=http://dave:8000"
   "--env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error}"
   "--env=VECTOR_MESSAGING_URL=http://messaging"
-  "--env=VECTOR_NODE_CONTAINER_URL=http://node_node:8000"
-  "--env=VECTOR_NODE_URL=http://node:8001"
-  "--env=VECTOR_ROGER_URL=http://router_node:8002"
-  "--env=VECTOR_ROUTER_URL=http://router:9000"
+  "--env=VECTOR_ROGER_URL=http://roger:8000"
+  "--env=VECTOR_ROUTER_URL=http://router:8000"
   "--env=VECTOR_NUM_AGENTS=${num_agents}"
   "--env=VECTOR_PROD=${production}"
   "--name=${project}_load_test_runner"

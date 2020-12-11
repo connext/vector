@@ -32,11 +32,11 @@ export const concurrencyTest = async (): Promise<void> => {
   const queuedPayments = 25; // added to queue
 
   // Get agent manager
-  console.log("****** trying to connect to agent service", env.nodeUrl);
-  let agentService;
+  console.log("****** trying to connect to agent service", env.carolUrl);
+  let agentService: RestServerNodeService;
   try {
     agentService = await RestServerNodeService.connect(
-      env.nodeUrl,
+      env.carolUrl,
       logger.child({ module: "AgentService" }),
       carolEvts,
     );
@@ -44,9 +44,9 @@ export const concurrencyTest = async (): Promise<void> => {
     logger.error({ ...e }, "Failed to connect agent service");
     process.exit(1);
   }
-  logger.info({ agentUrl: env.nodeUrl }, "Agent service connected");
+  logger.info({ agentUrl: env.carolUrl }, "Agent service connected");
   console.log("****** agent connected, trying to connect to manager");
-  let manager;
+  let manager: AgentManager;
   try {
     manager = await AgentManager.connect(agentService);
   } catch (e) {
