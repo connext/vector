@@ -25,7 +25,7 @@ describe("LibIterableMapping.sol", function() {
 
   beforeEach(async () => {
     const addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [
+    await deployContracts(alice.address, [
       ["TestLibIterableMapping", []],
       ["HashlockTransfer", []],
       ["Withdraw", []],

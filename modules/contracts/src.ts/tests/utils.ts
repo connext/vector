@@ -15,7 +15,7 @@ export const getTestAddressBook = async (): Promise<AddressBook> =>
 
 export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contract> => {
   const addressBook = _addressBook || (await getTestAddressBook());
-  await deployContracts(alice, addressBook, [
+  await deployContracts(alice.address, [
     ["TestChannel", []],
     ["ChannelFactory", ["TestChannel", Zero]],
   ]);
@@ -24,7 +24,7 @@ export const getTestChannel = async (_addressBook?: AddressBook): Promise<Contra
 
 export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Contract> => {
   const addressBook = _addressBook || (await getTestAddressBook());
-  await deployContracts(alice, addressBook, [
+  await deployContracts(alice.address, [
     ["TestChannel", []],
     ["TestChannelFactory", ["TestChannel", Zero]],
   ]);

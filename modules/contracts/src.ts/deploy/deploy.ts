@@ -1,54 +1,43 @@
 import { EtherSymbol, Zero } from "@ethersproject/constants";
-import { JsonRpcProvider } from "@ethersproject/providers";
 import { formatEther } from "@ethersproject/units";
-import { Wallet } from "@ethersproject/wallet";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { deployments, ethers, getNamedAccounts, getChainId } from "hardhat";
+// import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { getAddressBook } from "../addressBook";
+// import { getAddressBook } from "../addressBook";
 import { deployContracts } from "../actions/deployContracts";
-import { registerTransfer } from "../actions/registerTransfer";
+// import { registerTransfer } from "../actions/registerTransfer";
 import { logger } from "../constants";
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async () => {
 
-  const mnemonic = process.env.MNEMONIC || "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
-  const provider = hre.waffle.provider;
-  const addressBookPath = process.env.ADDRESS_BOOK || "/tmp/address-book.json";
-  const silent = false; 
+  const log = logger.child({ level: "info" });
+  const chainId = await getChainId();
+  const provider = ethers.provider;
+  const { deployer } = await getNamedAccounts();
 
-  const wallet = Wallet.fromMnemonic(mnemonic).connect(provider);
-  const addressBook = getAddressBook(
-    addressBookPath,
-    (await wallet.provider.getNetwork()).chainId.toString(),
-  );
-  const log = logger.child({ level: silent ? "silent" : "info" });
-
-  // Setup env & log initial state
-  const chainId = ((await wallet.provider.getNetwork()).chainId).toString();
-  const balance = await wallet.getBalance();
-  const nonce = await wallet.getTransactionCount();
-  const providerUrl = (wallet.provider as JsonRpcProvider).connection.url;
-
-  log.info(`Preparing to migrate contracts to provider ${providerUrl} w chainId: ${chainId}`);
-  log.info(`Deployer address=${wallet.address} nonce=${nonce} balance=${formatEther(balance)}`);
+  // Log initial state
+  const balance = await provider.getBalance(deployer);
+  const nonce = await provider.getTransactionCount(deployer);
+  log.info(`Preparing to migrate contracts to chain ${chainId}`);
+  log.info(`Deployer address=${deployer} nonce=${nonce} balance=${formatEther(balance)}`);
 
   if (balance.eq(Zero)) {
-    throw new Error(`Account ${wallet.address} has zero balance on chain ${chainId}, aborting migration`);
+    throw new Error(`Account ${deployer} has zero balance on chain ${chainId}, aborting migration`);
   }
 
   ////////////////////////////////////////
   // Run the migration
 
-  // Don't migrate to mainnet until disputes are working & major vulnerabilities are mitigated
+  // Don't migrate to mainnet until audit is finished
   if (chainId === "1") {
     throw new Error(`Contract migration for chain ${chainId} is not supported yet`);
 
-    // Default: run testnet migration
+  // Default: run testnet migration
   } else {
+
     await deployContracts(
-      wallet,
-      addressBook,
+      deployer,
       [
         ["TestToken", []],
         ["ChannelMastercopy", []],
@@ -59,15 +48,53 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       ],
       log,
     );
-    await registerTransfer("Withdraw", wallet, addressBook, log);
-    await registerTransfer("HashlockTransfer", wallet, addressBook, log);
+    // await registerTransfer("Withdraw", deployer, null, log);
+    // await registerTransfer("HashlockTransfer", deployer, null, log);
+
+    /*
+    for (const scheme of [
+      ["TestToken", []],
+      ["ChannelMastercopy", []],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
+      ["HashlockTransfer", []],
+      ["Withdraw", []],
+      ["TransferRegistry", []],
+    ]) {
+      const [name, args] = scheme;
+      await deployments.deploy(name, {
+        from: deployer,
+        args,
+      });
+      log.info(`Deployed ${name} to ${(await deployments.get(name)).address}!`);
+    }
+    */
+
+    /*
+    await deployments.deploy("TestToken", {
+      from: deployer,
+      args: [],
+    });
+    log.info(`Deployed TestToken to ${(await deployments.get("TestToken")).address}!`);
+    await deployments.deploy("ChannelMastercopy", {
+      from: deployer,
+      args: [],
+    });
+    const mastercopyAddress = (await deployments.get("ChannelMastercopy")).address;
+    log.info(`Deployed ChannelMastercopy to ${mastercopyAddress}!`);
+    await deployments.deploy("ChannelFactory", {
+      from: deployer,
+      args: [mastercopyAddress, Zero],
+    });
+    log.info(`Deployed ChannelFactory to ${(await deployments.get("ChannelFactory")).address}!`);
+    */
+
   }
 
   ////////////////////////////////////////
   // Print summary
   log.info("All done!");
-  const spent = formatEther(balance.sub(await wallet.getBalance()));
-  const nTx = (await wallet.getTransactionCount()) - nonce;
+  const spent = formatEther(balance.sub(await provider.getBalance(deployer)));
+  const nTx = (await provider.getTransactionCount(deployer)) - nonce;
   log.info(`Sent ${nTx} transaction${nTx === 1 ? "" : "s"} & spent ${EtherSymbol} ${spent}`);
 };
 export default func;

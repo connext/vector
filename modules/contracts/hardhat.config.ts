@@ -31,6 +31,12 @@ const config: HardhatUserConfig = {
     },
   },
   defaultNetwork: "hardhat",
+  namedAccounts: {
+    deployer: { default: 0 },
+    alice: { default: 1 },
+    bob: { default: 2 },
+    rando: { default: 3 },
+  },
   networks: {
     hardhat: {
       chainId,

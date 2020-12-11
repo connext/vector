@@ -52,7 +52,7 @@ describe("EthereumChainService", function () {
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
     chainId = await chainIdReq;
-    await deployContracts(alice, addressBook, [
+    await deployContracts(alice.address, [
       ["TestToken", []],
       ["HashlockTransfer", []],
     ]);

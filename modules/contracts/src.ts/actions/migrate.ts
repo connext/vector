@@ -35,8 +35,7 @@ export const migrate = async (wallet: Wallet, addressBook: AddressBook, log = lo
     // Default: run testnet migration
   } else {
     await deployContracts(
-      wallet,
-      addressBook,
+      wallet.address,
       [
         ["TestToken", []],
         ["ChannelMastercopy", []],

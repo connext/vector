@@ -19,7 +19,7 @@ describe("withdrawCommitment", function() {
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["TestToken", []]]);
+    await deployContracts(alice.address, [["TestToken", []]]);
     token = addressBook.getContract("TestToken");
     channel = await getTestChannel(addressBook);
     await (

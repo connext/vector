@@ -195,7 +195,7 @@ describe("CMCAdjudicator.sol", async function () {
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [
+    await deployContracts(alice.address, [
       ["TestToken", []],
       ["HashlockTransfer", []],
     ]);

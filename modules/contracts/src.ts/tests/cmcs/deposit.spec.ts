@@ -20,7 +20,7 @@ describe("CMCDeposit.sol", function() {
     const addressBook = await getTestAddressBook();
     channel = await getTestChannel(addressBook);
 
-    await deployContracts(alice, addressBook, [
+    await deployContracts(alice.address, [
       ["FailingToken", []],
       ["ReentrantToken", [channel.address]],
     ]);

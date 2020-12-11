@@ -15,7 +15,7 @@ describe("registerTransfer", function() {
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [
+    await deployContracts(alice.address, [
       ["HashlockTransfer", []],
       ["TransferRegistry", []],
     ]);

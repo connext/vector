@@ -23,7 +23,7 @@ describe("CMCWithdraw.sol", function() {
     addressBook = await getTestAddressBook();
     channel = await getTestChannel(addressBook);
 
-    await deployContracts(alice, addressBook, [["FailingToken", []]]);
+    await deployContracts(alice.address, [["FailingToken", []]]);
     failingToken = addressBook.getContract("FailingToken");
     await failingToken.mint(alice.address, parseEther("0.001"));
 
@@ -104,7 +104,7 @@ describe("CMCWithdraw.sol", function() {
   });
 
   it("should work for missing-return-value-bug tokens", async () => {
-    await deployContracts(alice, addressBook, [["NonconformingToken", []]]);
+    await deployContracts(alice.address, [["NonconformingToken", []]]);
     const nonconformingToken = addressBook.getContract("NonconformingToken");
     await nonconformingToken.mint(alice.address, parseEther("0.001"));
 

@@ -15,7 +15,7 @@ describe("ChannelMastercopy", function () {
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["ChannelMastercopy", []]]);
+    await deployContracts(alice.address, [["ChannelMastercopy", []]]);
     mastercopy = addressBook.getContract("ChannelMastercopy");
   });
 

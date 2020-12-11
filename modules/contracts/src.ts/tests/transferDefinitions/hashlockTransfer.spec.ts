@@ -32,7 +32,7 @@ describe("HashlockTransfer", function() {
 
   before(async () => {
     addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["HashlockTransfer", []]]);
+    await deployContracts(alice.address, [["HashlockTransfer", []]]);
     transfer = addressBook.getContract("HashlockTransfer");
   });
 

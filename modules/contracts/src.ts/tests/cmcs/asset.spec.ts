@@ -22,7 +22,7 @@ describe("CMCAsset", function () {
 
   beforeEach(async () => {
     addressBook = await getTestAddressBook();
-    await deployContracts(bob, addressBook, [
+    await deployContracts(bob.address, [
       ["CMCAsset", []],
       ["TestToken", []],
       ["FailingToken", []],
