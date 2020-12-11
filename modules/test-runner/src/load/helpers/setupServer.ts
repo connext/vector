@@ -20,6 +20,7 @@ export const carolEvts = {
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}`,
@@ -57,7 +58,7 @@ server.post(`${depositReconciledPath}`, async (request, response) => {
 });
 
 export const startServer = (): Promise<void> => {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     server.listen(env.port, "0.0.0.0", (err, address) => {
       if (err) {
         console.error(err);

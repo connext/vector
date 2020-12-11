@@ -18,6 +18,7 @@ export const aliceEvts = {
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -38,6 +39,7 @@ export const bobEvts = {
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),

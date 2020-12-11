@@ -20,6 +20,7 @@ export const ChannelRpcMethods = {
   chan_requestCollateral: "chan_requestCollateral",
   chan_createTransfer: "chan_createTransfer",
   chan_resolveTransfer: "chan_resolveTransfer",
+  chan_restoreState: "chan_restoreState",
   chan_withdraw: "chan_withdraw",
   chan_subscribe: "chan_subscribe",
   chan_unsubscribeAll: "chan_unsubscribeAll",
@@ -51,6 +52,7 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_requestCollateral]: EngineParams.Deposit;
   [ChannelRpcMethods.chan_createTransfer]: EngineParams.ConditionalTransfer;
   [ChannelRpcMethods.chan_resolveTransfer]: EngineParams.ResolveTransfer;
+  [ChannelRpcMethods.chan_restoreState]: EngineParams.RestoreState;
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
   [ChannelRpcMethods.chan_unsubscribeAll]: undefined;
@@ -84,6 +86,7 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_requestCollateral]: FullChannelState;
   [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
+  [ChannelRpcMethods.chan_restoreState]: FullChannelState;
   [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;

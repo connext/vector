@@ -41,6 +41,7 @@ const evts: EventCallbackConfig = {
     evt: Evt.create<RequestCollateralPayload>(),
     url: `${routerBase}${requestCollateralPath}`,
   },
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},

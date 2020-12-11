@@ -87,24 +87,30 @@ export type WithdrawalReconciledPayload = {
   transferId: string;
 };
 
+// Emitted on channel restore
+export const RESTORE_STATE_EVENT = "RESTORE_STATE_EVENT";
+export type RestoreStatePayload = SetupPayload;
+
 // Grouped event types
 export const EngineEvents = {
-  [SETUP_EVENT]: SETUP_EVENT,
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
   [DEPOSIT_RECONCILED_EVENT]: DEPOSIT_RECONCILED_EVENT,
   [REQUEST_COLLATERAL_EVENT]: REQUEST_COLLATERAL_EVENT,
+  [RESTORE_STATE_EVENT]: RESTORE_STATE_EVENT,
+  [SETUP_EVENT]: SETUP_EVENT,
   [WITHDRAWAL_CREATED_EVENT]: WITHDRAWAL_CREATED_EVENT,
   [WITHDRAWAL_RESOLVED_EVENT]: WITHDRAWAL_RESOLVED_EVENT,
   [WITHDRAWAL_RECONCILED_EVENT]: WITHDRAWAL_RECONCILED_EVENT,
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
 export interface EngineEventMap {
-  [SETUP_EVENT]: SetupPayload;
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;
   [DEPOSIT_RECONCILED_EVENT]: DepositReconciledPayload;
   [REQUEST_COLLATERAL_EVENT]: RequestCollateralPayload;
+  [RESTORE_STATE_EVENT]: RestoreStatePayload;
+  [SETUP_EVENT]: SetupPayload;
   [WITHDRAWAL_CREATED_EVENT]: WithdrawalCreatedPayload;
   [WITHDRAWAL_RESOLVED_EVENT]: WithdrawalResolvedPayload;
   [WITHDRAWAL_RECONCILED_EVENT]: WithdrawalReconciledPayload;
