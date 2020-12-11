@@ -48,7 +48,7 @@ export class RestServerNodeService implements INodeService {
     const service = new RestServerNodeService(serverNodeUrl, logger, evts);
     // If an index is provided, the service will only host a single engine
     // and the publicIdentifier will be automatically included in parameters
-    if (index !== undefined || index !== null) {
+    if (typeof index === "number") {
       // Create the public identifier and signer address
       const node = await service.createNode({ index });
       if (node.isError) {
@@ -110,34 +110,47 @@ export class RestServerNodeService implements INodeService {
     if (res.isError) {
       return res;
     }
-    if (this.evts) {
-      const urls = Object.fromEntries(
-        Object.entries(this.evts).map(([event, config]) => {
-          return [event, config.url ?? ""];
-        }),
-      );
-      const { publicIdentifier } = res.getValue();
-      // Create an evt context for this public identifier only
-      // (see not in `off`)
-      this.ctxs[publicIdentifier] = Evt.newCtx();
-      const params: NodeParams.RegisterListener = {
-        events: urls,
-        publicIdentifier: publicIdentifier ?? this.publicIdentifier,
-      };
-      // IFF the public identifier is undefined, it should be overridden by
-      // the pubId defined in the parameters.
-      const subscription = await this.executeHttpRequest(
-        `event/subscribe`,
-        "post",
-        params,
-        NodeParams.RegisterListenerSchema,
-      );
-      if (subscription.isError) {
-        this.logger.error({ error: subscription.getError()! }, "Failed to create subscription");
-        return Result.fail(subscription.getError()!);
-      }
-      this.logger.info({ urls, method: "connect" }, "Engine event subscription created");
+
+    if (!this.evts) {
+      return res;
     }
+
+    // Register listener subscription
+    const { publicIdentifier } = res.getValue();
+
+    // Check if the events have been registered (i.e. this called
+    // twice)
+    if (this.ctxs[publicIdentifier]) {
+      return res;
+    }
+
+    const urls = Object.fromEntries(
+      Object.entries(this.evts).map(([event, config]) => {
+        return [event, config.url ?? ""];
+      }),
+    );
+
+    // Create an evt context for this public identifier only
+    // (see not in `off`)
+    this.ctxs[publicIdentifier] = Evt.newCtx();
+    const subscriptionParams: NodeParams.RegisterListener = {
+      events: urls,
+      publicIdentifier,
+    };
+    // IFF the public identifier is undefined, it should be overridden by
+    // the pubId defined in the parameters.
+    const subscription = await this.executeHttpRequest(
+      `event/subscribe`,
+      "post",
+      subscriptionParams,
+      NodeParams.RegisterListenerSchema,
+    );
+    if (subscription.isError) {
+      this.logger.error({ error: subscription.getError()!, publicIdentifier }, "Failed to create subscription");
+      return Result.fail(subscription.getError()!);
+    }
+    this.logger.info({ urls, method: "createNode", publicIdentifier }, "Engine event subscription created");
+
     return res;
   }
 
