@@ -1,5 +1,12 @@
 import { TestToken } from "@connext/vector-contracts";
-import { EngineEvents, FullChannelState, INodeService, NodeError, TransferNames } from "@connext/vector-types";
+import {
+  DEFAULT_CHANNEL_TIMEOUT,
+  EngineEvents,
+  FullChannelState,
+  INodeService,
+  NodeError,
+  TransferNames,
+} from "@connext/vector-types";
 import { createlockHash, delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers";
 import { formatEther, parseEther } from "ethers/lib/utils";
@@ -90,11 +97,14 @@ export class Agent {
   ): Promise<Agent> {
     // Create node on server at idx
     // NOTE: can safely be called multiple times
+    console.log("****** trying to create new agent at", index);
     const nodeRes = await nodeService.createNode({ index });
     if (nodeRes.isError) {
+      console.log("****** creating node at", index, "failed");
       throw nodeRes.getError()!;
     }
     const { publicIdentifier, signerAddress } = nodeRes.getValue();
+    console.log("****** creating node passed for", index);
 
     // Create the agent
     const agent = new Agent(publicIdentifier, signerAddress, index, rogerIdentifier, nodeService);
@@ -162,7 +172,7 @@ export class Agent {
     // Get the channel to see if you need to deposit
     const channel = await this.getChannel();
 
-    const assetIdx = channel.assetIds.findIndex(a => a === assetId);
+    const assetIdx = channel.assetIds.findIndex((a) => a === assetId);
     const balance = BigNumber.from(assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1]);
     if (balance.gte(target)) {
       // Nothing to deposit, return
@@ -217,7 +227,7 @@ export class Agent {
       error = e;
     }
 
-    if (error && !error.context.error.includes("404")) {
+    if (error && !error.message.includes("404")) {
       // Unknown error, do not setup
       throw error!;
     }
@@ -226,7 +236,8 @@ export class Agent {
     const setup = await this.nodeService.setup({
       counterpartyIdentifier: this.rogerIdentifier,
       chainId,
-      timeout: "360000",
+      timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+      publicIdentifier: this.publicIdentifier,
     });
     if (setup.isError) {
       throw setup.getError()!;
@@ -253,26 +264,29 @@ export class AgentManager {
 
   private constructor(
     public readonly roger: string,
-    public readonly rogerIdentifier: string,
-    public readonly rogerService: INodeService,
+    public readonly routerIdentifier: string,
+    public readonly routerService: INodeService,
     public readonly agents: Agent[] = [],
     public readonly agentService: INodeService,
   ) {}
 
   static async connect(agentService: RestServerNodeService): Promise<AgentManager> {
     // First, create + fund roger onchain
-    const rogerService = await RestServerNodeService.connect(
+    logger.debug({ url: env.rogerUrl });
+    const routerService = await RestServerNodeService.connect(
       env.rogerUrl,
-      logger.child({ module: "RestServerNodeService" }),
+      logger.child({ module: "Router" }),
+      undefined,
+      0,
     );
-    const rogerConfig = await rogerService.createNode({ index: 0 });
-    if (rogerConfig.isError) {
-      throw rogerConfig.getError()!;
+    const routerConfig = await routerService.getConfig();
+    if (routerConfig.isError) {
+      throw routerConfig.getError()!;
     }
-    const { signerAddress: roger, publicIdentifier: rogerIdentifier } = rogerConfig.getValue();
+    const { signerAddress: router, publicIdentifier: routerIdentifier } = routerConfig.getValue()[0];
 
     // Fund roger
-    await fundAddressToTarget(roger, constants.AddressZero, parseEther("50"));
+    await fundAddressToTarget(router, constants.AddressZero, parseEther("50"));
 
     // Create all agents needed
     // First, get all nodes that are active on the server
@@ -286,25 +300,21 @@ export class AgentManager {
     if (registeredAgents.length > config.numAgents) {
       // Too many agents already registered on service
       // only use a portion of the registered agents
-      indices = registeredAgents.slice(0, config.numAgents).map(r => r.index);
+      indices = registeredAgents.slice(0, config.numAgents).map((r) => r.index);
     } else {
       // Must create more agents
       const toCreate = config.numAgents - registeredAgents.length;
-      indices = registeredAgents
-        .map(r => r.index)
-        .concat(
-          Array(toCreate)
-            .fill(0)
-            .map(getRandomIndex),
-        );
+      indices = registeredAgents.map((r) => r.index).concat(Array(toCreate).fill(0).map(getRandomIndex));
+      // indices = Array(config.numAgents).fill(0).map(getRandomIndex);
     }
+    console.log("****** trying to create", indices.length, "agents");
 
-    // NOTE: because connecting agents *may* send a tx, you cannot
-    // use `Promise.all` without the nonce of the tx being messed up
-    const agents = await Promise.all(indices.map(i => Agent.connect(agentService, rogerIdentifier, i)));
+    const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
+
+    console.log("****** agents created successfully");
 
     // Create the manager
-    const manager = new AgentManager(roger, rogerIdentifier, rogerService, agents, agentService);
+    const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
 
     // Automatically resolve any created transfers
     await manager.setupAutomaticResolve();
@@ -313,9 +323,9 @@ export class AgentManager {
   }
 
   private async setupAutomaticResolve(): Promise<void> {
-    await this.agentService.on(
+    this.agentService.on(
       EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-      async data => {
+      async (data) => {
         logger.debug({ ...data }, "Got conditional transfer created event");
         // First find the agent with the proper channel address
         const { channelAddress, transfer } = data;
@@ -324,14 +334,14 @@ export class AgentManager {
         const { routingId } = transfer.meta;
         // Make sure there is a routingID
         if (!routingId) {
-          logger.warn({}, "No routingID");
+          logger.warn({ ...(transfer.meta ?? {}) }, "No routingID");
           return;
         }
 
-        const agent = this.agents.find(a => a.channelAddress && a.channelAddress === data.channelAddress);
+        const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
         if (!agent) {
           logger.error(
-            { channelAddress, agents: this.agents.map(a => a.channelAddress).join(",") },
+            { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
             "No agent found to resolve",
           );
           process.exit(1);
@@ -373,7 +383,7 @@ export class AgentManager {
           process.exit(1);
         }
       },
-      data => this.agents.map(a => a.channelAddress).includes(data.channelAddress),
+      (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
     );
   }
 
@@ -381,9 +391,9 @@ export class AgentManager {
   async startCyclicalTransfers(): Promise<() => Promise<void>> {
     // Register listener that will resolve transfers once it is
     // created
-    await this.agentService.on(
+    this.agentService.on(
       EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
-      async data => {
+      async (data) => {
         // Create a new transfer to a random agent
         const { channelAddress, transfer } = data;
 
@@ -398,10 +408,10 @@ export class AgentManager {
         // Remove the preimage on resolution
         delete this.preImages[routingId];
 
-        const agent = this.agents.find(a => a.channelAddress && a.channelAddress === data.channelAddress);
+        const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
         if (!agent) {
           logger.error(
-            { channelAddress, agents: this.agents.map(a => a.channelAddress).join(",") },
+            { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
             "No agent found to resolve",
           );
           process.exit(1);
@@ -436,7 +446,7 @@ export class AgentManager {
           process.exit(1);
         }
       },
-      data => this.agents.map(a => a.channelAddress).includes(data.channelAddress),
+      (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
     );
 
     // Create some transfers to start cycle
@@ -457,8 +467,8 @@ export class AgentManager {
     const kill = () =>
       new Promise<void>(async (resolve, reject) => {
         try {
-          await this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
-          await this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
+          this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+          this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
           // Wait just in case
           await delay(5000);
           resolve();
@@ -472,11 +482,11 @@ export class AgentManager {
 
   public getRandomAgent(excluding?: Agent): Agent {
     const filtered = excluding
-      ? this.agents.filter(n => n.publicIdentifier !== excluding.publicIdentifier)
+      ? this.agents.filter((n) => n.publicIdentifier !== excluding.publicIdentifier)
       : [...this.agents];
     if (filtered.length === 0) {
       logger.error(
-        { node: excluding, agents: this.agents.map(n => n.publicIdentifier).join(",") },
+        { node: excluding, agents: this.agents.map((n) => n.publicIdentifier).join(",") },
         "Could not get random counterparty",
       );
       throw new Error("Failed to get counterparty");

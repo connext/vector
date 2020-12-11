@@ -12,6 +12,7 @@ export const cyclicalTransferTest = async (): Promise<void> => {
     env.carolUrl,
     logger.child({ module: "RestServerNodeService" }),
     carolEvts,
+    0,
   );
   const manager = await AgentManager.connect(agentService);
 
@@ -31,17 +32,33 @@ export const concurrencyTest = async (): Promise<void> => {
   const queuedPayments = 25; // added to queue
 
   // Get agent manager
-  const agentService = await RestServerNodeService.connect(
-    env.carolUrl,
-    logger.child({ module: "RestServerNodeService" }),
-    carolEvts,
-  );
-  const manager = await AgentManager.connect(agentService);
+  console.log("****** trying to connect to agent service", env.nodeUrl);
+  let agentService;
+  try {
+    agentService = await RestServerNodeService.connect(
+      env.nodeUrl,
+      logger.child({ module: "AgentService" }),
+      carolEvts,
+    );
+  } catch (e) {
+    logger.error({ ...e }, "Failed to connect agent service");
+    process.exit(1);
+  }
+  logger.info({ agentUrl: env.nodeUrl }, "Agent service connected");
+  console.log("****** agent connected, trying to connect to manager");
+  let manager;
+  try {
+    manager = await AgentManager.connect(agentService);
+  } catch (e) {
+    logger.error({ ...e }, "Failed to connect manager service");
+    process.exit(1);
+  }
+  console.log("****** manager connected");
 
   // Preload manager with preImages + routingIds for payments
   const paymentData = Array(queuedPayments)
     .fill(0)
-    .map(_ => {
+    .map((_) => {
       const [routingId, preImage] = [getRandomBytes32(), getRandomBytes32()];
       manager.preImages[routingId] = preImage;
       return [routingId, preImage];
@@ -64,6 +81,7 @@ export const concurrencyTest = async (): Promise<void> => {
       };
     });
 
+  console.log("****** generated tasks, starting test");
   let concurrency = 1;
   for (const _ of Array(maxConcurrency).fill(0)) {
     // For loop runs one iteration of the test, with increasing
@@ -73,7 +91,7 @@ export const concurrencyTest = async (): Promise<void> => {
     const queue = new PriorityQueue({ concurrency });
     concurrency += 1;
 
-    const promises = tasks.map(t => queue.add(t));
+    const promises = tasks.map((t) => queue.add(t));
 
     await Promise.all(promises);
     logger.info({}, "Test complete, increasing concurrency");
