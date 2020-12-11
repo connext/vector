@@ -54,7 +54,6 @@ const func: DeployFunction = async () => {
         ["TestToken", []],
         ["FailingToken", []],
         ["NonconformingToken", []],
-        ["ReentrantToken", ["TestChannel"]],
       ],
       log,
     );

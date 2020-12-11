@@ -4,8 +4,9 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, One } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
-import { deployments } from "hardhat";
+import { deployments, getNamedAccounts } from "hardhat";
 
+import { deployContracts } from "../../actions/deployContracts";
 import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
 import { getTestChannel } from "../utils";
@@ -20,14 +21,14 @@ describe("CMCDeposit.sol", function() {
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     channel = await getTestChannel();
+    // setup failing token
     failingToken = await getContract("FailingToken", alice);
+    await (await failingToken.mint(alice.address, parseEther("0.001"))).wait();
+    // setup reentrant token
+    const { deployer } = await getNamedAccounts();
+    await deployContracts(deployer, [["ReentrantToken", [channel.address]]]);
     reentrantToken = await getContract("ReentrantToken", alice);
-    // mint failing token
-    const tx = await failingToken.mint(alice.address, parseEther("0.001"));
-    await tx.wait();
-    // mint reentrant token
-    const tx2 = await reentrantToken.mint(alice.address, parseEther("0.01"));
-    await tx2.wait();
+    await (await reentrantToken.mint(alice.address, parseEther("0.01"))).wait();
   });
 
   it("should only increase totalDepositsBob after receiving a direct deposit", async () => {
@@ -62,7 +63,7 @@ describe("CMCDeposit.sol", function() {
   });
 
   it("should protect against reentrant tokens", async () => {
-    await expect(channel.depositAlice(reentrantToken.address, value)).revertedWith("ReentrancyGuard: REENTRANT_CALL");
+    await expect(channel.depositAlice(reentrantToken.address, value)).to.be.revertedWith("ReentrancyGuard: REENTRANT_CALL");
     expect(await channel.getTotalDepositsAlice(reentrantToken.address)).to.be.eq(0);
   });
 });
