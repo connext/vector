@@ -17,7 +17,7 @@ export const createChannel = async (
   const channelFactory = await getContract("ChannelFactory", alice);
   const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress);
   const channelCode = await alice.provider.getCode(channelAddress);
-  if (channelCode !== "0x" && channelCode !== "0x00" ) {
+  if (channelCode === "0x" || channelCode === "0x00") {
     await (await channelFactory.createChannel(alice.address, bobAddress)).wait();
     log.info(`Successfully created a channel at ${channelAddress}`);
   } else {

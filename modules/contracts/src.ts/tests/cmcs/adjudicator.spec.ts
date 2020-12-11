@@ -24,9 +24,10 @@ import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
+import { createChannel } from "../../actions";
 import { getContract } from "../../utils";
 import { bob, alice, networkName, provider, rando } from "../constants";
-import { advanceBlocktime, getOnchainBalance, getTestChannel } from "../utils";
+import { advanceBlocktime, getOnchainBalance } from "../utils";
 
 describe("CMCAdjudicator.sol", async function () {
   this.timeout(120_000);
@@ -199,7 +200,7 @@ describe("CMCAdjudicator.sol", async function () {
     // mint token to alice/bob
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();
-    channel = await getTestChannel();
+    channel = await createChannel(bob.address, alice, undefined, true);
     const preImage = getRandomBytes32();
     const state = {
       lockHash: createlockHash(preImage),
@@ -238,7 +239,11 @@ describe("CMCAdjudicator.sol", async function () {
   describe("disputeChannel", () => {
     it("should fail if state.alice is incorrect", async function () {
       await expect(
-        channel.disputeChannel({ ...channelState, alice: getRandomAddress() }, aliceSignature, bobSignature),
+        channel.disputeChannel(
+          { ...channelState, alice: getRandomAddress() },
+          aliceSignature,
+          bobSignature,
+        ),
       ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
