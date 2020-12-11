@@ -14,7 +14,7 @@ export const createChannel = async (
   test = false,
 ): Promise<Contract> => {
   log.info(`Preparing to create a channel for alice=${alice.address} and bob=${bobAddress}`);
-  const channelFactory = await getContract("ChannelFactory", alice);
+  const channelFactory = await getContract(test ? "TestChannelFactory" : "ChannelFactory", alice);
   const channelAddress = await channelFactory.getChannelAddress(alice.address, bobAddress);
   const channelCode = await alice.provider.getCode(channelAddress);
   if (channelCode === "0x" || channelCode === "0x00") {

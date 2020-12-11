@@ -22,21 +22,15 @@ describe("CMCAsset", function () {
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     assetTransfer = await getContract("CMCAsset", alice);
-    // NOTE: safe to do because of inheritance pattern
     channel = await getTestChannel();
 
     // Fund with all tokens
     token = await getContract("TestToken", alice);
-    const mint = await token.mint(bob.address, parseEther("1"));
-    await mint.wait();
-
+    await (await token.mint(bob.address, parseEther("1"))).wait();
     failingToken = await getContract("FailingToken", alice);
-    const mintFailure = await failingToken.mint(bob.address, parseEther("1"));
-    await mintFailure.wait();
-
+    await (await failingToken.mint(bob.address, parseEther("1"))).wait();
     nonconformingToken = await getContract("NonconformingToken", alice);
-    const mintNonconforming = await nonconformingToken.mint(bob.address, parseEther("1"));
-    await mintNonconforming.wait();
+    await (await nonconformingToken.mint(bob.address, parseEther("1"))).wait();
   });
 
   it("should deploy", async () => {
@@ -70,15 +64,10 @@ describe("CMCAsset", function () {
 
   describe("makeExitable", () => {
     beforeEach(async () => {
-      // Fund the channel with tokens and eth
-      const tx = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
-      await tx.wait();
-
-      const tokenTx = await token.connect(bob).transfer(channel.address, BigNumber.from(10000));
-      await tokenTx.wait();
-
-      const nonconforming = await nonconformingToken.connect(bob).transfer(channel.address, BigNumber.from(10000));
-      await nonconforming.wait();
+      const [to, value] = [channel.address, BigNumber.from(10000)];
+      await (await bob.sendTransaction({ to, value })).wait();
+      await (await token.connect(bob).transfer(to, value)).wait();
+      await (await nonconformingToken.connect(bob).transfer(to, value)).wait();
     });
 
     it("should work for ETH transfers", async () => {

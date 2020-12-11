@@ -40,6 +40,7 @@ const func: DeployFunction = async () => {
         ["Withdraw", []],
         ["TransferRegistry", []],
         ["TestLibIterableMapping", []],
+        ["CMCAsset", []],
 
         // Real Channel
         ["ChannelMastercopy", []],
