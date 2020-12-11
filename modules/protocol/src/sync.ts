@@ -299,7 +299,7 @@ export async function inbound(
     );
     if (syncRes.isError) {
       const error = syncRes.getError() as InboundChannelUpdateError;
-      return returnError(error.message, error.update, error.state, error.context);
+      return returnError(error.message, error.update, error.state as FullChannelState, error.context);
     }
 
     const { updatedChannel: syncedChannel, updatedActiveTransfers: syncedActiveTransfers } = syncRes.getValue();
@@ -352,8 +352,8 @@ export async function inbound(
 // update to send to the counterparty
 type OutboundSync = {
   update: ChannelUpdate<any>;
-  syncedChannel: FullChannelState<any>;
-  updatedChannel: FullChannelState<any>;
+  syncedChannel: FullChannelState;
+  updatedChannel: FullChannelState;
   updatedTransfer?: FullTransferState;
   updatedActiveTransfers: FullTransferState[];
 };

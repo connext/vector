@@ -14,7 +14,7 @@
   "dependencies": {
     "@connext/vector-types": "0.0.33",
     "@connext/vector-utils": "0.0.33",
-    "@sinclair/typebox": "0.11.0",
+    "@sinclair/typebox": "0.12.7",
     "crypto": "1.0.1",
     "fastify": "3.8.0",
     "fastify-cors": "4.1.0",

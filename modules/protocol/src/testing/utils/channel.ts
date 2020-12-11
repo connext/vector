@@ -82,7 +82,7 @@ export const createVectorInstances = async (
   );
 };
 
-export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState<any>> => {
+export const setupChannel = async (alice: IVectorProtocol, bob: IVectorProtocol): Promise<FullChannelState> => {
   const setupParams: SetupParams = {
     counterpartyIdentifier: bob.publicIdentifier,
     timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
@@ -193,7 +193,7 @@ export const depositInChannel = async (
   counterparty: IVectorProtocol,
   assetId: string = AddressZero,
   amount?: BigNumberish,
-): Promise<FullChannelState<any>> => {
+): Promise<FullChannelState> => {
   // If amount is not supplied, simply reconcile
   // deposits immediately
   if (!amount) {

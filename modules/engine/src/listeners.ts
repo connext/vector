@@ -194,7 +194,7 @@ function handleSetup(
     aliceIdentifier,
     bobIdentifier,
     networkContext: { chainId },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.setup>;
+  } = event.updatedChannelState as FullChannelState;
   const payload: SetupPayload = {
     channelAddress,
     aliceIdentifier,
@@ -220,7 +220,7 @@ function handleDepositReconciliation(
     balances,
     assetIds,
     latestUpdate: { assetId },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.deposit>;
+  } = event.updatedChannelState as FullChannelState;
   const payload: DepositReconciledPayload = {
     aliceIdentifier,
     bobIdentifier,
@@ -265,7 +265,7 @@ async function handleConditionalTransferCreation(
         meta: { routingId },
       },
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
+  } = event.updatedChannelState as FullChannelState;
   logger.info({ channelAddress }, "Handling conditional transfer create event");
   // Emit the properly structured event
   const transfer = event.updatedTransfer;
@@ -342,7 +342,7 @@ async function handleConditionalTransferResolution(
       assetId,
       details: { transferDefinition },
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
+  } = event.updatedChannelState as FullChannelState;
   // Emit the properly structured event
   const registryInfo = await chainService.getRegisteredTransferByDefinition(
     transferDefinition,
@@ -406,7 +406,7 @@ async function handleWithdrawalTransferCreation(
       assetId,
       fromIdentifier,
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.create>;
+  } = event.updatedChannelState as FullChannelState;
   logger.info({ channelAddress, transferId, assetId, method }, "Started");
 
   // Get the recipient + amount from the transfer state
@@ -564,7 +564,7 @@ async function handleWithdrawalTransferResolution(
       assetId,
       fromIdentifier,
     },
-  } = event.updatedChannelState as FullChannelState<typeof UpdateType.resolve>;
+  } = event.updatedChannelState as FullChannelState;
   logger.info({ method, channelAddress, transferId }, "Started");
 
   // Get the withdrawal amount

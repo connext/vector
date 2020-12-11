@@ -26,7 +26,7 @@ export type AllowedSwap = Static<typeof AllowedSwapSchema>;
 const VectorRouterConfigSchema = Type.Object({
   adminToken: Type.String(),
   allowedSwaps: Type.Array(AllowedSwapSchema),
-  chainProviders: Type.Map(Type.String({ format: "uri" })),
+  chainProviders: Type.Dict(Type.String({ format: "uri" })),
   dbUrl: Type.Optional(Type.String({ format: "uri" })),
   nodeUrl: Type.String({ format: "uri" }),
   logLevel: Type.Optional(
@@ -60,7 +60,7 @@ const valid = validate(vectorConfig);
 
 if (!valid) {
   console.error(`Invalid config: ${JSON.stringify(vectorConfig, null, 2)}`);
-  throw new Error(validate.errors?.map(err => err.message).join(","));
+  throw new Error(validate.errors?.map((err) => err.message).join(","));
 }
 
 export const config = {

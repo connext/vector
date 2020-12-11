@@ -2,10 +2,11 @@ import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Address, HexString } from "./basic";
-import { Balance, FullChannelState, FullTransferState } from "./channel";
+import { Balance, FullTransferState } from "./channel";
 import { ChannelDispute } from "./dispute";
 import { Result, Values, VectorError } from "./error";
 import { ChainProviders } from "./network";
+import { FullChannelState } from "./schemas";
 import { RegisteredTransfer, TransferName, TransferState } from "./transferDefinitions";
 
 export const ERC20Abi = [

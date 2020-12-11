@@ -44,7 +44,7 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
   name: string;
   updateType: T;
   updateOverrides?: PartialChannelUpdate<T>;
-  stateOverrides?: PartialFullChannelState<any>;
+  stateOverrides?: PartialFullChannelState<T>;
   activeTransfersOverrides?: Partial<FullTransferState>[];
   finalBalanceOverrides?: Balance;
   expected?: Partial<{
@@ -496,7 +496,7 @@ describe("generateAndApplyUpdate", () => {
   const makeAndVerifyCall = async (
     signer: IChannelSigner,
     params: UpdateParams<"create" | "deposit" | "resolve" | "setup">,
-    previousState: FullChannelState<any> | undefined,
+    previousState: FullChannelState | undefined,
     activeTransfers: FullTransferState[],
     expected: any,
     isError = false,

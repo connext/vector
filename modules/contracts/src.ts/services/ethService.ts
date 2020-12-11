@@ -269,7 +269,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
       const deployCompleted = new Promise((resolve) =>
         channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
           this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
-          resolve();
+          resolve(undefined);
         }),
       );
       const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
@@ -298,7 +298,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                 { deployTx: deployTx.hash, channel: channelState.channelAddress },
                 "Did not see event within 15s after tx was mined",
               );
-              resolve();
+              resolve(undefined);
             }, 15_000),
           ),
         ]);
@@ -323,7 +323,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   public async sendDepositTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     sender: string,
     amount: string,
     assetId: string,
@@ -526,7 +526,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async sendDepositATx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     amount: string,
     assetId: string,
   ): Promise<Result<TransactionResponse, ChainError>> {
@@ -573,7 +573,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async sendDepositBTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     amount: string,
     assetId: string,
   ): Promise<Result<TransactionResponse, ChainError>> {

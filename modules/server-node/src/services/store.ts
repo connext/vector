@@ -185,7 +185,7 @@ const convertChannelEntityToFullChannelState = (
       aliceSignature: channelEntity.latestUpdate!.signatureA ?? undefined,
       bobSignature: channelEntity.latestUpdate!.signatureB ?? undefined,
       toIdentifier: channelEntity.latestUpdate!.toIdentifier,
-      type: channelEntity.latestUpdate!.type,
+      type: channelEntity.latestUpdate!.type as "create" | "deposit" | "resolve" | "setup",
     },
     inDispute: channelEntity.inDispute,
   };
@@ -235,7 +235,7 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async saveChannelDispute(
-    channel: FullChannelState<any>,
+    channel: FullChannelState,
     channelDispute: ChannelDispute,
     transferDispute?: TransferDispute,
   ): Promise<void> {
@@ -445,7 +445,7 @@ export class PrismaStore implements IServerNodeStore {
     await this.prisma.$disconnect();
   }
 
-  async getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
+  async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     const channelEntity = await this.prisma.channel.findUnique({
       where: { channelAddress },
       include: { balances: true, latestUpdate: true },
@@ -461,7 +461,7 @@ export class PrismaStore implements IServerNodeStore {
     publicIdentifierA: string,
     publicIdentifierB: string,
     chainId: number,
-  ): Promise<FullChannelState<any> | undefined> {
+  ): Promise<FullChannelState | undefined> {
     const [channelEntity] = await this.prisma.channel.findMany({
       where: {
         OR: [

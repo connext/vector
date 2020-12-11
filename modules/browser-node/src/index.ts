@@ -15,7 +15,6 @@ import {
   NodeParams,
   NodeResponses,
   EngineParams,
-  FullChannelState,
   TransferNames,
   EngineEvents,
 } from "@connext/vector-types";
@@ -148,7 +147,7 @@ export class BrowserNode implements INodeService {
         if (address.isError) {
           throw address.getError();
         }
-        channel = await this.getStateChannel(address.getValue());
+        channel = (await this.getStateChannel(address.getValue())).getValue();
       }
       this.logger.info({ channel, chainId });
     }
@@ -178,8 +177,8 @@ export class BrowserNode implements INodeService {
     if (receiverChannelRes.isError) {
       throw receiverChannelRes.getError();
     }
-    const senderChannel = senderChannelRes.getValue() as FullChannelState;
-    const receiverChannel = receiverChannelRes.getValue() as FullChannelState;
+    const senderChannel = senderChannelRes.getValue();
+    const receiverChannel = receiverChannelRes.getValue();
     if (!senderChannel || !receiverChannel) {
       throw new Error(
         `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${

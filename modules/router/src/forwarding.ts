@@ -10,7 +10,6 @@ import {
   TRANSFER_DECREMENT,
   INodeService,
   NodeError,
-  IVectorChainReader,
   FullChannelState,
 } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
@@ -204,7 +203,7 @@ export async function forwardTransferCreation(
   }
 
   const routerBalance = getBalanceForAssetId(
-    recipientChannel,
+    recipientChannel as FullChannelState,
     recipientAssetId,
     routerPublicIdentifier === recipientChannel.aliceIdentifier ? "alice" : "bob",
   );
@@ -212,7 +211,7 @@ export async function forwardTransferCreation(
   if (BigNumber.from(routerBalance).lt(recipientAmount)) {
     logger.info({ routerBalance, recipientAmount }, "Requesting collateral to cover transfer");
     const requestCollateralRes = await requestCollateral(
-      recipientChannel,
+      recipientChannel as FullChannelState,
       recipientAssetId,
       routerPublicIdentifier,
       nodeService,

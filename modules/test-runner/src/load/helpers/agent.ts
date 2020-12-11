@@ -162,7 +162,7 @@ export class Agent {
     // Get the channel to see if you need to deposit
     const channel = await this.getChannel();
 
-    const assetIdx = channel.assetIds.findIndex(a => a === assetId);
+    const assetIdx = channel.assetIds.findIndex((a) => a === assetId);
     const balance = BigNumber.from(assetIdx === -1 ? "0" : channel.balances[assetIdx].amount[1]);
     if (balance.gte(target)) {
       // Nothing to deposit, return
@@ -202,7 +202,7 @@ export class Agent {
     if (channelRes.isError) {
       throw channelRes.getError()!;
     }
-    return channelRes.getValue();
+    return channelRes.getValue()!;
   }
 
   private async setupChannel(): Promise<string> {
@@ -286,22 +286,16 @@ export class AgentManager {
     if (registeredAgents.length > config.numAgents) {
       // Too many agents already registered on service
       // only use a portion of the registered agents
-      indices = registeredAgents.slice(0, config.numAgents).map(r => r.index);
+      indices = registeredAgents.slice(0, config.numAgents).map((r) => r.index);
     } else {
       // Must create more agents
       const toCreate = config.numAgents - registeredAgents.length;
-      indices = registeredAgents
-        .map(r => r.index)
-        .concat(
-          Array(toCreate)
-            .fill(0)
-            .map(getRandomIndex),
-        );
+      indices = registeredAgents.map((r) => r.index).concat(Array(toCreate).fill(0).map(getRandomIndex));
     }
 
     // NOTE: because connecting agents *may* send a tx, you cannot
     // use `Promise.all` without the nonce of the tx being messed up
-    const agents = await Promise.all(indices.map(i => Agent.connect(agentService, rogerIdentifier, i)));
+    const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, rogerIdentifier, i)));
 
     // Create the manager
     const manager = new AgentManager(roger, rogerIdentifier, rogerService, agents, agentService);
@@ -315,7 +309,7 @@ export class AgentManager {
   private async setupAutomaticResolve(): Promise<void> {
     await this.agentService.on(
       EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-      async data => {
+      async (data) => {
         logger.debug({ ...data }, "Got conditional transfer created event");
         // First find the agent with the proper channel address
         const { channelAddress, transfer } = data;
@@ -328,10 +322,10 @@ export class AgentManager {
           return;
         }
 
-        const agent = this.agents.find(a => a.channelAddress && a.channelAddress === data.channelAddress);
+        const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
         if (!agent) {
           logger.error(
-            { channelAddress, agents: this.agents.map(a => a.channelAddress).join(",") },
+            { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
             "No agent found to resolve",
           );
           process.exit(1);
@@ -373,7 +367,7 @@ export class AgentManager {
           process.exit(1);
         }
       },
-      data => this.agents.map(a => a.channelAddress).includes(data.channelAddress),
+      (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
     );
   }
 
@@ -383,7 +377,7 @@ export class AgentManager {
     // created
     await this.agentService.on(
       EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
-      async data => {
+      async (data) => {
         // Create a new transfer to a random agent
         const { channelAddress, transfer } = data;
 
@@ -398,10 +392,10 @@ export class AgentManager {
         // Remove the preimage on resolution
         delete this.preImages[routingId];
 
-        const agent = this.agents.find(a => a.channelAddress && a.channelAddress === data.channelAddress);
+        const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
         if (!agent) {
           logger.error(
-            { channelAddress, agents: this.agents.map(a => a.channelAddress).join(",") },
+            { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
             "No agent found to resolve",
           );
           process.exit(1);
@@ -436,7 +430,7 @@ export class AgentManager {
           process.exit(1);
         }
       },
-      data => this.agents.map(a => a.channelAddress).includes(data.channelAddress),
+      (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
     );
 
     // Create some transfers to start cycle
@@ -472,11 +466,11 @@ export class AgentManager {
 
   public getRandomAgent(excluding?: Agent): Agent {
     const filtered = excluding
-      ? this.agents.filter(n => n.publicIdentifier !== excluding.publicIdentifier)
+      ? this.agents.filter((n) => n.publicIdentifier !== excluding.publicIdentifier)
       : [...this.agents];
     if (filtered.length === 0) {
       logger.error(
-        { node: excluding, agents: this.agents.map(n => n.publicIdentifier).join(",") },
+        { node: excluding, agents: this.agents.map((n) => n.publicIdentifier).join(",") },
         "Could not get random counterparty",
       );
       throw new Error("Failed to get counterparty");

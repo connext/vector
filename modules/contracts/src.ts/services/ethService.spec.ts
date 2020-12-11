@@ -44,7 +44,7 @@ describe("EthereumChainService", function () {
   let channelFactory: Contract;
   let transferDefinition: Contract;
   let chainService: EthereumChainService;
-  let channelState: FullChannelState<any>;
+  let channelState: FullChannelState;
   let transferState: FullTransferState;
   let token: Contract;
   let chainId: number;

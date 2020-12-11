@@ -99,7 +99,7 @@ export interface CoreChannelState {
 }
 
 // Includes any additional info that doesn't need to be sent to chain
-export type FullChannelState<T extends UpdateType = any> = CoreChannelState & {
+export type _FullChannelState<T extends UpdateType = any> = CoreChannelState & {
   aliceIdentifier: string;
   bobIdentifier: string;
   latestUpdate: ChannelUpdate<T>;

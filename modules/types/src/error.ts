@@ -1,10 +1,11 @@
-import { ChannelUpdate, FullChannelState, UpdateParams } from "./channel";
+import { ChannelUpdate, UpdateParams } from "./channel";
 import {
   MAXIMUM_CHANNEL_TIMEOUT,
   MAXIMUM_TRANSFER_TIMEOUT,
   MINIMUM_CHANNEL_TIMEOUT,
   MINIMUM_TRANSFER_TIMEOUT,
 } from "./constants";
+import { FullChannelState } from "./schemas";
 
 export class Result<T, Y = any> {
   private value?: T;
@@ -124,7 +125,7 @@ export class ValidationError extends VectorError {
   constructor(
     public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
     public readonly params: UpdateParams<any> | ChannelUpdate<any>,
-    public readonly state?: FullChannelState<any>,
+    public readonly state?: FullChannelState,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
@@ -162,7 +163,7 @@ export class OutboundChannelUpdateError extends VectorError {
   constructor(
     public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
     public readonly params: UpdateParams<any>,
-    public readonly state?: FullChannelState<any>,
+    public readonly state?: FullChannelState,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
@@ -208,7 +209,7 @@ export class InboundChannelUpdateError extends VectorError {
   constructor(
     public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
-    public readonly state?: FullChannelState<any>,
+    public readonly state?: FullChannelState,
     public readonly context?: any,
   ) {
     super(message, context);

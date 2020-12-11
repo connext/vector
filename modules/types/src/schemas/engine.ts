@@ -1,6 +1,6 @@
 ////////////////////////////////////////
 
-import { Static, TStringLiteral, Type } from "@sinclair/typebox";
+import { Static, TLiteral, Type } from "@sinclair/typebox";
 
 import { ChannelRpcMethod, ChannelRpcMethods } from "../vectorProvider";
 
@@ -148,9 +148,7 @@ const RpcRequestEngineParamsSchema = Type.Object({
   id: Type.Number({ minimum: 1 }),
   jsonrpc: Type.Literal("2.0"),
   method: Type.Union(
-    Object.values(ChannelRpcMethods).map((methodName) => Type.Literal(methodName)) as [
-      TStringLiteral<ChannelRpcMethod>,
-    ],
+    Object.values(ChannelRpcMethods).map((methodName) => Type.Literal(methodName)) as [TLiteral<ChannelRpcMethod>],
   ),
   params: Type.Optional(Type.Any()),
   // NOTE: Safe to make params an object here, in engine the

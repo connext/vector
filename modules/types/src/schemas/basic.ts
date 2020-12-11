@@ -1,4 +1,4 @@
-import { TStringLiteral, Type } from "@sinclair/typebox";
+import { Static, TLiteral, Type } from "@sinclair/typebox";
 
 import { UpdateType } from "../channel";
 
@@ -6,13 +6,13 @@ import { UpdateType } from "../channel";
 //////// Shared object/string types
 
 // String pattern types
-export const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
-export const TIntegerString = Type.Pattern(/^([0-9])*$/);
-export const TDecimalString = Type.Pattern(/^[0-9]*\.?[0-9]*$/);
-export const TPublicIdentifier = Type.Pattern(/^vector([a-zA-Z0-9]{50})$/);
-export const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
-export const TBytes = Type.Pattern(/^0x([a-fA-F0-9])$/);
-export const TSignature = Type.Pattern(/^0x([a-fA-F0-9]{130})$/);
+export const TAddress = Type.RegEx(/^0x[a-fA-F0-9]{40}$/);
+export const TIntegerString = Type.RegEx(/^([0-9])*$/);
+export const TDecimalString = Type.RegEx(/^[0-9]*\.?[0-9]*$/);
+export const TPublicIdentifier = Type.RegEx(/^vector([a-zA-Z0-9]{50})$/);
+export const TBytes32 = Type.RegEx(/^0x([a-fA-F0-9]{64})$/);
+export const TBytes = Type.RegEx(/^0x([a-fA-F0-9])$/);
+export const TSignature = Type.RegEx(/^0x([a-fA-F0-9]{130})$/);
 export const TUrl = Type.String({ format: "uri" });
 
 // Convenience types
@@ -117,7 +117,7 @@ export const TChannelUpdateDetails = Type.Union([
 ]);
 
 export const TChannelUpdateType = Type.Union(
-  Object.values(UpdateType).map((update) => Type.Literal(update)) as [TStringLiteral<UpdateType>],
+  Object.values(UpdateType).map((update) => Type.Literal(update)) as [TLiteral<UpdateType>],
 );
 
 export const TChannelUpdate = Type.Object({
@@ -148,4 +148,8 @@ export const TFullChannelState = Type.Object({
   bobIdentifier: TPublicIdentifier,
   latestUpdate: TChannelUpdate,
   networkContext: TNetworkContext,
+  defundNonces: Type.Array(TIntegerString),
+  inDispute: Type.Boolean(),
 });
+
+export type FullChannelState = Static<typeof TFullChannelState>;

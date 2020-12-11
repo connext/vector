@@ -44,7 +44,7 @@ export const setup = async (
     publicIdentifier: aliceService.publicIdentifier,
   });
   expect(bobChannel.getValue()).to.deep.eq(aliceChannel.getValue());
-  return bobChannel.getValue();
+  return bobChannel.getValue()!;
 };
 
 export const deposit = async (
@@ -55,7 +55,7 @@ export const deposit = async (
   amount: BigNumber,
 ): Promise<FullChannelState> => {
   const channelRes = await depositor.getStateChannel({ channelAddress });
-  const channel = await channelRes.getValue();
+  const channel = channelRes.getValue()!;
 
   const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
@@ -111,8 +111,8 @@ export const transfer = async (
   amount: BigNumber,
   receiverChainId?: number,
 ): Promise<{ senderChannel: FullChannelState; receiverChannel: FullChannelState }> => {
-  const senderChannel = (await sender.getStateChannel({ channelAddress: senderChannelAddress })).getValue();
-  const receiverChannel = (await receiver.getStateChannel({ channelAddress: receiverChannelAddress })).getValue();
+  const senderChannel = (await sender.getStateChannel({ channelAddress: senderChannelAddress })).getValue()!;
+  const receiverChannel = (await receiver.getStateChannel({ channelAddress: receiverChannelAddress })).getValue()!;
   const senderAliceOrBob = sender.publicIdentifier === senderChannel.aliceIdentifier ? "alice" : "bob";
   const receiverAliceOrBob = receiver.publicIdentifier === receiverChannel.aliceIdentifier ? "alice" : "bob";
   const senderBefore = getBalanceForAssetId(senderChannel, senderAssetId, senderAliceOrBob);
@@ -161,7 +161,7 @@ export const transfer = async (
   });
 
   expect(receiverTransferRes.getError()).to.not.be.ok;
-  const receiverTransfer = receiverTransferRes.getValue();
+  const receiverTransfer = receiverTransferRes.getValue()!;
 
   const receiverResolvePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, 30_000);
   const resolveRes = await receiver.resolveTransfer({
@@ -220,7 +220,7 @@ export const withdraw = async (
   expect(transactionHash).to.be.ok;
   await provider.waitForTransaction(transactionHash!);
 
-  const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue();
+  const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()!;
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
   const postWithdrawMultisig = await getOnchainBalance(assetId, channelAddress, provider);
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);

@@ -182,7 +182,7 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
   type: T,
   overrides: PartialFullChannelState<T> = {},
   transferOverrides: Partial<FullTransferState> = {},
-): { channel: FullChannelState<T>; transfer: FullTransferState } {
+): { channel: FullChannelState; transfer: FullTransferState } {
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = [
@@ -289,7 +289,7 @@ export function createTestChannelStateWithSigners<T extends UpdateType = typeof 
   signers: IChannelSigner[],
   type: T,
   overrides: PartialFullChannelState<T> = {},
-): FullChannelState<T> {
+): FullChannelState {
   const signerOverrides = {
     aliceIdentifier: signers[0].publicIdentifier,
     bobIdentifier: signers[1].publicIdentifier,
@@ -297,7 +297,7 @@ export function createTestChannelStateWithSigners<T extends UpdateType = typeof 
     bob: signers[1].address,
     ...(overrides ?? {}),
   };
-  return createTestChannelState(type, signerOverrides).channel as FullChannelState<T>;
+  return createTestChannelState(type, signerOverrides).channel as FullChannelState;
 }
 
 export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof UpdateType.setup>(

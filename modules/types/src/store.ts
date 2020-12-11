@@ -1,9 +1,10 @@
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
-import { FullChannelState, FullTransferState } from "./channel";
+import { FullTransferState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
+import { FullChannelState } from "./schemas";
 
 export interface IVectorStore {
   // Store management methods

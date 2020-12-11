@@ -1,4 +1,5 @@
-import { FullChannelState, FullTransferState } from "./channel";
+import { FullTransferState } from "./channel";
+import { FullChannelState } from "./schemas";
 
 export type ChannelUpdateEvent = {
   updatedChannelState: FullChannelState;

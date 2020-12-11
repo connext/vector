@@ -208,13 +208,13 @@ export async function setupListeners(
         "Error requesting collateral",
       );
     }
-    const channel: FullChannelState = channelRes.getValue();
+    const channel = channelRes.getValue();
     if (!channel) {
       logger.error({ channelAddress: data.channelAddress }, "Error requesting collateral");
     }
 
     const res = await requestCollateral(
-      channel,
+      channel as FullChannelState,
       data.assetId,
       publicIdentifier,
       nodeService,
