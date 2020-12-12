@@ -7,6 +7,8 @@ import {
   MessagingError,
   OutboundChannelUpdateError,
   Result,
+  FullChannelState,
+  FullTransferState,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -65,7 +67,7 @@ export class MemoryMessagingService implements IMessagingService {
     >
   > {
     const inbox = getRandomBytes32();
-    const responsePromise = this.evt.pipe(e => e.inbox === inbox).waitFor(timeout);
+    const responsePromise = this.evt.pipe((e) => e.inbox === inbox).waitFor(timeout);
     this.evt.post({
       to: channelUpdate.toIdentifier,
       from: channelUpdate.fromIdentifier,
@@ -168,6 +170,35 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendRestoreStateMessage(
+    restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreInfo: Result<
+        { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+        MessagingError
+      >,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToRestoreStateMessage(
+    inbox: string,
+    infoToRestore: Result<{ channel: FullChannelState<any>; activeTransfers: FullTransferState[] }, MessagingError>,
+  ): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

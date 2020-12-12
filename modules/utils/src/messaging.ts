@@ -9,6 +9,8 @@ import {
   Result,
   EngineParams,
   MessagingError,
+  FullChannelState,
+  FullTransferState,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -91,6 +93,34 @@ export class NatsMessagingService implements IMessagingService {
     } else {
       throw new Error(`Either a bearerToken or signer must be provided`);
     }
+  }
+  sendRestoreStateMessage(
+    restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreInfo: Result<
+        { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+        MessagingError
+      >,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToRestoreStateMessage(
+    inbox: string,
+    infoToRestore: Result<{ channel: FullChannelState<any>; activeTransfers: FullTransferState[] }, MessagingError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 
   private isConnected(): boolean {

@@ -1,4 +1,4 @@
-import { ChannelUpdate } from "./channel";
+import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import { InboundChannelUpdateError, LockError, MessagingError, OutboundChannelUpdateError, Result } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
@@ -62,6 +62,33 @@ export interface IMessagingService {
     ) => void,
   ): Promise<void>;
   respondToSetupMessage(inbox: string, params: { message?: string; error?: string }): Promise<void>;
+
+  // - restore-r kicks off process
+  // - restore-r ends process
+  sendRestoreStateMessage(
+    restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>>;
+  // counterparty acquires lock, gets data
+  onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreInfo: Result<
+        { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+        MessagingError
+      >,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void>;
+  // counterparty returns data (called in ^^)
+  respondToRestoreStateMessage(
+    inbox: string,
+    infoToRestore: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>,
+  ): Promise<void>;
 
   sendRequestCollateralMessage(
     requestCollateralParams: EngineParams.RequestCollateral,
