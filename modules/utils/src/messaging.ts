@@ -94,34 +94,6 @@ export class NatsMessagingService implements IMessagingService {
       throw new Error(`Either a bearerToken or signer must be provided`);
     }
   }
-  sendRestoreStateMessage(
-    restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>> {
-    throw new Error("Method not implemented.");
-  }
-  onReceiveRestoreStateMessage(
-    publicIdentifier: string,
-    callback: (
-      restoreInfo: Result<
-        { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
-        MessagingError
-      >,
-      from: string,
-      inbox: string,
-    ) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  respondToRestoreStateMessage(
-    inbox: string,
-    infoToRestore: Result<{ channel: FullChannelState<any>; activeTransfers: FullTransferState[] }, MessagingError>,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
 
   private isConnected(): boolean {
     return !!this.connection?.isConnected();
@@ -288,6 +260,59 @@ export class NatsMessagingService implements IMessagingService {
     );
   }
   ////////////
+
+  // RESTORE METHODS
+  sendRestoreStateMessage(
+    restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+  async onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreInfo: Result<
+        { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+        MessagingError
+      >,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    this.assertConnected();
+    const method = "onReceiveRestoreStateMessage";
+    const subscriptionSubject = `${publicIdentifier}.*.restore`;
+    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
+      this.log.debug({ method, msg }, "Received message");
+      const from = msg.subject.split(".")[1];
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      if (err) {
+        callback(Result.fail(new MessagingError(err)), from, msg.reply);
+        return;
+      }
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      // TODO: validate msg structure
+      if (!parsedMsg.reply) {
+        return;
+      }
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        callback(Result.fail(parsedMsg.data.error), from, msg.reply);
+        return;
+      }
+      callback(Result.ok(parsedMsg.data.restoreInfo), from, msg.reply);
+    });
+    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+  }
+  respondToRestoreStateMessage(
+    inbox: string,
+    infoToRestore: Result<{ channel: FullChannelState<any>; activeTransfers: FullTransferState[] }, MessagingError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
 
   // SETUP METHODS
   async sendSetupMessage(
