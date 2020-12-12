@@ -234,6 +234,13 @@ export class PrismaStore implements IServerNodeStore {
     this.prisma = new PrismaClient(dbUrl ? { datasources: { db: { url: this.dbUrl } } } : undefined);
   }
 
+  saveChannelStateAndTransfers(
+    channelState: FullChannelState<any>,
+    activeTransfers: FullTransferState[],
+  ): Promise<void> {
+    throw new Error("saveChannelStateAndTransfers Method not implemented.");
+  }
+
   async saveChannelDispute(
     channel: FullChannelState<any>,
     channelDispute: ChannelDispute,

@@ -78,6 +78,8 @@ describe(testName, () => {
   let store: Sinon.SinonStubbedInstance<MemoryStoreService>;
   let chainService: Sinon.SinonStubbedInstance<VectorChainService>;
   let messaging: Sinon.SinonStubbedInstance<MemoryMessagingService>;
+  let acquireRestoreLockStub: Sinon.SinonStub;
+  let releaseRestoreLockStub: Sinon.SinonStub;
 
   // Create an EVT to post to, that can be aliased as a
   // vector instance
@@ -108,6 +110,10 @@ describe(testName, () => {
     vector = Sinon.createStubInstance(Vector);
     messaging = Sinon.createStubInstance(MemoryMessagingService);
     vector.on = on as any;
+
+    // By default acquire/release for restore succeeds
+    acquireRestoreLockStub = Sinon.stub().resolves(Result.ok(undefined));
+    releaseRestoreLockStub = Sinon.stub().resolves(Result.ok(undefined));
   });
 
   afterEach(() => {
@@ -281,8 +287,18 @@ describe(testName, () => {
 
       // Begin the test
       // Setup the listeners
-      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log, () =>
-        Promise.resolve(Result.ok({} as any)),
+      await setupEngineListeners(
+        container,
+        chainService,
+        vector,
+        messaging,
+        signer,
+        store,
+        chainAddresses,
+        log,
+        () => Promise.resolve(Result.ok({} as any)),
+        acquireRestoreLockStub,
+        releaseRestoreLockStub,
       );
 
       // Create a promise that will resolve once the event is emitted
@@ -388,8 +404,18 @@ describe(testName, () => {
 
       // Begin the test
       // Setup the listeners
-      await setupEngineListeners(container, chainService, vector, messaging, signer, store, chainAddresses, log, () =>
-        Promise.resolve(Result.ok({} as any)),
+      await setupEngineListeners(
+        container,
+        chainService,
+        vector,
+        messaging,
+        signer,
+        store,
+        chainAddresses,
+        log,
+        () => Promise.resolve(Result.ok({} as any)),
+        acquireRestoreLockStub,
+        releaseRestoreLockStub,
       );
 
       // Create a promise that will resolve once the event is emitted

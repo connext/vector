@@ -30,9 +30,12 @@ import {
   OutboundChannelUpdateError,
   Result,
   ChainError,
+  MessagingError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
+
+import { EngineError } from "./errors";
 
 import { EngineEvtContainer } from "./index";
 
@@ -50,6 +53,8 @@ export async function setupEngineListeners(
   ) => Promise<
     Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
   >,
+  acquireRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
+  releaseRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
 ): Promise<void> {
   // Set up listener for channel setup
   vector.on(
@@ -142,10 +147,117 @@ export async function setupEngineListeners(
   // who will submit the transaction? should both engines watch the multisig
   // indefinitely?
 
+  await messaging.onReceiveRestoreStateMessage(
+    signer.publicIdentifier,
+    async (
+      msg: Result<{ chainId: number } | { channelAddress: string; activeTransferIds: string[] }, MessagingError>,
+      from: string,
+      inbox: string,
+    ) => {
+      const method = "onReceiveRestoreStateMessage";
+      logger.debug({ method }, "Received message");
+
+      // If it is from yourself, do nothing
+      if (from === signer.publicIdentifier) {
+        return;
+      }
+
+      if (msg.isError) {
+        // FIXME: handle this better, when would you get an error result from
+        // your counterparty?
+        // releasing the lock should be done regardless of error
+        const error = msg.getError()!;
+        logger.error({ message: error.message, method, context: error.context }, "Error received");
+        return;
+      }
+
+      const data = msg.getValue();
+      const fields = Object.keys(data);
+      const isRestoreConfirmation = fields.sort().join() === ["channelAddress", "activeTransferIds"].sort().join();
+      if (!fields.includes("chainId") && !isRestoreConfirmation) {
+        logger.error({ fields }, "Message malformed");
+        return;
+      }
+
+      if (isRestoreConfirmation) {
+        const { channelAddress } = data as any;
+        const channel = await store.getChannelState(channelAddress);
+        if (!channel) {
+          logger.error({ channelAddress, data }, "Failed to find channel to release lock");
+          return;
+        }
+        // Release the lock
+        const releaseRes = await releaseRestoreLocks(channel!);
+        if (releaseRes.isError) {
+          logger.error({ ...releaseRes.getError()! }, "Failed to release lock");
+        }
+        return;
+      }
+
+      // Otherwise, they are looking to initiate a sync
+      const sendCannotSyncFromError = (error: string, context: any = {}) => {
+        return messaging.respondToRestoreStateMessage(
+          inbox,
+          Result.fail(new MessagingError(error as any, { ...context, method })),
+        );
+      };
+
+      // Get info from store to send to counterparty
+      const { chainId } = data as any;
+      let channel: FullChannelState | undefined;
+      try {
+        channel = await store.getChannelStateByParticipants(signer.publicIdentifier, from, chainId);
+      } catch (e) {
+        return sendCannotSyncFromError("Store method failed", {
+          storeMethod: "getChannelStateByParticipants",
+          chainId,
+          identifiers: [signer.publicIdentifier, from],
+        });
+      }
+      if (!channel) {
+        return sendCannotSyncFromError("No channel to restore from", { chainId });
+      }
+      let activeTransfers: FullTransferState[];
+      try {
+        activeTransfers = await store.getActiveTransfers(channel.channelAddress);
+      } catch (e) {
+        return sendCannotSyncFromError("Store method failed", {
+          storeMethod: "getActiveTransfers",
+          chainId,
+          channelAddress: channel.channelAddress,
+        });
+      }
+
+      // Acquire lock
+      const res = await acquireRestoreLocks(channel);
+      if (res.isError) {
+        return sendCannotSyncFromError("Failed to acquire lock", {
+          ...(res.getError()?.context ?? {}),
+          channel: channel.channelAddress,
+        });
+      }
+
+      // Send info to counterparty
+      logger.debug(
+        {
+          channel: channel.channelAddress,
+          nonce: channel.nonce,
+          activeTransfers: activeTransfers.map((a) => a.transferId),
+        },
+        "Sending counterparty state to sync",
+      );
+      await messaging.respondToRestoreStateMessage(inbox, Result.ok({ channel, activeTransfers }));
+
+      // Release lock on timeout
+      setTimeout(() => releaseRestoreLocks(channel!), 15_000);
+    },
+  );
+
   await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {
-    const method = "onReceiveSetupMessage";
+    const method = "onReceiveRequestCollateralMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
+      return;
     }
     logger.info({ params: params.getValue(), method }, "Handling message");
 

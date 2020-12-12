@@ -20,15 +20,20 @@ import {
   ChannelRpcMethods,
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
+  FullChannelState,
 } from "@connext/vector-types";
-import { Wallet } from "@ethersproject/wallet";
+import {
+  generateMerkleTreeData,
+  validateChannelUpdateSignatures,
+  getSignerAddressFromPublicIdentifier,
+} from "@connext/vector-utils";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
 
 import { version } from "../package.json";
 
-import { InvalidTransferType } from "./errors";
+import { EngineError, InvalidTransferType } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
@@ -45,6 +50,8 @@ export class VectorEngine implements IVectorEngine {
   // Setup event container to emit events from vector
   private readonly evts: EngineEvtContainer = getEngineEvtContainer();
 
+  private readonly restoreLocks: { [channelAddress: string]: string } = {};
+
   private constructor(
     private readonly signer: IChannelSigner,
     private readonly messaging: IMessagingService,
@@ -52,6 +59,7 @@ export class VectorEngine implements IVectorEngine {
     private readonly vector: IVectorProtocol,
     private readonly chainService: IVectorChainService,
     private readonly chainAddresses: ChainAddresses,
+    private readonly lockService: ILockService,
     private readonly logger: pino.BaseLogger,
   ) {}
 
@@ -81,6 +89,7 @@ export class VectorEngine implements IVectorEngine {
       vector,
       chainService,
       chainAddresses,
+      lock,
       logger.child({ module: "VectorEngine" }),
     );
     await engine.setupListener();
@@ -113,7 +122,50 @@ export class VectorEngine implements IVectorEngine {
       this.chainAddresses,
       this.logger,
       this.setup.bind(this),
+      this.acquireRestoreLocks.bind(this),
+      this.releaseRestoreLocks.bind(this),
     );
+  }
+
+  private async acquireRestoreLocks(channel: FullChannelState): Promise<Result<void, EngineError>> {
+    try {
+      const isAlice = channel.alice === this.signer.address;
+      const lockVal = await this.lockService.acquireLock(
+        channel.channelAddress,
+        isAlice,
+        isAlice ? channel.bobIdentifier : channel.aliceIdentifier,
+      );
+      this.restoreLocks[channel.channelAddress] = lockVal;
+      return Result.ok(undefined);
+    } catch (e) {
+      return Result.fail(
+        new EngineError("Failed to acquire restore lock", {
+          channel: channel.channelAddress,
+          publicIdentifier: this.signer.publicIdentifier,
+        }),
+      );
+    }
+  }
+
+  private async releaseRestoreLocks(channel: FullChannelState): Promise<Result<void, EngineError>> {
+    try {
+      const isAlice = channel.alice === this.signer.address;
+      await this.lockService.releaseLock(
+        channel.channelAddress,
+        this.restoreLocks[channel.channelAddress],
+        isAlice,
+        isAlice ? channel.bobIdentifier : channel.aliceIdentifier,
+      );
+      delete this.restoreLocks[channel.channelAddress];
+      return Result.ok(undefined);
+    } catch (e) {
+      return Result.fail(
+        new EngineError("Failed to release restore lock", {
+          channel: channel.channelAddress,
+          publicIdentifier: this.signer.publicIdentifier,
+        }),
+      );
+    }
   }
 
   private async getConfig(): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_getConfig]>> {
@@ -575,6 +627,147 @@ export class VectorEngine implements IVectorEngine {
     } catch (e) {
       return Result.fail(e);
     }
+  }
+
+  // RESTORE STATE
+  // NOTE: MUST be under protocol lock
+  private async restoreState(params: EngineParams.RestoreState): Promise<Result<string, Error>> {
+    const method = "restoreState";
+    const validate = ajv.compile(EngineParams.RestoreStateSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+    }
+
+    // Send message to counterparty, they will grab lock and
+    // return information under lock, initiator will update channel,
+    // then send confirmation message to counterparty, who will release the lock
+    const { chainId, counterpartyIdentifier } = params;
+    const restoreDataRes = await this.messaging.sendRestoreStateMessage(
+      { chainId },
+      counterpartyIdentifier,
+      this.signer.publicIdentifier,
+    );
+    if (restoreDataRes.isError) {
+      return Result.fail(restoreDataRes.getError()!);
+    }
+
+    const { channel, activeTransfers } = restoreDataRes.getValue();
+
+    // Here you are under lock, verify things about channel
+
+    // Verify channel address is same as calculated
+    const counterparty = getSignerAddressFromPublicIdentifier(counterpartyIdentifier);
+    const calculated = await this.chainService.getChannelAddress(
+      channel.alice === this.signer.address ? this.signer.address : counterparty,
+      channel.bob === this.signer.address ? this.signer.address : counterparty,
+      channel.networkContext.channelFactoryAddress,
+      chainId,
+    );
+    if (calculated.getValue() !== channel.channelAddress) {
+      return Result.fail(
+        new EngineError("Restore failed: invalid channelAddress", {
+          calculated: calculated.getValue(),
+          channelAddress: channel.channelAddress,
+          chainId,
+          counterpartyIdentifier,
+          method,
+        }),
+      );
+    }
+
+    // Verify signatures on latest update
+    const sigRes = await validateChannelUpdateSignatures(
+      channel,
+      channel.latestUpdate.aliceSignature,
+      channel.latestUpdate.bobSignature,
+      "both",
+    );
+    if (sigRes.isError) {
+      return Result.fail(
+        new EngineError("Restore failed: invalid signatures", {
+          error: sigRes.getError()!.message,
+          channelAddress: channel.channelAddress,
+          method,
+        }),
+      );
+    }
+
+    // Verify transfers match merkleRoot
+    const { root } = generateMerkleTreeData(activeTransfers);
+    if (root !== channel.merkleRoot) {
+      return Result.fail(
+        new EngineError("Restore failed: invalid merkleRoot", {
+          calculated: root,
+          merkleRoot: channel.merkleRoot,
+          channelAddress: channel.channelAddress,
+          activeTransfers: activeTransfers.map((t) => t.transferId),
+          method,
+        }),
+      );
+    }
+
+    // Verify nothing with a sync-able nonce exists in store
+    const existing = await this.getChannelState({ channelAddress: channel.channelAddress });
+    if (existing.isError) {
+      return Result.fail(
+        new EngineError("Restore failed: could not retrieve existing channel", {
+          error: existing.getError()?.message,
+          channelAddress: channel.channelAddress,
+          activeTransfers: activeTransfers.map((t) => t.transferId),
+          method,
+        }),
+      );
+    }
+    const nonce = existing.getValue()?.nonce ?? 0;
+    const diff = channel.nonce - nonce;
+    if (diff <= 1) {
+      return Result.fail(
+        new EngineError("Restore failed: syncable state", {
+          channelAddress: channel.channelAddress,
+          existing: nonce,
+          toRestore: channel.nonce,
+          method,
+        }),
+      );
+    }
+
+    // Save channel
+    try {
+      await this.store.saveChannelStateAndTransfers(channel, activeTransfers);
+    } catch (e) {
+      return Result.fail(
+        new EngineError("Restore failed: could not save state", {
+          error: e.message,
+          channelAddress: channel.channelAddress,
+          toRestore: channel.nonce,
+          method,
+        }),
+      );
+    }
+
+    // Respond by saying this was a success
+    const confirmationRes = await this.messaging.sendRestoreStateMessage(
+      {
+        channelAddress: channel.channelAddress,
+        activeTransferIds: activeTransfers.map((t) => t.transferId),
+      },
+      counterpartyIdentifier,
+      this.signer.publicIdentifier,
+    );
+    if (confirmationRes.isError) {
+      return Result.fail(confirmationRes.getError()!);
+    }
+
+    // Post to evt
+    this.evts[EngineEvents.RESTORE_STATE_EVENT].post({
+      channelAddress: channel.channelAddress,
+      aliceIdentifier: channel.aliceIdentifier,
+      bobIdentifier: channel.bobIdentifier,
+      chainId,
+    });
+
+    return Result.ok(channel.channelAddress);
   }
 
   // DISPUTE METHODS
