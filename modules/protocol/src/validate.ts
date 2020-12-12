@@ -25,17 +25,16 @@ import {
   TDepositUpdateDetails,
   TResolveUpdateDetails,
 } from "@connext/vector-types";
-import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/vector-utils";
+import {
+  getSignerAddressFromPublicIdentifier,
+  getTransferId,
+  validateChannelUpdateSignatures,
+} from "@connext/vector-utils";
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 
 import { applyUpdate, generateAndApplyUpdate } from "./update";
-import {
-  generateSignedChannelCommitment,
-  getParamsFromUpdate,
-  validateChannelUpdateSignatures,
-  validateSchema,
-} from "./utils";
+import { generateSignedChannelCommitment, getParamsFromUpdate, validateSchema } from "./utils";
 
 // This function performs all update *initiator* side validation
 // and is called from within the `sync.outbound` function.

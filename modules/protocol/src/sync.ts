@@ -14,9 +14,10 @@ import {
   FullTransferState,
   IExternalValidation,
 } from "@connext/vector-types";
+import { validateChannelUpdateSignatures } from "@connext/vector-utils";
 import pino from "pino";
 
-import { extractContextFromStore, validateChannelUpdateSignatures } from "./utils";
+import { extractContextFromStore } from "./utils";
 import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.

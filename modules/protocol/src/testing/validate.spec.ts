@@ -13,6 +13,7 @@ import {
   getTransferId,
   generateMerkleTreeData,
   getRandomBytes32,
+  validateChannelUpdateSignatures,
 } from "@connext/vector-utils";
 import {
   ChainError,
@@ -880,7 +881,9 @@ describe("validateAndApplyInboundUpdate", () => {
     // Set mocks
     chainReader = Sinon.createStubInstance(VectorChainReader);
     validateParamsAndApplyUpdateStub = Sinon.stub(validation, "validateParamsAndApplyUpdate");
-    validateChannelUpdateSignaturesStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures");
+    validateChannelUpdateSignaturesStub = Sinon.createStubInstance(validateChannelUpdateSignatures).resolves(
+      Result.ok(undefined),
+    );
     generateSignedChannelCommitmentStub = Sinon.stub(vectorUtils, "generateSignedChannelCommitment");
     applyUpdateStub = Sinon.stub(vectorUpdate, "applyUpdate");
     externalValidationStub = {
