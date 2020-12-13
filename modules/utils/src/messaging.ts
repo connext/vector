@@ -277,13 +277,11 @@ export class NatsMessagingService implements IMessagingService {
       const subject = `${to}.${from}.restore`;
       const msgBody = JSON.stringify({ restoreData });
       this.log.debug({ method, msgBody }, "Sending message");
-      console.log("*********", method, "sending request", msgBody);
       const msg = await this.connection!.request(subject, timeout, msgBody);
-      this.log.warn({ method, msg }, "Received response");
+      this.log.debug({ method, msg }, "Received response");
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
       const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
       parsedMsg.data = parsedData;
-      console.log("*********", method, "got response", parsedMsg);
       if (parsedMsg.data.error) {
         return Result.fail(new MessagingError(MessagingError.reasons.Response, { error: parsedMsg.data.error }) as any);
       }
@@ -304,10 +302,9 @@ export class NatsMessagingService implements IMessagingService {
     const method = "onReceiveRestoreStateMessage";
     const subscriptionSubject = `${publicIdentifier}.*.restore`;
     await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
-      this.log.warn({ method, msg }, "Received message");
+      this.log.debug({ method, msg }, "Received message");
       const from = msg.subject.split(".")[1];
       const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
-      console.log("*********", method, "got message", parsedMsg);
       if (err) {
         callback(Result.fail(new MessagingError(err) as any), from, msg.reply);
         return;
@@ -319,12 +316,6 @@ export class NatsMessagingService implements IMessagingService {
       }
       parsedMsg.data = parsedData;
       if (parsedMsg.data.error || parsedMsg.data.restoreData.error) {
-        console.log(
-          "*********",
-          method,
-          "handling callback with error",
-          parsedMsg.data.restoreData.error ?? parsedMsg.data.error,
-        );
         callback(Result.fail(parsedMsg.data.restoreData.error ?? parsedMsg.data.error), from, msg.reply);
         return;
       }
@@ -338,7 +329,7 @@ export class NatsMessagingService implements IMessagingService {
   ): Promise<void> {
     this.assertConnected();
     const subject = inbox;
-    this.log.warn({ method: "respondToRestoreStateMessage", subject }, `Sending response`);
+    this.log.debug({ method: "respondToRestoreStateMessage", subject }, `Sending response`);
     await this.connection!.publish(subject, safeJsonStringify(restoreData));
   }
   ////////////
