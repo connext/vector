@@ -1,5 +1,12 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { InboundChannelUpdateError, LockError, MessagingError, OutboundChannelUpdateError, Result } from "./error";
+import {
+  EngineError,
+  InboundChannelUpdateError,
+  LockError,
+  MessagingError,
+  OutboundChannelUpdateError,
+  Result,
+} from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -63,31 +70,34 @@ export interface IMessagingService {
   ): Promise<void>;
   respondToSetupMessage(inbox: string, params: { message?: string; error?: string }): Promise<void>;
 
-  // - restore-r kicks off process
-  // - restore-r ends process
+  // restore flow:
+  // - restore-r sends request
+  // - counterparty receives
+  //    1. acquires lock
+  //    2. sends restore data
+  // - counterparty responds
+  // - restore-r restores
+  // - restore-r sends result (err or success) to counterparty
+  // - counterparty receives
+  //    1. releases lock
   sendRestoreStateMessage(
-    restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, Error>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>>;
-  // counterparty acquires lock, gets data
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>>;
   onReceiveRestoreStateMessage(
     publicIdentifier: string,
     callback: (
-      restoreInfo: Result<
-        { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
-        MessagingError
-      >,
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
-  // counterparty returns data (called in ^^)
   respondToRestoreStateMessage(
     inbox: string,
-    infoToRestore: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void>;
 
   sendRequestCollateralMessage(

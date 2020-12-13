@@ -29,6 +29,8 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
+import { logger } from "..";
+
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
@@ -931,7 +933,8 @@ export class PrismaStore implements IServerNodeStore {
       },
     });
 
-    throw new Error("saving transfers not yet implemented");
+    // throw new Error("saving transfers not yet implemented");
+    logger.error({ activeTransfers: activeTransfers.map((t) => t.transferId) }, "saving transfers not implemented");
 
     // TODO:nsave activeTransfers
   }

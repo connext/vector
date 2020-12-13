@@ -21,6 +21,8 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
   FullChannelState,
+  EngineError,
+  UpdateType,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -33,7 +35,7 @@ import { Evt } from "evt";
 
 import { version } from "../package.json";
 
-import { EngineError, InvalidTransferType } from "./errors";
+import { InvalidTransferType } from "./errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,
@@ -128,6 +130,10 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async acquireRestoreLocks(channel: FullChannelState): Promise<Result<void, EngineError>> {
+    if (this.restoreLocks[channel.channelAddress]) {
+      // Has already been released, return undefined
+      return Result.ok(this.restoreLocks[channel.channelAddress]);
+    }
     try {
       const isAlice = channel.alice === this.signer.address;
       const lockVal = await this.lockService.acquireLock(
@@ -139,8 +145,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail(
-        new EngineError("Failed to acquire restore lock", {
-          channel: channel.channelAddress,
+        new EngineError("Failed to acquire restore lock", channel.channelAddress, {
           publicIdentifier: this.signer.publicIdentifier,
         }),
       );
@@ -148,6 +153,10 @@ export class VectorEngine implements IVectorEngine {
   }
 
   private async releaseRestoreLocks(channel: FullChannelState): Promise<Result<void, EngineError>> {
+    if (!this.restoreLocks[channel.channelAddress]) {
+      // Has already been released, return undefined
+      return Result.ok(undefined);
+    }
     try {
       const isAlice = channel.alice === this.signer.address;
       await this.lockService.releaseLock(
@@ -160,8 +169,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail(
-        new EngineError("Failed to release restore lock", {
-          channel: channel.channelAddress,
+        new EngineError("Failed to release restore lock", channel.channelAddress, {
           publicIdentifier: this.signer.publicIdentifier,
         }),
       );
@@ -631,7 +639,9 @@ export class VectorEngine implements IVectorEngine {
 
   // RESTORE STATE
   // NOTE: MUST be under protocol lock
-  private async restoreState(params: EngineParams.RestoreState): Promise<Result<string, Error>> {
+  private async restoreState(
+    params: EngineParams.RestoreState,
+  ): Promise<Result<ChannelRpcMethodsResponsesMap["chan_restoreState"], Error>> {
     const method = "restoreState";
     const validate = ajv.compile(EngineParams.RestoreStateSchema);
     const valid = validate(params);
@@ -644,7 +654,7 @@ export class VectorEngine implements IVectorEngine {
     // then send confirmation message to counterparty, who will release the lock
     const { chainId, counterpartyIdentifier } = params;
     const restoreDataRes = await this.messaging.sendRestoreStateMessage(
-      { chainId },
+      Result.ok({ chainId }),
       counterpartyIdentifier,
       this.signer.publicIdentifier,
     );
@@ -652,9 +662,47 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(restoreDataRes.getError()!);
     }
 
-    const { channel, activeTransfers } = restoreDataRes.getValue();
+    const { channel, activeTransfers } = restoreDataRes.getValue() ?? ({} as any);
 
     // Here you are under lock, verify things about channel
+    // Create helper to send message allowing a release lock
+    const sendResponseToCounterparty = async (error?: string, context: any = {}) => {
+      if (!error) {
+        const res = await this.messaging.sendRestoreStateMessage(
+          Result.ok({
+            channelAddress: channel.channelAddress,
+          }),
+          counterpartyIdentifier,
+          this.signer.publicIdentifier,
+        );
+        if (res.isError) {
+          error = "Restore failed: unable to ack";
+          context = { error: res.getError()!.message };
+        } else {
+          return Result.ok(channel);
+        }
+      }
+
+      // handle error by returning it to counterparty && returning result
+      const err = new EngineError(error as string, channel.channelAddress, {
+        ...context,
+        signer: this.signer.publicIdentifier,
+        chainId,
+        method,
+        counterpartyIdentifier,
+      });
+      await this.messaging.sendRestoreStateMessage(
+        Result.fail(err),
+        counterpartyIdentifier,
+        this.signer.publicIdentifier,
+      );
+      return Result.fail(err);
+    };
+
+    // Verify data exists
+    if (!channel || !activeTransfers) {
+      return sendResponseToCounterparty("Restore failed: no data for restore");
+    }
 
     // Verify channel address is same as calculated
     const counterparty = getSignerAddressFromPublicIdentifier(counterpartyIdentifier);
@@ -664,16 +712,16 @@ export class VectorEngine implements IVectorEngine {
       channel.networkContext.channelFactoryAddress,
       chainId,
     );
+    if (calculated.isError) {
+      return sendResponseToCounterparty("Restore failed: could not verify channelAddress", {
+        error: calculated.getError()!.message,
+        ...calculated.getError()!.context,
+      });
+    }
     if (calculated.getValue() !== channel.channelAddress) {
-      return Result.fail(
-        new EngineError("Restore failed: invalid channelAddress", {
-          calculated: calculated.getValue(),
-          channelAddress: channel.channelAddress,
-          chainId,
-          counterpartyIdentifier,
-          method,
-        }),
-      );
+      return sendResponseToCounterparty("Restore failed: invalid channelAddress", {
+        calculated: calculated.getValue(),
+      });
     }
 
     // Verify signatures on latest update
@@ -684,80 +732,49 @@ export class VectorEngine implements IVectorEngine {
       "both",
     );
     if (sigRes.isError) {
-      return Result.fail(
-        new EngineError("Restore failed: invalid signatures", {
-          error: sigRes.getError()!.message,
-          channelAddress: channel.channelAddress,
-          method,
-        }),
-      );
+      return sendResponseToCounterparty("Restore failed: invalid signatures", {
+        calculated: calculated.getValue(),
+        error: sigRes.getError()!.message,
+      });
     }
 
     // Verify transfers match merkleRoot
     const { root } = generateMerkleTreeData(activeTransfers);
     if (root !== channel.merkleRoot) {
-      return Result.fail(
-        new EngineError("Restore failed: invalid merkleRoot", {
-          calculated: root,
-          merkleRoot: channel.merkleRoot,
-          channelAddress: channel.channelAddress,
-          activeTransfers: activeTransfers.map((t) => t.transferId),
-          method,
-        }),
-      );
+      return sendResponseToCounterparty("Restore failed: invalid merkleRoot", {
+        calculated: root,
+        merkleRoot: channel.merkleRoot,
+        activeTransfers: activeTransfers.map((t) => t.transferId),
+      });
     }
 
     // Verify nothing with a sync-able nonce exists in store
     const existing = await this.getChannelState({ channelAddress: channel.channelAddress });
     if (existing.isError) {
-      return Result.fail(
-        new EngineError("Restore failed: could not retrieve existing channel", {
-          error: existing.getError()?.message,
-          channelAddress: channel.channelAddress,
-          activeTransfers: activeTransfers.map((t) => t.transferId),
-          method,
-        }),
-      );
+      return sendResponseToCounterparty("Restore failed: store.getChannelState faileds", {
+        error: existing.getError()?.message,
+      });
     }
     const nonce = existing.getValue()?.nonce ?? 0;
     const diff = channel.nonce - nonce;
-    if (diff <= 1) {
-      return Result.fail(
-        new EngineError("Restore failed: syncable state", {
-          channelAddress: channel.channelAddress,
-          existing: nonce,
-          toRestore: channel.nonce,
-          method,
-        }),
-      );
+    if (diff <= 1 && channel.latestUpdate.type !== UpdateType.setup) {
+      return sendResponseToCounterparty("Restore failed: syncable state", {
+        existing: nonce,
+        toRestore: channel.nonce,
+      });
     }
 
     // Save channel
     try {
       await this.store.saveChannelStateAndTransfers(channel, activeTransfers);
     } catch (e) {
-      return Result.fail(
-        new EngineError("Restore failed: could not save state", {
-          error: e.message,
-          channelAddress: channel.channelAddress,
-          toRestore: channel.nonce,
-          method,
-        }),
-      );
+      return sendResponseToCounterparty("Restore failed: could not save state", {
+        error: e.message,
+      });
     }
 
     // Respond by saying this was a success
-    const confirmationRes = await this.messaging.sendRestoreStateMessage(
-      {
-        channelAddress: channel.channelAddress,
-        activeTransferIds: activeTransfers.map((t) => t.transferId),
-      },
-      counterpartyIdentifier,
-      this.signer.publicIdentifier,
-    );
-    if (confirmationRes.isError) {
-      return Result.fail(confirmationRes.getError()!);
-    }
+    const returnVal = await sendResponseToCounterparty();
 
     // Post to evt
     this.evts[EngineEvents.RESTORE_STATE_EVENT].post({
@@ -767,7 +784,7 @@ export class VectorEngine implements IVectorEngine {
       chainId,
     });
 
-    return Result.ok(channel.channelAddress);
+    return returnVal;
   }
 
   // DISPUTE METHODS

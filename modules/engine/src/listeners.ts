@@ -30,12 +30,10 @@ import {
   OutboundChannelUpdateError,
   Result,
   ChainError,
-  MessagingError,
+  EngineError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
-
-import { EngineError } from "./errors";
 
 import { EngineEvtContainer } from "./index";
 
@@ -150,61 +148,70 @@ export async function setupEngineListeners(
   await messaging.onReceiveRestoreStateMessage(
     signer.publicIdentifier,
     async (
-      msg: Result<{ chainId: number } | { channelAddress: string; activeTransferIds: string[] }, MessagingError>,
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
       from: string,
       inbox: string,
     ) => {
-      const method = "onReceiveRestoreStateMessage";
-      logger.debug({ method }, "Handling message");
-
       // If it is from yourself, do nothing
       if (from === signer.publicIdentifier) {
         return;
       }
+      const method = "onReceiveRestoreStateMessage";
+      logger.debug({ method }, "Handling message");
 
-      if (msg.isError) {
-        // FIXME: handle this better, when would you get an error result from
-        // your counterparty?
-        // releasing the lock should be done regardless of error
-        const error = msg.getError()!;
-        logger.error({ message: error.message, method, context: error.context }, "Error received");
-        return;
-      }
-
-      const data = msg.getValue();
-      const fields = Object.keys(data);
-      const isRestoreConfirmation = fields.sort().join() === ["channelAddress", "activeTransferIds"].sort().join();
-      if (!fields.includes("chainId") && !isRestoreConfirmation) {
-        logger.error({ fields }, "Message malformed");
-        return;
-      }
-
-      if (isRestoreConfirmation) {
-        const { channelAddress } = data as any;
+      // releases the lock, and acks to senders confirmation message
+      const releaseLockAndAck = async (channelAddress: string, postToEvt = false) => {
         const channel = await store.getChannelState(channelAddress);
         if (!channel) {
-          logger.error({ channelAddress, data }, "Failed to find channel to release lock");
+          logger.error({ channelAddress }, "Failed to find channel to release lock");
           return;
         }
-        // Release the lock
-        const releaseRes = await releaseRestoreLocks(channel!);
-        if (releaseRes.isError) {
-          logger.error({ ...releaseRes.getError()! }, "Failed to release lock");
+        await releaseRestoreLocks(channel);
+        await messaging.respondToRestoreStateMessage(inbox, Result.ok(undefined));
+        if (postToEvt) {
+          // Post to evt
+          evts[EngineEvents.RESTORE_STATE_EVENT].post({
+            channelAddress: channel.channelAddress,
+            aliceIdentifier: channel.aliceIdentifier,
+            bobIdentifier: channel.bobIdentifier,
+            chainId,
+          });
         }
+        return;
+      };
+
+      // Received error from counterparty
+      if (restoreData.isError) {
+        // releasing the lock should be done regardless of error
+        logger.error({ message: restoreData.getError()!.message, method }, "Error received from counterparty restore");
+        await releaseLockAndAck(restoreData.getError()!.channelAddress);
+        return;
+      }
+
+      const data = restoreData.getValue();
+      const [key] = Object.keys(data ?? []);
+      if (key !== "chainId" && key !== "channelAddress") {
+        logger.error({ data }, "Message malformed");
+        return;
+      }
+
+      if (key === "channelAddress") {
+        const { channelAddress } = data as { channelAddress: string };
+        await releaseLockAndAck(channelAddress, true);
         return;
       }
 
       // Otherwise, they are looking to initiate a sync
+      let channel: FullChannelState | undefined;
       const sendCannotSyncFromError = (error: string, context: any = {}) => {
         return messaging.respondToRestoreStateMessage(
           inbox,
-          Result.fail(new MessagingError(error as any, { ...context, method })),
+          Result.fail(new EngineError(error, channel?.channelAddress ?? "unknown", { ...context, method })),
         );
       };
 
       // Get info from store to send to counterparty
       const { chainId } = data as any;
-      let channel: FullChannelState | undefined;
       try {
         channel = await store.getChannelStateByParticipants(signer.publicIdentifier, from, chainId);
       } catch (e) {
@@ -248,8 +255,10 @@ export async function setupEngineListeners(
       );
       await messaging.respondToRestoreStateMessage(inbox, Result.ok({ channel, activeTransfers }));
 
-      // Release lock on timeout
-      setTimeout(() => releaseRestoreLocks(channel!), 15_000);
+      // Release lock on timeout regardless
+      setTimeout(() => {
+        releaseRestoreLocks(channel!);
+      }, 15_000);
     },
   );
 

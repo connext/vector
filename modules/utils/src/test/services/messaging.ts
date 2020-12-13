@@ -8,6 +8,7 @@ import {
   OutboundChannelUpdateError,
   Result,
   FullChannelState,
+  EngineError,
   FullTransferState,
 } from "@connext/vector-types";
 import { Evt } from "evt";
@@ -174,21 +175,18 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendRestoreStateMessage(
-    restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>> {
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
     throw new Error("Method not implemented.");
   }
   onReceiveRestoreStateMessage(
     publicIdentifier: string,
     callback: (
-      restoreInfo: Result<
-        { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
-        MessagingError
-      >,
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
       from: string,
       inbox: string,
     ) => void,
@@ -197,7 +195,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
   respondToRestoreStateMessage(
     inbox: string,
-    infoToRestore: Result<{ channel: FullChannelState<any>; activeTransfers: FullTransferState[] }, MessagingError>,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }

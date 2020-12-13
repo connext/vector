@@ -59,6 +59,7 @@ export abstract class VectorError extends Error {
     NodeError: "NodeError",
     LockError: "LockError",
     MessagingError: "MessagingError",
+    EngineError: "EngineError",
     // etc.
   } as const;
 
@@ -255,5 +256,13 @@ export class MessagingError extends VectorError {
     public readonly context?: any,
   ) {
     super(message, context);
+  }
+}
+
+export class EngineError extends VectorError {
+  readonly type = VectorError.errors.EngineError;
+
+  constructor(public readonly msg: string, public readonly channelAddress: string, public readonly context: any = {}) {
+    super(msg, context);
   }
 }
