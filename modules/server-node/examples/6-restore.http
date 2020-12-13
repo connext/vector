@@ -16,11 +16,11 @@
 
 ##############
 ### Restore State
-POST {{aliceUrl}}/restore
+POST {{bobUrl}}/restore
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{bobPublicIdentifier}}",
+  "counterpartyIdentifier": "{{alicePublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "publicIdentifier": "{{alicePublicIdentifier}}"
+  "publicIdentifier": "{{bobPublicIdentifier}}"
 }
