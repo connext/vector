@@ -273,6 +273,18 @@ const PostSignUtilityMessageResponseSchema = {
   }),
 };
 
+// POST RESTORE STATE
+const PostRestoreStateBodySchema = Type.Intersect([
+  EngineParams.RestoreStateSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostRestoreStateResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
+  }),
+};
+
 // CREATE NODE
 const PostCreateNodeBodySchema = Type.Object({
   index: Type.Integer({ minimum: 0, maximum: 2147483647 }),
@@ -418,6 +430,9 @@ export namespace NodeParams {
   export const SignUtilityMessageSchema = PostSignUtilityMessageBodySchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageSchema>;
 
+  export const RestoreStateSchema = PostRestoreStateBodySchema;
+  export type RestoreState = Static<typeof RestoreStateSchema>;
+
   export const AdminSchema = PostAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
 
@@ -506,6 +521,9 @@ export namespace NodeResponses {
 
   export const SignUtilityMessageSchema = PostSignUtilityMessageResponseSchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageSchema["200"]>;
+
+  export const RestoreStateSchema = PostRestoreStateResponseSchema;
+  export type RestoreState = Static<typeof RestoreStateSchema["200"]>;
 
   export const AdminSchema = PostAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;

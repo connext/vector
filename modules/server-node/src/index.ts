@@ -588,8 +588,8 @@ server.post<{ Body: NodeParams.RestoreState }>(
     }
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_restoreState, request.body);
     try {
-      const { channelAddress, nonce } = await engine.request<typeof ChannelRpcMethods.chan_restoreState>(rpc);
-      return reply.status(200).send({ channelAddress, nonce } as NodeResponses.RestoreState);
+      const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_restoreState>(rpc);
+      return reply.status(200).send({ channelAddress } as NodeResponses.RestoreState);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
