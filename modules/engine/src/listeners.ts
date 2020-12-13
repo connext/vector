@@ -155,7 +155,7 @@ export async function setupEngineListeners(
       inbox: string,
     ) => {
       const method = "onReceiveRestoreStateMessage";
-      logger.debug({ method }, "Received message");
+      logger.debug({ method }, "Handling message");
 
       // If it is from yourself, do nothing
       if (from === signer.publicIdentifier) {
