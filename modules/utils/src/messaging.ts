@@ -17,6 +17,7 @@ import pino, { BaseLogger } from "pino";
 import { INatsService, natsServiceFactory } from "ts-natsutil";
 
 import { isNode } from "./env";
+import { safeJsonStringify } from "./json";
 
 export { AuthService } from "ts-natsutil";
 
@@ -262,14 +263,31 @@ export class NatsMessagingService implements IMessagingService {
   ////////////
 
   // RESTORE METHODS
-  sendRestoreStateMessage(
+  async sendRestoreStateMessage(
     restoreInfo: { chainId: number } | { channelAddress: string; activeTransferIds: string[] },
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] }, MessagingError>> {
-    throw new Error("Method not implemented.");
+    this.assertConnected();
+    const method = "sendRestoreStateMessage";
+    try {
+      const subject = `${to}.${from}.restore`;
+      const msgBody = JSON.stringify({ restoreInfo });
+      this.log.debug({ method, msgBody }, "Sending message");
+      const msg = await this.connection!.request(subject, timeout, msgBody);
+      this.log.debug({ method, msg }, "Received response");
+      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
+      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
+      parsedMsg.data = parsedData;
+      if (parsedMsg.data.error) {
+        return Result.fail(new MessagingError(MessagingError.reasons.Response, { error: parsedMsg.data.error }));
+      }
+      return Result.ok(parsedMsg.data);
+    } catch (e) {
+      return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }));
+    }
   }
   async onReceiveRestoreStateMessage(
     publicIdentifier: string,
@@ -307,11 +325,17 @@ export class NatsMessagingService implements IMessagingService {
     });
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
-  respondToRestoreStateMessage(
+  async respondToRestoreStateMessage(
     inbox: string,
     infoToRestore: Result<{ channel: FullChannelState<any>; activeTransfers: FullTransferState[] }, MessagingError>,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    this.assertConnected();
+    const subject = inbox;
+    this.log.debug({ method: "respondToRestoreStateMessage", subject }, `Sending response`);
+    await this.connection!.publish(
+      subject,
+      infoToRestore.isError ? safeJsonStringify(infoToRestore.getError()) : safeJsonStringify(infoToRestore.getValue()),
+    );
   }
 
   // SETUP METHODS
