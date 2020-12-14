@@ -29,31 +29,67 @@ then interactive=(--interactive --tty)
 else echo "Running in non-interactive mode"
 fi
 
+
+####################
+## Load Config
+
+if [[ ! -f "$root/node.config.json" ]]
+then cp "$root/ops/config/node.default.json" "$root/node.config.json"
+fi
+if [[ ! -f "$root/router.config.json" ]]
+then cp "$root/ops/config/router.default.json" "$root/router.config.json"
+fi
+
+config=$(
+  cat "$root/ops/config/node.default.json" "$root/ops/config/router.default.json" \
+  | cat - "$root/node.config.json" "$root/router.config.json" \
+  | jq -s '.[0] + .[1] + .[2] + .[3]'
+)
+
+function getConfig {
+  value=$(echo "$config" | jq ".$1" | tr -d '"')
+  if [[ "$value" == "null" ]]
+  then echo ""
+  else echo "$value"
+  fi
+}
+
+production=$(getConfig production)
+chain_addresses=$(echo "$config" | jq '.chainAddresses' | tr -d '\n\r ')
+chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
+
+#################
+## Start Deps
+
+# Start trio
+bash "$root/ops/start-trio.sh"
+
 ########################################
 ## Launch test runner
 
+tester_name=${project}_load_test_runner
 common=(
   ${interactive[@]}
   "--env=NODE_TLS_REJECT_UNAUTHORIZED=0"
   "--env=VECTOR_ADMIN_TOKEN=$VECTOR_ADMIN_TOKEN"
-  "--env=VECTOR_AUTH_URL=http://auth:5040"
   "--env=VECTOR_CAROL_URL=http://carol:8000"
-  "--env=VECTOR_CHAIN_ADDRESSES=$(tr -d ' \n' < "$root/.chaindata/chain-addresses.json")"
-  "--env=VECTOR_CHAIN_PROVIDERS=$(tr -d ' \n' < "$root/.chaindata/chain-providers.json")"
+  "--env=VECTOR_CHAIN_ADDRESSES=$chain_addresses"
+  "--env=VECTOR_CHAIN_PROVIDERS=$chain_providers"
   "--env=VECTOR_DAVE_URL=http://dave:8000"
   "--env=VECTOR_LOG_LEVEL=${LOG_LEVEL:-error}"
-  "--env=VECTOR_NATS_URL=nats://nats:4222"
-  "--env=VECTOR_NUM_AGENTS=${num_agents}"
-  "--env=VECTOR_PROD=${VECTOR_PROD}"
+  "--env=VECTOR_MESSAGING_URL=http://messaging"
   "--env=VECTOR_ROGER_URL=http://roger:8000"
-  "--env=VECTOR_ROUTER_URL=http://router:8009"
-  "--name=${project}_load_test_runner"
+  "--env=VECTOR_ROUTER_URL=http://router:8000"
+  "--env=VECTOR_NUM_AGENTS=${num_agents}"
+  "--env=VECTOR_PROD=${production}"
+  "--env=VECTOR_TESTER_NAME=$tester_name"
+  "--name=$tester_name"
   "--network=$project"
   "--rm"
   "--tmpfs=/tmp"
 )
 
-if [[ "$VECTOR_PROD" == "true" ]]
+if [[ "$production" == "true" ]]
 then
   # If we're on the prod branch then use the release semvar, otherwise use the commit hash
   if [[ "$(git rev-parse --abbrev-ref HEAD)" == "prod" || "${GITHUB_REF##*/}" == "prod" ]]

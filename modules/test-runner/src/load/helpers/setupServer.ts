@@ -10,10 +10,11 @@ import {
 
 import { env } from "../../utils";
 
-const serverBase = `http://vector_test_runner:${env.port}`;
+const serverBase = `http://${env.testerName}:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
+
 export const carolEvts = {
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {},
