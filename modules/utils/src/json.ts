@@ -47,8 +47,7 @@ export const safeJsonStringify = (value: any): string => {
     if (typeof value === "string") {
       return value;
     }
-    const ret = typeof value?.toString === "function" ? value.toString() : JSON.stringify(value, nullify);
-    return ret;
+    return typeof value?.toString === "function" ? value.toString() : JSON.stringify(value, nullify);
   } catch (e) {
     return value;
   }

@@ -43,7 +43,7 @@ export class Result<T, Y = any> {
     if (this.isError) {
       return JSON.stringify({
         isError: true,
-        error: typeof (this.error as any)?.toString === "function" ? (this.error as any).toString() : this.error ?? "",
+        error: typeof (this.error as any)?.toString === "function" ? (this.error as any).toString() : this.error,
       });
     }
     return JSON.stringify({ isError: false, value: this.value ?? "" });
@@ -78,12 +78,16 @@ export abstract class VectorError extends Error {
   abstract readonly type: Values<typeof VectorError.errors>;
   static readonly reasons: { [key: string]: string };
 
-  constructor(
-    public readonly message: Values<typeof VectorError.reasons>,
-    // public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
-    // public readonly state?: FullChannelState,
-    public readonly context?: any,
-  ) {
+  public toString(): string {
+    return JSON.stringify({
+      message: this.message,
+      context: this.context ?? {},
+      type: this.type,
+      // stack: this.stack,
+    });
+  }
+
+  constructor(public readonly message: Values<typeof VectorError.reasons>, public readonly context?: any) {
     super(message);
   }
 }
@@ -143,6 +147,16 @@ export class ValidationError extends VectorError {
   ) {
     super(message, context);
   }
+
+  public toString(): string {
+    return JSON.stringify({
+      message: this.message,
+      context: this.context ?? {},
+      type: this.type,
+      params: this.params,
+      state: this.state ?? {},
+    });
+  }
 }
 
 // Thrown by the protocol when initiating an update
@@ -181,6 +195,16 @@ export class OutboundChannelUpdateError extends VectorError {
   ) {
     super(message, context);
   }
+
+  public toString(): string {
+    return JSON.stringify({
+      message: this.message,
+      context: this.context ?? {},
+      type: this.type,
+      params: this.params,
+      state: this.state ?? {},
+    });
+  }
 }
 
 export class LockError extends VectorError {
@@ -190,8 +214,17 @@ export class LockError extends VectorError {
     Unknown: "Unknown Lock Error", // TODO
   };
 
-  constructor(message: string, lockName: string, context: any = {}) {
-    super(message);
+  public toString(): string {
+    return JSON.stringify({
+      message: this.message,
+      context: this.context ?? {},
+      type: this.type,
+      lockName: this.lockName,
+    });
+  }
+
+  constructor(public readonly message: string, public readonly lockName: string, public readonly context: any = {}) {
+    super(message, context);
   }
 }
 
@@ -226,9 +259,19 @@ export class InboundChannelUpdateError extends VectorError {
     public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
     public readonly state?: FullChannelState<any>,
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
+  }
+
+  public toString(): string {
+    return JSON.stringify({
+      message: this.message,
+      context: this.context ?? {},
+      type: this.type,
+      update: this.update,
+      state: this.state ?? {},
+    });
   }
 }
 
@@ -252,7 +295,7 @@ export class NodeError extends VectorError {
   constructor(
     public readonly message: Values<typeof NodeError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }
@@ -269,7 +312,7 @@ export class MessagingError extends VectorError {
   constructor(
     public readonly message: Values<typeof MessagingError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }
