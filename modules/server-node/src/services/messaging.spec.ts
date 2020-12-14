@@ -11,7 +11,7 @@ import pino from "pino";
 
 import { config } from "../config";
 
-describe.only("messaging", () => {
+describe("messaging", () => {
   const logger = pino();
   let messagingA: NatsMessagingService;
   let messagingB: NatsMessagingService;
