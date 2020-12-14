@@ -13,6 +13,7 @@ module.exports = {
   },
 
   externals: {
+    hardhat: "commonjs2 hardhat",
     mocha: "commonjs2 mocha",
     sequelize: "commonjs2 sequelize",
     sqlite3: "commonjs2 sqlite3",
