@@ -36,6 +36,19 @@ export class Result<T, Y = any> {
     return undefined;
   }
 
+  public toString(): string {
+    if (!this.error && !this.value) {
+      return "";
+    }
+    if (this.isError) {
+      return JSON.stringify({
+        isError: true,
+        error: typeof (this.error as any)?.toString === "function" ? (this.error as any).toString() : this.error ?? "",
+      });
+    }
+    return JSON.stringify({ isError: false, value: this.value ?? "" });
+  }
+
   public static fail<U, Y extends Error>(error: Y): Result<U, Y> {
     return new Result<U, Y>(error);
   }
@@ -174,8 +187,12 @@ export class LockError extends VectorError {
   readonly type = VectorError.errors.LockError;
 
   static readonly reasons = {
-    Unknown: "Unknown Lock Error //TODO",
+    Unknown: "Unknown Lock Error", // TODO
   };
+
+  constructor(message: string, lockName: string, context: any = {}) {
+    super(message);
+  }
 }
 
 // Thrown by the protocol when applying an update

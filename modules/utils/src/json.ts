@@ -8,9 +8,11 @@ export function bigNumberifyJson<T = any>(json: any): T {
   return typeof json === "string"
     ? json
     : JSON.parse(JSON.stringify(json), (key: string, value: any): any =>
-        (value && value._hex && value._isBigNumber) ? toBN(value._hex)
-        : (value && value.hex && value.type === "BigNumber") ? toBN(value.hex)
-        : value,
+        value && value._hex && value._isBigNumber
+          ? toBN(value._hex)
+          : value && value.hex && value.type === "BigNumber"
+          ? toBN(value.hex)
+          : value,
       );
 }
 
@@ -42,7 +44,11 @@ const nullify = (key: string, value: any) => (typeof value === "undefined" ? nul
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const safeJsonStringify = (value: any): string => {
   try {
-    return typeof value === "string" ? value : JSON.stringify(value, nullify);
+    if (typeof value === "string") {
+      return value;
+    }
+    const ret = typeof value?.toString === "function" ? value.toString() : JSON.stringify(value, nullify);
+    return ret;
   } catch (e) {
     return value;
   }

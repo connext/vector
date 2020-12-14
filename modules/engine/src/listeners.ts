@@ -155,7 +155,10 @@ export async function setupEngineListeners(
       bobIdentifier: from,
     });
 
-    await messaging.respondToRequestCollateralMessage(inbox, { message: "Successfully requested collateral" });
+    await messaging.respondToRequestCollateralMessage(
+      inbox,
+      Result.ok({ message: "Successfully requested collateral" }),
+    );
   });
 
   await messaging.onReceiveSetupMessage(signer.publicIdentifier, async (params, from, inbox) => {
@@ -165,18 +168,15 @@ export async function setupEngineListeners(
     }
     const setupInfo = params.getValue();
     logger.info({ params: setupInfo, method }, "Handling message");
-    let payload: { message?: string | undefined; error?: any };
     const res = await setup({
       chainId: setupInfo.chainId,
       counterpartyIdentifier: from,
       timeout: setupInfo.timeout,
     });
-    if (res.isError) {
-      payload = { error: res.getError()?.message };
-    } else {
-      payload = { message: res.getValue().channelAddress };
-    }
-    await messaging.respondToSetupMessage(inbox, payload);
+    await messaging.respondToSetupMessage(
+      inbox,
+      res.isError ? Result.fail(res.getError()!) : Result.ok({ channelAddress: res.getValue().channelAddress }),
+    );
   });
 }
 
