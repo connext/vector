@@ -16,6 +16,7 @@
     "@connext/vector-engine": "0.0.33",
     "@connext/vector-types": "0.0.33",
     "@connext/vector-utils": "0.0.33",
+    "@prisma/client": "2.12.1",
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.0",

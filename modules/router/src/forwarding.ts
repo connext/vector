@@ -70,7 +70,7 @@ export async function forwardTransferCreation(
   chainProviders: ChainJsonProviders,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
-  logger.error(
+  logger.info(
     { data, method, node: { signerAddress, routerPublicIdentifier } },
     "Received transfer event, starting forwarding",
   );
@@ -280,7 +280,7 @@ export async function forwardTransferResolution(
   data: ConditionalTransferResolvedPayload,
   publicIdentifier: string,
   signerAddress: string,
-  service: INodeService,
+  nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardResolutionError>> {
@@ -296,7 +296,7 @@ export async function forwardTransferResolution(
   const { routingId } = meta as RouterSchemas.RouterMeta;
 
   // Find the channel with the corresponding transfer to unlock
-  const transfersRes = await service.getTransfersByRoutingId({ routingId, publicIdentifier });
+  const transfersRes = await nodeService.getTransfersByRoutingId({ routingId, publicIdentifier });
   if (transfersRes.isError) {
     return Result.fail(
       new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
@@ -325,7 +325,7 @@ export async function forwardTransferResolution(
     transferResolver,
     publicIdentifier,
   };
-  const resolution = await service.resolveTransfer(resolveParams);
+  const resolution = await nodeService.resolveTransfer(resolveParams);
   if (resolution.isError) {
     // Store the transfer, retry later
     // TODO: add logic to periodically retry resolving transfers

@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { ConditionalTransferCreatedPayload, INodeService, Result, TransferNames } from "@connext/vector-types";
+import {
+  ConditionalTransferCreatedPayload,
+  FullChannelState,
+  INodeService,
+  NodeError,
+  Result,
+  TransferNames,
+} from "@connext/vector-types";
 import {
   createTestChannelState,
   createTestFullHashlockTransferState,
@@ -27,6 +34,9 @@ describe("Forwarding", () => {
   describe("transferCreation", () => {
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<RouterStore>;
+    let data: ConditionalTransferCreatedPayload;
+    let senderChannel: FullChannelState;
+    let receiverChannel: FullChannelState;
 
     const generateTransferData = (): ConditionalTransferCreatedPayload => {
       const channelAddress = mkAddress("0x1");
@@ -56,9 +66,33 @@ describe("Forwarding", () => {
     };
 
     beforeEach(async () => {
+      data = generateTransferData();
+      senderChannel = createTestChannelState("create", {
+        alice: mkAddress("0xa"),
+        bob: mkAddress("0xb1"),
+        channelAddress: data.channelAddress,
+        balances: [data.channelBalance],
+      }).channel;
+      receiverChannel = createTestChannelState("deposit", {
+        alice: mkAddress("0xa"),
+        bob: mkAddress("0xb2"),
+        assetIds: [AddressZero],
+        balances: [
+          {
+            amount: ["5", "7"],
+            to: [mkAddress("0xb"), mkAddress("0xc")],
+          },
+        ],
+      }).channel;
+
       node = Sinon.createStubInstance(RestServerNodeService, {
         sendDepositTx: Promise.resolve(Result.ok({ txHash: getRandomBytes32() })),
       });
+      node.getStateChannel.resolves(Result.ok(senderChannel));
+      node.getStateChannelByParticipants.resolves(Result.ok(receiverChannel));
+      node.conditionalTransfer.resolves(Result.ok({} as any));
+      node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
+      node.reconcileDeposit.resolves(Result.ok({ channelAddress: data.channelAddress }));
       store = Sinon.createStubInstance(RouterStore);
     });
 
@@ -91,17 +125,40 @@ describe("Forwarding", () => {
       node.conditionalTransfer.resolves(Result.ok({} as any));
       node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
       node.reconcileDeposit.resolves(Result.ok({ channelAddress: data.channelAddress }));
-      await expect(
-        forwardTransferCreation(
-          data,
-          mkPublicIdentifier("vectorBBB"),
-          mkAddress("0xb"),
-          node as INodeService,
-          store,
-          logger,
-          hydratedProviders,
-        ),
-      ).to.eventually.be.ok;
+      const forwarded = await forwardTransferCreation(
+        data,
+        mkPublicIdentifier("vectorBBB"),
+        mkAddress("0xb"),
+        node as INodeService,
+        store,
+        logger,
+        hydratedProviders,
+      );
+      expect(forwarded.getError()).to.be.undefined;
+    });
+
+    it.only("queues update successfully if transfer creation fails with timeout and transfer is allowOffline", async () => {
+      node.conditionalTransfer.resolves(Result.fail(new NodeError(NodeError.reasons.Timeout)));
+      await forwardTransferCreation(
+        data,
+        mkPublicIdentifier("vectorBBB"),
+        mkAddress("0xb"),
+        node as INodeService,
+        store,
+        logger,
+        hydratedProviders,
+      );
+
+      expect(
+        store.queueUpdate.calledWith("TransferCreation", {
+          channelAddress: receiverChannel.channelAddress,
+          amount: data.transfer.balance.amount[0],
+          assetId: data.transfer.assetId,
+          routingId: data.transfer.meta.routingId,
+          type: "HashlockTransfer",
+          details: data.transfer.transferState,
+        }),
+      ).to.be.true;
     });
 
     it.skip("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {});
@@ -113,7 +170,6 @@ describe("Forwarding", () => {
     it.skip("fails if no rebalance profile available", async () => {});
     it.skip("fails if depositing (collateralizing) fails", async () => {});
     it.skip("fails if transfer creation fails with timeout and transfer is requireOnline", async () => {});
-    it.skip("queues update successfully if transfer creation fails with timeout and transfer is allowOffline", async () => {});
     it.skip("fails if transfer creation fails for any other reason than a timeout", async () => {});
   });
 });
