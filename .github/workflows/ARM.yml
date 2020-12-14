@@ -6,9 +6,10 @@ on: push
 
 jobs:
   build-arm64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       IMAGE_NAME: vector_node_arm
+      DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -32,8 +33,8 @@ jobs:
         run: make
       - name: Build ARM and push
         run: |
-          echo "image name: ${IMAGE_NAME}:${GITHUB_SHA::8}"
+          echo "buildx'ing image name: ${IMAGE_NAME}:${GITHUB_SHA::8}"
           docker buildx build --platform=linux/arm/v7 --tag connextproject/${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
+          echo "buildx was successful, creating manifest"
           docker manifest create connextproject/vector_node:${GITHUB_SHA::8} --amend connextproject/vector_node@digest --amend connextproject/${IMAGE_NAME}:${GITHUB_SHA::8}
-          docker push connextproject/vector_node:${GITHUB_SHA::8} 
 
