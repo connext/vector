@@ -1,29 +1,6 @@
 #!/bin/bash
 set -e
 
-
-@ethersproject/bignumber
-@ethersproject/bytes
-@ethersproject/constants
-@ethersproject/random
-@ethersproject/wallet
-@ethersproject/abi
-@ethersproject/abstract-provider
-@ethersproject/abstract-signer
-@ethersproject/address
-@ethersproject/bignumber
-@ethersproject/bytes
-@ethersproject/constants
-@ethersproject/providers
-@ethersproject/random
-@ethersproject/solidity
-@ethersproject/strings
-@ethersproject/units
-@ethersproject/wallet
-
-
-
-
 echo "Ethereum testnet entrypoint activated!"
 
 ## Setup env
