@@ -4,7 +4,6 @@ import {
   INodeService,
   ConditionalTransferCreatedPayload,
   FullChannelState,
-  IVectorChainReader,
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
@@ -13,7 +12,7 @@ import { BaseLogger } from "pino";
 
 import { requestCollateral } from "./collateral";
 import { config } from "./config";
-import { forwardTransferCreation, forwardTransferResolution } from "./forwarding";
+import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
 
 const ajv = new Ajv();
@@ -70,8 +69,8 @@ const configureMetrics = (register: Registry) => {
 };
 
 export async function setupListeners(
-  publicIdentifier: string,
-  signerAddress: string,
+  routerPublicIdentifier: string,
+  routerSignerAddress: string,
   nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
@@ -89,8 +88,8 @@ export async function setupListeners(
       const end = transferSendTime.labels(meta.routingId).startTimer();
       const res = await forwardTransferCreation(
         data,
-        publicIdentifier,
-        signerAddress,
+        routerPublicIdentifier,
+        routerSignerAddress,
         nodeService,
         store,
         logger,
@@ -126,7 +125,7 @@ export async function setupListeners(
         return false;
       }
 
-      if (data.transfer.initiator === signerAddress) {
+      if (data.transfer.initiator === routerSignerAddress) {
         logger.info(
           { initiator: data.transfer.initiator },
           "Not forwarding transfer which was initiated by our node, doing nothing",
@@ -134,8 +133,11 @@ export async function setupListeners(
         return false;
       }
 
-      if (!meta.path[0].recipient || meta.path[0].recipient === publicIdentifier) {
-        logger.warn({ path: meta.path[0], publicIdentifier }, "Not forwarding transfer with no path to follow");
+      if (!meta.path[0].recipient || meta.path[0].recipient === routerPublicIdentifier) {
+        logger.warn(
+          { path: meta.path[0], publicIdentifier: routerPublicIdentifier },
+          "Not forwarding transfer with no path to follow",
+        );
         return false;
       }
       return true;
@@ -146,7 +148,14 @@ export async function setupListeners(
   nodeService.on(
     EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
     async (data: ConditionalTransferCreatedPayload) => {
-      const res = await forwardTransferResolution(data, publicIdentifier, signerAddress, nodeService, store, logger);
+      const res = await forwardTransferResolution(
+        data,
+        routerPublicIdentifier,
+        routerSignerAddress,
+        nodeService,
+        store,
+        logger,
+      );
       if (res.isError) {
         return logger.error(
           { method: "forwardTransferResolution", error: res.getError()?.message, context: res.getError()?.context },
@@ -185,7 +194,7 @@ export async function setupListeners(
       }
 
       // If we are the receiver of this transfer, do nothing
-      if (data.transfer.responder === signerAddress) {
+      if (data.transfer.responder === routerSignerAddress) {
         logger.info({ routingId: data.transfer.meta.routingId }, "Nothing to reclaim");
         return false;
       }
@@ -197,7 +206,10 @@ export async function setupListeners(
 
   nodeService.on(EngineEvents.REQUEST_COLLATERAL, async (data) => {
     logger.info({ data }, "Received request collateral event");
-    const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress, publicIdentifier });
+    const channelRes = await nodeService.getStateChannel({
+      channelAddress: data.channelAddress,
+      publicIdentifier: routerPublicIdentifier,
+    });
     if (channelRes.isError) {
       logger.error(
         {
@@ -216,7 +228,7 @@ export async function setupListeners(
     const res = await requestCollateral(
       channel as FullChannelState,
       data.assetId,
-      publicIdentifier,
+      routerPublicIdentifier,
       nodeService,
       chainProviders,
       logger,
@@ -230,10 +242,13 @@ export async function setupListeners(
     logger.info({ res: res.getValue() }, "Succesfully requested collateral");
   });
 
-  // await nodeService.on(
-  //   EngineEvents.IS_ALIVE, // TODO types
-  //   async data => {
-  //     await handleIsAlive(data);
-  //   },
-  // );
+  nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
+    const res = await handleIsAlive(data, routerPublicIdentifier, routerSignerAddress, nodeService, store, logger);
+    if (res.isError) {
+      logger.error({ error: res.getError()?.message, context: res.getError()?.context }, "Error handling isAlive");
+      return;
+    }
+
+    logger.info({ res: res.getValue() }, "Succesfully handled isAlive");
+  });
 }

@@ -8,6 +8,7 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
+  IsAlivePayload,
   RequestCollateralPayload,
 } from "@connext/vector-types";
 import { Registry } from "prom-client";
@@ -22,7 +23,12 @@ const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
+const isAlivePath = "/is-alive";
 const evts: EventCallbackConfig = {
+  [EngineEvents.IS_ALIVE]: {
+    evt: Evt.create<IsAlivePayload>(),
+    url: `${routerBase}${conditionalTransferCreatedPath}`,
+  },
   [EngineEvents.SETUP]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -74,6 +80,11 @@ server.addHook("onReady", async () => {
 
 server.get("/ping", async () => {
   return "pong\n";
+});
+
+server.post(isAlivePath, async (request, response) => {
+  evts[EngineEvents.IS_ALIVE].evt!.post(request.body as IsAlivePayload);
+  return response.status(200).send({ message: "success" });
 });
 
 server.post(conditionalTransferCreatedPath, async (request, response) => {

@@ -137,7 +137,7 @@ describe("Forwarding", () => {
       expect(forwarded.getError()).to.be.undefined;
     });
 
-    it.only("queues update successfully if transfer creation fails with timeout and transfer is allowOffline", async () => {
+    it("queues update successfully if transfer creation fails with timeout and transfer is allowOffline", async () => {
       node.conditionalTransfer.resolves(Result.fail(new NodeError(NodeError.reasons.Timeout)));
       await forwardTransferCreation(
         data,

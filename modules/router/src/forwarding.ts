@@ -11,13 +11,14 @@ import {
   INodeService,
   NodeError,
   FullChannelState,
+  IsAlivePayload,
 } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
 
 import { getSwappedAmount } from "./services/swap";
-import { IRouterStore } from "./services/store";
+import { IRouterStore, RouterUpdateType, RouterUpdateStatus } from "./services/store";
 import { ChainJsonProviders } from "./listener";
 import { requestCollateral } from "./collateral";
 
@@ -32,6 +33,8 @@ export class ForwardTransferError extends VectorError {
     ErrorForwardingTransfer: "Error forwarding transfer",
     UnableToCollateralize: "Could not collateralize receiver channel",
     InvalidTransferDefinition: "Could not find transfer definition",
+    StoredUpdateError: "Error in stored update",
+    IsAliveError: "Error processing isAlive",
   } as const;
 
   constructor(
@@ -63,7 +66,7 @@ export class ForwardResolutionError extends VectorError {
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
   routerPublicIdentifier: string,
-  signerAddress: string,
+  routerSignerAddress: string,
   nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
@@ -71,7 +74,7 @@ export async function forwardTransferCreation(
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.info(
-    { data, method, node: { signerAddress, routerPublicIdentifier } },
+    { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
     "Received transfer event, starting forwarding",
   );
 
@@ -111,7 +114,6 @@ export async function forwardTransferCreation(
     conditionType,
   } = data;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
-  const { routingId } = meta;
   const [path] = meta.path;
 
   const recipientIdentifier = path.recipient;
@@ -255,15 +257,8 @@ export async function forwardTransferCreation(
   if (transfer.isError) {
     if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
       // store transfer
-      const type = "TransferCreation";
-      await store.queueUpdate(type, {
-        channelAddress: params.channelAddress,
-        amount: params.amount,
-        assetId: params.assetId,
-        routingId,
-        type: params.type,
-        details,
-      });
+      const type = RouterUpdateType.TRANSFER_CREATION;
+      await store.queueUpdate(recipientChannel.channelAddress, type, params);
     }
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
@@ -278,15 +273,15 @@ export async function forwardTransferCreation(
 
 export async function forwardTransferResolution(
   data: ConditionalTransferResolvedPayload,
-  publicIdentifier: string,
-  signerAddress: string,
+  routerPublicIdentifier: string,
+  routerSignerAddress: string,
   nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
 ): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardResolutionError>> {
   const method = "forwardTransferResolution";
   logger.info(
-    { data, method, node: { signerAddress, publicIdentifier } },
+    { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
     "Received transfer resolution, starting forwarding",
   );
   const {
@@ -296,7 +291,10 @@ export async function forwardTransferResolution(
   const { routingId } = meta as RouterSchemas.RouterMeta;
 
   // Find the channel with the corresponding transfer to unlock
-  const transfersRes = await nodeService.getTransfersByRoutingId({ routingId, publicIdentifier });
+  const transfersRes = await nodeService.getTransfersByRoutingId({
+    routingId,
+    publicIdentifier: routerPublicIdentifier,
+  });
   if (transfersRes.isError) {
     return Result.fail(
       new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
@@ -307,7 +305,7 @@ export async function forwardTransferResolution(
   }
 
   // find transfer where node is responder
-  const incomingTransfer = transfersRes.getValue().find((transfer) => transfer.responder === signerAddress);
+  const incomingTransfer = transfersRes.getValue().find((transfer) => transfer.responder === routerSignerAddress);
 
   if (!incomingTransfer) {
     return Result.fail(
@@ -323,14 +321,14 @@ export async function forwardTransferResolution(
     transferId: incomingTransfer.transferId,
     meta: {},
     transferResolver,
-    publicIdentifier,
+    publicIdentifier: routerPublicIdentifier,
   };
   const resolution = await nodeService.resolveTransfer(resolveParams);
   if (resolution.isError) {
     // Store the transfer, retry later
     // TODO: add logic to periodically retry resolving transfers
-    const type = "TransferResolution";
-    await store.queueUpdate(type, resolveParams);
+    const type = RouterUpdateType.TRANSFER_RESOLUTION;
+    await store.queueUpdate(incomingTransfer.channelAddress, type, resolveParams);
     return Result.fail(
       new ForwardResolutionError(ForwardResolutionError.reasons.ErrorResolvingTransfer, {
         message: resolution.getError()?.message,
@@ -347,23 +345,51 @@ export async function forwardTransferResolution(
 }
 
 export async function handleIsAlive(
-  data: any,
-  publicIdentifier: string,
+  data: IsAlivePayload,
+  routerPublicIdentifier: string,
   signerAddress: string,
-  service: INodeService,
+  nodeService: INodeService,
   store: IRouterStore,
-) {
+  logger: BaseLogger,
+): Promise<Result<undefined, ForwardTransferError>> {
+  const method = "handleIsAlive";
+  logger.info(
+    { data, method, node: { signerAddress, routerPublicIdentifier } },
+    "Received transfer event, starting forwarding",
+  );
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
-  // const updates = await store.getQueuedUpdates(data.channelAdress);
-  // updates.forEach(async update => {
-  //   if (update.type == "TransferCreation") {
-  //     const { channelAddress, amount, assetId, paymentId, conditionData } = update.data;
-  //     // TODO do we want to try catch this? What should happen if this fails?
-  //     await node.conditionalTransfer(channelAddress, amount, assetId, paymentId, conditionData);
-  //   } else if (update.type == "TransferResolution") {
-  //     const { channelAddress, paymentId, resolverData } = update.data;
-  //     // TODO same as above
-  //     await node.resolveCondtion(channelAddress, paymentId, resolverData);
-  //   }
-  // });
+  const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
+  const erroredUpdates = [];
+  for (const update of updates) {
+    let transferResult;
+    if (update.type === RouterUpdateType.TRANSFER_CREATION) {
+      transferResult = await nodeService.conditionalTransfer(update.payload as NodeParams.ConditionalTransfer);
+    } else if (update.type === RouterUpdateType.TRANSFER_RESOLUTION) {
+      transferResult = await nodeService.resolveTransfer(update.payload as NodeParams.ResolveTransfer);
+    } else {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.StoredUpdateError, {
+          message: "Unknown update type",
+          update,
+        }),
+      );
+    }
+    if (transferResult.isError) {
+      logger.error(
+        { method, message: transferResult.getError()?.message, context: transferResult.getError()?.context, update },
+        "Error in transfer",
+      );
+      await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, transferResult.getError()?.message);
+      erroredUpdates.push(update);
+    }
+    logger.info({ update, method }, "Successful transfer on isAlive");
+  }
+  if (erroredUpdates.length > 0) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.IsAliveError, {
+        failedIds: erroredUpdates.map((update) => update.id),
+      }),
+    );
+  }
+  return Result.ok(undefined);
 }
