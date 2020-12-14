@@ -35,6 +35,12 @@ jobs:
         run: |
           echo "buildx'ing image name: ${IMAGE_NAME}:${GITHUB_SHA::8}"
           docker buildx build --platform=linux/arm/v7 --tag connextproject/${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
-          echo "buildx was successful, creating manifest"
+          echo "(re-?)building server-node"
+          make server-node
+          echo "inspecting default manifest"
+          docker manifest inspect connextproject/vector_node:${GITHUB_SHA::8}
+          echo "inspecting arm manifest"
+          docker manifest inspect connextproject/vector_node_arm:${GITHUB_SHA::8}
+          echo "creating manifest"
           docker manifest create connextproject/vector_node:${GITHUB_SHA::8} --amend connextproject/vector_node:${GITHUB_SHA::8} --amend connextproject/${IMAGE_NAME}:${GITHUB_SHA::8}
 
