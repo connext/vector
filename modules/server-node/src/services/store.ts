@@ -29,6 +29,8 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
+import { config } from "../config";
+
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
@@ -146,6 +148,7 @@ const convertChannelEntityToFullChannelState = (
           transferDefinition: channelEntity.latestUpdate.transferDefinition!,
           transferId: channelEntity.latestUpdate.transferId!,
           transferResolver: JSON.parse(channelEntity.latestUpdate.transferResolver!),
+          meta: channelEntity.latestUpdate!.meta ? JSON.parse(channelEntity.latestUpdate!.meta) : undefined,
         } as ResolveUpdateDetails;
         break;
     }
@@ -230,7 +233,13 @@ export class PrismaStore implements IServerNodeStore {
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
-    this.prisma = new PrismaClient(dbUrl ? { datasources: { db: { url: this.dbUrl } } } : undefined);
+    const _dbUrl = this.dbUrl
+      ? this.dbUrl
+      : config.dbUrl?.startsWith("sqlite")
+      ? `${config.dbUrl}?connection_limit=1&socket_timeout=10`
+      : config.dbUrl;
+
+    this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
   }
 
   async saveChannelDispute(
@@ -457,21 +466,21 @@ export class PrismaStore implements IServerNodeStore {
   }
 
   async getChannelStateByParticipants(
-    participantA: string,
-    participantB: string,
+    publicIdentifierA: string,
+    publicIdentifierB: string,
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
     const [channelEntity] = await this.prisma.channel.findMany({
       where: {
         OR: [
           {
-            participantA,
-            participantB,
+            publicIdentifierA,
+            publicIdentifierB,
             chainId: chainId.toString(),
           },
           {
-            participantA: participantB,
-            participantB: participantA,
+            publicIdentifierA: publicIdentifierB,
+            publicIdentifierB: publicIdentifierA,
             chainId: chainId.toString(),
           },
         ],
@@ -497,7 +506,7 @@ export class PrismaStore implements IServerNodeStore {
             inDispute: false,
             channelAddressId: channelState.channelAddress,
             transferId: transfer!.transferId,
-            routingId: transfer!.meta.routingId ?? getRandomBytes32(),
+            routingId: transfer!.meta?.routingId ?? getRandomBytes32(),
             amountA: transfer!.balance.amount[0],
             toA: transfer!.balance.to[0],
             amountB: transfer!.balance.amount[1],

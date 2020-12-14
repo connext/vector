@@ -2,6 +2,22 @@
 
 ## Next Release
 
+## 0.0.33
+
+- add sign method to browser node
+
+## 0.0.32
+
+- add utility sign method
+
+## 0.0.31
+
+- fix browser node store issue
+- fix `TFullTransferState` schema
+- store `getChannelStateByParticipants` accepts identifiers instead of addresses
+- make sure all rpc queries properly return `Result` types in error cases
+- add `crossChainTransfer` to iframe
+
 ## 0.0.28
 
 - use receiver payment name instead of transfer definition

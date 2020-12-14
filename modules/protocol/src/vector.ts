@@ -1,4 +1,3 @@
-import { VectorChannel } from "@connext/vector-contracts";
 import {
   ChannelUpdate,
   ChannelUpdateEvent,
@@ -21,9 +20,7 @@ import {
   InboundChannelUpdateError,
   TChannelUpdate,
 } from "@connext/vector-types";
-import { getCreate2MultisigAddress, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
-import { BigNumber } from "@ethersproject/bignumber";
-import { Contract } from "@ethersproject/contracts";
+import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
@@ -247,8 +244,6 @@ export class Vector implements IVectorProtocol {
 
     // TODO: https://github.com/connext/vector/issues/52
 
-    // TODO: https://github.com/connext/vector/issues/53
-
     // sync latest state before starting
     const channels = await this.storeService.getChannelStates();
 
@@ -421,15 +416,11 @@ export class Vector implements IVectorProtocol {
   }
 
   public async getChannelStateByParticipants(
-    alice: string,
-    bob: string,
+    aliceIdentifier: string,
+    bobIdentifier: string,
     chainId: number,
   ): Promise<FullChannelState | undefined> {
-    return this.storeService.getChannelStateByParticipants(
-      getSignerAddressFromPublicIdentifier(alice),
-      getSignerAddressFromPublicIdentifier(bob),
-      chainId,
-    );
+    return this.storeService.getChannelStateByParticipants(aliceIdentifier, bobIdentifier, chainId);
   }
 
   public async getTransferState(transferId: string): Promise<FullTransferState | undefined> {
