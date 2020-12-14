@@ -22,7 +22,8 @@ import {
 
 import { getAddressError, getHexStringError, isValidHexString } from "./hexStrings";
 
-export const VECTOR_SIGN_PREFIX = "\x15Vector Signed Message:\n";
+export const VECTOR_SIGN_PREFIX = "\x16Vector Signed Message:\n";
+export const UTILITY_SIGN_PREFIX = "\x17Utility Signed Message:\n";
 
 ////////////////////////////////////////
 // Misc
@@ -109,6 +110,13 @@ export const hashChannelMessage = (message: string): Bytes32 =>
     ),
   );
 
+export const hashUtilityMessage = (message: string): Bytes32 =>
+  hexlify(
+    keccak256(
+      concatBuffers(bufferify(UTILITY_SIGN_PREFIX), bufferify(`${bufferify(message).length}`), bufferify(message)),
+    ),
+  );
+
 export const encrypt = async (message: string, publicKey: PublicKey): Promise<HexString> =>
   hexlify(serialize(await libEncrypt(bufferify(publicKey), utf8ToBuffer(message))));
 
@@ -120,3 +128,9 @@ export const signChannelMessage = async (message: string, privateKey: PrivateKey
 
 export const recoverAddressFromChannelMessage = async (message: HexString, sig: SignatureString): Promise<Address> =>
   getAddressFromPublicKey(hexlify(recover(bufferify(hashChannelMessage(message)), bufferify(sig))));
+
+export const signUtilityMessage = async (message: string, privateKey: PrivateKey): Promise<HexString> =>
+  hexlify(sign(bufferify(privateKey), bufferify(hashUtilityMessage(message)), true));
+
+export const recoverAddressFroUtilityMessage = async (message: HexString, sig: SignatureString): Promise<Address> =>
+  getAddressFromPublicKey(hexlify(recover(bufferify(hashUtilityMessage(message)), bufferify(sig))));

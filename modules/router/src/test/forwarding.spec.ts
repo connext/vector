@@ -21,9 +21,10 @@ import { mockProvider } from "./utils/mocks";
 
 const hydratedProviders = { 1337: mockProvider };
 
+const logger = pino({ level: config.logLevel });
+
 describe("Forwarding", () => {
   describe("transferCreation", () => {
-    const logger = pino({ level: config.logLevel });
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<RouterStore>;
 
@@ -49,6 +50,8 @@ describe("Forwarding", () => {
         transfer,
         channelBalance,
         conditionType,
+        aliceIdentifier: mkPublicIdentifier("vectorA"),
+        bobIdentifier: mkPublicIdentifier("vectorB"),
       };
     };
 
@@ -71,7 +74,7 @@ describe("Forwarding", () => {
         bob: mkAddress("0xb1"),
         channelAddress: data.channelAddress,
         balances: [data.channelBalance],
-      });
+      }).channel;
       const receiverChannel = createTestChannelState("deposit", {
         alice: mkAddress("0xa"),
         bob: mkAddress("0xb2"),
@@ -82,7 +85,7 @@ describe("Forwarding", () => {
             to: [mkAddress("0xb"), mkAddress("0xc")],
           },
         ],
-      });
+      }).channel;
       node.getStateChannel.resolves(Result.ok(senderChannel));
       node.getStateChannelByParticipants.resolves(Result.ok(receiverChannel));
       node.conditionalTransfer.resolves(Result.ok({} as any));

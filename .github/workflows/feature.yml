@@ -155,4 +155,4 @@ jobs:
       - run: bash ops/test-integration.sh router
       - name: Print logs
         if: failure()
-        run: docker service ls && docker service logs --tail 200 router_node
+        run: docker service ls && docker service logs --tail 200 router_node && docker service logs --tail 200 router_router

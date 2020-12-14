@@ -29,6 +29,7 @@ import {
   ChannelRpcMethodsResponsesMap,
   OutboundChannelUpdateError,
   Result,
+  ChainError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
@@ -53,7 +54,7 @@ export async function setupEngineListeners(
   // Set up listener for channel setup
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async (event) => await handleSetup(event, signer, vector, evts, logger),
+    (event) => handleSetup(event, signer, vector, evts, logger),
     (event) => {
       const {
         updatedChannelState: {
@@ -67,7 +68,7 @@ export async function setupEngineListeners(
   // Set up listener for deposit reconciliations
   vector.on(
     ProtocolEventName.CHANNEL_UPDATE_EVENT,
-    async (event) => await handleDepositReconciliation(event, signer, vector, evts, logger),
+    (event) => handleDepositReconciliation(event, signer, vector, evts, logger),
     (event) => {
       const {
         updatedChannelState: {
@@ -179,13 +180,13 @@ export async function setupEngineListeners(
   });
 }
 
-async function handleSetup(
+function handleSetup(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
-): Promise<void> {
+): void {
   logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling setup event");
   // Emit the properly structured event
   const {
@@ -203,13 +204,13 @@ async function handleSetup(
   evts[EngineEvents.SETUP].post(payload);
 }
 
-async function handleDepositReconciliation(
+function handleDepositReconciliation(
   event: ChannelUpdateEvent,
   signer: IChannelSigner,
   vector: IVectorProtocol,
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
-): Promise<void> {
+): void {
   logger.info({ channelAddress: event.updatedChannelState.channelAddress }, "Handling deposit reconciliation event");
   // Emit the properly structured event
   const {
@@ -238,7 +239,15 @@ async function handleConditionalTransferCreation(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  if (await isWithdrawTransfer(event, chainAddresses, chainService)) {
+  const isWithdrawRes = await isWithdrawTransfer(event, chainAddresses, chainService);
+  if (isWithdrawRes.isError) {
+    logger.warn(
+      { method: "isWithdrawRes", ...isWithdrawRes.getError()!.context },
+      "Failed to determine if transfer is withdrawal",
+    );
+    return;
+  }
+  if (isWithdrawRes.getValue()) {
     return;
   }
   const {
@@ -307,7 +316,15 @@ async function handleConditionalTransferResolution(
   evts: EngineEvtContainer,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  if (await isWithdrawTransfer(event, chainAddresses, chainService)) {
+  const isWithdrawRes = await isWithdrawTransfer(event, chainAddresses, chainService);
+  if (isWithdrawRes.isError) {
+    logger.warn(
+      { method: "isWithdrawRes", ...isWithdrawRes.getError()!.context },
+      "Failed to determine if transfer is withdrawal",
+    );
+    return;
+  }
+  if (isWithdrawRes.getValue()) {
     return;
   }
   logger.info(
@@ -362,7 +379,15 @@ async function handleWithdrawalTransferCreation(
   chainService: IVectorChainService,
   logger: Pino.BaseLogger,
 ): Promise<void> {
-  if (!(await isWithdrawTransfer(event, chainAddresses, chainService))) {
+  const isWithdrawRes = await isWithdrawTransfer(event, chainAddresses, chainService);
+  if (isWithdrawRes.isError) {
+    logger.warn(
+      { method: "isWithdrawRes", ...isWithdrawRes.getError()!.context },
+      "Failed to determine if transfer is withdrawal",
+    );
+    return;
+  }
+  if (!isWithdrawRes.getValue()) {
     return;
   }
   const method = "handleWithdrawalTransferCreation";
@@ -453,7 +478,6 @@ async function handleWithdrawalTransferCreation(
   // via injected validation)
   let transactionHash: string | undefined = undefined;
   if (signer.address === alice) {
-    console.log(">>>>>>>>> SUBMITTING WITHDRAWAL");
     // Submit withdrawal to chain
     logger.info(
       { method, withdrawalAmount: withdrawalAmount.toString(), channelAddress },
@@ -514,7 +538,15 @@ async function handleWithdrawalTransferResolution(
   chainService: IVectorChainService,
   logger: Pino.BaseLogger = Pino(),
 ): Promise<void> {
-  if (!(await isWithdrawTransfer(event, chainAddresses, chainService))) {
+  const isWithdrawRes = await isWithdrawTransfer(event, chainAddresses, chainService);
+  if (isWithdrawRes.isError) {
+    logger.warn(
+      { method: "isWithdrawRes", ...isWithdrawRes.getError()!.context },
+      "Failed to determine if transfer is withdrawal",
+    );
+    return;
+  }
+  if (!isWithdrawRes.getValue()) {
     return;
   }
   const method = "handleWithdrawalTransferResolution";
@@ -648,7 +680,7 @@ const isWithdrawTransfer = async (
   event: ChannelUpdateEvent,
   chainAddresses: ChainAddresses,
   chainService: IVectorChainReader,
-): Promise<boolean> => {
+): Promise<Result<boolean, ChainError>> => {
   const {
     updatedChannelState: {
       latestUpdate: { details },
@@ -661,8 +693,8 @@ const isWithdrawTransfer = async (
     chainId,
   );
   if (withdrawInfo.isError) {
-    return false;
+    return Result.fail(withdrawInfo.getError()!);
   }
   const { definition } = withdrawInfo.getValue();
-  return (details as ResolveUpdateDetails).transferDefinition === definition;
+  return Result.ok((details as ResolveUpdateDetails).transferDefinition === definition);
 };

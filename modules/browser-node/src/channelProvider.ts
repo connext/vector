@@ -41,12 +41,12 @@ export interface IRpcChannelProvider {
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void>;
+  ): void;
   once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void>;
+  ): void;
 }
 
 export class IframeChannelProvider extends EventEmitter<string> implements IRpcChannelProvider {
@@ -107,7 +107,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
     });
   }
 
-  public on = (event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any => {
+  public on(event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any {
     if (isEventName(event) || isMethodName(event)) {
       const rpc = constructRpcRequest<"chan_subscribe">("chan_subscribe", {
         event,
@@ -118,9 +118,9 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       });
     }
     return this.events.on(event, listener);
-  };
+  }
 
-  public once = (event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any => {
+  public once(event: string | ChannelRpcMethod | EngineEvent, listener: (...args: any[]) => void): any {
     if (isEventName(event) || isMethodName(event)) {
       const rpc = constructRpcRequest<"chan_subscribe">("chan_subscribe", {
         event,
@@ -131,7 +131,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       });
     }
     return this.events.once(event, listener);
-  };
+  }
 
   public removeAllListeners = (): any => {
     this.events.removeAllListeners();
@@ -246,19 +246,19 @@ export class DirectProvider implements IRpcChannelProvider {
     throw new Error("Method not implemented.");
   }
 
-  async on<T extends EngineEvent>(
+  on<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void> {
+  ): void {
     this.engine.on(event, callback, filter);
   }
 
-  async once<T extends EngineEvent>(
+  once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
     filter?: (payload: EngineEventMap[T]) => boolean,
-  ): Promise<void> {
+  ): void {
     this.engine.once(event, callback, filter);
   }
 }

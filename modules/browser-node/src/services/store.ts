@@ -39,7 +39,8 @@ class VectorIndexedDBDatabase extends Dexie {
     this.version(1).stores({
       channels:
         "channelAddress, [aliceIdentifier+bobIdentifier+networkContext.chainId], [alice+bob+networkContext.chainId]",
-      transfers: "transferId,[routingId+channelAddress],createUpdateNonce,resolveUpdateNonce,transferResolver",
+      transfers:
+        "transferId,[routingId+channelAddress],[createUpdateNonce+channelAddress],[resolveUpdateNonce+channelAddress],[transferResolver+channelAddress]",
       transactions: "transactionHash",
       withdrawCommitment: "transferId",
       values: "key",
@@ -136,21 +137,21 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async getChannelStateByParticipants(
-    participantA: string,
-    participantB: string,
+    publicIdentifierA: string,
+    publicIdentifierB: string,
     chainId: number,
   ): Promise<FullChannelState<any> | undefined> {
     const channel = await this.db.channels
-      .where("[alice+bob+networkContext.chainId]")
-      .equals([participantA, participantB, chainId])
-      .or("[alice+bob+networkContext.chainId]")
-      .equals([participantB, participantA, chainId])
+      .where("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
+      .equals([publicIdentifierA, publicIdentifierB, chainId])
+      .or("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
+      .equals([publicIdentifierB, publicIdentifierA, chainId])
       .first();
     return channel;
   }
 
   async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
-    const collection = this.db.transfers.where("resolveUpdateNonce").equals(0);
+    const collection = this.db.transfers.where("[resolveUpdateNonce+channelAddress]").equals([0, channelAddress]);
     const transfers = await collection.toArray();
     return transfers.map(storedTransferToTransferState);
   }

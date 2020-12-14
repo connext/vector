@@ -21,9 +21,12 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
+import { Wallet } from "@ethersproject/wallet";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
+
+import { version } from "../package.json";
 
 import { InvalidTransferType } from "./errors";
 import {
@@ -137,7 +140,7 @@ export class VectorEngine implements IVectorEngine {
       }),
     );
     return Result.ok({
-      version: "x.x.x",
+      version,
       publicIdentifier: this.publicIdentifier,
       signerAddress: this.signerAddress,
       providerSyncing,
@@ -157,8 +160,12 @@ export class VectorEngine implements IVectorEngine {
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
-    const channel = await this.vector.getChannelState(params.channelAddress);
-    return Result.ok(channel);
+    try {
+      const channel = await this.store.getChannelState(params.channelAddress);
+      return Result.ok(channel);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   private async getTransferState(
@@ -203,8 +210,13 @@ export class VectorEngine implements IVectorEngine {
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
-    const transfer = await this.store.getTransferByRoutingId(params.channelAddress, params.routingId);
-    return Result.ok(transfer);
+
+    try {
+      const transfer = await this.store.getTransferByRoutingId(params.channelAddress, params.routingId);
+      return Result.ok(transfer);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   private async getTransferStatesByRoutingId(
@@ -215,8 +227,12 @@ export class VectorEngine implements IVectorEngine {
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
-    const transfers = await this.store.getTransfersByRoutingId(params.routingId);
-    return Result.ok(transfers);
+    try {
+      const transfers = await this.store.getTransfersByRoutingId(params.routingId);
+      return Result.ok(transfers);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   private async getChannelStateByParticipants(
@@ -232,8 +248,12 @@ export class VectorEngine implements IVectorEngine {
     if (!valid) {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
-    const channel = await this.vector.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
-    return Result.ok(channel);
+    try {
+      const channel = await this.store.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
+      return Result.ok(channel);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   private async getChannelStates(): Promise<
@@ -242,8 +262,12 @@ export class VectorEngine implements IVectorEngine {
       Error | OutboundChannelUpdateError
     >
   > {
-    const channel = await this.vector.getChannelStates();
-    return Result.ok(channel);
+    try {
+      const channel = await this.store.getChannelStates();
+      return Result.ok(channel);
+    } catch (e) {
+      return Result.fail(e);
+    }
   }
 
   private async getRegisteredTransfers(
@@ -280,7 +304,7 @@ export class VectorEngine implements IVectorEngine {
 
     const chainProviders = this.chainService.getChainProviders();
     if (chainProviders.isError) {
-      return Result.fail(new Error(chainProviders.getError()!.message));
+      return Result.fail(chainProviders.getError()!);
     }
 
     const setupRes = await this.vector.setup({
@@ -377,7 +401,11 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
-    const channel = await this.store.getChannelState(params.channelAddress);
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
     if (!channel) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
@@ -406,7 +434,11 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
-    const channel = await this.store.getChannelState(params.channelAddress);
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
     if (!channel) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
@@ -442,14 +474,16 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
-    // TODO: consider a store method to find active transfer by routingId
-    const transfer = await this.store.getTransferState(params.transferId);
+    const transferRes = await this.getTransferState({ transferId: params.transferId });
+    if (transferRes.isError) {
+      return Result.fail(transferRes.getError()!);
+    }
+    const transfer = transferRes.getValue();
     if (!transfer) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
       );
     }
-    // TODO validate that transfer hasn't already been resolved?
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const resolveResult = convertResolveConditionParams(params, transfer);
@@ -474,7 +508,11 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
-    const channel = await this.store.getChannelState(params.channelAddress);
+    const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
+    if (channelRes.isError) {
+      return Result.fail(channelRes.getError()!);
+    }
+    const channel = channelRes.getValue();
     if (!channel) {
       return Result.fail(
         new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
@@ -520,6 +558,20 @@ export class VectorEngine implements IVectorEngine {
     try {
       const res = await this.signer.decrypt(encrypted);
       return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  private async signUtilityMessage(params: EngineParams.SignUtilityMessage): Promise<Result<string, Error>> {
+    const validate = ajv.compile(EngineParams.SignUtilityMessageSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+    }
+    try {
+      const sig = await this.signer.signUtilityMessage(params.message);
+      return Result.ok(sig);
     } catch (e) {
       return Result.fail(e);
     }

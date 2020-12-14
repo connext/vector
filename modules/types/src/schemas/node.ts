@@ -261,6 +261,18 @@ const PostWithdrawTransferResponseSchema = {
   }),
 };
 
+// POST SIGN UTILITY MESSAGE
+const PostSignUtilityMessageBodySchema = Type.Intersect([
+  EngineParams.SignUtilityMessageSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostSignUtilityMessageResponseSchema = {
+  200: Type.Object({
+    signedMessage: Type.String(),
+  }),
+};
+
 // CREATE NODE
 const PostCreateNodeBodySchema = Type.Object({
   index: Type.Integer({ minimum: 0, maximum: 2147483647 }),
@@ -403,6 +415,9 @@ export namespace NodeParams {
   export const RegisterListenerSchema = PostRegisterListenerBodySchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema>;
 
+  export const SignUtilityMessageSchema = PostSignUtilityMessageBodySchema;
+  export type SignUtilityMessage = Static<typeof SignUtilityMessageSchema>;
+
   export const AdminSchema = PostAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
 
@@ -488,6 +503,9 @@ export namespace NodeResponses {
 
   export const RegisterListenerSchema = PostRegisterListenerResponseSchema;
   export type RegisterListener = Static<typeof RegisterListenerSchema["200"]>;
+
+  export const SignUtilityMessageSchema = PostSignUtilityMessageResponseSchema;
+  export type SignUtilityMessage = Static<typeof SignUtilityMessageSchema["200"]>;
 
   export const AdminSchema = PostAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;

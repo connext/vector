@@ -12,12 +12,13 @@ import {
   NetworkContext,
   IChannelSigner,
   HashlockTransferState,
+  FullTransferState,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
 
-import { createTestHashlockTransferState } from "./transfers";
-import { mkAddress, mkPublicIdentifier, mkBytes32, mkHash } from "./util";
+import { createTestFullHashlockTransferState, createTestHashlockTransferState } from "./transfers";
+import { mkAddress, mkPublicIdentifier, mkBytes32, mkHash, mkSig } from "./util";
 
 // Helper partial types for test helpers
 export type PartialChannelUpdate<T extends UpdateType> = Partial<
@@ -112,8 +113,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
     channelAddress: mkAddress("0xccc"),
     fromIdentifier: mkPublicIdentifier("vectorA"),
     nonce: 1,
-    aliceSignature: mkBytes32("0x0001"),
-    bobSignature: mkBytes32("0x0002"),
+    aliceSignature: mkSig("0x0001"),
+    bobSignature: mkSig("0x0002"),
     toIdentifier: mkPublicIdentifier("vectorB"),
     type,
   };
@@ -129,6 +130,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
         networkContext: {
           chainId: 1337,
           channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
+          transferRegistryAddress: mkAddress("0xffffeeeeeecccc"),
           providerUrl: "http://localhost:8545",
         },
         timeout: "1",
@@ -143,9 +145,9 @@ export function createTestChannelUpdate<T extends UpdateType>(
     case UpdateType.create:
       const createDeets: CreateUpdateDetails = {
         merkleProofData: [mkBytes32("0xproof")],
-        merkleRoot: mkBytes32("0xroot"),
+        merkleRoot: mkBytes32("0xeeeeaaaaa333344444"),
         transferDefinition: mkAddress("0xdef"),
-        transferId: mkBytes32("0xid"),
+        transferId: mkBytes32("0xaaaeee"),
         transferEncodings: ["state", "resolver"],
         balance: { to: [mkAddress("0x111"), mkAddress("0x222")], amount: ["7", "0"] },
         transferInitialState: {
@@ -158,9 +160,9 @@ export function createTestChannelUpdate<T extends UpdateType>(
       break;
     case UpdateType.resolve:
       const resolveDetails: ResolveUpdateDetails = {
-        merkleRoot: mkBytes32("0xroot1"),
+        merkleRoot: mkBytes32("0xeeeaaa32333"),
         transferDefinition: mkAddress("0xdef"),
-        transferId: mkBytes32("id"),
+        transferId: mkBytes32("0xeee3332222111"),
         transferResolver: { preImage: mkBytes32("0xpre") },
       };
       details = { ...resolveDetails };
@@ -179,7 +181,8 @@ export function createTestChannelUpdate<T extends UpdateType>(
 export function createTestChannelState<T extends UpdateType = typeof UpdateType.setup>(
   type: T,
   overrides: PartialFullChannelState<T> = {},
-): FullChannelState<T> {
+  transferOverrides: Partial<FullTransferState> = {},
+): { channel: FullChannelState<T>; transfer: FullTransferState } {
   // Get some default values that should be consistent between
   // the channel state and the channel update
   const publicIdentifiers = [
@@ -187,12 +190,17 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     overrides.bobIdentifier ?? mkPublicIdentifier("vectorB"),
   ];
   const participants = [overrides.alice ?? mkAddress("0xaaa"), overrides.bob ?? mkAddress("0xbbb")];
-  const channelAddress = mkAddress("0xccc");
+  const channelAddress = overrides.channelAddress ?? mkAddress("0xccc");
   const assetIds = overrides.assetIds ?? [mkAddress("0x0"), mkAddress("0x1")];
   const nonce = overrides.nonce ?? 1;
   const defundNonces = overrides.defundNonces ?? ["1", "1"];
 
-  const { latestUpdate: latestUpdateOverrides, networkContext, ...rest } = overrides;
+  const {
+    latestUpdate: latestUpdateOverrides,
+    networkContext: networkContextOverride,
+    inDispute: inDisputeOverride,
+    ...rest
+  } = overrides;
 
   const latestUpdate = createTestChannelUpdate(type, {
     channelAddress,
@@ -203,41 +211,77 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     ...latestUpdateOverrides,
   });
 
+  latestUpdate.details = { ...latestUpdate.details, ...transferOverrides };
+
+  const networkContext =
+    type === UpdateType.setup
+      ? { ...(latestUpdate.details as SetupUpdateDetails).networkContext }
+      : {
+          chainId: 1337,
+          channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
+          transferRegistryAddress: mkAddress("0xcc22233323132"),
+          providerUrl: "http://localhost:8545",
+          ...(networkContextOverride ?? {}),
+        };
+
+  const inDispute = inDisputeOverride ?? false;
+  let transfer: FullTransferState | undefined;
+  if (type === "create" || type === "resolve") {
+    transfer = createTestFullHashlockTransferState();
+    transfer.balance = latestUpdate.balance ?? transfer.balance;
+    transfer.meta = type === "create" ? (latestUpdate.details as any).meta : undefined;
+    (latestUpdate.details as CreateUpdateDetails).meta =
+      type === "create" ? (latestUpdate.details as any).meta : undefined;
+    transfer.channelFactoryAddress = networkContext.channelFactoryAddress ?? transfer.channelFactoryAddress;
+    transfer.inDispute = inDispute ?? transfer.inDispute;
+    transfer.initiator = participants[0];
+    transfer.responder = participants[1];
+    transfer.transferDefinition =
+      (latestUpdate.details as CreateUpdateDetails).transferDefinition ?? transfer.transferDefinition;
+    transfer.transferEncodings = (latestUpdate.details as CreateUpdateDetails).transferEncodings;
+    transfer.transferId = (latestUpdate.details as CreateUpdateDetails).transferId ?? transfer.transferId;
+    transfer.transferResolver =
+      type === "resolve" ? (latestUpdate.details as ResolveUpdateDetails).transferResolver : undefined;
+    transfer.transferState =
+      (latestUpdate.details as CreateUpdateDetails).transferInitialState ?? transfer.transferState;
+    transfer.transferTimeout =
+      (latestUpdate.details as CreateUpdateDetails).transferTimeout ?? transfer.transferTimeout;
+    transfer.chainId = networkContext.chainId;
+    transfer.channelAddress = channelAddress;
+  }
+
   return {
-    assetIds,
-    balances: [
-      // assetId0
-      {
-        amount: ["1", "2"],
-        to: [...participants],
-      },
-      // assetId1
-      {
-        amount: ["1", "2"],
-        to: [...participants],
-      },
-    ],
-    processedDepositsA: ["1", "2"],
-    processedDepositsB: ["1", "2"],
-    channelAddress,
-    latestUpdate,
-    merkleRoot: mkHash(),
-    networkContext: {
-      chainId: 1337,
-      channelFactoryAddress: mkAddress("0xccccddddaaaaaffff"),
-      transferRegistryAddress: mkAddress("0xcc22233323132"),
-      providerUrl: "http://localhost:8545",
-      ...(networkContext ?? {}),
+    channel: {
+      assetIds,
+      balances: [
+        // assetId0
+        {
+          amount: ["1", "2"],
+          to: [...participants],
+        },
+        // assetId1
+        {
+          amount: ["1", "2"],
+          to: [...participants],
+        },
+      ],
+      processedDepositsA: ["1", "2"],
+      processedDepositsB: ["1", "2"],
+      channelAddress,
+      latestUpdate,
+      merkleRoot: mkHash(),
+      networkContext,
+      nonce,
+      alice: participants[0],
+      bob: participants[1],
+      aliceIdentifier: publicIdentifiers[0],
+      bobIdentifier: publicIdentifiers[1],
+      timeout: "1",
+      defundNonces,
+      inDispute,
+      ...rest,
     },
-    nonce,
-    alice: participants[0],
-    bob: participants[1],
-    aliceIdentifier: publicIdentifiers[0],
-    bobIdentifier: publicIdentifiers[1],
-    timeout: "1",
-    defundNonces,
-    inDispute: false,
-    ...rest,
+    transfer,
   };
 }
 
@@ -253,7 +297,7 @@ export function createTestChannelStateWithSigners<T extends UpdateType = typeof 
     bob: signers[1].address,
     ...(overrides ?? {}),
   };
-  return createTestChannelState(type, signerOverrides) as FullChannelState<T>;
+  return createTestChannelState(type, signerOverrides).channel as FullChannelState<T>;
 }
 
 export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof UpdateType.setup>(
@@ -274,7 +318,7 @@ export function createTestChannelUpdateWithSigners<T extends UpdateType = typeof
 
   const signerOverrides = {
     balance: {
-      to: signers.map(s => s.address),
+      to: signers.map((s) => s.address),
       amount: ["1", "0"],
     },
     fromIdentifier: signers[0].publicIdentifier,

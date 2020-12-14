@@ -16,6 +16,7 @@ export * from "./identifiers";
 export * from "./json";
 export * from "./lock";
 export * from "./math";
+export * from "./merkle";
 export * from "./messaging";
 export * from "./rpc";
 export * from "./serverNode";

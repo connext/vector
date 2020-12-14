@@ -27,12 +27,17 @@ export async function convertConditionalTransferParams(
   channel: FullChannelState,
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
-): Promise<Result<CreateTransferParams, InvalidTransferType>> {
+): Promise<Result<CreateTransferParams, InvalidTransferType | Error>> {
   const { channelAddress, amount, assetId, recipient, details, type, timeout, meta: providedMeta } = params;
 
   const recipientChainId = params.recipientChainId ?? channel.networkContext.chainId;
   const recipientAssetId = params.recipientAssetId ?? params.assetId;
   const channelCounterparty = signer.address === channel.alice ? channel.bob : channel.alice;
+
+  if (recipient === signer.publicIdentifier && recipientChainId === channel.networkContext.chainId) {
+    // If signer is also the receipient on same chain/network
+    return Result.fail(new Error("An initiator cannot be a receiver on the same chain"));
+  }
 
   // If the recipient is the channel counterparty, no default routing
   // meta needs to be created, otherwise create the default routing meta.
@@ -43,7 +48,7 @@ export async function convertConditionalTransferParams(
   if (recipient && getSignerAddressFromPublicIdentifier(recipient) !== channelCounterparty) {
     baseRoutingMeta = {
       requireOnline: false, // TODO: change with more transfer types?
-      routingId: providedMeta.routingId ?? getRandomBytes32(),
+      routingId: providedMeta?.routingId ?? getRandomBytes32(),
       path: [{ recipient, recipientChainId, recipientAssetId }],
     };
   }
@@ -113,11 +118,7 @@ export async function convertWithdrawParams(
   const { channelAddress, assetId, recipient, fee, callTo, callData } = params;
 
   // If there is a fee being charged, add the fee to the amount.
-  const amount = fee
-    ? BigNumber.from(params.amount)
-        .add(fee)
-        .toString()
-    : params.amount;
+  const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
 
   const commitment = new WithdrawCommitment(
     channel.channelAddress,
