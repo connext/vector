@@ -20,7 +20,7 @@ This monorepo contains a number of packages hoisted using lerna. Documentation f
 Contents:
 
 - [Quick Start](#quick-start)
-- [WIP Developer Docs](https://connext.github.io/vector/)
+- [WIP Developer Docs](https://docs.connext.network)
 - [Architecture and Module Breakdown](#architecture-and-module-breakdown)
 - [Development and Running Tests](#development-and-running-tests)
 
@@ -80,7 +80,7 @@ For any of these stacks, you can manage them with:
 - `make restart-${stack}` stops the stack if it's running & starts it again
 - `make test-${stack}` runs unit tests against some stack. It will build & start the stack if that hasn't been done already.
 
-You can find WIP documentation on integrating and using Vector [here](https://connext.github.io/vector/).
+You can find WIP documentation on integrating and using Vector [here](https://docs.connext.network).
 
 ## Architecture and Module Breakdown
 
