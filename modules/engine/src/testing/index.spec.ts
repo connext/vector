@@ -1,11 +1,5 @@
 import { VectorChainService } from "@connext/vector-contracts";
-import {
-  Result,
-  EngineParams,
-  IVectorChainService,
-  IVectorProtocol,
-  DEFAULT_CHANNEL_TIMEOUT,
-} from "@connext/vector-types";
+import { Result, EngineParams, DEFAULT_CHANNEL_TIMEOUT } from "@connext/vector-types";
 import {
   expect,
   getRandomChannelSigner,
@@ -39,8 +33,6 @@ describe("VectorEngine", () => {
   const aliceIdentifier = mkPublicIdentifier("vectorA");
   const bobIdentifier = mkPublicIdentifier("vectorB");
   const counterpartyIdentifier = mkPublicIdentifier("vectorC");
-  const aliceAddress = mkAddress("0xa");
-  const bobAddress = mkAddress("0xb");
   const validAddress = mkAddress("0xc");
   const invalidAddress = "abc";
 
@@ -104,9 +96,9 @@ describe("VectorEngine", () => {
       );
 
       const rpc = constructRpcRequest<"chan_setup">("chan_setup", {
-        counterpartyIdentifier,
-        chainId,
-        DEFAULT_CHANNEL_TIMEOUT,
+        counterpartyIdentifier: counterpartyIdentifier,
+        chainId: chainId,
+        timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
       });
       const res = await engine.request(rpc);
 
@@ -134,7 +126,7 @@ describe("VectorEngine", () => {
   });
 
   // NOTE: if any of these change we have broken the rpc interface!
-  describe.only("should properly parse rpc request schema", async () => {
+  describe("should properly parse rpc request schema", async () => {
     const tests = [
       {
         name: "no request.id",
@@ -197,7 +189,7 @@ describe("VectorEngine", () => {
       });
     }
 
-    describe.only("should fail if it has malformed request.params", async () => {
+    describe("should fail if it has malformed request.params", async () => {
       const malformedPublicIdentifier = 'should match pattern "^vector([a-zA-Z0-9]{50})$"';
       const malformedAddress = 'should match pattern "^0x[a-fA-F0-9]{40}$"';
       const malformedTransactionId = 'should match pattern "^0x([a-fA-F0-9]{64})$"';
