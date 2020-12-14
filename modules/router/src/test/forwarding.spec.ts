@@ -6,6 +6,7 @@ import {
   NodeError,
   Result,
   TransferNames,
+  TRANSFER_DECREMENT,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -17,10 +18,11 @@ import {
   RestServerNodeService,
 } from "@connext/vector-utils";
 import { AddressZero } from "@ethersproject/constants";
+import { BigNumber } from "@ethersproject/bignumber";
 import pino from "pino";
 import Sinon from "sinon";
 
-import { RouterStore } from "../services/store";
+import { RouterStore, RouterUpdateType } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
 import { config } from "../config";
 
@@ -139,9 +141,10 @@ describe("Forwarding", () => {
 
     it("queues update successfully if transfer creation fails with timeout and transfer is allowOffline", async () => {
       node.conditionalTransfer.resolves(Result.fail(new NodeError(NodeError.reasons.Timeout)));
+      const routerPublicIdentifier = mkPublicIdentifier("vectorBBB");
       await forwardTransferCreation(
         data,
-        mkPublicIdentifier("vectorBBB"),
+        routerPublicIdentifier,
         mkAddress("0xb"),
         node as INodeService,
         store,
@@ -150,13 +153,15 @@ describe("Forwarding", () => {
       );
 
       expect(
-        store.queueUpdate.calledWith("TransferCreation", {
-          channelAddress: receiverChannel.channelAddress,
+        store.queueUpdate.calledWith(receiverChannel.channelAddress, RouterUpdateType.TRANSFER_CREATION, {
           amount: data.transfer.balance.amount[0],
           assetId: data.transfer.assetId,
-          routingId: data.transfer.meta.routingId,
-          type: "HashlockTransfer",
+          channelAddress: receiverChannel.channelAddress,
           details: data.transfer.transferState,
+          publicIdentifier: routerPublicIdentifier,
+          type: "HashlockTransfer",
+          meta: { ...data.transfer.meta, senderIdentifier: data.aliceIdentifier },
+          timeout: BigNumber.from(data.transfer.transferTimeout).sub(TRANSFER_DECREMENT).toString(),
         }),
       ).to.be.true;
     });
