@@ -22,7 +22,7 @@
     "@ethersproject/bignumber": "5.0.12",
     "@ethersproject/bytes": "5.0.8",
     "@ethersproject/constants": "5.0.7",
-    "@ethersproject/providers": "5.0.17",
+    "@ethersproject/providers": "5.0.15",
     "@ethersproject/random": "5.0.6",
     "@ethersproject/solidity": "5.0.7",
     "@ethersproject/strings": "5.0.7",

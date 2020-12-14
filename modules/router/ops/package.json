@@ -2,7 +2,7 @@
   "name": "router",
   "description": "This is only used to install & pin versions for a few global packages in the prod-mode docker container",
   "dependencies": {
-    "hardhat": "2.0.2",
+    "hardhat": "2.0.5",
     "pino-pretty": "4.3.0"
   }
 }

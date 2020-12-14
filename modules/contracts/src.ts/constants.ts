@@ -1,8 +1,5 @@
 import pino from "pino";
-import { ethers }from "hardhat";
 import { Options } from "yargs";
-
-export const eth = ethers;
 
 // While debugging tests, you can change this to be "info" or "debug"
 export const logger = pino({ level: process.env.LOG_LEVEL || "silent" });
