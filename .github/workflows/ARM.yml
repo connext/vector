@@ -1,5 +1,7 @@
 # Derived from:
 # https://medium.com/swlh/using-github-actions-to-build-arm-based-docker-images-413a8d498ee
+# How to get an image's sha digest:
+# https://github.com/moby/moby/issues/17670#issuecomment-206361685
 
 name: ARM
 on: push
@@ -35,9 +37,9 @@ jobs:
           DOCKER_CLI_EXPERIMENTAL: enabled
           LOCAL_ARM_IMAGE: vector_node_arm:${{ env.CI_SHA_SHORT }}
           LOCAL_DEFAULT_IMAGE: vector_node:${{ env.CI_SHA_SHORT }}
-          REMOTE_ARM_IMAGE: docker.io/connextproject/vector_node_arm:${{ env.CI_SHA_SHORT }}
-          REMOTE_DEFAULT_IMAGE: docker.io/connextproject/vector_node:${{ env.CI_SHA_SHORT }}
-          REGISTRY: docker.io/connextproject
+          REMOTE_ARM_IMAGE: connextproject/vector_node_arm:${{ env.CI_SHA_SHORT }}
+          REMOTE_DEFAULT_IMAGE: connextproject/vector_node:${{ env.CI_SHA_SHORT }}
+          REGISTRY: connextproject
         run: |
           echo "Starting critical step in env:"
           echo "- DOCKER_CLI_EXPERIMENTAL=$DOCKER_CLI_EXPERIMENTAL"
@@ -45,12 +47,12 @@ jobs:
           echo "- REMOTE_DEFAULT_IMAGE=$REMOTE_DEFAULT_IMAGE"
           echo "- LOCAL_ARM_IMAGE=$LOCAL_ARM_IMAGE"
           echo "- REMOTE_ARM_IMAGE=$REMOTE_ARM_IMAGE"
-          echo "buildx-ing image name: $REMOTE_ARM_IMAGE"
-          echo "buildx-ing image name: ${REMOTE_ARM_IMAGE}"
-          echo "buildx-ing image name: ${{ env.REMOTE_ARM_IMAGE }}"
           docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
           echo "(re-?)building server-node"
           make server-node
+          echo "docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}"
+          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}
+          echo "pushing ${REMOTE_DEFAULT_IMAGE}"
           default_digest=$(docker push ${REMOTE_DEFAULT_IMAGE} | grep sha | cut -d ' ' -f 3)
           echo "creating manifest from ${REGISTRY}/vector_node@${default_digest}"
           docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest}
