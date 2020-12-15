@@ -39,7 +39,17 @@ jobs:
           LOCAL_ARM_IMAGE: vector_node_arm:${CI_SHA_SHORT}
           REMOTE_ARM_IMAGE: ${REGISTRY}/${LOCAL_ARM_IMAGE}
         run: |
-          echo "buildx'ing image name: ${REMOTE_ARM_IMAGE}"
+          echo "Starting critical step in env:"
+          echo "- DOCKER_CLI_EXPERIMENTAL=$DOCKER_CLI_EXPERIMENTAL"
+          echo "- REGISTRY=$REGISTRY"
+          echo "- LOCAL_DEFAULT_IMAGE=$LOCAL_DEFAULT_IMAGE"
+          echo "- REMOTE_DEFAULT_IMAGE=$REMOTE_DEFAULT_IMAGE"
+          echo "- LOCAL_ARM_IMAGE=$LOCAL_ARM_IMAGE"
+          echo "- REMOTE_ARM_IMAGE=$REMOTE_ARM_IMAGE"
+          echo "buildx-ing image name: $REMOTE_ARM_IMAGE"
+          echo "buildx-ing image name: ${REMOTE_ARM_IMAGE}"
+          echo "buildx-ing image name: ${{REMOTE_ARM_IMAGE}}"
+          echo "buildx-ing image name: ${{ env.REMOTE_ARM_IMAGE }}"
           docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
           echo "(re-?)building server-node"
           make server-node
