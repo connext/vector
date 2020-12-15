@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.35
+
+- remove browser node `waitFor` calls
+
 ## 0.0.33
 
 - add sign method to browser node
