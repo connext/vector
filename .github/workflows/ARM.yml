@@ -36,7 +36,7 @@ jobs:
           LOCAL_ARM_IMAGE: vector_node_arm:${{ env.CI_SHA_SHORT }}
           LOCAL_DEFAULT_IMAGE: vector_node:${{ env.CI_SHA_SHORT }}
           REGISTRY: docker.io/connextproject
-          REMOTE_ARM_IMAGE: ${{ env.REGISTRY} }/${{ env.LOCAL_ARM_IMAGE }}
+          REMOTE_ARM_IMAGE: ${{ env.REGISTRY }}/${{ env.LOCAL_ARM_IMAGE }}
           REMOTE_DEFAULT_IMAGE: ${{ env.REGISTRY }}/${{ env.LOCAL_DEFAULT_IMAGE }}
         run: |
           echo "Starting critical step in env:"
