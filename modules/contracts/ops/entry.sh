@@ -38,6 +38,7 @@ jq '
     | map(.key = "\(.key)Address")
     | map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)"))
     | from_entries
+    | { "'"$CHAIN_ID"'": {channelFactoryAddress,testTokenAddress,transferRegistryAddress} }
 ' "$ADDRESS_BOOK" > "$chain_addresses"
 
 echo "Ethprovider started & deployed vector successfully, waiting for kill signal"
