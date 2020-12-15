@@ -222,6 +222,9 @@ describe(testName, () => {
         transferResolver: undefined,
         meta: { test: "meta" },
         inDispute: false,
+        channelNonce: 4,
+        initiatorIdentifier: initiator.publicIdentifier,
+        responderIdentifier: responder.publicIdentifier,
         ...createCoreTransferState({
           balance,
           assetId: commitment.assetId,

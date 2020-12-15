@@ -29,7 +29,6 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
-import { logger } from "..";
 import { config } from "../config";
 
 export interface IServerNodeStore extends IEngineStore {
@@ -218,6 +217,9 @@ const convertTransferEntityToFullTransferState = (
         : transfer.channel!.participantB,
     initialStateHash: transfer.initialStateHash,
     transferDefinition: transfer.createUpdate!.transferDefinition!,
+    initiatorIdentifier: transfer.createUpdate!.fromIdentifier,
+    responderIdentifier: transfer.createUpdate!.toIdentifier,
+    channelNonce: transfer!.channelNonce,
     transferEncodings: transfer.createUpdate!.transferEncodings!.split("$"),
     transferId: transfer.createUpdate!.transferId!,
     transferState: JSON.parse(transfer.createUpdate!.transferInitialState!),
@@ -513,6 +515,7 @@ export class PrismaStore implements IServerNodeStore {
             amountB: transfer!.balance.amount[1],
             toB: transfer!.balance.to[1],
             initialStateHash: transfer!.initialStateHash,
+            channelNonce: transfer!.channelNonce,
           }
         : undefined;
 
@@ -941,9 +944,9 @@ export class PrismaStore implements IServerNodeStore {
     });
 
     // throw new Error("saving transfers not yet implemented");
-    logger.error({ activeTransfers: activeTransfers.map((t) => t.transferId) }, "saving transfers not implemented");
+    console.error({ activeTransfers: activeTransfers.map((t) => t.transferId) }, "saving transfers not implemented");
 
-    // TODO:nsave activeTransfers
+    // TODO: save activeTransfers
   }
 
   async getActiveTransfers(channelAddress: string): Promise<FullTransferState[]> {
