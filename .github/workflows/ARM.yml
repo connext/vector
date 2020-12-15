@@ -45,7 +45,7 @@ jobs:
           echo "- LOCAL_DEFAULT_IMAGE=$LOCAL_DEFAULT_IMAGE"
           echo "- REMOTE_DEFAULT_IMAGE=$REMOTE_DEFAULT_IMAGE"
           echo "- REMOTE_ARM_IMAGE=$REMOTE_ARM_IMAGE"
-          docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
+          docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE}_arm --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
           echo "(re-?)building server-node"
           make server-node
           echo "docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}"
