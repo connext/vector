@@ -164,7 +164,7 @@ export class BrowserNode implements INodeService {
     toAssetId: string;
     reconcileDeposit?: boolean;
     withdrawalAddress?: string;
-  }): Promise<void> {
+  }): Promise<{ withdrawalTx?: string }> {
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
       chainId: params.fromChainId,
@@ -223,7 +223,7 @@ export class BrowserNode implements INodeService {
       throw transferRes.getError();
     }
     const senderTransfer = transferRes.getValue();
-    this.logger.warn({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
+    this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
     const receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
       this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
         if (
@@ -239,7 +239,7 @@ export class BrowserNode implements INodeService {
         { routingId: senderTransfer.routingId, channelAddress: receiverChannel.channelAddress },
         "Failed to get receiver event",
       );
-      return;
+      throw new Error("Failed to get receiver event");
     }
 
     this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
@@ -257,8 +257,9 @@ export class BrowserNode implements INodeService {
     const resolvedTransfer = resolveRes.getValue();
     this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
 
+    let withdrawalTx: string | undefined;
     if (params.withdrawalAddress) {
-      const withdrawalAmount = receiverTransferData.transfer.balance.amount[1];
+      const withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       this.logger.info(
         { withdrawalAddress: params.withdrawalAddress, withdrawalAmount },
         "Withdrawing to configured address",
@@ -274,7 +275,9 @@ export class BrowserNode implements INodeService {
       }
       const withdrawal = withdrawRes.getValue();
       this.logger.info({ withdrawal }, "Withdrawal completed");
+      withdrawalTx = withdrawal.transactionHash;
     }
+    return { withdrawalTx };
   }
   //////////////////
 
