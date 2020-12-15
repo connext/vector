@@ -51,11 +51,11 @@ jobs:
           echo "(re-?)building server-node"
           make server-node
           echo "docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}"
-          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}
-          echo "pushing ${REMOTE_DEFAULT_IMAGE}"
-          default_digest=$(docker push ${REMOTE_DEFAULT_IMAGE} | grep sha | cut -d ' ' -f 3)
-          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest}"
-          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest}
-          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest} AAAAAND ${REMOTE_ARM_IMAGE}"
-          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest} --amend ${REMOTE_ARM_IMAGE}
+          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}_default
+          docker tag ${LOCAL_ARM_IMAGE} ${REMOTE_ARM_IMAGE}_arm
+          echo "pushing ${REMOTE_DEFAULT_IMAGE}_default"
+          default_digest=$(docker push ${REMOTE_DEFAULT_IMAGE}_default | grep sha | cut -d ' ' -f 3)
+          arm_digest=$(docker push ${REMOTE_ARM_IMAGE}_arm | grep sha | cut -d ' ' -f 3)
+          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest} AAAAAND ${REGISTRY}/vector_node@${arm_digest}"
+          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest} --amend ${REGISTRY}/vector_node@${arm_digest}
           docker push ${REMOTE_DEFAULT_IMAGE}
