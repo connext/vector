@@ -401,7 +401,7 @@ describe("ParamConverter", () => {
       const { channelState, result } = await testSetup(params, true);
 
       expect(result.isError).to.be.true;
-      expect(result.getError()).to.eq(new InvalidTransferType("Signer fails to sign message"));
+      expect(result.getError()).to.contain(new Error("Signer fails to sign message"));
     });
     it("should fail if it cannot get registry information", async () => {
       const params = generateParams();
