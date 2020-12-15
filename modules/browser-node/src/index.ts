@@ -18,6 +18,7 @@ import {
   FullChannelState,
   TransferNames,
   EngineEvents,
+  ConditionalTransferCreatedPayload,
 } from "@connext/vector-types";
 import { constructRpcRequest, getRandomBytes32, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
@@ -223,14 +224,15 @@ export class BrowserNode implements INodeService {
     }
     const senderTransfer = transferRes.getValue();
     this.logger.warn({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
-    const receiverTransferData = await this.waitFor(EngineEvents.CONDITIONAL_TRANSFER_CREATED, 60000, (data) => {
-      if (
-        data.transfer.meta.routingId === senderTransfer.routingId &&
-        data.channelAddress === receiverChannel.channelAddress
-      ) {
-        return true;
-      }
-      return false;
+    const receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
+      this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+        if (
+          data.transfer.meta.routingId === senderTransfer.routingId &&
+          data.channelAddress === receiverChannel.channelAddress
+        ) {
+          res(data);
+        }
+      });
     });
     if (!receiverTransferData) {
       this.logger.error(
