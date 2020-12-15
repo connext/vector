@@ -51,12 +51,9 @@ jobs:
           docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
           echo "(re-?)building server-node"
           make server-node
-          echo "docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}"
-          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}_arm
-          docker push ${REMOTE_DEFAULT_IMAGE}_arm
-          digest=$(docker image inspect ${REMOTE_DEFAULT_IMAGE}_arm | jq '.[0].Config.Image' | tr -d '"')
-          echo "creating manifest from ${REGISTRY}/vector_node@${digest}"
-          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${digest}
-          echo "creating manifest from ${REGISTRY}/vector_node@${digest} AAAAAND ${REGISTRY}/vector_node@${digest} "
-          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${digest} --amend ${REMOTE_ARM_IMAGE}_arm
+          default_digest=$(docker push ${REMOTE_DEFAULT_IMAGE} | grep sha | cut -d ' ' -f 3)
+          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest}"
+          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest}
+          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest} AAAAAND ${REMOTE_ARM_IMAGE}"
+          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest} --amend ${REMOTE_ARM_IMAGE}
           docker push ${REMOTE_DEFAULT_IMAGE}
