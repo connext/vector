@@ -51,8 +51,11 @@ jobs:
           echo "(re-?)building server-node"
           make server-node
           echo "docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}"
-          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}
+          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}_arm
+          docker push ${REMOTE_DEFAULT_IMAGE}_arm
+          digest=$(docker image inspect ${REMOTE_DEFAULT_IMAGE}_arm | jq '.[0].Config.Image' | tr -d '"')
+          echo "creating manifest from ${REGISTRY}/vector_node@${digest}"
+          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${digest}
+          echo "creating manifest from ${REGISTRY}/vector_node@${digest} AAAAAND ${REGISTRY}/vector_node@${digest} "
+          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${digest} --amend ${REMOTE_ARM_IMAGE}_arm
           docker push ${REMOTE_DEFAULT_IMAGE}
-          digest=$(docker image inspect ${REMOTE_DEFAULT_IMAGE} | jq '.[0].Config.Image' | tr -d '"')
-          echo "creating manifest"
-          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${digest} --amend ${REMOTE_ARM_IMAGE}
