@@ -52,9 +52,9 @@ describe("messaging", () => {
       signerB.publicIdentifier,
       async (result: Result<any, any>, from: string, inbox: string) => {
         expect(result.isError).to.not.be.ok;
-        expect(result.getValue()).to.deep.eq({ update });
+        expect(result.getValue()).to.containSubset({ update });
         expect(inbox).to.be.a("string");
-        await messagingB.respondToProtocolMessage(inbox, result.getValue().update);
+        await messagingB.respondToProtocolMessage(inbox, update);
       },
     );
 
@@ -62,7 +62,7 @@ describe("messaging", () => {
 
     const res = await messagingA.sendProtocolMessage(update);
     expect(res.isError).to.not.be.ok;
-    expect(res.getValue()).to.deep.eq({ update });
+    expect(res.getValue()).to.containSubset({ update });
   });
 
   it("should send a protocol error message from A to B", async () => {
@@ -77,7 +77,7 @@ describe("messaging", () => {
       signerB.publicIdentifier,
       async (result: Result<any, any>, from: string, inbox: string) => {
         expect(result.isError).to.not.be.ok;
-        expect(result.getValue()).to.deep.eq({ update });
+        expect(result.getValue()).to.containSubset({ update });
         expect(inbox).to.be.a("string");
         await messagingB.respondWithProtocolError(inbox, err);
       },
@@ -87,7 +87,11 @@ describe("messaging", () => {
 
     const res = await messagingA.sendProtocolMessage(update);
     expect(res.isError).to.be.true;
-    expect(res.getError()?.toString()).to.deep.eq(err.toString());
+    const errReceived = res.getError()!;
+    Object.keys(errReceived).map((key: string) => {
+      const val = (errReceived as any)[key] ?? undefined;
+      expect(val).to.be.deep.eq((err as any)[key]);
+    });
   });
 
   describe("other methods", () => {
@@ -171,7 +175,11 @@ describe("messaging", () => {
               expect(result.getError()).to.be.undefined;
               expect(result.getValue()).to.be.deep.eq(message.getValue());
             } else {
-              expect(result.getError()?.toString()).to.be.eq(message.getError()?.toString());
+              const errReceived = result.getError()!;
+              Object.keys(errReceived).map((key: string) => {
+                const val = (errReceived as any)[key] ?? undefined;
+                expect(val).to.be.deep.eq((message.getError() as any)[key]);
+              });
             }
             await (messagingB as any)[respondKey](inbox, response as any);
           },
@@ -190,12 +198,11 @@ describe("messaging", () => {
           expect(test.getError()).to.be.undefined;
           expect(test.getValue()).to.be.deep.eq(response.getValue());
         } else {
-          if ((response.getError()! as any).type) {
-            // handle custom errors
-            expect(test.getError()?.toString()).to.be.eq(response.getError()?.toString());
-            return;
-          }
-          expect(test.getError()?.context.error).to.be.eq(response.getError()?.toString());
+          const errReceived = test.getError()!;
+          Object.keys(errReceived).map((key: string) => {
+            const val = (errReceived as any)[key] ?? undefined;
+            expect(val).to.be.deep.eq((response.getError() as any)[key]);
+          });
         }
       });
     }

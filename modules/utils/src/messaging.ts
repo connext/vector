@@ -417,11 +417,11 @@ export class NatsMessagingService implements IMessagingService {
       parsedMsg.data = parsedData;
       if (parsedMsg.data.error) {
         const parsedErr = safeJsonParse(parsedMsg.data.error);
-        return Result.fail(
-          typeof parsedErr === "string"
-            ? new MessagingError(MessagingError.reasons.Response, { error: parsedMsg.data.error })
-            : parsedMsg.data.error,
-        );
+        if (typeof parsedErr === "string") {
+          return Result.fail(new MessagingError(MessagingError.reasons.Response, { error: parsedMsg.data.error }));
+        }
+        // cast `msg` field of vector error from VectorError
+        return Result.fail(parsedErr.msg ? { ...parsedErr, message: parsedErr.msg } : parsedErr);
       }
       return Result.ok({ ...parsedMsg.data.value });
     } catch (e) {

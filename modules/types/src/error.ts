@@ -36,19 +36,6 @@ export class Result<T, Y = any> {
     return undefined;
   }
 
-  public toString(): string {
-    if (!this.error && !this.value) {
-      return "";
-    }
-    if (this.isError) {
-      return JSON.stringify({
-        isError: true,
-        error: typeof (this.error as any)?.toString === "function" ? (this.error as any).toString() : this.error,
-      });
-    }
-    return JSON.stringify({ isError: false, value: this.value ?? "" });
-  }
-
   public static fail<U, Y extends Error>(error: Y): Result<U, Y> {
     return new Result<U, Y>(error);
   }
@@ -78,17 +65,9 @@ export abstract class VectorError extends Error {
   abstract readonly type: Values<typeof VectorError.errors>;
   static readonly reasons: { [key: string]: string };
 
-  public toString(): string {
-    return JSON.stringify({
-      message: this.message,
-      context: this.context ?? {},
-      type: this.type,
-      // stack: this.stack,
-    });
-  }
-
-  constructor(public readonly message: Values<typeof VectorError.reasons>, public readonly context?: any) {
-    super(message);
+  constructor(public readonly msg: Values<typeof VectorError.reasons>, public readonly context?: any) {
+    super(msg);
+    this.context = context;
   }
 }
 
@@ -147,16 +126,6 @@ export class ValidationError extends VectorError {
   ) {
     super(message, context);
   }
-
-  public toString(): string {
-    return JSON.stringify({
-      message: this.message,
-      context: this.context ?? {},
-      type: this.type,
-      params: this.params,
-      state: this.state ?? {},
-    });
-  }
 }
 
 // Thrown by the protocol when initiating an update
@@ -195,16 +164,6 @@ export class OutboundChannelUpdateError extends VectorError {
   ) {
     super(message, context);
   }
-
-  public toString(): string {
-    return JSON.stringify({
-      message: this.message,
-      context: this.context ?? {},
-      type: this.type,
-      params: this.params,
-      state: this.state ?? {},
-    });
-  }
 }
 
 export class LockError extends VectorError {
@@ -213,15 +172,6 @@ export class LockError extends VectorError {
   static readonly reasons = {
     Unknown: "Unknown Lock Error", // TODO
   };
-
-  public toString(): string {
-    return JSON.stringify({
-      message: this.message,
-      context: this.context ?? {},
-      type: this.type,
-      lockName: this.lockName,
-    });
-  }
 
   constructor(public readonly message: string, public readonly lockName: string, public readonly context: any = {}) {
     super(message, context);
@@ -262,16 +212,6 @@ export class InboundChannelUpdateError extends VectorError {
     public readonly context: any = {},
   ) {
     super(message, context);
-  }
-
-  public toString(): string {
-    return JSON.stringify({
-      message: this.message,
-      context: this.context ?? {},
-      type: this.type,
-      update: this.update,
-      state: this.state ?? {},
-    });
   }
 }
 

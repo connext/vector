@@ -44,10 +44,7 @@ const nullify = (key: string, value: any) => (typeof value === "undefined" ? nul
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const safeJsonStringify = (value: any): string => {
   try {
-    if (typeof value === "string") {
-      return value;
-    }
-    return typeof value?.toString === "function" ? value.toString() : JSON.stringify(value, nullify);
+    return typeof value === "string" ? value : JSON.stringify(value, nullify);
   } catch (e) {
     return value;
   }
