@@ -205,25 +205,9 @@ export class NatsMessagingService implements IMessagingService {
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
-    this.assertConnected();
-    const method = "sendRestoreStateMessage";
-    try {
-      const subject = `${to}.${from}.restore`;
-      const msgBody = JSON.stringify({ restoreData });
-      this.log.debug({ method, msgBody }, "Sending message");
-      const msg = await this.connection!.request(subject, timeout, msgBody);
-      this.log.debug({ method, msg }, "Received response");
-      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
-      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
-      parsedMsg.data = parsedData;
-      if (parsedMsg.data.error) {
-        return Result.fail(new MessagingError(MessagingError.reasons.Response, { error: parsedMsg.data.error }) as any);
-      }
-      return Result.ok(parsedMsg.data.value);
-    } catch (e) {
-      return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }) as any);
-    }
+    return this.sendMessage(restoreData, "restore", to, from, timeout, numRetries, "sendRestoreStateMessage");
   }
+
   async onReceiveRestoreStateMessage(
     publicIdentifier: string,
     callback: (
@@ -232,39 +216,14 @@ export class NatsMessagingService implements IMessagingService {
       inbox: string,
     ) => void,
   ): Promise<void> {
-    this.assertConnected();
-    const method = "onReceiveRestoreStateMessage";
-    const subscriptionSubject = `${publicIdentifier}.*.restore`;
-    await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
-      this.log.debug({ method, msg }, "Received message");
-      const from = msg.subject.split(".")[1];
-      const parsedMsg = typeof msg === `string` ? JSON.parse(msg) : msg;
-      if (err) {
-        callback(Result.fail(new MessagingError(err) as any), from, msg.reply);
-        return;
-      }
-      const parsedData = typeof msg.data === `string` ? JSON.parse(msg.data) : msg.data;
-      // TODO: validate msg structure
-      if (!parsedMsg.reply) {
-        return;
-      }
-      parsedMsg.data = parsedData;
-      if (parsedMsg.data.error || parsedMsg.data.restoreData.error) {
-        callback(Result.fail(parsedMsg.data.restoreData.error ?? parsedMsg.data.error), from, msg.reply);
-        return;
-      }
-      callback(Result.ok(parsedMsg.data.restoreData.value), from, msg.reply);
-    });
-    this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
+    await this.registerCallback(`${publicIdentifier}.*.restore`, callback, "onReceiveRestoreStateMessage");
   }
+
   async respondToRestoreStateMessage(
     inbox: string,
     restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void> {
-    this.assertConnected();
-    const subject = inbox;
-    this.log.debug({ method: "respondToRestoreStateMessage", subject }, `Sending response`);
-    await this.connection!.publish(subject, safeJsonStringify(restoreData));
+    return this.respondToMessage(inbox, restoreData, "respondToRestoreStateMessage");
   }
   ////////////
 
