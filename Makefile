@@ -186,14 +186,14 @@ test-contracts: contracts-js
 watch-contracts: utils
 	bash ops/test-unit.sh contracts watch
 
-test-protocol: contracts-bundle protocol
+test-protocol: contracts-js protocol
 	bash ops/test-unit.sh protocol test 1340
-watch-protocol: contracts-bundle
+watch-protocol: contracts-js
 	bash ops/test-unit.sh protocol watch 1340
 
-test-engine: contracts-bundle engine
+test-engine: contracts-js engine
 	bash ops/test-unit.sh engine test 1341
-watch-engine: contracts-bundle protocol
+watch-engine: contracts-js protocol
 	bash ops/test-unit.sh engine watch 1341
 
 test-server-node: server-node-js
@@ -291,7 +291,7 @@ contracts-bundle: contracts-js utils $(shell find modules/contracts/src.sol modu
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-contracts-img: contracts-bundle $(shell find modules/contracts/ops $(find_options))
+contracts-img: contracts-js $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)

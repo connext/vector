@@ -16,7 +16,7 @@ const mnemonic =
 const config: HardhatUserConfig = {
   paths: {
     artifacts: "./artifacts",
-    deploy: "./src.ts/deploy",
+    deploy: "./deploy",
     deployments: "./deployments",
     sources: "./src.sol",
     tests: "./src.ts",
@@ -39,17 +39,17 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      accounts: {
+        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        mnemonic,
+      },
       chainId,
       loggingEnabled: false,
-      accounts: {
-        mnemonic,
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      },
     },
     matic: {
+      accounts: { mnemonic },
       chainId: 80001,
       url: "https://rpc-mumbai.matic.today",
-      accounts: { mnemonic },
     },
   },
 };

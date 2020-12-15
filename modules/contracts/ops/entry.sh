@@ -30,28 +30,35 @@ echo "Waiting for testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
 echo "Good morning!"
 
-pwd
-ls
-echo "====="
-ls deployments
+# I thought deployment was supposed to happen automatically..
+echo "Exporting stuff to $ADDRESS_BOOK"
 
-## Expose addresses in a more accessible format
+#hardhat deploy --export-all "$ADDRESS_BOOK"
+hardhat export --export-all "$ADDRESS_BOOK"
+
+## Expose addresses in a more accessible format..?
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
-jq '
-  map_values(
-    map_values(.address) |
-   to_entries |
-    map(.key = "\(.key)Address") |
-    map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
-    from_entries
- )
-' < "$ADDRESS_BOOK" > "$chain_addresses"
+
+jq '.["'"$CHAIN_ID"'"].localhost.contracts | map_values(.address)' "$ADDRESS_BOOK" > "$chain_addresses"
+
+#jq '
+#  .["1337"].localhost.contracts | 
+#  map_values(
+#    map_values(.address) |
+#    to_entries |
+#    map(.key = "\(.key)Address") |
+#    map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
+#    from_entries
+# )
+#' < "$ADDRESS_BOOK" > "$chain_addresses"
 
 ## Wait until evm exits or we get a kill signal
 
+echo "Ethprovider started & deployed vector successfully, waiting for kill signal"
 function goodbye {
   echo "Received kill signal, goodbye"
+  kill $pid
   exit
 }
 trap goodbye SIGTERM SIGINT

@@ -7,12 +7,15 @@ RUN curl https://raw.githubusercontent.com/vishnubob/wait-for-it/ed77b63706ea721
 ENV PATH="/root/node_modules/.bin:./node_modules/.bin:${PATH}"
 COPY package.json package.json
 RUN npm install
+COPY tsconfig.json tsconfig.json
+COPY hardhat.config.ts hardhat.config.ts
 COPY ops/entry.sh entry.sh
+COPY deploy deploy
+COPY src.sol src.sol
+COPY src.ts src.ts
 COPY artifacts artifacts
-COPY typechain typechain
 COPY dist dist
-COPY dist/hardhat.config.js hardhat.config.js
-COPY dist/src.ts src.ts
-RUN find src.ts -type f -name "*.ts"  -exec rm {} \;
-RUN find src.ts -type f -name "*.map" -exec rm {} \;
+COPY typechain typechain
+RUN find dist -type f -name "*.ts"  -exec rm {} \;
+RUN find dist -type f -name "*.map" -exec rm {} \;
 ENTRYPOINT ["bash", "entry.sh"]
