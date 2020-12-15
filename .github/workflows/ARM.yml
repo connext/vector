@@ -33,11 +33,11 @@ jobs:
       - name: Build ARM and push
         env:
           DOCKER_CLI_EXPERIMENTAL: enabled
+          LOCAL_ARM_IMAGE: vector_node_arm:${{ env.CI_SHA_SHORT }}
+          LOCAL_DEFAULT_IMAGE: vector_node:${{ env.CI_SHA_SHORT }}
           REGISTRY: docker.io/connextproject
-          LOCAL_DEFAULT_IMAGE: vector_node:${CI_SHA_SHORT}
-          REMOTE_DEFAULT_IMAGE: ${REGISTRY}/${LOCAL_DEFAULT_IMAGE}
-          LOCAL_ARM_IMAGE: vector_node_arm:${CI_SHA_SHORT}
-          REMOTE_ARM_IMAGE: ${REGISTRY}/${LOCAL_ARM_IMAGE}
+          REMOTE_ARM_IMAGE: ${{ env.REGISTRY} }/${{ env.LOCAL_ARM_IMAGE }}
+          REMOTE_DEFAULT_IMAGE: ${{ env.REGISTRY }}/${{ env.LOCAL_DEFAULT_IMAGE }}
         run: |
           echo "Starting critical step in env:"
           echo "- DOCKER_CLI_EXPERIMENTAL=$DOCKER_CLI_EXPERIMENTAL"
