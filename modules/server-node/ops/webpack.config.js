@@ -77,10 +77,6 @@ module.exports = {
           from: path.join(__dirname, "../../../node_modules/.prisma/client"),
           to: path.join(__dirname, "../dist/.prisma/client"),
         },
-        {
-          from: path.join(__dirname, "../node_modules/@connext/vector-contracts/dist/pure-evm_bg.wasm"),
-          to: path.join(__dirname, "../dist/pure-evm_bg.wasm"),
-        },
       ],
     }),
   ],
