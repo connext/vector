@@ -7,10 +7,9 @@ on: push
 jobs:
   build-arm64:
     runs-on: ubuntu-20.04
-    env:
-      IMAGE_NAME: vector_node_arm
-      DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
+      - name: Set up convenient env vars
+        uses: FranzDiebold/github-env-vars-action@v2
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -32,15 +31,21 @@ jobs:
       - name: Make
         run: make
       - name: Build ARM and push
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+          REGISTRY: docker.io/connextproject
+          LOCAL_DEFAULT_IMAGE: vector_node:${CI_SHA_SHORT}
+          REMOTE_DEFAULT_IMAGE: ${REGISTRY}/${LOCAL_DEFAULT_IMAGE}
+          LOCAL_ARM_IMAGE: vector_node_arm:${CI_SHA_SHORT}
+          REMOTE_ARM_IMAGE: ${REGISTRY}/${LOCAL_ARM_IMAGE}
         run: |
-          echo "buildx'ing image name: ${IMAGE_NAME}:${GITHUB_SHA::8}"
-          docker buildx build --platform=linux/arm/v7 --tag connextproject/${IMAGE_NAME}:${GITHUB_SHA::8} --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
+          echo "buildx'ing image name: ${REMOTE_ARM_IMAGE}"
+          docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE} --file modules/server-node/ops/arm.Dockerfile --output type=image modules/server-node
           echo "(re-?)building server-node"
           make server-node
-          echo "inspecting default manifest"
-          docker manifest inspect connextproject/vector_node:${GITHUB_SHA::8}
-          echo "inspecting arm manifest"
-          docker manifest inspect connextproject/vector_node_arm:${GITHUB_SHA::8}
+          echo "docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}"
+          docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}
+          docker push ${REMOTE_DEFAULT_IMAGE}
+          digest=$(docker image inspect ${REMOTE_DEFAULT_IMAGE} | jq '.[0].Config.Image' | tr -d '"')
           echo "creating manifest"
-          docker manifest create connextproject/vector_node:${GITHUB_SHA::8} --amend connextproject/vector_node:${GITHUB_SHA::8} --amend connextproject/${IMAGE_NAME}:${GITHUB_SHA::8}
-
+          docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${digest} --amend ${REMOTE_ARM_IMAGE}
