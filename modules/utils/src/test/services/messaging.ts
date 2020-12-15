@@ -10,6 +10,7 @@ import {
   FullChannelState,
   EngineError,
   FullTransferState,
+  EngineParams,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -125,7 +126,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendSetupMessage(
-    setupInfo: { chainId: number; timeout: string },
+    setupInfo: Result<{ chainId: number; timeout: string }>,
     to: string,
     from: string,
     timeout?: number,
@@ -145,12 +146,12 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
-  respondToSetupMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
+  respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, Error>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
   sendRequestCollateralMessage(
-    requestCollateralParams: {} & { amount?: string } & { channelAddress: string; assetId: string },
+    requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
     to: string,
     from: string,
     timeout?: number,
@@ -161,16 +162,12 @@ export class MemoryMessagingService implements IMessagingService {
 
   onReceiveRequestCollateralMessage(
     publicIdentifier: string,
-    callback: (
-      params: Result<{} & { amount?: string } & { channelAddress: string; assetId: string }, Error>,
-      from: string,
-      inbox: string,
-    ) => void,
+    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
-  respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void> {
+  respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
@@ -200,16 +197,22 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
-  respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void> {
+  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
   onReceiveLockMessage(
-    publicIdentifier: string,
+    myPublicIdentifier: string,
     callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  sendLockMessage(lockInfo: LockInformation, to: string, from: string): Promise<Result<string | void, LockError>> {
+  sendLockMessage(
+    lockInfo: Result<LockInformation, LockError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<LockInformation, LockError>> {
     throw new Error("Method not implemented.");
   }
 

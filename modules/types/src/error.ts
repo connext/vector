@@ -66,13 +66,9 @@ export abstract class VectorError extends Error {
   abstract readonly type: Values<typeof VectorError.errors>;
   static readonly reasons: { [key: string]: string };
 
-  constructor(
-    public readonly message: Values<typeof VectorError.reasons>,
-    // public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
-    // public readonly state?: FullChannelState,
-    public readonly context?: any,
-  ) {
-    super(message);
+  constructor(public readonly msg: Values<typeof VectorError.reasons>, public readonly context?: any) {
+    super(msg);
+    this.context = context;
   }
 }
 
@@ -175,8 +171,12 @@ export class LockError extends VectorError {
   readonly type = VectorError.errors.LockError;
 
   static readonly reasons = {
-    Unknown: "Unknown Lock Error //TODO",
+    Unknown: "Unknown Lock Error", // TODO
   };
+
+  constructor(public readonly message: string, public readonly lockName: string, public readonly context: any = {}) {
+    super(message, context);
+  }
 }
 
 // Thrown by the protocol when applying an update
@@ -210,7 +210,7 @@ export class InboundChannelUpdateError extends VectorError {
     public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
     public readonly state?: FullChannelState<any>,
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }
@@ -236,7 +236,7 @@ export class NodeError extends VectorError {
   constructor(
     public readonly message: Values<typeof NodeError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }
@@ -253,7 +253,7 @@ export class MessagingError extends VectorError {
   constructor(
     public readonly message: Values<typeof MessagingError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }

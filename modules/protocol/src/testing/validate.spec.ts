@@ -979,12 +979,14 @@ describe("validateAndApplyInboundUpdate", () => {
         {
           name: "malformed aliceSignature",
           overrides: { aliceSignature: "fail" },
-          error: 'should match pattern "^0x([a-fA-F0-9]{130})$"',
+          error:
+            'should match pattern "^0x([a-fA-F0-9]{130})$",should be null,should match exactly one schema in oneOf',
         },
         {
           name: "malformed bobSignature",
           overrides: { bobSignature: "fail" },
-          error: 'should match pattern "^0x([a-fA-F0-9]{130})$"',
+          error:
+            'should match pattern "^0x([a-fA-F0-9]{130})$",should be null,should match exactly one schema in oneOf',
         },
       ];
       for (const test of tests) {
