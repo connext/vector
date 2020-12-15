@@ -2,7 +2,6 @@ import { EtherSymbol, Zero } from "@ethersproject/constants";
 import { formatEther } from "@ethersproject/units";
 import { deployments, ethers } from "hardhat";
 
-import { artifacts } from "../artifacts";
 import { logger } from "../constants";
 
 // 3rd arg is: [ContractName, [ConstructorArgs]][]
@@ -14,10 +13,6 @@ export const deployContracts = async (
 ): Promise<void> => {
 
   for (const [name, args] of schema) {
-    if (!artifacts || !artifacts[name]) {
-      throw new Error(`No contract artifacts are available for ${name}`);
-    }
-
     const processedArgs = await Promise.all(args.map(async (arg: any): Promise<any> => {
       try {
         return (await deployments.get(arg)).address;
