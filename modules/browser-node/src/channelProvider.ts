@@ -62,7 +62,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   static async connect(opts: IframeOptions): Promise<IframeChannelProvider> {
     const cp = new IframeChannelProvider(opts);
-    await new Promise(async (res) => {
+    await new Promise<void>(async (res) => {
       if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", async () => {
           await cp.open();
@@ -135,12 +135,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public removeAllListeners = (): any => {
     this.events.removeAllListeners();
-    const rpc: EngineParams.RpcRequest = {
-      id: Date.now(),
-      jsonrpc: "2.0",
-      method: "chan_unsubscribeAll",
-      params: undefined,
-    };
+    const rpc = constructRpcRequest("chan_unsubscribeAll", undefined);
     return this.send(rpc);
   };
 
