@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.36
+
+- use correct withdrawal amount
+
 ## 0.0.35
 
 - remove browser node `waitFor` calls
