@@ -404,12 +404,11 @@ export class NatsMessagingService implements IMessagingService {
     try {
       const subject = `${to}.${from}.${subjectSuffix}`;
       const msgBody = safeJsonStringify(data.toJson());
-      console.log("******* sending", msgBody);
       this.log.debug({ method, msgBody }, "Sending message");
       const msg = await this.connection!.request(subject, timeout, msgBody);
       this.log.debug({ method, msg }, "Received response");
       const { result } = this.parseIncomingMessage<R>(msg);
-      return result.isError ? Result.fail(result.getError()!) : Result.ok<R>(result.getValue());
+      return result;
     } catch (e) {
       return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }));
     }
