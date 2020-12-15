@@ -135,6 +135,9 @@ export async function convertWithdrawParams(
   );
 
   const initiatorSignature = await signer.signMessage(commitment.hashToSign());
+  if (!initiatorSignature) {
+    return Result.fail(new Error("Signer fails to sign message"));
+  }
 
   const channelCounterparty = channel.alice === signer.address ? channel.bob : channel.alice;
 
