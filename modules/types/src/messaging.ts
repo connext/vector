@@ -17,7 +17,7 @@ export interface IMessagingService {
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<string | void, LockError>>;
+  ): Promise<Result<LockInformation, LockError>>;
   respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void>;
 
   onReceiveProtocolMessage(

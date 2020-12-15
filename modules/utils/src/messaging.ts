@@ -264,7 +264,7 @@ export class NatsMessagingService implements IMessagingService {
     from: string,
     timeout = 30_000, // TODO this timeout is copied from memolock
     numRetries = 0,
-  ): Promise<Result<string | undefined, LockError>> {
+  ): Promise<Result<LockInformation, LockError>> {
     return this.sendMessage(lockInfo, "lock", to, from, timeout, numRetries, "sendLockMessage");
   }
 

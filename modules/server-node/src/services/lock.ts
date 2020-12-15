@@ -93,7 +93,7 @@ export class LockService implements ILockService {
       if (res.isError) {
         throw res.getError()!;
       }
-      const lockValue = res.getValue();
+      const { lockValue } = res.getValue();
       if (!lockValue) {
         throw new LockError("Could not get lock, successfully sent lock message", lockName);
       }

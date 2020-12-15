@@ -183,7 +183,7 @@ export class MemoryMessagingService implements IMessagingService {
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<string | void, LockError>> {
+  ): Promise<Result<LockInformation, LockError>> {
     throw new Error("Method not implemented.");
   }
 
