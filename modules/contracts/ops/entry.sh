@@ -31,7 +31,14 @@ mkdir deployments
 hardhat deploy --network localhost --no-compile --export-all "$ADDRESS_BOOK" | pino-pretty --colorize --translateTime --ignore pid,level,hostname,module
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
-jq '.["'"$CHAIN_ID"'"].localhost.contracts | map_values(.address)' "$ADDRESS_BOOK" > "$chain_addresses"
+jq '
+  .["'"$CHAIN_ID"'"].localhost.contracts
+    | map_values(.address)
+    | to_entries
+    | map(.key = "\(.key)Address")
+    | map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)"))
+    | from_entries
+' "$ADDRESS_BOOK" > "$chain_addresses"
 
 echo "Ethprovider started & deployed vector successfully, waiting for kill signal"
 function goodbye {

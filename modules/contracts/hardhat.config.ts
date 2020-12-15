@@ -38,6 +38,14 @@ const config: HardhatUserConfig = {
     rando: { default: 3 },
   },
   networks: {
+    localhost: {
+      accounts: {
+        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        mnemonic,
+      },
+      chainId,
+      loggingEnabled: false,
+    },
     hardhat: {
       accounts: {
         accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
