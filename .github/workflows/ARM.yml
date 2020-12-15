@@ -37,6 +37,7 @@ jobs:
           LOCAL_DEFAULT_IMAGE: vector_node:${{ env.CI_SHA_SHORT }}
           REMOTE_ARM_IMAGE: docker.io/connextproject/vector_node_arm:${{ env.CI_SHA_SHORT }}
           REMOTE_DEFAULT_IMAGE: docker.io/connextproject/vector_node:${{ env.CI_SHA_SHORT }}
+          REGISTRY: docker.io/connextproject
         run: |
           echo "Starting critical step in env:"
           echo "- DOCKER_CLI_EXPERIMENTAL=$DOCKER_CLI_EXPERIMENTAL"
