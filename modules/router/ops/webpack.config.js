@@ -10,7 +10,6 @@ module.exports = {
   entry: path.join(__dirname, "../src/index.ts"),
 
   externals: {
-    "hardhat": "commonjs2 hardhat",
     "pg-native": "commonjs2 pg-native",
     sqlite3: "commonjs2 sqlite3",
   },

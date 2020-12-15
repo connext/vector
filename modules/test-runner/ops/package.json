@@ -2,7 +2,6 @@
   "name": "test-runner",
   "description": "This is only used to install & pin versions for a few global packages in the prod-mode docker container",
   "dependencies": {
-    "hardhat": "2.0.5",
     "mocha": "8.2.1",
     "pino-pretty": "4.3.0"
   }

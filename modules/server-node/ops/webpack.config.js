@@ -10,7 +10,6 @@ module.exports = {
   entry: path.join(__dirname, "../src/index.ts"),
 
   externals: {
-    "hardhat": "commonjs2 hardhat",
     ".prisma/client": "commonjs2 .prisma/client",
     "@prisma/client": "commonjs2 @prisma/client",
     "pg-native": "commonjs2 pg-native",

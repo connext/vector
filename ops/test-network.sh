@@ -27,7 +27,7 @@ eth_mnemonic="${3:-candy maple cake sugar pudding cream honey rich smooth crumbl
 make contracts
 
 # TODO: should just start chains here as well
-if [ "$evm" == "hardhat" ] || [ "$evm" == "ganahce" ]
+if [[ "$evm" == "hardhat" ]]
 then echo "Use 'make test-contracts' for local chains" && exit 1
 else echo "Running tests against remote node"
 fi
