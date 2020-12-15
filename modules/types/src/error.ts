@@ -36,6 +36,28 @@ export class Result<T, Y = any> {
     return undefined;
   }
 
+  public toJson(): ResultJson {
+    if (!this.isError) {
+      return { isError: false, value: this.value };
+    }
+    return {
+      isError: true,
+      // NOTE: Error.message is not returned as a property
+      // on default
+      error:
+        this.error instanceof Error
+          ? {
+              ...this.error,
+              message: this.error.message,
+            }
+          : this.error,
+    };
+  }
+
+  public static fromJson<U, Y extends Error>(json: ResultJson<U, Y>): Result<U, Y> {
+    return json.isError ? Result.fail(json.error) : Result.ok(json.value);
+  }
+
   public static fail<U, Y extends Error>(error: Y): Result<U, Y> {
     return new Result<U, Y>(error);
   }
@@ -44,6 +66,16 @@ export class Result<T, Y = any> {
     return new Result<T>(undefined, result);
   }
 }
+
+export type ResultJson<U = any, Y = any> =
+  | {
+      isError: true;
+      error: Y;
+    }
+  | {
+      isError: false;
+      value: U;
+    };
 
 export type Values<E> = E[keyof E];
 

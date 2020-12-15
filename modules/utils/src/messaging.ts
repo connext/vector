@@ -437,7 +437,7 @@ export class NatsMessagingService implements IMessagingService {
   private async respondToMessage<T = any>(inbox: string, response: Result<T, Error>, method: string): Promise<void> {
     this.assertConnected();
     this.log.debug({ method, inbox }, `Sending response`);
-    await this.connection!.publish(inbox, safeJsonStringify(response));
+    await this.connection!.publish(inbox, safeJsonStringify(response.toJson()));
   }
 
   private async registerCallback<T = any>(
@@ -449,22 +449,17 @@ export class NatsMessagingService implements IMessagingService {
     await this.connection!.subscribe(subscriptionSubject, (msg, err) => {
       this.log.debug({ method, msg }, "Received message");
       const from = msg.subject.split(".")[1];
-      const parsedMsg = typeof msg === `string` ? safeJsonParse(msg) : msg;
       if (err) {
         callback(Result.fail(new MessagingError(err)), from, msg.reply);
         return;
       }
-      const parsedData = typeof msg.data === `string` ? safeJsonParse(msg.data) : msg.data;
-      // TODO: validate msg structure
-      if (!parsedMsg.reply) {
+      const { result, parsed } = this.parseIncomingMessage<T>(msg);
+      if (!parsed.reply) {
         return;
       }
-      parsedMsg.data = parsedData;
-      if (parsedMsg.data.error) {
-        callback(Result.fail(parsedMsg.data.error), from, msg.reply);
-        return;
-      }
-      callback(Result.ok(parsedMsg.data.value), from, msg.reply);
+
+      callback(result, from, msg.reply);
+      return;
     });
     this.log.debug({ method, subject: subscriptionSubject }, `Subscription created`);
   }
@@ -482,24 +477,21 @@ export class NatsMessagingService implements IMessagingService {
     this.assertConnected();
     try {
       const subject = `${to}.${from}.${subjectSuffix}`;
-      const msgBody = safeJsonStringify(data);
+      const msgBody = safeJsonStringify(data.toJson());
       this.log.debug({ method, msgBody }, "Sending message");
       const msg = await this.connection!.request(subject, timeout, msgBody);
       this.log.debug({ method, msg }, "Received response");
-      const parsedMsg = typeof msg === `string` ? safeJsonParse(msg) : msg;
-      const parsedData = typeof msg.data === `string` ? safeJsonParse(msg.data) : msg.data;
-      parsedMsg.data = parsedData;
-      if (parsedMsg.data.error) {
-        const parsedErr = safeJsonParse(parsedMsg.data.error);
-        if (typeof parsedErr === "string") {
-          return Result.fail(new MessagingError(MessagingError.reasons.Response, { error: parsedMsg.data.error }));
-        }
-        // cast `msg` field of vector error from VectorError
-        return Result.fail(parsedErr.msg ? { ...parsedErr, message: parsedErr.msg } : parsedErr);
-      }
-      return Result.ok({ ...parsedMsg.data.value });
+      const { result } = this.parseIncomingMessage<R>(msg);
+      return result;
     } catch (e) {
       return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }));
     }
+  }
+
+  private parseIncomingMessage<R>(msg: any): { result: Result<R, any>; parsed: any } {
+    const parsedMsg = typeof msg === `string` ? safeJsonParse(msg) : msg;
+    const parsedData = typeof msg.data === `string` ? safeJsonParse(msg.data) : msg.data;
+    parsedMsg.data = parsedData;
+    return { result: Result.fromJson<R, any>(parsedMsg.data), parsed: parsedMsg };
   }
 }
