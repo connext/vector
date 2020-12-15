@@ -11,9 +11,6 @@
     "solidity"
   ],
   "main": "./dist/src.ts/index.js",
-  "bin": {
-    "vector-contracts": "./dist/src.ts/cli.js"
-  },
   "files": [
     "dist",
     "src.sol",
