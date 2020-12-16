@@ -12,9 +12,12 @@
   ],
   "main": "./dist/src.ts/index.js",
   "files": [
+    "artifacts",
+    "deployments",
     "dist",
     "src.sol",
-    "src.ts"
+    "src.ts",
+    "typechain"
   ],
   "scripts": {
     "prettier": "prettier --write './src.sol/**/*.sol'",
