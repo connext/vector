@@ -174,7 +174,7 @@ export async function setupEngineListeners(
             channelAddress: channel.channelAddress,
             aliceIdentifier: channel.aliceIdentifier,
             bobIdentifier: channel.bobIdentifier,
-            chainId,
+            chainId: channel.networkContext.chainId,
           });
         }
         return;
