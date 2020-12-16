@@ -58,8 +58,8 @@ const func: DeployFunction = async () => {
       log,
     );
 
-    registerTransfer("Withdraw", deployer);
-    registerTransfer("HashlockTransfer", deployer);
+    await registerTransfer("Withdraw", deployer);
+    await registerTransfer("HashlockTransfer", deployer);
 
   }
 
