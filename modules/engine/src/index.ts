@@ -21,6 +21,7 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
+import { Wallet } from "@ethersproject/wallet";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
@@ -371,7 +372,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     return this.messaging.sendSetupMessage(
-      { chainId: params.chainId, timeout: params.timeout },
+      Result.ok({ chainId: params.chainId, timeout: params.timeout }),
       params.counterpartyIdentifier,
       this.publicIdentifier,
     );
@@ -412,7 +413,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     const request = await this.messaging.sendRequestCollateralMessage(
-      params,
+      Result.ok(params),
       this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
       this.publicIdentifier,
     );
@@ -557,6 +558,20 @@ export class VectorEngine implements IVectorEngine {
     try {
       const res = await this.signer.decrypt(encrypted);
       return Result.ok(res);
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  private async signUtilityMessage(params: EngineParams.SignUtilityMessage): Promise<Result<string, Error>> {
+    const validate = ajv.compile(EngineParams.SignUtilityMessageSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+    }
+    try {
+      const sig = await this.signer.signUtilityMessage(params.message);
+      return Result.ok(sig);
     } catch (e) {
       return Result.fail(e);
     }

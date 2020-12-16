@@ -34,18 +34,12 @@ function App() {
 
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
+  const [signMessageForm] = Form.useForm();
 
   useEffect(() => {
     const effect = async () => {};
     effect();
   }, []);
-
-  const copyChannelAddress = () => {
-    this.textArea.select();
-    document.execCommand("copy");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 5000);
-  };
 
   const connectNode = async (
     iframeSrc: string,
@@ -238,6 +232,18 @@ function App() {
       console.error("Error withdrawing", requestRes.getError());
     }
     setWithdrawLoading(false);
+  };
+
+  const signMessage = async (message: string): Promise<string> => {
+    const requestRes = await node.signUtilityMessage({
+      message,
+    });
+    if (requestRes.isError) {
+      console.error("Error withdrawing", requestRes.getError());
+      return requestRes.getError().message;
+    }
+    console.log("requestRes.getValue(): ", requestRes.getValue());
+    return requestRes.getValue().signedMessage;
   };
 
   const onFinishFailed = (errorInfo: any) => {
@@ -569,6 +575,10 @@ function App() {
                         values.withdrawalAddress,
                       )
                     }
+                    initialValues={{
+                      fromAssetId: constants.AddressZero,
+                      toAssetId: constants.AddressZero,
+                    }}
                     onFinishFailed={onFinishFailed}
                     form={transferForm}
                   >
@@ -577,13 +587,7 @@ function App() {
                     </Form.Item>
 
                     <Form.Item label="From Asset ID" name="fromAssetId">
-                      <Select defaultActiveFirstOption={true}>
-                        {Array.from(new Set(channels.flatMap((channel) => channel.assetIds))).map((assetId) => (
-                          <Select.Option value={assetId} key={assetId}>
-                            {assetId}
-                          </Select.Option>
-                        ))}
-                      </Select>
+                      <Input />
                     </Form.Item>
 
                     <Form.Item label="From Chain ID" name="fromChainId">
@@ -597,13 +601,7 @@ function App() {
                     </Form.Item>
 
                     <Form.Item label="To Asset ID" name="toAssetId">
-                      <Select defaultActiveFirstOption={true}>
-                        {Array.from(new Set(channels.flatMap((channel) => channel.assetIds))).map((assetId) => (
-                          <Select.Option value={assetId} key={assetId}>
-                            {assetId}
-                          </Select.Option>
-                        ))}
-                      </Select>
+                      <Input />
                     </Form.Item>
 
                     <Form.Item label="To Chain ID" name="toChainId">
@@ -684,6 +682,42 @@ function App() {
                 <Form.Item wrapperCol={{ offset: 6 }}>
                   <Button type="primary" htmlType="submit" loading={withdrawLoading}>
                     Withdraw
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Col>
+          </Row>
+          <Divider orientation="left">Withdraw</Divider>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form
+                layout="horizontal"
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                name="signMessage"
+                onFinish={async (values) => {
+                  const signedMessage = await signMessage(values.message);
+                  console.log("signedMessage: ", signedMessage);
+                  signMessageForm.setFieldsValue({ signedMessage });
+                }}
+                onFinishFailed={onFinishFailed}
+                form={signMessageForm}
+              >
+                <Form.Item
+                  label="Message"
+                  name="message"
+                  rules={[{ required: true, message: "Please input message to sign" }]}
+                >
+                  <Input placeholder="Text goes here" />
+                </Form.Item>
+
+                <Form.Item label="Signed Message" name="signedMessage">
+                  <span />
+                </Form.Item>
+
+                <Form.Item wrapperCol={{ offset: 6 }}>
+                  <Button type="primary" htmlType="submit">
+                    Sign
                   </Button>
                 </Form.Item>
               </Form>

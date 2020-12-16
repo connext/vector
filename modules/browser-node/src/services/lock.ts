@@ -1,4 +1,4 @@
-import { ILockService, IMessagingService, LockError } from "@connext/vector-types";
+import { ILockService, IMessagingService, LockError, Result } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 
 export class BrowserLockService implements ILockService {
@@ -10,23 +10,23 @@ export class BrowserLockService implements ILockService {
 
   async acquireLock(lockName: string, isAlice?: boolean, counterpartyPublicIdentifier?: string): Promise<string> {
     if (!counterpartyPublicIdentifier) {
-      throw new LockError(`counterpartyPublicIdentifier is required`);
+      throw new LockError(`counterpartyPublicIdentifier is required`, lockName);
     }
     if (isAlice) {
-      throw new LockError(`Browser node cannot be Alice`);
+      throw new LockError(`Browser node cannot be Alice`, lockName);
     }
 
     const res = await this.messagingService.sendLockMessage(
-      { type: "acquire", lockName },
+      Result.ok({ type: "acquire", lockName }),
       counterpartyPublicIdentifier!,
       this.publicIdentifier,
     );
     if (res.isError) {
       throw res.getError()!;
     }
-    const lockValue = res.getValue();
+    const { lockValue } = res.getValue();
     if (!lockValue) {
-      throw new LockError("Could not get lock, successfully sent lock message");
+      throw new LockError("Could not get lock, successfully sent lock message", lockName);
     }
     this.log.debug({ method: "acquireLock", lockName, lockValue }, "Acquired lock");
     return lockValue;
@@ -39,14 +39,14 @@ export class BrowserLockService implements ILockService {
     counterpartyPublicIdentifier?: string,
   ): Promise<void> {
     if (!counterpartyPublicIdentifier) {
-      throw new LockError(`counterpartyPublicIdentifier is required`);
+      throw new LockError(`counterpartyPublicIdentifier is required`, lockName);
     }
     if (isAlice) {
-      throw new LockError(`Browser node cannot be Alice`);
+      throw new LockError(`Browser node cannot be Alice`, lockName);
     }
 
     const result = await this.messagingService.sendLockMessage(
-      { type: "release", lockName, lockValue },
+      Result.ok({ type: "release", lockName, lockValue }),
       counterpartyPublicIdentifier!,
       this.publicIdentifier,
     );
