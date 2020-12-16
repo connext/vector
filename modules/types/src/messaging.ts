@@ -12,13 +12,13 @@ export interface IMessagingService {
     callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
   ): Promise<void>;
   sendLockMessage(
-    lockInfo: LockInformation,
+    lockInfo: Result<LockInformation, LockError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<string | void, LockError>>;
-  respondToLockMessage(inbox: string, lockInformation: LockInformation & { error?: string }): Promise<void>;
+  ): Promise<Result<LockInformation, LockError>>;
+  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void>;
 
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
@@ -47,7 +47,7 @@ export interface IMessagingService {
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
 
   sendSetupMessage(
-    setupInfo: { chainId: number; timeout: string },
+    setupInfo: Result<{ chainId: number; timeout: string }>,
     to: string,
     from: string,
     timeout?: number,
@@ -61,10 +61,10 @@ export interface IMessagingService {
       inbox: string,
     ) => void,
   ): Promise<void>;
-  respondToSetupMessage(inbox: string, params: { message?: string; error?: string }): Promise<void>;
+  respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, Error>): Promise<void>;
 
   sendRequestCollateralMessage(
-    requestCollateralParams: EngineParams.RequestCollateral,
+    requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
     to: string,
     from: string,
     timeout?: number,
@@ -74,7 +74,7 @@ export interface IMessagingService {
     publicIdentifier: string,
     callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
   ): Promise<void>;
-  respondToRequestCollateralMessage(inbox: string, params: { message?: string; error?: string }): Promise<void>;
+  respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void>;
 
   onReceiveCheckIn(
     myPublicIdentifier: string,

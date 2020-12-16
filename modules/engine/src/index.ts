@@ -372,7 +372,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     return this.messaging.sendSetupMessage(
-      { chainId: params.chainId, timeout: params.timeout },
+      Result.ok({ chainId: params.chainId, timeout: params.timeout }),
       params.counterpartyIdentifier,
       this.publicIdentifier,
     );
@@ -413,7 +413,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     const request = await this.messaging.sendRequestCollateralMessage(
-      params,
+      Result.ok(params),
       this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
       this.publicIdentifier,
     );
