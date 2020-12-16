@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.37
+
+- refactor messaging service
+
 ## 0.0.36
 
 - use correct withdrawal amount
