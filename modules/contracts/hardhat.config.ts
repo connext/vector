@@ -45,6 +45,7 @@ const config: HardhatUserConfig = {
       },
       chainId,
       loggingEnabled: false,
+      saveDeployments: false,
     },
     hardhat: {
       accounts: {
@@ -53,6 +54,7 @@ const config: HardhatUserConfig = {
       },
       chainId,
       loggingEnabled: false,
+      saveDeployments: false,
     },
     matic: {
       accounts: { mnemonic },

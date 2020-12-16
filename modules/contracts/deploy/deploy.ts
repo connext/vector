@@ -6,12 +6,8 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { deployContracts } from "../src.ts/actions/deployContracts";
 import { logger } from "../src.ts/constants";
 
-console.log("Deploy fn loaded!");
 const func: DeployFunction = async () => {
-  const log = logger.child({ level: "info", module: "Deploy" });
-  console.log("Deploy fn activated!");
-  log.info("Deploy fn activated!");
-  log.error("Deploy fn activated!");
+  const log = logger.child({ module: "Deploy" });
   const chainId = await getChainId();
   const provider = ethers.provider;
   const { deployer } = await getNamedAccounts();
