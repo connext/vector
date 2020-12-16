@@ -40,24 +40,15 @@ jobs:
           REMOTE_DEFAULT_IMAGE: connextproject/vector_node:${{ env.CI_SHA_SHORT }}
           REGISTRY: connextproject
         run: |
-          echo "Starting critical step in env:"
-          echo "- DOCKER_CLI_EXPERIMENTAL=$DOCKER_CLI_EXPERIMENTAL"
-          echo "- LOCAL_DEFAULT_IMAGE=$LOCAL_DEFAULT_IMAGE"
-          echo "- REMOTE_DEFAULT_IMAGE=$REMOTE_DEFAULT_IMAGE"
-          echo "- REMOTE_ARM_IMAGE=$REMOTE_ARM_IMAGE"
-          echo "docker buildx-ing a thing with tag: ${REMOTE_ARM_IMAGE}_arm"
+          echo "docker buildx-ing ARM image with tag: ${REMOTE_ARM_IMAGE}_arm"
           docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE}_arm --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
-          echo "(re-?)building server-node"
-          make server-node
-          echo "docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}_default"
+          echo "pushing ${REMOTE_DEFAULT_IMAGE}_default to get digest"
           docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}_default
-          echo "pushing ${REMOTE_DEFAULT_IMAGE}_default"
           default_digest=$(docker push ${REMOTE_DEFAULT_IMAGE}_default | grep sha | cut -d ' ' -f 3)
-          echo "pulling ${REMOTE_ARM_IMAGE}_arm"
+          echo "pushing ${REMOTE_ARM_IMAGE}_arm to get digest"
           docker pull ${REMOTE_ARM_IMAGE}_arm
-          echo "pushing ${REMOTE_ARM_IMAGE}_arm"
           arm_digest=$(docker push ${REMOTE_ARM_IMAGE}_arm | grep sha | cut -d ' ' -f 3)
-          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest} AAAAAND ${REGISTRY}/vector_node_arm@${arm_digest}"
+          echo "creating manifest from ${REGISTRY}/vector_node@${default_digest} AND ${REGISTRY}/vector_node_arm@${arm_digest}"
           docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest} --amend ${REGISTRY}/vector_node_arm@${arm_digest}
           echo "pushing manifest ${REMOTE_DEFAULT_IMAGE}"
           docker manifest push ${REMOTE_DEFAULT_IMAGE}
