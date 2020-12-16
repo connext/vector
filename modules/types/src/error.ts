@@ -144,7 +144,7 @@ export class OutboundChannelUpdateError extends VectorError {
     Create2Failed: "Failed to get create2 address",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
-    OutboundValidationFailed: "Failed to validate incoming update",
+    OutboundValidationFailed: "Failed to validate outbound update",
     RestoreNeeded: "Channel too far out of sync, must be restored",
     RegenerateUpdateFailed: "Failed to regenerate update after sync",
     SaveChannelFailed: "Failed to save channel",
