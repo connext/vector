@@ -31,7 +31,7 @@ jobs:
           python-version: '3.9'
           architecture: 'x64'
       - name: Make
-        run: make server-node
+        run: make
       - name: Build ARM and push
         env:
           DOCKER_CLI_EXPERIMENTAL: enabled
