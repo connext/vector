@@ -59,4 +59,5 @@ jobs:
           arm_digest=$(docker push ${REMOTE_ARM_IMAGE}_arm | grep sha | cut -d ' ' -f 3)
           echo "creating manifest from ${REGISTRY}/vector_node@${default_digest} AAAAAND ${REGISTRY}/vector_node_arm@${arm_digest}"
           docker manifest create ${REMOTE_DEFAULT_IMAGE} --amend ${REGISTRY}/vector_node@${default_digest} --amend ${REGISTRY}/vector_node_arm@${arm_digest}
-          docker push ${REMOTE_DEFAULT_IMAGE}
+          echo "pushing manifest ${REMOTE_DEFAULT_IMAGE}"
+          docker manifest push ${REMOTE_DEFAULT_IMAGE}
