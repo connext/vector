@@ -36,6 +36,28 @@ export class Result<T, Y = any> {
     return undefined;
   }
 
+  public toJson(): ResultJson {
+    if (!this.isError) {
+      return { isError: false, value: this.value };
+    }
+    return {
+      isError: true,
+      // NOTE: Error.message is not returned as a property
+      // on default
+      error:
+        this.error instanceof Error
+          ? {
+              ...this.error,
+              message: this.error.message,
+            }
+          : this.error,
+    };
+  }
+
+  public static fromJson<U, Y extends Error>(json: ResultJson<U, Y>): Result<U, Y> {
+    return json.isError ? Result.fail(json.error) : Result.ok(json.value);
+  }
+
   public static fail<U, Y extends Error>(error: Y): Result<U, Y> {
     return new Result<U, Y>(error);
   }
@@ -44,6 +66,16 @@ export class Result<T, Y = any> {
     return new Result<T>(undefined, result);
   }
 }
+
+export type ResultJson<U = any, Y = any> =
+  | {
+      isError: true;
+      error: Y;
+    }
+  | {
+      isError: false;
+      value: U;
+    };
 
 export type Values<E> = E[keyof E];
 
@@ -65,13 +97,9 @@ export abstract class VectorError extends Error {
   abstract readonly type: Values<typeof VectorError.errors>;
   static readonly reasons: { [key: string]: string };
 
-  constructor(
-    public readonly message: Values<typeof VectorError.reasons>,
-    // public readonly update?: ChannelUpdate<any> | (UpdateParams<any> & { nonce: number }),
-    // public readonly state?: FullChannelState,
-    public readonly context?: any,
-  ) {
-    super(message);
+  constructor(public readonly msg: Values<typeof VectorError.reasons>, public readonly context?: any) {
+    super(msg);
+    this.context = context;
   }
 }
 
@@ -174,8 +202,12 @@ export class LockError extends VectorError {
   readonly type = VectorError.errors.LockError;
 
   static readonly reasons = {
-    Unknown: "Unknown Lock Error //TODO",
+    Unknown: "Unknown Lock Error", // TODO
   };
+
+  constructor(public readonly message: string, public readonly lockName: string, public readonly context: any = {}) {
+    super(message, context);
+  }
 }
 
 // Thrown by the protocol when applying an update
@@ -209,7 +241,7 @@ export class InboundChannelUpdateError extends VectorError {
     public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
     public readonly state?: FullChannelState<any>,
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }
@@ -235,7 +267,7 @@ export class NodeError extends VectorError {
   constructor(
     public readonly message: Values<typeof NodeError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }
@@ -252,7 +284,7 @@ export class MessagingError extends VectorError {
   constructor(
     public readonly message: Values<typeof MessagingError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }

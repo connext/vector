@@ -45,7 +45,7 @@ export class LockService implements ILockService {
         if (type === "acquire") {
           try {
             const acqValue = await this.acquireLock(lockName, true);
-            await this.messagingService.respondToLockMessage(inbox, { lockName, lockValue: acqValue, type });
+            await this.messagingService.respondToLockMessage(inbox, Result.ok({ lockName, lockValue: acqValue, type }));
           } catch (e) {
             this.log.error(
               {
@@ -54,12 +54,15 @@ export class LockService implements ILockService {
               },
               "Error acquiring lock",
             );
-            await this.messagingService.respondToLockMessage(inbox, { lockName, error: e.message, type });
+            await this.messagingService.respondToLockMessage(
+              inbox,
+              Result.fail(new LockError(e.message, lockName, { type })),
+            );
           }
         } else if (type === "release") {
           try {
             await this.releaseLock(lockName, lockValue!, true);
-            await this.messagingService.respondToLockMessage(inbox, { lockName, type });
+            await this.messagingService.respondToLockMessage(inbox, Result.ok({ lockName, type }));
           } catch (e) {
             this.log.error(
               {
@@ -68,7 +71,10 @@ export class LockService implements ILockService {
               },
               "Error releasing lock",
             );
-            await this.messagingService.respondToLockMessage(inbox, { lockName, error: e.message, type });
+            await this.messagingService.respondToLockMessage(
+              inbox,
+              Result.fail(new LockError(e.message, lockName, { type })),
+            );
           }
         }
       },
@@ -80,16 +86,16 @@ export class LockService implements ILockService {
       return this.memoryLockService.acquireLock(lockName);
     } else {
       const res = await this.messagingService.sendLockMessage(
-        { type: "acquire", lockName },
+        Result.ok({ type: "acquire", lockName }),
         counterpartyPublicIdentifier!,
         this.publicIdentifier,
       );
       if (res.isError) {
         throw res.getError()!;
       }
-      const lockValue = res.getValue();
+      const { lockValue } = res.getValue();
       if (!lockValue) {
-        throw new LockError("Could not get lock, successfully sent lock message");
+        throw new LockError("Could not get lock, successfully sent lock message", lockName);
       }
       this.log.debug({ method: "acquireLock", lockName, lockValue }, "Acquired lock");
       return lockValue;
@@ -106,7 +112,7 @@ export class LockService implements ILockService {
       return this.memoryLockService.releaseLock(lockName, lockValue);
     } else {
       const result = await this.messagingService.sendLockMessage(
-        { type: "release", lockName, lockValue },
+        Result.ok({ type: "release", lockName, lockValue }),
         counterpartyPublicIdentifier!,
         this.publicIdentifier,
       );
