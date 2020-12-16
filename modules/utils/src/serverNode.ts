@@ -246,6 +246,17 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>> {
+    return this.executeHttpRequest<NodeResponses.RestoreState>(
+      `restore`,
+      "post",
+      params,
+      NodeParams.RestoreStateSchema,
+    );
+  }
+
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {
