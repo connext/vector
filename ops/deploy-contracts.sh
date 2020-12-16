@@ -18,7 +18,7 @@ ethprovider_image="${project}_ethprovider:latest";
 bash "$root/ops/pull-images.sh" "$ethprovider_image" > /dev/null
 
 docker run \
-  --entrypoint=node \
+  --entrypoint=hardhat \
   --interactive \
   --name="${project}_contract_deployer" \
   --network="${project}" \
@@ -26,4 +26,4 @@ docker run \
   --tmpfs="/tmp" \
   --tty \
   --volume="$root/address-book.json:/data/address-book.json" \
-  "$ethprovider_image" dist/cli.js migrate --address-book=/data/address-book.json "${args[@]}"
+  "$ethprovider_image" deploy "${args[@]}"
