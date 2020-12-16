@@ -23,7 +23,7 @@ import { config } from "../config";
 
 import { PrismaStore } from "./store";
 
-describe("store", () => {
+describe.only("store", () => {
   let store: PrismaStore;
 
   before(() => {
@@ -36,6 +36,59 @@ describe("store", () => {
 
   after(async () => {
     await store.disconnect();
+  });
+
+  it.only("saveChannelStateAndTransfers should work when provided with transfers", async () => {
+    const { channel, transfer } = createTestChannelState(
+      "create",
+      {},
+      {
+        transferId: mkHash("0x111"),
+        meta: { routingId: mkBytes32("0xddd") },
+      },
+    );
+    const starting = transfer.channelNonce;
+    const transfers = Array(5)
+      .fill(0)
+      .map((_, idx) => {
+        return {
+          ...transfer,
+          transferId: getRandomBytes32(),
+          meta: { routingId: getRandomBytes32(), channelNonce: starting + idx },
+        };
+      });
+
+    // Test with transfers
+    await store.saveChannelStateAndTransfers(channel, transfers);
+
+    // Verify channel
+    const retrieved = await store.getChannelState(channel.channelAddress);
+    expect(retrieved).to.be.deep.eq(channel);
+
+    for (const t of transfers) {
+      const retrieved = await store.getTransferState(t.transferId);
+      console.log("retrieved", retrieved);
+      console.log("transfer", t);
+      expect(retrieved).to.be.deep.eq(t);
+    }
+    expect((await store.getActiveTransfers(channel.channelAddress)).sort()).to.be.deep.eq(transfers.sort());
+
+    // Verify updates
+    // TODO
+  });
+
+  it("saveChannelStateAndTransfers should work when provided with no active transfers", async () => {
+    const { channel } = createTestChannelState("create", undefined, {
+      transferId: mkHash("0x111"),
+      meta: { routingId: mkBytes32("0xddd") },
+    });
+
+    // Test with transfers
+    await store.saveChannelStateAndTransfers(channel, []);
+
+    // Verify channel
+    const retrieved = await store.getChannelState(channel.channelAddress);
+    expect(retrieved).to.be.deep.eq(channel);
   });
 
   describe("getActiveTransfers", () => {
