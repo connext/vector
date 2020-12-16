@@ -8,13 +8,13 @@ import { getContract } from "../utils";
 
 export const registerTransfer = async (
   transferName: string,
-  wallet: Wallet,
+  signer: string,
   log = logger.child({}),
 ): Promise<void> => {
-  log.info(`Preparing to add ${transferName} to registry (Sender=${wallet.address})`);
+  log.info(`Preparing to add ${transferName} to registry (Sender=${signer})`);
 
-  const registry = await getContract("TransferRegistry", wallet);
-  const transfer = await getContract(transferName, wallet);
+  const registry = await getContract("TransferRegistry", signer);
+  const transfer = await getContract(transferName, signer);
 
   const registered = await registry.getTransferDefinitions();
   const transferInfo = await transfer.getRegistryInformation();
@@ -57,8 +57,8 @@ export const registerTransfer = async (
 };
 
 export const registerTransferCommand = {
-  command: "register-transfer",
-  describe: "Adds transfer to registry",
+  command: "register",
+  describe: "Adds a transfer to registry",
   builder: (yargs: Argv): Argv => {
     return yargs
       .option("t", cliOpts.transferName)
@@ -69,6 +69,6 @@ export const registerTransferCommand = {
   handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
     const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
     const level = argv.silent ? "silent" : "info";
-    await registerTransfer(argv.transferName, wallet, logger.child({ level }));
+    await registerTransfer(argv.transferName, wallet.address, logger.child({ level }));
   },
 };

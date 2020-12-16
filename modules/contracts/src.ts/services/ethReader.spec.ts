@@ -5,7 +5,6 @@ import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 import pino from "pino";
 
-import { registerTransfer } from "../actions";
 import { alice, bob, chainIdReq, getTestChannel, provider } from "../tests";
 import { getContract } from "../utils";
 
@@ -28,7 +27,6 @@ describe("EthereumChainReader", function () {
     factory = await getContract("ChannelFactory", alice);
     transferRegistry = await getContract("TransferRegistry", alice);
 
-    await registerTransfer("Withdraw", alice);
     channel = (await getTestChannel()).connect(alice);
     chainId = await chainIdReq;
     chainReader = new EthereumChainReader({ [chainId]: provider }, pino());

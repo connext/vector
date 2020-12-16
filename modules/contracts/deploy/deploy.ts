@@ -3,7 +3,7 @@ import { formatEther } from "@ethersproject/units";
 import { ethers, getNamedAccounts, getChainId } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { deployContracts } from "../src.ts/actions/deployContracts";
+import { deployContracts, registerTransfer } from "../src.ts/actions";
 import { logger } from "../src.ts/constants";
 
 const func: DeployFunction = async () => {
@@ -57,6 +57,9 @@ const func: DeployFunction = async () => {
       ],
       log,
     );
+
+    registerTransfer("Withdraw", deployer);
+    registerTransfer("HashlockTransfer", deployer);
 
   }
 

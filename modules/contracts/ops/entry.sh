@@ -27,6 +27,7 @@ echo "Waiting for testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
 echo "Good morning!"
 
+echo "Deploying contracts..."
 mkdir -p deployments
 hardhat deploy --network localhost --no-compile --export-all "$ADDRESS_BOOK" | pino-pretty --colorize --translateTime --ignore pid,level,hostname,module
 

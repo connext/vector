@@ -19,6 +19,6 @@ describe("registerTransfer", function() {
 
   it("should registry a new transfer", async () => {
     expect(registry.address).to.be.a("string");
-    await expect(registerTransfer(TransferNames.HashlockTransfer, alice)).to.be.fulfilled;
+    await expect(registerTransfer(TransferNames.HashlockTransfer, alice.address)).to.be.fulfilled;
   });
 });
