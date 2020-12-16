@@ -45,6 +45,7 @@ then
     --detach \
     --entrypoint bash \
     --env "CHAIN_ID=$chain_id" \
+    --env="LOG_LEVEL=${LOG_LEVEL:-info}" \
     --env "MNEMONIC=$eth_mnemonic" \
     --mount "type=bind,source=$chain_data,target=/data" \
     --mount "type=bind,source=$root,target=/root" \
@@ -86,7 +87,7 @@ docker run \
   --env="CI=$CI" \
   --env="CHAIN_ADDRESSES=$CHAIN_ADDRESSES" \
   --env="CHAIN_PROVIDERS=$CHAIN_PROVIDERS" \
-  --env="LOG_LEVEL=$LOG_LEVEL" \
+  --env="LOG_LEVEL=${LOG_LEVEL:-silent}" \
   --env="SUGAR_DADDY=$eth_mnemonic" \
   --env="VECTOR_CONFIG=$config" \
   --name="${project}_test_$unit" \
