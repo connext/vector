@@ -1,10 +1,10 @@
 import { expect, RestServerNodeService } from "@connext/vector-utils";
 import { utils, constants } from "ethers";
-import { INodeService } from "@connext/vector-types";
+import { FullChannelState, FullTransferState, INodeService } from "@connext/vector-types";
 import axios from "axios";
 
 import { env, fundIfBelow, getRandomIndex, getTestLoggers } from "../utils";
-import { chainId1, deposit, setup, wallet1 } from "../utils/channel";
+import { chainId1, deposit, setup, transfer, wallet1 } from "../utils/channel";
 
 import { aliceEvts, bobEvts } from "./eventSetup";
 
@@ -18,8 +18,8 @@ describe(testName, () => {
   let channelAddress: string;
 
   const onchainMin = utils.parseEther("0.1");
-  const depositVal = onchainMin.div(10000);
-  // const transferVal = depositVal.div(10000);
+  const depositVal = onchainMin.div(100);
+  const transferVal = depositVal.div(100);
 
   beforeEach(async () => {
     // Prep alice-bob nodes onchain
@@ -36,32 +36,44 @@ describe(testName, () => {
     channelAddress = postSetup.channelAddress;
 
     // Alice deposit into channel
-    const postAliceDeposit = await deposit(
-      aliceService,
-      bobService,
-      postSetup.channelAddress,
-      constants.AddressZero,
-      depositVal,
-    );
+    await deposit(aliceService, bobService, postSetup.channelAddress, constants.AddressZero, depositVal);
 
     // Bob deposit into channel
-    const postBobDeposit = await deposit(
-      bobService,
-      aliceService,
-      postSetup.channelAddress,
-      constants.AddressZero,
-      depositVal,
+    await deposit(bobService, aliceService, postSetup.channelAddress, constants.AddressZero, depositVal);
+
+    // Create some transfers
+    await Promise.all(
+      Array(2)
+        .fill(0)
+        .map((_) =>
+          transfer(
+            aliceService,
+            bobService,
+            postSetup.channelAddress,
+            postSetup.channelAddress,
+            constants.AddressZero,
+            transferVal,
+            postSetup.networkContext.chainId,
+          ),
+        ),
     );
   });
 
   describe("alice restores from bob", () => {
-    let preRestore;
+    let preRestoreChannel: FullChannelState;
+    let preRestoreTransfers: FullTransferState[];
 
     beforeEach(async () => {
-      const getChannelParams = { channelAddress, publicIdentifier: aliceService.publicIdentifier };
       // Set preRestore channe
-      const preRestoreReq = await aliceService.getStateChannel(getChannelParams);
-      preRestore = preRestoreReq.getValue();
+      const preRestoreReq = await aliceService.getStateChannel({
+        channelAddress,
+        publicIdentifier: aliceService.publicIdentifier,
+      });
+      preRestoreChannel = preRestoreReq.getValue();
+      const preRestoreTransfersReq = await aliceService.getActiveTransfers({
+        channelAddress,
+      });
+      preRestoreTransfers = preRestoreTransfersReq.getValue().sort((a, b) => a.channelNonce - b.channelNonce);
       // Clear alice store
       const aliceClear = (await axios.post(`${env.aliceUrl}/clear-store`, { adminToken: env.adminToken })).data;
       await expect(
@@ -70,15 +82,56 @@ describe(testName, () => {
     });
 
     it("should work", async () => {
-      // const restore = await aliceService.restoreChannel({
-      //   counterpartyIdentifier: bobService.publicIdentifier,
-      //   chainId: chainId1,
-      // });
-      // expect(restore).to.be.deep.eq(preRestore);
+      const restore = await aliceService.restoreState({
+        counterpartyIdentifier: bobService.publicIdentifier,
+        chainId: chainId1,
+      });
+      expect(restore.getValue()).to.be.deep.eq({ channelAddress });
+
+      const channelRes = await aliceService.getStateChannel({ channelAddress });
+      expect(channelRes.getValue()).to.be.deep.eq(preRestoreChannel);
+      const transfers = await aliceService.getActiveTransfers({
+        channelAddress,
+      });
+      expect(transfers.getValue().sort((a, b) => a.channelNonce - b.channelNonce)).to.be.deep.eq(preRestoreTransfers);
     });
   });
 
   describe("bob restores from alice", () => {
-    it("should work", async () => {});
+    let preRestoreChannel: FullChannelState;
+    let preRestoreTransfers: FullTransferState[];
+
+    beforeEach(async () => {
+      // Set preRestore channe
+      const preRestoreReq = await bobService.getStateChannel({
+        channelAddress,
+        publicIdentifier: aliceService.publicIdentifier,
+      });
+      preRestoreChannel = preRestoreReq.getValue();
+      const preRestoreTransfersReq = await aliceService.getActiveTransfers({
+        channelAddress,
+      });
+      preRestoreTransfers = preRestoreTransfersReq.getValue().sort((a, b) => a.channelNonce - b.channelNonce);
+      // Clear alice store
+      const bobClear = (await axios.post(`${env.bobUrl}/clear-store`, { adminToken: env.adminToken })).data;
+      await expect(
+        bobService.getStateChannel({ channelAddress, publicIdentifier: bobService.publicIdentifier }),
+      ).rejectedWith("404");
+    });
+
+    it("should work", async () => {
+      const restore = await bobService.restoreState({
+        counterpartyIdentifier: aliceService.publicIdentifier,
+        chainId: chainId1,
+      });
+      expect(restore.getValue()).to.be.deep.eq({ channelAddress });
+
+      const channelRes = await bobService.getStateChannel({ channelAddress });
+      expect(channelRes.getValue()).to.be.deep.eq(preRestoreChannel);
+      const transfers = await aliceService.getActiveTransfers({
+        channelAddress,
+      });
+      expect(transfers.getValue().sort((a, b) => a.channelNonce - b.channelNonce)).to.be.deep.eq(preRestoreTransfers);
+    });
   });
 });
