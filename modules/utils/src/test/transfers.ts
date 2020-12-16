@@ -97,9 +97,9 @@ export function createTestFullHashlockTransferState(
     initiator: overrides.balance?.to[0] ?? mkAddress("0x111"),
     responder: overrides.balance?.to[1] ?? mkAddress("0x222"),
     inDispute: false,
-    initiatorIdentifier: overrides.initiatorIdentifier ?? channel.aliceIdentifier ?? mkPublicIdentifier("vector111"),
-    responderIdentifier: overrides.responderIdentifier ?? channel.bobIdentifier ?? mkPublicIdentifier("vector222"),
-    channelNonce: channel.nonce ?? 9,
+    initiatorIdentifier: overrides.initiatorIdentifier ?? channel?.aliceIdentifier ?? mkPublicIdentifier("vector111"),
+    responderIdentifier: overrides.responderIdentifier ?? channel?.bobIdentifier ?? mkPublicIdentifier("vector222"),
+    channelNonce: channel?.nonce ?? 9,
   };
 
   const channelOverrides = channel
