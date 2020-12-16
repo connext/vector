@@ -4,14 +4,13 @@ on:
   push:
     branches-ignore:
       - prod
-      - 217-build-for-arm
 
 jobs:
   build:
     env:
       DOCKER_USER: ${{ secrets.DOCKER_USER }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -21,49 +20,49 @@ jobs:
       - run: make push
 
   utils:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-utils
 
   contracts:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-contracts
 
   protocol:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-protocol
 
   engine:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-engine
 
   server-node:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-server-node
 
   browser-node:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-browser-node
 
   router:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make test-router
 
   messaging:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -75,7 +74,7 @@ jobs:
         run: docker service logs --tail 200 messaging_auth
 
   duet:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -89,7 +88,7 @@ jobs:
           docker service logs --tail 200 duet_bob
 
   trio:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -105,7 +104,7 @@ jobs:
           docker service logs --tail 200 trio_dave
 
   node:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -117,7 +116,7 @@ jobs:
         run: docker service logs --tail 200 node_node
 
   routing-node:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - run: make pull-latest
@@ -131,7 +130,7 @@ jobs:
           docker service logs --tail 200 router_router
 
   messaging-prod:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [build]
     steps:
       - uses: actions/checkout@v1
@@ -144,7 +143,7 @@ jobs:
         run: docker service ls && docker service logs --tail 200 messaging_auth
 
   routing-node-prod:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [build]
     steps:
       - uses: actions/checkout@v1

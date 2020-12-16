@@ -15,12 +15,9 @@
     "vector-contracts": "./dist/src.ts/cli.js"
   },
   "files": [
-    "artifacts",
-    "deployments",
     "dist",
     "src.sol",
-    "src.ts",
-    "typechain"
+    "src.ts"
   ],
   "scripts": {
     "prettier": "prettier --write './src.sol/**/*.sol'",
