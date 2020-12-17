@@ -172,13 +172,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     const channelFactory = new Contract(channelState.networkContext.channelFactoryAddress, ChannelFactory.abi, signer);
 
-    // Register event listener to log channel creation
-    /* TODO: this listener. It's never getting triggered & removed so tests never exit
-    channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
-      this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
-    });
-    */
-
     // If there is no deposit information, just create the channel
     if (!deposit) {
       // Deploy multisig tx
@@ -266,17 +259,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         ChannelFactory.abi,
         signer,
       );
-      const deployCompleted = new Promise((resolve) =>
-        channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
-          this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
-          resolve();
-        }),
-      );
       const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
         return channelFactory.createChannel(channelState.alice, channelState.bob);
       });
       if (txRes.isError) {
-        console.log(`txRes.isError`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             method,
@@ -291,7 +277,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         await deployTx.wait();
         this.log.debug("Waiting for event to be emitted");
         await Promise.race([
-          deployCompleted,
+          deployTx.wait(),
           new Promise((resolve) =>
             setTimeout(() => {
               this.log.warn(
@@ -303,7 +289,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
           ),
         ]);
       } catch (e) {
-        console.log(`caught (e)`);
+        this.log.error(`caught ${e.message}`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             error: e.message,

@@ -19,13 +19,6 @@ export const getUnsetupChannel = async (): Promise<Contract> => {
   return new Contract(channelAddress, TestChannel.abi, alice);
 };
 
-export const mineBlock = (): Promise<void> => {
-  return new Promise(async resolve => {
-    provider.once("block", () => resolve());
-    await provider.send("evm_mine", []);
-  });
-};
-
 export const advanceBlocktime = async (seconds: number): Promise<void> => {
   const { timestamp: currTime } = await provider.getBlock("latest");
   await provider.send("evm_increaseTime", [seconds]);

@@ -34,7 +34,7 @@ import { getContract } from "../utils";
 
 import { EthereumChainService } from "./ethService";
 
-describe("EthereumChainService", function () {
+describe.only("EthereumChainService", function () {
   this.timeout(120_000);
   const aliceSigner = new ChannelSigner(alice.privateKey);
   const bobSigner = new ChannelSigner(bob.privateKey);
@@ -102,26 +102,12 @@ describe("EthereumChainService", function () {
     expect(chainService).to.be.ok;
   });
 
-  it.only("should run sendDepositTx without error", async () => {
+  it("should run sendDepositTx without error", async () => {
     const res = await chainService.sendDepositTx(channelState, alice.address, "10", AddressZero);
     expect(res.getValue()).to.be.ok;
   });
 
-  it.only("should run sendDepositTx without error", async () => {
-    const res = await chainService.sendDepositTx(channelState, alice.address, "10", AddressZero);
-    expect(res.getValue()).to.be.ok;
-  });
-
-  it.only("should run sendWithdrawTx without error", async () => {
-    const res = await chainService.sendWithdrawTx(channelState, {
-      to: bob.address,
-      data: "0x",
-      value: "0x01",
-    });
-    expect(res.getValue()).to.be.ok;
-  });
-
-  it.only("should run sendWithdrawTx without error", async () => {
+  it("should run sendWithdrawTx without error", async () => {
     const res = await chainService.sendWithdrawTx(channelState, {
       to: bob.address,
       data: "0x",
