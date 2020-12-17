@@ -21,7 +21,7 @@ interactive=$(shell if [[ -t 0 && -t 2 ]]; then echo "--interactive"; else echo 
 ########################################
 # Setup more vars
 
-find_options=-type f -not -path "*/node_modules/*" -not -name "address-book.json" -not -name "*.swp" -not -path "*/.*" -not -path "*/cache/*" -not -path "*/build/*" -not -path "*/dist/*" -not -name "*.log"
+find_options=-type f -not -path "*/node_modules/*" -not -name "address-book.json" -not -name "*.swp" -not -path "*/.*" -not -path "*/cache/*" -not -path "*/build/*" -not -path "*/dist/*" -not -name "*.log" -not -path "*/artifacts/*"
 
 docker_run=docker run --name=$(project)_builder $(interactive) --tty --rm --volume=$(root):/root $(project)_builder $(id)
 
@@ -181,19 +181,19 @@ test-utils: utils
 watch-utils: types
 	bash ops/test-unit.sh utils watch
 
-test-contracts: contracts
+test-contracts: contracts-js
 	bash ops/test-unit.sh contracts test
 watch-contracts: utils
 	bash ops/test-unit.sh contracts watch
 
-test-protocol: contracts protocol
+test-protocol: contracts-js protocol
 	bash ops/test-unit.sh protocol test 1340
-watch-protocol: contracts
+watch-protocol: contracts-js
 	bash ops/test-unit.sh protocol watch 1340
 
-test-engine: contracts engine
+test-engine: contracts-js engine
 	bash ops/test-unit.sh engine test 1341
-watch-engine: contracts protocol
+watch-engine: contracts-js protocol
 	bash ops/test-unit.sh engine watch 1341
 
 test-server-node: server-node-js
@@ -291,13 +291,13 @@ contracts-bundle: contracts-js utils $(shell find modules/contracts/src.sol modu
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-contracts-img: contracts $(shell find modules/contracts/ops $(find_options))
+contracts-img: contracts-js $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-protocol: utils contracts $(shell find modules/protocol $(find_options))
+protocol: utils contracts-js $(shell find modules/protocol $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/protocol && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
