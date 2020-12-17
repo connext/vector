@@ -11,7 +11,6 @@ import {
   INodeService,
   FullChannelState,
   FullTransferState,
-  IVectorChainService,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, decodeTransferResolver } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
@@ -72,7 +71,6 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
   chainProviders: ChainJsonProviders,
-  chainService: IVectorChainService,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.error(
@@ -104,17 +102,15 @@ export async function forwardTransferCreation(
   // cancelling the transfer that was created on the sender side
   const handleForwardingError = async (
     routingId: string,
-    transferRegistryAddress: string,
     senderTransfer: FullTransferState,
     errorReason: Values<typeof ForwardTransferError.reasons>,
     context: any = {},
   ): Promise<Result<any, ForwardTransferError>> => {
     // First, get the cancelling resolver for the transfer
-    const transferResolverRes = await chainService.getRegisteredTransferByDefinition(
-      senderTransfer.transferDefinition,
-      transferRegistryAddress,
-      senderTransfer.chainId,
-    );
+    const transferResolverRes = await nodeService.getRegisteredTransfers({
+      chainId: senderTransfer.chainId,
+      publicIdentifier: routerPublicIdentifier,
+    });
     if (transferResolverRes.isError) {
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
@@ -127,31 +123,34 @@ export async function forwardTransferCreation(
       );
     }
 
-    const { encodedCancel, resolverEncoding } = transferResolverRes.getValue();
-    const transferResolver = decodeTransferResolver(encodedCancel, resolverEncoding);
+    const { encodedCancel, resolverEncoding } =
+      transferResolverRes.getValue().find((t) => t.definition === senderTransfer.transferDefinition) ?? {};
+    if (!encodedCancel || !resolverEncoding) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
+          cancellationError: "Sender transfer not in registry info",
+          routingId,
+          senderChannel: senderTransfer.channelAddress,
+          senderTransfer: senderTransfer.transferId,
+          cancellationReason: errorReason,
+        }),
+      );
+    }
 
     // Attempt to resolve with cancellation reason, otherwise
     // store queued update
     // Resolve the sender transfer
     const resolveParams: NodeParams.ResolveTransfer = {
-      channelAddress: senderTransfer.channelAddress,
-      transferId: senderTransfer.transferId,
-      meta: {
-        receiverError: errorReason,
-      },
-      transferResolver,
-      publicIdentifier: routerPublicIdentifier,
-    };
-    const resolveResult = await nodeService.resolveTransfer({
       publicIdentifier: routerPublicIdentifier,
       channelAddress: senderTransfer.channelAddress,
       transferId: senderTransfer.transferId,
-      transferResolver,
+      transferResolver: decodeTransferResolver(encodedCancel, resolverEncoding),
       meta: {
         cancellationReason: errorReason,
         cancellationContext: { ...context },
       },
-    });
+    };
+    const resolveResult = await nodeService.resolveTransfer(resolveParams);
     if (resolveResult.isError) {
       // Store the transfer, retry later
       // TODO: add logic to periodically retry resolving transfers
@@ -161,7 +160,6 @@ export async function forwardTransferCreation(
         new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
           resolveError: resolveResult.getError()?.message,
           routingId,
-          transferResolver,
           senderChannel: senderTransfer.channelAddress,
           senderTransfer: senderTransfer.transferId,
           cancellationReason: errorReason,
@@ -204,8 +202,7 @@ export async function forwardTransferCreation(
     publicIdentifier: routerPublicIdentifier,
   });
   if (senderChannelRes.isError) {
-    // Cannot cancel because no way to get registry info without channel
-    // network context
+    // Cancelling will fail
     return Result.fail(
       new ForwardTransferError(
         ForwardTransferError.reasons.SenderChannelNotFound,
@@ -215,8 +212,7 @@ export async function forwardTransferCreation(
   }
   const senderChannel = senderChannelRes.getValue() as FullChannelState;
   if (!senderChannel) {
-    // Cannot cancel because no way to get registry info without channel
-    // network context
+    // Cancelling will fail
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
         channelAddress: senderChannelAddress,
@@ -243,16 +239,10 @@ export async function forwardTransferCreation(
       recipientChainId,
     );
     if (swapRes.isError) {
-      return handleForwardingError(
-        routingId,
-        senderChannel.networkContext.transferRegistryAddress,
-        senderTransfer,
-        ForwardTransferError.reasons.UnableToCalculateSwap,
-        {
-          swapError: swapRes.getError()?.message,
-          swapContext: swapRes.getError()?.context,
-        },
-      );
+      return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.UnableToCalculateSwap, {
+        swapError: swapRes.getError()?.message,
+        swapContext: swapRes.getError()?.context,
+      });
     }
     recipientAmount = swapRes.getValue();
 
@@ -276,28 +266,16 @@ export async function forwardTransferCreation(
     chainId: recipientChainId,
   });
   if (recipientChannelRes.isError) {
-    return handleForwardingError(
-      routingId,
-      senderChannel.networkContext.transferRegistryAddress,
-      senderTransfer,
-      ForwardTransferError.reasons.RecipientChannelNotFound,
-      {
-        storeError: recipientChannelRes.getError()?.message,
-      },
-    );
+    return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.RecipientChannelNotFound, {
+      storeError: recipientChannelRes.getError()?.message,
+    });
   }
   const recipientChannel = recipientChannelRes.getValue();
   if (!recipientChannel) {
-    return handleForwardingError(
-      routingId,
-      senderChannel.networkContext.transferRegistryAddress,
-      senderTransfer,
-      ForwardTransferError.reasons.RecipientChannelNotFound,
-      {
-        participants: [routerPublicIdentifier, recipientIdentifier],
-        chainId: recipientChainId,
-      },
-    );
+    return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.RecipientChannelNotFound, {
+      participants: [routerPublicIdentifier, recipientIdentifier],
+      chainId: recipientChainId,
+    });
   }
 
   const routerBalance = getBalanceForAssetId(
@@ -319,16 +297,10 @@ export async function forwardTransferCreation(
       recipientAmount,
     );
     if (requestCollateralRes.isError) {
-      return handleForwardingError(
-        routingId,
-        senderChannel.networkContext.transferRegistryAddress,
-        senderTransfer,
-        ForwardTransferError.reasons.UnableToCollateralize,
-        {
-          participants: [routerPublicIdentifier, recipientIdentifier],
-          chainId: recipientChainId,
-        },
-      );
+      return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.UnableToCollateralize, {
+        participants: [routerPublicIdentifier, recipientIdentifier],
+        chainId: recipientChainId,
+      });
     }
   }
 
@@ -399,16 +371,10 @@ export async function forwardTransferCreation(
     //     );
     //   }
     // }
-    return handleForwardingError(
-      routingId,
-      senderChannel.networkContext.transferRegistryAddress,
-      senderTransfer,
-      ForwardTransferError.reasons.ErrorForwardingTransfer,
-      {
-        createError: transfer.getError()?.message,
-        ...(transfer.getError()!.context ?? {}),
-      },
-    );
+    return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.ErrorForwardingTransfer, {
+      createError: transfer.getError()?.message,
+      ...(transfer.getError()!.context ?? {}),
+    });
   }
 
   return Result.ok(transfer.getValue());

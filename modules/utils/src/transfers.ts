@@ -26,7 +26,7 @@ export const encodeTransferState = (state: TransferState, encoding: string): str
 
 export const encodeBalance = (balance: Balance): string => defaultAbiCoder.encode([BalanceEncoding], [balance]);
 
-export const decodeTransferResolver = (encoded: string, encoding: string): string =>
+export const decodeTransferResolver = <T extends TransferResolver = any>(encoded: string, encoding: string): T =>
   defaultAbiCoder.decode([encoding], encoded)[0];
 
 export const encodeTransferResolver = (resolver: TransferResolver, encoding: string): string =>
