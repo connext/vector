@@ -47,7 +47,7 @@ export interface IMessagingService {
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
 
   sendSetupMessage(
-    setupInfo: Result<{ chainId: number; timeout: string }>,
+    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, Error>,
     to: string,
     from: string,
     timeout?: number,
@@ -56,7 +56,7 @@ export interface IMessagingService {
   onReceiveSetupMessage(
     publicIdentifier: string,
     callback: (
-      setupInfo: Result<{ chainId: number; timeout: string }, MessagingError>,
+      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, MessagingError>,
       from: string,
       inbox: string,
     ) => void,

@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.0.38
+
+- propagate meta through updates
+
 ## 0.0.37
 
 - refactor messaging service

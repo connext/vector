@@ -104,7 +104,7 @@ export function convertResolveConditionParams(
     channelAddress,
     transferId: transfer.transferId,
     transferResolver,
-    meta: { details: meta ?? {} },
+    meta: { ...(transfer.meta ?? {}), ...(meta ?? {}) },
   });
 }
 
@@ -115,7 +115,7 @@ export async function convertWithdrawParams(
   chainAddresses: ChainAddresses,
   chainReader: IVectorChainReader,
 ): Promise<Result<CreateTransferParams, InvalidTransferType>> {
-  const { channelAddress, assetId, recipient, fee, callTo, callData } = params;
+  const { channelAddress, assetId, recipient, fee, callTo, callData, meta } = params;
 
   // If there is a fee being charged, add the fee to the amount.
   const amount = fee ? BigNumber.from(params.amount).add(fee).toString() : params.amount;
@@ -172,6 +172,7 @@ export async function convertWithdrawParams(
     timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
     // Note: we MUST include withdrawNonce in meta. The counterparty will NOT have the same nonce on their end otherwise.
     meta: {
+      ...(meta ?? {}),
       withdrawNonce: channel.nonce.toString(),
     },
   });
