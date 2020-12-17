@@ -192,7 +192,7 @@ export class BrowserNode implements INodeService {
 
     const crossChainTransferId = getRandomBytes32();
     const { meta, ...res } = params;
-    const updatedMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
+    const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
 
     if (params.reconcileDeposit) {
       const depositRes = await this.reconcileDeposit({
