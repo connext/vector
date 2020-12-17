@@ -78,12 +78,14 @@ export const TFullTransferState = Type.Object({
 export const TSetupUpdateDetails = Type.Object({
   timeout: TIntegerString,
   networkContext: TNetworkContext,
+  meta: TBasicMeta,
 });
 
 // Deposit update details
 export const TDepositUpdateDetails = Type.Object({
   totalDepositsAlice: TIntegerString,
   totalDepositsBob: TIntegerString,
+  meta: TBasicMeta,
 });
 
 // Create update details
@@ -129,8 +131,8 @@ export const TChannelUpdate = Type.Object({
   balance: TBalance,
   assetId: TAddress,
   details: Type.Any(), // specific detail structure asserted in validation
-  aliceSignature: Type.Optional(TSignature),
-  bobSignature: Type.Optional(TSignature),
+  aliceSignature: Type.Optional(Type.Union([TSignature, Type.Null()])), //Type.Optional(TSignature),
+  bobSignature: Type.Optional(Type.Union([TSignature, Type.Null()])),
 });
 
 export const TFullChannelState = Type.Object({

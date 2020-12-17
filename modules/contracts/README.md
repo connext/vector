@@ -143,7 +143,7 @@ interface ITransferDefinition {
 7. Transfers are single-turn: they follow a strict `create`->`resolve` flow. However, because they are generalized, it is possible to construct transfers with many intermediary states _so long as those states are independently resolveable_ (i.e. so long as at any point the receiver of the transfer can `resolve` to get a final balance).
 8. Withdrawing from the channel happens by constructing a mutually signed commitment to execute an arbitrary transaction from the contract. This can happen trustlessly using `create` and `resolve`.
 9. Disputing a channel/transfer happens in two phases: (1) `consensus` phase which sets the latest state onchain (by calling `disputeChannel`), (2) `defund` phase which allows users to withdraw disputed channel or transfer funds (by calling `defundChannel()` or `disputeTransfer()`/`defundTransfer()`, respectively.
-10. After the dusoyte ends, the onchain channel contract _resumes a "happy" state_. This means both parties can continue signing commitments at a higher nonce and resume normal channel operations. They also retain the ability to dispute again in case further offchain coordination cannot be reached.
+10. After the dispute ends, the onchain channel contract _resumes a "happy" state_. This means both parties can continue signing commitments at a higher nonce and resume normal channel operations. They also retain the ability to dispute again in case further offchain coordination cannot be reached.
 
 ## Commitments
 

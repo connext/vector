@@ -346,7 +346,7 @@ describe(testName, () => {
         expect(transferId).to.be.eq(transfer.transferId);
         // Verify transaction hash in meta if withdraw attempted
         chainService.sendWithdrawTx.callCount &&
-          expect(meta).to.be.deep.eq({ transactionHash: withdrawTransactionHash });
+          expect(meta).to.containSubset({ transactionHash: withdrawTransactionHash });
       }
     };
 

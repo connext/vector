@@ -29,6 +29,8 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
 
+import { config } from "../config";
+
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
   getSubscription<T extends EngineEvent>(publicIdentifier: string, event: T): Promise<string | undefined>;
@@ -231,7 +233,13 @@ export class PrismaStore implements IServerNodeStore {
   public prisma: PrismaClient;
 
   constructor(private readonly dbUrl?: string) {
-    this.prisma = new PrismaClient(dbUrl ? { datasources: { db: { url: this.dbUrl } } } : undefined);
+    const _dbUrl = this.dbUrl
+      ? this.dbUrl
+      : config.dbUrl?.startsWith("sqlite")
+      ? `${config.dbUrl}?connection_limit=1&socket_timeout=10`
+      : config.dbUrl;
+
+    this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
   }
 
   async saveChannelDispute(

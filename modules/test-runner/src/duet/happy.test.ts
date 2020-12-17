@@ -23,18 +23,15 @@ describe(testName, () => {
       aliceEvts,
       randomIndex,
     );
-    const aliceTx = await wallet1.sendTransaction({ to: aliceService.signerAddress, value: utils.parseEther("0.5") });
+    const aliceTx = await wallet1.sendTransaction({ to: aliceService.signerAddress, value: utils.parseEther("0.1") });
     await aliceTx.wait();
 
     bobService = await RestServerNodeService.connect(env.bobUrl, logger.child({ testName }), bobEvts, randomIndex);
-
-    const bobTx = await wallet1.sendTransaction({ to: bobService.signerAddress, value: utils.parseEther("0.1") });
-    await bobTx.wait();
   });
 
   it("ETH: A deposit, transfer A -> B, B deposit, transfer B -> A, withdraw", async () => {
     const assetId = constants.AddressZero;
-    const depositAmt = utils.parseEther("0.1");
+    const depositAmt = utils.parseEther("0.01");
     const transferAmt = utils.parseEther("0.005");
     const withdrawAmt = utils.parseEther("0.005");
 

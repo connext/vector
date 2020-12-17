@@ -1,5 +1,12 @@
 import { TestToken } from "@connext/vector-contracts";
-import { EngineEvents, FullChannelState, INodeService, NodeError, TransferNames } from "@connext/vector-types";
+import {
+  DEFAULT_CHANNEL_TIMEOUT,
+  EngineEvents,
+  FullChannelState,
+  INodeService,
+  NodeError,
+  TransferNames,
+} from "@connext/vector-types";
 import { createlockHash, delay, getRandomBytes32, RestServerNodeService } from "@connext/vector-utils";
 import { BigNumber, constants, Contract, providers, Wallet, utils } from "ethers";
 import { formatEther, parseEther } from "ethers/lib/utils";
@@ -90,11 +97,14 @@ export class Agent {
   ): Promise<Agent> {
     // Create node on server at idx
     // NOTE: can safely be called multiple times
+    console.log("****** trying to create new agent at", index);
     const nodeRes = await nodeService.createNode({ index });
     if (nodeRes.isError) {
+      console.log("****** creating node at", index, "failed");
       throw nodeRes.getError()!;
     }
     const { publicIdentifier, signerAddress } = nodeRes.getValue();
+    console.log("****** creating node passed for", index);
 
     // Create the agent
     const agent = new Agent(publicIdentifier, signerAddress, index, rogerIdentifier, nodeService);
@@ -217,7 +227,7 @@ export class Agent {
       error = e;
     }
 
-    if (error && !error.context.error.includes("404")) {
+    if (error && !error.message.includes("404")) {
       // Unknown error, do not setup
       throw error!;
     }
@@ -226,7 +236,8 @@ export class Agent {
     const setup = await this.nodeService.setup({
       counterpartyIdentifier: this.rogerIdentifier,
       chainId,
-      timeout: "360000",
+      timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
+      publicIdentifier: this.publicIdentifier,
     });
     if (setup.isError) {
       throw setup.getError()!;
@@ -253,26 +264,29 @@ export class AgentManager {
 
   private constructor(
     public readonly roger: string,
-    public readonly rogerIdentifier: string,
-    public readonly rogerService: INodeService,
+    public readonly routerIdentifier: string,
+    public readonly routerService: INodeService,
     public readonly agents: Agent[] = [],
     public readonly agentService: INodeService,
   ) {}
 
   static async connect(agentService: RestServerNodeService): Promise<AgentManager> {
     // First, create + fund roger onchain
-    const rogerService = await RestServerNodeService.connect(
+    logger.debug({ url: env.rogerUrl });
+    const routerService = await RestServerNodeService.connect(
       env.rogerUrl,
-      logger.child({ module: "RestServerNodeService" }),
+      logger.child({ module: "Router" }),
+      undefined,
+      0,
     );
-    const rogerConfig = await rogerService.createNode({ index: 0 });
-    if (rogerConfig.isError) {
-      throw rogerConfig.getError()!;
+    const routerConfig = await routerService.getConfig();
+    if (routerConfig.isError) {
+      throw routerConfig.getError()!;
     }
-    const { signerAddress: roger, publicIdentifier: rogerIdentifier } = rogerConfig.getValue();
+    const { signerAddress: router, publicIdentifier: routerIdentifier } = routerConfig.getValue()[0];
 
     // Fund roger
-    await fundAddressToTarget(roger, constants.AddressZero, parseEther("50"));
+    await fundAddressToTarget(router, constants.AddressZero, parseEther("50"));
 
     // Create all agents needed
     // First, get all nodes that are active on the server
@@ -291,91 +305,88 @@ export class AgentManager {
       // Must create more agents
       const toCreate = config.numAgents - registeredAgents.length;
       indices = registeredAgents.map((r) => r.index).concat(Array(toCreate).fill(0).map(getRandomIndex));
+      // indices = Array(config.numAgents).fill(0).map(getRandomIndex);
     }
 
-    // NOTE: because connecting agents *may* send a tx, you cannot
-    // use `Promise.all` without the nonce of the tx being messed up
-    const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, rogerIdentifier, i)));
+    const agents = await Promise.all(indices.map((i) => Agent.connect(agentService, routerIdentifier, i)));
 
     // Create the manager
-    const manager = new AgentManager(roger, rogerIdentifier, rogerService, agents, agentService);
+    const manager = new AgentManager(router, routerIdentifier, routerService, agents, agentService);
 
     // Automatically resolve any created transfers
-    await manager.setupAutomaticResolve();
+    manager.setupAutomaticResolve();
 
     return manager;
   }
 
-  private async setupAutomaticResolve(): Promise<void> {
-    await this.agentService.on(
-      EngineEvents.CONDITIONAL_TRANSFER_CREATED,
-      async (data) => {
-        logger.debug({ ...data }, "Got conditional transfer created event");
-        // First find the agent with the proper channel address
-        const { channelAddress, transfer } = data;
+  private setupAutomaticResolve(): void {
+    this.agents.map((agent) => {
+      const ret = this.agentService.on(
+        EngineEvents.CONDITIONAL_TRANSFER_CREATED,
+        async (data) => {
+          logger.debug({ ...data, agent: agent.publicIdentifier }, "Got conditional transfer created event");
 
-        // Find the agent from the recipient in routing meta
-        const { routingId } = transfer.meta;
-        // Make sure there is a routingID
-        if (!routingId) {
-          logger.warn({}, "No routingID");
-          return;
-        }
+          const {
+            channelAddress,
+            transfer: { meta, initiator, transferId },
+          } = data;
+          const { routingId } = meta ?? {};
+          // Make sure there is a routingID
+          if (!routingId) {
+            logger.warn({ ...(meta ?? {}) }, "No routingID");
+            return;
+          }
+          if (agent.channelAddress !== channelAddress) {
+            logger.error(
+              { agent: agent.channelAddress, channelAddress },
+              "Agent does not match data, should not happen!",
+            );
+            process.exit(1);
+          }
 
-        const agent = this.agents.find((a) => a.channelAddress && a.channelAddress === data.channelAddress);
-        if (!agent) {
-          logger.error(
-            { channelAddress, agents: this.agents.map((a) => a.channelAddress).join(",") },
-            "No agent found to resolve",
-          );
-          process.exit(1);
-        }
+          if (agent.signerAddress === initiator) {
+            // Agent is initiator, nothing to resolve
+            logger.debug({ transfer: transferId, agent: agent.signerAddress }, "Agent is initiator, doing nothing");
+            return;
+          }
 
-        if (agent.signerAddress === transfer.initiator) {
-          // Agent is initiator, nothing to resolve
-          logger.debug(
-            { transfer: transfer.transferId, agent: agent.signerAddress },
-            "Agent is initiator, doing nothing",
-          );
-          return;
-        }
+          // Creation comes from router forwarding, agent is responder
+          // Find the preImage
+          const preImage = this.preImages[routingId];
+          if (!preImage) {
+            logger.error(
+              { channelAddress, transferId, routingId, preImages: JSON.stringify(this.preImages), preImage },
+              "No preImage",
+            );
+            process.exit(1);
+          }
 
-        // Creation comes from router forwarding, agent is responder
-        // Find the preImage
-        const preImage = this.preImages[routingId];
-        if (!preImage) {
-          logger.error(
-            { channelAddress, transferId: transfer.transferId, routingId, preImages: JSON.stringify(this.preImages) },
-            "No preImage",
-          );
-          process.exit(1);
-        }
+          // Resolve the transfer
+          try {
+            logger.debug({ agent: agent.signerAddress, preImage, transfer: transferId }, "Resolving transfer");
+            await agent.resolveHashlockTransfer(transferId, preImage);
+            logger.info({ transferId, channelAddress, agent: agent.publicIdentifier }, "Resolved transfer");
+          } catch (e) {
+            logger.error(
+              { transferId, channelAddress, agent: agent.publicIdentifier, error: e.message },
+              "Failed to resolve transfer",
+            );
+            process.exit(1);
+          }
 
-        // Resolve the transfer
-        try {
-          logger.debug({ agent: agent.signerAddress, preImage, transfer: transfer.transferId }, "Resolving transfer");
-          await agent.resolveHashlockTransfer(transfer.transferId, preImage);
-          logger.info(
-            { transferId: transfer.transferId, channelAddress, agent: agent.publicIdentifier },
-            "Resolved transfer",
-          );
-        } catch (e) {
-          logger.error(
-            { transferId: transfer.transferId, channelAddress, agent: agent.publicIdentifier, error: e.message },
-            "Failed to resolve transfer",
-          );
-          process.exit(1);
-        }
-      },
-      (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
-    );
+          return ret;
+        },
+        (data) => this.agents.map((a) => a.channelAddress).includes(data.channelAddress),
+        agent.publicIdentifier,
+      );
+    });
   }
 
   // Should return function to kill cyclical transfers
   async startCyclicalTransfers(): Promise<() => Promise<void>> {
     // Register listener that will resolve transfers once it is
     // created
-    await this.agentService.on(
+    this.agentService.on(
       EngineEvents.CONDITIONAL_TRANSFER_RESOLVED,
       async (data) => {
         // Create a new transfer to a random agent
@@ -451,8 +462,8 @@ export class AgentManager {
     const kill = () =>
       new Promise<void>(async (resolve, reject) => {
         try {
-          await this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
-          await this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
+          this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_CREATED);
+          this.agentService.off(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED);
           // Wait just in case
           await delay(5000);
           resolve();
