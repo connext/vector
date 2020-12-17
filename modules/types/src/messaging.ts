@@ -63,6 +63,18 @@ export interface IMessagingService {
   ): Promise<void>;
   respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, Error>): Promise<void>;
 
+  sendIsAliveMessage(
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<void, MessagingError>>;
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAliveInfo: Result<undefined, MessagingError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+  respondToIsAliveMessage(inbox: string, params: Result<void, Error>): Promise<void>;
+
   sendRequestCollateralMessage(
     requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
     to: string,
@@ -75,12 +87,6 @@ export interface IMessagingService {
     callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void>;
-
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void>;
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>>;
 
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;

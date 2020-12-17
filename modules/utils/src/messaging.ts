@@ -281,15 +281,24 @@ export class NatsMessagingService implements IMessagingService {
   ////////////
 
   // CHECKIN METHODS
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
+  sendIsAliveMessage(
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<void, MessagingError>> {
+    return this.sendMessage(Result.ok(undefined), "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
   }
 
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
-    throw new Error("Method not implemented.");
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAliveInfo: Result<undefined, MessagingError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.isalive`, callback, "onReceiveIsAliveMessage");
+  }
+
+  respondToIsAliveMessage(inbox: string, isAliveInfo: Result<void, Error>): Promise<void> {
+    return this.respondToMessage(inbox, isAliveInfo, "respondToIsAliveMessage");
   }
   ////////////
 

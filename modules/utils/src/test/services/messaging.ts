@@ -44,16 +44,6 @@ export class MemoryMessagingService implements IMessagingService {
     this.evt.detach();
   }
 
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
-    throw new Error("Method not implemented.");
-  }
-
   async sendProtocolMessage(
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
@@ -184,6 +174,24 @@ export class MemoryMessagingService implements IMessagingService {
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<LockInformation, LockError>> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendIsAliveMessage(
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<void, MessagingError>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAliveInfo: Result<undefined, MessagingError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToIsAliveMessage(inbox: string, params: Result<void, Error>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
