@@ -59,6 +59,7 @@ export const deposit = async (
 
   const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
+  console.log("depositorBefore: ", depositorBefore);
 
   if (depositorAliceOrBob === "alice") {
     const tx = await depositor.sendDepositTx({
@@ -205,6 +206,7 @@ export const withdraw = async (
   const preWithdrawMultisig = await getOnchainBalance(assetId, preWithdrawChannel.channelAddress, provider);
   const preWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);
 
+  // TODO: wait for these?
   withdrawer.on(EngineEvents.WITHDRAWAL_CREATED, (data) => {
     console.log("EngineEvents.WITHDRAWAL_CREATED ===> data: ", JSON.stringify(data, null, 2));
   });
