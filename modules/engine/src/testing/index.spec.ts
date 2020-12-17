@@ -157,11 +157,7 @@ describe("VectorEngine", () => {
           log,
         );
         let rpc: EngineParams.RpcRequest = { ...test.overrides } as any;
-        try {
-          await engine.request(rpc);
-        } catch (res) {
-          expect(res.message).to.contain(test.error);
-        }
+        await expect(engine.request(rpc)).rejectedWith(test.error);
       });
     }
 
@@ -804,11 +800,7 @@ describe("VectorEngine", () => {
             log,
           );
           let rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
-          try {
-            await engine.request(rpc);
-          } catch (res) {
-            expect(res.message).to.be.eq(test.error);
-          }
+          await expect(engine.request(rpc)).rejectedWith(test.error);
         });
       }
     });
