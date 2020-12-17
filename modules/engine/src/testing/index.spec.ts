@@ -106,42 +106,42 @@ describe("VectorEngine", () => {
     const tests = [
       {
         name: "no request.id",
-        overrides: { id: 1, jsonrpc: "2.0", method: "chan_getConfig", params: undefined },
+        overrides: { id: 1, jsonrpc: "2.0", method: "chan_getConfig", params: {} },
         error: "should have required property 'id'",
       },
       {
         name: "malformed request.id",
-        overrides: { id: -1, jsonrpc: "2.0", method: "chan_getConfig", params: undefined },
+        overrides: { id: -1, jsonrpc: "2.0", method: "chan_getConfig", params: {} },
         error: "should be >= 1",
       },
       {
         name: "request.id is not a number",
-        overrides: { id: "ab", jsonrpc: "2.0", method: "chan_getConfig", params: undefined },
+        overrides: { id: "ab", jsonrpc: "2.0", method: "chan_getConfig", params: {} },
         error: "should be number",
       },
       {
         name: "no request.jsonrpc",
-        overrides: { id: 1, jsonrpc: undefined, method: "chan_getConfig", params: undefined },
+        overrides: { id: 1, jsonrpc: undefined, method: "chan_getConfig", params: {} },
         error: "should have required property 'jsonrpc'",
       },
       {
         name: "malformed request.jsonrpc",
-        overrides: { id: 1, jsonrpc: "3.0", method: "chan_getConfig", params: undefined },
+        overrides: { id: 1, jsonrpc: "3.0", method: "chan_getConfig", params: {} },
         error: "should be equal to one of the allowed values",
       },
       {
         name: "no request.method",
-        overrides: { id: 1, jsonrpc: "2.0", method: undefined, params: undefined },
+        overrides: { id: 1, jsonrpc: "2.0", method: undefined, params: {} },
         error: "should have required property 'method'",
       },
       {
         name: "malformed request.method",
-        overrides: { id: 1, jsonrpc: "2.0", method: "invalid_method", params: undefined },
+        overrides: { id: 1, jsonrpc: "2.0", method: "invalid_method", params: {} },
         error: "should be equal",
       },
       {
         name: "missing chan_ prefix from request.method",
-        overrides: { id: 1, jsonrpc: "2.0", method: "getConfig", params: undefined },
+        overrides: { id: 1, jsonrpc: "2.0", method: "getConfig", params: {} },
         error: "should be equal",
       },
     ];
