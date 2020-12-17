@@ -78,12 +78,14 @@ export const TFullTransferState = Type.Object({
 export const TSetupUpdateDetails = Type.Object({
   timeout: TIntegerString,
   networkContext: TNetworkContext,
+  meta: TBasicMeta,
 });
 
 // Deposit update details
 export const TDepositUpdateDetails = Type.Object({
   totalDepositsAlice: TIntegerString,
   totalDepositsBob: TIntegerString,
+  meta: TBasicMeta,
 });
 
 // Create update details

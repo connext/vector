@@ -193,7 +193,7 @@ export function applyUpdate<T extends UpdateType>(
         transferState: { ...transfer.transferState, balance: { ...finalTransferBalance } },
         transferResolver: { ...transferResolver },
         meta: {
-          ...transfer.meta,
+          ...(transfer.meta ?? {}),
           ...(meta ?? {}),
         },
       };
@@ -352,6 +352,7 @@ function generateSetupUpdate(
     details: {
       networkContext: params.details.networkContext,
       timeout: params.details.timeout,
+      meta: params.details.meta ?? {},
     },
     assetId: AddressZero,
   };
@@ -410,7 +411,7 @@ async function generateDepositUpdate(
     processedDepositsA: totalDepositsAlice,
     processedDepositsB: totalDepositsBob,
     assetId,
-    details: { totalDepositsAlice, totalDepositsBob },
+    details: { totalDepositsAlice, totalDepositsBob, meta: params.details.meta ?? {} },
   };
   return Result.ok(unsigned);
 }
@@ -554,7 +555,7 @@ async function generateResolveUpdate(
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
       merkleRoot: root,
-      meta,
+      meta: { ...(transferToResolve.meta ?? {}), ...(meta ?? {}) },
     },
   };
 
