@@ -41,7 +41,7 @@ jobs:
           REGISTRY: connextproject
         run: |
           echo "docker buildx-ing ARM image with tag: ${REMOTE_ARM_IMAGE}_arm"
-          docker buildx build --platform=linux/arm/v7 --tag ${REMOTE_ARM_IMAGE}_arm --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
+          docker buildx build --platform=linux/arm64 --tag ${REMOTE_ARM_IMAGE}_arm --file modules/server-node/ops/arm.Dockerfile --output type=image,push=true modules/server-node
           echo "pushing ${REMOTE_DEFAULT_IMAGE}_default to get digest"
           docker tag ${LOCAL_DEFAULT_IMAGE} ${REMOTE_DEFAULT_IMAGE}_default
           default_digest=$(docker push ${REMOTE_DEFAULT_IMAGE}_default | grep sha | cut -d ' ' -f 3)
