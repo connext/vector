@@ -9,11 +9,11 @@ import {
   NodeParams,
   TRANSFER_DECREMENT,
   INodeService,
-  NodeError,
-  IVectorChainReader,
   FullChannelState,
+  FullTransferState,
+  IVectorChainService,
 } from "@connext/vector-types";
-import { getBalanceForAssetId } from "@connext/vector-utils";
+import { getBalanceForAssetId, decodeTransferResolver } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
 
@@ -31,8 +31,11 @@ export class ForwardTransferError extends VectorError {
     UnableToCalculateSwap: "Could not calculate swap",
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     ErrorForwardingTransfer: "Error forwarding transfer",
+    ErrorQueuingReceiverUpdate: "Unable to queue update for receiver retry",
     UnableToCollateralize: "Could not collateralize receiver channel",
     InvalidTransferDefinition: "Could not find transfer definition",
+    ReceiverOffline: "Recipient was not online, could not forward",
+    FailedToCancelSenderTransfer: "Could not cancel sender transfer",
   } as const;
 
   constructor(
@@ -69,6 +72,7 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
   chainProviders: ChainJsonProviders,
+  chainService: IVectorChainService,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.error(
@@ -96,21 +100,99 @@ export async function forwardTransferCreation(
   Because we're validating the actual conditional params + allowed transfer definitions at the lower levels, this feels safe to do.
   */
 
-  const {
-    transfer: {
-      balance: {
-        amount: [senderAmount],
+  // Create a helper to handle failures in this function by
+  // cancelling the transfer that was created on the sender side
+  const handleForwardingError = async (
+    routingId: string,
+    transferRegistryAddress: string,
+    senderTransfer: FullTransferState,
+    errorReason: Values<typeof ForwardTransferError.reasons>,
+    context: any = {},
+  ): Promise<Result<any, ForwardTransferError>> => {
+    // First, get the cancelling resolver for the transfer
+    const transferResolverRes = await chainService.getRegisteredTransferByDefinition(
+      senderTransfer.transferDefinition,
+      transferRegistryAddress,
+      senderTransfer.chainId,
+    );
+    if (transferResolverRes.isError) {
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
+          cancellationError: transferResolverRes.getError()?.message,
+          routingId,
+          senderChannel: senderTransfer.channelAddress,
+          senderTransfer: senderTransfer.transferId,
+          cancellationReason: errorReason,
+        }),
+      );
+    }
+
+    const { encodedCancel, resolverEncoding } = transferResolverRes.getValue();
+    const transferResolver = decodeTransferResolver(encodedCancel, resolverEncoding);
+
+    // Attempt to resolve with cancellation reason, otherwise
+    // store queued update
+    // Resolve the sender transfer
+    const resolveParams: NodeParams.ResolveTransfer = {
+      channelAddress: senderTransfer.channelAddress,
+      transferId: senderTransfer.transferId,
+      meta: {
+        receiverError: errorReason,
       },
-      assetId: senderAssetId,
-      meta: untypedMeta,
-      transferState: createdTransferState,
-      channelAddress: senderChannelAddress,
-      initiator,
-      transferTimeout,
-      transferDefinition: senderTransferDefinition,
+      transferResolver,
+      publicIdentifier: routerPublicIdentifier,
+    };
+    const resolveResult = await nodeService.resolveTransfer({
+      publicIdentifier: routerPublicIdentifier,
+      channelAddress: senderTransfer.channelAddress,
+      transferId: senderTransfer.transferId,
+      transferResolver,
+      meta: {
+        cancellationReason: errorReason,
+        cancellationContext: { ...context },
+      },
+    });
+    if (resolveResult.isError) {
+      // Store the transfer, retry later
+      // TODO: add logic to periodically retry resolving transfers
+      const type = "TransferResolution";
+      await store.queueUpdate(type, resolveParams);
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
+          resolveError: resolveResult.getError()?.message,
+          routingId,
+          transferResolver,
+          senderChannel: senderTransfer.channelAddress,
+          senderTransfer: senderTransfer.transferId,
+          cancellationReason: errorReason,
+        }),
+      );
+    }
+
+    // return
+    return Result.fail(
+      new ForwardTransferError(errorReason, {
+        senderTransfer: senderTransfer.transferId,
+        senderChannel: senderTransfer.channelAddress,
+        details: "Sender transfer cancelled",
+        ...context,
+      }),
+    );
+  };
+
+  const { transfer: senderTransfer, conditionType } = data;
+  const {
+    balance: {
+      amount: [senderAmount],
     },
-    conditionType,
-  } = data;
+    assetId: senderAssetId,
+    meta: untypedMeta,
+    transferState: createdTransferState,
+    channelAddress: senderChannelAddress,
+    initiator,
+    transferTimeout,
+    transferDefinition: senderTransferDefinition,
+  } = senderTransfer;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
   const { routingId } = meta;
   const [path] = meta.path;
@@ -122,6 +204,8 @@ export async function forwardTransferCreation(
     publicIdentifier: routerPublicIdentifier,
   });
   if (senderChannelRes.isError) {
+    // Cannot cancel because no way to get registry info without channel
+    // network context
     return Result.fail(
       new ForwardTransferError(
         ForwardTransferError.reasons.SenderChannelNotFound,
@@ -131,6 +215,8 @@ export async function forwardTransferCreation(
   }
   const senderChannel = senderChannelRes.getValue() as FullChannelState;
   if (!senderChannel) {
+    // Cannot cancel because no way to get registry info without channel
+    // network context
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
         channelAddress: senderChannelAddress,
@@ -157,11 +243,15 @@ export async function forwardTransferCreation(
       recipientChainId,
     );
     if (swapRes.isError) {
-      return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.UnableToCalculateSwap, {
-          message: swapRes.getError()?.message,
-          context: swapRes.getError()?.context,
-        }),
+      return handleForwardingError(
+        routingId,
+        senderChannel.networkContext.transferRegistryAddress,
+        senderTransfer,
+        ForwardTransferError.reasons.UnableToCalculateSwap,
+        {
+          swapError: swapRes.getError()?.message,
+          swapContext: swapRes.getError()?.context,
+        },
       );
     }
     recipientAmount = swapRes.getValue();
@@ -186,20 +276,27 @@ export async function forwardTransferCreation(
     chainId: recipientChainId,
   });
   if (recipientChannelRes.isError) {
-    return Result.fail(
-      new ForwardTransferError(
-        ForwardTransferError.reasons.RecipientChannelNotFound,
-        recipientChannelRes.getError()?.message,
-      ),
+    return handleForwardingError(
+      routingId,
+      senderChannel.networkContext.transferRegistryAddress,
+      senderTransfer,
+      ForwardTransferError.reasons.RecipientChannelNotFound,
+      {
+        storeError: recipientChannelRes.getError()?.message,
+      },
     );
   }
   const recipientChannel = recipientChannelRes.getValue();
   if (!recipientChannel) {
-    return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.RecipientChannelNotFound, {
+    return handleForwardingError(
+      routingId,
+      senderChannel.networkContext.transferRegistryAddress,
+      senderTransfer,
+      ForwardTransferError.reasons.RecipientChannelNotFound,
+      {
         participants: [routerPublicIdentifier, recipientIdentifier],
         chainId: recipientChainId,
-      }),
+      },
     );
   }
 
@@ -222,11 +319,15 @@ export async function forwardTransferCreation(
       recipientAmount,
     );
     if (requestCollateralRes.isError) {
-      return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-          message: requestCollateralRes.getError()?.message,
-          context: requestCollateralRes.getError()?.context,
-        }),
+      return handleForwardingError(
+        routingId,
+        senderChannel.networkContext.transferRegistryAddress,
+        senderTransfer,
+        ForwardTransferError.reasons.UnableToCollateralize,
+        {
+          participants: [routerPublicIdentifier, recipientIdentifier],
+          chainId: recipientChainId,
+        },
       );
     }
   }
@@ -254,23 +355,59 @@ export async function forwardTransferCreation(
   };
   const transfer = await nodeService.conditionalTransfer(params);
   if (transfer.isError) {
-    if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
-      // store transfer
-      const type = "TransferCreation";
-      await store.queueUpdate(type, {
-        channelAddress: params.channelAddress,
-        amount: params.amount,
-        assetId: params.assetId,
-        routingId,
-        type: params.type,
-        details,
-      });
-    }
-    return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
-        message: transfer.getError()?.message,
+    // // TODO: properly implement offline payments
+    // if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
+    //   // store transfer
+    //   try {
+    //     const type = "TransferCreation";
+    //     await store.queueUpdate(type, {
+    //       channelAddress: params.channelAddress,
+    //       amount: params.amount,
+    //       assetId: params.assetId,
+    //       routingId,
+    //       type: params.type,
+    //       details,
+    //     });
+    //     // log warning and return success
+    //     logger.warn(
+    //       {
+    //         receiverError: transfer.getError()?.message,
+    //         senderChannel: senderChannel.channelAddress,
+    //         senderTransfer: senderTransfer.transferId,
+    //         routingId,
+    //       },
+    //       `Failed to create receiver transfer, will retry`,
+    //     );
+    //     // return failure without cancelling sender-side payment
+    //     return Result.fail(
+    //       new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
+    //         receiverError: transfer.getError()?.message,
+    //         senderChannel: senderChannel.channelAddress,
+    //         senderTransfer: senderTransfer.transferId,
+    //         routingId,
+    //       }),
+    //     );
+    //   } catch (e) {
+    //     return handleForwardingError(
+    //       routingId,
+    //       senderChannel.networkContext.transferRegistryAddress,
+    //       senderTransfer,
+    //       ForwardTransferError.reasons.ErrorQueuingReceiverUpdate,
+    //       {
+    //         storeError: e.message,
+    //       },
+    //     );
+    //   }
+    // }
+    return handleForwardingError(
+      routingId,
+      senderChannel.networkContext.transferRegistryAddress,
+      senderTransfer,
+      ForwardTransferError.reasons.ErrorForwardingTransfer,
+      {
+        createError: transfer.getError()?.message,
         ...(transfer.getError()!.context ?? {}),
-      }),
+      },
     );
   }
 

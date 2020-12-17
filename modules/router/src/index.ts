@@ -2,8 +2,7 @@ import fastify from "fastify";
 import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
-import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
-import { VectorChainReader } from "@connext/vector-contracts";
+import { EventCallbackConfig, RestServerNodeService } from "@connext/vector-utils";
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
