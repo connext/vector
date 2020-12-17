@@ -291,7 +291,7 @@ contracts-bundle: contracts-js utils $(shell find modules/contracts/src.sol modu
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-contracts-img: contracts-js $(shell find modules/contracts/ops $(find_options))
+contracts-img: contracts-bundle $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
@@ -334,7 +334,7 @@ server-node-js: engine $(shell find modules/server-node/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-server-node-bundle: server-node-js $(shell find modules/server-node/src $(find_options))
+server-node-bundle: contracts-bundle server-node-js $(shell find modules/server-node/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
@@ -349,7 +349,7 @@ router-js: engine $(shell find modules/router $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/router && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-router-bundle: router-js $(shell find modules/router $(find_options))
+router-bundle: contracts-bundle router-js $(shell find modules/router $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/router && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
