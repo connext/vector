@@ -7,13 +7,13 @@ import { network, ethers }from "hardhat";
 const chainProviders = JSON.parse(process.env.CHAIN_PROVIDERS ?? "{}");
 const chainId = Object.keys(chainProviders)[0];
 const url = Object.values(chainProviders)[0];
-const mnemonic = process.env.SUGAR_DADDY!;
+const mnemonic = process.env.SUGAR_DADDY ?? "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
 export const networkName = network.name;
 
 export const provider = url
   ? new JsonRpcProvider(url as string, parseInt(chainId))
-  : ethers.provider;
+  : ethers.provider as JsonRpcProvider;
 
 const hdNode = HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
 
