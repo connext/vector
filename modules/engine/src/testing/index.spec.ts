@@ -10,7 +10,6 @@ import {
   getRandomBytes32,
   mkPublicIdentifier,
   mkAddress,
-  constructRpcRequest,
 } from "@connext/vector-utils";
 import Sinon from "sinon";
 
@@ -83,31 +82,8 @@ describe("VectorEngine", () => {
   // NOTE: these are nice-to-haves
 
   describe.skip("setup", () => {
-    it("should fail if it cannot get chainProviders", async () => {
-      // chainService.getChainProviders.resolves(Result.fail(new Error("fail")));
-      const engine = await VectorEngine.connect(
-        Sinon.createStubInstance(MemoryMessagingService),
-        Sinon.createStubInstance(MemoryLockService),
-        storeService,
-        getRandomChannelSigner(),
-        Sinon.createStubInstance(VectorChainService),
-        chainAddresses,
-        log,
-      );
-
-      const rpc = constructRpcRequest<"chan_setup">("chan_setup", {
-        counterpartyIdentifier: counterpartyIdentifier,
-        chainId: chainId,
-        timeout: DEFAULT_CHANNEL_TIMEOUT.toString(),
-      });
-      const res = await engine.request(rpc);
-
-      console.log(res.message);
-      expect(res.message).to.contain("fail");
-    });
-    it("should fail if vector.setup fails", async () => {
-      // vectorSetup.setup.resolves(Result.fail(new Error("fail")));
-    });
+    it("should fail if it cannot get chainProviders", async () => {});
+    it("should fail if vector.setup fails", async () => {});
     it("should work when signer is bob", async () => {});
     describe("should work when signer is alice", () => {
       it("should work without deploying contract", async () => {});
