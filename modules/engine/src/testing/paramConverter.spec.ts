@@ -62,6 +62,8 @@ describe("ParamConverter", () => {
     signerA = Sinon.createStubInstance(ChannelSigner);
     signerB = Sinon.createStubInstance(ChannelSigner);
 
+    signerA.signMessage.resolves("success");
+    signerB.signMessage.resolves("success");
     chainReader.getBlockNumber.resolves(Result.ok<number>(110));
   });
 
@@ -369,7 +371,6 @@ describe("ParamConverter", () => {
     ) => {
       const withdrawHash = generateChainData(params, channelState);
       const signature = isUserA ? await signerA.signMessage(withdrawHash) : await signerB.signMessage(withdrawHash);
-
       expect(result).to.deep.eq({
         channelAddress: channelState.channelAddress,
         balance: {
