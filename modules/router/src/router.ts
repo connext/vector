@@ -1,5 +1,5 @@
 import { BaseLogger } from "pino";
-import { FullChannelState, INodeService, IVectorChainReader } from "@connext/vector-types";
+import { FullChannelState, INodeService } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
 import { formatEther } from "@ethersproject/units";
 
