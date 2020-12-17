@@ -27,6 +27,12 @@ contract HashlockTransfer is TransferDefinition {
     string public constant override ResolverEncoding =
         "tuple(bytes32 preImage)";
 
+    function EncodedCancel() external pure override returns(bytes memory) {
+      TransferResolver memory resolver;
+      resolver.preImage = bytes32(0);
+      return abi.encode(resolver);
+    } 
+
     function create(bytes calldata encodedBalance, bytes calldata encodedState)
         external
         view
