@@ -102,12 +102,26 @@ describe("EthereumChainService", function () {
     expect(chainService).to.be.ok;
   });
 
-  it("should run sendDepositTx without error", async () => {
+  it.only("should run sendDepositTx without error", async () => {
     const res = await chainService.sendDepositTx(channelState, alice.address, "10", AddressZero);
     expect(res.getValue()).to.be.ok;
   });
 
-  it("should run sendWithdrawTx without error", async () => {
+  it.only("should run sendDepositTx without error", async () => {
+    const res = await chainService.sendDepositTx(channelState, alice.address, "10", AddressZero);
+    expect(res.getValue()).to.be.ok;
+  });
+
+  it.only("should run sendWithdrawTx without error", async () => {
+    const res = await chainService.sendWithdrawTx(channelState, {
+      to: bob.address,
+      data: "0x",
+      value: "0x01",
+    });
+    expect(res.getValue()).to.be.ok;
+  });
+
+  it.only("should run sendWithdrawTx without error", async () => {
     const res = await chainService.sendWithdrawTx(channelState, {
       to: bob.address,
       data: "0x",
