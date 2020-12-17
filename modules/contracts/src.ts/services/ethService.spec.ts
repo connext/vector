@@ -34,7 +34,7 @@ import { getContract } from "../utils";
 
 import { EthereumChainService } from "./ethService";
 
-describe.only("EthereumChainService", function () {
+describe("EthereumChainService", function () {
   this.timeout(120_000);
   const aliceSigner = new ChannelSigner(alice.privateKey);
   const bobSigner = new ChannelSigner(bob.privateKey);
