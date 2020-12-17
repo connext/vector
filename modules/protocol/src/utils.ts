@@ -74,11 +74,12 @@ export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelU
   let paramDetails: SetupParams | DepositParams | CreateTransferParams | ResolveTransferParams;
   switch (type) {
     case "setup": {
-      const { networkContext, timeout } = details as SetupUpdateDetails;
+      const { networkContext, timeout, meta } = details as SetupUpdateDetails;
       const params: SetupParams = {
         networkContext: { ...networkContext },
         timeout,
         counterpartyIdentifier: toIdentifier,
+        meta: meta ?? {},
       };
       paramDetails = params;
       break;
@@ -87,6 +88,7 @@ export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelU
       const params: DepositParams = {
         channelAddress,
         assetId,
+        meta: details.meta ?? {},
       };
       paramDetails = params;
       break;
@@ -109,7 +111,7 @@ export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelU
         transferDefinition,
         transferInitialState,
         timeout: transferTimeout,
-        meta,
+        meta: meta ?? {},
       };
       paramDetails = params;
       break;
@@ -120,7 +122,7 @@ export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelU
         channelAddress,
         transferId,
         transferResolver,
-        meta,
+        meta: meta ?? {},
       };
       paramDetails = params;
       break;

@@ -164,7 +164,8 @@ export class BrowserNode implements INodeService {
     toAssetId: string;
     reconcileDeposit?: boolean;
     withdrawalAddress?: string;
-  }): Promise<{ withdrawalTx?: string }> {
+    meta?: any;
+  }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
       chainId: params.fromChainId,
@@ -189,10 +190,15 @@ export class BrowserNode implements INodeService {
       );
     }
 
+    const crossChainTransferId = getRandomBytes32();
+    const { meta, ...res } = params;
+    const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
+
     if (params.reconcileDeposit) {
       const depositRes = await this.reconcileDeposit({
         assetId: params.fromAssetId,
         channelAddress: senderChannel.channelAddress,
+        meta: { ...updatedMeta },
       });
       if (depositRes.isError) {
         throw depositRes.getError();
@@ -216,7 +222,7 @@ export class BrowserNode implements INodeService {
       recipient: this.publicIdentifier,
       recipientAssetId: params.toAssetId,
       recipientChainId: params.toChainId,
-      meta: { ...params, reason: "Cross-chain transfer" },
+      meta: { ...updatedMeta },
     };
     const transferRes = await this.conditionalTransfer(transferParams);
     if (transferRes.isError) {
@@ -249,6 +255,7 @@ export class BrowserNode implements INodeService {
       transferResolver: {
         preImage,
       },
+      meta: { ...updatedMeta },
     };
     const resolveRes = await this.resolveTransfer(resolveParams);
     if (resolveRes.isError) {
@@ -258,8 +265,9 @@ export class BrowserNode implements INodeService {
     this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
 
     let withdrawalTx: string | undefined;
+    let withdrawalAmount: string | undefined;
     if (params.withdrawalAddress) {
-      const withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
+      withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       this.logger.info(
         { withdrawalAddress: params.withdrawalAddress, withdrawalAmount },
         "Withdrawing to configured address",
@@ -269,6 +277,7 @@ export class BrowserNode implements INodeService {
         assetId: params.toAssetId,
         channelAddress: receiverChannel.channelAddress,
         recipient: params.withdrawalAddress,
+        meta: { ...updatedMeta },
       });
       if (withdrawRes.isError) {
         throw withdrawRes.getError();
@@ -277,7 +286,7 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
-    return { withdrawalTx };
+    return { withdrawalTx, withdrawalAmount };
   }
   //////////////////
 

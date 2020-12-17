@@ -5,6 +5,9 @@ import {
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
+  WithdrawalCreatedPayload,
+  WithdrawalReconciledPayload,
+  WithdrawalResolvedPayload,
 } from "@connext/vector-types";
 
 import { env } from "../utils";
@@ -13,11 +16,23 @@ const serverBase = `http://${env.testerName}:${env.port}`;
 const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
+const withdrawalCreatedPath = "/withdrawal-created";
+const withdrawalResolvedPath = "/withdrawal-resolved";
+const withdrawalReconciledPath = "/withdrawal-reconciled";
 export const carolEvts = {
   [EngineEvents.SETUP]: {},
-  [EngineEvents.WITHDRAWAL_CREATED]: {},
-  [EngineEvents.WITHDRAWAL_RESOLVED]: {},
-  [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.WITHDRAWAL_CREATED]: {
+    evt: Evt.create<WithdrawalCreatedPayload>(),
+    url: `${serverBase}${withdrawalCreatedPath}-carol`,
+  },
+  [EngineEvents.WITHDRAWAL_RESOLVED]: {
+    evt: Evt.create<WithdrawalResolvedPayload>(),
+    url: `${serverBase}${withdrawalResolvedPath}-carol`,
+  },
+  [EngineEvents.WITHDRAWAL_RECONCILED]: {
+    evt: Evt.create<WithdrawalReconciledPayload>(),
+    url: `${serverBase}${withdrawalReconciledPath}-carol`,
+  },
   [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -35,9 +50,18 @@ export const carolEvts = {
 
 export const daveEvts = {
   [EngineEvents.SETUP]: {},
-  [EngineEvents.WITHDRAWAL_CREATED]: {},
-  [EngineEvents.WITHDRAWAL_RESOLVED]: {},
-  [EngineEvents.WITHDRAWAL_RECONCILED]: {},
+  [EngineEvents.WITHDRAWAL_CREATED]: {
+    evt: Evt.create<WithdrawalCreatedPayload>(),
+    url: `${serverBase}${withdrawalCreatedPath}-dave`,
+  },
+  [EngineEvents.WITHDRAWAL_RESOLVED]: {
+    evt: Evt.create<WithdrawalResolvedPayload>(),
+    url: `${serverBase}${withdrawalResolvedPath}-dave`,
+  },
+  [EngineEvents.WITHDRAWAL_RECONCILED]: {
+    evt: Evt.create<WithdrawalReconciledPayload>(),
+    url: `${serverBase}${withdrawalReconciledPath}-dave`,
+  },
   [EngineEvents.REQUEST_COLLATERAL]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -74,6 +98,21 @@ server.post(`${depositReconciledPath}-carol`, async (request, response) => {
   return response.status(200).send({ message: "success" });
 });
 
+server.post(`${withdrawalCreatedPath}-carol`, async (request, response) => {
+  carolEvts[EngineEvents.WITHDRAWAL_CREATED].evt.post(request.body as WithdrawalCreatedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${withdrawalResolvedPath}-carol`, async (request, response) => {
+  carolEvts[EngineEvents.WITHDRAWAL_RESOLVED].evt.post(request.body as WithdrawalResolvedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${withdrawalReconciledPath}-carol`, async (request, response) => {
+  carolEvts[EngineEvents.WITHDRAWAL_RECONCILED].evt.post(request.body as WithdrawalReconciledPayload);
+  return response.status(200).send({ message: "success" });
+});
+
 server.post(`${conditionalTransferCreatedPath}-dave`, async (request, response) => {
   daveEvts[EngineEvents.CONDITIONAL_TRANSFER_CREATED].evt.post(request.body as ConditionalTransferCreatedPayload);
   return response.status(200).send({ message: "success" });
@@ -86,6 +125,21 @@ server.post(`${conditionalTransferResolvedPath}-dave`, async (request, response)
 
 server.post(`${depositReconciledPath}-dave`, async (request, response) => {
   daveEvts[EngineEvents.DEPOSIT_RECONCILED].evt.post(request.body as DepositReconciledPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${withdrawalCreatedPath}-dave`, async (request, response) => {
+  daveEvts[EngineEvents.WITHDRAWAL_CREATED].evt.post(request.body as WithdrawalCreatedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${withdrawalResolvedPath}-dave`, async (request, response) => {
+  daveEvts[EngineEvents.WITHDRAWAL_RESOLVED].evt.post(request.body as WithdrawalResolvedPayload);
+  return response.status(200).send({ message: "success" });
+});
+
+server.post(`${withdrawalReconciledPath}-dave`, async (request, response) => {
+  daveEvts[EngineEvents.WITHDRAWAL_RECONCILED].evt.post(request.body as WithdrawalReconciledPayload);
   return response.status(200).send({ message: "success" });
 });
 
