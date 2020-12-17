@@ -196,7 +196,7 @@ export class NatsMessagingService implements IMessagingService {
 
   // SETUP METHODS
   async sendSetupMessage(
-    setupInfo: Result<{ chainId: number; timeout: string }, Error>,
+    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, Error>,
     to: string,
     from: string,
     timeout = 30_000,
@@ -209,7 +209,7 @@ export class NatsMessagingService implements IMessagingService {
   async onReceiveSetupMessage(
     publicIdentifier: string,
     callback: (
-      setupInfo: Result<{ chainId: number; timeout: string }, MessagingError>,
+      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, MessagingError>,
       from: string,
       inbox: string,
     ) => void,

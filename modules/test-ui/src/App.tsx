@@ -48,7 +48,6 @@ function App() {
   ): Promise<BrowserNode> => {
     try {
       setConnectLoading(true);
-      console.log("supportedChains: ", supportedChains);
       const client = new BrowserNode({
         supportedChains,
         iframeSrc,
