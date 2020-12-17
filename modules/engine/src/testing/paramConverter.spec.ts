@@ -282,7 +282,8 @@ describe("ParamConverter", () => {
           preImage: params.transferResolver.preImage,
         },
         meta: {
-          details: params.meta,
+          ...transferState.meta,
+          ...params.meta,
         },
       });
     });

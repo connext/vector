@@ -123,7 +123,7 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendSetupMessage(
-    setupInfo: Result<{ chainId: number; timeout: string }>,
+    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, Error>,
     to: string,
     from: string,
     timeout?: number,
@@ -135,7 +135,7 @@ export class MemoryMessagingService implements IMessagingService {
   onReceiveSetupMessage(
     publicIdentifier: string,
     callback: (
-      setupInfo: Result<{ chainId: number; timeout: string }, MessagingError>,
+      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, MessagingError>,
       from: string,
       inbox: string,
     ) => void,
