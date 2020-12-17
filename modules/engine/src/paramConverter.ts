@@ -134,8 +134,10 @@ export async function convertWithdrawParams(
     callData,
   );
 
-  const initiatorSignature = await signer.signMessage(commitment.hashToSign());
-  if (!initiatorSignature) {
+  let initiatorSignature;
+  try {
+    initiatorSignature = await signer.signMessage(commitment.hashToSign());
+  } catch (res) {
     return Result.fail(new Error("Signer fails to sign message"));
   }
 
