@@ -23,7 +23,7 @@
     "prettier": "prettier --write './src.sol/**/*.sol'",
     "build": "rm -rf dist && hardhat compile && tsc",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
-    "test": "mocha --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
+    "test": "mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
