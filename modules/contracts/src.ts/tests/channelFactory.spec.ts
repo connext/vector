@@ -17,7 +17,6 @@ import { alice, bob, chainIdReq, provider } from "../constants";
 import { VectorChainReader } from "../services";
 import { createChannel, getContract } from "../utils";
 
-
 describe("ChannelFactory", function () {
   this.timeout(120_000);
   const alicePubId = getPublicIdentifierFromPublicKey(alice.publicKey);
