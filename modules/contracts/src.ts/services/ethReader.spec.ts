@@ -76,6 +76,7 @@ describe("EthereumChainReader", function () {
         definition: r.definition,
         stateEncoding: r.stateEncoding,
         resolverEncoding: r.resolverEncoding,
+        encodedCancel: r.encodedCancel,
       };
     });
     const info = cleaned.find((i: any) => i.name === TransferNames.Withdraw);
@@ -94,6 +95,7 @@ describe("EthereumChainReader", function () {
         definition: r.definition,
         stateEncoding: r.stateEncoding,
         resolverEncoding: r.resolverEncoding,
+        encodedCancel: r.encodedCancel,
       };
     });
     const result = await chainReader.getRegisteredTransfers(transferRegistry.address, chainId);

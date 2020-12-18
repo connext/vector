@@ -171,6 +171,7 @@ const GetRegisteredTransfersResponseSchema = {
       stateEncoding: Type.String(),
       resolverEncoding: Type.String(),
       definition: TAddress,
+      encodedCancel: Type.String(),
     }),
   ),
 };

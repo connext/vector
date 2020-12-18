@@ -1,7 +1,6 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { final } from "pino";
 
 import { createChannel, deployContracts } from "../actions";
 import { AddressBook, getAddressBook } from "../addressBook";
@@ -43,7 +42,7 @@ export const getUnsetupChannel = async (_addressBook?: AddressBook): Promise<Con
 };
 
 export const mineBlock = (): Promise<void> => {
-  return new Promise(async resolve => {
+  return new Promise(async (resolve) => {
     provider.once("block", () => resolve());
     await provider.send("evm_mine", []);
   });
