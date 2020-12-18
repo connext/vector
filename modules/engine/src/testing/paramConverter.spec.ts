@@ -398,11 +398,11 @@ describe("ParamConverter", () => {
 
     it("should fail if signer fails to sign message", async () => {
       const params = generateParams();
-      signerA.signMessage.resolves(undefined);
+      signerA.signMessage.rejects(new Error("fail"));
       const { channelState, result } = await testSetup(params, true);
 
       expect(result.isError).to.be.true;
-      expect(result.getError()).to.contain(new Error("Signer fails to sign message"));
+      expect(result.getError()).to.contain(new Error(`${signerA.publicIdentifier} failed to sign: fail`));
     });
     it("should fail if it cannot get registry information", async () => {
       const params = generateParams();

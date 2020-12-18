@@ -134,11 +134,11 @@ export async function convertWithdrawParams(
     callData,
   );
 
-  let initiatorSignature;
+  let initiatorSignature: string;
   try {
     initiatorSignature = await signer.signMessage(commitment.hashToSign());
-  } catch (res) {
-    return Result.fail(new Error("Signer fails to sign message"));
+  } catch (err) {
+    return Result.fail(new Error(`${signer.publicIdentifier} failed to sign: ${err.message}`));
   }
 
   const channelCounterparty = channel.alice === signer.address ? channel.bob : channel.alice;
