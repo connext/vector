@@ -4,9 +4,7 @@ import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 
 import { alice } from "../constants";
-import { getContract } from "../utils";
-
-import { registerTransfer } from "./registerTransfer";
+import { getContract, registerTransfer } from "../utils";
 
 describe("registerTransfer", function() {
   this.timeout(120_000);

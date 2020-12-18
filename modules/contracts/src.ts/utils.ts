@@ -11,12 +11,12 @@ export const getContract = (ethers as any).getContract;
 ////////////////////////////////////////
 // Wrap tasks in a format that's easier to use internally
 
-export const deployContracts = (
-  deployerAddress: string,
-  schema: [string, any[]][],
+export const registerTransfer = (
+  transferName: string,
+  signerAddress: string,
   logLevel = "silent",
 ): Promise<Contract> =>
-  run("deploy-contracts", { deployerAddress, schema, logLevel });
+  run("register-transfer", { transferName, signerAddress, logLevel });
 
 export const createChannel = (
   aliceAddress: string,
@@ -29,6 +29,7 @@ export const createChannel = (
 ////////////////////////////////////////
 // Other Utils
 
+// TODO: rm!
 export const getTestChannel = async (): Promise<Contract> => {
   return createChannel(alice.address, bob.address, "", "true");
 };

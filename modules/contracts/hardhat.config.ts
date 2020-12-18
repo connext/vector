@@ -7,6 +7,7 @@ import { HardhatUserConfig } from "hardhat/types";
 import * as packageJson from "./package.json";
 import "./src.ts/tasks/createChannel";
 import "./src.ts/tasks/displayAccounts";
+import "./src.ts/tasks/registerTransfer";
 
 const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
 

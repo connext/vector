@@ -5,7 +5,7 @@ import pino from "pino";
 
 export default task("display-accounts", "Displays first 3 accounts and their recommended gifts")
   .addParam("mnemonic", "The mnemonic to display accounts for")
-  .addParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: silent)")
+  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: silent)")
   .setAction(async (args): Promise<void> => {
     const { mnemonic, logLevel } = args;
     const log = pino({ level: logLevel || "silent" });

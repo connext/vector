@@ -5,7 +5,7 @@ import pino from "pino";
 export default task("create-channel", "Creates a new channel")
   .addParam("aliceAddress", "The address of both the alice role AND the signer")
   .addParam("bobAddress", "The address of the channel's bob role")
-  .addParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: silent)")
+  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: silent)")
   .addParam("testMode", "If provided then create a TestChannel else create a VectorChannel")
   .setAction(async (args, hre): Promise<Contract> => {
     const { aliceAddress, bobAddress, logLevel, testMode } = args;
