@@ -8,6 +8,10 @@ import {
   FullTransferState,
   UpdateType,
   TRANSFER_DECREMENT,
+  Values,
+  NodeError,
+  HashlockTransferStateEncoding,
+  HashlockTransferResolverEncoding,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -17,8 +21,11 @@ import {
   mkPublicIdentifier,
   RestServerNodeService,
   getTestLoggers,
+  encodeTransferResolver,
+  decodeTransferResolver,
 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
+import { HashZero } from "@ethersproject/constants";
 import Sinon from "sinon";
 
 import { RouterStore } from "../services/store";
@@ -106,6 +113,30 @@ describe.only("Forwarding", () => {
         }),
       );
 
+      // Set mock methods for error handling
+      // get registered transfer
+      node.getRegisteredTransfers.onFirstCall().resolves(
+        Result.ok([
+          {
+            definition: senderTransfer.transferDefinition,
+            stateEncoding: HashlockTransferStateEncoding,
+            resolverEncoding: HashlockTransferResolverEncoding,
+            encodedCancel: encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
+            name: TransferNames.HashlockTransfer,
+          },
+        ]),
+      );
+      // queue missed update
+      store.queueUpdate.resolves();
+      // resolve sender transfer
+      node.resolveTransfer.onFirstCall().resolves(
+        Result.ok({
+          channelAddress: senderTransfer.channelAddress,
+          transferId: senderTransfer.transferId,
+          routingId: senderTransfer.meta.routingId,
+        }),
+      );
+
       return ctx;
     };
 
@@ -139,7 +170,59 @@ describe.only("Forwarding", () => {
             ...(senderTransfer.meta ?? {}),
           },
         }),
+      ).to.be.true;
+    };
+
+    const verifyErrorResult = async (
+      result: Result<any, ForwardTransferError>,
+      ctx: TransferCreatedTestContext,
+      errorReason: Values<typeof ForwardTransferError.reasons>,
+      errorContext: any = {},
+      senderCancelled = true,
+      senderResolveFailed = false,
+    ) => {
+      console.log("got forwarding result", result.toJson());
+      const error = result.getError();
+      expect(error).to.be.ok;
+      expect(result.isError).to.be.true;
+      expect(error.message).to.be.eq(errorReason);
+
+      if (!senderCancelled) {
+        expect(error.context).to.containSubset({
+          ...errorContext,
+        });
+        expect(node.resolveTransfer.callCount).to.be.eq(0);
+        expect(store.queueUpdate.callCount).to.be.eq(0);
+        return;
+      }
+      expect(error.context).to.containSubset({
+        senderTransfer: ctx.senderTransfer.transferId,
+        senderChannel: ctx.senderTransfer.channelAddress,
+        details: "Sender transfer cancelled",
+        ...errorContext,
+      });
+      expect(node.getRegisteredTransfers.callCount).to.be.eq(1);
+      const transferResolver = decodeTransferResolver(
+        encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
+        HashlockTransferResolverEncoding,
       );
+      const resolveParams = {
+        publicIdentifier: routerPublicIdentifier,
+        channelAddress: ctx.senderTransfer.channelAddress,
+        transferId: ctx.senderTransfer.transferId,
+        transferResolver,
+        meta: {
+          cancellationReason: errorReason,
+          cancellationContext: { ...errorContext },
+        },
+      };
+
+      expect(node.resolveTransfer.calledOnceWithExactly(resolveParams)).to.be.true;
+      if (!senderResolveFailed) {
+        expect(store.queueUpdate.callCount).to.be.eq(0);
+        return;
+      }
+      expect(store.queueUpdate.calledOnceWithExactly("TransferResolution", resolveParams)).to.be.true;
     };
 
     beforeEach(async () => {
@@ -232,20 +315,350 @@ describe.only("Forwarding", () => {
       await verifySuccessfulResult(result, mocked, 1, 1);
     });
 
+    // TODO: implement offline payments
     it.skip("successfully queues transfers if allowable offline && creation failed because receiver was offline", async () => {});
 
     // Uncancellable failures
-    it.skip("should fail without cancelling if no meta.routingId", async () => {});
-    it.skip("should fail without cancelling if no meta.path", async () => {});
-    it.skip("should fail without cancelling if no meta.path.recipientIdentifier", async () => {});
-    it.skip("should fail without cancelling if cannot get sender channel from store", async () => {});
-    it.skip("should fail without cancelling if sender channel undefined", async () => {});
+    it("should fail without cancelling if no meta.routingId", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.senderTransfer.meta.routingId = undefined;
+      const mocked = prepEnv({ ...ctx });
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(
+        result,
+        mocked,
+        ForwardTransferError.reasons.InvalidForwardingInfo,
+        {
+          meta: mocked.senderTransfer.meta,
+          senderTransfer: mocked.senderTransfer.transferId,
+          senderChannel: mocked.senderTransfer.channelAddress,
+        },
+        false,
+      );
+    });
+
+    it("should fail without cancelling if no meta.path", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.senderTransfer.meta.path = undefined;
+      const mocked = prepEnv({ ...ctx });
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(
+        result,
+        mocked,
+        ForwardTransferError.reasons.InvalidForwardingInfo,
+        {
+          meta: mocked.senderTransfer.meta,
+          senderTransfer: mocked.senderTransfer.transferId,
+          senderChannel: mocked.senderTransfer.channelAddress,
+        },
+        false,
+      );
+    });
+
+    it("should fail without cancelling if no meta.path.recipientIdentifier", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.senderTransfer.meta.path = [{}];
+      const mocked = prepEnv({ ...ctx });
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(
+        result,
+        mocked,
+        ForwardTransferError.reasons.InvalidForwardingInfo,
+        {
+          meta: mocked.senderTransfer.meta,
+          senderTransfer: mocked.senderTransfer.transferId,
+          senderChannel: mocked.senderTransfer.channelAddress,
+        },
+        false,
+      );
+    });
+
+    it("should fail without cancelling if cannot get sender channel from store", async () => {
+      const ctx = prepEnv();
+      node.getStateChannel.onFirstCall().resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(
+        result,
+        ctx,
+        ForwardTransferError.reasons.SenderChannelNotFound,
+        {
+          nodeError: NodeError.reasons.InternalServerError,
+        },
+        false,
+      );
+    });
+
+    it("should fail without cancelling if sender channel undefined", async () => {
+      const ctx = prepEnv();
+      node.getStateChannel.onFirstCall().resolves(Result.ok(undefined));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(
+        result,
+        ctx,
+        ForwardTransferError.reasons.SenderChannelNotFound,
+        {
+          channelAddress: ctx.senderChannel.channelAddress,
+        },
+        false,
+      );
+    });
 
     // Cancellable failures
-    it.skip("fails with cancellation if swapping amount fails", async () => {});
-    it.skip("fails with cancellation if no state channel available for receiver", async () => {});
-    it.skip("fails with cancellation if no rebalance profile available", async () => {});
-    it.skip("fails with cancellation if depositing (collateralizing) fails", async () => {});
-    it.skip("fails with cancellation if transfer creation fails for any other reason than a timeout", async () => {});
+    it("fails with cancellation if swapping amount fails", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.receiverChannel.networkContext.chainId = 1338;
+      ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
+      const mocked = prepEnv(ctx);
+      getSwappedAmount.resolves(Result.fail(new Error("fail")));
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(result, mocked, ForwardTransferError.reasons.UnableToCalculateSwap, {
+        swapError: "fail",
+        swapContext: undefined,
+      });
+    });
+
+    it("fails with cancellation if getting receiver channel fails", async () => {
+      const ctx = prepEnv();
+      node.getStateChannelByParticipants.onFirstCall().resolves(Result.fail(new Error("fail")));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(result, ctx, ForwardTransferError.reasons.RecipientChannelNotFound, {
+        storeError: "fail",
+      });
+    });
+
+    it("fails with cancellation if no state channel available for receiver", async () => {
+      const ctx = prepEnv();
+      node.getStateChannelByParticipants.onFirstCall().resolves(Result.ok(undefined));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(result, ctx, ForwardTransferError.reasons.RecipientChannelNotFound, {
+        participants: [routerPublicIdentifier, ctx.receiverChannel.bobIdentifier],
+        chainId: ctx.receiverChannel.networkContext.chainId,
+      });
+    });
+
+    it("fails with cancellation if request collateral fails", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.senderTransfer.meta.path[0].recipientAssetId = mkAddress("0xfff");
+      const mocked = prepEnv({ ...ctx });
+      requestCollateral.resolves(Result.fail(new Error("fail")));
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(result, mocked, ForwardTransferError.reasons.UnableToCollateralize, {
+        collateralError: "fail",
+      });
+    });
+
+    // TODO: implement timeouts
+    it("fails with cancellation if transfer creation fails", async () => {
+      const ctx = prepEnv();
+      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifyErrorResult(result, ctx, ForwardTransferError.reasons.ErrorForwardingTransfer, {
+        createError: "fail",
+      });
+    });
+
+    // TODO: Failures cancelling
+    it("cancelling sender transfer should fail if cannot get registered transfers", async () => {
+      const ctx = prepEnv();
+      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.getRegisteredTransfers.onFirstCall().resolves(Result.fail(new Error("fail")));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
+      expect(result.getError().context).to.containSubset({
+        cancellationError: "fail",
+        routingId: ctx.senderTransfer.meta.routingId,
+        senderChannel: ctx.senderTransfer.channelAddress,
+        senderTransfer: ctx.senderTransfer.transferId,
+        cancellationReason: ForwardTransferError.reasons.ErrorForwardingTransfer,
+      });
+    });
+
+    it("cancelling transfers should fail if it cannot find transfer in registered transfers", async () => {
+      const ctx = prepEnv();
+      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.getRegisteredTransfers.onFirstCall().resolves(Result.ok([]));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
+      expect(result.getError().context).to.containSubset({
+        cancellationError: "Sender transfer not in registry info",
+        routingId: ctx.senderTransfer.meta.routingId,
+        senderChannel: ctx.senderTransfer.channelAddress,
+        senderTransfer: ctx.senderTransfer.transferId,
+        cancellationReason: ForwardTransferError.reasons.ErrorForwardingTransfer,
+        transferDefinition: ctx.senderTransfer.transferDefinition,
+        registered: [],
+      });
+    });
+
+    it("cancelling should fail if resolving transfer fails for non-timeout", async () => {
+      const ctx = prepEnv();
+      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.resolveTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
+      expect(result.getError().context).to.containSubset({
+        resolveError: "fail",
+        routingId: ctx.senderTransfer.meta.routingId,
+        senderChannel: ctx.senderTransfer.channelAddress,
+        senderTransfer: ctx.senderTransfer.transferId,
+        cancellationReason: ForwardTransferError.reasons.ErrorForwardingTransfer,
+      });
+    });
+
+    it("cancelling should be queued if resolving transfer fails due to timeout", async () => {
+      const ctx = prepEnv();
+      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.resolveTransfer.onFirstCall().resolves(Result.fail(new Error(NodeError.reasons.Timeout)));
+
+      const result = await forwardTransferCreation(
+        ctx.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.ErrorForwardingTransfer);
+      expect(result.getError().context).to.containSubset({
+        routingId: ctx.senderTransfer.meta.routingId,
+        senderChannel: ctx.senderTransfer.channelAddress,
+        senderTransfer: ctx.senderTransfer.transferId,
+        details: "Sender transfer cancelled/queued",
+      });
+
+      expect(store.queueUpdate.callCount).to.be.eq(1);
+    });
   });
 });
