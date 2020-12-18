@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "prisma generate && rm -rf dist && tsc",
     "build-bundle": "webpack --config ops/webpack.config.js",
-    "start": "node dist/index.js",
-    "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
+    "start": "prisma migrate up --experimental && node dist/index.js",
+    "test": "ts-mocha --bail --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'",
+    "migration:generate": "prisma migrate save --experimental"
   },
   "author": "",
   "license": "ISC",

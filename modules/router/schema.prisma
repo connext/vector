@@ -7,3 +7,9 @@ datasource db {
   provider = ["postgresql", "sqlite"]
   url      = env("VECTOR_DATABASE_URL")
 }
+
+model QueuedUpdate {
+  id             String @id @default(uuid())
+  channelAddress String
+  updateDate     String
+}
