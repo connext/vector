@@ -109,7 +109,7 @@ describe.only("Forwarding", () => {
       return ctx;
     };
 
-    const verifySuccessfulResult = (
+    const verifySuccessfulResult = async (
       result: Result<any, ForwardTransferError>,
       ctx: TransferCreatedTestContext,
       swapCallCount = 0,
@@ -128,7 +128,8 @@ describe.only("Forwarding", () => {
       expect(
         node.conditionalTransfer.calledOnceWithExactly({
           channelAddress: receiverChannel.channelAddress,
-          amount: swapCallCount > 0 ? getSwappedAmount.returnValues[0].getValue() : senderTransfer.balance.amount[0],
+          amount:
+            swapCallCount > 0 ? (await getSwappedAmount.returnValues[0]).getValue() : senderTransfer.balance.amount[0],
           assetId: senderTransfer.meta.path.recipientAssetId ?? senderTransfer.assetId,
           timeout: BigNumber.from(senderTransfer.transferTimeout).sub(TRANSFER_DECREMENT).toString(),
           type: event.conditionType,
@@ -157,7 +158,7 @@ describe.only("Forwarding", () => {
     });
 
     // Successful forwards
-    it.only("successfully forwards a transfer creation with no swaps, no cross-chain and no collateralization", async () => {
+    it("successfully forwards a transfer creation with no swaps, no cross-chain and no collateralization", async () => {
       const ctx = prepEnv();
       const result = await forwardTransferCreation(
         ctx.event,
@@ -169,11 +170,68 @@ describe.only("Forwarding", () => {
         chainProviders,
       );
 
-      verifySuccessfulResult(result, ctx);
+      await verifySuccessfulResult(result, ctx);
     });
-    it.skip("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {});
-    it.skip("successfully forwards a transfer creation with no swaps, cross-chain and no collateralization", async () => {});
-    it.skip("successfully forwards a transfer creation with swaps, cross-chain, and collateralization", async () => {});
+
+    it("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.receiverChannel.assetIds = [mkAddress("0xfff")];
+      ctx.receiverChannel.balances = [ctx.receiverChannel.balances[0]];
+      ctx.senderTransfer.meta.path[0].recipientAssetId = mkAddress("0xfff");
+      const mocked = prepEnv({ ...ctx });
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifySuccessfulResult(result, mocked, 1);
+    });
+
+    it("successfully forwards a transfer creation with no swaps, cross-chain and no collateralization", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.receiverChannel.networkContext.chainId = 1338;
+      ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
+      const mocked = prepEnv({ ...ctx });
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifySuccessfulResult(result, mocked, 1);
+    });
+
+    it("successfully forwards a transfer creation with swaps, cross-chain, and collateralization", async () => {
+      const ctx = generateDefaultTestContext();
+      ctx.receiverChannel.networkContext.chainId = 1338;
+      ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
+      ctx.senderTransfer.meta.path[0].recipientAssetId = mkAddress("0xfff");
+      const mocked = prepEnv({ ...ctx });
+
+      const result = await forwardTransferCreation(
+        mocked.event,
+        routerPublicIdentifier,
+        signerAddress,
+        node as INodeService,
+        store,
+        testLog,
+        chainProviders,
+      );
+
+      await verifySuccessfulResult(result, mocked, 1, 1);
+    });
+
     it.skip("successfully queues transfers if allowable offline && creation failed because receiver was offline", async () => {});
 
     // Uncancellable failures
