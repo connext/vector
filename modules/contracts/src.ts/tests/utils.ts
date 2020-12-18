@@ -2,7 +2,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 
-import { createChannel } from "../actions";
+import { createChannel } from "../tasks";
 import { TestChannel, TestToken } from "../artifacts";
 import { getContract } from "../utils";
 

@@ -12,7 +12,7 @@ import { Contract } from "@ethersproject/contracts";
 import { deployments, ethers } from "hardhat";
 import pino from "pino";
 
-import { createChannel } from "../actions";
+import { createChannel } from "../tasks";
 import { ChannelMastercopy } from "../artifacts";
 import { VectorChainReader } from "../services";
 import { getContract } from "../utils";

@@ -24,7 +24,7 @@ import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { createChannel } from "../../actions";
+import { createChannel } from "../../tasks";
 import { getContract } from "../../utils";
 import { bob, alice, networkName, provider, rando } from "../constants";
 import { advanceBlocktime, getOnchainBalance } from "../utils";

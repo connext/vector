@@ -6,7 +6,7 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
+import { deployContracts } from "../../tasks";
 import { getContract } from "../../utils";
 import { alice, bob } from "../constants";
 import { getTestChannel } from "../utils";
