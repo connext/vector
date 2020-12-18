@@ -6,7 +6,7 @@ import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 
 import { alice, bob, provider } from "../constants";
-import { getContract, getTestChannel } from "../utils";
+import { getContract, createChannel } from "../utils";
 
 import { WithdrawCommitment } from "./withdraw";
 
@@ -19,7 +19,7 @@ describe("withdrawCommitment", function() {
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     token = await getContract("TestToken", alice);
-    channel = await getTestChannel();
+    channel = await createChannel();
     await (
       await alice.sendTransaction({
         to: channel.address,

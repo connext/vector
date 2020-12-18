@@ -21,7 +21,7 @@ import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
 import { alice, bob, chainIdReq, logger, provider, rando } from "../constants";
-import { advanceBlocktime, getContract, getTestChannel } from "../utils";
+import { advanceBlocktime, getContract, createChannel } from "../utils";
 
 import { EthereumChainService } from "./ethService";
 
@@ -41,7 +41,7 @@ describe("EthereumChainService", function () {
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     chainId = await chainIdReq;
-    channel = await getTestChannel();
+    channel = await createChannel();
     channelFactory = await getContract("ChannelFactory", alice);
     chainService = new EthereumChainService(
       new MemoryStoreService(),

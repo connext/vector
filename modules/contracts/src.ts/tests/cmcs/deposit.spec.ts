@@ -7,7 +7,7 @@ import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 
 import { alice, bob } from "../../constants";
-import { getContract, getTestChannel } from "../../utils";
+import { getContract, createChannel } from "../../utils";
 
 describe("CMCDeposit.sol", function() {
   this.timeout(120_000);
@@ -18,7 +18,7 @@ describe("CMCDeposit.sol", function() {
 
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
-    channel = await getTestChannel();
+    channel = await createChannel();
     // setup failing token
     failingToken = await getContract("FailingToken", alice);
     await (await failingToken.mint(alice.address, parseEther("0.001"))).wait();

@@ -6,7 +6,7 @@ import { deployments } from "hardhat";
 import pino from "pino";
 
 import { alice, bob, chainIdReq, provider } from "../constants";
-import { getContract, getTestChannel } from "../utils";
+import { getContract, createChannel } from "../utils";
 
 import { EthereumChainReader } from "./ethReader";
 
@@ -27,7 +27,7 @@ describe("EthereumChainReader", function () {
     factory = await getContract("ChannelFactory", alice);
     transferRegistry = await getContract("TransferRegistry", alice);
 
-    channel = (await getTestChannel()).connect(alice);
+    channel = (await createChannel()).connect(alice);
     chainId = await chainIdReq;
     chainReader = new EthereumChainReader({ [chainId]: provider }, pino());
   });

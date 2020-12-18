@@ -13,14 +13,14 @@ export const getContract = (ethers as any).getContract;
 
 export const registerTransfer = (
   transferName: string,
-  signerAddress: string,
+  signerAddress: string = alice.address,
   logLevel = "silent",
 ): Promise<Contract> =>
   run("register-transfer", { transferName, signerAddress, logLevel });
 
 export const createChannel = (
-  aliceAddress: string,
-  bobAddress: string,
+  aliceAddress: string = alice.address,
+  bobAddress: string = bob.address,
   logLevel = "silent",
   testMode = "",
 ): Promise<Contract> =>
@@ -28,11 +28,6 @@ export const createChannel = (
 
 ////////////////////////////////////////
 // Other Utils
-
-// TODO: rm!
-export const getTestChannel = async (): Promise<Contract> => {
-  return createChannel(alice.address, bob.address, "", "true");
-};
 
 export const getUnsetupChannel = async (): Promise<Contract> => {
   const testFactory = await getContract("TestChannelFactory", alice);

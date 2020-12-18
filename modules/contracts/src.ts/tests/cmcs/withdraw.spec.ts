@@ -9,7 +9,7 @@ import { deployments } from "hardhat";
 
 import { alice, bob, provider } from "../../constants";
 import { WithdrawCommitment } from "../../commitments";
-import { getContract, getTestChannel } from "../../utils";
+import { getContract, createChannel } from "../../utils";
 
 describe("CMCWithdraw.sol", function() {
   this.timeout(120_000);
@@ -20,7 +20,7 @@ describe("CMCWithdraw.sol", function() {
 
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
-    channel = await getTestChannel();
+    channel = await createChannel();
 
     failingToken = await getContract("FailingToken", alice);
     await failingToken.mint(alice.address, parseEther("0.001"));

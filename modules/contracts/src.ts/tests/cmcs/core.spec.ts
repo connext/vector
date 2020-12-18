@@ -5,7 +5,7 @@ import { expect } from "chai";
 import { deployments } from "hardhat";
 
 import { alice, bob } from "../../constants";
-import { getTestChannel, getUnsetupChannel } from "../../utils";
+import { createChannel, getUnsetupChannel } from "../../utils";
 
 // NOTE: This will use a channel deployed by the `TestChannelFactory` that
 // has not been setup on deploy. Otherwise, the
@@ -60,7 +60,7 @@ describe("CMCCore.sol", function() {
 
   describe("getters", async () => {
     beforeEach(async () => {
-      channel = await getTestChannel();
+      channel = await createChannel();
     });
 
     it("should work", async () => {

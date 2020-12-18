@@ -8,7 +8,7 @@ import { expect } from "chai";
 import { deployments } from "hardhat";
 
 import { alice, bob, rando } from "../../constants";
-import { getContract, getTestChannel } from "../../utils";
+import { getContract, createChannel } from "../../utils";
 
 describe("CMCAsset", function () {
   this.timeout(120_000);
@@ -21,7 +21,7 @@ describe("CMCAsset", function () {
   beforeEach(async () => {
     await deployments.fixture(); // Start w fresh deployments
     assetTransfer = await getContract("CMCAsset", alice);
-    channel = await getTestChannel();
+    channel = await createChannel();
 
     // Fund with all tokens
     token = await getContract("TestToken", alice);
