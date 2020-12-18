@@ -343,61 +343,43 @@ export async function forwardTransferCreation(
   };
   const transfer = await nodeService.conditionalTransfer(params);
   if (transfer.isError) {
+    // TODO: properly implement offline payments
     if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
       // store transfer
-      const type = RouterUpdateType.TRANSFER_CREATION;
-      await store.queueUpdate(recipientChannel.channelAddress, type, params);
+      try {
+        // store transfer
+        const type = RouterUpdateType.TRANSFER_CREATION;
+        await store.queueUpdate(recipientChannel.channelAddress, type, params);
+        // log warning and return success
+        logger.warn(
+          {
+            receiverError: transfer.getError()?.message,
+            senderChannel: senderChannel.channelAddress,
+            senderTransfer: senderTransfer.transferId,
+            routingId,
+          },
+          `Failed to create receiver transfer, will retry`,
+        );
+        // return failure without cancelling sender-side payment
+        return Result.fail(
+          new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
+            receiverError: transfer.getError()?.message,
+            senderChannel: senderChannel.channelAddress,
+            senderTransfer: senderTransfer.transferId,
+            routingId,
+          }),
+        );
+      } catch (e) {
+        return handleForwardingError(
+          routingId,
+          senderTransfer,
+          ForwardTransferError.reasons.ErrorQueuingReceiverUpdate,
+          {
+            storeError: e.message,
+          },
+        );
+      }
     }
-    return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
-        message: transfer.getError()?.message,
-        ...(transfer.getError()!.context ?? {}),
-      }),
-    );
-    // // TODO: properly implement offline payments
-    // if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
-    //   // store transfer
-    //   try {
-    //     const type = "TransferCreation";
-    //     await store.queueUpdate(type, {
-    //       channelAddress: params.channelAddress,
-    //       amount: params.amount,
-    //       assetId: params.assetId,
-    //       routingId,
-    //       type: params.type,
-    //       details,
-    //     });
-    //     // log warning and return success
-    //     logger.warn(
-    //       {
-    //         receiverError: transfer.getError()?.message,
-    //         senderChannel: senderChannel.channelAddress,
-    //         senderTransfer: senderTransfer.transferId,
-    //         routingId,
-    //       },
-    //       `Failed to create receiver transfer, will retry`,
-    //     );
-    //     // return failure without cancelling sender-side payment
-    //     return Result.fail(
-    //       new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
-    //         receiverError: transfer.getError()?.message,
-    //         senderChannel: senderChannel.channelAddress,
-    //         senderTransfer: senderTransfer.transferId,
-    //         routingId,
-    //       }),
-    //     );
-    //   } catch (e) {
-    //     return handleForwardingError(
-    //       routingId,
-    //       senderChannel.networkContext.transferRegistryAddress,
-    //       senderTransfer,
-    //       ForwardTransferError.reasons.ErrorQueuingReceiverUpdate,
-    //       {
-    //         storeError: e.message,
-    //       },
-    //     );
-    //   }
-    // }
     return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.ErrorForwardingTransfer, {
       createError: transfer.getError()?.message,
       ...(transfer.getError()!.context ?? {}),
@@ -491,12 +473,13 @@ export async function handleIsAlive(
   const method = "handleIsAlive";
   logger.info(
     { data, method, node: { signerAddress, routerPublicIdentifier } },
-    "Received transfer event, starting forwarding",
+    "Received isAlive event, starting handler",
   );
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
   const erroredUpdates = [];
   for (const update of updates) {
+    logger.info({ method, update }, "Found update for isAlive channel");
     let transferResult;
     if (update.type === RouterUpdateType.TRANSFER_CREATION) {
       transferResult = await nodeService.conditionalTransfer(update.payload as NodeParams.ConditionalTransfer);
@@ -518,7 +501,7 @@ export async function handleIsAlive(
       await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, transferResult.getError()?.message);
       erroredUpdates.push(update);
     }
-    logger.info({ update, method }, "Successful transfer on isAlive");
+    logger.info({ transferResult: transferResult.getValue(), update, method }, "Successful handled isAlive update");
   }
   if (erroredUpdates.length > 0) {
     return Result.fail(
