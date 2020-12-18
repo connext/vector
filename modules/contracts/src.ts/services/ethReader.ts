@@ -505,7 +505,7 @@ export class EthereumChainReader implements IVectorChainReader {
       try {
         registered = await registry.getTransferDefinitions();
       } catch (e) {
-        return Result.fail(new ChainError(e.message, { chainId, transferRegistry, name }));
+        return Result.fail(new ChainError(e.message, { chainId, transferRegistry }));
       }
     }
     const cleaned = registered.map((r: RegisteredTransfer) => {
@@ -514,6 +514,7 @@ export class EthereumChainReader implements IVectorChainReader {
         definition: r.definition,
         stateEncoding: tidy(r.stateEncoding),
         resolverEncoding: tidy(r.resolverEncoding),
+        encodedCancel: r.encodedCancel,
       };
     });
     this.transferRegistries.set(chainId.toString(), cleaned);

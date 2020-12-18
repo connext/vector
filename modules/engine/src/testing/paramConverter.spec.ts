@@ -48,12 +48,14 @@ describe("ParamConverter", () => {
     resolverEncoding: "resolve",
     stateEncoding: "state",
     name: TransferNames.Withdraw,
+    encodedCancel: "encodedCancel",
   };
   const transferRegisteredInfo: RegisteredTransfer = {
     definition: mkAddress("0xdef"),
     resolverEncoding: "resolve",
     stateEncoding: "state",
     name: TransferNames.HashlockTransfer,
+    encodedCancel: "encodedCancel",
   };
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
 

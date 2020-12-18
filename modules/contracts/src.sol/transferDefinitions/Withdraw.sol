@@ -35,6 +35,12 @@ contract Withdraw is TransferDefinition {
     string public constant override ResolverEncoding =
         "tuple(bytes responderSignature)";
 
+    function EncodedCancel() external pure override returns(bytes memory) {
+      TransferResolver memory resolver;
+      resolver.responderSignature = new bytes(65);
+      return abi.encode(resolver);
+    }
+
     function create(bytes calldata encodedBalance, bytes calldata encodedState)
         external
         pure

@@ -47,6 +47,7 @@ export default task("register-transfer", "Displays first 3 accounts and their re
       definition: transferInfo.definition,
       resolverEncoding: tidy(transferInfo.resolverEncoding),
       stateEncoding: tidy(transferInfo.stateEncoding),
+      encodedCancel: transferInfo.encodedCancel,
     };
     log.info(`Adding transfer to registry ${JSON.stringify(cleaned, null, 2)}`);
     const response = await registry.addTransferDefinition(cleaned);

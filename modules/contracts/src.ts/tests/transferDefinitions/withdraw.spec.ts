@@ -25,7 +25,7 @@ import { deployments } from "hardhat";
 import { alice, bob } from "../../constants";
 import { getContract } from "../../utils";
 
-describe("Withdraw", function() {
+describe("Withdraw", function () {
   this.timeout(120_000);
   let withdraw: Contract;
 
@@ -108,6 +108,9 @@ describe("Withdraw", function() {
     );
     expect(registry.resolverEncoding).to.be.eq("tuple(bytes responderSignature)");
     expect(registry.definition).to.be.eq(withdraw.address);
+    expect(registry.encodedCancel).to.be.eq(
+      encodeTransferResolver({ responderSignature: mkSig("0x0") }, registry.resolverEncoding),
+    );
   });
 
   describe("Create", () => {

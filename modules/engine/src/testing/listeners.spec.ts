@@ -72,6 +72,7 @@ describe(testName, () => {
     resolverEncoding: "resolve",
     stateEncoding: "state",
     name: TransferNames.Withdraw,
+    encodedCancel: "encodedCancel",
   };
 
   // Declare mocks

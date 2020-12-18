@@ -24,7 +24,7 @@ import { deployments } from "hardhat";
 import { alice, provider } from "../../constants";
 import { getContract } from "../../utils";
 
-describe("HashlockTransfer", function() {
+describe("HashlockTransfer", function () {
   this.timeout(120_000);
   let transfer: Contract;
 
@@ -102,6 +102,7 @@ describe("HashlockTransfer", function() {
     expect(registry.stateEncoding).to.be.eq("tuple(bytes32 lockHash, uint256 expiry)");
     expect(registry.resolverEncoding).to.be.eq("tuple(bytes32 preImage)");
     expect(registry.definition).to.be.eq(transfer.address);
+    expect(registry.encodedCancel).to.be.eq(encodeTransferResolver({ preImage: HashZero }, registry.resolverEncoding));
   });
 
   describe("Create", () => {

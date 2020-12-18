@@ -7,7 +7,7 @@ import { deployments } from "hardhat";
 import { alice, rando } from "../constants";
 import { getContract } from "../utils";
 
-describe("TransferRegistry.sol", function() {
+describe("TransferRegistry.sol", function () {
   this.timeout(120_000);
   let transfer: Contract;
   let registry: Contract;
