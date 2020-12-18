@@ -7,7 +7,9 @@ export const getRebalanceProfile = async (
   chainId: number,
   assetId: string,
 ): Promise<Result<RebalanceProfile, ForwardTransferError>> => {
-  const rebalanceProfile = config.rebalanceProfiles.find(profile => profile.assetId && profile.chainId);
+  const rebalanceProfile = config.rebalanceProfiles.find(
+    (profile) => profile.assetId === assetId && profile.chainId === chainId,
+  );
   if (!rebalanceProfile) {
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.UnableToGetRebalanceProfile, { chainId, assetId }),
