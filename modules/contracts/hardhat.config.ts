@@ -7,6 +7,7 @@ import { HardhatUserConfig } from "hardhat/types";
 import * as packageJson from "./package.json";
 import "./src.ts/tasks";
 
+const apiKey = process.env.API_KEY ??  "abc123";
 const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
 
 const mnemonic =
@@ -61,6 +62,11 @@ const config: HardhatUserConfig = {
       accounts: { mnemonic },
       chainId: 80001,
       url: "https://rpc-mumbai.matic.today",
+    },
+    rinkeby: {
+      accounts: { mnemonic },
+      chainId: 4,
+      url: `https://eth-rinkeby.alchemyapi.io/jsonrpc/${apiKey}`,
     },
   },
 };
