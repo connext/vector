@@ -106,7 +106,7 @@ describe("VectorEngine", () => {
     const tests = [
       {
         name: "no request.id",
-        overrides: { id: 1, jsonrpc: "2.0", method: "chan_getConfig", params: {} },
+        overrides: { id: undefined, jsonrpc: "2.0", method: "chan_getConfig", params: {} },
         error: "should have required property 'id'",
       },
       {
