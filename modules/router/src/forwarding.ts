@@ -31,6 +31,7 @@ export class ForwardTransferError extends VectorError {
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
     ErrorForwardingTransfer: "Error forwarding transfer",
     ErrorQueuingReceiverUpdate: "Unable to queue update for receiver retry",
+    InvalidForwardingInfo: "Invalid information to forward transfer within meta",
     UnableToCollateralize: "Could not collateralize receiver channel",
     InvalidTransferDefinition: "Could not find transfer definition",
     ReceiverOffline: "Recipient was not online, could not forward",
@@ -192,10 +193,18 @@ export async function forwardTransferCreation(
     transferDefinition: senderTransferDefinition,
   } = senderTransfer;
   const meta = { ...untypedMeta } as RouterSchemas.RouterMeta & any;
-  const { routingId } = meta;
-  const [path] = meta.path;
-
-  const recipientIdentifier = path.recipient;
+  const { routingId } = meta ?? {};
+  const [path] = meta.path ?? [];
+  const recipientIdentifier = path?.recipient;
+  if (!routingId || !path || !recipientIdentifier) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.InvalidForwardingInfo, {
+        meta,
+        senderTransfer: senderTransfer.transferId,
+        senderChannel: senderTransfer.channelAddress,
+      }),
+    );
+  }
 
   const senderChannelRes = await nodeService.getStateChannel({
     channelAddress: senderChannelAddress,
