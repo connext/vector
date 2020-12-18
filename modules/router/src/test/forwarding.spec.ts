@@ -47,7 +47,7 @@ type TransferCreatedTestContext = {
   event: ConditionalTransferCreatedPayload;
 };
 
-describe.only("Forwarding", () => {
+describe("Forwarding", () => {
   describe("forwardTransferCreation", () => {
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<RouterStore>;
