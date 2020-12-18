@@ -295,12 +295,12 @@ export class BrowserNode implements INodeService {
   }
 
   async getConfig(): Promise<NodeResponses.GetConfig> {
-    const rpc = constructRpcRequest("chan_getConfig", undefined);
+    const rpc = constructRpcRequest("chan_getConfig", {});
     return this.send(rpc);
   }
 
   async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
-    const rpc = constructRpcRequest("chan_getStatus", undefined);
+    const rpc = constructRpcRequest("chan_getStatus", {});
     try {
       const res = await this.send(rpc);
       return Result.ok(res);
@@ -342,7 +342,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, NodeError>> {
     try {
-      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
+      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res.map((chan) => chan.channelAddress));
     } catch (e) {
