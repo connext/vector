@@ -143,7 +143,7 @@ export async function setupEngineListeners(
   // indefinitely?
 
   await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {
-    const method = "onReceiveSetupMessage";
+    const method = "onReceiveRequestCollateralMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
     }
@@ -155,7 +155,10 @@ export async function setupEngineListeners(
       bobIdentifier: from,
     });
 
-    await messaging.respondToRequestCollateralMessage(inbox, { message: "Successfully requested collateral" });
+    await messaging.respondToRequestCollateralMessage(
+      inbox,
+      Result.ok({ message: "Successfully requested collateral" }),
+    );
   });
 
   await messaging.onReceiveSetupMessage(signer.publicIdentifier, async (params, from, inbox) => {
@@ -165,18 +168,16 @@ export async function setupEngineListeners(
     }
     const setupInfo = params.getValue();
     logger.info({ params: setupInfo, method }, "Handling message");
-    let payload: { message?: string | undefined; error?: any };
     const res = await setup({
       chainId: setupInfo.chainId,
       counterpartyIdentifier: from,
       timeout: setupInfo.timeout,
+      meta: setupInfo.meta,
     });
-    if (res.isError) {
-      payload = { error: res.getError()?.message };
-    } else {
-      payload = { message: res.getValue().channelAddress };
-    }
-    await messaging.respondToSetupMessage(inbox, payload);
+    await messaging.respondToSetupMessage(
+      inbox,
+      res.isError ? Result.fail(res.getError()!) : Result.ok({ channelAddress: res.getValue().channelAddress }),
+    );
   });
 }
 
@@ -194,12 +195,16 @@ function handleSetup(
     aliceIdentifier,
     bobIdentifier,
     networkContext: { chainId },
+    latestUpdate: {
+      details: { meta },
+    },
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.setup>;
   const payload: SetupPayload = {
     channelAddress,
     aliceIdentifier,
     bobIdentifier,
     chainId,
+    meta,
   };
   evts[EngineEvents.SETUP].post(payload);
 }
@@ -219,7 +224,10 @@ function handleDepositReconciliation(
     channelAddress,
     balances,
     assetIds,
-    latestUpdate: { assetId },
+    latestUpdate: {
+      assetId,
+      details: { meta },
+    },
   } = event.updatedChannelState as FullChannelState<typeof UpdateType.deposit>;
   const payload: DepositReconciledPayload = {
     aliceIdentifier,
@@ -227,6 +235,7 @@ function handleDepositReconciliation(
     channelAddress,
     assetId,
     channelBalance: balances[assetIds.findIndex((a) => a === assetId)],
+    meta,
   };
   evts[EngineEvents.DEPOSIT_RECONCILED].post(payload);
 }
@@ -513,7 +522,7 @@ async function handleWithdrawalTransferCreation(
     transferResolver: { responderSignature },
     transferId,
     channelAddress,
-    meta: { transactionHash },
+    meta: { transactionHash, ...(transfer.meta ?? {}) },
   });
 
   // Handle the error
@@ -643,6 +652,7 @@ async function handleWithdrawalTransferResolution(
       channelAddress,
       transferId,
       transactionHash: meta?.transactionHash,
+      meta: transfer.meta,
     });
     logger.info({ method, withdrawalAmount: withdrawalAmount.toString(), assetId }, "Completed");
     return;

@@ -27,5 +27,5 @@ Content-Type: application/json
   "counterpartyIdentifier": "{{counterpartyPublicIdentifier}}",
   "publicIdentifier": "{{nodePublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "36000"
+  "timeout": "86400"
 }

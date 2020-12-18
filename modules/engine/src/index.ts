@@ -21,7 +21,6 @@ import {
   IExternalValidation,
   AUTODEPLOY_CHAIN_IDS,
 } from "@connext/vector-types";
-import { Wallet } from "@ethersproject/wallet";
 import pino from "pino";
 import Ajv from "ajv";
 import { Evt } from "evt";
@@ -316,6 +315,7 @@ export class VectorEngine implements IVectorEngine {
         chainId: params.chainId,
         providerUrl: chainProviders.getValue()[params.chainId],
       },
+      meta: params.meta,
     });
 
     if (setupRes.isError) {
@@ -371,11 +371,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(chainProviders.getError()!.message));
     }
 
-    return this.messaging.sendSetupMessage(
-      { chainId: params.chainId, timeout: params.timeout },
-      params.counterpartyIdentifier,
-      this.publicIdentifier,
-    );
+    return this.messaging.sendSetupMessage(Result.ok(params), params.counterpartyIdentifier, this.publicIdentifier);
   }
 
   private async deposit(
@@ -413,7 +409,7 @@ export class VectorEngine implements IVectorEngine {
     }
 
     const request = await this.messaging.sendRequestCollateralMessage(
-      params,
+      Result.ok(params),
       this.publicIdentifier === channel.aliceIdentifier ? channel.bobIdentifier : channel.aliceIdentifier,
       this.publicIdentifier,
     );

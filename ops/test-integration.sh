@@ -19,9 +19,9 @@ else echo "Running in non-interactive mode"
 fi
 
 # If this stack can be tested in prod-mode..
-if [[ "$stack" == "messaging" || "$stack" == "node" || "$stack" == "router" || "$stack" == "trio" ]]
+if [[ "$stack" == "messaging" || "$stack" == "node" || "$stack" == "router" || "$stack" == "trio" || "$stack" == "duet" ]]
 then
-  if [ ! -f "$root/${stack}.config.json" ] && [ "$stack" != "trio" ]
+  if [ ! -f "$root/${stack}.config.json" ] && [ "$stack" != "trio" ] && [ "$stack" != "duet" ]
   then cp "$root/ops/config/${stack}.default.json" "$root/${stack}.config.json"
   fi
 
@@ -30,6 +30,12 @@ then
   then
     config=$(
       cat "$root/node.config.json" "$root/router.config.json" |\
+      jq -s '.[0] + .[1]'
+    )
+  elif [[ "$stack" == "duet" ]]
+  then
+    config=$(
+      cat "$root/node.config.json" |\
       jq -s '.[0] + .[1]'
     )
   else

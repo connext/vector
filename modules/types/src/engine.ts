@@ -19,6 +19,7 @@ export type SetupPayload = {
   aliceIdentifier: string;
   bobIdentifier: string;
   chainId: number;
+  meta?: any;
 };
 
 // Emitted when transfer created
@@ -45,6 +46,7 @@ export type DepositReconciledPayload = {
   channelAddress: string;
   assetId: string;
   channelBalance: Balance;
+  meta?: any;
 };
 
 // Emitted when a counterparty requests collateral
@@ -55,6 +57,7 @@ export type RequestCollateralPayload = {
   channelAddress: string;
   assetId: string;
   amount?: string;
+  meta?: any;
 };
 
 // Emitted when a withdrawal transfer is created
@@ -85,6 +88,7 @@ export type WithdrawalReconciledPayload = {
   channelAddress: string;
   transactionHash: string;
   transferId: string;
+  meta?: any;
 };
 
 // Grouped event types
