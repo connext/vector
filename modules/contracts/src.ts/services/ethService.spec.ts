@@ -20,17 +20,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { logger } from "../constants";
-import {
-  advanceBlocktime,
-  alice,
-  bob,
-  chainIdReq,
-  getTestChannel,
-  provider,
-  rando,
-} from "../tests";
-import { getContract } from "../utils";
+import { alice, bob, chainIdReq, logger, provider, rando } from "../constants";
+import { advanceBlocktime, getContract, getTestChannel } from "../utils";
 
 import { EthereumChainService } from "./ethService";
 

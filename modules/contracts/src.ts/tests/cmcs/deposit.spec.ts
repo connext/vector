@@ -6,10 +6,9 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 
+import { alice, bob } from "../../constants";
 import { deployContracts } from "../../tasks";
-import { getContract } from "../../utils";
-import { alice, bob } from "../constants";
-import { getTestChannel } from "../utils";
+import { getContract, getTestChannel } from "../../utils";
 
 describe("CMCDeposit.sol", function() {
   this.timeout(120_000);

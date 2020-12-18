@@ -7,10 +7,9 @@ import { parseEther } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 import { deployments } from "hardhat";
 
-import { getTestChannel, alice } from "..";
-import { WithdrawCommitment } from "../..";
-import { getContract } from "../../utils";
-import { bob, provider } from "../constants";
+import { alice, bob, provider } from "../../constants";
+import { WithdrawCommitment } from "../../commitments";
+import { getContract, getTestChannel } from "../../utils";
 
 describe("CMCWithdraw.sol", function() {
   this.timeout(120_000);

@@ -3,9 +3,8 @@ import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 
+import { alice } from "../constants";
 import { getContract } from "../utils";
-
-import { alice } from "./constants";
 
 describe("ChannelMastercopy", function () {
   this.timeout(120_000);

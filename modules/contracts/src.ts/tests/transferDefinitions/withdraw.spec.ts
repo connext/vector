@@ -22,8 +22,8 @@ import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 
+import { alice, bob } from "../../constants";
 import { getContract } from "../../utils";
-import { alice, bob } from "../constants";
 
 describe("Withdraw", function() {
   this.timeout(120_000);

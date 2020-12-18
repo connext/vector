@@ -7,9 +7,8 @@ import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
 import { deployments } from "hardhat";
 
-import { getContract } from "../../utils";
-import { alice, bob, rando } from "../constants";
-import { getTestChannel } from "../utils";
+import { alice, bob, rando } from "../../constants";
+import { getContract, getTestChannel } from "../../utils";
 
 describe("CMCAsset", function () {
   this.timeout(120_000);

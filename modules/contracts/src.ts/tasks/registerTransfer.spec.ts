@@ -3,7 +3,7 @@ import { expect } from "@connext/vector-utils";
 import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 
-import { alice } from "../tests";
+import { alice } from "../constants";
 import { getContract } from "../utils";
 
 import { registerTransfer } from "./registerTransfer";

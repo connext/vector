@@ -5,8 +5,8 @@ import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 import { deployments } from "hardhat";
 
+import { alice } from "../../constants";
 import { getContract } from "../../utils";
-import { alice } from "../constants";
 
 describe("LibIterableMapping.sol", function() {
   this.timeout(120_000);

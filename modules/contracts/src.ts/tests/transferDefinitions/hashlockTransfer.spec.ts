@@ -21,8 +21,8 @@ import { Contract } from "@ethersproject/contracts";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 import { deployments } from "hardhat";
 
+import { alice, provider } from "../../constants";
 import { getContract } from "../../utils";
-import { alice, provider } from "../constants";
 
 describe("HashlockTransfer", function() {
   this.timeout(120_000);

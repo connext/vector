@@ -5,8 +5,8 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 
-import { bob, alice, getTestChannel, provider } from "../tests";
-import { getContract } from "../utils";
+import { alice, bob, provider } from "../constants";
+import { getContract, getTestChannel } from "../utils";
 
 import { WithdrawCommitment } from "./withdraw";
 

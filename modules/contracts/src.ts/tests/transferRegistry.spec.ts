@@ -4,9 +4,8 @@ import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 import { deployments } from "hardhat";
 
+import { alice, rando } from "../constants";
 import { getContract } from "../utils";
-
-import { alice, rando } from "./constants";
 
 describe("TransferRegistry.sol", function() {
   this.timeout(120_000);

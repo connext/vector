@@ -24,10 +24,8 @@ import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { createChannel } from "../../tasks";
-import { getContract } from "../../utils";
-import { bob, alice, networkName, provider, rando } from "../constants";
-import { advanceBlocktime, getOnchainBalance } from "../utils";
+import { bob, alice, networkName, provider, rando } from "../../constants";
+import { advanceBlocktime, createChannel, getContract, getOnchainBalance } from "../../utils";
 
 describe("CMCAdjudicator.sol", async function () {
   this.timeout(120_000);

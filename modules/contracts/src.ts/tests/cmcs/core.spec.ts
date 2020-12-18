@@ -4,7 +4,8 @@ import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 import { deployments } from "hardhat";
 
-import { getTestChannel, alice, bob, getUnsetupChannel } from "..";
+import { alice, bob } from "../../constants";
+import { getTestChannel, getUnsetupChannel } from "../../utils";
 
 // NOTE: This will use a channel deployed by the `TestChannelFactory` that
 // has not been setup on deploy. Otherwise, the

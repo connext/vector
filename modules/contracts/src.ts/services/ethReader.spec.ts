@@ -5,8 +5,8 @@ import { Contract } from "@ethersproject/contracts";
 import { deployments } from "hardhat";
 import pino from "pino";
 
-import { alice, bob, chainIdReq, getTestChannel, provider } from "../tests";
-import { getContract } from "../utils";
+import { alice, bob, chainIdReq, provider } from "../constants";
+import { getContract, getTestChannel } from "../utils";
 
 import { EthereumChainReader } from "./ethReader";
 

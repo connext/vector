@@ -12,12 +12,11 @@ import { Contract } from "@ethersproject/contracts";
 import { deployments, ethers } from "hardhat";
 import pino from "pino";
 
-import { createChannel } from "../tasks";
 import { ChannelMastercopy } from "../artifacts";
+import { alice, bob, chainIdReq, provider } from "../constants";
 import { VectorChainReader } from "../services";
-import { getContract } from "../utils";
+import { createChannel, getContract } from "../utils";
 
-import { alice, bob, chainIdReq, provider } from "./constants";
 
 describe("ChannelFactory", function () {
   this.timeout(120_000);
