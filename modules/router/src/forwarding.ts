@@ -335,8 +335,7 @@ export async function forwardTransferCreation(
     details,
     meta: {
       // Node is never the initiator, that is always payment sender
-      senderIdentifier:
-        initiator === senderChannel.bobIdentifier ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
+      senderIdentifier: initiator === senderChannel.bob ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
       ...meta,
     },
   };

@@ -68,8 +68,17 @@ describe.only("Forwarding", () => {
       };
       const { channel: senderChannel, transfer: senderTransfer } = createTestChannelState(
         UpdateType.create,
-        { aliceIdentifier: routerPublicIdentifier, bobIdentifier: aliceIdentifier, alice: signerAddress },
-        { meta: transferMeta },
+        {
+          aliceIdentifier: routerPublicIdentifier,
+          bobIdentifier: aliceIdentifier,
+          alice: signerAddress,
+          bob: mkAddress("0xeee"),
+          latestUpdate: {
+            fromIdentifier: bobIdentifier,
+            toIdentifier: aliceIdentifier,
+          },
+        },
+        { meta: transferMeta, initiator: mkAddress("0xeee") },
       );
 
       const { channel: receiverChannel } = createTestChannelState(UpdateType.deposit, {
@@ -156,21 +165,22 @@ describe.only("Forwarding", () => {
       // Verify call stack
       expect(getSwappedAmount.callCount).to.be.eq(swapCallCount);
       expect(requestCollateral.callCount).to.be.eq(collateralCallCount);
-      expect(
-        node.conditionalTransfer.calledOnceWithExactly({
-          channelAddress: receiverChannel.channelAddress,
-          amount:
-            swapCallCount > 0 ? (await getSwappedAmount.returnValues[0]).getValue() : senderTransfer.balance.amount[0],
-          assetId: senderTransfer.meta.path.recipientAssetId ?? senderTransfer.assetId,
-          timeout: BigNumber.from(senderTransfer.transferTimeout).sub(TRANSFER_DECREMENT).toString(),
-          type: event.conditionType,
-          publicIdentifier: routerPublicIdentifier,
-          details: { ...senderTransfer.transferState },
-          meta: {
-            ...(senderTransfer.meta ?? {}),
-          },
-        }),
-      ).to.be.true;
+      expect(node.conditionalTransfer.callCount).to.be.eq(1);
+      const expected = {
+        channelAddress: receiverChannel.channelAddress,
+        amount:
+          swapCallCount > 0 ? (await getSwappedAmount.returnValues[0]).getValue() : senderTransfer.balance.amount[0],
+        assetId: senderTransfer.meta?.path[0]?.recipientAssetId ?? senderTransfer.assetId,
+        timeout: BigNumber.from(senderTransfer.transferTimeout).sub(TRANSFER_DECREMENT).toString(),
+        type: event.conditionType,
+        publicIdentifier: routerPublicIdentifier,
+        details: { ...senderTransfer.transferState },
+        meta: {
+          senderIdentifier: ctx.senderChannel.bobIdentifier,
+          ...(senderTransfer.meta ?? {}),
+        },
+      };
+      expect(node.conditionalTransfer.firstCall.args[0]).to.be.deep.eq(expected);
     };
 
     const verifyErrorResult = async (
@@ -181,7 +191,6 @@ describe.only("Forwarding", () => {
       senderCancelled = true,
       senderResolveFailed = false,
     ) => {
-      console.log("got forwarding result", result.toJson());
       const error = result.getError();
       expect(error).to.be.ok;
       expect(result.isError).to.be.true;
@@ -198,7 +207,7 @@ describe.only("Forwarding", () => {
       expect(error.context).to.containSubset({
         senderTransfer: ctx.senderTransfer.transferId,
         senderChannel: ctx.senderTransfer.channelAddress,
-        details: "Sender transfer cancelled",
+        details: "Sender transfer cancelled/queued",
         ...errorContext,
       });
       expect(node.getRegisteredTransfers.callCount).to.be.eq(1);
@@ -454,7 +463,7 @@ describe.only("Forwarding", () => {
     });
 
     // Cancellable failures
-    it("fails with cancellation if swapping amount fails", async () => {
+    it("fails with cancellation if calculating swapped amount fails", async () => {
       const ctx = generateDefaultTestContext();
       ctx.receiverChannel.networkContext.chainId = 1338;
       ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
