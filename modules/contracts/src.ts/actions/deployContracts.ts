@@ -45,6 +45,6 @@ export const deployContracts = async (
         (receipt.gasUsed || Zero).mul(tx.gasPrice),
       )} deploying ${name} to address: ${deployment.address}`,
     );
-
   }
+
 };

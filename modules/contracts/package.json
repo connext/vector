@@ -20,8 +20,9 @@
     "typechain"
   ],
   "scripts": {
+    "copy-wasm": "cp ../../node_modules/@connext/pure-evm-wasm/pure-evm_bg.wasm dist/pure-evm_bg.wasm",
     "prettier": "prettier --write './src.sol/**/*.sol'",
-    "build": "rm -rf dist && hardhat compile && tsc",
+    "build": "rm -rf dist && hardhat compile && tsc && npm run copy-wasm",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
     "test": "mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
   },

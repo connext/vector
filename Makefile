@@ -281,17 +281,13 @@ utils: types $(shell find modules/utils $(find_options))
 	$(docker_run) "cd modules/utils && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
 
-contracts: contracts-bundle
+contracts: contracts-js
 ethprovider: contracts-img
 contracts-js: utils modules/contracts/hardhat.config.ts $(shell find modules/contracts/src.sol modules/contracts/src.ts $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-contracts-bundle: contracts-js utils $(shell find modules/contracts/src.sol modules/contracts/src.ts $(find_options))
-	$(log_start)
-	$(docker_run) "cd modules/contracts && npm run build-bundle"
-	$(log_finish) && mv -f $(totalTime) .flags/$@
-contracts-img: contracts-bundle $(shell find modules/contracts/ops $(find_options))
+contracts-img: contracts-js $(shell find modules/contracts/ops $(find_options))
 	$(log_start)
 	docker build --file modules/contracts/ops/Dockerfile $(image_cache) --tag $(project)_ethprovider modules/contracts
 	docker tag $(project)_ethprovider $(project)_ethprovider:$(commit)
@@ -334,7 +330,7 @@ server-node-js: engine $(shell find modules/server-node/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build && touch src/index.ts"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-server-node-bundle: contracts-bundle server-node-js $(shell find modules/server-node/src $(find_options))
+server-node-bundle: contracts-js server-node-js $(shell find modules/server-node/src $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/server-node && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
@@ -349,7 +345,7 @@ router-js: engine $(shell find modules/router $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/router && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-router-bundle: contracts-bundle router-js $(shell find modules/router $(find_options))
+router-bundle: contracts-js router-js $(shell find modules/router $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/router && npm run build-bundle"
 	$(log_finish) && mv -f $(totalTime) .flags/$@

@@ -1,4 +1,4 @@
-export { createChannel, createChannelCommand } from "./createChannel";
+export { createChannel } from "./createChannel";
 export { deployContracts } from "./deployContracts";
-export { displayAccounts, displayCommand } from "./displayAccounts";
-export { registerTransfer, registerTransferCommand } from "./registerTransfer";
+export { displayAccounts } from "./displayAccounts";
+export { registerTransfer } from "./registerTransfer";
