@@ -125,7 +125,6 @@ describe.only("Forwarding", () => {
       // Verify call stack
       expect(getSwappedAmount.callCount).to.be.eq(swapCallCount);
       expect(requestCollateral.callCount).to.be.eq(collateralCallCount);
-      expect(node.conditionalTransfer.callCount).to.be.eq(1);
       expect(
         node.conditionalTransfer.calledOnceWithExactly({
           channelAddress: receiverChannel.channelAddress,
@@ -157,6 +156,7 @@ describe.only("Forwarding", () => {
       Sinon.reset();
     });
 
+    // Successful forwards
     it.only("successfully forwards a transfer creation with no swaps, no cross-chain and no collateralization", async () => {
       const ctx = prepEnv();
       const result = await forwardTransferCreation(
@@ -171,17 +171,23 @@ describe.only("Forwarding", () => {
 
       verifySuccessfulResult(result, ctx);
     });
-
     it.skip("successfully forwards a transfer creation with swaps, no cross-chain and no collateralization", async () => {});
     it.skip("successfully forwards a transfer creation with no swaps, cross-chain and no collateralization", async () => {});
     it.skip("successfully forwards a transfer creation with swaps, cross-chain, and collateralization", async () => {});
-    it.skip("fails if no state channel available for sender", async () => {});
-    it.skip("fails if no swapping amount fails", async () => {});
-    it.skip("fails if no state channel available for receiver", async () => {});
-    it.skip("fails if no rebalance profile available", async () => {});
-    it.skip("fails if depositing (collateralizing) fails", async () => {});
-    it.skip("fails if transfer creation fails with timeout and transfer is requireOnline", async () => {});
-    it.skip("queues update successfully if transfer creation fails with timeout and transfer is allowOffline", async () => {});
-    it.skip("fails if transfer creation fails for any other reason than a timeout", async () => {});
+    it.skip("successfully queues transfers if allowable offline && creation failed because receiver was offline", async () => {});
+
+    // Uncancellable failures
+    it.skip("should fail without cancelling if no meta.routingId", async () => {});
+    it.skip("should fail without cancelling if no meta.path", async () => {});
+    it.skip("should fail without cancelling if no meta.path.recipientIdentifier", async () => {});
+    it.skip("should fail without cancelling if cannot get sender channel from store", async () => {});
+    it.skip("should fail without cancelling if sender channel undefined", async () => {});
+
+    // Cancellable failures
+    it.skip("fails with cancellation if swapping amount fails", async () => {});
+    it.skip("fails with cancellation if no state channel available for receiver", async () => {});
+    it.skip("fails with cancellation if no rebalance profile available", async () => {});
+    it.skip("fails with cancellation if depositing (collateralizing) fails", async () => {});
+    it.skip("fails with cancellation if transfer creation fails for any other reason than a timeout", async () => {});
   });
 });
