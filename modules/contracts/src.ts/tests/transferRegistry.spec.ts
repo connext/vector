@@ -10,7 +10,7 @@ import { rando } from "./constants";
 
 import { getTestAddressBook, alice } from ".";
 
-describe("TransferRegistry.sol", function() {
+describe("TransferRegistry.sol", function () {
   this.timeout(120_000);
   let addressBook: AddressBook;
   let transfer: Contract;
