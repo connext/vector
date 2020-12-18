@@ -1,3 +1,3 @@
-// export * from "./createChannel";
-// export { displayAccounts } from "./displayAccounts";
-// export { registerTransfer } from "./registerTransfer";
+import "./createChannel";
+import "./displayAccounts";
+import "./registerTransfer";
