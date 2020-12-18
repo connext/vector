@@ -24,7 +24,7 @@ import { parseEther } from "@ethersproject/units";
 import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { bob, alice, networkName, provider, rando } from "../../constants";
+import { bob, alice, defaultLogLevel, networkName, provider, rando } from "../../constants";
 import { advanceBlocktime, createChannel, getContract, getOnchainBalance } from "../../utils";
 
 describe("CMCAdjudicator.sol", async function () {
@@ -198,7 +198,7 @@ describe("CMCAdjudicator.sol", async function () {
     // mint token to alice/bob
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();
-    channel = await createChannel(alice.address, bob.address, "", "true");
+    channel = await createChannel(alice.address, bob.address, defaultLogLevel, "true");
     const preImage = getRandomBytes32();
     const state = {
       lockHash: createlockHash(preImage),
