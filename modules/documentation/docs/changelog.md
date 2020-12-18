@@ -2,6 +2,9 @@
 
 ## Next Release
 
+- \[router\] fix rebalance profile getter to respect assetIds
+- \[router\] cancel transfers if they are unsuccessful
+- \[transfers\] added required `EncodedCancel` getter to transfer registry interface 
 ## 0.0.38
 
 - propagate meta through updates
