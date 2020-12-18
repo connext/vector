@@ -139,7 +139,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
       id: Date.now(),
       jsonrpc: "2.0",
       method: "chan_unsubscribeAll",
-      params: undefined,
+      params: {},
     };
     return this.send(rpc);
   };
