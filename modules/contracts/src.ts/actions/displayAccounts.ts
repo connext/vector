@@ -1,8 +1,7 @@
 import { HDNode } from "@ethersproject/hdnode";
 import { Wallet } from "@ethersproject/wallet";
-import { Argv } from "yargs";
 
-import { cliOpts, logger } from "../constants";
+import { logger } from "../constants";
 
 export const displayAccounts = async (mnemonic: string, log = logger.child({})): Promise<void> => {
   const hdNode = HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
@@ -19,15 +18,4 @@ export const displayAccounts = async (mnemonic: string, log = logger.child({})):
   log.info({ alice: wallets[0].address, recommended: "1 ETH" }, "Alice");
   log.info({ bob: wallets[1].address, recommended: "0.5 ETH" }, "Bob");
   log.info({ rando: wallets[2].address, recommended: "0.1 ETH" }, "Rando");
-};
-
-export const displayCommand = {
-  command: "display-accounts",
-  describe: "Display contract test accounts",
-  builder: (yargs: Argv): Argv => {
-    return yargs.option("m", cliOpts.mnemonic);
-  },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
-    await displayAccounts(argv.mnemonic, logger.child({ level: "info" }));
-  },
 };

@@ -1,10 +1,8 @@
-import { getEthProvider } from "@connext/vector-utils";
 import { Contract } from "@ethersproject/contracts";
 import { Wallet } from "@ethersproject/wallet";
-import { Argv } from "yargs";
 
 import { TestChannel, VectorChannel } from "../artifacts";
-import { cliOpts, logger } from "../constants";
+import { logger } from "../constants";
 import { getContract } from "../utils";
 
 export const createChannel = async (
@@ -26,21 +24,4 @@ export const createChannel = async (
   return test
     ? new Contract(channelAddress, TestChannel.abi, alice)
     : new Contract(channelAddress, VectorChannel.abi, alice);
-};
-
-export const createChannelCommand = {
-  command: "create-channel",
-  describe: "Creates a new channel for the two counterparties",
-  builder: (yargs: Argv): Argv => {
-    return yargs
-      .option("c", cliOpts.bobAddress)
-      .option("m", cliOpts.mnemonic)
-      .option("p", cliOpts.ethProvider)
-      .option("s", cliOpts.silent);
-  },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
-    const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const level = argv.silent ? "silent" : "info";
-    await createChannel(argv.transferName, wallet, logger.child({ level }));
-  },
 };

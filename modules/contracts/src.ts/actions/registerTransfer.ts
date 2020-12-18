@@ -1,9 +1,6 @@
 import { RegisteredTransfer, tidy } from "@connext/vector-types";
-import { getEthProvider } from "@connext/vector-utils";
-import { Wallet } from "@ethersproject/wallet";
-import { Argv } from "yargs";
 
-import { cliOpts, logger } from "../constants";
+import { logger } from "../constants";
 import { getContract } from "../utils";
 
 export const registerTransfer = async (
@@ -54,21 +51,4 @@ export const registerTransfer = async (
   log.info(`Added: ${response.hash}`);
   await response.wait();
   log.info(`Tx mined, successfully added ${cleaned.name} on ${cleaned.definition}`);
-};
-
-export const registerTransferCommand = {
-  command: "register",
-  describe: "Adds a transfer to registry",
-  builder: (yargs: Argv): Argv => {
-    return yargs
-      .option("t", cliOpts.transferName)
-      .option("m", cliOpts.mnemonic)
-      .option("p", cliOpts.ethProvider)
-      .option("s", cliOpts.silent);
-  },
-  handler: async (argv: { [key: string]: any } & Argv["argv"]): Promise<void> => {
-    const wallet = Wallet.fromMnemonic(argv.mnemonic).connect(getEthProvider(argv.ethProvider));
-    const level = argv.silent ? "silent" : "info";
-    await registerTransfer(argv.transferName, wallet.address, logger.child({ level }));
-  },
 };
