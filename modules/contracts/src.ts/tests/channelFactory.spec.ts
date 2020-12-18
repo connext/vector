@@ -51,7 +51,7 @@ describe("ChannelFactory", function () {
   });
 
   it("should create a channel and calculated addresses should match actual one", async () => {
-    const channel = await createChannel(bob.address, alice);
+    const channel = await createChannel(alice.address, bob.address);
     const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr2 = await getCreate2MultisigAddress(
       alicePubId,
@@ -100,7 +100,7 @@ describe("ChannelFactory", function () {
   });
 
   it("should create a different channel with a different mastercopy address", async () => {
-    const channel = await createChannel(bob.address, alice);
+    const channel = await createChannel(alice.address, bob.address);
     const newChannelMastercopy = await (await (
       await ethers.getContractFactory("ChannelMastercopy", alice)
     ).deploy()).deployed();

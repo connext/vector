@@ -200,7 +200,7 @@ describe("CMCAdjudicator.sol", async function () {
     // mint token to alice/bob
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();
-    channel = await createChannel(bob.address, alice, undefined, true);
+    channel = await createChannel(alice.address, bob.address, "", "true");
     const preImage = getRandomBytes32();
     const state = {
       lockHash: createlockHash(preImage),

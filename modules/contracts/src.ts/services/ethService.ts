@@ -42,7 +42,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     log: BaseLogger,
     private readonly defaultRetries = 1,
   ) {
-    super(chainProviders, log.child({ module: "EthereumChainReader" }));
+    super(chainProviders, log.child({ module: "EthereumChainService" }));
     Object.entries(chainProviders).forEach(([chainId, provider]) => {
       this.signers.set(
         parseInt(chainId),
