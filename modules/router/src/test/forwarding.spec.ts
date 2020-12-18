@@ -28,7 +28,7 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
 import Sinon from "sinon";
 
-import { RouterStore } from "../services/store";
+import { PrismaStore, RouterUpdateType } from "../services/store";
 import { forwardTransferCreation, ForwardTransferError } from "../forwarding";
 import { config } from "../config";
 import * as swapService from "../services/swap";
@@ -50,7 +50,7 @@ type TransferCreatedTestContext = {
 describe("Forwarding", () => {
   describe("forwardTransferCreation", () => {
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
-    let store: Sinon.SinonStubbedInstance<RouterStore>;
+    let store: Sinon.SinonStubbedInstance<PrismaStore>;
     let data: ConditionalTransferCreatedPayload;
     let senderChannel: FullChannelState;
     let receiverChannel: FullChannelState;
@@ -200,6 +200,7 @@ describe("Forwarding", () => {
       expect(error.message).to.be.eq(errorReason);
 
       if (!senderCancelled) {
+        console.log("!senderCancelled error.context: ", error.context);
         expect(error.context).to.containSubset({
           ...errorContext,
         });
@@ -207,6 +208,7 @@ describe("Forwarding", () => {
         expect(store.queueUpdate.callCount).to.be.eq(0);
         return;
       }
+      console.log("error.context: ", error.context);
       expect(error.context).to.containSubset({
         senderTransfer: ctx.senderTransfer.transferId,
         senderChannel: ctx.senderTransfer.channelAddress,
@@ -234,11 +236,17 @@ describe("Forwarding", () => {
         expect(store.queueUpdate.callCount).to.be.eq(0);
         return;
       }
-      expect(store.queueUpdate.calledOnceWithExactly("TransferResolution", resolveParams)).to.be.true;
+      expect(
+        store.queueUpdate.calledOnceWithExactly(
+          ctx.senderTransfer.channelAddress,
+          RouterUpdateType.TRANSFER_RESOLUTION,
+          resolveParams,
+        ),
+      ).to.be.true;
     };
 
     beforeEach(async () => {
-      data = generateTransferData();
+      data = generateDefaultTestContext().event;
       senderChannel = createTestChannelState("create", {
         alice: mkAddress("0xa"),
         bob: mkAddress("0xb1"),
@@ -266,7 +274,7 @@ describe("Forwarding", () => {
       node.conditionalTransfer.resolves(Result.ok({} as any));
       node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
       node.reconcileDeposit.resolves(Result.ok({ channelAddress: data.channelAddress }));
-      store = Sinon.createStubInstance(RouterStore);
+      store = Sinon.createStubInstance(PrismaStore);
       getSwappedAmount = Sinon.stub(swapService, "getSwappedAmount");
       requestCollateral = Sinon.stub(collateral, "requestCollateral");
     });
@@ -515,7 +523,9 @@ describe("Forwarding", () => {
 
     it("fails with cancellation if getting receiver channel fails", async () => {
       const ctx = prepEnv();
-      node.getStateChannelByParticipants.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.getStateChannelByParticipants
+        .onFirstCall()
+        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
 
       const result = await forwardTransferCreation(
         ctx.event,
@@ -528,7 +538,7 @@ describe("Forwarding", () => {
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferError.reasons.RecipientChannelNotFound, {
-        storeError: "fail",
+        storeError: NodeError.reasons.InternalServerError,
       });
     });
 
@@ -576,7 +586,9 @@ describe("Forwarding", () => {
     // TODO: implement timeouts
     it("fails with cancellation if transfer creation fails", async () => {
       const ctx = prepEnv();
-      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.conditionalTransfer
+        .onFirstCall()
+        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
 
       const result = await forwardTransferCreation(
         ctx.event,
@@ -589,15 +601,19 @@ describe("Forwarding", () => {
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferError.reasons.ErrorForwardingTransfer, {
-        createError: "fail",
+        createError: NodeError.reasons.InternalServerError,
       });
     });
 
     // TODO: Failures cancelling
     it("cancelling sender transfer should fail if cannot get registered transfers", async () => {
       const ctx = prepEnv();
-      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
-      node.getRegisteredTransfers.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.conditionalTransfer
+        .onFirstCall()
+        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+      node.getRegisteredTransfers
+        .onFirstCall()
+        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
 
       const result = await forwardTransferCreation(
         ctx.event,
@@ -611,7 +627,7 @@ describe("Forwarding", () => {
 
       expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
       expect(result.getError().context).to.containSubset({
-        cancellationError: "fail",
+        cancellationError: NodeError.reasons.InternalServerError,
         routingId: ctx.senderTransfer.meta.routingId,
         senderChannel: ctx.senderTransfer.channelAddress,
         senderTransfer: ctx.senderTransfer.transferId,
@@ -621,7 +637,9 @@ describe("Forwarding", () => {
 
     it("cancelling transfers should fail if it cannot find transfer in registered transfers", async () => {
       const ctx = prepEnv();
-      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.conditionalTransfer
+        .onFirstCall()
+        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
       node.getRegisteredTransfers.onFirstCall().resolves(Result.ok([]));
 
       const result = await forwardTransferCreation(
@@ -648,8 +666,10 @@ describe("Forwarding", () => {
 
     it("cancelling should fail if resolving transfer fails for non-timeout", async () => {
       const ctx = prepEnv();
-      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
-      node.resolveTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
+      node.conditionalTransfer
+        .onFirstCall()
+        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+      node.resolveTransfer.onFirstCall().resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
 
       const result = await forwardTransferCreation(
         ctx.event,
@@ -663,7 +683,7 @@ describe("Forwarding", () => {
 
       expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
       expect(result.getError().context).to.containSubset({
-        resolveError: "fail",
+        resolveError: NodeError.reasons.InternalServerError,
         routingId: ctx.senderTransfer.meta.routingId,
         senderChannel: ctx.senderTransfer.channelAddress,
         senderTransfer: ctx.senderTransfer.transferId,
@@ -673,8 +693,10 @@ describe("Forwarding", () => {
 
     it("cancelling should be queued if resolving transfer fails due to timeout", async () => {
       const ctx = prepEnv();
-      node.conditionalTransfer.onFirstCall().resolves(Result.fail(new Error("fail")));
-      node.resolveTransfer.onFirstCall().resolves(Result.fail(new Error(NodeError.reasons.Timeout)));
+      node.conditionalTransfer
+        .onFirstCall()
+        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+      node.resolveTransfer.onFirstCall().resolves(Result.fail(new NodeError(NodeError.reasons.Timeout)));
 
       const result = await forwardTransferCreation(
         ctx.event,

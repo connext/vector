@@ -10,6 +10,9 @@ datasource db {
 
 model QueuedUpdate {
   id             String @id @default(uuid())
+  type           String
   channelAddress String
-  updateDate     String
+  updateData     String
+  status         String
+  context        String?
 }

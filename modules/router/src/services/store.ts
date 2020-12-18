@@ -1,4 +1,7 @@
 import { NodeParams } from "@connext/vector-types";
+import { PrismaClient } from "@prisma/client";
+
+import { config } from "../config";
 
 export const RouterUpdateStatus = {
   PENDING: "PENDING",
@@ -24,10 +27,7 @@ export type RouterStoredUpdate<T extends RouterUpdateType> = {
   payload: RouterStoredUpdatePayload[T];
 };
 export interface IRouterStore {
-  getQueuedUpdates(
-    channelAddress: string,
-    status?: RouterUpdateStatus,
-  ): Promise<RouterStoredUpdate<RouterUpdateType>[]>;
+  getQueuedUpdates(channelAddress: string, status: RouterUpdateStatus): Promise<RouterStoredUpdate<RouterUpdateType>[]>;
   queueUpdate<T extends RouterUpdateType>(
     channelAddress: string,
     type: T,
@@ -35,12 +35,25 @@ export interface IRouterStore {
   ): Promise<void>;
   setUpdateStatus(updateId: string, status: RouterUpdateStatus, context?: string): Promise<void>;
 }
-export class RouterStore implements IRouterStore {
+export class PrismaStore implements IRouterStore {
+  public prisma: PrismaClient;
+
+  constructor(private readonly dbUrl?: string) {
+    const _dbUrl = this.dbUrl
+      ? this.dbUrl
+      : config.dbUrl?.startsWith("sqlite")
+      ? `${config.dbUrl}?connection_limit=1&socket_timeout=10`
+      : config.dbUrl;
+
+    this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
+  }
+
   async getQueuedUpdates(
     channelAddress: string,
-    status?: RouterUpdateStatus,
+    status: RouterUpdateStatus,
   ): Promise<RouterStoredUpdate<RouterUpdateType>[]> {
-    return [];
+    const updates = await this.prisma.queuedUpdate.findMany({ where: { channelAddress, status } });
+    return updates.map((u) => JSON.parse(u.updateData));
   }
 
   async queueUpdate<T extends RouterUpdateType>(
@@ -48,10 +61,23 @@ export class RouterStore implements IRouterStore {
     type: T,
     updateData: RouterStoredUpdatePayload[T],
   ): Promise<void> {
-    return;
+    await this.prisma.queuedUpdate.create({
+      data: {
+        channelAddress,
+        type,
+        updateData: JSON.stringify(updateData),
+        status: RouterUpdateStatus.PENDING,
+      },
+    });
   }
 
   async setUpdateStatus(updateId: string, status: RouterUpdateStatus, context?: string): Promise<void> {
-    return;
+    await this.prisma.queuedUpdate.update({
+      where: { id: updateId },
+      data: {
+        status,
+        context,
+      },
+    });
   }
 }

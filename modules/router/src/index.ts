@@ -15,7 +15,7 @@ import { Registry } from "prom-client";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
-import { RouterStore } from "./services/store";
+import { PrismaStore } from "./services/store";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -59,7 +59,7 @@ const register = new Registry();
 server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });
 
 let router: IRouter;
-const store = new RouterStore();
+const store = new PrismaStore();
 
 server.addHook("onReady", async () => {
   const nodeService = await RestServerNodeService.connect(
