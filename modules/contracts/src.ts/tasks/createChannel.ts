@@ -5,11 +5,11 @@ import pino from "pino";
 export default task("create-channel", "Creates a new channel")
   .addParam("aliceAddress", "The address of both the alice role AND the signer")
   .addParam("bobAddress", "The address of the channel's bob role")
-  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: silent)")
+  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: info)")
   .addParam("testMode", "If provided then create a TestChannel else create a VectorChannel")
   .setAction(async (args, hre): Promise<Contract> => {
     const { aliceAddress, bobAddress, logLevel, testMode } = args;
-    const log = pino({ level: logLevel || "silent" });
+    const log = pino({ level: logLevel || "info" });
     log.info(`Preparing to create a channel for alice=${aliceAddress} and bob=${bobAddress}`);
     const channelFactory = await (hre.ethers as any).getContract(testMode ? "TestChannelFactory" : "ChannelFactory", aliceAddress);
     const channelAddress = await channelFactory.getChannelAddress(aliceAddress, bobAddress);

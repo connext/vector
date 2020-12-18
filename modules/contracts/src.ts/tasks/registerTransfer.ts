@@ -5,10 +5,10 @@ import pino from "pino";
 export default task("register-transfer", "Displays first 3 accounts and their recommended gifts")
   .addParam("transferName", "The name of the transfer to register")
   .addParam("signerAddress", "The address that will sign the registration tx")
-  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: silent)")
+  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: info)")
   .setAction(async (args, hre): Promise<void> => {
     const { transferName, signerAddress, logLevel } = args;
-    const log = pino({ level: logLevel || "silent" });
+    const log = pino({ level: logLevel || "info" });
 
     log.info(`Preparing to add ${transferName} to registry (Sender=${signerAddress})`);
 

@@ -49,7 +49,7 @@ describe("ChannelFactory", function () {
   });
 
   it("should create a channel and calculated addresses should match actual one", async () => {
-    const channel = await createChannel(alice.address, bob.address);
+    const channel = await createChannel(alice.address, bob.address, undefined, "");
     const computedAddr1 = await channelFactory.getChannelAddress(alice.address, bob.address);
     const computedAddr2 = await getCreate2MultisigAddress(
       alicePubId,

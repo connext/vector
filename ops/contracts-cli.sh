@@ -16,6 +16,12 @@ fi
 ethprovider_image="${project}_ethprovider:latest";
 bash "$root/ops/pull-images.sh" "$ethprovider_image" > /dev/null
 
+prettyfn="./node_modules/.bin/pino-pretty"
+if [[ -x "$prettyfn" ]]
+then prettify=("$prettyfn" "-f" "--ignore" "level,pid,hostname,time")
+else prettify=()
+fi
+
 docker run \
   --entrypoint=hardhat \
   --env="API_KEY=${API_KEY}" \
@@ -30,4 +36,4 @@ docker run \
   --volume="$root/address-book.json:/data/address-book.json" \
   --volume="$root:/root" \
   --workdir="/root/modules/contracts" \
-  "$ethprovider_image" --config dist/hardhat.config.js "${args[@]}"
+  "$ethprovider_image" --config dist/hardhat.config.js "${args[@]}" | "${prettify[@]}"

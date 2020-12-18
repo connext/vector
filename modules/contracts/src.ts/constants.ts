@@ -10,8 +10,8 @@ const chainId = Object.keys(chainProviders)[0];
 const url = Object.values(chainProviders)[0];
 const mnemonic = process.env.SUGAR_DADDY ?? "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
-export const logLevel = process.env.LOG_LEVEL || "silent";
-export const logger = pino({ level: logLevel });
+export const defaultLogLevel = process.env.LOG_LEVEL || "info";
+export const logger = pino({ level: defaultLogLevel });
 
 export const networkName = network.name;
 

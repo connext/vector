@@ -5,10 +5,10 @@ import pino from "pino";
 
 export default task("display-accounts", "Displays first 3 accounts and their recommended gifts")
   .addParam("mnemonic", "The mnemonic to display accounts for")
-  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: silent)")
+  .addOptionalParam("logLevel", "One of 'debug', 'info', 'warn', 'error', 'silent' (default: info)")
   .setAction(async (args): Promise<void> => {
     const { mnemonic, logLevel } = args;
-    const log = pino({ level: logLevel || "silent" });
+    const log = pino({ level: logLevel || "info" });
     const hdNode = HDNode.fromMnemonic(mnemonic).derivePath("m/44'/60'/0'/0");
     const wallets: Wallet[] = Array(20)
       .fill(0)

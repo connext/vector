@@ -4,7 +4,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
 import { TestChannel, TestToken } from "./artifacts";
-import { alice, bob, provider } from "./constants";
+import { alice, bob, defaultLogLevel, provider } from "./constants";
 
 export const getContract = (ethers as any).getContract;
 
@@ -14,15 +14,15 @@ export const getContract = (ethers as any).getContract;
 export const registerTransfer = (
   transferName: string,
   signerAddress: string = alice.address,
-  logLevel = "silent",
+  logLevel = defaultLogLevel,
 ): Promise<Contract> =>
   run("register-transfer", { transferName, signerAddress, logLevel });
 
 export const createChannel = (
   aliceAddress: string = alice.address,
   bobAddress: string = bob.address,
-  logLevel = "silent",
-  testMode = "",
+  logLevel = defaultLogLevel,
+  testMode = "yarp",
 ): Promise<Contract> =>
   run("create-channel", { aliceAddress, bobAddress, logLevel, testMode });
 
