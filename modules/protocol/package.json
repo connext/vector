@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-protocol",
-  "version": "0.0.38",
+  "version": "0.0.39",
   "description": "",
   "main": "dist/vector.js",
   "types": "dist/vector.d.ts",
@@ -14,9 +14,9 @@
   "author": "Arjun Bhuptani",
   "license": "MIT",
   "dependencies": {
-    "@connext/vector-contracts": "0.0.38",
-    "@connext/vector-types": "0.0.38",
-    "@connext/vector-utils": "0.0.38",
+    "@connext/vector-contracts": "0.0.39",
+    "@connext/vector-types": "0.0.39",
+    "@connext/vector-utils": "0.0.39",
     "@ethersproject/abi": "5.0.9",
     "@ethersproject/bignumber": "5.0.12",
     "@ethersproject/constants": "5.0.7",

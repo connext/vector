@@ -12,8 +12,8 @@
     "test": "ts-mocha --check-leaks --exit --timeout 60000 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.0.38",
-    "@connext/vector-utils": "0.0.38",
+    "@connext/vector-types": "0.0.39",
+    "@connext/vector-utils": "0.0.39",
     "@sinclair/typebox": "0.11.0",
     "crypto": "1.0.1",
     "fastify": "3.8.0",

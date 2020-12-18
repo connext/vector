@@ -165,7 +165,7 @@ export class BrowserNode implements INodeService {
     reconcileDeposit?: boolean;
     withdrawalAddress?: string;
     meta?: any;
-  }): Promise<{ withdrawalTx?: string }> {
+  }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
       chainId: params.fromChainId,
@@ -192,7 +192,7 @@ export class BrowserNode implements INodeService {
 
     const crossChainTransferId = getRandomBytes32();
     const { meta, ...res } = params;
-    const updatedMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
+    const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
 
     if (params.reconcileDeposit) {
       const depositRes = await this.reconcileDeposit({
@@ -265,8 +265,9 @@ export class BrowserNode implements INodeService {
     this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
 
     let withdrawalTx: string | undefined;
+    let withdrawalAmount: string | undefined;
     if (params.withdrawalAddress) {
-      const withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
+      withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       this.logger.info(
         { withdrawalAddress: params.withdrawalAddress, withdrawalAmount },
         "Withdrawing to configured address",
@@ -285,7 +286,7 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
-    return { withdrawalTx };
+    return { withdrawalTx, withdrawalAmount };
   }
   //////////////////
 
