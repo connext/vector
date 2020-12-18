@@ -134,6 +134,7 @@ export const TChannelUpdate = Type.Object({
   aliceSignature: Type.Optional(Type.Union([TSignature, Type.Null()])), //Type.Optional(TSignature),
   bobSignature: Type.Optional(Type.Union([TSignature, Type.Null()])),
 });
+export type TChannelUpdate = Static<typeof TChannelUpdate>;
 
 export const TFullChannelState = Type.Object({
   assetIds: Type.Array(TAddress, { minItems: 1 }),
@@ -154,4 +155,4 @@ export const TFullChannelState = Type.Object({
   inDispute: Type.Boolean(),
 });
 
-export type FullChannelState = Static<typeof TFullChannelState>;
+export type TFullChannelState = Static<typeof TFullChannelState>;

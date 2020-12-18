@@ -6,10 +6,10 @@ import {
   ResolveTransferParams,
   SetupParams,
   UpdateType,
+  FullChannelState,
 } from "./channel";
 import { InboundChannelUpdateError, OutboundChannelUpdateError, Result } from "./error";
 import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";
-import { FullChannelState } from "./schemas";
 
 export interface IVectorProtocol {
   signerAddress: string;

@@ -1,5 +1,5 @@
-import { FullTransferState } from "./channel";
-import { EngineParams, FullChannelState, NodeResponses } from "./schemas";
+import { FullTransferState, FullChannelState } from "./channel";
+import { EngineParams, NodeResponses } from "./schemas";
 import { RegisteredTransfer } from "./transferDefinitions";
 
 export const ChannelRpcMethods = {

@@ -212,7 +212,7 @@ export class Agent {
     if (channelRes.isError) {
       throw channelRes.getError()!;
     }
-    return channelRes.getValue()!;
+    return channelRes.getValue()! as FullChannelState;
   }
 
   private async setupChannel(): Promise<string> {

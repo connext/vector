@@ -1,11 +1,10 @@
-import { ChannelUpdate, UpdateParams } from "./channel";
+import { ChannelUpdate, UpdateParams, FullChannelState } from "./channel";
 import {
   MAXIMUM_CHANNEL_TIMEOUT,
   MAXIMUM_TRANSFER_TIMEOUT,
   MINIMUM_CHANNEL_TIMEOUT,
   MINIMUM_TRANSFER_TIMEOUT,
 } from "./constants";
-import { FullChannelState } from "./schemas";
 
 export class Result<T, Y = any> {
   private value?: T;

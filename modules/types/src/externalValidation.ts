@@ -1,6 +1,5 @@
-import { ChannelUpdate, FullTransferState, UpdateParams, UpdateType } from "./channel";
+import { ChannelUpdate, FullTransferState, UpdateParams, UpdateType, FullChannelState } from "./channel";
 import { Result } from "./error";
-import { FullChannelState } from "./schemas";
 
 // This service is injected into the protocol via the higher
 // level modules (i.e. router) to allow validation of updates
