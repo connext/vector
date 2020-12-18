@@ -8,7 +8,16 @@ import { alice, bob, provider } from "./constants";
 
 export const getContract = (ethers as any).getContract;
 
+////////////////////////////////////////
 // Wrap tasks in a format that's easier to use internally
+
+export const deployContracts = (
+  deployerAddress: string,
+  schema: [string, any[]][],
+  logLevel = "silent",
+): Promise<Contract> =>
+  run("deploy-contracts", { deployerAddress, schema, logLevel });
+
 export const createChannel = (
   aliceAddress: string,
   bobAddress: string,
@@ -16,6 +25,9 @@ export const createChannel = (
   testMode = "",
 ): Promise<Contract> =>
   run("create-channel", { aliceAddress, bobAddress, logLevel, testMode });
+
+////////////////////////////////////////
+// Other Utils
 
 export const getTestChannel = async (): Promise<Contract> => {
   return createChannel(alice.address, bob.address, "", "true");

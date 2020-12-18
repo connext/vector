@@ -1,9 +1,10 @@
+import { BigNumber } from "@ethersproject/bignumber";
 import { EtherSymbol, Zero } from "@ethersproject/constants";
 import { formatEther } from "@ethersproject/units";
-import { ethers, getNamedAccounts, getChainId } from "hardhat";
+import { deployments, ethers, getNamedAccounts, getChainId } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { deployContracts, registerTransfer } from "../src.ts/tasks";
+import { registerTransfer } from "../src.ts/tasks";
 import { logger } from "../src.ts/constants";
 
 const func: DeployFunction = async () => {
@@ -32,31 +33,59 @@ const func: DeployFunction = async () => {
   // Default: run testnet migration
   } else {
 
-    await deployContracts(
-      deployer,
-      [
-        // Libs
-        ["HashlockTransfer", []],
-        ["Withdraw", []],
-        ["TransferRegistry", []],
-        ["TestLibIterableMapping", []],
-        ["CMCAsset", []],
+    for (const row of [
+      // Libs
+      ["HashlockTransfer", []],
+      ["Withdraw", []],
+      ["TransferRegistry", []],
+      ["TestLibIterableMapping", []],
+      ["CMCAsset", []],
 
-        // Real Channel
-        ["ChannelMastercopy", []],
-        ["ChannelFactory", ["ChannelMastercopy", Zero]],
+      // Real Channel
+      ["ChannelMastercopy", []],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
 
-        // Test Channel
-        ["TestChannel", []],
-        ["TestChannelFactory", ["TestChannel", Zero]],
+      // Test Channel
+      ["TestChannel", []],
+      ["TestChannelFactory", ["TestChannel", Zero]],
 
-        // Test Tokens
-        ["TestToken", []],
-        ["FailingToken", []],
-        ["NonconformingToken", []],
-      ],
-      log,
-    );
+      // Test Tokens
+      ["TestToken", []],
+      ["FailingToken", []],
+      ["NonconformingToken", []],
+    ]) {
+      const name = row[0] as string;
+      const args = row[1] as Array<string | BigNumber>;
+      const processedArgs = await Promise.all(args.map(async (arg: any): Promise<any> => {
+        try {
+          return (await deployments.get(arg)).address;
+        } catch (e) {
+          return arg;
+        }
+      }));
+      log.info(`Deploying ${name} with args [${processedArgs.join(", ")}]`);
+      await deployments.deploy(name, {
+        from: deployer,
+        args: processedArgs,
+        /*
+        gasLimit: deployTx.gasLimit && BigNumber.from(deployTx.gasLimit).lt(MIN_GAS_LIMIT)
+          ? MIN_GAS_LIMIT
+          : undefined,
+        */
+      });
+      const deployment = await deployments.get(name);
+      if (!deployment.transactionHash) {
+        throw new Error(`Failed to deploy ${name}`);
+      }
+      const tx = await ethers.provider.getTransaction(deployment.transactionHash!);
+      const receipt = await ethers.provider.getTransactionReceipt(deployment.transactionHash!);
+      log.info(`Sent transaction to deploy ${name}, txHash: ${deployment.transactionHash}`);
+      log.info(
+        `Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(
+          (receipt.gasUsed || Zero).mul(tx.gasPrice),
+        )} deploying ${name} to address: ${deployment.address}`,
+      );
+    }
 
     await registerTransfer("Withdraw", deployer);
     await registerTransfer("HashlockTransfer", deployer);
