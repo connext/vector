@@ -165,6 +165,7 @@ export async function setupEngineListeners(
     const method = "onReceiveSetupMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
+      return;
     }
     const setupInfo = params.getValue();
     logger.info({ params: setupInfo, method }, "Handling message");
