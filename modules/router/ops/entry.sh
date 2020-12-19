@@ -47,9 +47,9 @@ fi
 ########################################
 # Launch it
 
-echo "Running database migration"
-prisma --version
-prisma migrate up --experimental
+# echo "Running database migration"
+# prisma --version
+# prisma migrate up --experimental
 
 # TODO: this doesn't work with single container mode
 # echo "Starting database UI"
