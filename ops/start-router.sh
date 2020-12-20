@@ -323,7 +323,7 @@ services:
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_DATABASE_URL: '$database_url'
       VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: 'database'
+      VECTOR_PG_HOST: 'database-node'
       VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
@@ -338,24 +338,41 @@ services:
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
       VECTOR_DATABASE_URL: '$database_url'
       VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: 'database'
+      VECTOR_PG_HOST: 'database-router'
       VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
 
-  database:
+  database-node:
     $common
     $database_image
     environment:
       AWS_ACCESS_KEY_ID: '$aws_access_id'
       AWS_SECRET_ACCESS_KEY: '$aws_access_key'
-      POSTGRES_DB: '$project'
+      POSTGRES_DB: '$pg_db'
       POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$project'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PROD: '$production'
+    ports:
+      - '5432:5432'
+
+  database-router:
+    $common
+    $database_image
+    environment:
+      AWS_ACCESS_KEY_ID: '$aws_access_id'
+      AWS_SECRET_ACCESS_KEY: '$aws_access_key'
+      POSTGRES_DB: '$pg_db'
+      POSTGRES_PASSWORD: '$pg_password'
+      POSTGRES_PASSWORD_FILE: '$pg_password_file'
+      POSTGRES_USER: '$project'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
+      VECTOR_PROD: '$production'
+    ports:
+      - '5433:5432'
 
   $observability_services
 
