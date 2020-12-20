@@ -73,3 +73,4 @@ cypress/videos
 **/.env
 **/react-app-env.d.ts
 .secret
+**/generated

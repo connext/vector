@@ -1,6 +1,6 @@
 import { NodeParams } from "@connext/vector-types";
-import { PrismaClient } from "@prisma/client";
 
+import { PrismaClient } from "../generated/db-client";
 import { config } from "../config";
 
 export const RouterUpdateStatus = {

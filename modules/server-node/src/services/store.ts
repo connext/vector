@@ -17,6 +17,10 @@ import {
   TransferDispute,
 } from "@connext/vector-types";
 import { getRandomBytes32, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { BigNumber } from "@ethersproject/bignumber";
+import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
+
+import { config } from "../config";
 import {
   Prisma,
   Channel,
@@ -25,11 +29,7 @@ import {
   Balance as BalanceEntity,
   Transfer,
   OnchainTransaction,
-} from "@prisma/client";
-import { BigNumber } from "@ethersproject/bignumber";
-import { TransactionResponse, TransactionReceipt } from "@ethersproject/providers";
-
-import { config } from "../config";
+} from "../generated/db-client";
 
 export interface IServerNodeStore extends IEngineStore {
   registerSubscription<T extends EngineEvent>(publicIdentifier: string, event: T, url: string): Promise<void>;
