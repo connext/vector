@@ -24,7 +24,7 @@
     "ethers": "5.0.21",
     "fastify": "3.8.0",
     "fastify-cors": "4.1.0",
-    "fastify-oas": "3.0.3",
+    "fastify-oas": "3.0.8",
     "merkletreejs": "0.2.9",
     "pg": "8.5.1",
     "pino": "6.7.0",

@@ -278,6 +278,7 @@ export async function forwardTransferCreation(
   }
 
   // Next, get the recipient's channel and figure out whether it needs to be collateralized
+  // TODO: Do we want to cancel or hold payment in this case?
   const recipientChannelRes = await nodeService.getStateChannelByParticipants({
     publicIdentifier: routerPublicIdentifier,
     counterparty: recipientIdentifier,
@@ -288,6 +289,7 @@ export async function forwardTransferCreation(
       storeError: recipientChannelRes.getError()?.message,
     });
   }
+  // TODO: Do we want to cancel or hold payment in this case?
   const recipientChannel = recipientChannelRes.getValue();
   if (!recipientChannel) {
     return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.RecipientChannelNotFound, {
@@ -314,6 +316,7 @@ export async function forwardTransferCreation(
       undefined,
       recipientAmount,
     );
+    // TODO: Do we want to cancel or hold payment in this case?
     if (requestCollateralRes.isError) {
       return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.UnableToCollateralize, {
         collateralError: requestCollateralRes.getError()?.message,

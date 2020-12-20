@@ -32,8 +32,23 @@ describe("Collateral", () => {
   });
 
   afterEach(() => {
-    // TODO: this breaks tests, why???
+    // TODO: why doesnt this work
     // Sinon.restore();
+    // Sinon.reset();
+  });
+
+  it("should get profiles for different assetIds", async () => {
+    const channel = createTestChannelState("create").channel;
+    const rebalanceProfileEthRes = await getRebalanceProfile(channel.networkContext.chainId, AddressZero);
+    const profileEth = rebalanceProfileEthRes.getValue();
+    expect(profileEth.assetId).eq(AddressZero);
+
+    const tokenProfile = config.rebalanceProfiles.find(
+      (prof) => prof.chainId === channel.networkContext.chainId && prof.assetId !== AddressZero,
+    );
+    const rebalanceProfileTokenRes = await getRebalanceProfile(channel.networkContext.chainId, tokenProfile.assetId);
+    const profileToken = rebalanceProfileTokenRes.getValue();
+    expect(profileToken.assetId).eq(tokenProfile.assetId);
   });
 
   it("should request collateral without a target", async () => {
