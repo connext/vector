@@ -49,7 +49,7 @@ export default task("register-transfer", "Displays first 3 accounts and their re
       stateEncoding: tidy(transferInfo.stateEncoding),
       encodedCancel: transferInfo.encodedCancel,
     };
-    log.info(`Adding transfer to registry ${JSON.stringify(cleaned, null, 2)}`);
+    log.info(cleaned, `Adding transfer to registry`);
     const response = await registry.addTransferDefinition(cleaned);
     log.info(`Added: ${response.hash}`);
     await response.wait();

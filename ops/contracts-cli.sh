@@ -33,7 +33,6 @@ docker run \
   --rm \
   --tmpfs="/tmp" \
   --tty \
-  --volume="$root/address-book.json:/data/address-book.json" \
   --volume="$root:/root" \
   --workdir="/root/modules/contracts" \
-  "$ethprovider_image" --config dist/hardhat.config.js "${args[@]}" | "${prettify[@]}"
+  "$ethprovider_image" "${args[@]}" | "${prettify[@]}"
