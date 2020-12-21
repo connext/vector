@@ -283,7 +283,7 @@ utils: types $(shell find modules/utils $(find_options))
 
 contracts: contracts-js
 ethprovider: contracts-img
-contracts-js: utils modules/contracts/hardhat.config.ts $(shell find modules/contracts/src.sol modules/contracts/src.ts $(find_options))
+contracts-js: utils modules/contracts/hardhat.config.ts $(shell find modules/contracts/src.sol modules/contracts/src.ts modules/contracts/deploy $(find_options))
 	$(log_start)
 	$(docker_run) "cd modules/contracts && npm run build"
 	$(log_finish) && mv -f $(totalTime) .flags/$@
