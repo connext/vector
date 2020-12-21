@@ -79,6 +79,11 @@ const config: HardhatUserConfig = {
       chainId: 80001,
       url: urlOverride || "https://rpc-mumbai.matic.today",
     },
+    atrium: {
+      accounts: { mnemonic },
+      chainId: 152709604825713,
+      url: urlOverride || "https://kovan2.arbitrum.io/rpc",
+    },
   },
 };
 
