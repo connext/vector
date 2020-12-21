@@ -26,65 +26,81 @@ const func: DeployFunction = async () => {
   ////////////////////////////////////////
   // Run the migration
 
+  type Args = Array<string | BigNumber>;
+  const migrate = async (name: string, args: Args): Promise<void> => {
+    const processedArgs = await Promise.all(args.map(async (arg: any): Promise<any> => {
+      try {
+        return (await deployments.get(arg)).address;
+      } catch (e) {
+        return arg;
+      }
+    }));
+    log.info(`Deploying ${name} with args [${processedArgs.join(", ")}]`);
+    await deployments.deploy(name, {
+      from: deployer,
+      args: processedArgs,
+      /*
+      gasLimit: deployTx.gasLimit && BigNumber.from(deployTx.gasLimit).lt(MIN_GAS_LIMIT)
+        ? MIN_GAS_LIMIT
+        : undefined,
+      */
+    });
+    const deployment = await deployments.get(name);
+    if (!deployment.transactionHash) {
+      throw new Error(`Failed to deploy ${name}`);
+    }
+    const tx = await ethers.provider.getTransaction(deployment.transactionHash!);
+    const receipt = await ethers.provider.getTransactionReceipt(deployment.transactionHash!);
+    log.info(`Sent transaction to deploy ${name}, txHash: ${deployment.transactionHash}`);
+    log.info(
+      `Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(
+        (receipt.gasUsed || Zero).mul(tx.gasPrice),
+      )} deploying ${name} to address: ${deployment.address}`,
+    );
+  };
+
   // Don't migrate to mainnet until audit is finished
   if (chainId === "1") {
+    log.info(`Running mainnet migration`);
     throw new Error(`Contract migration for chain ${chainId} is not supported yet`);
+
+  } else if (chainId === "4" || chainId === "5" || chainId === "42" || chainId === "80001") {
+    log.info(`Running testnet migration`);
+
+    for (const row of [
+      ["HashlockTransfer", []],
+      ["Withdraw", []],
+      ["TransferRegistry", []],
+      ["ChannelMastercopy", []],
+      ["ChannelFactory", ["ChannelMastercopy", Zero]],
+      ["TestToken", []],
+    ]) {
+      const name = row[0] as string;
+      const args = row[1] as Array<string | BigNumber>;
+      await migrate(name, args);
+    }
 
   // Default: run testnet migration
   } else {
+    log.info(`Running localnet migration`);
 
     for (const row of [
-      // Libs
       ["HashlockTransfer", []],
       ["Withdraw", []],
       ["TransferRegistry", []],
       ["TestLibIterableMapping", []],
       ["CMCAsset", []],
-
-      // Real Channel
       ["ChannelMastercopy", []],
       ["ChannelFactory", ["ChannelMastercopy", Zero]],
-
-      // Test Channel
       ["TestChannel", []],
       ["TestChannelFactory", ["TestChannel", Zero]],
-
-      // Test Tokens
       ["TestToken", []],
       ["FailingToken", []],
       ["NonconformingToken", []],
     ]) {
       const name = row[0] as string;
       const args = row[1] as Array<string | BigNumber>;
-      const processedArgs = await Promise.all(args.map(async (arg: any): Promise<any> => {
-        try {
-          return (await deployments.get(arg)).address;
-        } catch (e) {
-          return arg;
-        }
-      }));
-      log.info(`Deploying ${name} with args [${processedArgs.join(", ")}]`);
-      await deployments.deploy(name, {
-        from: deployer,
-        args: processedArgs,
-        /*
-        gasLimit: deployTx.gasLimit && BigNumber.from(deployTx.gasLimit).lt(MIN_GAS_LIMIT)
-          ? MIN_GAS_LIMIT
-          : undefined,
-        */
-      });
-      const deployment = await deployments.get(name);
-      if (!deployment.transactionHash) {
-        throw new Error(`Failed to deploy ${name}`);
-      }
-      const tx = await ethers.provider.getTransaction(deployment.transactionHash!);
-      const receipt = await ethers.provider.getTransactionReceipt(deployment.transactionHash!);
-      log.info(`Sent transaction to deploy ${name}, txHash: ${deployment.transactionHash}`);
-      log.info(
-        `Success! Consumed ${receipt.gasUsed} gas worth ${EtherSymbol} ${formatEther(
-          (receipt.gasUsed || Zero).mul(tx.gasPrice),
-        )} deploying ${name} to address: ${deployment.address}`,
-      );
+      await migrate(name, args);
     }
 
     await registerTransfer("Withdraw", deployer);
