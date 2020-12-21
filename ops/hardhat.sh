@@ -22,12 +22,17 @@ then prettify=("$prettyfn" "--ignore" "level,module,pid,hostname,time")
 else prettify=()
 fi
 
+# Bc we're running a docker container, override localhost with container host's IP
+if echo "${args[@]}" | grep -qs "localhost"
+then ETH_PROVIDER_URL=${ETH_PROVIDER_URL:-http://172.17.0.1:8545}
+fi
+
 name="${project}_hardhat_cli"
 docker run \
   --detach \
   --entrypoint=hardhat \
   --env="API_KEY=${API_KEY}" \
-  --env="ETH_PROVIDER_URL=${ETH_PROVIDER_URL:-http://172.17.0.1:8545}" \
+  --env="ETH_PROVIDER_URL=$ETH_PROVIDER_URL" \
   --env="MNEMONIC=${MNEMONIC}" \
   --interactive \
   --name="$name" \
