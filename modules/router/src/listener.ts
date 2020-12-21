@@ -243,7 +243,15 @@ export async function setupListeners(
   });
 
   nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
-    const res = await handleIsAlive(data, routerPublicIdentifier, routerSignerAddress, nodeService, store, logger);
+    const res = await handleIsAlive(
+      data,
+      routerPublicIdentifier,
+      routerSignerAddress,
+      nodeService,
+      store,
+      chainProviders,
+      logger,
+    );
     if (res.isError) {
       logger.error({ error: res.getError()?.message, context: res.getError()?.context }, "Error handling isAlive");
       return;

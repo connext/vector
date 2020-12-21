@@ -477,6 +477,7 @@ export async function handleIsAlive(
   signerAddress: string,
   nodeService: INodeService,
   store: IRouterStore,
+  chainProviders: ChainJsonProviders,
   logger: BaseLogger,
 ): Promise<Result<undefined, ForwardTransferError>> {
   const method = "handleIsAlive";
@@ -491,7 +492,39 @@ export async function handleIsAlive(
     logger.info({ method, update }, "Found update for isAlive channel");
     let transferResult;
     if (update.type === RouterUpdateType.TRANSFER_CREATION) {
-      transferResult = await nodeService.conditionalTransfer(update.payload as NodeParams.ConditionalTransfer);
+      // first collateralize if needed
+      const params = update.payload as NodeParams.ConditionalTransfer;
+      const channelStateRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+      if (channelStateRes.isError) {
+        transferResult = channelStateRes;
+      } else {
+        const channelState = channelStateRes.getValue();
+        const routerBalance = getBalanceForAssetId(
+          channelState as FullChannelState,
+          params.assetId,
+          routerPublicIdentifier === channelState?.aliceIdentifier ? "alice" : "bob",
+        );
+        if (BigNumber.from(routerBalance).lt(params.amount)) {
+          logger.info({ routerBalance, recipientAmount: params.amount }, "Requesting collateral to cover transfer");
+          const requestCollateralRes = await requestCollateral(
+            channelState as FullChannelState,
+            params.assetId,
+            routerPublicIdentifier,
+            nodeService,
+            chainProviders,
+            logger,
+            undefined,
+            params.amount,
+          );
+          // TODO: Do we want to cancel or hold payment in this case?
+          if (requestCollateralRes.isError) {
+            transferResult = requestCollateralRes;
+          }
+        }
+      }
+      if (!transferResult?.isError) {
+        transferResult = await nodeService.conditionalTransfer(update.payload as NodeParams.ConditionalTransfer);
+      }
     } else if (update.type === RouterUpdateType.TRANSFER_RESOLUTION) {
       transferResult = await nodeService.resolveTransfer(update.payload as NodeParams.ResolveTransfer);
     } else {
