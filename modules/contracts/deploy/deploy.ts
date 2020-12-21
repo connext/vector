@@ -80,6 +80,9 @@ const func: DeployFunction = async () => {
       await migrate(name, args);
     }
 
+    await registerTransfer("Withdraw", deployer);
+    await registerTransfer("HashlockTransfer", deployer);
+
   // Default: run testnet migration
   } else {
     log.info(`Running localnet migration`);
