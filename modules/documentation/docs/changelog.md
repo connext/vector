@@ -2,6 +2,12 @@
 
 ## Next Release
 
+- add cancellation of sender-side payment on router
+- add `EncodedCancel()` to `TransferRegistry` / `TransferDefinition`
+- add `encodedCancel` to `RegisteredTransfer`
+- add engine RPC tests
+- add engine param converter tests
+
 ## 0.0.38
 
 - propagate meta through updates

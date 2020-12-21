@@ -73,7 +73,7 @@ server.get<{ Params: { publicIdentifier: string } }>(
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
     try {
-      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, undefined);
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
       const res = await engine.request<"chan_getStatus">(params);
       return reply.status(200).send(res);
     } catch (e) {
@@ -230,7 +230,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
     if (!engine) {
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, {});
     try {
       const res = await engine.request<"chan_getChannelStates">(params);
       // OPTIMIZATION: use db query instead of filter
