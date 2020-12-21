@@ -59,15 +59,25 @@ const config: HardhatUserConfig = {
       saveDeployments: false,
       url: urlOverride || "http://localhost:8545",
     },
-    matic: {
-      accounts: { mnemonic },
-      chainId: 80001,
-      url: urlOverride || "https://rpc-mumbai.matic.today",
-    },
     rinkeby: {
       accounts: { mnemonic },
       chainId: 4,
       url: urlOverride || "http://localhost:8545",
+    },
+    goerli: {
+      accounts: { mnemonic },
+      chainId: 5,
+      url: urlOverride || "http://localhost:8545",
+    },
+    kovan: {
+      accounts: { mnemonic },
+      chainId: 42,
+      url: urlOverride || "http://localhost:8545",
+    },
+    matic: {
+      accounts: { mnemonic },
+      chainId: 80001,
+      url: urlOverride || "https://rpc-mumbai.matic.today",
     },
   },
 };
