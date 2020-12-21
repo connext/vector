@@ -59,7 +59,6 @@ export const deposit = async (
 
   const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
-  console.log("depositorBefore: ", depositorBefore);
 
   if (depositorAliceOrBob === "alice") {
     const tx = await depositor.sendDepositTx({
@@ -195,6 +194,7 @@ export const withdraw = async (
   assetId: string,
   amount: BigNumber,
   withdrawRecipient: string,
+  fee = "0",
 ): Promise<FullChannelState> => {
   // Get pre-withdraw channel balances
   const preWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue() as FullChannelState;
@@ -226,7 +226,7 @@ export const withdraw = async (
     amount: amount.toString(),
     assetId,
     recipient: withdrawRecipient,
-    fee: "0",
+    fee,
     meta: { reason: "Test withdrawal" },
   });
   expect(withdrawalRes.getError()).to.be.undefined;

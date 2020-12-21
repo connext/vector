@@ -24,7 +24,7 @@ describe(testName, () => {
       carolEvts,
       randomIndex,
     );
-    const min = utils.parseEther("0.1");
+    const min = utils.parseEther("0.0001");
 
     daveService = await RestServerNodeService.connect(
       env.daveUrl,
@@ -47,9 +47,9 @@ describe(testName, () => {
 
   it("ETH: deposit, transfer C -> R -> D, withdraw", async () => {
     const assetId = constants.AddressZero;
-    const depositAmt = utils.parseEther("0.1");
-    const transferAmt = utils.parseEther("0.005");
-    const withdrawAmt = utils.parseEther("0.005");
+    const depositAmt = utils.parseEther("0.0001");
+    const transferAmt = utils.parseEther("0.00005");
+    const withdrawAmt = utils.parseEther("0.00005");
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
     const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
@@ -63,8 +63,16 @@ describe(testName, () => {
       assetId,
       transferAmt,
     );
+    console.log("WITHDRAWING WITH FEE ===========");
     // withdraw to signing address
-    await withdraw(carolService, carolRogerPostSetup.channelAddress, assetId, withdrawAmt, carolService.signerAddress);
+    await withdraw(
+      carolService,
+      carolRogerPostSetup.channelAddress,
+      assetId,
+      withdrawAmt,
+      carolService.signerAddress,
+      "10",
+    );
     // withdraw to delegated recipient
     await withdraw(daveService, daveRogerPostSetup.channelAddress, assetId, withdrawAmt, Wallet.createRandom().address);
   });
@@ -75,9 +83,9 @@ describe(testName, () => {
       return;
     }
     const assetId = constants.AddressZero;
-    const depositAmt = utils.parseEther("0.1");
-    const transferAmt = utils.parseEther("0.005");
-    const withdrawAmt = utils.parseEther("0.005");
+    const depositAmt = utils.parseEther("0.0001");
+    const transferAmt = utils.parseEther("0.00005");
+    const withdrawAmt = utils.parseEther("0.00005");
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
     const daveRogerPostSetup = await setup(daveService, rogerService, chainId2);
