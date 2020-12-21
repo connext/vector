@@ -1,3 +1,4 @@
+import { deployments } from "@connext/vector-contracts";
 import { VectorNodeConfig, VectorNodeConfigSchema } from "@connext/vector-types";
 import Ajv from "ajv";
 
@@ -19,6 +20,31 @@ try {
 
 // Set defaults
 vectorConfig.messagingUrl = vectorConfig.messagingUrl || "http://messaging";
+
+// Pull live network addresses out of public deployments if not provided explicitly
+for (const chainId of Object.keys(vectorConfig.chainProviders)) {
+  if (!vectorConfig.chainAddresses) {
+    vectorConfig.chainAddresses = {} as any;
+  }
+  if (!vectorConfig.chainAddresses[chainId]) {
+    vectorConfig.chainAddresses[chainId] = {} as any;
+  }
+  if (
+    !vectorConfig.chainAddresses[chainId].channelFactoryAddress
+    && deployments[chainId] && deployments[chainId].ChannelFactory
+  ) {
+    vectorConfig.chainAddresses[chainId].channelFactoryAddress =
+      deployments[chainId].ChannelFactory.address;
+  }
+  if (
+    !vectorConfig.chainAddresses[chainId].transferRegistryAddress
+    && deployments[chainId] && deployments[chainId].TransferRegistry
+  ) {
+    vectorConfig.chainAddresses[chainId].transferRegistryAddress =
+      deployments[chainId].TransferRegistry.address;
+  }
+
+}
 
 const validate = ajv.compile(VectorNodeConfigSchema);
 const valid = validate(vectorConfig);
