@@ -7,12 +7,12 @@ import { HardhatUserConfig } from "hardhat/types";
 import * as packageJson from "./package.json";
 import "./src.ts/tasks";
 
-const apiKey = process.env.API_KEY ??  "abc123";
+const urlOverride = process.env.ETH_PROVIDER_URL;
 const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
 
 const mnemonic =
-  process.env.SUGAR_DADDY ??
-  process.env.MNEMONIC ??
+  process.env.SUGAR_DADDY ||
+  process.env.MNEMONIC ||
   "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
 const config: HardhatUserConfig = {
@@ -40,15 +40,6 @@ const config: HardhatUserConfig = {
     rando: { default: 3 },
   },
   networks: {
-    localhost: {
-      accounts: {
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        mnemonic,
-      },
-      chainId,
-      loggingEnabled: false,
-      saveDeployments: false,
-    },
     hardhat: {
       accounts: {
         accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
@@ -58,15 +49,25 @@ const config: HardhatUserConfig = {
       loggingEnabled: false,
       saveDeployments: false,
     },
+    localhost: {
+      accounts: {
+        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        mnemonic,
+      },
+      chainId,
+      loggingEnabled: false,
+      saveDeployments: false,
+      url: urlOverride || "http://localhost:8545",
+    },
     matic: {
       accounts: { mnemonic },
       chainId: 80001,
-      url: "https://rpc-mumbai.matic.today",
+      url: urlOverride || "https://rpc-mumbai.matic.today",
     },
     rinkeby: {
       accounts: { mnemonic },
       chainId: 4,
-      url: `https://eth-rinkeby.alchemyapi.io/jsonrpc/${apiKey}`,
+      url: urlOverride,
     },
   },
 };
