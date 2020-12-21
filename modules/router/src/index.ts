@@ -2,7 +2,8 @@ import fastify from "fastify";
 import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
-import { EventCallbackConfig, RestServerNodeService } from "@connext/vector-utils";
+import { VectorChainReader } from "@connext/vector-contracts";
+import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
@@ -64,14 +65,19 @@ const store = new PrismaStore();
 server.addHook("onReady", async () => {
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
-    logger.child({ module: "RestServerNodeService" }),
+    logger.child({ module: "RouterNodeService" }),
     evts,
     0,
+  );
+  const chainService = new VectorChainReader(
+    hydrateProviders(config.chainProviders),
+    logger.child({ module: "RouterChainReader" }),
   );
   router = await Router.connect(
     nodeService.publicIdentifier,
     nodeService.signerAddress,
     nodeService,
+    chainService,
     store,
     logger,
     register,

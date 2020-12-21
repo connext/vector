@@ -2,6 +2,7 @@ import {
   FullChannelState,
   FullTransferState,
   INodeService,
+  IVectorChainReader,
   NodeError,
   NodeParams,
   NodeResponses,
@@ -13,7 +14,6 @@ import { BaseLogger } from "pino";
 
 import { requestCollateral } from "../collateral";
 import { ForwardTransferError } from "../errors";
-import { ChainJsonProviders } from "../listener";
 
 import { IRouterStore, RouterUpdateType } from "./store";
 
@@ -23,7 +23,7 @@ export const transferWithAutoCollateralization = async (
   routerPublicIdentifier: string,
   nodeService: INodeService,
   store: IRouterStore,
-  chainProviders: ChainJsonProviders,
+  chainReader: IVectorChainReader,
   logger: BaseLogger,
   enqueue = true,
 ): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
@@ -41,7 +41,7 @@ export const transferWithAutoCollateralization = async (
       params.assetId,
       routerPublicIdentifier,
       nodeService,
-      chainProviders,
+      chainReader,
       logger,
       undefined,
       params.amount,

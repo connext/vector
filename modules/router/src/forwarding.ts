@@ -11,6 +11,7 @@ import {
   FullChannelState,
   IsAlivePayload,
   FullTransferState,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
@@ -18,7 +19,6 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 import { getSwappedAmount } from "./services/swap";
 import { IRouterStore, RouterUpdateType, RouterUpdateStatus } from "./services/store";
-import { ChainJsonProviders } from "./listener";
 import { requestCollateral } from "./collateral";
 import { ForwardTransferError, ForwardResolutionError } from "./errors";
 import { cancelCreatedTransfer, transferWithAutoCollateralization } from "./services/transfer";
@@ -30,7 +30,7 @@ export async function forwardTransferCreation(
   nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
-  chainProviders: ChainJsonProviders,
+  chainReader: IVectorChainReader,
 ): Promise<Result<any, ForwardTransferError>> {
   const method = "forwardTransferCreation";
   logger.info(
@@ -224,7 +224,7 @@ export async function forwardTransferCreation(
     routerPublicIdentifier,
     nodeService,
     store,
-    chainProviders,
+    chainReader,
     logger,
     !requireOnline, // enqueue if allowed offline only
   );
@@ -330,7 +330,7 @@ export async function handleIsAlive(
   signerAddress: string,
   nodeService: INodeService,
   store: IRouterStore,
-  chainProviders: ChainJsonProviders,
+  chainReader: IVectorChainReader,
   logger: BaseLogger,
 ): Promise<Result<undefined, ForwardTransferError>> {
   const method = "handleIsAlive";
@@ -364,7 +364,7 @@ export async function handleIsAlive(
             params.assetId,
             routerPublicIdentifier,
             nodeService,
-            chainProviders,
+            chainReader,
             logger,
             undefined,
             params.amount,

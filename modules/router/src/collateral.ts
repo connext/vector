@@ -1,10 +1,10 @@
-import { FullChannelState, INodeService, Result, NodeResponses } from "@connext/vector-types";
+import { FullChannelState, INodeService, Result, NodeResponses, IVectorChainReader } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 
 import { RequestCollateralError } from "./errors";
-import { ChainJsonProviders } from "./listener";
 import { getRebalanceProfile } from "./services/rebalance";
 
 export const requestCollateral = async (
@@ -12,7 +12,7 @@ export const requestCollateral = async (
   assetId: string,
   publicIdentifier: string,
   node: INodeService,
-  chainProviders: ChainJsonProviders,
+  chainReader: IVectorChainReader,
   logger: BaseLogger,
   requestedAmount?: string,
   transferAmount?: string, // used when called internally
@@ -55,8 +55,8 @@ export const requestCollateral = async (
     return Result.ok(undefined);
   }
 
-  const provider = chainProviders[channel.networkContext.chainId];
-  if (!provider) {
+  const providers = chainReader.getChainProviders();
+  if (providers.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
         channelAddress: channel.channelAddress,
@@ -66,23 +66,33 @@ export const requestCollateral = async (
       }),
     );
   }
+  const providerUrl = providers.getValue()[channel.networkContext.chainId];
+  if (!providerUrl) {
+    return Result.fail(
+      new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
+        channelAddress: channel.channelAddress,
+        chainId: channel.networkContext.chainId,
+        assetId,
+        requestedAmount,
+      }),
+    );
+  }
+  const provider = new JsonRpcProvider(providerUrl, channel.networkContext.chainId);
 
-  // TODO: add chainservice methods to node interface
   // Check if a tx has already been sent, but has not been reconciled
   // Get the total deposits vs. processed deposits
-  // const onchainProcessed = iAmAlice
-  //   ? await node.getTotalDepositedA(channel.channelAddress, channel.networkContext.chainId, assetId)
-  //   : await node.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
-  // if (onchainProcessed.isError) {
-  //   return Result.fail(
-  //     new RequestCollateralError(RequestCollateralError.reasons.CouldNotGetOnchainDeposits, {
-  //       channelAddress: channel.channelAddress,
-  //       error: onchainProcessed.getError()?.message,
-  //       context: onchainProcessed.getError()?.context,
-  //     }),
-  //   );
-  // }
-  const onchainProcessed = Result.ok(BigNumber.from(0));
+  const onchainProcessed = iAmAlice
+    ? await chainReader.getTotalDepositedA(channel.channelAddress, channel.networkContext.chainId, assetId)
+    : await chainReader.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
+  if (onchainProcessed.isError) {
+    return Result.fail(
+      new RequestCollateralError(RequestCollateralError.reasons.CouldNotGetOnchainDeposits, {
+        channelAddress: channel.channelAddress,
+        error: onchainProcessed.getError()?.message,
+        context: onchainProcessed.getError()?.context,
+      }),
+    );
+  }
   const offchainProcessed = BigNumber.from(channel.processedDepositsA[assetIdx] ?? "0");
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
   if (onchainProcessed.getValue().sub(offchainProcessed).lt(amountToDeposit)) {
