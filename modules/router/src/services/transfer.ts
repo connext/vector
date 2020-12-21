@@ -47,28 +47,36 @@ export const transferWithAutoCollateralization = async (
       params.amount,
     );
 
-    if (requestCollateralRes.isError) {
-      // Reconciling may fail if the recipient is offline, do not cancel
+    if (requestCollateralRes.isError && !enqueue) {
+      // Fail without enqueueing
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
           ...params,
           channelAddress: channel.channelAddress,
+          shouldCancelSender: true,
         }),
       );
     }
+    // Fallthrough, transfer attempt will force an enqueue
   }
 
   // attempt to transfer
+  // NOTE: as soon as you try to create a transfer with the receiver,
+  // you CANNOT cancel the sender transfer until it has expired.
   const transfer = await nodeService.conditionalTransfer(params);
   if (!transfer.isError) {
     return transfer as Result<NodeResponses.ConditionalTransfer>;
   }
 
   // error transferring
-  if (!enqueue || transfer.getError()?.message !== NodeError.reasons.Timeout) {
+  if (!enqueue || transfer.getError()!.message !== NodeError.reasons.Timeout) {
     // do not enqueue transfer creation
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, { ...transfer.getError()! }),
+      new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
+        ...transfer.getError()!.context,
+        // IFF its a timeout, could be withholding sig
+        shouldCancelSender: transfer.getError()!.message !== NodeError.reasons.Timeout,
+      }),
     );
   }
 
@@ -80,6 +88,7 @@ export const transferWithAutoCollateralization = async (
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
         storeError: e.message,
+        shouldCancelSender: false,
         ...params,
       }),
     );

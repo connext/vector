@@ -60,7 +60,7 @@ export async function forwardTransferCreation(
 
   // Create a helper to handle failures in this function by
   // cancelling the transfer that was created on the sender side
-  const handleForwardingError = async (
+  const cancelSenderTransferAndReturnError = async (
     routingId: string,
     senderTransfer: FullTransferState,
     errorReason: Values<typeof ForwardTransferError.reasons>,
@@ -160,10 +160,15 @@ export async function forwardTransferCreation(
       recipientChainId,
     );
     if (swapRes.isError) {
-      return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.UnableToCalculateSwap, {
-        swapError: swapRes.getError()?.message,
-        swapContext: swapRes.getError()?.context,
-      });
+      return cancelSenderTransferAndReturnError(
+        routingId,
+        senderTransfer,
+        ForwardTransferError.reasons.UnableToCalculateSwap,
+        {
+          swapError: swapRes.getError()?.message,
+          swapContext: swapRes.getError()?.context,
+        },
+      );
     }
     recipientAmount = swapRes.getValue();
 
@@ -189,16 +194,26 @@ export async function forwardTransferCreation(
     chainId: recipientChainId,
   });
   if (recipientChannelRes.isError) {
-    return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.RecipientChannelNotFound, {
-      storeError: recipientChannelRes.getError()?.message,
-    });
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferError.reasons.RecipientChannelNotFound,
+      {
+        storeError: recipientChannelRes.getError()?.message,
+      },
+    );
   }
   const recipientChannel = recipientChannelRes.getValue() as FullChannelState | undefined;
   if (!recipientChannel) {
-    return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.RecipientChannelNotFound, {
-      participants: [routerPublicIdentifier, recipientIdentifier],
-      chainId: recipientChainId,
-    });
+    return cancelSenderTransferAndReturnError(
+      routingId,
+      senderTransfer,
+      ForwardTransferError.reasons.RecipientChannelNotFound,
+      {
+        participants: [routerPublicIdentifier, recipientIdentifier],
+        chainId: recipientChainId,
+      },
+    );
   }
 
   // Create the params you will transfer with
@@ -229,7 +244,7 @@ export async function forwardTransferCreation(
     !requireOnline, // enqueue if allowed offline only
   );
   if (!transferRes.isError) {
-    // returns undefined IFF successfully queued
+    // transfer was either queued or executed
     const value = transferRes.getValue();
     return !!value
       ? Result.ok(transferRes.getValue())
@@ -242,13 +257,15 @@ export async function forwardTransferCreation(
         );
   }
 
-  // error creating or queueing transfer, cancel sender-side payment
-  return handleForwardingError(routingId, senderTransfer, transferRes.getError()!.message, {
-    routingId,
-    senderTransfer: senderTransfer.transferId,
-    recipientChannel: recipientChannel.channelAddress,
-    ...transferRes.getError()?.context,
-  });
+  // check if you should cancel the sender
+  const error = transferRes.getError()!;
+  if (error.context.shouldCancelSender) {
+    logger.warn({ ...error }, "Cancelling sender-side transfer");
+    return cancelSenderTransferAndReturnError(routingId, senderTransfer, error.message);
+  }
+
+  // return failure without cancelling
+  return Result.fail(transferRes.getError()!);
 }
 
 export async function forwardTransferResolution(
