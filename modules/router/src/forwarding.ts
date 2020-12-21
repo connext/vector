@@ -304,31 +304,7 @@ export async function forwardTransferCreation(
     routerPublicIdentifier === recipientChannel.aliceIdentifier ? "alice" : "bob",
   );
 
-  if (BigNumber.from(routerBalance).lt(recipientAmount)) {
-    logger.info({ routerBalance, recipientAmount }, "Requesting collateral to cover transfer");
-    const requestCollateralRes = await requestCollateral(
-      recipientChannel as FullChannelState,
-      recipientAssetId,
-      routerPublicIdentifier,
-      nodeService,
-      chainProviders,
-      logger,
-      undefined,
-      recipientAmount,
-    );
-    // TODO: Do we want to cancel or hold payment in this case?
-    if (requestCollateralRes.isError) {
-      return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.UnableToCollateralize, {
-        collateralError: requestCollateralRes.getError()?.message,
-      });
-    }
-  }
-
-  // If the above is not the case, we can make the transfer!
-
-  // Create the initial  state of the transfer by updating the
-  // `to` in the balance field
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Create the params you will transfer with
   const { balance, ...details } = createdTransferState;
   const params = {
     channelAddress: recipientChannel.channelAddress,
@@ -344,44 +320,74 @@ export async function forwardTransferCreation(
       ...meta,
     },
   };
+
+  // helper to queue router update
+  const queueUpdate = async (error: string) => {
+    // attempt to store transfer
+    try {
+      const type = RouterUpdateType.TRANSFER_CREATION;
+      await store.queueUpdate(recipientChannel.channelAddress, type, params);
+      // log warning and return success
+      logger.warn(
+        {
+          receiverError: error,
+          senderChannel: senderChannel.channelAddress,
+          senderTransfer: senderTransfer.transferId,
+          routingId,
+        },
+        `Failed to create receiver transfer, will retry`,
+      );
+      // return failure without cancelling sender-side payment
+      return Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
+          receiverError: error,
+          senderChannel: senderChannel.channelAddress,
+          senderTransfer: senderTransfer.transferId,
+          routingId,
+        }),
+      );
+    } catch (e) {
+      return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
+        storeError: e.message,
+      });
+    }
+  };
+
+  if (BigNumber.from(routerBalance).lt(recipientAmount)) {
+    logger.info({ routerBalance, recipientAmount }, "Requesting collateral to cover transfer");
+    const requestCollateralRes = await requestCollateral(
+      recipientChannel as FullChannelState,
+      recipientAssetId,
+      routerPublicIdentifier,
+      nodeService,
+      chainProviders,
+      logger,
+      undefined,
+      recipientAmount,
+    );
+    // TODO: Do we want to cancel or hold payment in this case?
+    if (requestCollateralRes.isError) {
+      // Reconciling may fail if the recipient is offline, do not cancel
+      if (requireOnline) {
+        // Don't queue
+        return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.UnableToCollateralize, {
+          collateralError: requestCollateralRes.getError()?.message,
+          collateralContext: requestCollateralRes.getError()?.context,
+        });
+      }
+      return queueUpdate(
+        requestCollateralRes.getError()?.message ?? ForwardTransferError.reasons.UnableToCollateralize,
+      );
+    }
+  }
+
+  // If the above is not the case, we can make the transfer!
   const transfer = await nodeService.conditionalTransfer(params);
   if (transfer.isError) {
     // TODO: properly implement offline payments
     if (!requireOnline && transfer.getError()?.message === NodeError.reasons.Timeout) {
-      // store transfer
-      try {
-        // store transfer
-        const type = RouterUpdateType.TRANSFER_CREATION;
-        await store.queueUpdate(recipientChannel.channelAddress, type, params);
-        // log warning and return success
-        logger.warn(
-          {
-            receiverError: transfer.getError()?.message,
-            senderChannel: senderChannel.channelAddress,
-            senderTransfer: senderTransfer.transferId,
-            routingId,
-          },
-          `Failed to create receiver transfer, will retry`,
-        );
-        // return failure without cancelling sender-side payment
-        return Result.fail(
-          new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
-            receiverError: transfer.getError()?.message,
-            senderChannel: senderChannel.channelAddress,
-            senderTransfer: senderTransfer.transferId,
-            routingId,
-          }),
-        );
-      } catch (e) {
-        return handleForwardingError(
-          routingId,
-          senderTransfer,
-          ForwardTransferError.reasons.ErrorQueuingReceiverUpdate,
-          {
-            storeError: e.message,
-          },
-        );
-      }
+      // queue for later
+      return queueUpdate(transfer.getError()!.message);
     }
     return handleForwardingError(routingId, senderTransfer, ForwardTransferError.reasons.ErrorForwardingTransfer, {
       createError: transfer.getError()?.message,
