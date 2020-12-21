@@ -110,7 +110,6 @@ export async function forwardTransferCreation(
     errorReason: Values<typeof ForwardTransferError.reasons>,
     context: any = {},
   ): Promise<Result<any, ForwardTransferError>> => {
-    // First, get the cancelling resolver for the transfer
     const transferResolverRes = await nodeService.getRegisteredTransfers({
       chainId: senderTransfer.chainId,
       publicIdentifier: routerPublicIdentifier,
@@ -127,6 +126,7 @@ export async function forwardTransferCreation(
       );
     }
 
+    // First, get the cancelling resolver for the transfer
     const { encodedCancel, resolverEncoding } =
       transferResolverRes.getValue().find((t) => t.definition === senderTransfer.transferDefinition) ?? {};
     if (!encodedCancel || !resolverEncoding) {
