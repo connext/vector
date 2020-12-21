@@ -24,7 +24,7 @@ describe(testName, () => {
       carolEvts,
       randomIndex,
     );
-    const min = utils.parseEther("0.0001");
+    const min = utils.parseEther("0.01");
 
     daveService = await RestServerNodeService.connect(
       env.daveUrl,
@@ -39,9 +39,10 @@ describe(testName, () => {
       undefined,
       0,
     );
-    await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(10), wallet1);
+    // Default collateral is 0.1 ETH
+    await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(15), wallet1);
     if (wallet2) {
-      await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(10), wallet2);
+      await fundIfBelow(rogerService.signerAddress, constants.AddressZero, min.mul(15), wallet2);
     }
   });
 
@@ -50,6 +51,7 @@ describe(testName, () => {
     const depositAmt = utils.parseEther("0.0001");
     const transferAmt = utils.parseEther("0.00005");
     const withdrawAmt = utils.parseEther("0.00005");
+    const carolFee = "10";
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
     const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
@@ -63,15 +65,14 @@ describe(testName, () => {
       assetId,
       transferAmt,
     );
-    console.log("WITHDRAWING WITH FEE ===========");
     // withdraw to signing address
     await withdraw(
       carolService,
       carolRogerPostSetup.channelAddress,
       assetId,
-      withdrawAmt,
+      withdrawAmt.sub(carolFee),
       carolService.signerAddress,
-      "10",
+      carolFee,
     );
     // withdraw to delegated recipient
     await withdraw(daveService, daveRogerPostSetup.channelAddress, assetId, withdrawAmt, Wallet.createRandom().address);
