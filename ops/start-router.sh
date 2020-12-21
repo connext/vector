@@ -126,7 +126,8 @@ bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 # database connection settings
 pg_db="$project"
 pg_user="$project"
-pg_dev_port="5434"
+pg_dev_port_node="5434"
+pg_dev_port_router="5435"
 
 if [[ "$production" == "true" ]]
 then
@@ -137,12 +138,20 @@ then
   fi
   pg_password=""
   pg_password_file="/run/secrets/$db_secret"
-  snapshots_dir="$root/.db-snapshots"
-  mkdir -p "$snapshots_dir"
-  database_image="image: '$database_image'
+  snapshots_dir_node="$root/.db-snapshots-node"
+  snapshots_dir_router="$root/.db-snapshots-router"
+  mkdir -p "$snapshots_dir_node"
+  mkdir -p "$snapshots_dir_router"
+  database_image_node="image: '$database_image'
     volumes:
-      - 'database:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
+      - 'database_node:/var/lib/postgresql/data'
+      - '$snapshots_dir_node:/root/snapshots'
+    secrets:
+      - '$db_secret'"
+  database_image_router="image: '$database_image'
+    volumes:
+      - 'database_router:/var/lib/postgresql/data'
+      - '$snapshots_dir_router:/root/snapshots'
     secrets:
       - '$db_secret'"
 
@@ -151,10 +160,14 @@ else
   db_secret=""
   pg_password="$project"
   pg_password_file=""
-  database_image="image: '$database_image'
+  database_image_node="image: '$database_image'
     ports:
-      - '$pg_dev_port:5432'"
-  echo "${stack}_database will be exposed on *:$pg_dev_port"
+      - '$pg_dev_port_node:5432'"
+  database_image_router="image: '$database_image'
+    ports:
+      - '$pg_dev_port_router:5432'"
+  echo "${stack}_database_node will be exposed on *:$pg_dev_port_node"
+  echo "${stack}_database_router will be exposed on *:$pg_dev_port_router"
 fi
 
 ########################################
@@ -309,7 +322,8 @@ $stack_secrets
 
 volumes:
   certs:
-  database:
+  database-node:
+  database-router:
 
 services:
 
@@ -346,7 +360,7 @@ services:
 
   database-node:
     $common
-    $database_image
+    $database_image_node
     environment:
       AWS_ACCESS_KEY_ID: '$aws_access_id'
       AWS_SECRET_ACCESS_KEY: '$aws_access_key'
@@ -356,12 +370,10 @@ services:
       POSTGRES_USER: '$project'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PROD: '$production'
-    ports:
-      - '5432:5432'
 
   database-router:
     $common
-    $database_image
+    $database_image_router
     environment:
       AWS_ACCESS_KEY_ID: '$aws_access_id'
       AWS_SECRET_ACCESS_KEY: '$aws_access_key'
@@ -371,8 +383,6 @@ services:
       POSTGRES_USER: '$project'
       VECTOR_ADMIN_TOKEN: '$admin_token'
       VECTOR_PROD: '$production'
-    ports:
-      - '5433:5432'
 
   $observability_services
 
