@@ -29,10 +29,11 @@ import { BigNumber } from "@ethersproject/bignumber";
 import Sinon from "sinon";
 
 import { PrismaStore, RouterUpdateType } from "../services/store";
-import { forwardTransferCreation, ForwardTransferError } from "../forwarding";
+import { forwardTransferCreation } from "../forwarding";
 import { config } from "../config";
 import * as swapService from "../services/swap";
 import * as collateral from "../collateral";
+import { ForwardTransferError } from "../errors";
 
 import { mockProvider } from "./utils/mocks";
 
@@ -208,7 +209,6 @@ describe("Forwarding", () => {
         expect(store.queueUpdate.callCount).to.be.eq(0);
         return;
       }
-      console.log("error.context: ", error.context);
       expect(error.context).to.containSubset({
         senderTransfer: ctx.senderTransfer.transferId,
         senderChannel: ctx.senderTransfer.channelAddress,
@@ -360,7 +360,7 @@ describe("Forwarding", () => {
     });
 
     // TODO: implement offline payments
-    it.skip("successfully queues transfers if allowable offline && creation failed because receiver was offline", async () => {});
+    it.skip("fails but queues transfers if receiver offline and allowable offline", async () => {});
 
     // Uncancellable failures
     it("should fail without cancelling if no meta.routingId", async () => {
@@ -562,28 +562,10 @@ describe("Forwarding", () => {
       });
     });
 
-    it("fails with cancellation if request collateral fails", async () => {
-      const ctx = generateDefaultTestContext();
-      ctx.senderTransfer.meta.path[0].recipientAssetId = mkAddress("0xfff");
-      const mocked = prepEnv({ ...ctx });
-      requestCollateral.resolves(Result.fail(new Error("fail")));
+    it("fails with cancellation if transferWithAutoCollateralization indicates sender-side should be cancelled", async () => {});
 
-      const result = await forwardTransferCreation(
-        mocked.event,
-        routerPublicIdentifier,
-        signerAddress,
-        node as INodeService,
-        store,
-        testLog,
-        chainProviders,
-      );
+    it("fails without cancellation if transferWithAutoCollateralization got receiver timeout", async () => {});
 
-      await verifyErrorResult(result, mocked, ForwardTransferError.reasons.UnableToCollateralize, {
-        collateralError: "fail",
-      });
-    });
-
-    // TODO: implement timeouts
     it("fails with cancellation if transfer creation fails", async () => {
       const ctx = prepEnv();
       node.conditionalTransfer
@@ -604,119 +586,16 @@ describe("Forwarding", () => {
         createError: NodeError.reasons.InternalServerError,
       });
     });
+  });
 
-    // TODO: Failures cancelling
-    it("cancelling sender transfer should fail if cannot get registered transfers", async () => {
-      const ctx = prepEnv();
-      node.conditionalTransfer
-        .onFirstCall()
-        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
-      node.getRegisteredTransfers
-        .onFirstCall()
-        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+  describe("forwardTransferResolution", () => {
+    it("should fail if it cannot find the transfers", async () => {});
+    it("should fail if it cannot find incoming transfer", async () => {});
+    it("should fail + queue update if resolveTransfer fails", async () => {});
+    it("should work", async () => {});
+  });
 
-      const result = await forwardTransferCreation(
-        ctx.event,
-        routerPublicIdentifier,
-        signerAddress,
-        node as INodeService,
-        store,
-        testLog,
-        chainProviders,
-      );
-
-      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(result.getError().context).to.containSubset({
-        cancellationError: NodeError.reasons.InternalServerError,
-        routingId: ctx.senderTransfer.meta.routingId,
-        senderChannel: ctx.senderTransfer.channelAddress,
-        senderTransfer: ctx.senderTransfer.transferId,
-        cancellationReason: ForwardTransferError.reasons.ErrorForwardingTransfer,
-      });
-    });
-
-    it("cancelling transfers should fail if it cannot find transfer in registered transfers", async () => {
-      const ctx = prepEnv();
-      node.conditionalTransfer
-        .onFirstCall()
-        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
-      node.getRegisteredTransfers.onFirstCall().resolves(Result.ok([]));
-
-      const result = await forwardTransferCreation(
-        ctx.event,
-        routerPublicIdentifier,
-        signerAddress,
-        node as INodeService,
-        store,
-        testLog,
-        chainProviders,
-      );
-
-      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(result.getError().context).to.containSubset({
-        cancellationError: "Sender transfer not in registry info",
-        routingId: ctx.senderTransfer.meta.routingId,
-        senderChannel: ctx.senderTransfer.channelAddress,
-        senderTransfer: ctx.senderTransfer.transferId,
-        cancellationReason: ForwardTransferError.reasons.ErrorForwardingTransfer,
-        transferDefinition: ctx.senderTransfer.transferDefinition,
-        registered: [],
-      });
-    });
-
-    it("cancelling should fail if resolving transfer fails for non-timeout", async () => {
-      const ctx = prepEnv();
-      node.conditionalTransfer
-        .onFirstCall()
-        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
-      node.resolveTransfer.onFirstCall().resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
-
-      const result = await forwardTransferCreation(
-        ctx.event,
-        routerPublicIdentifier,
-        signerAddress,
-        node as INodeService,
-        store,
-        testLog,
-        chainProviders,
-      );
-
-      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.FailedToCancelSenderTransfer);
-      expect(result.getError().context).to.containSubset({
-        resolveError: NodeError.reasons.InternalServerError,
-        routingId: ctx.senderTransfer.meta.routingId,
-        senderChannel: ctx.senderTransfer.channelAddress,
-        senderTransfer: ctx.senderTransfer.transferId,
-        cancellationReason: ForwardTransferError.reasons.ErrorForwardingTransfer,
-      });
-    });
-
-    it("cancelling should be queued if resolving transfer fails due to timeout", async () => {
-      const ctx = prepEnv();
-      node.conditionalTransfer
-        .onFirstCall()
-        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
-      node.resolveTransfer.onFirstCall().resolves(Result.fail(new NodeError(NodeError.reasons.Timeout)));
-
-      const result = await forwardTransferCreation(
-        ctx.event,
-        routerPublicIdentifier,
-        signerAddress,
-        node as INodeService,
-        store,
-        testLog,
-        chainProviders,
-      );
-
-      expect(result.getError().message).to.be.eq(ForwardTransferError.reasons.ErrorForwardingTransfer);
-      expect(result.getError().context).to.containSubset({
-        routingId: ctx.senderTransfer.meta.routingId,
-        senderChannel: ctx.senderTransfer.channelAddress,
-        senderTransfer: ctx.senderTransfer.transferId,
-        details: "Sender transfer cancelled/queued",
-      });
-
-      expect(store.queueUpdate.callCount).to.be.eq(1);
-    });
+  describe("handleIsAlive", () => {
+    it("should ");
   });
 });
