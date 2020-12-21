@@ -1,7 +1,7 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { EtherSymbol, Zero } from "@ethersproject/constants";
 import { formatEther } from "@ethersproject/units";
-import { deployments, ethers, getNamedAccounts, getChainId } from "hardhat";
+import { deployments, ethers, getNamedAccounts, getChainId, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import { registerTransfer } from "../src.ts/utils";
@@ -59,53 +59,47 @@ const func: DeployFunction = async () => {
     );
   };
 
-  // Don't migrate to mainnet until audit is finished
-  if (chainId === "1") {
-    log.info(`Running mainnet migration`);
-    throw new Error(`Contract migration for chain ${chainId} is not supported yet`);
+  const standardMigration = [
+    ["ChannelMastercopy", []],
+    ["ChannelFactory", ["ChannelMastercopy", Zero]],
+    ["HashlockTransfer", []],
+    ["Withdraw", []],
+    ["TransferRegistry", []],
+    ["TestToken", []],
+  ];
 
-  } else if (chainId === "4" || chainId === "5" || chainId === "42" || chainId === "80001") {
-    log.info(`Running testnet migration`);
-
+  // Only deploy test fixtures during hardhat tests
+  if (network.name === "hardhat") {
+    log.info(`Running localnet migration`);
     for (const row of [
-      ["HashlockTransfer", []],
-      ["Withdraw", []],
-      ["TransferRegistry", []],
-      ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy", Zero]],
-      ["TestToken", []],
+      ...standardMigration,
+      ["TestChannel", []],
+      ["TestChannelFactory", ["TestChannel", Zero]],
+      ["FailingToken", []],
+      ["NonconformingToken", []],
+      ["TestLibIterableMapping", []],
+      ["CMCAsset", []],
     ]) {
       const name = row[0] as string;
       const args = row[1] as Array<string | BigNumber>;
       await migrate(name, args);
     }
-
     await registerTransfer("Withdraw", deployer);
     await registerTransfer("HashlockTransfer", deployer);
 
-  // Default: run testnet migration
-  } else {
-    log.info(`Running localnet migration`);
+  // Don't migrate to mainnet until audit is finished
+  } else if (chainId === "1") {
+    log.info(`Running mainnet migration`);
+    throw new Error(`Contract migration for chain ${chainId} is not supported yet`);
 
-    for (const row of [
-      ["HashlockTransfer", []],
-      ["Withdraw", []],
-      ["TransferRegistry", []],
-      ["TestLibIterableMapping", []],
-      ["CMCAsset", []],
-      ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy", Zero]],
-      ["TestChannel", []],
-      ["TestChannelFactory", ["TestChannel", Zero]],
-      ["TestToken", []],
-      ["FailingToken", []],
-      ["NonconformingToken", []],
-    ]) {
+  // Default: run standard migration
+  } else {
+    log.info(`Running testnet migration`);
+    for (const row of standardMigration) {
       const name = row[0] as string;
       const args = row[1] as Array<string | BigNumber>;
       await migrate(name, args);
     }
-
     await registerTransfer("Withdraw", deployer);
     await registerTransfer("HashlockTransfer", deployer);
 
