@@ -5,7 +5,7 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 
 import { RequestCollateralError } from "./errors";
-import { getRebalanceProfile } from "./services/rebalance";
+import { getRebalanceProfile } from "./services/config";
 
 export const requestCollateral = async (
   channel: FullChannelState,
