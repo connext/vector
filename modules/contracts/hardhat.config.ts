@@ -74,7 +74,7 @@ const config: HardhatUserConfig = {
       chainId: 42,
       url: urlOverride || "http://localhost:8545",
     },
-    matic: {
+    mumbai: {
       accounts: { mnemonic },
       chainId: 80001,
       url: urlOverride || "https://rpc-mumbai.matic.today",
