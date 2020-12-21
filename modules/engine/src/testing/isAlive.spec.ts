@@ -33,7 +33,7 @@ describe("Is Alive", () => {
     expect(messagingService.sendIsAliveMessage.called).to.be.false;
   });
 
-  it.only("should send isAlive messages to all channels", async () => {
+  it("should send isAlive messages to all channels", async () => {
     messagingService.sendIsAliveMessage.resolves(Result.ok(undefined));
     const signer = getRandomChannelSigner();
     const channel1 = createTestChannelState("create", {
