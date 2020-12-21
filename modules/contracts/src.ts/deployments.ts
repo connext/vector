@@ -14,12 +14,12 @@ import * as rinkebyTestToken from "../deployments/rinkeby/TestToken.json";
 import * as rinkebyTransferRegistry from "../deployments/rinkeby/TransferRegistry.json";
 import * as rinkebyWithdraw from "../deployments/rinkeby/Withdraw.json";
 const rinkebyDeployment = {
-  rinkebyChannelFactory,
-  rinkebyChannelMastercopy,
-  rinkebyHashlockTransfer,
-  rinkebyTestToken,
-  rinkebyTransferRegistry,
-  rinkebyWithdraw,
+  ChannelFactory: rinkebyChannelFactory,
+  ChannelMastercopy: rinkebyChannelMastercopy,
+  HashlockTransfer: rinkebyHashlockTransfer,
+  TestToken: rinkebyTestToken,
+  TransferRegistry: rinkebyTransferRegistry,
+  Withdraw: rinkebyWithdraw,
 };
 deployments.rinkeby = rinkebyDeployment;
 deployments["4"] = rinkebyDeployment;
@@ -34,12 +34,12 @@ import * as goerliTestToken from "../deployments/goerli/TestToken.json";
 import * as goerliTransferRegistry from "../deployments/goerli/TransferRegistry.json";
 import * as goerliWithdraw from "../deployments/goerli/Withdraw.json";
 const goerliDeployment = {
-  goerliChannelFactory,
-  goerliChannelMastercopy,
-  goerliHashlockTransfer,
-  goerliTestToken,
-  goerliTransferRegistry,
-  goerliWithdraw,
+  ChannelFactory: goerliChannelFactory,
+  ChannelMastercopy: goerliChannelMastercopy,
+  HashlockTransfer: goerliHashlockTransfer,
+  TestToken: goerliTestToken,
+  TransferRegistry: goerliTransferRegistry,
+  Withdraw: goerliWithdraw,
 };
 deployments.goerli = goerliDeployment;
 deployments["5"] = goerliDeployment;
@@ -54,12 +54,12 @@ import * as kovanTestToken from "../deployments/kovan/TestToken.json";
 import * as kovanTransferRegistry from "../deployments/kovan/TransferRegistry.json";
 import * as kovanWithdraw from "../deployments/kovan/Withdraw.json";
 const kovanDeployment = {
-  kovanChannelFactory,
-  kovanChannelMastercopy,
-  kovanHashlockTransfer,
-  kovanTestToken,
-  kovanTransferRegistry,
-  kovanWithdraw,
+  ChannelFactory: kovanChannelFactory,
+  ChannelMastercopy: kovanChannelMastercopy,
+  HashlockTransfer: kovanHashlockTransfer,
+  TestToken: kovanTestToken,
+  TransferRegistry: kovanTransferRegistry,
+  Withdraw: kovanWithdraw,
 };
 deployments.kovan = kovanDeployment;
 deployments["42"] = kovanDeployment;
@@ -74,12 +74,12 @@ import * as mumbaiTestToken from "../deployments/mumbai/TestToken.json";
 import * as mumbaiTransferRegistry from "../deployments/mumbai/TransferRegistry.json";
 import * as mumbaiWithdraw from "../deployments/mumbai/Withdraw.json";
 const mumbaiDeployment = {
-  mumbaiChannelFactory,
-  mumbaiChannelMastercopy,
-  mumbaiHashlockTransfer,
-  mumbaiTestToken,
-  mumbaiTransferRegistry,
-  mumbaiWithdraw,
+  ChannelFactory: mumbaiChannelFactory,
+  ChannelMastercopy: mumbaiChannelMastercopy,
+  HashlockTransfer: mumbaiHashlockTransfer,
+  TestToken: mumbaiTestToken,
+  TransferRegistry: mumbaiTransferRegistry,
+  Withdraw: mumbaiWithdraw,
 };
 deployments.mumbai = mumbaiDeployment;
 deployments["80001"] = mumbaiDeployment;
