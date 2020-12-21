@@ -18,21 +18,36 @@ bash "$root/ops/pull-images.sh" "$ethprovider_image" > /dev/null
 
 prettyfn="./node_modules/.bin/pino-pretty"
 if [[ -x "$prettyfn" ]]
-then prettify=("$prettyfn" "-f" "--ignore" "level,pid,hostname,time")
+then prettify=("$prettyfn" "--ignore" "level,module,pid,hostname,time")
 else prettify=()
 fi
 
+name="${project}_contract_cli"
 docker run \
+  --detach \
   --entrypoint=hardhat \
   --env="API_KEY=${API_KEY}" \
-  --env="ETH_PROVIDER_URL=${ETH_PROVIDER_URL}" \
+  --env="ETH_PROVIDER_URL=${ETH_PROVIDER_URL:-http://172.17.0.1:8545}" \
   --env="MNEMONIC=${MNEMONIC}" \
   --interactive \
-  --name="${project}_contract_cli" \
+  --name="$name" \
   --network="${project}" \
   --rm \
   --tmpfs="/tmp" \
   --tty \
   --volume="$root:/root" \
   --workdir="/root/modules/contracts" \
-  "$ethprovider_image" "${args[@]}" | "${prettify[@]}"
+  "$ethprovider_image" "${args[@]}"
+
+echo "Contracts CLI image has been launched, printing logs & waiting for ctrl-c"
+docker container logs --follow "$name" | "${prettify[@]}" &
+
+function goodbye {
+  echo "Received kill signal, goodbye.."
+  docker kill "$name"
+  exit
+}
+trap goodbye SIGTERM SIGINT
+while grep -qs "$name" <<<"$(docker container ls)"
+do sleep 1
+done
