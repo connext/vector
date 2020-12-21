@@ -1,7 +1,22 @@
 import { ChannelUpdate } from "./channel";
-import { InboundChannelUpdateError, LockError, MessagingError, OutboundChannelUpdateError, Result } from "./error";
+import {
+  InboundChannelUpdateError,
+  IsAliveError,
+  LockError,
+  MessagingError,
+  OutboundChannelUpdateError,
+  Result,
+} from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
+
+export type IsAliveInfo = { channelAddress: string };
+export type IsAliveResponse = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
+  chainId: number;
+  channelAddress: string;
+};
 
 export interface IMessagingService {
   connect(): Promise<void>;
@@ -64,16 +79,17 @@ export interface IMessagingService {
   respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, Error>): Promise<void>;
 
   sendIsAliveMessage(
+    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<void, MessagingError>>;
+  ): Promise<Result<void, IsAliveError>>;
   onReceiveIsAliveMessage(
     publicIdentifier: string,
-    callback: (isAliveInfo: Result<undefined, MessagingError>, from: string, inbox: string) => void,
+    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
   ): Promise<void>;
-  respondToIsAliveMessage(inbox: string, params: Result<void, Error>): Promise<void>;
+  respondToIsAliveMessage(inbox: string, params: Result<IsAliveResponse, IsAliveError>): Promise<void>;
 
   sendRequestCollateralMessage(
     requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,

@@ -91,6 +91,7 @@ export abstract class VectorError extends Error {
     NodeError: "NodeError",
     LockError: "LockError",
     MessagingError: "MessagingError",
+    IsAliveError: "IsAliveError",
     // etc.
   } as const;
 
@@ -283,6 +284,23 @@ export class MessagingError extends VectorError {
 
   constructor(
     public readonly message: Values<typeof MessagingError.reasons>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context: any = {},
+  ) {
+    super(message, context);
+  }
+}
+
+export class IsAliveError extends VectorError {
+  readonly type = VectorError.errors.IsAliveError;
+
+  static readonly reasons = {
+    ChannelNotFound: "Channel not found",
+    Unknown: "Unknown isAlive error",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof IsAliveError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context: any = {},
   ) {

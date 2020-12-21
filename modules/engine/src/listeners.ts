@@ -30,6 +30,9 @@ import {
   OutboundChannelUpdateError,
   Result,
   ChainError,
+  IS_ALIVE_EVENT,
+  IsAliveError,
+  IsAliveResponse,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
@@ -142,12 +145,41 @@ export async function setupEngineListeners(
   // who will submit the transaction? should both engines watch the multisig
   // indefinitely?
 
+  await messaging.onReceiveIsAliveMessage(signer.publicIdentifier, async (params, from, inbox) => {
+    const method = "onReceiveRequestCollateralMessage";
+    if (params.isError) {
+      logger.error({ error: params.getError()?.message, method }, "Error received");
+    }
+    logger.info({ params: params.getValue(), method, from }, "Handling message");
+    const channel = await store.getChannelState(params.getValue().channelAddress);
+    let response: Result<IsAliveResponse, IsAliveError>;
+    if (!channel) {
+      logger.error({ params: params.getValue(), method }, "Could not find channel for received isAlive message");
+      response = Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound));
+    } else {
+      response = Result.ok({
+        aliceIdentifier: channel.aliceIdentifier,
+        bobIdentifier: channel.bobIdentifier,
+        chainId: channel.networkContext.chainId,
+        channelAddress: channel.channelAddress,
+      });
+      evts[IS_ALIVE_EVENT].post({
+        aliceIdentifier: channel.aliceIdentifier,
+        bobIdentifier: channel.bobIdentifier,
+        chainId: channel.networkContext.chainId,
+        channelAddress: channel.channelAddress,
+      });
+    }
+
+    await messaging.respondToIsAliveMessage(inbox, response);
+  });
+
   await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {
     const method = "onReceiveRequestCollateralMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
     }
-    logger.info({ params: params.getValue(), method }, "Handling message");
+    logger.info({ params: params.getValue(), method, from }, "Handling message");
 
     evts[REQUEST_COLLATERAL_EVENT].post({
       ...params.getValue(),

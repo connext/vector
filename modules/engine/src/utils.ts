@@ -15,7 +15,7 @@ import {
   SetupPayload,
   REQUEST_COLLATERAL_EVENT,
   RequestCollateralPayload,
-  IS_ALIVE,
+  IS_ALIVE_EVENT,
   IsAlivePayload,
 } from "@connext/vector-types";
 import { Evt } from "evt";
@@ -24,7 +24,7 @@ import { EngineEvtContainer } from "./index";
 
 export const getEngineEvtContainer = (): EngineEvtContainer => {
   return {
-    [IS_ALIVE]: Evt.create<IsAlivePayload>(),
+    [IS_ALIVE_EVENT]: Evt.create<IsAlivePayload>(),
     [SETUP_EVENT]: Evt.create<SetupPayload>(),
     [CONDITIONAL_TRANSFER_CREATED_EVENT]: Evt.create<ConditionalTransferCreatedPayload>(),
     [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: Evt.create<ConditionalTransferResolvedPayload>(),

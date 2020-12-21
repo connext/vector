@@ -8,6 +8,9 @@ import {
   OutboundChannelUpdateError,
   Result,
   EngineParams,
+  IsAliveError,
+  IsAliveInfo,
+  IsAliveResponse,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -178,20 +181,21 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendIsAliveMessage(
+    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<void, MessagingError>> {
+  ): Promise<Result<void, IsAliveError>> {
     throw new Error("Method not implemented.");
   }
   onReceiveIsAliveMessage(
     publicIdentifier: string,
-    callback: (isAliveInfo: Result<undefined, MessagingError>, from: string, inbox: string) => void,
+    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  respondToIsAliveMessage(inbox: string, params: Result<void, Error>): Promise<void> {
+  respondToIsAliveMessage(inbox: string, params: Result<IsAliveResponse, IsAliveError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
