@@ -33,7 +33,7 @@ Content-Type: application/json
   "amount": "{{ethAmount}}",
   "assetId": "0x0000000000000000000000000000000000000000",
   "chainId": "{{chainId}}",
-  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "publicIdentifier": "{{nodePublicIdentifier}}"
 }
 
 ##############
