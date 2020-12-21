@@ -67,7 +67,7 @@ const config: HardhatUserConfig = {
     rinkeby: {
       accounts: { mnemonic },
       chainId: 4,
-      url: urlOverride,
+      url: urlOverride || "http://localhost:8545",
     },
   },
 };
