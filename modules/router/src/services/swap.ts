@@ -2,7 +2,7 @@ import { Result } from "@connext/vector-types";
 import { calculateExchangeAmount, inverse } from "@connext/vector-utils";
 
 import { config } from "../config";
-import { ForwardTransferError } from "../forwarding";
+import { ForwardTransferError } from "../errors";
 
 export const getSwappedAmount = async (
   fromAmount: string,

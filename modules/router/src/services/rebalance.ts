@@ -1,7 +1,7 @@
 import { Result } from "@connext/vector-types";
 
 import { config, RebalanceProfile } from "../config";
-import { ForwardTransferError } from "../forwarding";
+import { ForwardTransferError } from "../errors";
 
 export const getRebalanceProfile = async (
   chainId: number,

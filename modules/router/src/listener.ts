@@ -4,6 +4,7 @@ import {
   INodeService,
   ConditionalTransferCreatedPayload,
   FullChannelState,
+  IVectorChainReader,
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
@@ -11,7 +12,6 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 
 import { requestCollateral } from "./collateral";
-import { config } from "./config";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
 
@@ -20,10 +20,6 @@ const ajv = new Ajv();
 export type ChainJsonProviders = {
   [k: string]: JsonRpcProvider;
 };
-const chainProviders: ChainJsonProviders = Object.entries(config.chainProviders).reduce((acc, [chainId, url]) => {
-  acc[chainId] = new JsonRpcProvider(url);
-  return acc;
-}, {} as ChainJsonProviders);
 
 const configureMetrics = (register: Registry) => {
   // Track number of times a payment was forwarded
@@ -73,6 +69,7 @@ export async function setupListeners(
   routerSignerAddress: string,
   nodeService: INodeService,
   store: IRouterStore,
+  chainReader: IVectorChainReader,
   logger: BaseLogger,
   register: Registry,
 ): Promise<void> {
@@ -93,7 +90,7 @@ export async function setupListeners(
         nodeService,
         store,
         logger,
-        chainProviders,
+        chainReader,
       );
       if (res.isError) {
         failed.labels(meta.routingId).inc(1);
@@ -230,7 +227,7 @@ export async function setupListeners(
       data.assetId,
       routerPublicIdentifier,
       nodeService,
-      chainProviders,
+      chainReader,
       logger,
       data.amount,
     );
@@ -249,7 +246,7 @@ export async function setupListeners(
       routerSignerAddress,
       nodeService,
       store,
-      chainProviders,
+      chainReader,
       logger,
     );
     if (res.isError) {
