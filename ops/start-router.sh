@@ -138,18 +138,20 @@ then
   fi
   pg_password=""
   pg_password_file="/run/secrets/$db_secret"
-  snapshots_dir="$root/.db-snapshots"
-  mkdir -p "$snapshots_dir"
+  snapshots_dir_node="$root/.db-snapshots-node"
+  snapshots_dir_router="$root/.db-snapshots-router"
+  mkdir -p "$snapshots_dir_node"
+  mkdir -p "$snapshots_dir_router"
   database_image_node="image: '$database_image'
     volumes:
       - 'database_node:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
+      - '$snapshots_dir_node:/root/snapshots'
     secrets:
       - '$db_secret'"
   database_image_router="image: '$database_image'
     volumes:
       - 'database_router:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
+      - '$snapshots_dir_router:/root/snapshots'
     secrets:
       - '$db_secret'"
 
