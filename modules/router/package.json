@@ -20,6 +20,7 @@
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.0",
+    "core-js": "3.8.1",
     "ethers": "5.0.21",
     "evt": "1.9.2",
     "fastify": "3.8.0",
@@ -27,6 +28,7 @@
     "fastify-oas": "3.0.8",
     "pg": "8.5.1",
     "pino": "6.7.0",
+    "regenerator-runtime": "0.13.7",
     "sqlite3": "5.0.0",
     "prom-client": "12.0.0"
   },

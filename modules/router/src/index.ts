@@ -1,3 +1,5 @@
+import "core-js/stable";
+import "regenerator-runtime/runtime";
 import fastify from "fastify";
 import metricsPlugin from "fastify-metrics";
 import pino from "pino";
