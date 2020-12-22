@@ -12,7 +12,7 @@ const testName = "Duet Restore";
 
 const { log } = getTestLoggers(testName);
 
-describe(testName, () => {
+describe.only(testName, () => {
   let aliceService: INodeService;
   let bobService: INodeService;
   let channelAddress: string;
@@ -42,20 +42,25 @@ describe(testName, () => {
     await deposit(bobService, aliceService, postSetup.channelAddress, constants.AddressZero, depositVal);
 
     // Create some transfers
-    await Promise.all(
-      Array(2)
-        .fill(0)
-        .map((_) =>
-          transfer(
-            aliceService,
-            bobService,
-            postSetup.channelAddress,
-            postSetup.channelAddress,
-            constants.AddressZero,
-            transferVal,
-            postSetup.networkContext.chainId,
-          ),
-        ),
+    // NOTE: doing `await Promise.all` will cause errors with balance assertions
+    // in helper
+    await transfer(
+      aliceService,
+      bobService,
+      postSetup.channelAddress,
+      postSetup.channelAddress,
+      constants.AddressZero,
+      transferVal,
+      postSetup.networkContext.chainId,
+    );
+    await transfer(
+      aliceService,
+      bobService,
+      postSetup.channelAddress,
+      postSetup.channelAddress,
+      constants.AddressZero,
+      transferVal,
+      postSetup.networkContext.chainId,
     );
   });
 
@@ -69,16 +74,21 @@ describe(testName, () => {
         channelAddress,
         publicIdentifier: aliceService.publicIdentifier,
       });
-      preRestoreChannel = preRestoreReq.getValue();
+      preRestoreChannel = preRestoreReq.getValue() as FullChannelState;
       const preRestoreTransfersReq = await aliceService.getActiveTransfers({
         channelAddress,
       });
       preRestoreTransfers = preRestoreTransfersReq.getValue().sort((a, b) => a.channelNonce - b.channelNonce);
       // Clear alice store
+      console.log("**** trying to remove alice channel");
       const aliceClear = (await axios.post(`${env.aliceUrl}/clear-store`, { adminToken: env.adminToken })).data;
-      await expect(
-        aliceService.getStateChannel({ channelAddress, publicIdentifier: aliceService.publicIdentifier }),
-      ).rejectedWith("404");
+      console.log("**** sent request");
+      const channel = await aliceService.getStateChannel({
+        channelAddress,
+        publicIdentifier: aliceService.publicIdentifier,
+      });
+      expect(channel.isError).to.be.true;
+      expect(channel.getError()!.message).to.be.eq("Channel not found");
     });
 
     it("should work", async () => {
@@ -107,16 +117,19 @@ describe(testName, () => {
         channelAddress,
         publicIdentifier: aliceService.publicIdentifier,
       });
-      preRestoreChannel = preRestoreReq.getValue();
+      preRestoreChannel = preRestoreReq.getValue() as FullChannelState;
       const preRestoreTransfersReq = await aliceService.getActiveTransfers({
         channelAddress,
       });
       preRestoreTransfers = preRestoreTransfersReq.getValue().sort((a, b) => a.channelNonce - b.channelNonce);
       // Clear alice store
       const bobClear = (await axios.post(`${env.bobUrl}/clear-store`, { adminToken: env.adminToken })).data;
-      await expect(
-        bobService.getStateChannel({ channelAddress, publicIdentifier: bobService.publicIdentifier }),
-      ).rejectedWith("404");
+      const channel = await bobService.getStateChannel({
+        channelAddress,
+        publicIdentifier: bobService.publicIdentifier,
+      });
+      expect(channel.isError).to.be.true;
+      expect(channel.getError()!.message).to.be.eq("Channel not found");
     });
 
     it("should work", async () => {
