@@ -175,7 +175,6 @@ fi
 
 node_internal_port="8000"
 node_public_port="${public_port:-8002}"
-public_url="http://127.0.0.1:$node_public_port/ping"
 if [[ $production == "true" ]]
 then
   node_image_name="${project}_node:$version"
@@ -213,12 +212,14 @@ fi
 ## Router config
 
 router_internal_port="8000"
-router_dev_port="9000"
-
+router_public_port="9000"
+public_url="http://127.0.0.1:$router_public_port/ping"
 if [[ $production == "true" ]]
 then
   router_image_name="${project}_router:$version"
-  router_image="image: '$router_image_name'"
+  router_image="image: '$router_image_name'
+    ports:
+      - '$router_public_port:$router_internal_port'"
 else
   router_image_name="${project}_builder:$version";
   router_image="image: '$router_image_name'
@@ -226,8 +227,8 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$router_dev_port:$router_internal_port'"
-  echo "${stack}_router will be exposed on *:$router_dev_port"
+      - '$router_public_port:$router_internal_port'"
+  echo "${stack}_router will be exposed on *:$router_public_port"
 fi
 bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
 
@@ -395,7 +396,7 @@ timeout=$(( $(date +%s) + 60 ))
 while true
 do
   res=$(curl -k -m 5 -s "$public_url" || true)
-  if [[ -z "$res" || "$res" == "Waiting for node to wake up" ]]
+  if [[ -z "$res" || "$res" == "Waiting for router to wake up" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]
     then echo "Timed out waiting for $public_url to respond.." && exit
