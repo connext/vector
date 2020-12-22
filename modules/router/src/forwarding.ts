@@ -221,6 +221,11 @@ export async function forwardTransferCreation(
 
   // Create the params you will transfer with
   const { balance, ...details } = createdTransferState;
+  const newMeta = {
+    // Node is never the initiator, that is always payment sender
+    senderIdentifier: initiator === senderChannel.bob ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
+    ...meta,
+  };
   const params = {
     channelAddress: recipientChannel.channelAddress,
     amount: recipientAmount,
@@ -229,12 +234,9 @@ export async function forwardTransferCreation(
     type: conditionType,
     publicIdentifier: routerPublicIdentifier,
     details,
-    meta: {
-      // Node is never the initiator, that is always payment sender
-      senderIdentifier: initiator === senderChannel.bob ? senderChannel.bobIdentifier : senderChannel.aliceIdentifier,
-      ...meta,
-    },
+    meta: newMeta,
   };
+  logger.info({ params, method }, "Generated new transfer params");
 
   const transferRes = await transferWithAutoCollateralization(
     params,
@@ -250,7 +252,7 @@ export async function forwardTransferCreation(
     // transfer was either queued or executed
     const value = transferRes.getValue();
     return !!value
-      ? Result.ok(transferRes.getValue())
+      ? Result.ok(value)
       : Result.fail(
           new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
             routingId,
