@@ -1,4 +1,4 @@
-import { VectorChainService } from "@connext/vector-contracts";
+import { deployments, VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import {
   ChainAddresses,
@@ -93,6 +93,31 @@ export class BrowserNode implements INodeService {
       config.signer,
       config.logger.child({ module: "VectorChainService" }),
     );
+
+    // Pull live network addresses out of public deployments if not provided explicitly
+    for (const chainId of Object.keys(config.chainProviders)) {
+      if (!config.chainAddresses) {
+        config.chainAddresses = {} as any;
+      }
+      if (!config.chainAddresses[chainId]) {
+        config.chainAddresses[chainId] = {} as any;
+      }
+      if (
+        !config.chainAddresses[chainId].channelFactoryAddress
+        && deployments[chainId] && deployments[chainId].ChannelFactory
+      ) {
+        config.chainAddresses[chainId].channelFactoryAddress =
+          deployments[chainId].ChannelFactory.address;
+      }
+      if (
+        !config.chainAddresses[chainId].transferRegistryAddress
+        && deployments[chainId] && deployments[chainId].TransferRegistry
+      ) {
+        config.chainAddresses[chainId].transferRegistryAddress =
+          deployments[chainId].TransferRegistry.address;
+      }
+    }
+
     const engine = await VectorEngine.connect(
       messaging,
       lock,
