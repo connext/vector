@@ -31,8 +31,10 @@ import {
   getTestLoggers,
   getTransferId,
   createTestHashlockTransferState,
+  encodeTransferResolver,
 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
+import { HashZero } from "@ethersproject/constants";
 import Sinon from "sinon";
 
 import * as vectorUpdate from "../update";
@@ -44,7 +46,7 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
   name: string;
   updateType: T;
   updateOverrides?: PartialChannelUpdate<T>;
-  stateOverrides?: PartialFullChannelState<any>;
+  stateOverrides?: PartialFullChannelState<T>;
   activeTransfersOverrides?: Partial<FullTransferState>[];
   finalBalanceOverrides?: Balance;
   expected?: Partial<{
@@ -496,7 +498,7 @@ describe("generateAndApplyUpdate", () => {
   const makeAndVerifyCall = async (
     signer: IChannelSigner,
     params: UpdateParams<"create" | "deposit" | "resolve" | "setup">,
-    previousState: FullChannelState<any> | undefined,
+    previousState: FullChannelState | undefined,
     activeTransfers: FullTransferState[],
     expected: any,
     isError = false,
@@ -699,6 +701,7 @@ describe("generateAndApplyUpdate", () => {
       resolverEncoding: HashlockTransferResolverEncoding,
       name: "test",
       definition: params.details.transferDefinition,
+      encodedCancel: encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
     };
     chainService.getRegisteredTransferByDefinition.resolves(Result.ok(registryInfo));
 
@@ -760,6 +763,7 @@ describe("generateAndApplyUpdate", () => {
       resolverEncoding: HashlockTransferResolverEncoding,
       name: "test",
       definition: params.details.transferDefinition,
+      encodedCancel: encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
     };
     chainService.getRegisteredTransferByDefinition.resolves(Result.ok(registryInfo));
 
@@ -828,6 +832,7 @@ describe("generateAndApplyUpdate", () => {
       resolverEncoding: transfer.transferEncodings[1],
       name: "test",
       definition: transfer.transferDefinition,
+      encodedCancel: encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
     };
     chainService.getRegisteredTransferByDefinition.resolves(Result.ok(registryInfo));
     chainService.resolve.resolves(Result.ok(transferBalance));
@@ -890,6 +895,7 @@ describe("generateAndApplyUpdate", () => {
       resolverEncoding: transfer.transferEncodings[1],
       name: "test",
       definition: transfer.transferDefinition,
+      encodedCancel: encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
     };
     chainService.getRegisteredTransferByDefinition.resolves(Result.ok(registryInfo));
     chainService.resolve.resolves(Result.ok(transferBalance));
@@ -979,6 +985,7 @@ describe("generateAndApplyUpdate", () => {
       resolverEncoding: transfer.transferEncodings[1],
       name: "test",
       definition: transfer.transferDefinition,
+      encodedCancel: encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
     };
     chainService.getRegisteredTransferByDefinition.resolves(Result.ok(registryInfo));
     chainService.resolve.resolves(Result.ok(transferBalance));

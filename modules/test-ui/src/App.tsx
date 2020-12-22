@@ -48,7 +48,6 @@ function App() {
   ): Promise<BrowserNode> => {
     try {
       setConnectLoading(true);
-      console.log("supportedChains: ", supportedChains);
       const client = new BrowserNode({
         supportedChains,
         iframeSrc,
@@ -121,7 +120,7 @@ function App() {
     } else {
       console.log("Updated channel:", res.getValue());
       const idx = channels.findIndex((c) => c.channelAddress === channelAddress);
-      channels.splice(idx, res.getValue());
+      channels.splice(idx, 0, res.getValue());
       setChannels(channels);
     }
   };
@@ -382,7 +381,7 @@ function App() {
 
           <Divider orientation="left">Channels</Divider>
           <Row gutter={16}>
-            <Col span={18}>
+            <Col span={12}>
               <Form layout="horizontal" name="selectChannel" wrapperCol={{ span: 18 }} labelCol={{ span: 6 }}>
                 <Form.Item label="Channels">
                   <Select
@@ -401,7 +400,7 @@ function App() {
                 </Form.Item>
               </Form>
             </Col>
-            <Col>
+            <Col span={2}>
               <CopyToClipboard
                 text={selectedChannel?.channelAddress}
                 onCopy={() => {
@@ -412,6 +411,7 @@ function App() {
                 <Button>{copied ? "Copied!" : "Copy"}</Button>
               </CopyToClipboard>
             </Col>
+            <Col span={6}>ChainId: {selectedChannel?.networkContext.chainId}</Col>
           </Row>
 
           <Divider orientation="left">Balance & Deposit</Divider>

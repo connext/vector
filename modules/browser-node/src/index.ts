@@ -1,4 +1,4 @@
-import { VectorChainService } from "@connext/vector-contracts";
+import { deployments, VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import {
   ChainAddresses,
@@ -15,7 +15,6 @@ import {
   NodeParams,
   NodeResponses,
   EngineParams,
-  FullChannelState,
   TransferNames,
   EngineEvents,
   ConditionalTransferCreatedPayload,
@@ -93,6 +92,31 @@ export class BrowserNode implements INodeService {
       config.signer,
       config.logger.child({ module: "VectorChainService" }),
     );
+
+    // Pull live network addresses out of public deployments if not provided explicitly
+    for (const chainId of Object.keys(config.chainProviders)) {
+      if (!config.chainAddresses) {
+        config.chainAddresses = {} as any;
+      }
+      if (!config.chainAddresses[chainId]) {
+        config.chainAddresses[chainId] = {} as any;
+      }
+      if (
+        !config.chainAddresses[chainId].channelFactoryAddress
+        && deployments[chainId] && deployments[chainId].ChannelFactory
+      ) {
+        config.chainAddresses[chainId].channelFactoryAddress =
+          deployments[chainId].ChannelFactory.address;
+      }
+      if (
+        !config.chainAddresses[chainId].transferRegistryAddress
+        && deployments[chainId] && deployments[chainId].TransferRegistry
+      ) {
+        config.chainAddresses[chainId].transferRegistryAddress =
+          deployments[chainId].TransferRegistry.address;
+      }
+    }
+
     const engine = await VectorEngine.connect(
       messaging,
       lock,
@@ -149,7 +173,7 @@ export class BrowserNode implements INodeService {
         if (address.isError) {
           throw address.getError();
         }
-        channel = await this.getStateChannel(address.getValue());
+        channel = (await this.getStateChannel(address.getValue())).getValue();
       }
       this.logger.info({ channel, chainId });
     }
@@ -164,7 +188,8 @@ export class BrowserNode implements INodeService {
     toAssetId: string;
     reconcileDeposit?: boolean;
     withdrawalAddress?: string;
-  }): Promise<{ withdrawalTx?: string }> {
+    meta?: any;
+  }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
       chainId: params.fromChainId,
@@ -179,8 +204,8 @@ export class BrowserNode implements INodeService {
     if (receiverChannelRes.isError) {
       throw receiverChannelRes.getError();
     }
-    const senderChannel = senderChannelRes.getValue() as FullChannelState;
-    const receiverChannel = receiverChannelRes.getValue() as FullChannelState;
+    const senderChannel = senderChannelRes.getValue();
+    const receiverChannel = receiverChannelRes.getValue();
     if (!senderChannel || !receiverChannel) {
       throw new Error(
         `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${
@@ -189,10 +214,15 @@ export class BrowserNode implements INodeService {
       );
     }
 
+    const crossChainTransferId = getRandomBytes32();
+    const { meta, ...res } = params;
+    const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
+
     if (params.reconcileDeposit) {
       const depositRes = await this.reconcileDeposit({
         assetId: params.fromAssetId,
         channelAddress: senderChannel.channelAddress,
+        meta: { ...updatedMeta },
       });
       if (depositRes.isError) {
         throw depositRes.getError();
@@ -216,7 +246,7 @@ export class BrowserNode implements INodeService {
       recipient: this.publicIdentifier,
       recipientAssetId: params.toAssetId,
       recipientChainId: params.toChainId,
-      meta: { ...params, reason: "Cross-chain transfer" },
+      meta: { ...updatedMeta },
     };
     const transferRes = await this.conditionalTransfer(transferParams);
     if (transferRes.isError) {
@@ -249,6 +279,7 @@ export class BrowserNode implements INodeService {
       transferResolver: {
         preImage,
       },
+      meta: { ...updatedMeta },
     };
     const resolveRes = await this.resolveTransfer(resolveParams);
     if (resolveRes.isError) {
@@ -258,8 +289,9 @@ export class BrowserNode implements INodeService {
     this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
 
     let withdrawalTx: string | undefined;
+    let withdrawalAmount: string | undefined;
     if (params.withdrawalAddress) {
-      const withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
+      withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       this.logger.info(
         { withdrawalAddress: params.withdrawalAddress, withdrawalAmount },
         "Withdrawing to configured address",
@@ -269,6 +301,7 @@ export class BrowserNode implements INodeService {
         assetId: params.toAssetId,
         channelAddress: receiverChannel.channelAddress,
         recipient: params.withdrawalAddress,
+        meta: { ...updatedMeta },
       });
       if (withdrawRes.isError) {
         throw withdrawRes.getError();
@@ -277,7 +310,7 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
-    return { withdrawalTx };
+    return { withdrawalTx, withdrawalAmount };
   }
   //////////////////
 
@@ -286,12 +319,12 @@ export class BrowserNode implements INodeService {
   }
 
   async getConfig(): Promise<NodeResponses.GetConfig> {
-    const rpc = constructRpcRequest("chan_getConfig", undefined);
+    const rpc = constructRpcRequest("chan_getConfig", {});
     return this.send(rpc);
   }
 
   async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
-    const rpc = constructRpcRequest("chan_getStatus", undefined);
+    const rpc = constructRpcRequest("chan_getStatus", {});
     try {
       const res = await this.send(rpc);
       return Result.ok(res);
@@ -333,7 +366,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, NodeError>> {
     try {
-      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
+      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res.map((chan) => chan.channelAddress));
     } catch (e) {

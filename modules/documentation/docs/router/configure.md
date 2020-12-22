@@ -64,18 +64,32 @@ Now you can login to your new server with just `ssh new-vector`.
 
 Before moving any further, you should first ensure that the required Vector contracts are deployed to your chain.
 
-We have a global [address-book](https://github.com/connext/vector/blob/master/address-book.json) in the root of the Vector repo which contains the addresses of deployed contracts indexed by chainId. If you can't find the specific chain(s) that you want to deploy a routing node to, you likely need to deploy contracts first.
+!!! Info
+    Deploying contracts only needs to happen once per chain. If you want to use Vector on a new chain, the easiest thing to do is message the Connext team on Discord & ask us to add support for the new chain. This lets us save the deployment data in a place where everyone can access it & avoids duplicate deployments. If you want to deploy things yourself (or are a member of the Connext team looking for a refresher), read on.
 
-To deploy contracts, you can use our helper script. (A CLI usable via npx is coming soon!)
+We use [`hardhat-deploy`](https://hardhat.org/plugins/hardhat-deploy.html) which manages all of our contract deployment data in `modules/contracts/deployments/`. You should check inside this folder as well as in `modules/contracts/hardhat.config.ts` to see whether your chain is supported yet.
+
+If not, you'll need to manually edit the hardhat config file to add support. You can mostly copy/paste one of the other network configurations but make sure that you've updated the network name & chain id.
+
+After editing hardhat config, run `make ethprovider` to ensure our hardhat cli script is using the most up-to-date info.
+
+We have a helper script for running hardhat tasks at `ops/hardhat.sh`, use this like you'd use the hardhat cli.
+
+!!! Info
+    You can also bypass the fancy dockerized ops by running `cd modules/contracts && npm install && npm run build && hardhat <task_name>`.
+
+To deploy contracts, run something like this:
 
 ```bash
-bash ops/deploy-contracts.sh --eth-provider="$ethProvider" --mnemonic="$mnemonic"
+ export MNEMONIC="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+ export ETH_PROVIDER_URL="https://eth-rinkeby.alchemyapi.io/jsonrpc/123apikey
+bash ops/hardhat.sh deploy --network rinkeby
 ```
 
 !!! Warning
-    Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument
+    Make sure the mnemonic cli argument is wrapped in double quotes to ensure it's all interpreted as one argument. Additionally, make sure you put a space in front of any commands that include important secrets to prevent them from being saved to your bash history.
 
-In the above command, `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. an Infura url including an API key). Any newly deployed contracts will have their addresses added to the project root's `address-book.json`. Make sure your address-book is stored somewhere safe. The best option would be to submit a PR to our repo so that these addresses are backed up for you and so that they're readily available for everyone else to use too!
+In the above command, `$mnemonic` controls a funded account on whatever chain you plan to deploy to, and `$ethProvider` is a provider URL for the same chain (e.g. an Infura url including an API key). Any newly deployed contracts will have their addresses added to `modules/contracts/deployments/<networkname>/`. Make sure you either commit these changes or submit a PR so that the rest of the world can use these newly deployed contracts too.
 
 !!! Info
     The account that deploys the contracts does not need to be the same one as your vector node's hot wallet.

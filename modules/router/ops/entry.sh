@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eE
 
 if [[ -d "modules/router" ]]
 then cd modules/router || exit 1
@@ -13,10 +13,6 @@ then
   VECTOR_PG_PASSWORD="$(cat "$VECTOR_PG_PASSWORD_FILE")"
   export VECTOR_PG_PASSWORD
 fi
-
-
-########################################
-# Config database url
 
 if [[ -n $VECTOR_DATABASE_URL ]]
 then
@@ -40,18 +36,24 @@ echo "VECTOR_DATABASE_URL: $VECTOR_DATABASE_URL"
 
 ########################################
 # Wait for dependencies to wake up
-
-db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
-echo "Waiting for database at $db"
-wait-for -q -t 60 "$db" 2>&1 | sed '/nc: bad address/d'
-
-echo "Pinging node at $VECTOR_NODE_URL"
-while [[ -z "$(curl -k -m 5 -s "$VECTOR_NODE_URL/ping" || true)" ]]
-do sleep 1
-done
+if [[ -n $VECTOR_PG_HOST ]]
+then
+  db="$VECTOR_PG_HOST:$VECTOR_PG_PORT"
+  echo "Waiting for database at $db"
+  wait-for -q -t 60 "$db" 2>&1 | sed '/nc: bad address/d'
+  echo "Database is available"
+fi
 
 ########################################
 # Launch it
+
+echo "Running database migration"
+prisma --version
+prisma migrate up --experimental
+
+# TODO: this doesn't work with single container mode
+# echo "Starting database UI"
+# prisma studio &
 
 if [[ "$VECTOR_PROD" == "true" ]]
 then

@@ -12,6 +12,15 @@ export type ConditionalTransferResponse = {
 
 ///////////////////////////////////
 ////// Engine event types
+// Emitted on startup
+export const IS_ALIVE_EVENT = "IS_ALIVE";
+export type IsAlivePayload = {
+  channelAddress: string;
+  aliceIdentifier: string;
+  bobIdentifier: string;
+  chainId: number;
+};
+
 // Emitted on channel setup
 export const SETUP_EVENT = "SETUP";
 export type SetupPayload = {
@@ -19,6 +28,7 @@ export type SetupPayload = {
   aliceIdentifier: string;
   bobIdentifier: string;
   chainId: number;
+  meta?: any;
 };
 
 // Emitted when transfer created
@@ -45,6 +55,7 @@ export type DepositReconciledPayload = {
   channelAddress: string;
   assetId: string;
   channelBalance: Balance;
+  meta?: any;
 };
 
 // Emitted when a counterparty requests collateral
@@ -55,6 +66,7 @@ export type RequestCollateralPayload = {
   channelAddress: string;
   assetId: string;
   amount?: string;
+  meta?: any;
 };
 
 // Emitted when a withdrawal transfer is created
@@ -85,6 +97,7 @@ export type WithdrawalReconciledPayload = {
   channelAddress: string;
   transactionHash: string;
   transferId: string;
+  meta?: any;
 };
 
 // Emitted on channel restore
@@ -93,6 +106,8 @@ export type RestoreStatePayload = SetupPayload;
 
 // Grouped event types
 export const EngineEvents = {
+  [IS_ALIVE_EVENT]: IS_ALIVE_EVENT,
+  [SETUP_EVENT]: SETUP_EVENT,
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
   [DEPOSIT_RECONCILED_EVENT]: DEPOSIT_RECONCILED_EVENT,
@@ -105,6 +120,8 @@ export const EngineEvents = {
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
 export interface EngineEventMap {
+  [IS_ALIVE_EVENT]: IsAlivePayload;
+  [SETUP_EVENT]: SetupPayload;
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;
   [DEPOSIT_RECONCILED_EVENT]: DepositReconciledPayload;

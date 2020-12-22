@@ -1,7 +1,7 @@
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
-import { FullChannelState, FullTransferState } from "./channel";
+import { FullTransferState, FullChannelState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
 

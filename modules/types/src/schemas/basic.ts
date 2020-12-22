@@ -1,4 +1,4 @@
-import { TStringLiteral, Type } from "@sinclair/typebox";
+import { Static, TLiteral, Type } from "@sinclair/typebox";
 
 import { UpdateType } from "../channel";
 
@@ -6,13 +6,13 @@ import { UpdateType } from "../channel";
 //////// Shared object/string types
 
 // String pattern types
-export const TAddress = Type.Pattern(/^0x[a-fA-F0-9]{40}$/);
-export const TIntegerString = Type.Pattern(/^([0-9])*$/);
-export const TDecimalString = Type.Pattern(/^[0-9]*\.?[0-9]*$/);
-export const TPublicIdentifier = Type.Pattern(/^vector([a-zA-Z0-9]{50})$/);
-export const TBytes32 = Type.Pattern(/^0x([a-fA-F0-9]{64})$/);
-export const TBytes = Type.Pattern(/^0x([a-fA-F0-9])$/);
-export const TSignature = Type.Pattern(/^0x([a-fA-F0-9]{130})$/);
+export const TAddress = Type.RegEx(/^0x[a-fA-F0-9]{40}$/);
+export const TIntegerString = Type.RegEx(/^([0-9])*$/);
+export const TDecimalString = Type.RegEx(/^[0-9]*\.?[0-9]*$/);
+export const TPublicIdentifier = Type.RegEx(/^vector([a-zA-Z0-9]{50})$/);
+export const TBytes32 = Type.RegEx(/^0x([a-fA-F0-9]{64})$/);
+export const TBytes = Type.RegEx(/^0x([a-fA-F0-9])$/);
+export const TSignature = Type.RegEx(/^0x([a-fA-F0-9]{130})$/);
 export const TUrl = Type.String({ format: "uri" });
 
 // Convenience types
@@ -24,7 +24,7 @@ export const TBalance = Type.Object({
   amount: Type.Array(TIntegerString),
 });
 
-export const TBasicMeta = Type.Optional(Type.Object(Type.Any()));
+export const TBasicMeta = Type.Optional(Type.Dict(Type.Any()));
 
 export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
@@ -47,8 +47,8 @@ export const TNetworkContext = Type.Intersect([
 // risk to not validating these using the schema validation. Instead,
 // use relaxed schema validation for all transfer types to make it easier
 // to support generic transfer types (since no schemas have to be updated)
-export const TransferStateSchema = Type.Object(Type.Any());
-export const TransferResolverSchema = Type.Object(Type.Any());
+export const TransferStateSchema = Type.Dict(Type.Any());
+export const TransferResolverSchema = Type.Dict(Type.Any());
 export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
 export const TransferNameSchema = Type.String();
 
@@ -81,12 +81,14 @@ export const TFullTransferState = Type.Object({
 export const TSetupUpdateDetails = Type.Object({
   timeout: TIntegerString,
   networkContext: TNetworkContext,
+  meta: TBasicMeta,
 });
 
 // Deposit update details
 export const TDepositUpdateDetails = Type.Object({
   totalDepositsAlice: TIntegerString,
   totalDepositsBob: TIntegerString,
+  meta: TBasicMeta,
 });
 
 // Create update details
@@ -96,7 +98,7 @@ export const TCreateUpdateDetails = Type.Object({
   transferDefinition: TAddress,
   transferTimeout: TIntegerString,
   transferInitialState: TransferStateSchema,
-  transferEncodings: Type.Array(Type.String()),
+  transferEncodings: TransferEncodingSchema,
   merkleProofData: Type.Array(Type.String()),
   merkleRoot: TBytes32,
   meta: TBasicMeta,
@@ -120,7 +122,7 @@ export const TChannelUpdateDetails = Type.Union([
 ]);
 
 export const TChannelUpdateType = Type.Union(
-  Object.values(UpdateType).map((update) => Type.Literal(update)) as [TStringLiteral<UpdateType>],
+  Object.values(UpdateType).map((update) => Type.Literal(update)) as [TLiteral<UpdateType>],
 );
 
 export const TChannelUpdate = Type.Object({
@@ -131,10 +133,11 @@ export const TChannelUpdate = Type.Object({
   nonce: Type.Number(),
   balance: TBalance,
   assetId: TAddress,
-  details: Type.Any(), // specific detail structure asserted in validation
+  details: Type.Dict(Type.Any()), // specific detail structure asserted in validation
   aliceSignature: Type.Optional(Type.Union([TSignature, Type.Null()])), //Type.Optional(TSignature),
   bobSignature: Type.Optional(Type.Union([TSignature, Type.Null()])),
 });
+export type TChannelUpdate = Static<typeof TChannelUpdate>;
 
 export const TFullChannelState = Type.Object({
   assetIds: Type.Array(TAddress, { minItems: 1 }),
@@ -151,4 +154,8 @@ export const TFullChannelState = Type.Object({
   bobIdentifier: TPublicIdentifier,
   latestUpdate: TChannelUpdate,
   networkContext: TNetworkContext,
+  defundNonces: Type.Array(TIntegerString),
+  inDispute: Type.Boolean(),
 });
+
+export type TFullChannelState = Static<typeof TFullChannelState>;

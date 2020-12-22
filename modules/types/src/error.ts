@@ -1,4 +1,4 @@
-import { ChannelUpdate, FullChannelState, UpdateParams } from "./channel";
+import { ChannelUpdate, UpdateParams, FullChannelState } from "./channel";
 import {
   MAXIMUM_CHANNEL_TIMEOUT,
   MAXIMUM_TRANSFER_TIMEOUT,
@@ -92,6 +92,7 @@ export abstract class VectorError extends Error {
     LockError: "LockError",
     MessagingError: "MessagingError",
     EngineError: "EngineError",
+    IsAliveError: "IsAliveError",
     // etc.
   } as const;
 
@@ -153,7 +154,7 @@ export class ValidationError extends VectorError {
   constructor(
     public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
     public readonly params: UpdateParams<any> | ChannelUpdate<any>,
-    public readonly state?: FullChannelState<any>,
+    public readonly state?: FullChannelState,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
@@ -170,10 +171,11 @@ export class OutboundChannelUpdateError extends VectorError {
     ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
     CounterpartyFailure: "Counterparty failed to apply update",
+    CounterpartyOffline: "Message to counterparty timed out",
     Create2Failed: "Failed to get create2 address",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
-    OutboundValidationFailed: "Failed to validate incoming update",
+    OutboundValidationFailed: "Failed to validate outbound update",
     RestoreNeeded: "Channel too far out of sync, must be restored",
     RegenerateUpdateFailed: "Failed to regenerate update after sync",
     SaveChannelFailed: "Failed to save channel",
@@ -191,7 +193,7 @@ export class OutboundChannelUpdateError extends VectorError {
   constructor(
     public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
     public readonly params: UpdateParams<any>,
-    public readonly state?: FullChannelState<any>,
+    public readonly state?: FullChannelState,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
@@ -241,7 +243,7 @@ export class InboundChannelUpdateError extends VectorError {
   constructor(
     public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
     public readonly update: ChannelUpdate<any>,
-    public readonly state?: FullChannelState<any>,
+    public readonly state?: FullChannelState,
     public readonly context: any = {},
   ) {
     super(message, context);
@@ -279,6 +281,7 @@ export class MessagingError extends VectorError {
 
   static readonly reasons = {
     Response: "Error received in response",
+    Timeout: "Request timed out",
     Unknown: "Unknown messaging error",
   } as const;
 
@@ -296,5 +299,21 @@ export class EngineError extends VectorError {
 
   constructor(public readonly msg: string, public readonly channelAddress: string, public readonly context: any = {}) {
     super(msg, context);
+  }
+}
+export class IsAliveError extends VectorError {
+  readonly type = VectorError.errors.IsAliveError;
+
+  static readonly reasons = {
+    ChannelNotFound: "Channel not found",
+    Unknown: "Unknown isAlive error",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof IsAliveError.reasons>,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    public readonly context: any = {},
+  ) {
+    super(message, context);
   }
 }

@@ -47,7 +47,7 @@ export function applyUpdate<T extends UpdateType>(
   finalTransferBalance: Balance | undefined, // defined only on resolve
 ): Result<
   {
-    updatedChannel: FullChannelState<T>;
+    updatedChannel: FullChannelState;
     updatedActiveTransfers: FullTransferState[];
     updatedTransfer?: FullTransferState;
   },
@@ -196,7 +196,7 @@ export function applyUpdate<T extends UpdateType>(
         transferState: { ...transfer.transferState, balance: { ...finalTransferBalance } },
         transferResolver: { ...transferResolver },
         meta: {
-          ...transfer.meta,
+          ...(transfer.meta ?? {}),
           ...(meta ?? {}),
         },
       };
@@ -231,7 +231,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   Result<
     {
       update: ChannelUpdate<T>;
-      updatedChannel: FullChannelState<T>;
+      updatedChannel: FullChannelState;
       updatedActiveTransfers: FullTransferState[];
       updatedTransfer: FullTransferState | undefined;
     },
@@ -355,6 +355,7 @@ function generateSetupUpdate(
     details: {
       networkContext: params.details.networkContext,
       timeout: params.details.timeout,
+      meta: params.details.meta ?? {},
     },
     assetId: AddressZero,
   };
@@ -413,7 +414,7 @@ async function generateDepositUpdate(
     processedDepositsA: totalDepositsAlice,
     processedDepositsB: totalDepositsBob,
     assetId,
-    details: { totalDepositsAlice, totalDepositsBob },
+    details: { totalDepositsAlice, totalDepositsBob, meta: params.details.meta ?? {} },
   };
   return Result.ok(unsigned);
 }
@@ -561,7 +562,7 @@ async function generateResolveUpdate(
       transferDefinition: transferToResolve.transferDefinition,
       transferResolver,
       merkleRoot: root,
-      meta,
+      meta: { ...(transferToResolve.meta ?? {}), ...(meta ?? {}) },
     },
   };
 

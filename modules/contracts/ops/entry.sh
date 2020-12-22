@@ -3,8 +3,6 @@ set -e
 
 echo "Ethereum testnet entrypoint activated!"
 
-## Setup env
-
 if [[ -d "modules/contracts" ]]
 then cd modules/contracts || exit 1
 fi
@@ -16,52 +14,39 @@ export MNEMONIC="${MNEMONIC:-candy maple cake sugar pudding cream honey rich smo
 mkdir -p /data /tmp
 touch "$ADDRESS_BOOK"
 
-config_file="/tmp/hardhat.config.js"
-chain_addresses="$(dirname "$ADDRESS_BOOK")/chain-addresses.json"
-
 # rm this early so we can use it's presence to indicate when migrations finish
+chain_addresses="$(dirname "$ADDRESS_BOOK")/chain-addresses.json"
 rm -f "$chain_addresses"
 
 ## Start hardhat testnet
 
-echo "Starting testnet with chain id $CHAIN_ID"
-echo 'module.exports = {
-  defaultNetwork: "hardhat",
-  networks: {
-    hardhat: {
-      chainId: '"$CHAIN_ID"',
-      loggingEnabled: false,
-      accounts: {
-        mnemonic: "'"$MNEMONIC"'",
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      },
-      gasPrice: 100000000000,
-    },
-  },
-}' > "$config_file"
-hardhat node --config $config_file --hostname 0.0.0.0 --port 8545 > /tmp/evm.log &
+echo "Starting hardhat node.."
+hardhat node --hostname 0.0.0.0 --port 8545 --no-deploy --as-network localhost > /tmp/hardhat.log &
 pid=$!
 echo "Waiting for testnet to wake up.."
 wait-for -q -t 60 localhost:8545 2>&1 | sed '/nc: bad address/d'
+echo "Good morning!"
 
-## Run contract migrations
-
-echo "Migrating contracts.."
-node "./dist/cli.js" migrate --address-book "$ADDRESS_BOOK" --mnemonic "$MNEMONIC" | pino-pretty --colorize --translateTime --ignore pid,level,hostname
-
-## Expose the address book in a more accessible format
+echo "Deploying contracts..."
+mkdir -p deployments
+hardhat deploy --network localhost --no-compile --export-all "$ADDRESS_BOOK" | pino-pretty --colorize --translateTime --ignore pid,level,hostname,module
 
 # jq docs: https://stedolan.github.io/jq/manual/v1.5/#Builtinoperatorsandfunctions
 jq '
-  map_values(
-    map_values(.address) |
-    to_entries |
-    map(.key = "\(.key)Address") |
-    map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)")) |
-    from_entries
-  )
-' < "$ADDRESS_BOOK" > "$chain_addresses"
+  .["'"$CHAIN_ID"'"].localhost.contracts
+    | map_values(.address)
+    | to_entries
+    | map(.key = "\(.key)Address")
+    | map(.key |= (capture("(?<a>^[A-Z])(?<b>.*$)"; "g") | "\(.a | ascii_downcase)\(.b)"))
+    | from_entries
+    | { "'"$CHAIN_ID"'": {channelFactoryAddress,testTokenAddress,transferRegistryAddress,hashlockTransferAddress} }
+' "$ADDRESS_BOOK" > "$chain_addresses"
 
-## exit iff our evm exits
-
+echo "Ethprovider started & deployed vector successfully, waiting for kill signal"
+function goodbye {
+  echo "Received kill signal, goodbye"
+  kill $pid
+  exit
+}
+trap goodbye SIGTERM SIGINT
 wait $pid

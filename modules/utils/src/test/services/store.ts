@@ -13,7 +13,7 @@ import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract
 
 export class MemoryStoreService implements IEngineStore {
   saveChannelDispute(
-    channel: FullChannelState<any>,
+    channel: FullChannelState,
     channelDispute: ChannelDispute,
     transferDispute?: TransferDispute,
   ): Promise<void> {
@@ -87,7 +87,7 @@ export class MemoryStoreService implements IEngineStore {
     return Promise.resolve();
   }
 
-  getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
+  getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     const state = this.channelStates.get(channelAddress);
     return Promise.resolve(state);
   }
@@ -96,7 +96,7 @@ export class MemoryStoreService implements IEngineStore {
     participantA: string,
     participantB: string,
     chainId: number,
-  ): Promise<FullChannelState<any> | undefined> {
+  ): Promise<FullChannelState | undefined> {
     return Promise.resolve(
       [...this.channelStates.values()].find((channelState) => {
         channelState.alice === participantA &&

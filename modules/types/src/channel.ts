@@ -14,11 +14,13 @@ export type SetupParams = {
   counterpartyIdentifier: string;
   timeout: string;
   networkContext: NetworkContext;
+  meta?: any;
 };
 
 export type DepositParams = {
   channelAddress: string;
   assetId: string;
+  meta?: any;
 };
 
 export type CreateTransferParams = {
@@ -131,7 +133,7 @@ export interface CoreTransferState {
 }
 
 export type FullTransferState = CoreTransferState & {
-  channelFactoryAddress: string; // networkContext?
+  channelFactoryAddress: string; // networkContext? TODO: remove
   chainId: number;
   transferEncodings: string[]; // Initial state encoding, resolver encoding
   transferState: any;
@@ -212,9 +214,11 @@ export type ResolveUpdateDetails = {
 export type DepositUpdateDetails = {
   totalDepositsAlice: string;
   totalDepositsBob: string;
+  meta?: any;
 };
 
 export type SetupUpdateDetails = {
   timeout: string;
   networkContext: NetworkContext;
+  meta?: any;
 };

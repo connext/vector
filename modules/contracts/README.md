@@ -29,9 +29,9 @@ In `~/vector` (root), run:
 
 There are a few command line functions that allow you to easily deploy and interact with the contracts:
 
-### migrate
+### deploy
 
-Checks deployed contracts are up to date, and redeploys them if needed for a given chain. Will pull current addresses, and update information if needed, from the given `addressBook`
+Powered by `hardhat-deploy`. Checks deployed contracts are up to date, and redeploys them if needed for a given chain. Will pull current addresses, and update information if needed, from the saved info in `contracts/deployments`
 
 #### Arguments
 
@@ -45,7 +45,7 @@ Checks deployed contracts are up to date, and redeploys them if needed for a giv
 From the `~/vector/modules/contracts` directory:
 
 ```sh
-dist/cli.js migrate --address-book=/data/address-book.json --eth-provider "http://localhost:8545"
+hardhat deploy
 ```
 
 ### registerTransfer

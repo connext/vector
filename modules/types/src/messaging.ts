@@ -2,6 +2,7 @@ import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import {
   EngineError,
   InboundChannelUpdateError,
+  IsAliveError,
   LockError,
   MessagingError,
   OutboundChannelUpdateError,
@@ -9,6 +10,14 @@ import {
 } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
+
+export type IsAliveInfo = { channelAddress: string };
+export type IsAliveResponse = {
+  aliceIdentifier: string;
+  bobIdentifier: string;
+  chainId: number;
+  channelAddress: string;
+};
 
 export interface IMessagingService {
   connect(): Promise<void>;
@@ -54,7 +63,7 @@ export interface IMessagingService {
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
 
   sendSetupMessage(
-    setupInfo: Result<{ chainId: number; timeout: string }>,
+    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, Error>,
     to: string,
     from: string,
     timeout?: number,
@@ -63,7 +72,7 @@ export interface IMessagingService {
   onReceiveSetupMessage(
     publicIdentifier: string,
     callback: (
-      setupInfo: Result<{ chainId: number; timeout: string }, MessagingError>,
+      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, MessagingError>,
       from: string,
       inbox: string,
     ) => void,
@@ -100,6 +109,19 @@ export interface IMessagingService {
     restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void>;
 
+  sendIsAliveMessage(
+    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<void, IsAliveError>>;
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+  respondToIsAliveMessage(inbox: string, params: Result<IsAliveResponse, IsAliveError>): Promise<void>;
+
   sendRequestCollateralMessage(
     requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
     to: string,
@@ -112,12 +134,6 @@ export interface IMessagingService {
     callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
   ): Promise<void>;
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void>;
-
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void>;
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>>;
 
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;

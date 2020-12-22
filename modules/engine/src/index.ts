@@ -43,6 +43,7 @@ import {
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
+import { sendIsAlive } from "./isAlive";
 
 export const ajv = new Ajv();
 
@@ -95,6 +96,8 @@ export class VectorEngine implements IVectorEngine {
       logger.child({ module: "VectorEngine" }),
     );
     await engine.setupListener();
+    logger.debug({}, "Setup engine listeners");
+    await sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
   }
@@ -376,6 +379,7 @@ export class VectorEngine implements IVectorEngine {
         chainId: params.chainId,
         providerUrl: chainProviders.getValue()[params.chainId],
       },
+      meta: params.meta,
     });
 
     if (setupRes.isError) {
@@ -426,16 +430,7 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
-    const chainProviders = this.chainService.getChainProviders();
-    if (chainProviders.isError) {
-      return Result.fail(new Error(chainProviders.getError()!.message));
-    }
-
-    return this.messaging.sendSetupMessage(
-      Result.ok({ chainId: params.chainId, timeout: params.timeout }),
-      params.counterpartyIdentifier,
-      this.publicIdentifier,
-    );
+    return this.messaging.sendSetupMessage(Result.ok(params), params.counterpartyIdentifier, this.publicIdentifier);
   }
 
   private async deposit(

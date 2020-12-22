@@ -13,6 +13,7 @@ import {
   IVectorChainReader,
   FullTransferState,
   IExternalValidation,
+  MessagingError,
 } from "@connext/vector-types";
 import { validateChannelUpdateSignatures } from "@connext/vector-utils";
 import pino from "pino";
@@ -137,9 +138,16 @@ export async function outbound(
     // Error is for some other reason, do not retry update.
     logger.error({ method, error }, "Error receiving response, will not save state!");
     return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.CounterpartyFailure, params, previousState, {
-        counterpartyError: error.message,
-      }),
+      new OutboundChannelUpdateError(
+        error.message === MessagingError.reasons.Timeout
+          ? OutboundChannelUpdateError.reasons.CounterpartyOffline
+          : OutboundChannelUpdateError.reasons.CounterpartyFailure,
+        params,
+        previousState,
+        {
+          counterpartyError: error.message,
+        },
+      ),
     );
   }
 
@@ -300,7 +308,7 @@ export async function inbound(
     );
     if (syncRes.isError) {
       const error = syncRes.getError() as InboundChannelUpdateError;
-      return returnError(error.message, error.update, error.state, error.context);
+      return returnError(error.message, error.update, error.state as FullChannelState, error.context);
     }
 
     const { updatedChannel: syncedChannel, updatedActiveTransfers: syncedActiveTransfers } = syncRes.getValue();
@@ -353,8 +361,8 @@ export async function inbound(
 // update to send to the counterparty
 type OutboundSync = {
   update: ChannelUpdate<any>;
-  syncedChannel: FullChannelState<any>;
-  updatedChannel: FullChannelState<any>;
+  syncedChannel: FullChannelState;
+  updatedChannel: FullChannelState;
   updatedTransfer?: FullTransferState;
   updatedActiveTransfers: FullTransferState[];
 };
