@@ -21,13 +21,21 @@ import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
+import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { deployContracts } from "../../actions";
-import { AddressBook } from "../../addressBook";
-import { bob, alice, networkName, provider, rando } from "../constants";
-import { advanceBlocktime, getOnchainBalance, getTestAddressBook, getTestChannel } from "../utils";
+import { bob, alice, defaultLogLevel, networkName, provider, rando } from "../../constants";
+import { advanceBlocktime, createChannel, getContract } from "../../utils";
 
+const getOnchainBalance = async (assetId: string, address: string): Promise<BigNumber> => {
+  return assetId === AddressZero
+    ? provider.getBalance(address)
+    : new Contract(
+      assetId,
+      (await deployments.getArtifact("TestToken")).abi,
+      provider,
+    ).balanceOf(address);
+};
 describe("CMCAdjudicator.sol", async function () {
   this.timeout(120_000);
 
@@ -39,7 +47,6 @@ describe("CMCAdjudicator.sol", async function () {
   let channel: Contract;
   let token: Contract;
   let transferDefinition: Contract;
-  let addressBook: AddressBook;
   let channelState: FullChannelState;
   let transferState: FullTransferState;
   let aliceSignature: string;
@@ -194,17 +201,13 @@ describe("CMCAdjudicator.sol", async function () {
   };
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [
-      ["TestToken", []],
-      ["HashlockTransfer", []],
-    ]);
-    token = addressBook.getContract("TestToken");
-    transferDefinition = addressBook.getContract("HashlockTransfer");
+    await deployments.fixture(); // Start w fresh deployments
+    token = await getContract("TestToken", alice);
+    transferDefinition = await getContract("HashlockTransfer", alice);
     // mint token to alice/bob
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();
-    channel = await getTestChannel(addressBook);
+    channel = await createChannel(alice.address, bob.address, defaultLogLevel, "true");
     const preImage = getRandomBytes32();
     const state = {
       lockHash: createlockHash(preImage),
@@ -243,7 +246,11 @@ describe("CMCAdjudicator.sol", async function () {
   describe("disputeChannel", () => {
     it("should fail if state.alice is incorrect", async function () {
       await expect(
-        channel.disputeChannel({ ...channelState, alice: getRandomAddress() }, aliceSignature, bobSignature),
+        channel.disputeChannel(
+          { ...channelState, alice: getRandomAddress() },
+          aliceSignature,
+          bobSignature,
+        ),
       ).revertedWith("CMCAdjudicator: INVALID_CHANNEL");
     });
 
