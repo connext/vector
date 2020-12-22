@@ -82,10 +82,6 @@ describe("LibIterableMapping.sol", function () {
       expect(await mapping.getTransferDefinitionByName("HashlockTransfer")).to.be.deep.eq(hashlockRegistry);
     });
 
-    it("should fail if name is an empty string", async () => {
-      await expect(mapping.getTransferDefinitionByName("")).revertedWith("LibIterableMapping: EMPTY_NAME");
-    });
-
     it("should fail if name is not in contract.names", async () => {
       await expect(mapping.getTransferDefinitionByName("Test")).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
     });
