@@ -198,10 +198,10 @@ watch-engine: contracts-js protocol
 
 test-server-node: server-node-js
 	bash ops/start-messaging.sh
-	bash ops/test-unit.sh server-node test
+	bash ops/test-unit.sh server-node test 1342
 watch-server-node: engine
 	bash ops/start-messaging.sh
-	bash ops/test-unit.sh server-node watch
+	bash ops/test-unit.sh server-node watch 1342
 
 test-browser-node: browser-node
 	bash ops/test-unit.sh browser-node test
