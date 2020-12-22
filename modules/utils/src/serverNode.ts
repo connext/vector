@@ -450,7 +450,7 @@ export class RestServerNodeService implements INodeService {
             stack: jsonErr.stack,
             url,
             params,
-            ...(e.response.data ?? {}),
+            ...(e.response?.data ?? {}),
           },
         ),
       );

@@ -12,6 +12,7 @@ import {
   IsAlivePayload,
   FullTransferState,
   IVectorChainReader,
+  NodeError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
@@ -358,15 +359,20 @@ export async function handleIsAlive(
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
   const erroredUpdates = [];
-  for (const update of updates) {
-    logger.info({ method, update }, "Found update for isAlive channel");
+  for (const routerUpdate of updates) {
+    // set status to processing to avoid race conditions
+    await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.PROCESSING);
+    logger.info({ method, update: routerUpdate }, "Found update for isAlive channel");
+    const { type, payload } = routerUpdate;
+
     let transferResult;
-    if (update.type === RouterUpdateType.TRANSFER_CREATION) {
+    let nodeServiceError: string | undefined = undefined;
+    if (type === RouterUpdateType.TRANSFER_CREATION) {
       // first collateralize if needed
-      const params = update.payload as NodeParams.ConditionalTransfer;
+      const params = payload as NodeParams.ConditionalTransfer;
       const channelStateRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
       if (channelStateRes.isError) {
-        transferResult = channelStateRes;
+        nodeServiceError = channelStateRes.getError()?.message;
       } else {
         const channelState = channelStateRes.getValue();
         const routerBalance = getBalanceForAssetId(
@@ -388,32 +394,44 @@ export async function handleIsAlive(
           );
           // TODO: Do we want to cancel or hold payment in this case?
           if (requestCollateralRes.isError) {
-            transferResult = requestCollateralRes;
+            nodeServiceError = requestCollateralRes.getError()?.context.nodeError;
           }
         }
       }
-      if (!transferResult?.isError) {
-        transferResult = await nodeService.conditionalTransfer(update.payload as NodeParams.ConditionalTransfer);
+      if (!nodeServiceError) {
+        transferResult = await nodeService.conditionalTransfer(payload as NodeParams.ConditionalTransfer);
       }
-    } else if (update.type === RouterUpdateType.TRANSFER_RESOLUTION) {
-      transferResult = await nodeService.resolveTransfer(update.payload as NodeParams.ResolveTransfer);
+    } else if (type === RouterUpdateType.TRANSFER_RESOLUTION) {
+      transferResult = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
     } else {
-      return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.StoredUpdateError, {
-          message: "Unknown update type",
-          update,
-        }),
-      );
+      logger.error({ update: routerUpdate }, "Unknown update type");
+      await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
+      continue;
     }
-    if (transferResult.isError) {
+    nodeServiceError = nodeServiceError ?? transferResult?.getError()?.message;
+    if (nodeServiceError || !transferResult) {
       logger.error(
-        { method, message: transferResult.getError()?.message, context: transferResult.getError()?.context, update },
-        "Error in transfer",
+        {
+          method,
+          message: nodeServiceError,
+          update: routerUpdate,
+          transferResult: transferResult?.toJson(),
+        },
+        "Error handling isAlive update",
       );
-      await store.setUpdateStatus(update.id, RouterUpdateStatus.FAILED, transferResult.getError()?.message);
-      erroredUpdates.push(update);
+      const isTimeout = nodeServiceError === NodeError.reasons.Timeout;
+      await store.setUpdateStatus(
+        routerUpdate.id,
+        isTimeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+        nodeServiceError,
+      );
+      erroredUpdates.push(routerUpdate);
+      continue;
     }
-    logger.info({ transferResult: transferResult.getValue(), update, method }, "Successful handled isAlive update");
+    logger.info(
+      { transferResult: transferResult.getValue(), update: routerUpdate, method },
+      "Successfully handled isAlive update",
+    );
   }
   if (erroredUpdates.length > 0) {
     return Result.fail(

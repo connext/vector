@@ -4,9 +4,10 @@ import { PrismaClient } from "../generated/db-client";
 import { config } from "../config";
 
 export const RouterUpdateStatus = {
-  PENDING: "PENDING",
   COMPLETE: "COMPLETE",
   FAILED: "FAILED",
+  PENDING: "PENDING",
+  PROCESSING: "PROCESSING",
 } as const;
 export type RouterUpdateStatus = keyof typeof RouterUpdateStatus;
 
@@ -25,6 +26,7 @@ export type RouterStoredUpdate<T extends RouterUpdateType> = {
   id: string;
   type: T;
   payload: RouterStoredUpdatePayload[T];
+  status: RouterUpdateStatus;
 };
 export interface IRouterStore {
   getQueuedUpdates(channelAddress: string, status: RouterUpdateStatus): Promise<RouterStoredUpdate<RouterUpdateType>[]>;
@@ -53,7 +55,14 @@ export class PrismaStore implements IRouterStore {
     status: RouterUpdateStatus,
   ): Promise<RouterStoredUpdate<RouterUpdateType>[]> {
     const updates = await this.prisma.queuedUpdate.findMany({ where: { channelAddress, status } });
-    return updates.map((u) => JSON.parse(u.updateData));
+    return updates.map((u) => {
+      return {
+        payload: JSON.parse(u.updateData),
+        type: u.type as RouterUpdateType,
+        status: u.status as RouterUpdateStatus,
+        id: u.id,
+      };
+    });
   }
 
   async queueUpdate<T extends RouterUpdateType>(

@@ -146,9 +146,13 @@ export async function setupEngineListeners(
   // indefinitely?
 
   await messaging.onReceiveIsAliveMessage(signer.publicIdentifier, async (params, from, inbox) => {
+    if (from === signer.publicIdentifier) {
+      return;
+    }
     const method = "onReceiveRequestCollateralMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
+      return;
     }
     logger.info({ params: params.getValue(), method, from }, "Handling message");
     const channel = await store.getChannelState(params.getValue().channelAddress);

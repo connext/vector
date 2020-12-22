@@ -28,7 +28,7 @@ const isAlivePath = "/is-alive";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
-    url: `${routerBase}${conditionalTransferCreatedPath}`,
+    url: `${routerBase}${isAlivePath}`,
   },
   [EngineEvents.SETUP]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
