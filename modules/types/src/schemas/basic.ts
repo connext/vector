@@ -24,7 +24,7 @@ export const TBalance = Type.Object({
   amount: Type.Array(TIntegerString),
 });
 
-export const TBasicMeta = Type.Optional(Type.Any());
+export const TBasicMeta = Type.Optional(Type.Dict(Type.Any()));
 
 export const TContractAddresses = Type.Object({
   channelFactoryAddress: TAddress,
@@ -47,8 +47,8 @@ export const TNetworkContext = Type.Intersect([
 // risk to not validating these using the schema validation. Instead,
 // use relaxed schema validation for all transfer types to make it easier
 // to support generic transfer types (since no schemas have to be updated)
-export const TransferStateSchema = Type.Any();
-export const TransferResolverSchema = Type.Any();
+export const TransferStateSchema = Type.Dict(Type.Any());
+export const TransferResolverSchema = Type.Dict(Type.Any());
 export const TransferEncodingSchema = Type.Array(Type.String(), { maxItems: 2, minItems: 2, uniqueItems: true });
 export const TransferNameSchema = Type.String();
 
@@ -95,7 +95,7 @@ export const TCreateUpdateDetails = Type.Object({
   transferDefinition: TAddress,
   transferTimeout: TIntegerString,
   transferInitialState: TransferStateSchema,
-  transferEncodings: Type.Array(Type.String()),
+  transferEncodings: TransferEncodingSchema,
   merkleProofData: Type.Array(Type.String()),
   merkleRoot: TBytes32,
   meta: TBasicMeta,
@@ -130,7 +130,7 @@ export const TChannelUpdate = Type.Object({
   nonce: Type.Number(),
   balance: TBalance,
   assetId: TAddress,
-  details: Type.Any(), // specific detail structure asserted in validation
+  details: Type.Dict(Type.Any()), // specific detail structure asserted in validation
   aliceSignature: Type.Optional(Type.Union([TSignature, Type.Null()])), //Type.Optional(TSignature),
   bobSignature: Type.Optional(Type.Union([TSignature, Type.Null()])),
 });

@@ -24,14 +24,14 @@ const SetupProtocolParamsSchema = Type.Object({
   timeout: TIntegerString,
   networkContext: TNetworkContext,
   counterpartyIdentifier: TPublicIdentifier,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Deposit
 const DepositProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Create
@@ -42,7 +42,7 @@ const CreateProtocolParamsSchema = Type.Object({
   transferDefinition: TAddress,
   transferInitialState: TransferStateSchema,
   timeout: TIntegerString,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Resolve
@@ -50,7 +50,7 @@ const ResolveProtocolParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
   transferResolver: TransferResolverSchema,
-  meta: TBasicMeta,
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Namespace export

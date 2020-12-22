@@ -64,14 +64,14 @@ const SetupEngineParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
   chainId: TChainId,
   timeout: TIntegerString,
-  meta: Type.Optional(Type.Any()),
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Deposit engine params
 const DepositEngineParamsSchema = Type.Object({
   channelAddress: TAddress,
   assetId: TAddress,
-  meta: Type.Optional(Type.Any()),
+  meta: Type.Optional(TBasicMeta),
 });
 
 // Request collateral engine params
@@ -90,17 +90,17 @@ const CreateConditionalTransferParamsSchema = Type.Object({
   recipientChainId: Type.Optional(TChainId),
   recipientAssetId: Type.Optional(TAddress),
   timeout: Type.Optional(TIntegerString),
-  meta: Type.Optional(Type.Any()),
+  meta: Type.Optional(TBasicMeta),
   type: Type.String(), // Type.Union([TransferNameSchema, TAddress]),
-  details: Type.Any(), // initial state w.o balance object
+  details: Type.Dict(Type.Any()), // initial state w.o balance object
 });
 
 // Resolve conditional transfer engine params
 const ResolveTransferParamsSchema = Type.Object({
   channelAddress: TAddress,
   transferId: TBytes32,
-  meta: Type.Optional(Type.Any()),
-  transferResolver: Type.Any(),
+  meta: Type.Optional(TBasicMeta),
+  transferResolver: TransferResolverSchema,
 });
 
 // Withdraw engine params
@@ -112,7 +112,7 @@ const WithdrawParamsSchema = Type.Object({
   fee: Type.Optional(TIntegerString),
   callTo: Type.Optional(TAddress),
   callData: Type.Optional(Type.String()),
-  meta: Type.Optional(Type.Any()),
+  meta: Type.Optional(TBasicMeta),
 });
 
 //////////////////
