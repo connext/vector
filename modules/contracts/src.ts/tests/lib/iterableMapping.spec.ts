@@ -8,7 +8,7 @@ import { deployments } from "hardhat";
 import { alice } from "../../constants";
 import { getContract } from "../../utils";
 
-describe("LibIterableMapping.sol", function() {
+describe("LibIterableMapping.sol", function () {
   this.timeout(120_000);
   let mapping: Contract;
   let transferDefs: Contract[];
@@ -27,10 +27,7 @@ describe("LibIterableMapping.sol", function() {
     await deployments.fixture(); // Start w fresh deployments
     mapping = await getContract("TestLibIterableMapping", alice);
     expect(mapping.address).to.be.a("string");
-    transferDefs = [
-      await getContract("HashlockTransfer", alice),
-      await getContract("Withdraw", alice),
-    ];
+    transferDefs = [await getContract("HashlockTransfer", alice), await getContract("Withdraw", alice)];
     expect(transferDefs[0].address).to.be.a("string");
     expect(transferDefs[1].address).to.be.a("string");
   });
@@ -99,7 +96,7 @@ describe("LibIterableMapping.sol", function() {
 
     it("should work", async () => {
       for (const transfer of transferDefs) {
-        const idx = transferDefs.findIndex(t => t.address === transfer.address);
+        const idx = transferDefs.findIndex((t) => t.address === transfer.address);
         const registry = await transferDefs[idx].getRegistryInformation();
         expect(await mapping.getTransferDefinitionByIndex(BigNumber.from(idx))).to.be.deep.eq(registry);
       }
@@ -116,7 +113,7 @@ describe("LibIterableMapping.sol", function() {
     beforeEach(async () => await loadMapping());
 
     it("should work", async () => {
-      const info = await Promise.all(transferDefs.map(t => t.getRegistryInformation()));
+      const info = await Promise.all(transferDefs.map((t) => t.getRegistryInformation()));
       expect(await mapping.getTransferDefinitions()).to.be.deep.eq(info);
     });
   });
@@ -124,8 +121,9 @@ describe("LibIterableMapping.sol", function() {
   describe("addTransferDefinition", () => {
     let info: RegisteredTransfer[];
     beforeEach(async () => {
-      info = await Promise.all(transferDefs.map(t => t.getRegistryInformation()));
+      info = await Promise.all(transferDefs.map((t) => t.getRegistryInformation()));
     });
+
     it("should work", async () => {
       await loadMapping();
       expect(await mapping.length()).to.be.eq(BigNumber.from(2));
@@ -140,14 +138,14 @@ describe("LibIterableMapping.sol", function() {
 
     it("should fail if name is in contract.names", async () => {
       await loadMapping();
-      await expect(mapping.addTransferDefinition(info[0])).revertedWith("LibIterableMapping: NAME_NOT_FOUND");
+      await expect(mapping.addTransferDefinition(info[0])).revertedWith("LibIterableMapping: NAME_ALREADY_ADDED");
     });
   });
 
   describe("removeTransferDefinition", () => {
     let info: RegisteredTransfer[];
     beforeEach(async () => {
-      info = await Promise.all(transferDefs.map(t => t.getRegistryInformation()));
+      info = await Promise.all(transferDefs.map((t) => t.getRegistryInformation()));
       await loadMapping();
     });
 
