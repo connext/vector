@@ -16,7 +16,7 @@ export const requestCollateral = async (
   requestedAmount?: string,
   transferAmount?: string, // used when called internally
 ): Promise<Result<undefined | NodeResponses.Deposit, RequestCollateralError>> => {
-  const profileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
+  const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.UnableToGetRebalanceProfile, {

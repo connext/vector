@@ -47,14 +47,14 @@ describe("Collateral", () => {
 
   // it("should get profiles for different assetIds", async () => {
   //   const channel = createTestChannelState("create").channel;
-  //   const rebalanceProfileEthRes = await getRebalanceProfile(channel.networkContext.chainId, AddressZero);
+  //   const rebalanceProfileEthRes = getRebalanceProfile(channel.networkContext.chainId, AddressZero);
   //   const profileEth = rebalanceProfileEthRes.getValue();
   //   expect(profileEth.assetId).eq(AddressZero);
 
   //   const tokenProfile = config.rebalanceProfiles.find(
   //     (prof) => prof.chainId === channel.networkContext.chainId && prof.assetId !== AddressZero,
   //   );
-  //   const rebalanceProfileTokenRes = await getRebalanceProfile(channel.networkContext.chainId, tokenProfile.assetId);
+  //   const rebalanceProfileTokenRes = getRebalanceProfile(channel.networkContext.chainId, tokenProfile.assetId);
   //   const profileToken = rebalanceProfileTokenRes.getValue();
   //   expect(profileToken.assetId).eq(tokenProfile.assetId);
   // });
@@ -77,7 +77,7 @@ describe("Collateral", () => {
   it("should request collateral without a target", async () => {
     const assetId = AddressZero;
     const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
+    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
     await requestCollateral(channel, assetId, channel.aliceIdentifier, node as INodeService, chainReader, logger);
@@ -97,7 +97,7 @@ describe("Collateral", () => {
   it("should request collateral with a requested amount higher than the target", async () => {
     const assetId = AddressZero;
     const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
+    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
     const requestedAmount = BigNumber.from(profile.target).add(10);
@@ -126,7 +126,7 @@ describe("Collateral", () => {
   it("should request collateral with a requested amount lower than the target", async () => {
     const assetId = AddressZero;
     const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
+    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
     const requestedAmount = BigNumber.from(profile.target).sub(10);
@@ -155,7 +155,7 @@ describe("Collateral", () => {
   it("should error on request collateral with a requested amount higher than reclaim threshold", async () => {
     const assetId = AddressZero;
     const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
+    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
     const requestedAmount = BigNumber.from(profile.reclaimThreshold).add(10);
@@ -174,7 +174,7 @@ describe("Collateral", () => {
   it("should request collateral with a transfer amount higher than the threshold", async () => {
     const assetId = AddressZero;
     const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
+    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
     const requestedAmount = BigNumber.from(profile.target).sub(10);

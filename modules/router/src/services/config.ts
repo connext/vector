@@ -3,10 +3,10 @@ import { Result } from "@connext/vector-types";
 import { config, RebalanceProfile } from "../config";
 import { ForwardTransferError } from "../errors";
 
-export const getRebalanceProfile = async (
+export const getRebalanceProfile = (
   chainId: number,
   assetId: string,
-): Promise<Result<RebalanceProfile, ForwardTransferError>> => {
+): Result<RebalanceProfile, ForwardTransferError> => {
   const rebalanceProfile = config.rebalanceProfiles.find(
     (profile) => profile.assetId === assetId && profile.chainId === chainId,
   );
