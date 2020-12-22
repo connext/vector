@@ -423,7 +423,14 @@ export class NatsMessagingService implements IMessagingService {
       const { result } = this.parseIncomingMessage<R>(msg);
       return result;
     } catch (e) {
-      return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }));
+      return Result.fail(
+        new MessagingError(
+          e.message.includes("Request timed out") ? MessagingError.reasons.Timeout : MessagingError.reasons.Unknown,
+          {
+            error: e.message,
+          },
+        ),
+      );
     }
   }
 

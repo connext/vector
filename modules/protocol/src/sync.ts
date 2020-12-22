@@ -13,6 +13,7 @@ import {
   IVectorChainReader,
   FullTransferState,
   IExternalValidation,
+  MessagingError,
 } from "@connext/vector-types";
 import pino from "pino";
 
@@ -136,9 +137,16 @@ export async function outbound(
     // Error is for some other reason, do not retry update.
     logger.error({ method, error }, "Error receiving response, will not save state!");
     return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.CounterpartyFailure, params, previousState, {
-        counterpartyError: error.message,
-      }),
+      new OutboundChannelUpdateError(
+        error.message === MessagingError.reasons.Timeout
+          ? OutboundChannelUpdateError.reasons.CounterpartyOffline
+          : OutboundChannelUpdateError.reasons.CounterpartyFailure,
+        params,
+        previousState,
+        {
+          counterpartyError: error.message,
+        },
+      ),
     );
   }
 

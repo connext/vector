@@ -34,6 +34,7 @@ export const transferWithAutoCollateralization = async (
     routerPublicIdentifier === channel.aliceIdentifier ? "alice" : "bob",
   );
 
+  let collateralError: string | undefined = undefined;
   if (BigNumber.from(routerBalance).lt(params.amount)) {
     logger.info({ routerBalance, recipientAmount: params.amount }, "Requesting collateral to cover transfer");
     const requestCollateralRes = await requestCollateral(
@@ -46,6 +47,7 @@ export const transferWithAutoCollateralization = async (
       undefined,
       params.amount,
     );
+    collateralError = requestCollateralRes.getError()?.context?.nodeError;
 
     if (requestCollateralRes.isError && !enqueue) {
       // Fail without enqueueing
@@ -63,24 +65,34 @@ export const transferWithAutoCollateralization = async (
   // attempt to transfer
   // NOTE: as soon as you try to create a transfer with the receiver,
   // you CANNOT cancel the sender transfer until it has expired.
-  const transfer = await nodeService.conditionalTransfer(params);
-  if (!transfer.isError) {
-    return transfer as Result<NodeResponses.ConditionalTransfer>;
+  let transferError = collateralError;
+  if (!collateralError) {
+    const transfer = await nodeService.conditionalTransfer(params);
+    if (!transfer.isError) {
+      return transfer as Result<NodeResponses.ConditionalTransfer>;
+    }
+    transferError = transfer.getError()?.message;
   }
 
   // error transferring
-  if (!enqueue || transfer.getError()!.message !== NodeError.reasons.Timeout) {
+  if (!enqueue || transferError !== NodeError.reasons.Timeout) {
     // do not enqueue transfer creation
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
-        ...transfer.getError()!.context,
-        // IFF its a timeout, could be withholding sig
-        shouldCancelSender: transfer.getError()!.message !== NodeError.reasons.Timeout,
+        transferError,
+        // if its a timeout, could be withholding sig, so do not cancel
+        // sender transfer
+        shouldCancelSender: false, //transferError !== NodeError.reasons.Timeout,
+        ...params,
       }),
     );
   }
 
   // queue the transfer creation
+  logger.info(
+    { channel: channel.channelAddress, routingId: params.meta?.routingid },
+    "Receiver offline, queueing transfer",
+  );
   try {
     await store.queueUpdate(channel.channelAddress, RouterUpdateType.TRANSFER_CREATION, params);
   } catch (e) {

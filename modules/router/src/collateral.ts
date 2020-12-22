@@ -126,6 +126,7 @@ export const requestCollateral = async (
     publicIdentifier,
     channelAddress: channel.channelAddress,
   };
+  logger.info({ balance: channel.balances[assetIdx], target: target.toString() }, "Reconciling onchain funds");
   const depositRes = await node.reconcileDeposit(params);
   if (!depositRes.isError) {
     return depositRes as Result<NodeResponses.Deposit>;
@@ -134,7 +135,7 @@ export const requestCollateral = async (
   return Result.fail(
     new RequestCollateralError(RequestCollateralError.reasons.UnableToCollateralize, {
       channelAddress: channel.channelAddress,
-      error: error.message,
+      nodeError: error.message,
       context: error.context,
     }),
   );

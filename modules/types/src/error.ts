@@ -170,6 +170,7 @@ export class OutboundChannelUpdateError extends VectorError {
     ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
     CounterpartyFailure: "Counterparty failed to apply update",
+    CounterpartyOffline: "Message to counterparty timed out",
     Create2Failed: "Failed to get create2 address",
     InvalidParams: "Invalid params",
     MessageFailed: "Failed to send message",
@@ -279,6 +280,7 @@ export class MessagingError extends VectorError {
 
   static readonly reasons = {
     Response: "Error received in response",
+    Timeout: "Request timed out",
     Unknown: "Unknown messaging error",
   } as const;
 
