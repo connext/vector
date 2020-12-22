@@ -20,21 +20,18 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
-import { AddressBook } from "../../addressBook";
-import { alice, bob } from "../constants";
-import { getTestAddressBook } from "../utils";
+import { alice, bob } from "../../constants";
+import { getContract } from "../../utils";
 
 describe("Withdraw", function () {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let withdraw: Contract;
 
   before(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["Withdraw", []]]);
-    withdraw = addressBook.getContract("Withdraw");
+    await deployments.fixture(); // Start w fresh deployments
+    withdraw = await getContract("Withdraw", alice);
   });
 
   const createInitialState = async (

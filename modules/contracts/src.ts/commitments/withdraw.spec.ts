@@ -3,25 +3,23 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../actions";
-import { AddressBook } from "../addressBook";
-import { bob, alice, getTestChannel, getTestAddressBook, provider } from "../tests";
+import { alice, bob, provider } from "../constants";
+import { getContract, createChannel } from "../utils";
 
 import { WithdrawCommitment } from "./withdraw";
 
 describe("withdrawCommitment", function() {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let channel: Contract;
   let token: Contract;
   const amount = "50";
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [["TestToken", []]]);
-    token = addressBook.getContract("TestToken");
-    channel = await getTestChannel(addressBook);
+    await deployments.fixture(); // Start w fresh deployments
+    token = await getContract("TestToken", alice);
+    channel = await createChannel();
     await (
       await alice.sendTransaction({
         to: channel.address,

@@ -2,11 +2,11 @@ import { TransferNames, RegisteredTransfer } from "@connext/vector-types";
 import { expect } from "@connext/vector-utils";
 import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { deployments } from "hardhat";
 import pino from "pino";
 
-import { deployContracts, registerTransfer } from "../actions";
-import { AddressBook } from "../addressBook";
-import { alice, bob, chainIdReq, getTestAddressBook, getTestChannel, provider } from "../tests";
+import { alice, bob, chainIdReq, provider } from "../constants";
+import { getContract, createChannel } from "../utils";
 
 import { EthereumChainReader } from "./ethReader";
 
@@ -15,7 +15,6 @@ describe("EthereumChainReader", function () {
   this.timeout(120_000);
   const assetId = AddressZero;
   const transfer = {} as any; // TODO
-  let addressBook: AddressBook;
   let chainId: number;
   let chainReader: EthereumChainReader;
   let channel: Contract;
@@ -23,17 +22,12 @@ describe("EthereumChainReader", function () {
   let transferRegistry: Contract;
 
   before(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [
-      ["ChannelMastercopy", []],
-      ["ChannelFactory", ["ChannelMastercopy", Zero]],
-      ["TransferRegistry", []],
-      ["Withdraw", []],
-    ]);
-    transferRegistry = addressBook.getContract("TransferRegistry");
-    factory = addressBook.getContract("ChannelFactory");
-    await registerTransfer("Withdraw", alice, addressBook);
-    channel = (await getTestChannel()).connect(alice);
+    await deployments.fixture(); // Start w fresh deployments
+
+    factory = await getContract("ChannelFactory", alice);
+    transferRegistry = await getContract("TransferRegistry", alice);
+
+    channel = (await createChannel()).connect(alice);
     chainId = await chainIdReq;
     chainReader = new EthereumChainReader({ [chainId]: provider }, pino());
   });

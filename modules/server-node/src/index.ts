@@ -307,8 +307,9 @@ server.post<{ Body: NodeParams.RequestSetup }>(
       timeout: request.body.timeout,
     });
     try {
-      const res = await engine.request<"chan_requestSetup">(rpc);
-      return reply.status(200).send(res);
+      const result = await engine.request<"chan_requestSetup">(rpc);
+      logger.info({ result }, "Request collateral completed");
+      return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -485,8 +486,9 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, request.body);
     try {
-      const res = await engine.request<"chan_requestCollateral">(rpc);
-      return reply.status(200).send(res);
+      const result = await engine.request<"chan_requestCollateral">(rpc);
+      logger.info({ result }, "Request collateral completed");
+      return reply.status(200).send({ ...result, channelAddress: request.body.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

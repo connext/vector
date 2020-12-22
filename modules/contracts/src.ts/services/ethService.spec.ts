@@ -17,21 +17,11 @@ import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { parseEther } from "@ethersproject/units";
 import { BigNumber } from "@ethersproject/bignumber";
+import { deployments } from "hardhat";
 import { MerkleTree } from "merkletreejs";
 
-import { deployContracts } from "../actions";
-import { AddressBook } from "../addressBook";
-import { logger } from "../constants";
-import {
-  advanceBlocktime,
-  alice,
-  bob,
-  chainIdReq,
-  getTestAddressBook,
-  getTestChannel,
-  provider,
-  rando,
-} from "../tests";
+import { alice, bob, chainIdReq, logger, provider, rando } from "../constants";
+import { advanceBlocktime, getContract, createChannel } from "../utils";
 
 import { EthereumChainService } from "./ethService";
 
@@ -39,7 +29,6 @@ describe("EthereumChainService", function () {
   this.timeout(120_000);
   const aliceSigner = new ChannelSigner(alice.privateKey);
   const bobSigner = new ChannelSigner(bob.privateKey);
-  let addressBook: AddressBook;
   let channel: Contract;
   let channelFactory: Contract;
   let transferDefinition: Contract;
@@ -50,22 +39,18 @@ describe("EthereumChainService", function () {
   let chainId: number;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
+    await deployments.fixture(); // Start w fresh deployments
     chainId = await chainIdReq;
-    await deployContracts(alice, addressBook, [
-      ["TestToken", []],
-      ["HashlockTransfer", []],
-    ]);
-    channel = await getTestChannel(addressBook);
-    channelFactory = addressBook.getContract("ChannelFactory");
+    channel = await createChannel();
+    channelFactory = await getContract("ChannelFactory", alice);
     chainService = new EthereumChainService(
       new MemoryStoreService(),
       { [chainId]: provider },
       alice.privateKey,
       logger,
     );
-    token = addressBook.getContract("TestToken");
-    transferDefinition = addressBook.getContract("HashlockTransfer");
+    token = await getContract("TestToken", alice);
+    transferDefinition = await getContract("HashlockTransfer", alice);
     await (await token.mint(alice.address, parseEther("1"))).wait();
     await (await token.mint(bob.address, parseEther("1"))).wait();
     const preImage = getRandomBytes32();
