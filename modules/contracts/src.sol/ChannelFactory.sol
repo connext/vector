@@ -40,12 +40,14 @@ contract ChannelFactory is IChannelFactory {
 
     /// @dev Allows us to get the chainId that this factory will use in the create2 salt
     function getChainId() public view override returns (uint256 _chainId) {
-        if (chainId == 0) {
+        // Hold in memory to reduce sload calls
+        uint256 chain = chainId;
+        if (chain == 0) {
             assembly {
                 _chainId := chainid()
             }
         } else {
-            _chainId = chainId;
+            _chainId = chain;
         }
     }
 
