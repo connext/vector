@@ -31,7 +31,7 @@ Once you have the above trio set up, you can interact with your nodes via a REST
 
 First, set up your nodes (in [0_config](https://github.com/connext/vector/blob/master/modules/server-node/examples/0-config.http)) on the servers to register signers and create the engines.
 
-```
+```sh
 ### Node -> Carol
 POST {{carolUrl}}/node
 Content-Type: application/json
@@ -51,7 +51,7 @@ Content-Type: application/json
 
 Then, set up your channels from Carol -> Roger and Roger -> Carol (in [1_Setup](https://github.com/connext/vector/blob/master/modules/server-node/examples/1-setup.http)). Note `aliceUrl` is the internal URL that Carol has access to on the Docker network. In these examples, Carol and Dave are requesting Roger to set up the channel with them so that they can be the "Bob" within the channel, which lets them deposit by transferrring directly into the channel address.:
 
-```
+```sh
 ### Carol -> Node
 POST {{carolUrl}}/setup
 Content-Type: application/json
@@ -79,7 +79,7 @@ Content-Type: application/json
 
 Then, send an Eth deposit to Carol's channel onchain. This can be done by connecting Metamask to your local EVM at `http://localhost:8545` and sending a transfer directly to the `channelAddress`, at any time, regardless of either channel participant's liveness status. A convenient way to do this using HTTP JSON-RPC calls is with a POST request:
 
-```
+```sh
 # Send a transaction to {{channelAddress}} for 100000000000000000 Wei
 POST http://localhost:8545
 Content-Type: application/json
@@ -99,7 +99,7 @@ Content-Type: application/json
 
 To add this to Carol's offchain balance, you need to wait for the tx to be mined and then call:
 
-```
+```sh
 POST {{carolUrl}}/deposit
 Content-Type: application/json
 
@@ -110,11 +110,14 @@ Content-Type: application/json
 }
 ```
 
+!!! Warning
+    Only deposit ETH and ERC20-like assets into channel that implement a `transfer(address, address)` function
+
 ## Making a Transfer
 
 Then, create a transfer between Carol and Dave through Roger (in [3_transfer](https://github.com/connext/vector/blob/master/modules/server-node/examples/3-transfer.http)):
 
-```
+```sh
 POST {{carolUrl}}/transfers/create
 Content-Type: application/json
 
@@ -138,7 +141,7 @@ Content-Type: application/json
 
 Lastly, unlock the transfer for Bob to get his funds:
 
-``` http
+```sh
 POST {{daveUrl}}/transfers/resolve
 Content-Type: application/json
 
