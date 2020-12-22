@@ -55,7 +55,6 @@ library LibIterableMapping {
         IterableMapping storage self,
         string memory name
     ) internal view returns (RegisteredTransfer memory) {
-        require(!isEmptyString(name), "LibIterableMapping: EMPTY_NAME");
         require(nameExists(self, name), "LibIterableMapping: NAME_NOT_FOUND");
         return self.transfers[name].transfer;
     }
