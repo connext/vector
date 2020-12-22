@@ -87,7 +87,7 @@ library LibIterableMapping {
     ) internal {
         string memory name = transfer.name;
         require(!isEmptyString(name), "LibIterableMapping: EMPTY_NAME");
-        require(!nameExists(self, name), "LibIterableMapping: NAME_NOT_FOUND");
+        require(!nameExists(self, name), "LibIterableMapping: NAME_ALREADY_ADDED");
         self.transfers[name] = TransferDefinitionWithIndex({
             transfer: transfer,
             index: self.names.length
