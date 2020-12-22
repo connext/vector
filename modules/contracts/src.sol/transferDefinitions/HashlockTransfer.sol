@@ -76,7 +76,8 @@ contract HashlockTransfer is TransferDefinition {
         Balance memory balance = abi.decode(encodedBalance, (Balance));
 
         // If you pass in bytes32(0), payment is canceled
-        // If timelock is nonzero and has expired, payment is canceled
+        // If timelock is nonzero and has expired, payment must be canceled
+        // otherwise resolve will revert
         if (
             resolver.preImage != bytes32(0) &&
             (state.expiry == 0 || state.expiry > block.timestamp)
