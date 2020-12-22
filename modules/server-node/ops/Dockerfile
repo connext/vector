@@ -11,4 +11,5 @@ COPY ops ops
 COPY schema.prisma schema.prisma
 COPY migrations migrations
 COPY dist dist
+COPY dist/generated/db-client /.prisma/client
 ENTRYPOINT ["bash", "ops/entry.sh"]
