@@ -21,6 +21,7 @@
     "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "axios": "0.21.0",
+    "core-js": "3.8.1",
     "ethers": "5.0.21",
     "fastify": "3.8.0",
     "fastify-cors": "4.1.0",
@@ -28,6 +29,7 @@
     "merkletreejs": "0.2.9",
     "pg": "8.5.1",
     "pino": "6.7.0",
+    "regenerator-runtime": "0.13.7",
     "sqlite3": "5.0.0",
     "ts-nats": "1.2.15"
   },
