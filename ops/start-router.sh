@@ -322,8 +322,8 @@ $stack_secrets
 
 volumes:
   certs:
-  database-node:
-  database-router:
+  database_node:
+  database_router:
 
 services:
 
