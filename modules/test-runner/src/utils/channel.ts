@@ -44,7 +44,7 @@ export const setup = async (
     publicIdentifier: aliceService.publicIdentifier,
   });
   expect(bobChannel.getValue()).to.deep.eq(aliceChannel.getValue());
-  return bobChannel.getValue();
+  return bobChannel.getValue()! as FullChannelState;
 };
 
 export const deposit = async (
@@ -55,7 +55,7 @@ export const deposit = async (
   amount: BigNumber,
 ): Promise<FullChannelState> => {
   const channelRes = await depositor.getStateChannel({ channelAddress });
-  const channel = await channelRes.getValue();
+  const channel = channelRes.getValue()! as FullChannelState;
 
   const depositorAliceOrBob = depositor.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
   const depositorBefore = getBalanceForAssetId(channel, assetId, depositorAliceOrBob);
@@ -88,7 +88,7 @@ export const deposit = async (
       channelAddress: channel.channelAddress,
       publicIdentifier: depositor.publicIdentifier,
     })
-  ).getValue()!;
+  ).getValue()! as FullChannelState;
   const counterpartyChannel = (
     await counterparty.getStateChannel({
       channelAddress: channel.channelAddress,
@@ -111,8 +111,12 @@ export const transfer = async (
   amount: BigNumber,
   receiverChainId?: number,
 ): Promise<{ senderChannel: FullChannelState; receiverChannel: FullChannelState }> => {
-  const senderChannel = (await sender.getStateChannel({ channelAddress: senderChannelAddress })).getValue();
-  const receiverChannel = (await receiver.getStateChannel({ channelAddress: receiverChannelAddress })).getValue();
+  const senderChannel = (
+    await sender.getStateChannel({ channelAddress: senderChannelAddress })
+  ).getValue()! as FullChannelState;
+  const receiverChannel = (
+    await receiver.getStateChannel({ channelAddress: receiverChannelAddress })
+  ).getValue()! as FullChannelState;
   const senderAliceOrBob = sender.publicIdentifier === senderChannel.aliceIdentifier ? "alice" : "bob";
   const receiverAliceOrBob = receiver.publicIdentifier === receiverChannel.aliceIdentifier ? "alice" : "bob";
   const senderBefore = getBalanceForAssetId(senderChannel, senderAssetId, senderAliceOrBob);
@@ -147,7 +151,7 @@ export const transfer = async (
       channelAddress: senderChannel.channelAddress,
       publicIdentifier: sender.publicIdentifier,
     })
-  ).getValue()!;
+  ).getValue()! as FullChannelState;
   const senderBalanceAfterTransfer = getBalanceForAssetId(senderChannelAfterTransfer, senderAssetId, senderAliceOrBob);
   expect(senderBalanceAfterTransfer).to.be.eq(BigNumber.from(senderBefore).sub(amount));
   const [senderCreate, receiverCreate] = await Promise.all([senderCreatePromise, receiverCreatePromise]);
@@ -161,7 +165,7 @@ export const transfer = async (
   });
 
   expect(receiverTransferRes.getError()).to.not.be.ok;
-  const receiverTransfer = receiverTransferRes.getValue();
+  const receiverTransfer = receiverTransferRes.getValue()!;
 
   const receiverResolvePromise = receiver.waitFor(EngineEvents.CONDITIONAL_TRANSFER_RESOLVED, 30_000);
   const resolveRes = await receiver.resolveTransfer({
@@ -181,7 +185,7 @@ export const transfer = async (
       channelAddress: receiverChannel.channelAddress,
       publicIdentifier: receiver.publicIdentifier,
     })
-  ).getValue()!;
+  ).getValue()! as FullChannelState;
 
   const daveAfterResolve = getBalanceForAssetId(receiverChannelAfterResolve, senderAssetId, receiverAliceOrBob);
   expect(daveAfterResolve).to.be.eq(BigNumber.from(receiverBefore).add(amount));
@@ -234,7 +238,7 @@ export const withdraw = async (
   expect(transactionHash).to.be.ok;
   await provider.waitForTransaction(transactionHash!);
 
-  const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue();
+  const postWithdrawChannel = (await withdrawer.getStateChannel({ channelAddress })).getValue()! as FullChannelState;
   const postWithdrawBalance = getBalanceForAssetId(postWithdrawChannel, assetId, withdrawerAliceOrBob);
   const postWithdrawMultisig = await getOnchainBalance(assetId, channelAddress, provider);
   const postWithdrawRecipient = await getOnchainBalance(assetId, withdrawRecipient, provider);

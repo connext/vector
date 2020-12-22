@@ -75,7 +75,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
   }
 
   async saveChannelDispute(
-    channel: FullChannelState<any>,
+    channel: FullChannelState,
     channelDispute: ChannelDispute,
     transferDispute?: TransferDispute,
   ): Promise<void> {
@@ -107,7 +107,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.transactions.clear();
   }
 
-  async saveChannelState(channelState: FullChannelState<any>, transfer?: FullTransferState): Promise<void> {
+  async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
     await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
       await this.db.channels.put(channelState);
       if (channelState.latestUpdate.type === UpdateType.create) {
@@ -126,12 +126,12 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     });
   }
 
-  async getChannelStates(): Promise<FullChannelState<any>[]> {
+  async getChannelStates(): Promise<FullChannelState[]> {
     const channels = await this.db.channels.toArray();
     return channels;
   }
 
-  async getChannelState(channelAddress: string): Promise<FullChannelState<any> | undefined> {
+  async getChannelState(channelAddress: string): Promise<FullChannelState | undefined> {
     const channel = await this.db.channels.get(channelAddress);
     return channel;
   }
@@ -140,7 +140,7 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     publicIdentifierA: string,
     publicIdentifierB: string,
     chainId: number,
-  ): Promise<FullChannelState<any> | undefined> {
+  ): Promise<FullChannelState | undefined> {
     const channel = await this.db.channels
       .where("[aliceIdentifier+bobIdentifier+networkContext.chainId]")
       .equals([publicIdentifierA, publicIdentifierB, chainId])

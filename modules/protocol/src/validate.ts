@@ -328,7 +328,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
 ): Promise<
   Result<
     {
-      updatedChannel: FullChannelState<T>;
+      updatedChannel: FullChannelState;
       updatedActiveTransfers: FullTransferState[];
       updatedTransfer?: FullTransferState;
     },

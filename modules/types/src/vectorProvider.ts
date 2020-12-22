@@ -1,4 +1,4 @@
-import { FullChannelState, FullTransferState } from "./channel";
+import { FullTransferState, FullChannelState } from "./channel";
 import { EngineParams, NodeResponses } from "./schemas";
 import { RegisteredTransfer } from "./transferDefinitions";
 

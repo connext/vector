@@ -1,3 +1,4 @@
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   createTestChannelState,
   expect,
@@ -14,41 +15,63 @@ import { INodeService, Result } from "@connext/vector-types";
 
 import { config } from "../config";
 import { requestCollateral } from "../collateral";
-import { getRebalanceProfile } from "../services/rebalance";
-
-import { mockProvider } from "./utils/mocks";
+import { getRebalanceProfile } from "../services/config";
 
 const logger = pino({ level: config.logLevel });
-const hydratedProviders = { 1337: mockProvider };
 
 describe("Collateral", () => {
   let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
+  let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
 
   beforeEach(async () => {
     node = Sinon.createStubInstance(RestServerNodeService);
     node.conditionalTransfer.resolves(Result.ok({} as any));
     node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
     node.reconcileDeposit.resolves(Result.ok({ channelAddress: mkAddress() }));
+
+    chainReader = Sinon.createStubInstance(VectorChainReader);
+    chainReader.getTotalDepositedA.resolves(Result.ok(BigNumber.from(0)));
+    chainReader.getTotalDepositedB.resolves(Result.ok(BigNumber.from(0)));
+    chainReader.getHydratedProviders.returns(
+      Result.ok({
+        [1337]: { waitForTransaction: () => Promise.resolve({ logs: [] }) } as any,
+      }),
+    );
   });
 
   afterEach(() => {
     // TODO: why doesnt this work
-    // Sinon.restore();
-    // Sinon.reset();
+    Sinon.restore();
+    Sinon.reset();
   });
 
-  it("should get profiles for different assetIds", async () => {
-    const channel = createTestChannelState("create").channel;
-    const rebalanceProfileEthRes = await getRebalanceProfile(channel.networkContext.chainId, AddressZero);
-    const profileEth = rebalanceProfileEthRes.getValue();
-    expect(profileEth.assetId).eq(AddressZero);
+  // it("should get profiles for different assetIds", async () => {
+  //   const channel = createTestChannelState("create").channel;
+  //   const rebalanceProfileEthRes = await getRebalanceProfile(channel.networkContext.chainId, AddressZero);
+  //   const profileEth = rebalanceProfileEthRes.getValue();
+  //   expect(profileEth.assetId).eq(AddressZero);
 
-    const tokenProfile = config.rebalanceProfiles.find(
-      (prof) => prof.chainId === channel.networkContext.chainId && prof.assetId !== AddressZero,
-    );
-    const rebalanceProfileTokenRes = await getRebalanceProfile(channel.networkContext.chainId, tokenProfile.assetId);
-    const profileToken = rebalanceProfileTokenRes.getValue();
-    expect(profileToken.assetId).eq(tokenProfile.assetId);
+  //   const tokenProfile = config.rebalanceProfiles.find(
+  //     (prof) => prof.chainId === channel.networkContext.chainId && prof.assetId !== AddressZero,
+  //   );
+  //   const rebalanceProfileTokenRes = await getRebalanceProfile(channel.networkContext.chainId, tokenProfile.assetId);
+  //   const profileToken = rebalanceProfileTokenRes.getValue();
+  //   expect(profileToken.assetId).eq(tokenProfile.assetId);
+  // });
+  it("should fail if getRebalanceProfile fails", async () => {});
+  it("should fail if requestedAmount > reclaimThreshold", async () => {});
+  it("should fail if it cannot get the chainProviders", async () => {});
+  it("should fail if it cannot get a providerUrl", async () => {});
+  it("should fail if it cannot get the onchain balance", async () => {});
+
+  describe("should work", () => {
+    it("if profile.target > requestedAmount (deposits larger of two)", async () => {});
+    it("if requestedAmount > profile.target (deposits larger of two)", async () => {});
+    it("if transferAmount provided", async () => {});
+    it("if no collateral needed", async () => {});
+    it("if there is only offchain reconciliation needed (no deposit sent onchain)", async () => {});
+    it("if an onchain deposit is needed", async () => {});
+    it("if requested amount higher than the target", async () => {});
   });
 
   it("should request collateral without a target", async () => {
@@ -57,7 +80,7 @@ describe("Collateral", () => {
     const rebalanceProfileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
     const profile = rebalanceProfileRes.getValue();
 
-    await requestCollateral(channel, assetId, channel.aliceIdentifier, node as INodeService, hydratedProviders, logger);
+    await requestCollateral(channel, assetId, channel.aliceIdentifier, node as INodeService, chainReader, logger);
     node.sendDepositTx.getCall(0);
 
     expect(
@@ -83,7 +106,7 @@ describe("Collateral", () => {
       assetId,
       channel.aliceIdentifier,
       node as INodeService,
-      hydratedProviders,
+      chainReader,
       logger,
       requestedAmount.toString(),
     );
@@ -112,7 +135,7 @@ describe("Collateral", () => {
       assetId,
       channel.aliceIdentifier,
       node as INodeService,
-      hydratedProviders,
+      chainReader,
       logger,
       requestedAmount.toString(),
     );
@@ -141,7 +164,7 @@ describe("Collateral", () => {
       assetId,
       channel.aliceIdentifier,
       node as INodeService,
-      hydratedProviders,
+      chainReader,
       logger,
       requestedAmount.toString(),
     );
@@ -161,7 +184,7 @@ describe("Collateral", () => {
       assetId,
       channel.aliceIdentifier,
       node as INodeService,
-      hydratedProviders,
+      chainReader,
       logger,
       requestedAmount.toString(),
       transferAmount.toString(),

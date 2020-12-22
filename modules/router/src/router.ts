@@ -15,6 +15,7 @@ export class Router implements IRouter {
     private readonly publicIdentifier: string,
     private readonly signerAddress: string,
     private readonly nodeService: INodeService,
+    private readonly chainReader: IVectorChainReader,
     private readonly store: IRouterStore,
     private readonly logger: BaseLogger,
     private readonly register: Registry,
@@ -24,11 +25,12 @@ export class Router implements IRouter {
     publicIdentifier: string,
     signerAddress: string,
     nodeService: INodeService,
+    chainReader: IVectorChainReader,
     store: IRouterStore,
     logger: BaseLogger,
     register: Registry,
   ): Promise<Router> {
-    const router = new Router(publicIdentifier, signerAddress, nodeService, store, logger, register);
+    const router = new Router(publicIdentifier, signerAddress, nodeService, chainReader, store, logger, register);
     await router.startup();
     logger.info("Vector Router connected 🚀");
     return router;
@@ -40,6 +42,7 @@ export class Router implements IRouter {
       this.signerAddress,
       this.nodeService,
       this.store,
+      this.chainReader,
       this.logger,
       this.register,
     );

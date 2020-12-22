@@ -1,3 +1,5 @@
+import "core-js/stable";
+import "regenerator-runtime/runtime";
 import fastify from "fastify";
 import fastifyCors from "fastify-cors";
 import pino from "pino";

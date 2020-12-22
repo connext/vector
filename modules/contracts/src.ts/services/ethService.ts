@@ -284,7 +284,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
                 { deployTx: deployTx.hash, channel: channelState.channelAddress },
                 "Did not see event within 15s after tx was mined",
               );
-              resolve();
+              resolve(undefined);
             }, 15_000),
           ),
         ]);
@@ -309,7 +309,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   public async sendDepositTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     sender: string,
     amount: string,
     assetId: string,
@@ -512,7 +512,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async sendDepositATx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     amount: string,
     assetId: string,
   ): Promise<Result<TransactionResponse, ChainError>> {
@@ -559,7 +559,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async sendDepositBTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     amount: string,
     assetId: string,
   ): Promise<Result<TransactionResponse, ChainError>> {

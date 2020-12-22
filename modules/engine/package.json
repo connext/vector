@@ -23,7 +23,7 @@
     "@ethersproject/constants": "5.0.7",
     "@ethersproject/random": "5.0.6",
     "@ethersproject/wallet": "5.0.9",
-    "@sinclair/typebox": "0.11.0",
+    "@sinclair/typebox": "0.12.7",
     "ajv": "6.12.6",
     "evt": "1.9.2",
     "pino": "6.7.0",

@@ -11,6 +11,5 @@ COPY ops ops
 COPY schema.prisma schema.prisma
 COPY migrations migrations
 COPY dist dist
-RUN cp -rfT dist/.prisma node_modules/.prisma
-RUN cp -rfT dist/@prisma/client node_modules/@prisma/client
+COPY dist/generated/db-client /.prisma/client
 ENTRYPOINT ["bash", "ops/entry.sh"]

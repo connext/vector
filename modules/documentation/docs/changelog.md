@@ -2,11 +2,10 @@
 
 ## Next Release
 
-- add cancellation of sender-side payment on router
-- add `EncodedCancel()` to `TransferRegistry` / `TransferDefinition`
-- add `encodedCancel` to `RegisteredTransfer`
-- add engine RPC tests
-- add engine param converter tests
+- \[router\] fix rebalance profile getter to respect assetIds
+- \[router\] cancel transfers if they are unsuccessful
+- \[contracts\] added required `EncodedCancel` getter to transfer registry interface
+- \[engine\] add rpc schema + param conversion tests
 
 ## 0.0.38
 

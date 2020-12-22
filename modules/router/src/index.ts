@@ -1,20 +1,24 @@
+import "core-js/stable";
+import "regenerator-runtime/runtime";
 import fastify from "fastify";
 import metricsPlugin from "fastify-metrics";
 import pino from "pino";
 import { Evt } from "evt";
-import { EventCallbackConfig, RestServerNodeService } from "@connext/vector-utils";
+import { VectorChainReader } from "@connext/vector-contracts";
+import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
 import {
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
+  IsAlivePayload,
   RequestCollateralPayload,
 } from "@connext/vector-types";
 import { Registry } from "prom-client";
 
 import { config } from "./config";
 import { IRouter, Router } from "./router";
-import { RouterStore } from "./services/store";
+import { PrismaStore } from "./services/store";
 
 const routerPort = 8000;
 const routerBase = `http://router:${routerPort}`;
@@ -22,7 +26,12 @@ const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
+const isAlivePath = "/is-alive";
 const evts: EventCallbackConfig = {
+  [EngineEvents.IS_ALIVE]: {
+    evt: Evt.create<IsAlivePayload>(),
+    url: `${routerBase}${isAlivePath}`,
+  },
   [EngineEvents.SETUP]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
@@ -53,19 +62,24 @@ const register = new Registry();
 server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });
 
 let router: IRouter;
-const store = new RouterStore();
+const store = new PrismaStore();
 
 server.addHook("onReady", async () => {
   const nodeService = await RestServerNodeService.connect(
     config.nodeUrl,
-    logger.child({ module: "RestServerNodeService" }),
+    logger.child({ module: "RouterNodeService" }),
     evts,
     0,
+  );
+  const chainService = new VectorChainReader(
+    hydrateProviders(config.chainProviders),
+    logger.child({ module: "RouterChainReader" }),
   );
   router = await Router.connect(
     nodeService.publicIdentifier,
     nodeService.signerAddress,
     nodeService,
+    chainService,
     store,
     logger,
     register,
@@ -74,6 +88,11 @@ server.addHook("onReady", async () => {
 
 server.get("/ping", async () => {
   return "pong\n";
+});
+
+server.post(isAlivePath, async (request, response) => {
+  evts[EngineEvents.IS_ALIVE].evt!.post(request.body as IsAlivePayload);
+  return response.status(200).send({ message: "success" });
 });
 
 server.post(conditionalTransferCreatedPath, async (request, response) => {

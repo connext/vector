@@ -64,7 +64,7 @@ type TestHashlockTransferOptions = {
 
 export function createTestFullHashlockTransferState(
   overrides: Partial<TestHashlockTransferOptions> = {},
-  channel?: FullChannelState<"create"> | FullChannelState<"resolve">,
+  channel?: FullChannelState,
 ): FullTransferState {
   // get overrides/defaults values
   const { assetId, preImage, expiry, meta, ...core } = overrides;

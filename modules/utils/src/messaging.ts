@@ -9,6 +9,9 @@ import {
   Result,
   EngineParams,
   MessagingError,
+  IsAliveInfo,
+  IsAliveResponse,
+  IsAliveError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -281,15 +284,25 @@ export class NatsMessagingService implements IMessagingService {
   ////////////
 
   // CHECKIN METHODS
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
+  sendIsAliveMessage(
+    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<void, IsAliveError>> {
+    return this.sendMessage(isAliveInfo, "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
   }
 
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
-    throw new Error("Method not implemented.");
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.isalive`, callback, "onReceiveIsAliveMessage");
+  }
+
+  respondToIsAliveMessage(inbox: string, isAliveInfo: Result<IsAliveResponse, IsAliveError>): Promise<void> {
+    return this.respondToMessage(inbox, isAliveInfo, "respondToIsAliveMessage");
   }
   ////////////
 
@@ -410,7 +423,14 @@ export class NatsMessagingService implements IMessagingService {
       const { result } = this.parseIncomingMessage<R>(msg);
       return result;
     } catch (e) {
-      return Result.fail(new MessagingError(MessagingError.reasons.Unknown, { error: e.message }));
+      return Result.fail(
+        new MessagingError(
+          e.message.includes("Request timed out") ? MessagingError.reasons.Timeout : MessagingError.reasons.Unknown,
+          {
+            error: e.message,
+          },
+        ),
+      );
     }
   }
 

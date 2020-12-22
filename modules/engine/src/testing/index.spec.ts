@@ -1,5 +1,5 @@
 import { VectorChainService } from "@connext/vector-contracts";
-import { Result, EngineParams, DEFAULT_CHANNEL_TIMEOUT } from "@connext/vector-types";
+import { Result, EngineParams, IEngineStore } from "@connext/vector-types";
 import {
   expect,
   getRandomChannelSigner,
@@ -27,7 +27,6 @@ describe("VectorEngine", () => {
 
   const testName = "VectorEngine index utils";
   const { log } = getTestLoggers(testName, env.logLevel);
-  let chainService: Sinon.SinonStubbedInstance<VectorEngine>;
 
   const aliceIdentifier = mkPublicIdentifier("vectorA");
   const bobIdentifier = mkPublicIdentifier("vectorB");
@@ -35,12 +34,11 @@ describe("VectorEngine", () => {
   const validAddress = mkAddress("0xc");
   const invalidAddress = "abc";
 
-  let storeService;
+  let storeService: IEngineStore;
   beforeEach(() => {
     storeService = Sinon.createStubInstance(MemoryStoreService, {
       getChannelStates: Promise.resolve([]),
     });
-    chainService = Sinon.createStubInstance(VectorEngine);
   });
 
   afterEach(() => Sinon.restore());
@@ -156,7 +154,7 @@ describe("VectorEngine", () => {
           chainAddresses,
           log,
         );
-        let rpc: EngineParams.RpcRequest = { ...test.overrides } as any;
+        const rpc: EngineParams.RpcRequest = { ...test.overrides } as any;
         await expect(engine.request(rpc)).rejectedWith(test.error);
       });
     }
@@ -499,7 +497,7 @@ describe("VectorEngine", () => {
               timeout: "1000",
             },
           },
-          error: missingParam(".details"),
+          error: missingParam("details"),
         },
         {
           name: "chan_createTransfer malformed parameter channelAddress",
@@ -799,7 +797,7 @@ describe("VectorEngine", () => {
             chainAddresses,
             log,
           );
-          let rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
+          const rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
           await expect(engine.request(rpc)).rejectedWith(test.error);
         });
       }

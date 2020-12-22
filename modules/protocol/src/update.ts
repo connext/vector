@@ -47,7 +47,7 @@ export function applyUpdate<T extends UpdateType>(
   finalTransferBalance: Balance | undefined, // defined only on resolve
 ): Result<
   {
-    updatedChannel: FullChannelState<T>;
+    updatedChannel: FullChannelState;
     updatedActiveTransfers: FullTransferState[];
     updatedTransfer?: FullTransferState;
   },
@@ -228,7 +228,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   Result<
     {
       update: ChannelUpdate<T>;
-      updatedChannel: FullChannelState<T>;
+      updatedChannel: FullChannelState;
       updatedActiveTransfers: FullTransferState[];
       updatedTransfer: FullTransferState | undefined;
     },

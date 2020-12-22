@@ -44,7 +44,7 @@ messaging-prod: auth-img messaging-proxy nats
 node: messaging server-node-img
 node-prod: messaging-prod database server-node-img
 
-router: node router-js
+router: node router-img
 router-prod: node-prod router-img
 
 duet: messaging server-node-js
@@ -339,7 +339,6 @@ server-node-img: server-node-bundle $(shell find modules/server-node/ops $(find_
 	docker build --file modules/server-node/ops/Dockerfile $(image_cache) --tag $(project)_node modules/server-node
 	docker tag $(project)_node $(project)_node:$(commit)
 	$(log_finish) && mv -f $(totalTime) .flags/$@
-
 
 router-js: engine $(shell find modules/router $(find_options))
 	$(log_start)
