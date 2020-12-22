@@ -369,11 +369,6 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
-    const chainProviders = this.chainService.getChainProviders();
-    if (chainProviders.isError) {
-      return Result.fail(new Error(chainProviders.getError()!.message));
-    }
-
     return this.messaging.sendSetupMessage(Result.ok(params), params.counterpartyIdentifier, this.publicIdentifier);
   }
 

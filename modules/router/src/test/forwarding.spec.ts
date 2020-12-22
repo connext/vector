@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   ConditionalTransferCreatedPayload,
   FullChannelState,
@@ -32,10 +33,8 @@ import { PrismaStore, RouterUpdateType } from "../services/store";
 import { forwardTransferCreation } from "../forwarding";
 import { config } from "../config";
 import * as swapService from "../services/swap";
-import * as collateral from "../collateral";
+import * as transferService from "../services/transfer";
 import { ForwardTransferError } from "../errors";
-
-import { mockProvider } from "./utils/mocks";
 
 const testName = "Forwarding";
 
@@ -48,21 +47,22 @@ type TransferCreatedTestContext = {
   event: ConditionalTransferCreatedPayload;
 };
 
-describe("Forwarding", () => {
-  describe("forwardTransferCreation", () => {
+describe.only("Forwarding", () => {
+  describe.only("forwardTransferCreation", () => {
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
+    let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
     let data: ConditionalTransferCreatedPayload;
     let senderChannel: FullChannelState;
     let receiverChannel: FullChannelState;
     let getSwappedAmount: Sinon.SinonStub;
-    let requestCollateral: Sinon.SinonStub;
+    let transferWithCollateral: Sinon.SinonStub;
+    let cancelTransfer: Sinon.SinonStub;
 
     const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
     const aliceIdentifier = mkPublicIdentifier("vectorA");
     const bobIdentifier = mkPublicIdentifier("vectorB");
     const signerAddress = mkAddress("0xBBB");
-    const chainProviders = { 1337: mockProvider };
     const testLog = logger.child({ module: "forwardTransferCreation" });
 
     const generateDefaultTestContext = (): TransferCreatedTestContext => {
@@ -116,7 +116,8 @@ describe("Forwarding", () => {
       // get receiver channel
       node.getStateChannelByParticipants.onFirstCall().resolves(Result.ok(receiverChannel));
       // request collateral (optional)
-      requestCollateral.resolves(Result.ok({ channelAddress: receiverChannel.channelAddress }));
+      transferWithCollateral.resolves(Result.ok({ channelAddress: receiverChannel.channelAddress }));
+      cancelTransfer.resolves(Result.ok({ channelAddress: receiverChannel.channelAddress }));
       // create receiver transfer
       node.conditionalTransfer.onFirstCall().resolves(
         Result.ok({
@@ -168,7 +169,7 @@ describe("Forwarding", () => {
       expect(result.getValue().transferId).to.be.ok;
       // Verify call stack
       expect(getSwappedAmount.callCount).to.be.eq(swapCallCount);
-      expect(requestCollateral.callCount).to.be.eq(collateralCallCount);
+      expect(transferWithCollateral.callCount).to.be.eq(collateralCallCount);
       expect(node.conditionalTransfer.callCount).to.be.eq(1);
       const expected = {
         channelAddress: receiverChannel.channelAddress,
@@ -191,6 +192,7 @@ describe("Forwarding", () => {
       result: Result<any, ForwardTransferError>,
       ctx: TransferCreatedTestContext,
       errorReason: Values<typeof ForwardTransferError.reasons>,
+      attemptedTransfer: boolean,
       errorContext: any = {},
       senderCancelled = true,
       senderResolveFailed = false,
@@ -205,17 +207,16 @@ describe("Forwarding", () => {
         expect(error.context).to.containSubset({
           ...errorContext,
         });
-        expect(node.resolveTransfer.callCount).to.be.eq(0);
+        expect(transferWithCollateral.callCount).to.be.eq(0);
         expect(store.queueUpdate.callCount).to.be.eq(0);
         return;
       }
       expect(error.context).to.containSubset({
         senderTransfer: ctx.senderTransfer.transferId,
         senderChannel: ctx.senderTransfer.channelAddress,
-        details: "Sender transfer cancelled/queued",
+        senderTransferCancellation: senderResolveFailed ? "queued" : "executed",
         ...errorContext,
       });
-      expect(node.getRegisteredTransfers.callCount).to.be.eq(1);
       const transferResolver = decodeTransferResolver(
         encodeTransferResolver({ preImage: HashZero }, HashlockTransferResolverEncoding),
         HashlockTransferResolverEncoding,
@@ -231,18 +232,8 @@ describe("Forwarding", () => {
         },
       };
 
-      expect(node.resolveTransfer.calledOnceWithExactly(resolveParams)).to.be.true;
-      if (!senderResolveFailed) {
-        expect(store.queueUpdate.callCount).to.be.eq(0);
-        return;
-      }
-      expect(
-        store.queueUpdate.calledOnceWithExactly(
-          ctx.senderTransfer.channelAddress,
-          RouterUpdateType.TRANSFER_RESOLUTION,
-          resolveParams,
-        ),
-      ).to.be.true;
+      expect(transferWithCollateral.callCount).to.be.eq(attemptedTransfer ? 1 : 0);
+      attemptedTransfer && expect(transferWithCollateral.firstCall.args[0]).to.containSubset(resolveParams);
     };
 
     beforeEach(async () => {
@@ -274,9 +265,16 @@ describe("Forwarding", () => {
       node.conditionalTransfer.resolves(Result.ok({} as any));
       node.sendDepositTx.resolves(Result.ok({ txHash: getRandomBytes32() }));
       node.reconcileDeposit.resolves(Result.ok({ channelAddress: data.channelAddress }));
+
       store = Sinon.createStubInstance(PrismaStore);
+
       getSwappedAmount = Sinon.stub(swapService, "getSwappedAmount");
-      requestCollateral = Sinon.stub(collateral, "requestCollateral");
+
+      cancelTransfer = Sinon.stub(transferService, "cancelCreatedTransfer");
+
+      transferWithCollateral = Sinon.stub(transferService, "transferWithAutoCollateralization");
+
+      chainReader = Sinon.createStubInstance(VectorChainReader);
     });
 
     afterEach(() => {
@@ -294,7 +292,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifySuccessfulResult(result, ctx);
@@ -314,7 +312,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -333,7 +331,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1);
@@ -353,7 +351,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifySuccessfulResult(result, mocked, 1, 1);
@@ -375,7 +373,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(
@@ -403,7 +401,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(
@@ -431,7 +429,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(
@@ -458,7 +456,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(
@@ -483,7 +481,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(
@@ -498,7 +496,7 @@ describe("Forwarding", () => {
     });
 
     // Cancellable failures
-    it("fails with cancellation if calculating swapped amount fails", async () => {
+    it.only("fails with cancellation if calculating swapped amount fails", async () => {
       const ctx = generateDefaultTestContext();
       ctx.receiverChannel.networkContext.chainId = 1338;
       ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
@@ -512,7 +510,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(result, mocked, ForwardTransferError.reasons.UnableToCalculateSwap, {
@@ -534,7 +532,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferError.reasons.RecipientChannelNotFound, {
@@ -553,7 +551,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferError.reasons.RecipientChannelNotFound, {
@@ -579,7 +577,7 @@ describe("Forwarding", () => {
         node as INodeService,
         store,
         testLog,
-        chainProviders,
+        chainReader,
       );
 
       await verifyErrorResult(result, ctx, ForwardTransferError.reasons.ErrorForwardingTransfer, {

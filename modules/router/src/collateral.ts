@@ -1,7 +1,6 @@
 import { FullChannelState, INodeService, Result, NodeResponses, IVectorChainReader } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
-import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 
 import { RequestCollateralError } from "./errors";
@@ -55,7 +54,7 @@ export const requestCollateral = async (
     return Result.ok(undefined);
   }
 
-  const providers = chainReader.getChainProviders();
+  const providers = chainReader.getHydratedProviders();
   if (providers.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
@@ -66,8 +65,8 @@ export const requestCollateral = async (
       }),
     );
   }
-  const providerUrl = providers.getValue()[channel.networkContext.chainId];
-  if (!providerUrl) {
+  const provider = providers.getValue()[channel.networkContext.chainId];
+  if (!provider) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
         channelAddress: channel.channelAddress,
@@ -77,7 +76,7 @@ export const requestCollateral = async (
       }),
     );
   }
-  const provider = new JsonRpcProvider(providerUrl, channel.networkContext.chainId);
+  console.log("***** provider", provider);
 
   // Check if a tx has already been sent, but has not been reconciled
   // Get the total deposits vs. processed deposits

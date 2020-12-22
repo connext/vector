@@ -30,12 +30,19 @@ describe("Collateral", () => {
     node.reconcileDeposit.resolves(Result.ok({ channelAddress: mkAddress() }));
 
     chainReader = Sinon.createStubInstance(VectorChainReader);
+    chainReader.getTotalDepositedA.resolves(Result.ok(BigNumber.from(0)));
+    chainReader.getTotalDepositedB.resolves(Result.ok(BigNumber.from(0)));
+    chainReader.getHydratedProviders.returns(
+      Result.ok({
+        [1337]: { waitForTransaction: () => Promise.resolve({ logs: [] }) } as any,
+      }),
+    );
   });
 
   afterEach(() => {
     // TODO: why doesnt this work
-    // Sinon.restore();
-    // Sinon.reset();
+    Sinon.restore();
+    Sinon.reset();
   });
 
   // it("should get profiles for different assetIds", async () => {

@@ -13,6 +13,7 @@ import {
   TransferName,
   ChannelDispute,
   TransferState,
+  HydratedProviders,
 } from "@connext/vector-types";
 import { encodeBalance, encodeTransferResolver, encodeTransferState } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -43,6 +44,10 @@ export class EthereumChainReader implements IVectorChainReader {
       ret[parseInt(name)] = value.connection.url;
     });
     return Result.ok(ret);
+  }
+
+  getHydratedProviders(): Result<HydratedProviders, ChainError> {
+    return Result.ok(this.chainProviders);
   }
 
   async getSyncing(

@@ -87,6 +87,8 @@ export async function forwardTransferCreation(
     return Result.fail(
       new ForwardTransferError(errorReason, {
         ...context,
+        senderChannel: senderTransfer.channelAddress,
+        senderTransfer: senderTransfer.transferId,
         routingId,
         senderTransferCancellation: !!cancelRes.getValue() ? "executed" : "enqueued",
       }),
