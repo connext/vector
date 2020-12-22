@@ -78,10 +78,10 @@ contract HashlockTransfer is TransferDefinition {
         // If you pass in bytes32(0), payment is canceled
         // If timelock is nonzero and has expired, payment must be canceled
         // otherwise resolve will revert
-        if (
-            resolver.preImage != bytes32(0) &&
-            (state.expiry == 0 || state.expiry > block.timestamp)
-        ) {
+        if (resolver.preImage != bytes32(0)) {
+            // Payment must not be expired
+            require(state.expiry == 0 || state.expiry > block.timestamp, "HashlockTransfer: PAYMENT_EXPIRED");
+
             // Check hash for normal payment unlock
             bytes32 generatedHash = sha256(abi.encode(resolver.preImage));
             require(

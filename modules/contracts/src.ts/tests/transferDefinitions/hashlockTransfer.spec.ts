@@ -190,6 +190,13 @@ describe("HashlockTransfer", function () {
       );
     });
 
+    it("should fail if the payment is expired and trying to resolve", async () => {
+      const preImage = getRandomBytes32();
+      const { state, balance } = await createInitialState(preImage);
+      state.expiry = "1";
+      await expect(resolveTransfer(balance, state, { preImage })).revertedWith("HashlockTransfer: PAYMENT_EXPIRED");
+    });
+
     it("should fail if cancelling with a non-zero preimage", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
