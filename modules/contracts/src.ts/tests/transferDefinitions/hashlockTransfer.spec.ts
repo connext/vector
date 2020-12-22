@@ -113,6 +113,13 @@ describe("HashlockTransfer", function () {
       expect((res as any)[0]).to.be.true;
     });
 
+    it("should fail create if sender balance is zero", async () => {
+      const preImage = getRandomBytes32();
+      const { state, balance } = await createInitialState(preImage);
+      balance.amount[0] = "0";
+      await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: ZER0_SENDER_BALANCE");
+    });
+
     it("should fail create if receiver balance is nonzero", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);

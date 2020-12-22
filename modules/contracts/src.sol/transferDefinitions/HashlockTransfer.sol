@@ -44,6 +44,11 @@ contract HashlockTransfer is TransferDefinition {
         Balance memory balance = abi.decode(encodedBalance, (Balance));
 
         require(
+            balance.amount[0] > 0,
+            "HashlockTransfer: ZER0_SENDER_BALANCE"
+        );
+
+        require(
             balance.amount[1] == 0,
             "HashlockTransfer: NONZERO_RECIPIENT_BALANCE"
         );
