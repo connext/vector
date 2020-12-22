@@ -497,7 +497,7 @@ describe("VectorEngine", () => {
               timeout: "1000",
             },
           },
-          error: missingParam(".details"),
+          error: missingParam("details"),
         },
         {
           name: "chan_createTransfer malformed parameter channelAddress",
