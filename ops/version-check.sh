@@ -20,7 +20,7 @@ do filter_cmd="$filter_cmd\| $ignored|d;"
 done
 
 echo "===== Package: $project/package.json"
-npm outdated -D | tail -n +2 | awk '$3 != $4' | format | sed "$filter_cmd"
+npm outdated -D | tail -n +2 | awk '$3 != $4' | format
 echo
 
 for package in modules/*/package.json modules/*/ops/package.json

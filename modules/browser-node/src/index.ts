@@ -1,4 +1,4 @@
-import { VectorChainService } from "@connext/vector-contracts";
+import { deployments, VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import {
   ChainAddresses,
@@ -93,6 +93,31 @@ export class BrowserNode implements INodeService {
       config.signer,
       config.logger.child({ module: "VectorChainService" }),
     );
+
+    // Pull live network addresses out of public deployments if not provided explicitly
+    for (const chainId of Object.keys(config.chainProviders)) {
+      if (!config.chainAddresses) {
+        config.chainAddresses = {} as any;
+      }
+      if (!config.chainAddresses[chainId]) {
+        config.chainAddresses[chainId] = {} as any;
+      }
+      if (
+        !config.chainAddresses[chainId].channelFactoryAddress
+        && deployments[chainId] && deployments[chainId].ChannelFactory
+      ) {
+        config.chainAddresses[chainId].channelFactoryAddress =
+          deployments[chainId].ChannelFactory.address;
+      }
+      if (
+        !config.chainAddresses[chainId].transferRegistryAddress
+        && deployments[chainId] && deployments[chainId].TransferRegistry
+      ) {
+        config.chainAddresses[chainId].transferRegistryAddress =
+          deployments[chainId].TransferRegistry.address;
+      }
+    }
+
     const engine = await VectorEngine.connect(
       messaging,
       lock,
@@ -295,12 +320,12 @@ export class BrowserNode implements INodeService {
   }
 
   async getConfig(): Promise<NodeResponses.GetConfig> {
-    const rpc = constructRpcRequest("chan_getConfig", undefined);
+    const rpc = constructRpcRequest("chan_getConfig", {});
     return this.send(rpc);
   }
 
   async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
-    const rpc = constructRpcRequest("chan_getStatus", undefined);
+    const rpc = constructRpcRequest("chan_getStatus", {});
     try {
       const res = await this.send(rpc);
       return Result.ok(res);
@@ -342,7 +367,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, NodeError>> {
     try {
-      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
+      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res.map((chan) => chan.channelAddress));
     } catch (e) {

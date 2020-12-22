@@ -5,15 +5,13 @@ import { AddressZero, Zero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { expect } from "chai";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../..";
-import { AddressBook } from "../../addressBook";
-import { bob, rando } from "../constants";
-import { getTestAddressBook, getTestChannel } from "../utils";
+import { alice, bob, rando } from "../../constants";
+import { getContract, createChannel } from "../../utils";
 
 describe("CMCAsset", function () {
   this.timeout(120_000);
-  let addressBook: AddressBook;
   let assetTransfer: Contract;
   let channel: Contract;
   let token: Contract;
@@ -21,29 +19,17 @@ describe("CMCAsset", function () {
   let nonconformingToken: Contract;
 
   beforeEach(async () => {
-    addressBook = await getTestAddressBook();
-    await deployContracts(bob, addressBook, [
-      ["CMCAsset", []],
-      ["TestToken", []],
-      ["FailingToken", []],
-      ["NonconformingToken", []],
-    ]);
-    assetTransfer = addressBook.getContract("CMCAsset");
-    // NOTE: safe to do because of inheritance pattern
-    channel = await getTestChannel(addressBook);
+    await deployments.fixture(); // Start w fresh deployments
+    assetTransfer = await getContract("CMCAsset", alice);
+    channel = await createChannel();
 
     // Fund with all tokens
-    token = addressBook.getContract("TestToken");
-    const mint = await token.mint(bob.address, parseEther("1"));
-    await mint.wait();
-
-    failingToken = addressBook.getContract("FailingToken");
-    const mintFailure = await failingToken.mint(bob.address, parseEther("1"));
-    await mintFailure.wait();
-
-    nonconformingToken = addressBook.getContract("NonconformingToken");
-    const mintNonconforming = await nonconformingToken.mint(bob.address, parseEther("1"));
-    await mintNonconforming.wait();
+    token = await getContract("TestToken", alice);
+    await (await token.mint(bob.address, parseEther("1"))).wait();
+    failingToken = await getContract("FailingToken", alice);
+    await (await failingToken.mint(bob.address, parseEther("1"))).wait();
+    nonconformingToken = await getContract("NonconformingToken", alice);
+    await (await nonconformingToken.mint(bob.address, parseEther("1"))).wait();
   });
 
   it("should deploy", async () => {
@@ -77,15 +63,10 @@ describe("CMCAsset", function () {
 
   describe("makeExitable", () => {
     beforeEach(async () => {
-      // Fund the channel with tokens and eth
-      const tx = await bob.sendTransaction({ to: channel.address, value: BigNumber.from(10000) });
-      await tx.wait();
-
-      const tokenTx = await token.connect(bob).transfer(channel.address, BigNumber.from(10000));
-      await tokenTx.wait();
-
-      const nonconforming = await nonconformingToken.connect(bob).transfer(channel.address, BigNumber.from(10000));
-      await nonconforming.wait();
+      const [to, value] = [channel.address, BigNumber.from(10000)];
+      await (await bob.sendTransaction({ to, value })).wait();
+      await (await token.connect(bob).transfer(to, value)).wait();
+      await (await nonconformingToken.connect(bob).transfer(to, value)).wait();
     });
 
     it("should work for ETH transfers", async () => {

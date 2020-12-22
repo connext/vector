@@ -7,6 +7,7 @@ struct RegisteredTransfer {
     address definition;
     string stateEncoding;
     string resolverEncoding;
+    bytes encodedCancel;
 }
 
 interface ITransferRegistry {

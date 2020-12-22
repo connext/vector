@@ -1,7 +1,5 @@
 import { Address } from "../basic";
-import { BalanceEncoding } from "../contracts";
 import { Values } from "../error";
-import { tidy } from "../utils";
 
 import {
   HashlockTransferName,
@@ -52,4 +50,5 @@ export type RegisteredTransfer = {
   resolverEncoding: string;
   definition: Address;
   name: string;
+  encodedCancel: string;
 };

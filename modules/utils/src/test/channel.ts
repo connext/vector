@@ -13,6 +13,7 @@ import {
   IChannelSigner,
   HashlockTransferState,
   FullTransferState,
+  DEFAULT_TRANSFER_TIMEOUT,
 } from "@connext/vector-types";
 
 import { ChannelSigner } from "../channelSigner";
@@ -154,7 +155,7 @@ export function createTestChannelUpdate<T extends UpdateType>(
           lockHash: mkBytes32("0xlockHash"),
           expiry: "0",
         },
-        transferTimeout: "0",
+        transferTimeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
       };
       details = { ...createDeets };
       break;
@@ -234,8 +235,8 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
       type === "create" ? (latestUpdate.details as any).meta : undefined;
     transfer.channelFactoryAddress = networkContext.channelFactoryAddress ?? transfer.channelFactoryAddress;
     transfer.inDispute = inDispute ?? transfer.inDispute;
-    transfer.initiator = participants[0];
-    transfer.responder = participants[1];
+    transfer.initiator = latestUpdate.fromIdentifier === publicIdentifiers[0] ? participants[0] : participants[1];
+    transfer.responder = latestUpdate.toIdentifier === publicIdentifiers[0] ? participants[0] : participants[1];
     transfer.transferDefinition =
       (latestUpdate.details as CreateUpdateDetails).transferDefinition ?? transfer.transferDefinition;
     transfer.transferEncodings = (latestUpdate.details as CreateUpdateDetails).transferEncodings;
