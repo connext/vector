@@ -1,8 +1,13 @@
 export const env = {
   adminToken: process.env.VECTOR_ADMIN_TOKEN || "cxt1234",
   aliceUrl: process.env.VECTOR_ALICE_URL || "http://alice:8000",
+  aliceMnemonic:
+    process.env.VECTOR_ALICE_MNEMONIC ||
+    "avoid post vessel voyage trigger real side ribbon pattern neither essence shine",
   messagingUrl: process.env.VECTOR_MESSAGING_URL || "http://messaging",
   bobUrl: process.env.VECTOR_BOB_URL || "http://bob:8000",
+  bobMnemonic:
+    process.env.VECTOR_BOB_MNEMONIC || "negative stamp rule dizzy embark worth ill popular hip ready truth abandon",
   carolUrl: process.env.VECTOR_CAROL_URL || "http://carol:8000",
   chainProviders: JSON.parse(process.env.VECTOR_CHAIN_PROVIDERS || "{}"),
   chainAddresses: JSON.parse(process.env.VECTOR_CHAIN_ADDRESSES || "{}"),

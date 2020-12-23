@@ -13,7 +13,7 @@ import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 import { getRandomBytes32 } from "../hexStrings";
 import { hashTransferState } from "../transfers";
 
-import { mkAddress, mkHash, mkBytes32 } from "./util";
+import { mkAddress, mkHash, mkBytes32, mkPublicIdentifier } from "./util";
 
 export const createTestHashlockTransferState = (overrides: Partial<HashlockTransferState> = {}): TransferState => {
   return {
@@ -60,6 +60,8 @@ type TestHashlockTransferOptions = {
   transferResolver: any;
   transferTimeout: string;
   transferState: any;
+  initiatorIdentifier: string;
+  responderIdentifier: string;
 } & CoreTransferState;
 
 export function createTestFullHashlockTransferState(
@@ -95,11 +97,16 @@ export function createTestFullHashlockTransferState(
     initiator: overrides.balance?.to[0] ?? mkAddress("0x111"),
     responder: overrides.balance?.to[1] ?? mkAddress("0x222"),
     inDispute: false,
+    initiatorIdentifier: overrides.initiatorIdentifier ?? channel?.aliceIdentifier ?? mkPublicIdentifier("vector111"),
+    responderIdentifier: overrides.responderIdentifier ?? channel?.bobIdentifier ?? mkPublicIdentifier("vector222"),
+    channelNonce: channel?.nonce ?? 9,
   };
 
   const channelOverrides = channel
     ? {
         inDispute: channel.inDispute,
+        aliceIdentifier: defaults.initiatorIdentifier,
+        bobIdentifier: defaults.responderIdentifier,
         ...channel.networkContext,
         ...channel.latestUpdate,
       }

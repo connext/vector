@@ -138,9 +138,15 @@ const DefundTransferParamsSchema = Type.Object({
   transferId: TBytes32,
 });
 
-// Eth-sign a message
+// Utility-sign a message
 const SignUtilityMessageParamsSchema = Type.Object({
   message: Type.String(),
+});
+
+// Restore channel from counterparty
+const RestoreStateParamsSchema = Type.Object({
+  counterpartyIdentifier: TPublicIdentifier,
+  chainId: TChainId,
 });
 
 // Rpc request schema
@@ -190,6 +196,9 @@ export namespace EngineParams {
 
   export const SetupSchema = SetupEngineParamsSchema;
   export type Setup = Static<typeof SetupEngineParamsSchema>;
+
+  export const RestoreStateSchema = RestoreStateParamsSchema;
+  export type RestoreState = Static<typeof RestoreStateParamsSchema>;
 
   export const DepositSchema = DepositEngineParamsSchema;
   export type Deposit = Static<typeof DepositEngineParamsSchema>;

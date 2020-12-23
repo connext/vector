@@ -880,7 +880,9 @@ describe("validateAndApplyInboundUpdate", () => {
     // Set mocks
     chainReader = Sinon.createStubInstance(VectorChainReader);
     validateParamsAndApplyUpdateStub = Sinon.stub(validation, "validateParamsAndApplyUpdate");
-    validateChannelUpdateSignaturesStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures");
+    validateChannelUpdateSignaturesStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(
+      Result.ok(undefined),
+    );
     generateSignedChannelCommitmentStub = Sinon.stub(vectorUtils, "generateSignedChannelCommitment");
     applyUpdateStub = Sinon.stub(vectorUpdate, "applyUpdate");
     externalValidationStub = {

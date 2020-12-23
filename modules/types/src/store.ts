@@ -134,4 +134,6 @@ export interface IEngineStore extends IVectorStore, IChainServiceStore {
 
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
+  // Used for restore
+  saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void>;
 }

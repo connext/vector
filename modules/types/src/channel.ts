@@ -140,6 +140,9 @@ export type FullTransferState = CoreTransferState & {
   transferResolver?: any; // undefined iff not resolved
   meta?: any;
   inDispute: boolean;
+  channelNonce: number;
+  initiatorIdentifier: string;
+  responderIdentifier: string;
 };
 
 export interface TransferCommitmentData {

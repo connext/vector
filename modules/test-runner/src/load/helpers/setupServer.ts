@@ -22,6 +22,7 @@ export const carolEvts = {
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},
   [EngineEvents.WITHDRAWAL_RECONCILED]: {},
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}`,

@@ -20,7 +20,7 @@ import {
   UpdateType,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
-import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
+import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
 import Ajv from "ajv";
 
 const ajv = new Ajv();
@@ -34,6 +34,24 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
   }
   return undefined;
 };
+
+// NOTE: If you do *NOT* use this function within the protocol, it becomes
+// very difficult to write proper unit tests. When the same utility is imported
+// as:
+// `import { validateChannelUpdateSignatures } from "@connext/vector-utils"`
+// it does not properly register as a mock.
+// Is this a silly function? yes. Are tests silly? no.
+// Another note: if you move this into the `validate` file, you will have
+// problems properly mocking the fn in the validation unit tests. This likely
+// has to do with destructuring, but it is unclear.
+export async function validateChannelSignatures(
+  state: FullChannelState,
+  aliceSignature: string | undefined,
+  bobSignature: string | undefined,
+  requiredSigners: "alice" | "bob" | "both",
+): Promise<Result<void, Error>> {
+  return validateChannelUpdateSignatures(state, aliceSignature, bobSignature, requiredSigners);
+}
 
 export const extractContextFromStore = async (
   storeService: IVectorStore,
@@ -169,73 +187,6 @@ export async function generateSignedChannelCommitment(
   } catch (e) {
     return Result.fail(e);
   }
-}
-
-export async function validateChannelUpdateSignatures(
-  state: FullChannelState,
-  aliceSignature?: string,
-  bobSignature?: string,
-  requiredSigners: "alice" | "bob" | "both" = "both",
-): Promise<Result<void | Error>> {
-  // Generate the commitment
-  const { networkContext, ...core } = state;
-  let hash;
-  try {
-    hash = hashChannelCommitment(core);
-  } catch (e) {
-    return Result.fail(new Error("Failed to generate channel commitment hash"));
-  }
-
-  // Create a recovery helper to catch errors
-  const tryRecovery = async (sig?: string): Promise<string> => {
-    if (!sig) {
-      return "No signature provided";
-    }
-    let recovered: string;
-    try {
-      recovered = await recoverAddressFromChannelMessage(hash, sig);
-    } catch (e) {
-      recovered = e.message;
-    }
-    return recovered;
-  };
-
-  const [rAlice, rBob] = await Promise.all([tryRecovery(aliceSignature), tryRecovery(bobSignature)]);
-
-  const aliceSigned = rAlice === state.alice;
-  const bobSigned = rBob === state.bob;
-
-  const bobNeeded = requiredSigners === "bob" || requiredSigners === "both";
-  const aliceNeeded = requiredSigners === "alice" || requiredSigners === "both";
-
-  // Check if signers are required and valid
-  if (aliceNeeded && bobNeeded && aliceSigned && bobSigned) {
-    return Result.ok(undefined);
-  }
-
-  // Only one signer is required, but if there are two signatures both
-  // should be valid
-  if (aliceNeeded && aliceSigned && !bobSignature && !bobNeeded) {
-    return Result.ok(undefined);
-  }
-
-  if (bobNeeded && bobSigned && !aliceSignature && !aliceNeeded) {
-    return Result.ok(undefined);
-  }
-
-  // Only one is required, but both are provided (and should be valid)
-  if (aliceSignature && aliceSigned && bobSignature && bobSigned) {
-    return Result.ok(undefined);
-  }
-
-  // Construct an explicit error message
-  const prefix = `Expected ${requiredSigners === "both" ? "alice + bob" : requiredSigners} ${
-    aliceNeeded ? state.alice : ""
-  }${bobNeeded ? " + " + state.bob : ""}. Got: `;
-
-  const details = `${aliceNeeded ? "(alice) " + rAlice : ""}${bobNeeded ? "+ (bob) " + rBob : ""}`;
-
-  return Result.fail(new Error(prefix + details));
 }
 
 export const reconcileDeposit = async (

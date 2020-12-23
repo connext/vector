@@ -538,6 +538,18 @@ export class BrowserNode implements INodeService {
     }
   }
 
+  async restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_restoreState">(ChannelRpcMethods.chan_restoreState, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok({ channelAddress: res.channelAddress });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
   async signUtilityMessage(
     params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
   ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>> {

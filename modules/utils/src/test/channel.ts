@@ -237,6 +237,10 @@ export function createTestChannelState<T extends UpdateType = typeof UpdateType.
     transfer.inDispute = inDispute ?? transfer.inDispute;
     transfer.initiator = latestUpdate.fromIdentifier === publicIdentifiers[0] ? participants[0] : participants[1];
     transfer.responder = latestUpdate.toIdentifier === publicIdentifiers[0] ? participants[0] : participants[1];
+    transfer.initiatorIdentifier =
+      latestUpdate.fromIdentifier === publicIdentifiers[0] ? publicIdentifiers[0] : publicIdentifiers[1];
+    transfer.responderIdentifier =
+      latestUpdate.toIdentifier === publicIdentifiers[0] ? publicIdentifiers[0] : publicIdentifiers[1];
     transfer.transferDefinition =
       (latestUpdate.details as CreateUpdateDetails).transferDefinition ?? transfer.transferDefinition;
     transfer.transferEncodings = (latestUpdate.details as CreateUpdateDetails).transferEncodings;

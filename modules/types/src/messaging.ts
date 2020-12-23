@@ -1,5 +1,6 @@
-import { ChannelUpdate } from "./channel";
+import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import {
+  EngineError,
   InboundChannelUpdateError,
   IsAliveError,
   LockError,
@@ -77,6 +78,36 @@ export interface IMessagingService {
     ) => void,
   ): Promise<void>;
   respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, Error>): Promise<void>;
+
+  // restore flow:
+  // - restore-r sends request
+  // - counterparty receives
+  //    1. acquires lock
+  //    2. sends restore data
+  // - counterparty responds
+  // - restore-r restores
+  // - restore-r sends result (err or success) to counterparty
+  // - counterparty receives
+  //    1. releases lock
+  sendRestoreStateMessage(
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, Error>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>>;
+  onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void>;
+  respondToRestoreStateMessage(
+    inbox: string,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
+  ): Promise<void>;
 
   sendIsAliveMessage(
     isAliveInfo: Result<IsAliveInfo, IsAliveError>,
