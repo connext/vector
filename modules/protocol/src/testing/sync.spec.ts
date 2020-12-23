@@ -14,8 +14,8 @@ import {
   MemoryMessagingService,
   getTestLoggers,
   createTestChannelUpdate,
-  validateChannelUpdateSignatures,
 } from "@connext/vector-utils";
+import * as vectorUtils from "@connext/vector-utils";
 import {
   UpdateType,
   ChannelUpdate,
@@ -549,7 +549,7 @@ describe("outbound", () => {
     validateAndApplyInboundStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
 
     // Stub out all signature validation
-    validateUpdateSignatureStub = Sinon.createStubInstance(validateChannelUpdateSignatures).resolves(
+    validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(
       Result.ok(undefined),
     );
   });
