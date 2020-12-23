@@ -25,16 +25,17 @@ import {
   TDepositUpdateDetails,
   TResolveUpdateDetails,
 } from "@connext/vector-types";
-import {
-  getSignerAddressFromPublicIdentifier,
-  getTransferId,
-  validateChannelUpdateSignatures,
-} from "@connext/vector-utils";
+import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/vector-utils";
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 
 import { applyUpdate, generateAndApplyUpdate } from "./update";
-import { generateSignedChannelCommitment, getParamsFromUpdate, validateSchema } from "./utils";
+import {
+  generateSignedChannelCommitment,
+  getParamsFromUpdate,
+  validateChannelSignatures,
+  validateSchema,
+} from "./utils";
 
 // This function performs all update *initiator* side validation
 // and is called from within the `sync.outbound` function.
@@ -405,16 +406,11 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
       );
     }
     const { updatedChannel, updatedActiveTransfers, updatedTransfer } = applyRes.getValue();
-    const sigRes = await validateChannelUpdateSignatures(
-      updatedChannel,
-      update.aliceSignature,
-      update.bobSignature,
-      "both",
-    );
+    const sigRes = await validateChannelSignatures(updatedChannel, update.aliceSignature, update.bobSignature, "both");
     if (sigRes.isError) {
       return Result.fail(
         new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, previousState, {
-          error: sigRes.getError().message,
+          error: sigRes.getError()?.message,
         }),
       );
     }
@@ -466,7 +462,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validRes.getValue();
 
   // Validate proper signatures on channel
-  const sigRes = await validateChannelUpdateSignatures(
+  const sigRes = await validateChannelSignatures(
     updatedChannel,
     update.aliceSignature,
     update.bobSignature,
@@ -475,7 +471,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   if (sigRes.isError) {
     return Result.fail(
       new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, previousState, {
-        error: sigRes.getError().message,
+        error: sigRes.getError()?.message,
       }),
     );
   }

@@ -20,7 +20,7 @@ import {
   UpdateType,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
-import { hashChannelCommitment, recoverAddressFromChannelMessage } from "@connext/vector-utils";
+import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
 import Ajv from "ajv";
 
 const ajv = new Ajv();
@@ -34,6 +34,24 @@ export const validateSchema = (obj: any, schema: any): undefined | string => {
   }
   return undefined;
 };
+
+// NOTE: If you do *NOT* use this function within the protocol, it becomes
+// very difficult to write proper unit tests. When the same utility is imported
+// as:
+// `import { validateChannelUpdateSignatures } from "@connext/vector-utils"`
+// it does not properly register as a mock.
+// Is this a silly function? yes. Are tests silly? no.
+// Another note: if you move this into the `validate` file, you will have
+// problems properly mocking the fn in the validation unit tests. This likely
+// has to do with destructuring, but it is unclear.
+export async function validateChannelSignatures(
+  state: FullChannelState,
+  aliceSignature: string | undefined,
+  bobSignature: string | undefined,
+  requiredSigners: "alice" | "bob" | "both",
+): Promise<Result<void, Error>> {
+  return validateChannelUpdateSignatures(state, aliceSignature, bobSignature, requiredSigners);
+}
 
 export const extractContextFromStore = async (
   storeService: IVectorStore,

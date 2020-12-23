@@ -14,9 +14,7 @@ import {
   MemoryMessagingService,
   getTestLoggers,
   createTestChannelUpdate,
-  validateChannelUpdateSignatures,
 } from "@connext/vector-utils";
-import * as vectorUtils from "@connext/vector-utils";
 import {
   UpdateType,
   ChannelUpdate,
@@ -34,6 +32,7 @@ import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
 // Import as full module for easy sinon function mocking
+import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";
 
@@ -550,9 +549,7 @@ describe("outbound", () => {
     validateAndApplyInboundStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
 
     // Stub out all signature validation
-    validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(
-      Result.ok(undefined),
-    );
+    validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(Result.ok(undefined));
   });
 
   afterEach(() => {

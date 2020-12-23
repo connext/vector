@@ -15,10 +15,9 @@ import {
   IExternalValidation,
   MessagingError,
 } from "@connext/vector-types";
-import { validateChannelUpdateSignatures } from "@connext/vector-utils";
 import pino from "pino";
 
-import { extractContextFromStore } from "./utils";
+import { extractContextFromStore, validateChannelSignatures } from "./utils";
 import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 
 // Function responsible for handling user-initated/outbound channel updates.
@@ -156,7 +155,7 @@ export async function outbound(
   const { update: counterpartyUpdate } = counterpartyResult.getValue();
 
   // verify sigs on update
-  const sigRes = await validateChannelUpdateSignatures(
+  const sigRes = await validateChannelSignatures(
     updatedChannel,
     counterpartyUpdate.aliceSignature,
     counterpartyUpdate.bobSignature,
@@ -167,7 +166,7 @@ export async function outbound(
       OutboundChannelUpdateError.reasons.BadSignatures,
       params,
       previousState,
-      { error: sigRes.getError().message },
+      { error: sigRes.getError()?.message },
     );
     logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
