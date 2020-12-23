@@ -2,6 +2,10 @@
 
 ## Next Release
 
+- \[contracts\] audit results implemented
+- \[router\] store and process queued updates
+- \[engine\] restore state from counterparty
+- \[engine\] handle `isAlive` messages
 - \[router\] fix rebalance profile getter to respect assetIds
 - \[router\] cancel transfers if they are unsuccessful
 - \[contracts\] added required `EncodedCancel` getter to transfer registry interface
