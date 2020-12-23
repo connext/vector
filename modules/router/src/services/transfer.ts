@@ -162,15 +162,16 @@ export const cancelCreatedTransfer = async (
     transferResolver: decodeTransferResolver(encodedCancel, resolverEncoding),
     meta: {
       cancellationReason,
-      cancellationContext: { transferId: toCancel.transferId, channel: toCancel.channelAddress },
+      cancellationContext: { ...context },
     },
   };
   const resolveResult = await nodeService.resolveTransfer(resolveParams);
+  console.log("resolveResult", resolveResult.toJson());
   if (!resolveResult.isError) {
     return resolveResult as Result<NodeResponses.ResolveTransfer>;
   }
   // Failed to cancel sender side payment
-  if (enqueue) {
+  if (enqueue && resolveResult.getError()!.message === NodeError.reasons.Timeout) {
     try {
       await store.queueUpdate(toCancel.channelAddress, RouterUpdateType.TRANSFER_RESOLUTION, resolveParams);
       logger.warn({ ...resolveParams }, "Cancellation enqueued");
