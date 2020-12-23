@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.0-rc.0
+
 - \[contracts\] audit results implemented
 - \[router\] store and process queued updates
 - \[engine\] restore state from counterparty
