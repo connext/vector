@@ -1,12 +1,11 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native"]
-  output        = "./src/generated/db-client"
 }
 
 datasource db {
   provider = ["postgresql", "sqlite"]
-  url      = env("VECTOR_DATABASE_URL")
+  url = "***"
 }
 
 model Balance {

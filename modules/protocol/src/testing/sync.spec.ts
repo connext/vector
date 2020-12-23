@@ -549,9 +549,7 @@ describe("outbound", () => {
     validateAndApplyInboundStub = Sinon.stub(vectorValidation, "validateAndApplyInboundUpdate");
 
     // Stub out all signature validation
-    validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures").resolves(
-      Result.ok(undefined),
-    );
+    validateUpdateSignatureStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(Result.ok(undefined));
   });
 
   afterEach(() => {

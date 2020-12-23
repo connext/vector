@@ -1,4 +1,11 @@
-import { IChannelSigner, Result, LockError, MessagingError, InboundChannelUpdateError } from "@connext/vector-types";
+import {
+  IChannelSigner,
+  Result,
+  LockError,
+  MessagingError,
+  InboundChannelUpdateError,
+  UpdateType,
+} from "@connext/vector-types";
 import {
   createTestChannelUpdate,
   delay,
@@ -6,13 +13,16 @@ import {
   getRandomChannelSigner,
   NatsMessagingService,
   mkAddress,
+  createTestChannelState,
+  getTestLoggers,
 } from "@connext/vector-utils";
 import pino from "pino";
 
 import { config } from "../config";
 
 describe("messaging", () => {
-  const logger = pino();
+  console.log("config.logLevel: ", config.logLevel);
+  const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
   let messagingA: NatsMessagingService;
   let messagingB: NatsMessagingService;
   let signerA: IChannelSigner;
@@ -157,6 +167,20 @@ describe("messaging", () => {
         message: Result.fail(new MessagingError("sender failure" as any, { test: "context" })),
         response: Result.fail(new Error("responder failure")),
         type: "RequestCollateral",
+      },
+      {
+        name: "restoreState should work from A --> B",
+        message: Result.ok({
+          chainId: 1337,
+        }),
+        response: Result.ok({ channel: createTestChannelState(UpdateType.setup).channel, activeTransfers: [] }),
+        type: "RestoreState",
+      },
+      {
+        name: "restoreState send failure messages properly from A --> B",
+        message: Result.fail(new MessagingError("sender failure" as any, { test: "context" })),
+        response: Result.fail(new Error("responder failure")),
+        type: "RestoreState",
       },
     ];
 

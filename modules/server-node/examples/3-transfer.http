@@ -23,10 +23,10 @@
 @routingId = 0x5e7af61c2bd4243ea005c3e450dbee3feac55fef230e47db2cfa4e5394bd6942
 @transferId = 0x
 
-@nodeUrl = {{carolUrl}}
-@nodePublicIdentifier = {{carolPublicIdentifier}}
-@counterpartyPublicIdentifier = {{rogerPublicIdentifier}}
-@channel = {{carolRogerChannel}}
+@nodeUrl = {{aliceUrl}}
+@nodePublicIdentifier = {{alicePublicIdentifier}}
+@counterpartyPublicIdentifier = {{bobPublicIdentifier}}
+@channel = {{aliceBobChannel}}
 
 ##############
 ### Create Transfer ETH
@@ -43,7 +43,7 @@ Content-Type: application/json
     "lockHash": "{{lockHash}}",
     "expiry": "0"
   },
-  "recipient": "{{bobPublicIdentifier}}",
+  "recipient": "{{counterpartyPublicIdentifier}}",
   "meta": {
     "routingId": "{{routingId}}",
     "hello": "world"

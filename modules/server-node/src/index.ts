@@ -582,6 +582,25 @@ server.post<{ Body: NodeParams.Withdraw }>(
   },
 );
 
+server.post<{ Body: NodeParams.RestoreState }>(
+  "/restore",
+  { schema: { body: NodeParams.RestoreStateSchema, response: NodeResponses.RestoreStateSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_restoreState, request.body);
+    try {
+      const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_restoreState>(rpc);
+      return reply.status(200).send({ channelAddress } as NodeResponses.RestoreState);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.RegisterListener }>(
   "/event/subscribe",
   {

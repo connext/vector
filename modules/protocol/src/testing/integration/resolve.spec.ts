@@ -9,6 +9,7 @@ import {
 } from "@connext/vector-types";
 import { AddressZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
+
 import { createTransfer, getFundedChannel, resolveTransfer, depositInChannel } from "../utils";
 import { env } from "../env";
 import { chainId } from "../constants";
@@ -24,7 +25,7 @@ describe(testName, () => {
   let bobSigner: IChannelSigner;
   let aliceStore: IVectorStore;
   let bobStore: IVectorStore;
-  
+
   let assetId: string;
   let assetIdErc20: string;
   let transferAmount: any;

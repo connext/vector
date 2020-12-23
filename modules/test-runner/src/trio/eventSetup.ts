@@ -35,6 +35,7 @@ export const carolEvts = {
     url: `${serverBase}${withdrawalReconciledPath}-carol`,
   },
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-carol`,
@@ -65,6 +66,7 @@ export const daveEvts = {
     url: `${serverBase}${withdrawalReconciledPath}-dave`,
   },
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-dave`,
