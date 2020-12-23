@@ -141,6 +141,7 @@ export class ValidationError extends VectorError {
     SetupTimeoutInvalid: "Provided state timeout is invalid",
     ShortChannelTimeout: `Channel timeout below minimum of ${MINIMUM_CHANNEL_TIMEOUT.toString()}s`,
     StoreFailure: "Failed to pull data from store",
+    TooManyAssets: "20 or more assets already in channel state",
     TransferNotActive: "Transfer not found in activeTransfers",
     TransferNotFound: "No transfer found in storage",
     TransferResolved: "Transfer has already been resolved",
