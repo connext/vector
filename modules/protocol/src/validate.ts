@@ -144,7 +144,7 @@ export async function validateUpdateParams<T extends UpdateType = any>(
         return handleError(ValidationError.reasons.ChannelNotFound);
       }
 
-      if (previousState.assetIds.length >= 20) {
+      if (previousState.assetIds.length >= 100) {
         return handleError(ValidationError.reasons.TooManyAssets);
       }
       break;
