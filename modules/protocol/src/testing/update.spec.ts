@@ -78,6 +78,8 @@ describe("applyUpdate", () => {
   // Sample transfer (alice creating, bob recieving)
   const transferAmount = "7";
   const sampleResolvedTransfer = createTestFullHashlockTransferState({
+    initiatorIdentifier: publicIdentifiers[0],
+    responderIdentifier: publicIdentifiers[1],
     initiator: participants[0],
     responder: participants[1],
     balance: { to: participants, amount: ["0", transferAmount.toString()] },
@@ -221,8 +223,14 @@ describe("applyUpdate", () => {
           processedDepositsB: ["5", "7", "9"],
           assetIds: [mkAddress(), mkAddress("0xdeffff"), mkAddress("0xasdf")],
         },
-        activeTransfers: [{ ...sampleCreatedTransfer, meta: { testing: "is ok sometimes" } }],
-        transfer: { ...sampleCreatedTransfer, meta: { testing: "is ok sometimes" } },
+        activeTransfers: [{ ...sampleCreatedTransfer, channelNonce: 5, meta: { testing: "is ok sometimes" } }],
+        transfer: {
+          ...sampleCreatedTransfer,
+          initiatorIdentifier: publicIdentifiers[1],
+          responderIdentifier: publicIdentifiers[0],
+          channelNonce: 5,
+          meta: { testing: "is ok sometimes" },
+        },
       },
     },
     {
@@ -261,6 +269,7 @@ describe("applyUpdate", () => {
         activeTransfers: [
           {
             ...sampleCreatedTransfer,
+            channelNonce: 5,
             initiator: participants[1],
             responder: participants[0],
             meta: { testing: "is fine i guess" },
@@ -268,6 +277,7 @@ describe("applyUpdate", () => {
         ],
         transfer: {
           ...sampleCreatedTransfer,
+          channelNonce: 5,
           initiator: participants[1],
           responder: participants[0],
           meta: { testing: "is fine i guess" },
