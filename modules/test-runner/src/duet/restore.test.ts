@@ -2,6 +2,7 @@ import { expect, RestServerNodeService } from "@connext/vector-utils";
 import { utils, constants } from "ethers";
 import { FullChannelState, FullTransferState, INodeService } from "@connext/vector-types";
 import axios from "axios";
+import pino from "pino";
 
 import { env, fundIfBelow, getRandomIndex, getTestLoggers } from "../utils";
 import { chainId1, deposit, setup, transfer, wallet1 } from "../utils/channel";
@@ -10,9 +11,9 @@ import { aliceEvts, bobEvts } from "./eventSetup";
 
 const testName = "Duet Restore";
 
-const { log } = getTestLoggers(testName);
+const { log } = getTestLoggers(testName, env.logLevel! as pino.Level);
 
-describe.only(testName, () => {
+describe(testName, () => {
   let aliceService: INodeService;
   let bobService: INodeService;
   let channelAddress: string;
@@ -20,10 +21,11 @@ describe.only(testName, () => {
   const onchainMin = utils.parseEther("0.1");
   const depositVal = onchainMin.div(100);
   const transferVal = depositVal.div(100);
+  let randomIndex: number | undefined;
 
   beforeEach(async () => {
     // Prep alice-bob nodes onchain
-    const randomIndex = getRandomIndex();
+    randomIndex = getRandomIndex();
 
     aliceService = await RestServerNodeService.connect(env.aliceUrl, log.child({ testName }), aliceEvts, randomIndex);
     await fundIfBelow(aliceService.signerAddress, constants.AddressZero, onchainMin, wallet1);
@@ -80,9 +82,8 @@ describe.only(testName, () => {
       });
       preRestoreTransfers = preRestoreTransfersReq.getValue().sort((a, b) => a.channelNonce - b.channelNonce);
       // Clear alice store
-      console.log("**** trying to remove alice channel");
-      const aliceClear = (await axios.post(`${env.aliceUrl}/clear-store`, { adminToken: env.adminToken })).data;
-      console.log("**** sent request");
+      (await axios.post(`${env.aliceUrl}/clear-store`, { adminToken: env.adminToken })).data;
+      await aliceService.createNode({ index: randomIndex!, mnemonic: env.aliceMnemonic });
       const channel = await aliceService.getStateChannel({
         channelAddress,
         publicIdentifier: aliceService.publicIdentifier,
@@ -115,15 +116,16 @@ describe.only(testName, () => {
       // Set preRestore channe
       const preRestoreReq = await bobService.getStateChannel({
         channelAddress,
-        publicIdentifier: aliceService.publicIdentifier,
+        publicIdentifier: bobService.publicIdentifier,
       });
       preRestoreChannel = preRestoreReq.getValue() as FullChannelState;
-      const preRestoreTransfersReq = await aliceService.getActiveTransfers({
+      const preRestoreTransfersReq = await bobService.getActiveTransfers({
         channelAddress,
       });
       preRestoreTransfers = preRestoreTransfersReq.getValue().sort((a, b) => a.channelNonce - b.channelNonce);
-      // Clear alice store
-      const bobClear = (await axios.post(`${env.bobUrl}/clear-store`, { adminToken: env.adminToken })).data;
+      // Clear bob store
+      (await axios.post(`${env.bobUrl}/clear-store`, { adminToken: env.adminToken })).data;
+      await bobService.createNode({ index: randomIndex!, mnemonic: env.bobMnemonic });
       const channel = await bobService.getStateChannel({
         channelAddress,
         publicIdentifier: bobService.publicIdentifier,
