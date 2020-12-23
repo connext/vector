@@ -14,13 +14,15 @@ import {
   NatsMessagingService,
   mkAddress,
   createTestChannelState,
+  getTestLoggers,
 } from "@connext/vector-utils";
 import pino from "pino";
 
 import { config } from "../config";
 
 describe("messaging", () => {
-  const logger = pino();
+  console.log("config.logLevel: ", config.logLevel);
+  const { log: logger } = getTestLoggers("messaging", (config.logLevel ?? "fatal") as pino.Level);
   let messagingA: NatsMessagingService;
   let messagingB: NatsMessagingService;
   let signerA: IChannelSigner;
@@ -102,7 +104,7 @@ describe("messaging", () => {
     });
   });
 
-  describe.only("other methods", () => {
+  describe("other methods", () => {
     const tests = [
       {
         name: "setup should work from A --> B",
