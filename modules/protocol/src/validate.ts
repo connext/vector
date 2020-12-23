@@ -140,6 +140,13 @@ export async function validateUpdateParams<T extends UpdateType = any>(
         return handleError(ValidationError.reasons.InvalidAssetId);
       }
 
+      if (!previousState) {
+        return handleError(ValidationError.reasons.ChannelNotFound);
+      }
+
+      if (previousState.assetIds.length >= 100) {
+        return handleError(ValidationError.reasons.TooManyAssets);
+      }
       break;
     }
 
@@ -151,6 +158,10 @@ export async function validateUpdateParams<T extends UpdateType = any>(
         transferInitialState,
         timeout,
       } = details as UpdateParamsMap[typeof UpdateType.create];
+
+      if (!previousState) {
+        return handleError(ValidationError.reasons.ChannelNotFound);
+      }
 
       // Verify the assetId is in the channel (and get index)
       const assetIdx = previousState!.assetIds.findIndex((a) => a === assetId);
@@ -216,6 +227,10 @@ export async function validateUpdateParams<T extends UpdateType = any>(
 
     case UpdateType.resolve: {
       const { transferId, transferResolver } = details as UpdateParamsMap[typeof UpdateType.resolve];
+
+      if (!previousState) {
+        return handleError(ValidationError.reasons.ChannelNotFound);
+      }
 
       // Make sure the transfer is active
       const transfer = activeTransfers.find((t) => t.transferId === transferId);

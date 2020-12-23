@@ -96,7 +96,7 @@ contract Withdraw is TransferDefinition {
                     resolver.responderSignature,
                     state.responder
                 ),
-                "Withdraw.resolve: INVALID_RESPONDER_SIG"
+                "Withdraw: INVALID_RESPONDER_SIG"
             );
             // Reduce withdraw amount by optional fee
             // It's up to the offchain validators to ensure that the withdraw commitment takes this fee into account
