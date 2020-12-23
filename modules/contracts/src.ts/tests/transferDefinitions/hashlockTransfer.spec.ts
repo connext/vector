@@ -113,6 +113,13 @@ describe("HashlockTransfer", function () {
       expect((res as any)[0]).to.be.true;
     });
 
+    it("should fail create if sender balance is zero", async () => {
+      const preImage = getRandomBytes32();
+      const { state, balance } = await createInitialState(preImage);
+      balance.amount[0] = "0";
+      await expect(createTransfer(balance, state)).revertedWith("HashlockTransfer: ZER0_SENDER_BALANCE");
+    });
+
     it("should fail create if receiver balance is nonzero", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
@@ -183,13 +190,11 @@ describe("HashlockTransfer", function () {
       );
     });
 
-    it("should fail if cancelling with a non-zero preimage", async () => {
+    it("should fail if the payment is expired and trying to resolve", async () => {
       const preImage = getRandomBytes32();
       const { state, balance } = await createInitialState(preImage);
       state.expiry = "1";
-      await expect(resolveTransfer(balance, state, { preImage: getRandomBytes32() })).revertedWith(
-        `HashlockTransfer: NONZERO_LOCKHASH`,
-      );
+      await expect(resolveTransfer(balance, state, { preImage })).revertedWith("HashlockTransfer: PAYMENT_EXPIRED");
     });
   });
 });

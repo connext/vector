@@ -19,6 +19,7 @@ contract ChannelFactory is IChannelFactory {
     bytes private constant proxyCreationCodeSuffix =
         hex"5af43d82803e903d91602b57fd5bf3";
 
+    bytes32 private creationCodeHash;
     address private immutable mastercopy;
     uint256 private immutable chainId;
 
@@ -28,6 +29,7 @@ contract ChannelFactory is IChannelFactory {
     constructor(address _mastercopy, uint256 _chainId) {
         mastercopy = _mastercopy;
         chainId = _chainId;
+        creationCodeHash = keccak256(_getProxyCreationCode(_mastercopy));
     }
 
     ////////////////////////////////////////
@@ -40,12 +42,14 @@ contract ChannelFactory is IChannelFactory {
 
     /// @dev Allows us to get the chainId that this factory will use in the create2 salt
     function getChainId() public view override returns (uint256 _chainId) {
-        if (chainId == 0) {
+        // Hold in memory to reduce sload calls
+        uint256 chain = chainId;
+        if (chain == 0) {
             assembly {
                 _chainId := chainid()
             }
         } else {
-            _chainId = chainId;
+            _chainId = chain;
         }
     }
 
@@ -61,12 +65,7 @@ contract ChannelFactory is IChannelFactory {
         override
         returns (bytes memory)
     {
-        return
-            abi.encodePacked(
-                proxyCreationCodePrefix,
-                mastercopy,
-                proxyCreationCodeSuffix
-            );
+        return _getProxyCreationCode(mastercopy);
     }
 
     /// @dev Allows us to get the address for a new channel contract created via `createChannel`
@@ -81,7 +80,7 @@ contract ChannelFactory is IChannelFactory {
         return
             Create2.computeAddress(
                 generateSalt(alice, bob),
-                keccak256(getProxyCreationCode())
+                creationCodeHash
             );
     }
 
@@ -131,6 +130,14 @@ contract ChannelFactory is IChannelFactory {
 
     ////////////////////////////////////////
     // Internal Methods
+
+    function _getProxyCreationCode(address _mastercopy) internal pure returns (bytes memory) {
+      return abi.encodePacked(
+                proxyCreationCodePrefix,
+                _mastercopy,
+                proxyCreationCodeSuffix
+            );
+    }
 
     /// @dev Allows us to create new channel contact using CREATE2
     /// @param alice address of the high fidelity participant in the channel

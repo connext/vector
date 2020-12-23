@@ -24,7 +24,6 @@ const rinkebyDeployment = {
 deployments.rinkeby = rinkebyDeployment;
 deployments["4"] = rinkebyDeployment;
 
-
 ////////////////////////////////////////
 // 5 - goerli
 import * as goerliChannelFactory from "../deployments/goerli/ChannelFactory.json";
@@ -43,7 +42,6 @@ const goerliDeployment = {
 };
 deployments.goerli = goerliDeployment;
 deployments["5"] = goerliDeployment;
-
 
 ////////////////////////////////////////
 // 42 - kovan
@@ -64,7 +62,6 @@ const kovanDeployment = {
 deployments.kovan = kovanDeployment;
 deployments["42"] = kovanDeployment;
 
-
 ////////////////////////////////////////
 // 80001 - mumbai
 import * as mumbaiChannelFactory from "../deployments/mumbai/ChannelFactory.json";
@@ -83,3 +80,22 @@ const mumbaiDeployment = {
 };
 deployments.mumbai = mumbaiDeployment;
 deployments["80001"] = mumbaiDeployment;
+
+////////////////////////////////////////
+// 152709604825713 - arbitrum
+import * as arbitrumChannelFactory from "../deployments/arbitrum/ChannelFactory.json";
+import * as arbitrumChannelMastercopy from "../deployments/arbitrum/ChannelMastercopy.json";
+import * as arbitrumHashlockTransfer from "../deployments/arbitrum/HashlockTransfer.json";
+import * as arbitrumTestToken from "../deployments/arbitrum/TestToken.json";
+import * as arbitrumTransferRegistry from "../deployments/arbitrum/TransferRegistry.json";
+import * as arbitrumWithdraw from "../deployments/arbitrum/Withdraw.json";
+const arbitrumDeployment = {
+  ChannelFactory: arbitrumChannelFactory,
+  ChannelMastercopy: arbitrumChannelMastercopy,
+  HashlockTransfer: arbitrumHashlockTransfer,
+  TestToken: arbitrumTestToken,
+  TransferRegistry: arbitrumTransferRegistry,
+  Withdraw: arbitrumWithdraw,
+};
+deployments.arbitrum = arbitrumDeployment;
+deployments["152709604825713"] = arbitrumDeployment;

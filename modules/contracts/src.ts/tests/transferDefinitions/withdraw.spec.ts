@@ -189,7 +189,7 @@ describe("Withdraw", function () {
       const { balance, state } = await createInitialState(getRandomBytes32());
       const responderSignature = await signChannelMessage(getRandomBytes32(), bob.privateKey);
       await expect(resolveTransfer(balance, state, { responderSignature })).revertedWith(
-        "Withdraw.resolve: INVALID_RESPONDER_SIG",
+        "Withdraw: INVALID_RESPONDER_SIG",
       );
     });
 

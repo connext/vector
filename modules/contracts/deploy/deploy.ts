@@ -28,13 +28,17 @@ const func: DeployFunction = async () => {
 
   type Args = Array<string | BigNumber>;
   const migrate = async (name: string, args: Args): Promise<void> => {
-    const processedArgs = await Promise.all(args.map(async (arg: any): Promise<any> => {
-      try {
-        return (await deployments.get(arg)).address;
-      } catch (e) {
-        return arg;
-      }
-    }));
+    const processedArgs = await Promise.all(
+      args.map(
+        async (arg: any): Promise<any> => {
+          try {
+            return (await deployments.get(arg)).address;
+          } catch (e) {
+            return arg;
+          }
+        },
+      ),
+    );
     log.info(`Deploying ${name} with args [${processedArgs.join(", ")}]`);
     await deployments.deploy(name, {
       from: deployer,
@@ -87,12 +91,12 @@ const func: DeployFunction = async () => {
     await registerTransfer("Withdraw", deployer);
     await registerTransfer("HashlockTransfer", deployer);
 
-  // Don't migrate to mainnet until audit is finished
+    // Don't migrate to mainnet until audit is finished
   } else if (chainId === "1") {
     log.info(`Running mainnet migration`);
     throw new Error(`Contract migration for chain ${chainId} is not supported yet`);
 
-  // Default: run standard migration
+    // Default: run standard migration
   } else {
     log.info(`Running testnet migration`);
     for (const row of standardMigration) {
@@ -102,7 +106,6 @@ const func: DeployFunction = async () => {
     }
     await registerTransfer("Withdraw", deployer);
     await registerTransfer("HashlockTransfer", deployer);
-
   }
 
   ////////////////////////////////////////
