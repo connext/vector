@@ -14,6 +14,7 @@ import {
   MemoryMessagingService,
   getTestLoggers,
   createTestChannelUpdate,
+  validateChannelUpdateSignatures,
 } from "@connext/vector-utils";
 import * as vectorUtils from "@connext/vector-utils";
 import {
