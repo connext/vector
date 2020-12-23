@@ -7,7 +7,13 @@ import {
   MessagingError,
   OutboundChannelUpdateError,
   Result,
+  FullChannelState,
+  EngineError,
+  FullTransferState,
   EngineParams,
+  IsAliveError,
+  IsAliveInfo,
+  IsAliveResponse,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -42,16 +48,6 @@ export class MemoryMessagingService implements IMessagingService {
 
   async disconnect(): Promise<void> {
     this.evt.detach();
-  }
-
-  onReceiveCheckIn(
-    myPublicIdentifier: string,
-    callback: (nonce: string, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  sendCheckInMessage(): Promise<Result<undefined, OutboundChannelUpdateError>> {
-    throw new Error("Method not implemented.");
   }
 
   async sendProtocolMessage(
@@ -168,6 +164,32 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
+  sendRestoreStateMessage(
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToRestoreStateMessage(
+    inbox: string,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -184,6 +206,25 @@ export class MemoryMessagingService implements IMessagingService {
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<LockInformation, LockError>> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendIsAliveMessage(
+    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<void, IsAliveError>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToIsAliveMessage(inbox: string, params: Result<IsAliveResponse, IsAliveError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

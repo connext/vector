@@ -880,7 +880,9 @@ describe("validateAndApplyInboundUpdate", () => {
     // Set mocks
     chainReader = Sinon.createStubInstance(VectorChainReader);
     validateParamsAndApplyUpdateStub = Sinon.stub(validation, "validateParamsAndApplyUpdate");
-    validateChannelUpdateSignaturesStub = Sinon.stub(vectorUtils, "validateChannelUpdateSignatures");
+    validateChannelUpdateSignaturesStub = Sinon.stub(vectorUtils, "validateChannelSignatures").resolves(
+      Result.ok(undefined),
+    );
     generateSignedChannelCommitmentStub = Sinon.stub(vectorUtils, "generateSignedChannelCommitment");
     applyUpdateStub = Sinon.stub(vectorUpdate, "applyUpdate");
     externalValidationStub = {
@@ -936,7 +938,7 @@ describe("validateAndApplyInboundUpdate", () => {
           name: "malformed type",
           overrides: { type: "fail" },
           error:
-            "should be equal to one of the allowed values,should be equal to one of the allowed values,should be equal to one of the allowed values,should be equal to one of the allowed values,should match exactly one schema in oneOf",
+            "should be equal to one of the allowed values,should be equal to one of the allowed values,should be equal to one of the allowed values,should be equal to one of the allowed values,should match some schema in anyOf",
         },
         {
           name: "no nonce",
@@ -971,19 +973,17 @@ describe("validateAndApplyInboundUpdate", () => {
         {
           name: "no details",
           overrides: { details: undefined },
-          error: "should have required property '.details'",
+          error: "should have required property 'details'",
         },
         {
           name: "malformed aliceSignature",
           overrides: { aliceSignature: "fail" },
-          error:
-            'should match pattern "^0x([a-fA-F0-9]{130})$",should be null,should match exactly one schema in oneOf',
+          error: 'should match pattern "^0x([a-fA-F0-9]{130})$",should be null,should match some schema in anyOf',
         },
         {
           name: "malformed bobSignature",
           overrides: { bobSignature: "fail" },
-          error:
-            'should match pattern "^0x([a-fA-F0-9]{130})$",should be null,should match exactly one schema in oneOf',
+          error: 'should match pattern "^0x([a-fA-F0-9]{130})$",should be null,should match some schema in anyOf',
         },
       ];
       for (const test of tests) {

@@ -1,3 +1,5 @@
+import "core-js/stable";
+import "regenerator-runtime/runtime";
 import fastify from "fastify";
 import fastifyCors from "fastify-cors";
 import pino from "pino";
@@ -73,7 +75,7 @@ server.get<{ Params: { publicIdentifier: string } }>(
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
     try {
-      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, undefined);
+      const params = constructRpcRequest(ChannelRpcMethods.chan_getStatus, {});
       const res = await engine.request<"chan_getStatus">(params);
       return reply.status(200).send(res);
     } catch (e) {
@@ -230,7 +232,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
     if (!engine) {
       return reply.status(400).send({ message: "Node not found", publicIdentifier: request.params.publicIdentifier });
     }
-    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, undefined);
+    const params = constructRpcRequest(ChannelRpcMethods.chan_getChannelStates, {});
     try {
       const res = await engine.request<"chan_getChannelStates">(params);
       // OPTIMIZATION: use db query instead of filter
@@ -307,8 +309,9 @@ server.post<{ Body: NodeParams.RequestSetup }>(
       timeout: request.body.timeout,
     });
     try {
-      const res = await engine.request<"chan_requestSetup">(rpc);
-      return reply.status(200).send(res);
+      const result = await engine.request<"chan_requestSetup">(rpc);
+      logger.info({ result }, "Request collateral completed");
+      return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -485,8 +488,9 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
 
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_requestCollateral, request.body);
     try {
-      const res = await engine.request<"chan_requestCollateral">(rpc);
-      return reply.status(200).send(res);
+      const result = await engine.request<"chan_requestCollateral">(rpc);
+      logger.info({ result }, "Request collateral completed");
+      return reply.status(200).send({ ...result, channelAddress: request.body.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });
@@ -571,6 +575,25 @@ server.post<{ Body: NodeParams.Withdraw }>(
         transferId: (channel.latestUpdate.details as ResolveUpdateDetails).transferId,
         transactionHash,
       } as NodeResponses.Withdraw);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
+server.post<{ Body: NodeParams.RestoreState }>(
+  "/restore",
+  { schema: { body: NodeParams.RestoreStateSchema, response: NodeResponses.RestoreStateSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_restoreState, request.body);
+    try {
+      const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_restoreState>(rpc);
+      return reply.status(200).send({ channelAddress } as NodeResponses.RestoreState);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
       return reply.status(500).send({ message: e.message, context: e.context });

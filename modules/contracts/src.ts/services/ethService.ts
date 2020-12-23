@@ -42,7 +42,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
     log: BaseLogger,
     private readonly defaultRetries = 1,
   ) {
-    super(chainProviders, log.child({ module: "EthereumChainReader" }));
+    super(chainProviders, log.child({ module: "EthereumChainService" }));
     Object.entries(chainProviders).forEach(([chainId, provider]) => {
       this.signers.set(
         parseInt(chainId),
@@ -172,13 +172,6 @@ export class EthereumChainService extends EthereumChainReader implements IVector
 
     const channelFactory = new Contract(channelState.networkContext.channelFactoryAddress, ChannelFactory.abi, signer);
 
-    // Register event listener to log channel creation
-    /* TODO: this listener. It's never getting triggered & removed so tests never exit
-    channelFactory.once(channelFactory.filters.ChannelCreation(), data => {
-      this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
-    });
-    */
-
     // If there is no deposit information, just create the channel
     if (!deposit) {
       // Deploy multisig tx
@@ -266,17 +259,10 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         ChannelFactory.abi,
         signer,
       );
-      const deployCompleted = new Promise((resolve) =>
-        channelFactory.once(channelFactory.filters.ChannelCreation(), (data) => {
-          this.log.info({ method, data: JSON.stringify(data) }, "Caught channel created event");
-          resolve();
-        }),
-      );
       const txRes = await this.sendTxWithRetries(channelState.channelAddress, TransactionReason.deploy, () => {
         return channelFactory.createChannel(channelState.alice, channelState.bob);
       });
       if (txRes.isError) {
-        console.log(`txRes.isError`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             method,
@@ -291,19 +277,19 @@ export class EthereumChainService extends EthereumChainReader implements IVector
         await deployTx.wait();
         this.log.debug("Waiting for event to be emitted");
         await Promise.race([
-          deployCompleted,
+          deployTx.wait(),
           new Promise((resolve) =>
             setTimeout(() => {
               this.log.warn(
                 { deployTx: deployTx.hash, channel: channelState.channelAddress },
                 "Did not see event within 15s after tx was mined",
               );
-              resolve();
+              resolve(undefined);
             }, 15_000),
           ),
         ]);
       } catch (e) {
-        console.log(`caught (e)`);
+        this.log.error(`caught ${e.message}`);
         return Result.fail(
           new ChainError(ChainError.reasons.FailedToDeploy, {
             error: e.message,
@@ -323,7 +309,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   public async sendDepositTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     sender: string,
     amount: string,
     assetId: string,
@@ -526,7 +512,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async sendDepositATx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     amount: string,
     assetId: string,
   ): Promise<Result<TransactionResponse, ChainError>> {
@@ -573,7 +559,7 @@ export class EthereumChainService extends EthereumChainReader implements IVector
   }
 
   private async sendDepositBTx(
-    channelState: FullChannelState<any>,
+    channelState: FullChannelState,
     amount: string,
     assetId: string,
   ): Promise<Result<TransactionResponse, ChainError>> {

@@ -7,6 +7,7 @@ import {
   NodeResponses,
   NodeError,
   OptionalPublicIdentifier,
+  OutboundChannelUpdateError,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -246,6 +247,17 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>> {
+    return this.executeHttpRequest<NodeResponses.RestoreState>(
+      `restore`,
+      "post",
+      params,
+      NodeParams.RestoreStateSchema,
+    );
+  }
+
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
   ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {
@@ -441,8 +453,17 @@ export class RestServerNodeService implements INodeService {
       return Result.ok(res.data);
     } catch (e) {
       const jsonErr = Object.keys(e).includes("toJSON") ? e.toJSON() : e;
+      const msg = e.response?.data?.message ?? jsonErr.message ?? NodeError.reasons.InternalServerError;
       return Result.fail(
-        new NodeError(jsonErr.message ?? NodeError.reasons.InternalServerError, { stack: jsonErr.stack, filled, url }),
+        new NodeError(
+          msg.includes(OutboundChannelUpdateError.reasons.CounterpartyOffline) ? NodeError.reasons.Timeout : msg,
+          {
+            stack: jsonErr.stack,
+            url,
+            params,
+            ...(e.response?.data ?? {}),
+          },
+        ),
       );
     }
   }

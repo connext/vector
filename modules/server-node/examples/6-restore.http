@@ -1,0 +1,26 @@
+@aliceUrl = http://localhost:8003
+@bobUrl = http://localhost:8004
+@carolUrl = http://localhost:8005
+@daveUrl = http://localhost:8006
+@rogerUrl = http://localhost:8007
+@aliceBobChannel = 0x47809CD3218c69aB21BeEe8ad6a7b7Ec5E026859
+@carolRogerChannel = 0x08d324c5CA1CC52c185f9b026a7ed50994632167
+@daveRogerChannel = 0x05b2FFe2814240aa788FcD38Fe0DB29354E6d789
+@adminToken = cxt1234
+@alicePublicIdentifier = vector8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
+@bobPublicIdentifier = vector5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
+@carolPublicIdentifier = vector8ZaxNSdUM83kLXJSsmj5jrcq17CpZUwBirmboaNPtQMEXjVNrL
+@davePublicIdentifier = vector7mAydt3S3dDPWJMYSHZPdRo16Pru145qTNQYFoS8TrpXWW8HAj
+@rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
+@chainId = 1337
+
+##############
+### Restore State
+POST {{aliceUrl}}/restore
+Content-Type: application/json
+
+{
+  "counterpartyIdentifier": "{{bobPublicIdentifier}}",
+  "chainId": "{{chainId}}",
+  "publicIdentifier": "{{alicePublicIdentifier}}"
+}

@@ -135,7 +135,7 @@ export class IframeChannelProvider extends EventEmitter<string> implements IRpcC
 
   public removeAllListeners = (): any => {
     this.events.removeAllListeners();
-    const rpc = constructRpcRequest("chan_unsubscribeAll", undefined);
+    const rpc = constructRpcRequest("chan_unsubscribeAll", {});
     return this.send(rpc);
   };
 

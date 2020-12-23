@@ -1,7 +1,7 @@
 import { TransactionReceipt, TransactionResponse } from "@ethersproject/abstract-provider";
 
 import { WithdrawCommitmentJson } from "./transferDefinitions/withdraw";
-import { FullChannelState, FullTransferState } from "./channel";
+import { FullTransferState, FullChannelState } from "./channel";
 import { Address } from "./basic";
 import { ChannelDispute, TransferDispute } from "./dispute";
 
@@ -134,4 +134,6 @@ export interface IEngineStore extends IVectorStore, IChainServiceStore {
 
   // Setters
   saveWithdrawalCommitment(transferId: string, withdrawCommitment: WithdrawCommitmentJson): Promise<void>;
+  // Used for restore
+  saveChannelStateAndTransfers(channelState: FullChannelState, activeTransfers: FullTransferState[]): Promise<void>;
 }

@@ -2,11 +2,11 @@ import {
   ChannelUpdate,
   CreateTransferParams,
   DepositParams,
-  FullChannelState,
   FullTransferState,
   ResolveTransferParams,
   SetupParams,
   UpdateType,
+  FullChannelState,
 } from "./channel";
 import { InboundChannelUpdateError, OutboundChannelUpdateError, Result } from "./error";
 import { ProtocolEventName, ProtocolEventPayloadsMap } from "./event";

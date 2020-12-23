@@ -1,4 +1,4 @@
-import { Static, TStringLiteral, Type } from "@sinclair/typebox";
+import { Static, TLiteral, Type } from "@sinclair/typebox";
 
 import { EngineEvent, EngineEvents } from "../engine";
 
@@ -46,7 +46,7 @@ const GetTransferStateByRoutingIdParamsSchema = Type.Intersect([
 ]);
 
 const GetTransferStateByRoutingIdResponseSchema = {
-  200: Type.Union([Type.Undefined, TFullTransferState]),
+  200: Type.Union([Type.Undefined(), TFullTransferState]),
 };
 
 // GET TRANSFERS BY ROUTINGID
@@ -78,7 +78,7 @@ const GetTransferStateParamsSchema = Type.Intersect([
 ]);
 
 const GetTransferStateResponseSchema = {
-  200: Type.Union([Type.Undefined, TFullTransferState]),
+  200: Type.Union([Type.Undefined(), TFullTransferState]),
 };
 
 // GET CHANNEL STATE
@@ -88,7 +88,7 @@ const GetChannelStateParamsSchema = Type.Intersect([
 ]);
 
 const GetChannelStateResponseSchema = {
-  200: Type.Union([Type.Undefined, TFullChannelState]),
+  200: Type.Union([Type.Undefined(), TFullChannelState]),
 };
 
 // GET CHANNEL STATES
@@ -126,15 +126,16 @@ const GetStatusResponseSchema = {
   200: Type.Object({
     publicIdentifier: TPublicIdentifier,
     signerAddress: TAddress,
-    providerSyncing: Type.Map(
+    providerSyncing: Type.Dict(
       Type.Union([
-        Type.Boolean,
+        Type.Boolean(),
         Type.Object({
           startingBlock: Type.String(),
           currentBlock: Type.String(),
           highestBlock: Type.String(),
         }),
         Type.String(),
+        Type.Undefined(),
       ]),
     ),
     version: Type.String(),
@@ -143,7 +144,7 @@ const GetStatusResponseSchema = {
 
 // GET LISTENER
 const GetListenerParamsSchema = Type.Object({
-  eventName: Type.Union(Object.values(EngineEvents).map((e) => Type.Literal(e)) as [TStringLiteral<EngineEvent>]),
+  eventName: Type.Union(Object.values(EngineEvents).map((e) => Type.Literal(e)) as [TLiteral<EngineEvent>]),
   publicIdentifier: TPublicIdentifier,
 });
 
@@ -155,7 +156,7 @@ const GetListenerResponseSchema = {
 const GetListenersParamsSchema = Type.Object({ publicIdentifier: TPublicIdentifier });
 
 const GetListenersResponseSchema = {
-  200: Type.Map(TUrl),
+  200: Type.Dict(TUrl),
 };
 
 // GET REGISTERED TRANSFERS
@@ -171,6 +172,7 @@ const GetRegisteredTransfersResponseSchema = {
       stateEncoding: Type.String(),
       resolverEncoding: Type.String(),
       definition: TAddress,
+      encodedCancel: Type.String(),
     }),
   ),
 };
@@ -178,7 +180,7 @@ const GetRegisteredTransfersResponseSchema = {
 // REGISTER LISTENER
 const PostRegisterListenerBodySchema = Type.Object({
   publicIdentifier: TPublicIdentifier,
-  events: Type.Map(Type.String()),
+  events: Type.Dict(Type.String()),
 });
 
 const PostRegisterListenerResponseSchema = {
@@ -270,6 +272,18 @@ const PostSignUtilityMessageBodySchema = Type.Intersect([
 const PostSignUtilityMessageResponseSchema = {
   200: Type.Object({
     signedMessage: Type.String(),
+  }),
+};
+
+// POST RESTORE STATE
+const PostRestoreStateBodySchema = Type.Intersect([
+  EngineParams.RestoreStateSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostRestoreStateResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
   }),
 };
 
@@ -418,6 +432,9 @@ export namespace NodeParams {
   export const SignUtilityMessageSchema = PostSignUtilityMessageBodySchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageSchema>;
 
+  export const RestoreStateSchema = PostRestoreStateBodySchema;
+  export type RestoreState = Static<typeof RestoreStateSchema>;
+
   export const AdminSchema = PostAdminBodySchema;
   export type Admin = Static<typeof AdminSchema>;
 
@@ -506,6 +523,9 @@ export namespace NodeResponses {
 
   export const SignUtilityMessageSchema = PostSignUtilityMessageResponseSchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageSchema["200"]>;
+
+  export const RestoreStateSchema = PostRestoreStateResponseSchema;
+  export type RestoreState = Static<typeof RestoreStateSchema["200"]>;
 
   export const AdminSchema = PostAdminResponseSchema;
   export type Admin = Static<typeof AdminSchema["200"]>;

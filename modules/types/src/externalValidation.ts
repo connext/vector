@@ -1,4 +1,4 @@
-import { ChannelUpdate, FullChannelState, FullTransferState, UpdateParams, UpdateType } from "./channel";
+import { ChannelUpdate, FullTransferState, UpdateParams, UpdateType, FullChannelState } from "./channel";
 import { Result } from "./error";
 
 // This service is injected into the protocol via the higher

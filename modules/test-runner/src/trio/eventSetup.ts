@@ -20,6 +20,7 @@ const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";
 const withdrawalReconciledPath = "/withdrawal-reconciled";
 export const carolEvts = {
+  [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {
     evt: Evt.create<WithdrawalCreatedPayload>(),
@@ -34,6 +35,7 @@ export const carolEvts = {
     url: `${serverBase}${withdrawalReconciledPath}-carol`,
   },
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-carol`,
@@ -49,6 +51,7 @@ export const carolEvts = {
 };
 
 export const daveEvts = {
+  [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {
     evt: Evt.create<WithdrawalCreatedPayload>(),
@@ -63,6 +66,7 @@ export const daveEvts = {
     url: `${serverBase}${withdrawalReconciledPath}-dave`,
   },
   [EngineEvents.REQUEST_COLLATERAL]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
     evt: Evt.create<ConditionalTransferCreatedPayload>(),
     url: `${serverBase}${conditionalTransferCreatedPath}-dave`,

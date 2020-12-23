@@ -126,7 +126,8 @@ bash "$root/ops/pull-images.sh" "$database_image" > /dev/null
 # database connection settings
 pg_db="$project"
 pg_user="$project"
-pg_dev_port="5434"
+pg_dev_port_node="5434"
+pg_dev_port_router="5435"
 
 if [[ "$production" == "true" ]]
 then
@@ -137,12 +138,20 @@ then
   fi
   pg_password=""
   pg_password_file="/run/secrets/$db_secret"
-  snapshots_dir="$root/.db-snapshots"
-  mkdir -p "$snapshots_dir"
-  database_image="image: '$database_image'
+  snapshots_dir_node="$root/.db-snapshots-node"
+  snapshots_dir_router="$root/.db-snapshots-router"
+  mkdir -p "$snapshots_dir_node"
+  mkdir -p "$snapshots_dir_router"
+  database_image_node="image: '$database_image'
     volumes:
-      - 'database:/var/lib/postgresql/data'
-      - '$snapshots_dir:/root/snapshots'
+      - 'database_node:/var/lib/postgresql/data'
+      - '$snapshots_dir_node:/root/snapshots'
+    secrets:
+      - '$db_secret'"
+  database_image_router="image: '$database_image'
+    volumes:
+      - 'database_router:/var/lib/postgresql/data'
+      - '$snapshots_dir_router:/root/snapshots'
     secrets:
       - '$db_secret'"
 
@@ -151,10 +160,14 @@ else
   db_secret=""
   pg_password="$project"
   pg_password_file=""
-  database_image="image: '$database_image'
+  database_image_node="image: '$database_image'
     ports:
-      - '$pg_dev_port:5432'"
-  echo "${stack}_database will be exposed on *:$pg_dev_port"
+      - '$pg_dev_port_node:5432'"
+  database_image_router="image: '$database_image'
+    ports:
+      - '$pg_dev_port_router:5432'"
+  echo "${stack}_database_node will be exposed on *:$pg_dev_port_node"
+  echo "${stack}_database_router will be exposed on *:$pg_dev_port_router"
 fi
 
 ########################################
@@ -162,7 +175,6 @@ fi
 
 node_internal_port="8000"
 node_public_port="${public_port:-8002}"
-public_url="http://127.0.0.1:$node_public_port/ping"
 if [[ $production == "true" ]]
 then
   node_image_name="${project}_node:$version"
@@ -200,12 +212,14 @@ fi
 ## Router config
 
 router_internal_port="8000"
-router_dev_port="9000"
-
+router_public_port="9000"
+public_url="http://127.0.0.1:$router_public_port/ping"
 if [[ $production == "true" ]]
 then
   router_image_name="${project}_router:$version"
-  router_image="image: '$router_image_name'"
+  router_image="image: '$router_image_name'
+    ports:
+      - '$router_public_port:$router_internal_port'"
 else
   router_image_name="${project}_builder:$version";
   router_image="image: '$router_image_name'
@@ -213,8 +227,8 @@ else
     volumes:
       - '$root:/root'
     ports:
-      - '$router_dev_port:$router_internal_port'"
-  echo "${stack}_router will be exposed on *:$router_dev_port"
+      - '$router_public_port:$router_internal_port'"
+  echo "${stack}_router will be exposed on *:$router_public_port"
 fi
 bash "$root/ops/pull-images.sh" "$router_image_name" > /dev/null
 
@@ -309,7 +323,8 @@ $stack_secrets
 
 volumes:
   certs:
-  database:
+  database_node:
+  database_router:
 
 services:
 
@@ -323,7 +338,7 @@ services:
       VECTOR_MNEMONIC_FILE: '$eth_mnemonic_file'
       VECTOR_DATABASE_URL: '$database_url'
       VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: 'database'
+      VECTOR_PG_HOST: 'database-node'
       VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
@@ -338,19 +353,32 @@ services:
       VECTOR_NODE_URL: 'http://node:$node_internal_port'
       VECTOR_DATABASE_URL: '$database_url'
       VECTOR_PG_DATABASE: '$pg_db'
-      VECTOR_PG_HOST: 'database'
+      VECTOR_PG_HOST: 'database-router'
       VECTOR_PG_PASSWORD: '$pg_password'
       VECTOR_PG_PASSWORD_FILE: '$pg_password_file'
       VECTOR_PG_PORT: '5432'
       VECTOR_PG_USERNAME: '$pg_user'
 
-  database:
+  database-node:
     $common
-    $database_image
+    $database_image_node
     environment:
       AWS_ACCESS_KEY_ID: '$aws_access_id'
       AWS_SECRET_ACCESS_KEY: '$aws_access_key'
-      POSTGRES_DB: '$project'
+      POSTGRES_DB: '$pg_db'
+      POSTGRES_PASSWORD: '$pg_password'
+      POSTGRES_PASSWORD_FILE: '$pg_password_file'
+      POSTGRES_USER: '$project'
+      VECTOR_ADMIN_TOKEN: '$admin_token'
+      VECTOR_PROD: '$production'
+
+  database-router:
+    $common
+    $database_image_router
+    environment:
+      AWS_ACCESS_KEY_ID: '$aws_access_id'
+      AWS_SECRET_ACCESS_KEY: '$aws_access_key'
+      POSTGRES_DB: '$pg_db'
       POSTGRES_PASSWORD: '$pg_password'
       POSTGRES_PASSWORD_FILE: '$pg_password_file'
       POSTGRES_USER: '$project'
@@ -368,7 +396,7 @@ timeout=$(( $(date +%s) + 60 ))
 while true
 do
   res=$(curl -k -m 5 -s "$public_url" || true)
-  if [[ -z "$res" || "$res" == "Waiting for node to wake up" ]]
+  if [[ -z "$res" || "$res" == "Waiting for router to wake up" ]]
   then
     if [[ "$(date +%s)" -gt "$timeout" ]]
     then echo "Timed out waiting for $public_url to respond.." && exit

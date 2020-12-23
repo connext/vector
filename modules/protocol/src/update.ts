@@ -47,7 +47,7 @@ export function applyUpdate<T extends UpdateType>(
   finalTransferBalance: Balance | undefined, // defined only on resolve
 ): Result<
   {
-    updatedChannel: FullChannelState<T>;
+    updatedChannel: FullChannelState;
     updatedActiveTransfers: FullTransferState[];
     updatedTransfer?: FullTransferState;
   },
@@ -162,6 +162,9 @@ export function applyUpdate<T extends UpdateType>(
         responder: initiator === previousState!.alice ? previousState!.bob : previousState!.alice,
         meta,
         inDispute: false,
+        channelNonce: previousState!.nonce,
+        initiatorIdentifier: update.fromIdentifier,
+        responderIdentifier: update.toIdentifier,
       };
       return Result.ok({
         updatedChannel,
@@ -228,7 +231,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   Result<
     {
       update: ChannelUpdate<T>;
-      updatedChannel: FullChannelState<T>;
+      updatedChannel: FullChannelState;
       updatedActiveTransfers: FullTransferState[];
       updatedTransfer: FullTransferState | undefined;
     },
@@ -460,6 +463,7 @@ async function generateCreateUpdate(
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
   const initialStateHash = hashTransferState(transferInitialState, stateEncoding);
+  const counterpartyId = signer.address === state.alice ? state.bobIdentifier : state.aliceIdentifier;
   const counterpartyAddr = signer.address === state.alice ? state.bob : state.alice;
   const transferState: FullTransferState = {
     balance,
@@ -478,6 +482,9 @@ async function generateCreateUpdate(
     responder: signer.publicIdentifier === initiatorIdentifier ? counterpartyAddr : signer.address,
     meta,
     inDispute: false,
+    channelNonce: state.nonce,
+    initiatorIdentifier,
+    responderIdentifier: signer.publicIdentifier === initiatorIdentifier ? counterpartyId : signer.address,
   };
   const { proof, root } = generateMerkleTreeData([...transfers, transferState], transferState);
 

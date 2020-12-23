@@ -3,10 +3,10 @@ import { RegisteredTransfer } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
+import { deployments } from "hardhat";
 
-import { deployContracts } from "../../actions";
-import { alice } from "../constants";
-import { getTestAddressBook } from "../utils";
+import { alice } from "../../constants";
+import { getContract } from "../../utils";
 
 describe("LibIterableMapping.sol", function() {
   this.timeout(120_000);
@@ -24,15 +24,15 @@ describe("LibIterableMapping.sol", function() {
   };
 
   beforeEach(async () => {
-    const addressBook = await getTestAddressBook();
-    await deployContracts(alice, addressBook, [
-      ["TestLibIterableMapping", []],
-      ["HashlockTransfer", []],
-      ["Withdraw", []],
-    ]);
-    mapping = addressBook.getContract("TestLibIterableMapping");
+    await deployments.fixture(); // Start w fresh deployments
+    mapping = await getContract("TestLibIterableMapping", alice);
     expect(mapping.address).to.be.a("string");
-    transferDefs = [addressBook.getContract("HashlockTransfer"), addressBook.getContract("Withdraw")];
+    transferDefs = [
+      await getContract("HashlockTransfer", alice),
+      await getContract("Withdraw", alice),
+    ];
+    expect(transferDefs[0].address).to.be.a("string");
+    expect(transferDefs[1].address).to.be.a("string");
   });
 
   describe("stringEqual", () => {

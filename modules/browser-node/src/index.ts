@@ -1,4 +1,4 @@
-import { VectorChainService } from "@connext/vector-contracts";
+import { deployments, VectorChainService } from "@connext/vector-contracts";
 import { VectorEngine } from "@connext/vector-engine";
 import {
   ChainAddresses,
@@ -15,7 +15,6 @@ import {
   NodeParams,
   NodeResponses,
   EngineParams,
-  FullChannelState,
   TransferNames,
   EngineEvents,
   ConditionalTransferCreatedPayload,
@@ -93,6 +92,31 @@ export class BrowserNode implements INodeService {
       config.signer,
       config.logger.child({ module: "VectorChainService" }),
     );
+
+    // Pull live network addresses out of public deployments if not provided explicitly
+    for (const chainId of Object.keys(config.chainProviders)) {
+      if (!config.chainAddresses) {
+        config.chainAddresses = {} as any;
+      }
+      if (!config.chainAddresses[chainId]) {
+        config.chainAddresses[chainId] = {} as any;
+      }
+      if (
+        !config.chainAddresses[chainId].channelFactoryAddress
+        && deployments[chainId] && deployments[chainId].ChannelFactory
+      ) {
+        config.chainAddresses[chainId].channelFactoryAddress =
+          deployments[chainId].ChannelFactory.address;
+      }
+      if (
+        !config.chainAddresses[chainId].transferRegistryAddress
+        && deployments[chainId] && deployments[chainId].TransferRegistry
+      ) {
+        config.chainAddresses[chainId].transferRegistryAddress =
+          deployments[chainId].TransferRegistry.address;
+      }
+    }
+
     const engine = await VectorEngine.connect(
       messaging,
       lock,
@@ -149,7 +173,7 @@ export class BrowserNode implements INodeService {
         if (address.isError) {
           throw address.getError();
         }
-        channel = await this.getStateChannel(address.getValue());
+        channel = (await this.getStateChannel(address.getValue())).getValue();
       }
       this.logger.info({ channel, chainId });
     }
@@ -180,8 +204,8 @@ export class BrowserNode implements INodeService {
     if (receiverChannelRes.isError) {
       throw receiverChannelRes.getError();
     }
-    const senderChannel = senderChannelRes.getValue() as FullChannelState;
-    const receiverChannel = receiverChannelRes.getValue() as FullChannelState;
+    const senderChannel = senderChannelRes.getValue();
+    const receiverChannel = receiverChannelRes.getValue();
     if (!senderChannel || !receiverChannel) {
       throw new Error(
         `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${
@@ -266,6 +290,7 @@ export class BrowserNode implements INodeService {
 
     let withdrawalTx: string | undefined;
     let withdrawalAmount: string | undefined;
+    const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
     if (params.withdrawalAddress) {
       withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       this.logger.info(
@@ -277,7 +302,7 @@ export class BrowserNode implements INodeService {
         assetId: params.toAssetId,
         channelAddress: receiverChannel.channelAddress,
         recipient: params.withdrawalAddress,
-        meta: { ...updatedMeta },
+        meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
         throw withdrawRes.getError();
@@ -295,12 +320,12 @@ export class BrowserNode implements INodeService {
   }
 
   async getConfig(): Promise<NodeResponses.GetConfig> {
-    const rpc = constructRpcRequest("chan_getConfig", undefined);
+    const rpc = constructRpcRequest("chan_getConfig", {});
     return this.send(rpc);
   }
 
   async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
-    const rpc = constructRpcRequest("chan_getStatus", undefined);
+    const rpc = constructRpcRequest("chan_getStatus", {});
     try {
       const res = await this.send(rpc);
       return Result.ok(res);
@@ -342,7 +367,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, NodeError>> {
     try {
-      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, undefined);
+      const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
       return Result.ok(res.map((chan) => chan.channelAddress));
     } catch (e) {
@@ -508,6 +533,18 @@ export class BrowserNode implements INodeService {
         transferId: (res.channel.latestUpdate.details as CreateUpdateDetails).transferId,
         transactionHash: res.transactionHash,
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_restoreState">(ChannelRpcMethods.chan_restoreState, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok({ channelAddress: res.channelAddress });
     } catch (e) {
       return Result.fail(e);
     }

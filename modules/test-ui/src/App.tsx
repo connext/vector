@@ -120,7 +120,7 @@ function App() {
     } else {
       console.log("Updated channel:", res.getValue());
       const idx = channels.findIndex((c) => c.channelAddress === channelAddress);
-      channels.splice(idx, res.getValue());
+      channels.splice(idx, 0, res.getValue());
       setChannels(channels);
     }
   };

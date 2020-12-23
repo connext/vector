@@ -1,38 +1,17 @@
-import { FullChannelState, INodeService, Result, NodeResponses, Values, VectorError } from "@connext/vector-types";
+import { FullChannelState, INodeService, Result, NodeResponses, IVectorChainReader } from "@connext/vector-types";
 import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
-import { ChainJsonProviders } from "./listener";
-import { getRebalanceProfile } from "./services/rebalance";
-
-export class RequestCollateralError extends VectorError {
-  readonly type = VectorError.errors.RouterError;
-
-  static readonly reasons = {
-    ChannelNotFound: "Channel not found",
-    ProviderNotFound: "Provider not found",
-    UnableToGetRebalanceProfile: "Could not get rebalance profile",
-    TargetHigherThanThreshold: "Specified target is higher than reclaim threshold",
-    TxError: "Error sending deposit transaction",
-    UnableToCollateralize: "Could not collateralize channel",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof RequestCollateralError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
-  ) {
-    super(message, context);
-  }
-}
+import { RequestCollateralError } from "./errors";
+import { getRebalanceProfile } from "./services/config";
 
 export const requestCollateral = async (
   channel: FullChannelState,
   assetId: string,
   publicIdentifier: string,
   node: INodeService,
-  chainProviders: ChainJsonProviders,
+  chainReader: IVectorChainReader,
   logger: BaseLogger,
   requestedAmount?: string,
   transferAmount?: string, // used when called internally
@@ -75,7 +54,18 @@ export const requestCollateral = async (
     return Result.ok(undefined);
   }
 
-  const provider = chainProviders[channel.networkContext.chainId];
+  const providers = chainReader.getHydratedProviders();
+  if (providers.isError) {
+    return Result.fail(
+      new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
+        channelAddress: channel.channelAddress,
+        chainId: channel.networkContext.chainId,
+        assetId,
+        requestedAmount,
+      }),
+    );
+  }
+  const provider = providers.getValue()[channel.networkContext.chainId];
   if (!provider) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.ProviderNotFound, {
@@ -86,45 +76,66 @@ export const requestCollateral = async (
       }),
     );
   }
+  console.log("***** provider", provider);
 
+  // Check if a tx has already been sent, but has not been reconciled
+  // Get the total deposits vs. processed deposits
+  const onchainProcessed = iAmAlice
+    ? await chainReader.getTotalDepositedA(channel.channelAddress, channel.networkContext.chainId, assetId)
+    : await chainReader.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
+  if (onchainProcessed.isError) {
+    return Result.fail(
+      new RequestCollateralError(RequestCollateralError.reasons.CouldNotGetOnchainDeposits, {
+        channelAddress: channel.channelAddress,
+        error: onchainProcessed.getError()?.message,
+        context: onchainProcessed.getError()?.context,
+      }),
+    );
+  }
+  const offchainProcessed = BigNumber.from(channel.processedDepositsA[assetIdx] ?? "0");
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
-  logger.info({ amountToDeposit: amountToDeposit.toString() }, "Deposit amount calculated, submitting deposit tx");
-  const txRes = await node.sendDepositTx({
-    amount: amountToDeposit.toString(),
-    assetId: assetId,
-    chainId: channel.networkContext.chainId,
-    channelAddress: channel.channelAddress,
-    publicIdentifier,
-  });
-  if (txRes.isError) {
-    return Result.fail(
-      new RequestCollateralError(RequestCollateralError.reasons.TxError, {
-        channelAddress: channel.channelAddress,
-        error: txRes.getError()?.message,
-        context: txRes.getError()?.context,
-      }),
-    );
+  if (onchainProcessed.getValue().sub(offchainProcessed).lt(amountToDeposit)) {
+    // Deposit needed
+    logger.info({ amountToDeposit: amountToDeposit.toString() }, "Deposit amount calculated, submitting deposit tx");
+    const txRes = await node.sendDepositTx({
+      amount: amountToDeposit.toString(),
+      assetId: assetId,
+      chainId: channel.networkContext.chainId,
+      channelAddress: channel.channelAddress,
+      publicIdentifier,
+    });
+    if (txRes.isError) {
+      return Result.fail(
+        new RequestCollateralError(RequestCollateralError.reasons.TxError, {
+          channelAddress: channel.channelAddress,
+          error: txRes.getError()?.message,
+          context: txRes.getError()?.context,
+        }),
+      );
+    }
+
+    const tx = txRes.getValue();
+    logger.info({ txHash: tx.txHash }, "Submitted deposit tx");
+    const receipt = await provider.waitForTransaction(tx.txHash);
+    logger.info({ txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
   }
 
-  const tx = txRes.getValue();
-  logger.info({ txHash: tx.txHash }, "Submitted deposit tx");
-  const receipt = await provider.waitForTransaction(tx.txHash);
-  logger.info({ txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
-
-  const depositRes = await node.reconcileDeposit({
+  const params = {
     assetId: assetId,
     publicIdentifier,
     channelAddress: channel.channelAddress,
-  });
-  if (depositRes.isError) {
-    return Result.fail(
-      new RequestCollateralError(RequestCollateralError.reasons.UnableToCollateralize, {
-        channelAddress: channel.channelAddress,
-        error: depositRes.getError()?.message,
-        context: depositRes.getError()?.context,
-      }),
-    );
+  };
+  logger.info({ balance: channel.balances[assetIdx], target: target.toString() }, "Reconciling onchain funds");
+  const depositRes = await node.reconcileDeposit(params);
+  if (!depositRes.isError) {
+    return depositRes as Result<NodeResponses.Deposit>;
   }
-
-  return depositRes as Result<NodeResponses.Deposit>;
+  const error = depositRes.getError()!;
+  return Result.fail(
+    new RequestCollateralError(RequestCollateralError.reasons.UnableToCollateralize, {
+      channelAddress: channel.channelAddress,
+      nodeError: error.message,
+      context: error.context,
+    }),
+  );
 };

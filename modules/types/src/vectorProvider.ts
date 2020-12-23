@@ -1,4 +1,4 @@
-import { FullChannelState, FullTransferState } from "./channel";
+import { FullTransferState, FullChannelState } from "./channel";
 import { EngineParams, NodeResponses } from "./schemas";
 import { RegisteredTransfer } from "./transferDefinitions";
 
@@ -20,6 +20,7 @@ export const ChannelRpcMethods = {
   chan_requestCollateral: "chan_requestCollateral",
   chan_createTransfer: "chan_createTransfer",
   chan_resolveTransfer: "chan_resolveTransfer",
+  chan_restoreState: "chan_restoreState",
   chan_withdraw: "chan_withdraw",
   chan_subscribe: "chan_subscribe",
   chan_unsubscribeAll: "chan_unsubscribeAll",
@@ -35,8 +36,8 @@ export type ChannelRpcMethod = typeof ChannelRpcMethods[keyof typeof ChannelRpcM
 
 export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_signUtilityMessage]: EngineParams.SignUtilityMessage;
-  [ChannelRpcMethods.chan_getConfig]: undefined;
-  [ChannelRpcMethods.chan_getStatus]: undefined;
+  [ChannelRpcMethods.chan_getConfig]: {};
+  [ChannelRpcMethods.chan_getStatus]: {};
   [ChannelRpcMethods.chan_getChannelState]: EngineParams.GetChannelState;
   [ChannelRpcMethods.chan_getChannelStateByParticipants]: EngineParams.GetChannelStateByParticipants;
   [ChannelRpcMethods.chan_getTransferStateByRoutingId]: EngineParams.GetTransferStateByRoutingId;
@@ -44,16 +45,17 @@ export type ChannelRpcMethodsPayloadMap = {
   [ChannelRpcMethods.chan_getActiveTransfers]: EngineParams.GetActiveTransfers;
   [ChannelRpcMethods.chan_getTransferState]: EngineParams.GetTransferState;
   [ChannelRpcMethods.chan_getRegisteredTransfers]: EngineParams.GetRegisteredTransfers;
-  [ChannelRpcMethods.chan_getChannelStates]: undefined;
+  [ChannelRpcMethods.chan_getChannelStates]: {};
   [ChannelRpcMethods.chan_setup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_requestSetup]: EngineParams.Setup;
   [ChannelRpcMethods.chan_deposit]: EngineParams.Deposit;
   [ChannelRpcMethods.chan_requestCollateral]: EngineParams.Deposit;
   [ChannelRpcMethods.chan_createTransfer]: EngineParams.ConditionalTransfer;
   [ChannelRpcMethods.chan_resolveTransfer]: EngineParams.ResolveTransfer;
+  [ChannelRpcMethods.chan_restoreState]: EngineParams.RestoreState;
   [ChannelRpcMethods.chan_withdraw]: EngineParams.Withdraw;
   [ChannelRpcMethods.chan_subscribe]: { event: string; once: boolean };
-  [ChannelRpcMethods.chan_unsubscribeAll]: undefined;
+  [ChannelRpcMethods.chan_unsubscribeAll]: {};
   [ChannelRpcMethods.connext_authenticate]: { signature?: string };
   [ChannelRpcMethods.chan_dispute]: EngineParams.DisputeChannel;
   [ChannelRpcMethods.chan_defund]: EngineParams.DefundChannel;
@@ -84,6 +86,7 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_requestCollateral]: FullChannelState;
   [ChannelRpcMethods.chan_createTransfer]: FullChannelState;
   [ChannelRpcMethods.chan_resolveTransfer]: FullChannelState;
+  [ChannelRpcMethods.chan_restoreState]: FullChannelState;
   [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;

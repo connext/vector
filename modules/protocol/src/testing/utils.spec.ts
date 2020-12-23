@@ -13,7 +13,7 @@ import {
 import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
-import { generateSignedChannelCommitment, reconcileDeposit, validateChannelUpdateSignatures } from "../utils";
+import { generateSignedChannelCommitment, reconcileDeposit } from "../utils";
 
 import { env } from "./env";
 
@@ -140,76 +140,6 @@ describe("utils", () => {
     }
   });
 
-  describe("validateChannelUpdateSignatures", () => {
-    const aliceSigner = getRandomChannelSigner();
-    const bobSigner = getRandomChannelSigner();
-    const wrongSigner = getRandomChannelSigner();
-    const state = createTestChannelState("create", { alice: aliceSigner.address, bob: bobSigner.address }).channel;
-    const { networkContext, ...core } = state;
-
-    const tests = [
-      {
-        name: "should work for a valid single signed update",
-        updateSignatures: [undefined, "bobSig"],
-        requiredSigners: "bob",
-        expected: undefined,
-      },
-      {
-        name: "should work for a valid double signed update",
-        updateSignatures: ["aliceSig", "bobSig"],
-        requiredSigners: "both",
-        expected: undefined,
-      },
-      {
-        name: "should fail if there are not at the number of required sigs included",
-        updateSignatures: [undefined, "bobSig"],
-        requiredSigners: "both",
-        expected: "Expected alice + bob",
-      },
-      {
-        name: "should fail if any of the signatures are invalid",
-        updateSignatures: [undefined, "wrongSig"],
-        requiredSigners: "alice",
-        expected: "Expected alice",
-      },
-    ];
-
-    for (const test of tests) {
-      const { name, updateSignatures, requiredSigners, expected } = test;
-      it(name, async () => {
-        const signatures: (string | undefined)[] = [];
-
-        // Have to do this because of weird race conditions around looping
-        for (let i = 0; i < 2; i++) {
-          if (updateSignatures[i] == "bobSig") {
-            signatures[i] = await bobSigner.signMessage(hashChannelCommitment(core));
-          } else if (updateSignatures[i] == "aliceSig") {
-            signatures[i] = await aliceSigner.signMessage(hashChannelCommitment(core));
-          } else if (updateSignatures[i] == "wrongSig") {
-            signatures[i] = await wrongSigner.signMessage(hashChannelCommitment(core));
-          } else {
-            signatures[i] = updateSignatures[i];
-          }
-        }
-
-        const ret = await validateChannelUpdateSignatures(
-          state,
-          signatures[0],
-          signatures[1],
-          requiredSigners as "alice" | "bob" | "both",
-        );
-
-        if (expected) {
-          expect(ret.isError).to.be.true;
-          expect(ret.getError().message).includes(expected);
-        } else {
-          expect(ret.isError).to.be.false;
-          expect(ret.getValue()).to.be.undefined;
-        }
-      });
-    }
-  });
-
   describe("reconcileDeposit", () => {
     const channelAddress = mkAddress("0xccc");
     const chainId = parseInt(Object.keys(env.chainProviders)[0]);
@@ -227,8 +157,8 @@ describe("utils", () => {
       const mockedValues = {
         // Default the value chainReader + depositA + multisig deposit
         getChannelOnchainBalance: Result.ok<BigNumber>(initialChainBalance.add(aliceDeposit ?? 0).add(bobDeposit ?? 0)),
-        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add((processedDepositsA as any)!)),
-        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add((processedDepositsB as any)!)),
+        getTotalDepositedA: Result.ok<BigNumber>(BigNumber.from(aliceDeposit ?? 0).add(processedDepositsA![0])),
+        getTotalDepositedB: Result.ok<BigNumber>(BigNumber.from(bobDeposit ?? 0).add(processedDepositsB![0])),
         ...stubs,
       };
       Object.entries(mockedValues).forEach(([method, stub]) => {
