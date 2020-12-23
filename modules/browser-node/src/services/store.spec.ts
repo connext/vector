@@ -34,80 +34,110 @@ describe("store", () => {
     await store.disconnect();
   });
 
-  it("saveChannelStateAndTransfers should work when provided with transfers", async () => {
-    const { channel, transfer } = createTestChannelState(
-      "create",
-      {},
-      {
+  describe("saveChannelStateAndTransfers", () => {
+    it("saveChannelStateAndTransfers removes previous state", async () => {
+      const { channel, transfer } = createTestChannelState(
+        "create",
+        { nonce: 10 },
+        {
+          transferId: mkHash("0x111"),
+          meta: { routingId: mkBytes32("0xddd") },
+        },
+      );
+      await store.saveChannelState(channel, transfer);
+      const fromStore = await store.getChannelState(channel.channelAddress);
+      expect(fromStore).to.deep.eq(channel);
+
+      const { channel: newChannel, transfer: newTransfer } = createTestChannelState(
+        "create",
+        { nonce: 9 },
+        {
+          transferId: mkHash("0x111"),
+          meta: { routingId: mkBytes32("0xddd") },
+        },
+      );
+      await store.saveChannelStateAndTransfers(newChannel, [newTransfer]);
+      const afterRestore = await store.getChannelState(channel.channelAddress);
+      expect(afterRestore).to.deep.eq(newChannel);
+    });
+
+    it("saveChannelStateAndTransfers should work when provided with transfers", async () => {
+      const { channel, transfer } = createTestChannelState(
+        "create",
+        {},
+        {
+          transferId: mkHash("0x111"),
+          meta: { routingId: mkBytes32("0xddd") },
+        },
+      );
+      const starting = transfer.channelNonce;
+      const transfers = Array(5)
+        .fill(0)
+        .map((_, idx) => {
+          return {
+            ...transfer,
+            transferId: getRandomBytes32(),
+            channelNonce: starting + idx,
+            meta: { routingId: getRandomBytes32() },
+          };
+        });
+
+      // Test with transfers
+      await store.saveChannelStateAndTransfers(channel, transfers);
+
+      // Verify channel
+      const retrieved = await store.getChannelState(channel.channelAddress);
+      expect(retrieved).to.be.deep.eq(channel);
+
+      for (const t of transfers) {
+        const retrieved = await store.getTransferState(t.transferId);
+        expect(retrieved).to.be.deep.eq(t);
+      }
+      expect(
+        (await store.getActiveTransfers(channel.channelAddress)).sort((a, b) => a.channelNonce - b.channelNonce),
+      ).to.be.deep.eq(transfers.sort((a, b) => a.channelNonce - b.channelNonce));
+
+      // Verify it works if the transfers/channel are overridden
+      const secondChannel = { ...channel, nonce: 30 };
+      const secondTransfers = transfers
+        .map((t, idx) => {
+          return {
+            ...t,
+            channelNonce: 30 + idx,
+            meta: { routingId: getRandomBytes32() },
+          };
+        })
+        .slice(0, 3);
+
+      // Test with transfers
+      await store.saveChannelStateAndTransfers(secondChannel, secondTransfers);
+
+      // Verify channel
+      const retrieved2 = await store.getChannelState(secondChannel.channelAddress);
+      expect(retrieved2).to.be.deep.eq(secondChannel);
+
+      for (const t2 of secondTransfers) {
+        const retrieved = await store.getTransferState(t2.transferId);
+        expect(retrieved).to.be.deep.eq(t2);
+      }
+      expect(
+        (await store.getActiveTransfers(secondChannel.channelAddress)).sort((a, b) => a.channelNonce - b.channelNonce),
+      ).to.be.deep.eq(secondTransfers.sort((a, b) => a.channelNonce - b.channelNonce));
+    });
+
+    it("saveChannelStateAndTransfers should work when provided with no active transfers", async () => {
+      const { channel } = createTestChannelState("create", undefined, {
         transferId: mkHash("0x111"),
         meta: { routingId: mkBytes32("0xddd") },
-      },
-    );
-    const starting = transfer.channelNonce;
-    const transfers = Array(5)
-      .fill(0)
-      .map((_, idx) => {
-        return {
-          ...transfer,
-          transferId: getRandomBytes32(),
-          channelNonce: starting + idx,
-          meta: { routingId: getRandomBytes32() },
-        };
       });
 
-    // Test with transfers
-    await store.saveChannelStateAndTransfers(channel, transfers);
+      // Test with transfers
+      await store.saveChannelStateAndTransfers(channel, []);
 
-    // Verify channel
-    const retrieved = await store.getChannelState(channel.channelAddress);
-    expect(retrieved).to.be.deep.eq(channel);
-
-    for (const t of transfers) {
-      const retrieved = await store.getTransferState(t.transferId);
-      expect(retrieved).to.be.deep.eq(t);
-    }
-    expect(
-      (await store.getActiveTransfers(channel.channelAddress)).sort((a, b) => a.channelNonce - b.channelNonce),
-    ).to.be.deep.eq(transfers.sort((a, b) => a.channelNonce - b.channelNonce));
-
-    // Verify it works if the transfers/channel are overridden
-    const secondChannel = { ...channel, nonce: 30 };
-    const secondTransfers = transfers
-      .map((t, idx) => {
-        return {
-          ...t,
-          channelNonce: 30 + idx,
-          meta: { routingId: getRandomBytes32() },
-        };
-      })
-      .slice(0, 3);
-
-    // Test with transfers
-    await store.saveChannelStateAndTransfers(secondChannel, secondTransfers);
-
-    // Verify channel
-    const retrieved2 = await store.getChannelState(secondChannel.channelAddress);
-    expect(retrieved2).to.be.deep.eq(secondChannel);
-
-    for (const t2 of secondTransfers) {
-      const retrieved = await store.getTransferState(t2.transferId);
-      expect(retrieved).to.be.deep.eq(t2);
-    }
-    expect(
-      (await store.getActiveTransfers(secondChannel.channelAddress)).sort((a, b) => a.channelNonce - b.channelNonce),
-    ).to.be.deep.eq(secondTransfers.sort((a, b) => a.channelNonce - b.channelNonce));
-  });
-
-  it("saveChannelStateAndTransfers should work when provided with no active transfers", async () => {
-    const { channel } = createTestChannelState("create", undefined, {
-      transferId: mkHash("0x111"),
-      meta: { routingId: mkBytes32("0xddd") },
+      // Verify channel
+      const retrieved = await store.getChannelState(channel.channelAddress);
+      expect(retrieved).to.be.deep.eq(channel);
     });
-    await store.saveChannelStateAndTransfers(channel, []);
-
-    // Verify channel
-    const retrieved = await store.getChannelState(channel.channelAddress);
-    expect(retrieved).to.be.deep.eq(channel);
   });
 
   describe("getActiveTransfers", () => {
