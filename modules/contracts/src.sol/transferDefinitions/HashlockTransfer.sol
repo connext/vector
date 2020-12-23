@@ -92,11 +92,10 @@ contract HashlockTransfer is TransferDefinition {
             // Update state
             balance.amount[1] = balance.amount[0];
             balance.amount[0] = 0;
-        } else {
-            // To cancel, the preImage must be empty (not simply incorrect)
-            // There are no additional state mutations, and the preImage is
-            // asserted by the `if` statement
         }
+        // To cancel, the preImage must be empty (not simply incorrect)
+        // There are no additional state mutations, and the preImage is
+        // asserted by the `if` statement
 
         return balance;
     }
