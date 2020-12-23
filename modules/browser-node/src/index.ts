@@ -290,6 +290,7 @@ export class BrowserNode implements INodeService {
 
     let withdrawalTx: string | undefined;
     let withdrawalAmount: string | undefined;
+    const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
     if (params.withdrawalAddress) {
       withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       this.logger.info(
@@ -301,7 +302,7 @@ export class BrowserNode implements INodeService {
         assetId: params.toAssetId,
         channelAddress: receiverChannel.channelAddress,
         recipient: params.withdrawalAddress,
-        meta: { ...updatedMeta },
+        meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
         throw withdrawRes.getError();
