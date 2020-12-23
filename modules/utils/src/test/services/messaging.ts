@@ -7,6 +7,9 @@ import {
   MessagingError,
   OutboundChannelUpdateError,
   Result,
+  FullChannelState,
+  EngineError,
+  FullTransferState,
   EngineParams,
   IsAliveError,
   IsAliveInfo,
@@ -158,6 +161,32 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendRestoreStateMessage(
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
+    throw new Error("Method not implemented.");
+  }
+  onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  respondToRestoreStateMessage(
+    inbox: string,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
+  ): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

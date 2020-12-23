@@ -22,6 +22,7 @@ const withdrawalReconciledPath = "/withdrawal-reconciled";
 export const aliceEvts = {
   [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {
     evt: Evt.create<WithdrawalCreatedPayload>(),
     url: `${serverBase}${withdrawalCreatedPath}-alice`,
@@ -52,6 +53,7 @@ export const aliceEvts = {
 export const bobEvts = {
   [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
+  [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {
     evt: Evt.create<WithdrawalCreatedPayload>(),
     url: `${serverBase}${withdrawalCreatedPath}-bob`,

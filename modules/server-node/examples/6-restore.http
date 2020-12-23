@@ -3,8 +3,8 @@
 @carolUrl = http://localhost:8005
 @daveUrl = http://localhost:8006
 @rogerUrl = http://localhost:8007
-@aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
-@carolRogerChannel = 0xEd985dC74648f968F9B42Ef2CCF2ed98777f4C3A
+@aliceBobChannel = 0x47809CD3218c69aB21BeEe8ad6a7b7Ec5E026859
+@carolRogerChannel = 0x08d324c5CA1CC52c185f9b026a7ed50994632167
 @daveRogerChannel = 0x05b2FFe2814240aa788FcD38Fe0DB29354E6d789
 @adminToken = cxt1234
 @alicePublicIdentifier = vector8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
@@ -14,18 +14,13 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
-@nodeUrl = {{aliceUrl}}
-@nodePublicIdentifier = {{alicePublicIdentifier}}
-@counterpartyPublicIdentifier = {{bobPublicIdentifier}}
-
 ##############
-### Setup Channel
-POST {{nodeUrl}}/setup
+### Restore State
+POST {{aliceUrl}}/restore
 Content-Type: application/json
 
 {
-  "counterpartyIdentifier": "{{counterpartyPublicIdentifier}}",
-  "publicIdentifier": "{{nodePublicIdentifier}}",
+  "counterpartyIdentifier": "{{bobPublicIdentifier}}",
   "chainId": "{{chainId}}",
-  "timeout": "86400"
+  "publicIdentifier": "{{alicePublicIdentifier}}"
 }

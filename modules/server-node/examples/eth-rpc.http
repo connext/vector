@@ -18,7 +18,7 @@ Content-Type: application/json
   "method":"eth_sendTransaction",
   "params":[{
     "from": "{{sugarDaddy}}",
-    "to": "{{roger}}",
+    "to": "{{alice}}",
     "value": "{{amount}}"
   }],
   "id":1

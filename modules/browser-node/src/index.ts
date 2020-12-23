@@ -290,6 +290,7 @@ export class BrowserNode implements INodeService {
 
     let withdrawalTx: string | undefined;
     let withdrawalAmount: string | undefined;
+    const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
     if (params.withdrawalAddress) {
       withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       this.logger.info(
@@ -301,7 +302,7 @@ export class BrowserNode implements INodeService {
         assetId: params.toAssetId,
         channelAddress: receiverChannel.channelAddress,
         recipient: params.withdrawalAddress,
-        meta: { ...updatedMeta },
+        meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
         throw withdrawRes.getError();
@@ -532,6 +533,18 @@ export class BrowserNode implements INodeService {
         transferId: (res.channel.latestUpdate.details as CreateUpdateDetails).transferId,
         transactionHash: res.transactionHash,
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>> {
+    try {
+      const rpc = constructRpcRequest<"chan_restoreState">(ChannelRpcMethods.chan_restoreState, params);
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok({ channelAddress: res.channelAddress });
     } catch (e) {
       return Result.fail(e);
     }

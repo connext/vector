@@ -23,3 +23,4 @@ export * from "./serverNode";
 export * from "./strings";
 export * from "./test";
 export * from "./transfers";
+export * from "./validateUpdateSignatures";

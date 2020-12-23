@@ -15,6 +15,8 @@ import {
   SetupPayload,
   REQUEST_COLLATERAL_EVENT,
   RequestCollateralPayload,
+  RESTORE_STATE_EVENT,
+  RestoreStatePayload,
   IS_ALIVE_EVENT,
   IsAlivePayload,
 } from "@connext/vector-types";
@@ -30,6 +32,7 @@ export const getEngineEvtContainer = (): EngineEvtContainer => {
     [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: Evt.create<ConditionalTransferResolvedPayload>(),
     [DEPOSIT_RECONCILED_EVENT]: Evt.create<DepositReconciledPayload>(),
     [REQUEST_COLLATERAL_EVENT]: Evt.create<RequestCollateralPayload>(),
+    [RESTORE_STATE_EVENT]: Evt.create<RestoreStatePayload>(),
     [WITHDRAWAL_CREATED_EVENT]: Evt.create<WithdrawalCreatedPayload>(),
     [WITHDRAWAL_RESOLVED_EVENT]: Evt.create<WithdrawalResolvedPayload>(),
     [WITHDRAWAL_RECONCILED_EVENT]: Evt.create<WithdrawalReconciledPayload>(),

@@ -69,6 +69,9 @@ export const TFullTransferState = Type.Object({
   transferState: TransferStateSchema,
   transferResolver: Type.Optional(TransferResolverSchema), // undefined iff not resolved
   meta: TBasicMeta,
+  channelNonce: Type.Integer({ minimum: 1 }),
+  initiatorIdentifier: TPublicIdentifier,
+  responderIdentifier: TPublicIdentifier,
 });
 
 ////////////////////////////////////////

@@ -107,6 +107,31 @@ export class BrowserStore implements IEngineStore, IChainServiceStore {
     await this.db.transactions.clear();
   }
 
+  async saveChannelStateAndTransfers(
+    channelState: FullChannelState,
+    activeTransfers: FullTransferState[],
+  ): Promise<void> {
+    await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
+      // remove all "active" transfers
+      const currActive = await this.getActiveTransfers(channelState.channelAddress);
+      // TODO: can we "unassociate" them without deleting them?
+      await this.db.transfers.bulkDelete(currActive.map((t) => t.transferId));
+      // save channel
+      await this.db.channels.put(channelState);
+      // save all active transfers
+      await this.db.transfers.bulkPut(
+        activeTransfers.map((transfer) => {
+          return {
+            ...transfer,
+            createUpdateNonce: transfer.channelNonce + 1,
+            resolveUpdateNonce: 0,
+            routingId: transfer?.meta?.routingId,
+          };
+        }),
+      );
+    });
+  }
+
   async saveChannelState(channelState: FullChannelState, transfer?: FullTransferState): Promise<void> {
     await this.db.transaction("rw", this.db.channels, this.db.transfers, async () => {
       await this.db.channels.put(channelState);

@@ -9,6 +9,9 @@ import {
   Result,
   EngineParams,
   MessagingError,
+  FullChannelState,
+  FullTransferState,
+  EngineError,
   IsAliveInfo,
   IsAliveResponse,
   IsAliveError,
@@ -194,6 +197,36 @@ export class NatsMessagingService implements IMessagingService {
 
   async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
     return this.respondToMessage(inbox, Result.fail(error), "respondWithProtocolError");
+  }
+  ////////////
+
+  // RESTORE METHODS
+  async sendRestoreStateMessage(
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>> {
+    return this.sendMessage(restoreData, "restore", to, from, timeout, numRetries, "sendRestoreStateMessage");
+  }
+
+  async onReceiveRestoreStateMessage(
+    publicIdentifier: string,
+    callback: (
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+      from: string,
+      inbox: string,
+    ) => void,
+  ): Promise<void> {
+    await this.registerCallback(`${publicIdentifier}.*.restore`, callback, "onReceiveRestoreStateMessage");
+  }
+
+  async respondToRestoreStateMessage(
+    inbox: string,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
+  ): Promise<void> {
+    return this.respondToMessage(inbox, restoreData, "respondToRestoreStateMessage");
   }
   ////////////
 

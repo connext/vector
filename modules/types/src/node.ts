@@ -100,6 +100,10 @@ export interface INodeService {
 
   withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
 
+  restoreState(
+    params: OptionalPublicIdentifier<NodeParams.RestoreState>,
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>>;
+
   once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
