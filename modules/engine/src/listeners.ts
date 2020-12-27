@@ -31,9 +31,9 @@ import {
   Result,
   ChainError,
   EngineError,
-  IS_ALIVE_EVENT,
-  IsAliveError,
-  IsAliveResponse,
+  CHECK_IN_EVENT,
+  CheckInError,
+  CheckInResponse,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
@@ -264,7 +264,8 @@ export async function setupEngineListeners(
       }, 15_000);
     },
   );
-  await messaging.onReceiveIsAliveMessage(signer.publicIdentifier, async (params, from, inbox) => {
+
+  await messaging.onReceiveCheckInMessage(signer.publicIdentifier, async (params, from, inbox) => {
     if (from === signer.publicIdentifier) {
       return;
     }
@@ -275,10 +276,10 @@ export async function setupEngineListeners(
     }
     logger.info({ params: params.getValue(), method, from }, "Handling message");
     const channel = await store.getChannelState(params.getValue().channelAddress);
-    let response: Result<IsAliveResponse, IsAliveError>;
+    let response: Result<CheckInResponse, CheckInError>;
     if (!channel) {
       logger.error({ params: params.getValue(), method }, "Could not find channel for received isAlive message");
-      response = Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound));
+      response = Result.fail(new CheckInError(CheckInError.reasons.ChannelNotFound));
     } else {
       response = Result.ok({
         aliceIdentifier: channel.aliceIdentifier,
@@ -286,7 +287,7 @@ export async function setupEngineListeners(
         chainId: channel.networkContext.chainId,
         channelAddress: channel.channelAddress,
       });
-      evts[IS_ALIVE_EVENT].post({
+      evts[CHECK_IN_EVENT].post({
         aliceIdentifier: channel.aliceIdentifier,
         bobIdentifier: channel.bobIdentifier,
         chainId: channel.networkContext.chainId,
@@ -294,7 +295,7 @@ export async function setupEngineListeners(
       });
     }
 
-    await messaging.respondToIsAliveMessage(inbox, response);
+    await messaging.respondToCheckInMessage(inbox, response);
   });
 
   await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {

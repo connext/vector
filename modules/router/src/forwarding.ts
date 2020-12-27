@@ -9,7 +9,7 @@ import {
   TRANSFER_DECREMENT,
   INodeService,
   FullChannelState,
-  IsAlivePayload,
+  CheckInPayload,
   FullTransferState,
   IVectorChainReader,
   NodeError,
@@ -346,8 +346,8 @@ export async function forwardTransferResolution(
   return Result.ok(resolution.getValue());
 }
 
-export async function handleIsAlive(
-  data: IsAlivePayload,
+export async function handleCheckIn(
+  data: CheckInPayload,
   routerPublicIdentifier: string,
   signerAddress: string,
   nodeService: INodeService,
@@ -355,10 +355,10 @@ export async function handleIsAlive(
   chainReader: IVectorChainReader,
   logger: BaseLogger,
 ): Promise<Result<undefined, ForwardTransferError>> {
-  const method = "handleIsAlive";
+  const method = "handleCheckIn";
   logger.info(
     { data, method, node: { signerAddress, routerPublicIdentifier } },
-    "Received isAlive event, starting handler",
+    "Received checkIn event, starting handler",
   );
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
@@ -366,7 +366,7 @@ export async function handleIsAlive(
   for (const routerUpdate of updates) {
     // set status to processing to avoid race conditions
     await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.PROCESSING);
-    logger.info({ method, update: routerUpdate }, "Found update for isAlive channel");
+    logger.info({ method, update: routerUpdate }, "Found update for checkIn channel");
     const { type, payload } = routerUpdate;
 
     let transferResult;
@@ -421,7 +421,7 @@ export async function handleIsAlive(
           update: routerUpdate,
           transferResult: transferResult?.toJson(),
         },
-        "Error handling isAlive update",
+        "Error handling checkIn update",
       );
       const isTimeout = nodeServiceError === NodeError.reasons.Timeout;
       await store.setUpdateStatus(
@@ -434,12 +434,12 @@ export async function handleIsAlive(
     }
     logger.info(
       { transferResult: transferResult.getValue(), update: routerUpdate, method },
-      "Successfully handled isAlive update",
+      "Successfully handled checkIn update",
     );
   }
   if (erroredUpdates.length > 0) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.IsAliveError, {
+      new ForwardTransferError(ForwardTransferError.reasons.CheckInError, {
         failedIds: erroredUpdates.map((update) => update.id),
       }),
     );

@@ -2,7 +2,7 @@ import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
 import {
   EngineError,
   InboundChannelUpdateError,
-  IsAliveError,
+  CheckInError,
   LockError,
   MessagingError,
   OutboundChannelUpdateError,
@@ -11,8 +11,8 @@ import {
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
-export type IsAliveInfo = { channelAddress: string };
-export type IsAliveResponse = {
+export type CheckInInfo = { channelAddress: string };
+export type CheckInResponse = {
   aliceIdentifier: string;
   bobIdentifier: string;
   chainId: number;
@@ -109,18 +109,18 @@ export interface IMessagingService {
     restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void>;
 
-  sendIsAliveMessage(
-    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
+  sendCheckInMessage(
+    checkInInfo: Result<CheckInInfo, CheckInError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<void, IsAliveError>>;
-  onReceiveIsAliveMessage(
+  ): Promise<Result<void, CheckInError>>;
+  onReceiveCheckInMessage(
     publicIdentifier: string,
-    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
+    callback: (checkInInfo: Result<CheckInInfo, CheckInError>, from: string, inbox: string) => void,
   ): Promise<void>;
-  respondToIsAliveMessage(inbox: string, params: Result<IsAliveResponse, IsAliveError>): Promise<void>;
+  respondToCheckInMessage(inbox: string, params: Result<CheckInResponse, CheckInError>): Promise<void>;
 
   sendRequestCollateralMessage(
     requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,

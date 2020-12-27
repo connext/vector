@@ -11,12 +11,12 @@ import {
 } from "@connext/vector-utils";
 import Sinon from "sinon";
 
-import { sendIsAlive } from "../isAlive";
+import { sendCheckIn } from "../checkIn";
 
 import { env } from "./env";
 
-describe("Is Alive", () => {
-  const testName = "IsAlive";
+describe("checkIn", () => {
+  const testName = "checkIn";
   const { log } = getTestLoggers(testName, env.logLevel);
 
   let storeService: Sinon.SinonStubbedInstance<MemoryStoreService>;
@@ -26,15 +26,15 @@ describe("Is Alive", () => {
     messagingService = Sinon.createStubInstance(MemoryMessagingService);
   });
 
-  it("should send no isAlive messages if there are no channels", async () => {
+  it("should send no checkIn messages if there are no channels", async () => {
     const signer = getRandomChannelSigner();
     storeService.getChannelStates.resolves([]);
-    await sendIsAlive(signer, messagingService, storeService, log);
-    expect(messagingService.sendIsAliveMessage.called).to.be.false;
+    await sendCheckIn(signer, messagingService, storeService, log);
+    expect(messagingService.sendCheckInMessage.called).to.be.false;
   });
 
-  it("should send isAlive messages to all channels", async () => {
-    messagingService.sendIsAliveMessage.resolves(Result.ok(undefined));
+  it("should send checkIn messages to all channels", async () => {
+    messagingService.sendCheckInMessage.resolves(Result.ok(undefined));
     const signer = getRandomChannelSigner();
     const channel1 = createTestChannelState("create", {
       alice: signer.address,
@@ -50,7 +50,7 @@ describe("Is Alive", () => {
     }).channel;
     storeService.getChannelStates.resolves([channel1, channel2]);
 
-    await sendIsAlive(signer, messagingService, storeService, log);
-    expect(messagingService.sendIsAliveMessage.callCount).to.eq(2);
+    await sendCheckIn(signer, messagingService, storeService, log);
+    expect(messagingService.sendCheckInMessage.callCount).to.eq(2);
   });
 });

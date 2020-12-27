@@ -16,7 +16,7 @@ const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 
 export const carolEvts = {
-  [EngineEvents.IS_ALIVE]: {},
+  [EngineEvents.CHECK_IN]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {},
   [EngineEvents.WITHDRAWAL_RESOLVED]: {},

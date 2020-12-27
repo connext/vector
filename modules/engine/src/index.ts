@@ -43,7 +43,7 @@ import {
 } from "./paramConverter";
 import { setupEngineListeners } from "./listeners";
 import { getEngineEvtContainer } from "./utils";
-import { sendIsAlive } from "./isAlive";
+import { sendCheckIn } from "./checkIn";
 
 export const ajv = new Ajv();
 
@@ -97,7 +97,7 @@ export class VectorEngine implements IVectorEngine {
     );
     await engine.setupListener();
     logger.debug({}, "Setup engine listeners");
-    await sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
+    await sendCheckIn(engine.signer, engine.messaging, engine.store, engine.logger);
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
   }

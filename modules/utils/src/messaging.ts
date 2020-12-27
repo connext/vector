@@ -12,9 +12,9 @@ import {
   FullChannelState,
   FullTransferState,
   EngineError,
-  IsAliveInfo,
-  IsAliveResponse,
-  IsAliveError,
+  CheckInInfo,
+  CheckInResponse,
+  CheckInError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -317,25 +317,25 @@ export class NatsMessagingService implements IMessagingService {
   ////////////
 
   // CHECKIN METHODS
-  sendIsAliveMessage(
-    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
+  sendCheckInMessage(
+    checkInInfo: Result<CheckInInfo, CheckInError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<void, IsAliveError>> {
-    return this.sendMessage(isAliveInfo, "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
+  ): Promise<Result<void, CheckInError>> {
+    return this.sendMessage(checkInInfo, "isalive", to, from, timeout, numRetries, "sendCheckInMessage");
   }
 
-  onReceiveIsAliveMessage(
+  onReceiveCheckInMessage(
     publicIdentifier: string,
-    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
+    callback: (checkInInfo: Result<CheckInInfo, CheckInError>, from: string, inbox: string) => void,
   ): Promise<void> {
-    return this.registerCallback(`${publicIdentifier}.*.isalive`, callback, "onReceiveIsAliveMessage");
+    return this.registerCallback(`${publicIdentifier}.*.isalive`, callback, "onReceiveCheckInMessage");
   }
 
-  respondToIsAliveMessage(inbox: string, isAliveInfo: Result<IsAliveResponse, IsAliveError>): Promise<void> {
-    return this.respondToMessage(inbox, isAliveInfo, "respondToIsAliveMessage");
+  respondToCheckInMessage(inbox: string, checkInInfo: Result<CheckInResponse, CheckInError>): Promise<void> {
+    return this.respondToMessage(inbox, checkInInfo, "respondToCheckInMessage");
   }
   ////////////
 
