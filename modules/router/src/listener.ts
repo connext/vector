@@ -12,7 +12,7 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 
 import { requestCollateral } from "./collateral";
-import { forwardTransferCreation, forwardTransferResolution, handleCheckIn } from "./forwarding";
+import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
 
 const ajv = new Ajv();
@@ -239,8 +239,8 @@ export async function setupListeners(
     logger.info({ res: res.getValue() }, "Succesfully requested collateral");
   });
 
-  nodeService.on(EngineEvents.CHECK_IN, async (data) => {
-    const res = await handleCheckIn(
+  nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
+    const res = await handleIsAlive(
       data,
       routerPublicIdentifier,
       routerSignerAddress,

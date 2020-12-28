@@ -31,10 +31,10 @@ import {
   Result,
   ChainError,
   EngineError,
-  CHECK_IN_EVENT,
   CheckInError,
   CheckInResponse,
   VectorError,
+  IS_ALIVE_EVENT,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
@@ -300,11 +300,11 @@ export async function setupEngineListeners(
     },
   );
 
-  await messaging.onReceiveCheckInMessage(signer.publicIdentifier, async (params, from, inbox) => {
+  await messaging.onReceiveIsAliveMessage(signer.publicIdentifier, async (params, from, inbox) => {
     if (from === signer.publicIdentifier) {
       return;
     }
-    const method = "onReceiveCheckInMessage";
+    const method = "onReceiveIsAliveMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
       return;
@@ -321,16 +321,12 @@ export async function setupEngineListeners(
         bobIdentifier: channel.bobIdentifier,
         chainId: channel.networkContext.chainId,
         channelAddress: channel.channelAddress,
+        skipCheckIn: params.getValue().skipCheckIn,
       });
-      evts[CHECK_IN_EVENT].post({
-        aliceIdentifier: channel.aliceIdentifier,
-        bobIdentifier: channel.bobIdentifier,
-        chainId: channel.networkContext.chainId,
-        channelAddress: channel.channelAddress,
-      });
+      evts[IS_ALIVE_EVENT].post(response.getValue());
     }
 
-    await messaging.respondToCheckInMessage(inbox, response);
+    await messaging.respondToIsAliveMessage(inbox, response);
   });
 
   await messaging.onReceiveRequestCollateralMessage(signer.publicIdentifier, async (params, from, inbox) => {

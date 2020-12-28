@@ -36,7 +36,7 @@ export const transferWithAutoCollateralization = async (
   // check if recipient is available
   let available = false;
   try {
-    const online = await nodeService.sendIsAliveMessage({ channelAddress: params.channelAddress });
+    const online = await nodeService.sendIsAliveMessage({ channelAddress: params.channelAddress, skipCheckIn: true });
     available = !online.isError;
   } catch (e) {
     logger.warn({ error: e.message }, "Failed to ping recipient");

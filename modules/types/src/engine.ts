@@ -13,12 +13,13 @@ export type ConditionalTransferResponse = {
 ///////////////////////////////////
 ////// Engine event types
 // Emitted on startup
-export const CHECK_IN_EVENT = "CHECK_IN";
-export type CheckInPayload = {
+export const IS_ALIVE_EVENT = "IS_ALIVE";
+export type IsAlivePayload = {
   channelAddress: string;
   aliceIdentifier: string;
   bobIdentifier: string;
   chainId: number;
+  skipCheckIn?: boolean;
 };
 
 // Emitted on channel setup
@@ -106,7 +107,7 @@ export type RestoreStatePayload = SetupPayload;
 
 // Grouped event types
 export const EngineEvents = {
-  [CHECK_IN_EVENT]: CHECK_IN_EVENT,
+  [IS_ALIVE_EVENT]: IS_ALIVE_EVENT,
   [SETUP_EVENT]: SETUP_EVENT,
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: CONDITIONAL_TRANSFER_CREATED_EVENT,
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: CONDITIONAL_TRANSFER_RESOLVED_EVENT,
@@ -120,7 +121,7 @@ export const EngineEvents = {
 } as const;
 export type EngineEvent = typeof EngineEvents[keyof typeof EngineEvents];
 export interface EngineEventMap {
-  [CHECK_IN_EVENT]: CheckInPayload;
+  [IS_ALIVE_EVENT]: IsAlivePayload;
   [SETUP_EVENT]: SetupPayload;
   [CONDITIONAL_TRANSFER_CREATED_EVENT]: ConditionalTransferCreatedPayload;
   [CONDITIONAL_TRANSFER_RESOLVED_EVENT]: ConditionalTransferResolvedPayload;

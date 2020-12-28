@@ -7,7 +7,7 @@ import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
 import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
 import {
-  CheckInPayload,
+  IsAlivePayload,
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
@@ -28,8 +28,8 @@ const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
 const checkInPath = "/check-in";
 const evts: EventCallbackConfig = {
-  [EngineEvents.CHECK_IN]: {
-    evt: Evt.create<CheckInPayload>(),
+  [EngineEvents.IS_ALIVE]: {
+    evt: Evt.create<IsAlivePayload>(),
     url: `${routerBase}${checkInPath}`,
   },
   [EngineEvents.SETUP]: {},
@@ -92,7 +92,7 @@ server.get("/ping", async () => {
 });
 
 server.post(checkInPath, async (request, response) => {
-  evts[EngineEvents.CHECK_IN].evt!.post(request.body as CheckInPayload);
+  evts[EngineEvents.IS_ALIVE].evt!.post(request.body as IsAlivePayload);
   return response.status(200).send({ message: "success" });
 });
 

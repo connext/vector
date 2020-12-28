@@ -11,7 +11,7 @@ import {
 } from "@connext/vector-utils";
 import Sinon from "sinon";
 
-import { sendCheckIn } from "../checkIn";
+import { sendIsAlive } from "../isAlive";
 
 import { env } from "./env";
 
@@ -29,7 +29,7 @@ describe("checkIn", () => {
   it("should send no checkIn messages if there are no channels", async () => {
     const signer = getRandomChannelSigner();
     storeService.getChannelStates.resolves([]);
-    await sendCheckIn(signer, messagingService, storeService, log);
+    await sendIsAlive(signer, messagingService, storeService, log);
     expect(messagingService.sendCheckInMessage.called).to.be.false;
   });
 
@@ -50,7 +50,7 @@ describe("checkIn", () => {
     }).channel;
     storeService.getChannelStates.resolves([channel1, channel2]);
 
-    await sendCheckIn(signer, messagingService, storeService, log);
+    await sendIsAlive(signer, messagingService, storeService, log);
     expect(messagingService.sendCheckInMessage.callCount).to.eq(2);
   });
 });

@@ -9,7 +9,7 @@ import {
   TRANSFER_DECREMENT,
   INodeService,
   FullChannelState,
-  CheckInPayload,
+  IsAlivePayload,
   FullTransferState,
   IVectorChainReader,
   NodeError,
@@ -346,8 +346,8 @@ export async function forwardTransferResolution(
   return Result.ok(resolution.getValue());
 }
 
-export async function handleCheckIn(
-  data: CheckInPayload,
+export async function handleIsAlive(
+  data: IsAlivePayload,
   routerPublicIdentifier: string,
   signerAddress: string,
   nodeService: INodeService,
@@ -355,11 +355,16 @@ export async function handleCheckIn(
   chainReader: IVectorChainReader,
   logger: BaseLogger,
 ): Promise<Result<undefined, ForwardTransferError>> {
-  const method = "handleCheckIn";
+  const method = "handleIsAlive";
   logger.info(
     { data, method, node: { signerAddress, routerPublicIdentifier } },
-    "Received checkIn event, starting handler",
+    "Received isAlive event, starting handler",
   );
+
+  if (data.skipCheckIn) {
+    logger.info({ method, data }, "Skipping isAlive handler");
+    return Result.ok(undefined);
+  }
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
   const erroredUpdates = [];

@@ -20,7 +20,7 @@ const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";
 const withdrawalReconciledPath = "/withdrawal-reconciled";
 export const carolEvts = {
-  [EngineEvents.CHECK_IN]: {},
+  [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {
     evt: Evt.create<WithdrawalCreatedPayload>(),
@@ -51,7 +51,7 @@ export const carolEvts = {
 };
 
 export const daveEvts = {
-  [EngineEvents.CHECK_IN]: {},
+  [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {
     evt: Evt.create<WithdrawalCreatedPayload>(),

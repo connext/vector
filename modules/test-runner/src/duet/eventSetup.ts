@@ -20,7 +20,7 @@ const withdrawalCreatedPath = "/withdrawal-created";
 const withdrawalResolvedPath = "/withdrawal-resolved";
 const withdrawalReconciledPath = "/withdrawal-reconciled";
 export const aliceEvts = {
-  [EngineEvents.CHECK_IN]: {},
+  [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {
@@ -51,7 +51,7 @@ export const aliceEvts = {
 };
 
 export const bobEvts = {
-  [EngineEvents.CHECK_IN]: {},
+  [EngineEvents.IS_ALIVE]: {},
   [EngineEvents.SETUP]: {},
   [EngineEvents.RESTORE_STATE_EVENT]: {},
   [EngineEvents.WITHDRAWAL_CREATED]: {

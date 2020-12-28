@@ -111,7 +111,7 @@ export interface IMessagingService {
   ): Promise<void>;
 
   sendIsAliveMessage(
-    isAlive: Result<{ channelAddress: string }, Error>,
+    isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, Error>,
     to: string,
     from: string,
     timeout?: number,
@@ -119,22 +119,13 @@ export interface IMessagingService {
   ): Promise<Result<{ channelAddress: string }, VectorError>>;
   onReceiveIsAliveMessage(
     publicIdentifier: string,
-    callback: (isAlive: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => void,
+    callback: (
+      isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, VectorError>,
+      from: string,
+      inbox: string,
+    ) => void,
   ): Promise<void>;
   respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void>;
-
-  sendCheckInMessage(
-    checkInInfo: Result<CheckInInfo, CheckInError>,
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<void, CheckInError>>;
-  onReceiveCheckInMessage(
-    publicIdentifier: string,
-    callback: (checkInInfo: Result<CheckInInfo, CheckInError>, from: string, inbox: string) => void,
-  ): Promise<void>;
-  respondToCheckInMessage(inbox: string, params: Result<CheckInResponse, CheckInError>): Promise<void>;
 
   sendRequestCollateralMessage(
     requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,

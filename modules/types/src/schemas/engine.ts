@@ -144,7 +144,7 @@ const SignUtilityMessageParamsSchema = Type.Object({
 });
 
 // Ping-pong
-const SendIsAliveParamsSchema = Type.Object({ channelAddress: TAddress });
+const SendIsAliveParamsSchema = Type.Object({ channelAddress: TAddress, skipCheckIn: Type.Boolean() });
 
 // Restore channel from counterparty
 const RestoreStateParamsSchema = Type.Object({
