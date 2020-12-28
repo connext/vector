@@ -92,7 +92,7 @@ export abstract class VectorError extends Error {
     LockError: "LockError",
     MessagingError: "MessagingError",
     EngineError: "EngineError",
-    IsAliveError: "IsAliveError",
+    CheckInError: "CheckInError",
     // etc.
   } as const;
 
@@ -101,7 +101,6 @@ export abstract class VectorError extends Error {
 
   constructor(public readonly msg: Values<typeof VectorError.reasons>, public readonly context?: any) {
     super(msg);
-    this.context = context;
   }
 }
 
@@ -302,16 +301,16 @@ export class EngineError extends VectorError {
     super(msg, context);
   }
 }
-export class IsAliveError extends VectorError {
-  readonly type = VectorError.errors.IsAliveError;
+export class CheckInError extends VectorError {
+  readonly type = VectorError.errors.CheckInError;
 
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
-    Unknown: "Unknown isAlive error",
+    Unknown: "Unknown check-in error",
   } as const;
 
   constructor(
-    public readonly message: Values<typeof IsAliveError.reasons>,
+    public readonly message: Values<typeof CheckInError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context: any = {},
   ) {

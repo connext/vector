@@ -31,9 +31,10 @@ import {
   Result,
   ChainError,
   EngineError,
+  CheckInError,
+  CheckInResponse,
+  VectorError,
   IS_ALIVE_EVENT,
-  IsAliveError,
-  IsAliveResponse,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
@@ -264,34 +265,65 @@ export async function setupEngineListeners(
       }, 15_000);
     },
   );
+
+  await messaging.onReceiveIsAliveMessage(
+    signer.publicIdentifier,
+    async (params: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => {
+      if (from === signer.publicIdentifier) {
+        return;
+      }
+      const method = "onReceiveIsAliveMessage";
+      if (params.isError) {
+        logger.warn({ error: params.getError()?.message, method }, "Error received");
+        return;
+      }
+
+      const { channelAddress } = params.getValue();
+
+      const channel = await store.getChannelState(params.getValue().channelAddress);
+
+      if (!channel) {
+        logger.error({ channelAddress, method }, "Channel not found");
+        return messaging.respondToIsAliveMessage(
+          inbox,
+          Result.fail(new EngineError("Channel not found", channelAddress)),
+        );
+      }
+
+      // // Post to evt (i.e. so router can track responses)
+      // evts[IS_ALIVE_EVENT].post({
+      //   channelAddress,
+      // });
+
+      // Just return an ack
+      return messaging.respondToIsAliveMessage(inbox, params);
+    },
+  );
+
   await messaging.onReceiveIsAliveMessage(signer.publicIdentifier, async (params, from, inbox) => {
     if (from === signer.publicIdentifier) {
       return;
     }
-    const method = "onReceiveRequestCollateralMessage";
+    const method = "onReceiveIsAliveMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
       return;
     }
     logger.info({ params: params.getValue(), method, from }, "Handling message");
     const channel = await store.getChannelState(params.getValue().channelAddress);
-    let response: Result<IsAliveResponse, IsAliveError>;
+    let response: Result<CheckInResponse, CheckInError>;
     if (!channel) {
       logger.error({ params: params.getValue(), method }, "Could not find channel for received isAlive message");
-      response = Result.fail(new IsAliveError(IsAliveError.reasons.ChannelNotFound));
+      response = Result.fail(new CheckInError(CheckInError.reasons.ChannelNotFound));
     } else {
       response = Result.ok({
         aliceIdentifier: channel.aliceIdentifier,
         bobIdentifier: channel.bobIdentifier,
         chainId: channel.networkContext.chainId,
         channelAddress: channel.channelAddress,
+        skipCheckIn: params.getValue().skipCheckIn,
       });
-      evts[IS_ALIVE_EVENT].post({
-        aliceIdentifier: channel.aliceIdentifier,
-        bobIdentifier: channel.bobIdentifier,
-        chainId: channel.networkContext.chainId,
-        channelAddress: channel.channelAddress,
-      });
+      evts[IS_ALIVE_EVENT].post(response.getValue());
     }
 
     await messaging.respondToIsAliveMessage(inbox, response);

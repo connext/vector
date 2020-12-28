@@ -9,7 +9,7 @@ export async function sendIsAlive(
 ): Promise<void> {
   const method = "sendIsAlive";
   const channels = await store.getChannelStates();
-  logger.info({ method, numChannels: channels.length }, "Sending isAlive messages");
+  logger.info({ method, numChannels: channels.length }, "Sending check-in messages");
   await Promise.all(
     channels.map(async (channel) => {
       const counterpartyIdentifier =
@@ -28,12 +28,12 @@ export async function sendIsAlive(
             error: res.getError()?.message,
             context: res.getError()?.context,
           },
-          "Error sending isAlive message",
+          "Error sending checkIn message",
         );
       } else {
         logger.info(
           { method, counterpartyIdentifier, channel: channel.channelAddress, result: res.getValue() },
-          "Successfully sent isAlive message",
+          "Successfully sent checkIn message",
         );
       }
     }),

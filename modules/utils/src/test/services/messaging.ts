@@ -11,9 +11,10 @@ import {
   EngineError,
   FullTransferState,
   EngineParams,
-  IsAliveError,
-  IsAliveInfo,
-  IsAliveResponse,
+  CheckInInfo,
+  CheckInResponse,
+  CheckInError,
+  VectorError,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -210,21 +211,23 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendIsAliveMessage(
-    isAliveInfo: Result<IsAliveInfo, IsAliveError>,
+    isAlive: Result<{ channelAddress: string }, VectorError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<void, IsAliveError>> {
+  ): Promise<Result<{ channelAddress: string }, VectorError>> {
     throw new Error("Method not implemented.");
   }
+
   onReceiveIsAliveMessage(
     publicIdentifier: string,
-    callback: (isAliveInfo: Result<IsAliveInfo, IsAliveError>, from: string, inbox: string) => void,
+    callback: (isAlive: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  respondToIsAliveMessage(inbox: string, params: Result<IsAliveResponse, IsAliveError>): Promise<void> {
+
+  respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

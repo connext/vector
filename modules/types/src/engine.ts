@@ -19,6 +19,7 @@ export type IsAlivePayload = {
   aliceIdentifier: string;
   bobIdentifier: string;
   chainId: number;
+  skipCheckIn?: boolean;
 };
 
 // Emitted on channel setup
