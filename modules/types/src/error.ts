@@ -101,7 +101,6 @@ export abstract class VectorError extends Error {
 
   constructor(public readonly msg: Values<typeof VectorError.reasons>, public readonly context?: any) {
     super(msg);
-    this.context = context;
   }
 }
 

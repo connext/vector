@@ -7,6 +7,7 @@ import {
   MessagingError,
   OutboundChannelUpdateError,
   Result,
+  VectorError,
 } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
@@ -108,6 +109,19 @@ export interface IMessagingService {
     inbox: string,
     restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void>;
+
+  sendIsAliveMessage(
+    isAlive: Result<{ channelAddress: string }, Error>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channelAddress: string }, VectorError>>;
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAlive: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => void,
+  ): Promise<void>;
+  respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void>;
 
   sendCheckInMessage(
     checkInInfo: Result<CheckInInfo, CheckInError>,
