@@ -14,6 +14,7 @@ import {
   CheckInInfo,
   CheckInResponse,
   CheckInError,
+  VectorError,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -225,6 +226,27 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
   respondToCheckInMessage(inbox: string, params: Result<CheckInResponse, CheckInError>): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  sendIsAliveMessage(
+    isAlive: Result<{ channelAddress: string }, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channelAddress: string }, VectorError>> {
+    throw new Error("Method not implemented.");
+  }
+
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAlive: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

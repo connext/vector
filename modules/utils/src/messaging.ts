@@ -15,6 +15,7 @@ import {
   CheckInInfo,
   CheckInResponse,
   CheckInError,
+  VectorError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -324,18 +325,41 @@ export class NatsMessagingService implements IMessagingService {
     timeout?: number,
     numRetries?: number,
   ): Promise<Result<void, CheckInError>> {
-    return this.sendMessage(checkInInfo, "isalive", to, from, timeout, numRetries, "sendCheckInMessage");
+    return this.sendMessage(checkInInfo, "checkin", to, from, timeout, numRetries, "sendCheckInMessage");
   }
 
   onReceiveCheckInMessage(
     publicIdentifier: string,
     callback: (checkInInfo: Result<CheckInInfo, CheckInError>, from: string, inbox: string) => void,
   ): Promise<void> {
-    return this.registerCallback(`${publicIdentifier}.*.isalive`, callback, "onReceiveCheckInMessage");
+    return this.registerCallback(`${publicIdentifier}.*.checkin`, callback, "onReceiveCheckInMessage");
   }
 
   respondToCheckInMessage(inbox: string, checkInInfo: Result<CheckInResponse, CheckInError>): Promise<void> {
     return this.respondToMessage(inbox, checkInInfo, "respondToCheckInMessage");
+  }
+  ////////////
+
+  // ISALIVE METHODS
+  sendIsAliveMessage(
+    isAlive: Result<{ channelAddress: string }, VectorError>,
+    to: string,
+    from: string,
+    timeout?: number,
+    numRetries?: number,
+  ): Promise<Result<{ channelAddress: string }, VectorError>> {
+    return this.sendMessage(isAlive, "isalive", to, from, timeout, numRetries, "sendIsAliveMessage");
+  }
+
+  onReceiveIsAliveMessage(
+    publicIdentifier: string,
+    callback: (isAlive: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => void,
+  ): Promise<void> {
+    return this.registerCallback(`${publicIdentifier}.*.isalive`, callback, "onReceiveIsAliveMessage");
+  }
+
+  respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void> {
+    return this.respondToMessage(inbox, params, "respondToIsAliveMessage");
   }
   ////////////
 

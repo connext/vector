@@ -34,6 +34,7 @@ import {
   CHECK_IN_EVENT,
   CheckInError,
   CheckInResponse,
+  VectorError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import Pino from "pino";
@@ -265,11 +266,45 @@ export async function setupEngineListeners(
     },
   );
 
+  await messaging.onReceiveIsAliveMessage(
+    signer.publicIdentifier,
+    async (params: Result<{ channelAddress: string }, VectorError>, from: string, inbox: string) => {
+      if (from === signer.publicIdentifier) {
+        return;
+      }
+      const method = "onReceiveIsAliveMessage";
+      if (params.isError) {
+        logger.warn({ error: params.getError()?.message, method }, "Error received");
+        return;
+      }
+
+      const { channelAddress } = params.getValue();
+
+      const channel = await store.getChannelState(params.getValue().channelAddress);
+
+      if (!channel) {
+        logger.error({ channelAddress, method }, "Channel not found");
+        return messaging.respondToIsAliveMessage(
+          inbox,
+          Result.fail(new EngineError("Channel not found", channelAddress)),
+        );
+      }
+
+      // // Post to evt (i.e. so router can track responses)
+      // evts[IS_ALIVE_EVENT].post({
+      //   channelAddress,
+      // });
+
+      // Just return an ack
+      return messaging.respondToIsAliveMessage(inbox, params);
+    },
+  );
+
   await messaging.onReceiveCheckInMessage(signer.publicIdentifier, async (params, from, inbox) => {
     if (from === signer.publicIdentifier) {
       return;
     }
-    const method = "onReceiveRequestCollateralMessage";
+    const method = "onReceiveCheckInMessage";
     if (params.isError) {
       logger.error({ error: params.getError()?.message, method }, "Error received");
       return;
