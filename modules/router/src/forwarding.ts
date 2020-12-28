@@ -246,7 +246,7 @@ export async function forwardTransferCreation(
     store,
     chainReader,
     logger,
-    !requireOnline, // enqueue if allowed offline only
+    requireOnline,
   );
   if (!transferRes.isError) {
     // transfer was either queued or executed
