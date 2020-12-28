@@ -240,7 +240,7 @@ export async function forwardTransferCreation(
     store,
     chainReader,
     logger,
-    !requireOnline, // enqueue if allowed offline only
+    requireOnline,
   );
   if (!transferRes.isError) {
     // transfer was either queued or executed
@@ -354,13 +354,18 @@ export async function handleIsAlive(
     { data, method, node: { signerAddress, routerPublicIdentifier } },
     "Received isAlive event, starting handler",
   );
+
+  if (data.skipCheckIn) {
+    logger.info({ method, data }, "Skipping isAlive handler");
+    return Result.ok(undefined);
+  }
   // This means the user is online and has checked in. Get all updates that are queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
   const erroredUpdates = [];
   for (const routerUpdate of updates) {
     // set status to processing to avoid race conditions
     await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.PROCESSING);
-    logger.info({ method, update: routerUpdate }, "Found update for isAlive channel");
+    logger.info({ method, update: routerUpdate }, "Found update for checkIn channel");
     const { type, payload } = routerUpdate;
 
     let transferResult;
@@ -415,7 +420,7 @@ export async function handleIsAlive(
           update: routerUpdate,
           transferResult: transferResult?.toJson(),
         },
-        "Error handling isAlive update",
+        "Error handling checkIn update",
       );
       const isTimeout = nodeServiceError === NodeError.reasons.Timeout;
       await store.setUpdateStatus(
@@ -428,12 +433,12 @@ export async function handleIsAlive(
     }
     logger.info(
       { transferResult: transferResult.getValue(), update: routerUpdate, method },
-      "Successfully handled isAlive update",
+      "Successfully handled checkIn update",
     );
   }
   if (erroredUpdates.length > 0) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.IsAliveError, {
+      new ForwardTransferError(ForwardTransferError.reasons.CheckInError, {
         failedIds: erroredUpdates.map((update) => update.id),
       }),
     );

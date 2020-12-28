@@ -632,6 +632,24 @@ export class VectorEngine implements IVectorEngine {
     }
   }
 
+  private async sendIsAlive(params: EngineParams.SendIsAlive): Promise<Result<{ channelAddress: string }, Error>> {
+    const validate = ajv.compile(EngineParams.SendIsAliveSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
+    }
+    try {
+      const channel = await this.store.getChannelState(params.channelAddress);
+      if (!channel) {
+        return Result.fail(new EngineError("Channel not found", params.channelAddress));
+      }
+      const counterparty = this.signer.address === channel.alice ? channel.bobIdentifier : channel.aliceIdentifier;
+      return this.messaging.sendIsAliveMessage(Result.ok(params), counterparty, this.signer.publicIdentifier);
+    } catch (e) {
+      return Result.fail(new EngineError(e.message, params.channelAddress));
+    }
+  }
+
   // RESTORE STATE
   // NOTE: MUST be under protocol lock
   private async restoreState(

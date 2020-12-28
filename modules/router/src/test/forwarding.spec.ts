@@ -116,6 +116,8 @@ describe("Forwarding", () => {
       getSwappedAmount.resolves(Result.ok(senderTransfer.balance.amount[0]));
       // get receiver channel
       node.getStateChannelByParticipants.onFirstCall().resolves(Result.ok(receiverChannel));
+      // check online
+      node.sendIsAliveMessage.resolves(Result.ok({ channelAddress: receiverChannel.channelAddress }));
       // request collateral (optional)
       requestCollateral.resolves(Result.ok(undefined));
       cancelTransfer.resolves(Result.ok({ channelAddress: receiverChannel.channelAddress }));

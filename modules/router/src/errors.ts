@@ -36,7 +36,7 @@ export class ForwardTransferError extends VectorError {
     UnableToCollateralize: "Could not collateralize receiver channel",
     InvalidTransferDefinition: "Could not find transfer definition",
     StoredUpdateError: "Error in stored update",
-    IsAliveError: "Error processing isAlive",
+    CheckInError: "Error processing isAlive",
     ReceiverOffline: "Recipient was not online, could not forward",
     FailedToCancelSenderTransfer: "Could not cancel sender transfer",
   } as const;

@@ -46,8 +46,9 @@ export async function convertConditionalTransferParams(
   // set for the higher level modules to parse
   let baseRoutingMeta: RouterSchemas.RouterMeta | undefined = undefined;
   if (recipient && getSignerAddressFromPublicIdentifier(recipient) !== channelCounterparty) {
+    const requireOnline = providedMeta?.requireOnline ?? true; // true by default
     baseRoutingMeta = {
-      requireOnline: false, // TODO: change with more transfer types?
+      requireOnline,
       routingId: providedMeta?.routingId ?? getRandomBytes32(),
       path: [{ recipient, recipientChainId, recipientAssetId }],
     };

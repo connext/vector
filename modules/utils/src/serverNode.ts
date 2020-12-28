@@ -346,6 +346,12 @@ export class RestServerNodeService implements INodeService {
     );
   }
 
+  sendIsAliveMessage(
+    params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
+  ): Promise<Result<NodeResponses.SendIsAlive, NodeError>> {
+    return this.executeHttpRequest<NodeResponses.SendIsAlive>(`is-alive`, "post", params, NodeParams.SendIsAliveSchema);
+  }
+
   public once<T extends EngineEvent>(
     event: T,
     callback: (payload: EngineEventMap[T]) => void | Promise<void>,
