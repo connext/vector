@@ -601,6 +601,25 @@ server.post<{ Body: NodeParams.RestoreState }>(
   },
 );
 
+server.post<{ Body: NodeParams.SendIsAlive }>(
+  "/is-alive",
+  { schema: { response: NodeResponses.SendIsAliveSchema } },
+  async (request, reply) => {
+    const engine = getNode(request.body.publicIdentifier);
+    if (!engine) {
+      return reply.status(400).send({ message: "Node not found", publicIdentifier: request.body.publicIdentifier });
+    }
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_sendIsAlive, request.body);
+    try {
+      const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_sendIsAlive>(rpc);
+      return reply.status(200).send({ channelAddress } as NodeResponses.SendIsAlive);
+    } catch (e) {
+      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      return reply.status(500).send({ message: e.message, context: e.context });
+    }
+  },
+);
+
 server.post<{ Body: NodeParams.RegisterListener }>(
   "/event/subscribe",
   {

@@ -7,11 +7,11 @@ import { Evt } from "evt";
 import { VectorChainReader } from "@connext/vector-contracts";
 import { EventCallbackConfig, hydrateProviders, RestServerNodeService } from "@connext/vector-utils";
 import {
+  IsAlivePayload,
   ConditionalTransferCreatedPayload,
   ConditionalTransferResolvedPayload,
   DepositReconciledPayload,
   EngineEvents,
-  IsAlivePayload,
   RequestCollateralPayload,
 } from "@connext/vector-types";
 import { Registry } from "prom-client";
@@ -26,11 +26,11 @@ const conditionalTransferCreatedPath = "/conditional-transfer-created";
 const conditionalTransferResolvedPath = "/conditional-transfer-resolved";
 const depositReconciledPath = "/deposit-reconciled";
 const requestCollateralPath = "/request-collateral";
-const isAlivePath = "/is-alive";
+const checkInPath = "/check-in";
 const evts: EventCallbackConfig = {
   [EngineEvents.IS_ALIVE]: {
     evt: Evt.create<IsAlivePayload>(),
-    url: `${routerBase}${isAlivePath}`,
+    url: `${routerBase}${checkInPath}`,
   },
   [EngineEvents.SETUP]: {},
   [EngineEvents.CONDITIONAL_TRANSFER_CREATED]: {
@@ -91,7 +91,7 @@ server.get("/ping", async () => {
   return "pong\n";
 });
 
-server.post(isAlivePath, async (request, response) => {
+server.post(checkInPath, async (request, response) => {
   evts[EngineEvents.IS_ALIVE].evt!.post(request.body as IsAlivePayload);
   return response.status(200).send({ message: "success" });
 });

@@ -102,18 +102,18 @@ export class BrowserNode implements INodeService {
         config.chainAddresses[chainId] = {} as any;
       }
       if (
-        !config.chainAddresses[chainId].channelFactoryAddress
-        && deployments[chainId] && deployments[chainId].ChannelFactory
+        !config.chainAddresses[chainId].channelFactoryAddress &&
+        deployments[chainId] &&
+        deployments[chainId].ChannelFactory
       ) {
-        config.chainAddresses[chainId].channelFactoryAddress =
-          deployments[chainId].ChannelFactory.address;
+        config.chainAddresses[chainId].channelFactoryAddress = deployments[chainId].ChannelFactory.address;
       }
       if (
-        !config.chainAddresses[chainId].transferRegistryAddress
-        && deployments[chainId] && deployments[chainId].TransferRegistry
+        !config.chainAddresses[chainId].transferRegistryAddress &&
+        deployments[chainId] &&
+        deployments[chainId].TransferRegistry
       ) {
-        config.chainAddresses[chainId].transferRegistryAddress =
-          deployments[chainId].TransferRegistry.address;
+        config.chainAddresses[chainId].transferRegistryAddress = deployments[chainId].TransferRegistry.address;
       }
     }
 
@@ -559,6 +559,18 @@ export class BrowserNode implements INodeService {
       return Result.ok({
         signedMessage: res,
       });
+    } catch (e) {
+      return Result.fail(e);
+    }
+  }
+
+  async sendIsAliveMessage(
+    params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
+  ): Promise<Result<NodeResponses.SendIsAlive, NodeError>> {
+    const rpc = constructRpcRequest(ChannelRpcMethods.chan_sendIsAlive, params);
+    try {
+      const res = await this.channelProvider!.send(rpc);
+      return Result.ok({ channelAddress: res.channelAddress });
     } catch (e) {
       return Result.fail(e);
     }

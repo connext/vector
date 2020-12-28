@@ -168,7 +168,7 @@ describe("ParamConverter", () => {
         },
         timeout: params.timeout,
         meta: {
-          requireOnline: false,
+          requireOnline: true,
           routingId: params.meta!.routingId,
           path: [
             {

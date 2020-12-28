@@ -9,7 +9,7 @@ import { deployments } from "hardhat";
 import { alice, bob } from "../../constants";
 import { getContract, createChannel } from "../../utils";
 
-describe("CMCDeposit.sol", function() {
+describe("CMCDeposit.sol", function () {
   this.timeout(120_000);
   const value = One;
   let channel: Contract;
@@ -27,7 +27,6 @@ describe("CMCDeposit.sol", function() {
       from: alice.address,
       args: [channel.address],
     });
-
 
     reentrantToken = await getContract("ReentrantToken", alice);
     await (await reentrantToken.mint(alice.address, parseEther("0.01"))).wait();
@@ -58,6 +57,14 @@ describe("CMCDeposit.sol", function() {
     expect(await channel.getTotalDepositsAlice(AddressZero)).to.be.eq(0);
   });
 
+  it("depositAlice should fail if ETH is sent along with an ERC deposit", async () => {
+    await expect(channel.depositAlice(failingToken.address, value, { value: BigNumber.from(10) })).revertedWith(
+      "CMCDeposit: ETH_WITH_ERC_TRANSFER",
+    );
+    expect(await channel.getTotalDepositsAlice(failingToken.address)).to.be.eq(0);
+    expect(await channel.getTotalDepositsAlice(AddressZero)).to.be.eq(0);
+  });
+
   it("should fail if the token transfer fails", async () => {
     expect(await failingToken.balanceOf(alice.address)).to.be.gt(value);
     await expect(channel.depositAlice(failingToken.address, value)).revertedWith("FAIL: Failing token");
@@ -65,7 +72,9 @@ describe("CMCDeposit.sol", function() {
   });
 
   it("should protect against reentrant tokens", async () => {
-    await expect(channel.depositAlice(reentrantToken.address, value)).to.be.revertedWith("ReentrancyGuard: REENTRANT_CALL");
+    await expect(channel.depositAlice(reentrantToken.address, value)).to.be.revertedWith(
+      "ReentrancyGuard: REENTRANT_CALL",
+    );
     expect(await channel.getTotalDepositsAlice(reentrantToken.address)).to.be.eq(0);
   });
 });
