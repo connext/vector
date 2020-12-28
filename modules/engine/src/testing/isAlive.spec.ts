@@ -30,11 +30,10 @@ describe("checkIn", () => {
     const signer = getRandomChannelSigner();
     storeService.getChannelStates.resolves([]);
     await sendIsAlive(signer, messagingService, storeService, log);
-    expect(messagingService.sendCheckInMessage.called).to.be.false;
+    expect(messagingService.sendIsAliveMessage.called).to.be.false;
   });
 
   it("should send checkIn messages to all channels", async () => {
-    messagingService.sendCheckInMessage.resolves(Result.ok(undefined));
     const signer = getRandomChannelSigner();
     const channel1 = createTestChannelState("create", {
       alice: signer.address,
@@ -48,9 +47,10 @@ describe("checkIn", () => {
       bobIdentifier: signer.publicIdentifier,
       aliceIdentifier: mkPublicIdentifier("vectorCCC"),
     }).channel;
+    messagingService.sendIsAliveMessage.resolves(Result.ok({ channelAddress: channel1.channelAddress }));
     storeService.getChannelStates.resolves([channel1, channel2]);
 
     await sendIsAlive(signer, messagingService, storeService, log);
-    expect(messagingService.sendCheckInMessage.callCount).to.eq(2);
+    expect(messagingService.sendIsAliveMessage.callCount).to.eq(2);
   });
 });

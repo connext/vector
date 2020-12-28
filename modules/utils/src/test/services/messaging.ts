@@ -210,25 +210,6 @@ export class MemoryMessagingService implements IMessagingService {
     throw new Error("Method not implemented.");
   }
 
-  sendCheckInMessage(
-    checkInInfo: Result<CheckInInfo, CheckInError>,
-    to: string,
-    from: string,
-    timeout?: number,
-    numRetries?: number,
-  ): Promise<Result<void, CheckInError>> {
-    throw new Error("Method not implemented.");
-  }
-  onReceiveCheckInMessage(
-    publicIdentifier: string,
-    callback: (checkInInfo: Result<CheckInInfo, CheckInError>, from: string, inbox: string) => void,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  respondToCheckInMessage(inbox: string, params: Result<CheckInResponse, CheckInError>): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
   sendIsAliveMessage(
     isAlive: Result<{ channelAddress: string }, VectorError>,
     to: string,
