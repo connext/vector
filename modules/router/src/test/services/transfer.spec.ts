@@ -1,3 +1,4 @@
+import { VectorChainReader } from "@connext/vector-contracts";
 import {
   HashlockTransferResolverEncoding,
   HashlockTransferStateEncoding,
@@ -5,6 +6,10 @@ import {
   TransferNames,
   Result,
   NodeError,
+  NodeParams,
+  DEFAULT_TRANSFER_TIMEOUT,
+  UpdateType,
+  INodeService,
 } from "@connext/vector-types";
 import {
   createTestFullHashlockTransferState,
@@ -15,30 +20,247 @@ import {
   mkAddress,
   mkPublicIdentifier,
   RestServerNodeService,
+  createTestChannelState,
 } from "@connext/vector-utils";
 import { HashZero } from "@ethersproject/constants";
 import * as Sinon from "sinon";
 
 import { config } from "../../config";
 import { ForwardTransferError } from "../../errors";
-import { PrismaStore } from "../../services/store";
-import { cancelCreatedTransfer } from "../../services/transfer";
+import { PrismaStore, RouterUpdateType } from "../../services/store";
+import { cancelCreatedTransfer, transferWithAutoCollateralization } from "../../services/transfer";
+import * as collateral from "../../collateral";
 
 const testName = "Router transfer service";
 
 const { log } = getTestLoggers(testName, config.logLevel as any);
 
-describe.only(testName, () => {
+describe(testName, () => {
   describe("transferWithAutoCollateralization", () => {
-    describe("should properly queue update", () => {
-      it("should work", async () => {});
-      it("should work if undercollateralized", async () => {});
+    // Declare mocks
+    let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
+    let store: Sinon.SinonStubbedInstance<PrismaStore>;
+    let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+    let requestCollateral: Sinon.SinonStub;
+
+    // Declare constants
+    const routerPublicIdentifier = mkPublicIdentifier("vectorIII");
+    const routerAddr = mkAddress("0xaaa");
+    const recipient = mkPublicIdentifier("vectorRRR");
+    const recipientAddr = mkAddress("0xeee");
+    const channelAddress = mkAddress("0xccc");
+    const transferId = getRandomBytes32();
+    const routingId = getRandomBytes32();
+
+    // Declare helpers
+    const mkParams = (overrides: Partial<NodeParams.ConditionalTransfer> = {}) => {
+      return {
+        channelAddress,
+        amount: "123",
+        assetId: mkAddress(),
+        recipient,
+        recipientChainId: parseInt(Object.keys(config.chainProviders)[0]),
+        recipientAssetId: mkAddress(),
+        timeout: DEFAULT_TRANSFER_TIMEOUT.toString(),
+        meta: { hello: "world" },
+        type: TransferNames.HashlockTransfer,
+        details: { lockHash: getRandomBytes32(), expiry: "0" },
+        publicIdentifier: routerPublicIdentifier,
+        ...overrides,
+      };
+    };
+
+    beforeEach(async () => {
+      // Create the stubs
+      nodeService = Sinon.createStubInstance(RestServerNodeService);
+      store = Sinon.createStubInstance(PrismaStore);
+      chainReader = Sinon.createStubInstance(VectorChainReader);
+      requestCollateral = Sinon.stub(collateral, "requestCollateral");
+
+      // Default all stubs to return sucessful values
+      nodeService.sendIsAliveMessage.resolves(Result.ok({ channelAddress }));
+      store.queueUpdate.resolves(undefined);
+      requestCollateral.resolves(Result.ok(undefined));
+      nodeService.conditionalTransfer.resolves(Result.ok({ channelAddress, transferId, routingId }));
     });
-    describe("should work without queueing update", () => {
-      it("should fail if requestCollateral fails", async () => {});
-      it("should fail if conditionalTransfer fails", async () => {});
-      it("should work", async () => {});
-      it("should work if undercollateralized", async () => {});
+
+    afterEach(() => Sinon.restore());
+
+    it("should queue update if receiver is offline && requireOnline == false", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["700", "53"] }],
+      });
+      nodeService.sendIsAliveMessage.resolves(Result.fail(new Error("fail") as any));
+      const params = mkParams();
+      const res = await transferWithAutoCollateralization(
+        params,
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader,
+        log,
+        false,
+      );
+      expect(res.getError()).to.be.undefined;
+      expect(res.getValue()).to.be.undefined;
+      expect(store.queueUpdate.calledOnceWithExactly(channelAddress, RouterUpdateType.TRANSFER_CREATION, params)).to.be
+        .true;
+    });
+
+    it("should work if receiver is online and properly collateralized", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["700", "53"] }],
+      });
+      const res = await transferWithAutoCollateralization(
+        mkParams(),
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader,
+        log,
+        false,
+      );
+      expect(res.getError()).to.be.undefined;
+      expect(res.getValue()).to.be.deep.eq({ channelAddress, transferId, routingId });
+    });
+
+    it("should work if receiver is online and uncollateralized", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
+      });
+      const res = await transferWithAutoCollateralization(
+        mkParams(),
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader,
+        log,
+        false,
+      );
+      expect(res.getError()).to.be.undefined;
+      expect(res.getValue()).to.be.deep.eq({ channelAddress, transferId, routingId });
+      expect(requestCollateral.callCount).to.be.eq(1);
+    });
+
+    it("should fail if recipient if offline && requireOnline == true", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
+      });
+      nodeService.sendIsAliveMessage.resolves(Result.fail(new Error("fail") as any));
+      const res = await transferWithAutoCollateralization(
+        mkParams(),
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader,
+        log,
+        true,
+      );
+      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.ReceiverOffline);
+      expect(res.getError().context.shouldCancelSender).to.be.true;
+    });
+
+    it("should fail if store.queueUpdate fails", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["700", "53"] }],
+      });
+      nodeService.sendIsAliveMessage.resolves(Result.fail(new Error("fail") as any));
+      const res = await transferWithAutoCollateralization(
+        mkParams(),
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader,
+        log,
+        true,
+      );
+      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.ReceiverOffline);
+      expect(res.getError().context.shouldCancelSender).to.be.true;
+    });
+
+    it("should fail if undercollateralized && requestCollateral fails", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
+      });
+      requestCollateral.resolves(Result.fail(new Error("fail")));
+      const res = await transferWithAutoCollateralization(
+        mkParams(),
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader,
+        log,
+        true,
+      );
+      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.UnableToCollateralize);
+      expect(res.getError().context.shouldCancelSender).to.be.true;
+    });
+
+    it("should fail if node.conditionalTransfer fails", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        channelAddress,
+        aliceIdentifier: routerPublicIdentifier,
+        alice: routerAddr,
+        bobIdentifier: recipient,
+        bob: recipientAddr,
+        assetIds: [mkAddress()],
+        balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
+      });
+      nodeService.conditionalTransfer.resolves(Result.fail(new Error("fail") as any));
+      const res = await transferWithAutoCollateralization(
+        mkParams(),
+        channel,
+        routerPublicIdentifier,
+        nodeService as INodeService,
+        store,
+        chainReader,
+        log,
+        true,
+      );
+      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.ErrorForwardingTransfer);
+      expect(res.getError().context.shouldCancelSender).to.be.false;
     });
   });
 
@@ -180,7 +402,7 @@ describe.only(testName, () => {
       expect(store.queueUpdate.callCount).to.be.eq(1);
     });
 
-    it("should fail without enqueueing if resolveTransfer fails && enqueue = false", async () => {
+    it("should fail without enqueueing if resolveTransfer fails && enqueue == false", async () => {
       nodeService.resolveTransfer.resolves(Result.fail(new Error(NodeError.reasons.Timeout) as any));
 
       const res = await cancelCreatedTransfer(

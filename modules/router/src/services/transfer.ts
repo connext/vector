@@ -6,6 +6,7 @@ import {
   NodeParams,
   NodeResponses,
   Result,
+  NodeError,
 } from "@connext/vector-types";
 import { decodeTransferResolver, getBalanceForAssetId } from "@connext/vector-utils";
 import { BigNumber } from "ethers";
