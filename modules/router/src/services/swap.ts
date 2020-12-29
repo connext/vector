@@ -4,13 +4,13 @@ import { calculateExchangeAmount, inverse } from "@connext/vector-utils";
 import { config } from "../config";
 import { ForwardTransferError } from "../errors";
 
-export const getSwappedAmount = async (
+export const getSwappedAmount = (
   fromAmount: string,
   fromAssetId: string,
   fromChainId: number,
   toAssetId: string,
   toChainId: number,
-): Promise<Result<string, ForwardTransferError>> => {
+): Result<string, ForwardTransferError> => {
   let swap = config.allowedSwaps.find(
     (s) =>
       s.fromAssetId === fromAssetId &&

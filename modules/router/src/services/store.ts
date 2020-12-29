@@ -50,6 +50,20 @@ export class PrismaStore implements IRouterStore {
     this.prisma = new PrismaClient(_dbUrl ? { datasources: { db: { url: _dbUrl } } } : undefined);
   }
 
+  // Store management methods
+  connect(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  async disconnect(): Promise<void> {
+    await this.prisma.$disconnect();
+  }
+
+  async clear(): Promise<void> {
+    await this.prisma.queuedUpdate.deleteMany({});
+  }
+
+  // Interface methods
   async getQueuedUpdates(
     channelAddress: string,
     status: RouterUpdateStatus,

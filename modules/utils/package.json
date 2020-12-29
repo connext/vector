@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc",
-    "test": "ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
+    "test": "nyc ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/vector-types": "0.1.0-rc.2",
@@ -39,6 +39,7 @@
     "eth-crypto": "1.8.0",
     "evt": "1.9.2",
     "mocha": "8.2.0",
+    "nyc": "15.1.0",
     "pino": "6.7.0",
     "pino-pretty": "4.3.0",
     "ts-natsutil": "1.1.1"

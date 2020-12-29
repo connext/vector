@@ -1,8 +1,8 @@
 #!/bin/bash
 set -eE
 
-if [[ -d "modules/server-node" ]]
-then cd modules/server-node || exit 1
+if [[ -d "modules/router" ]]
+then cd modules/router|| exit 1
 fi
 
 # Poke sqlite file
