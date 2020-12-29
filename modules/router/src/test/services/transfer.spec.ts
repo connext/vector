@@ -84,7 +84,10 @@ describe(testName, () => {
       nodeService.conditionalTransfer.resolves(Result.ok({ channelAddress, transferId, routingId }));
     });
 
-    afterEach(() => Sinon.restore());
+    afterEach(() => {
+      Sinon.restore();
+      Sinon.reset();
+    });
 
     it("should queue update if receiver is offline && requireOnline == false", async () => {
       const { channel } = createTestChannelState(UpdateType.deposit, {

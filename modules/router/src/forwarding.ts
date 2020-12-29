@@ -156,6 +156,7 @@ export async function forwardTransferCreation(
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
     logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
     const swapRes = getSwappedAmount(senderAmount, senderAssetId, senderChainId, recipientAssetId, recipientChainId);
+    console.log("***** swap res", swapRes);
     if (swapRes.isError) {
       return cancelSenderTransferAndReturnError(
         routingId,

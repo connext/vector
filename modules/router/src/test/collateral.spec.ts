@@ -58,13 +58,13 @@ describe("Collateral", () => {
   //   const profileToken = rebalanceProfileTokenRes.getValue();
   //   expect(profileToken.assetId).eq(tokenProfile.assetId);
   // });
-  it("should fail if getRebalanceProfile fails", async () => {});
-  it("should fail if requestedAmount > reclaimThreshold", async () => {});
-  it("should fail if it cannot get the chainProviders", async () => {});
-  it("should fail if it cannot get a providerUrl", async () => {});
-  it("should fail if it cannot get the onchain balance", async () => {});
+  it.skip("should fail if getRebalanceProfile fails", async () => {});
+  it.skip("should fail if requestedAmount > reclaimThreshold", async () => {});
+  it.skip("should fail if it cannot get the chainProviders", async () => {});
+  it.skip("should fail if it cannot get a providerUrl", async () => {});
+  it.skip("should fail if it cannot get the onchain balance", async () => {});
 
-  describe("should work", () => {
+  describe.skip("should work", () => {
     it("if profile.target > requestedAmount (deposits larger of two)", async () => {});
     it("if requestedAmount > profile.target (deposits larger of two)", async () => {});
     it("if transferAmount provided", async () => {});
