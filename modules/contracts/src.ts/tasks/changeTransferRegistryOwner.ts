@@ -1,8 +1,6 @@
 import { task } from "hardhat/config";
 import pino from "pino";
 
-import { TransferRegistry } from "../../typechain";
-
 export default task("change-transfer-registry-owner", "Change transfer registry owner")
   .addParam("newOwner", "Address of the new owner")
   .addParam("signerAddress", "The address that will sign the registration tx")
@@ -13,7 +11,7 @@ export default task("change-transfer-registry-owner", "Change transfer registry 
       const log = pino({ level: logLevel || "info" });
 
       log.info(`Preparing to add ${newOwner} to as owner of transfer registry (Sender=${signerAddress})`);
-      const registry = (await (hre.ethers as any).getContract("TransferRegistry", signerAddress)) as TransferRegistry;
+      const registry = await (hre.ethers as any).getContract("TransferRegistry", signerAddress);
       const currentOwner = await registry.owner();
       log.info(`Current owner: ${currentOwner}`);
 
