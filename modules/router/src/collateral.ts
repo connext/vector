@@ -76,7 +76,6 @@ export const requestCollateral = async (
       }),
     );
   }
-  console.log("***** provider", provider);
 
   // Check if a tx has already been sent, but has not been reconciled
   // Get the total deposits vs. processed deposits
