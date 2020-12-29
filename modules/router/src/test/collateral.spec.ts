@@ -6,22 +6,31 @@ import {
   mkAddress,
   RestServerNodeService,
   getBalanceForAssetId,
+  mkPublicIdentifier,
+  getTestLoggers,
 } from "@connext/vector-utils";
 import Sinon from "sinon";
-import pino from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { INodeService, Result } from "@connext/vector-types";
+import { INodeService, Result, UpdateType } from "@connext/vector-types";
+import { parseEther } from "@ethersproject/units";
 
 import { config } from "../config";
 import { requestCollateral } from "../collateral";
-import { getRebalanceProfile } from "../services/config";
+import * as configService from "../services/config";
+import { RequestCollateralError } from "../errors";
 
-const logger = pino({ level: config.logLevel });
+const testName = "Collateral";
+const { log } = getTestLoggers(testName, config.logLevel as any);
+const chainId = parseInt(Object.keys(config.chainProviders)[0]);
 
-describe("Collateral", () => {
+describe(testName, () => {
   let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
   let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
+  let getRebalanceProfile: Sinon.SinonStub;
+
+  const ethProfile = config.rebalanceProfiles.find((p) => p.chainId === chainId && p.assetId === AddressZero);
+  const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
 
   beforeEach(async () => {
     node = Sinon.createStubInstance(RestServerNodeService);
@@ -37,6 +46,9 @@ describe("Collateral", () => {
         [1337]: { waitForTransaction: () => Promise.resolve({ logs: [] }) } as any,
       }),
     );
+
+    getRebalanceProfile = Sinon.stub(configService, "getRebalanceProfile");
+    getRebalanceProfile.returns(Result.ok(ethProfile));
   });
 
   afterEach(() => {
@@ -45,163 +57,241 @@ describe("Collateral", () => {
     Sinon.reset();
   });
 
-  // it("should get profiles for different assetIds", async () => {
-  //   const channel = createTestChannelState("create").channel;
-  //   const rebalanceProfileEthRes = getRebalanceProfile(channel.networkContext.chainId, AddressZero);
-  //   const profileEth = rebalanceProfileEthRes.getValue();
-  //   expect(profileEth.assetId).eq(AddressZero);
-
-  //   const tokenProfile = config.rebalanceProfiles.find(
-  //     (prof) => prof.chainId === channel.networkContext.chainId && prof.assetId !== AddressZero,
-  //   );
-  //   const rebalanceProfileTokenRes = getRebalanceProfile(channel.networkContext.chainId, tokenProfile.assetId);
-  //   const profileToken = rebalanceProfileTokenRes.getValue();
-  //   expect(profileToken.assetId).eq(tokenProfile.assetId);
-  // });
-  it.skip("should fail if getRebalanceProfile fails", async () => {});
-  it.skip("should fail if requestedAmount > reclaimThreshold", async () => {});
-  it.skip("should fail if it cannot get the chainProviders", async () => {});
-  it.skip("should fail if it cannot get a providerUrl", async () => {});
-  it.skip("should fail if it cannot get the onchain balance", async () => {});
-
-  describe.skip("should work", () => {
-    it("if profile.target > requestedAmount (deposits larger of two)", async () => {});
-    it("if requestedAmount > profile.target (deposits larger of two)", async () => {});
-    it("if transferAmount provided", async () => {});
-    it("if no collateral needed", async () => {});
-    it("if there is only offchain reconciliation needed (no deposit sent onchain)", async () => {});
-    it("if an onchain deposit is needed", async () => {});
-    it("if requested amount higher than the target", async () => {});
-  });
-
-  it("should request collateral without a target", async () => {
-    const assetId = AddressZero;
-    const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
-    const profile = rebalanceProfileRes.getValue();
-
-    await requestCollateral(channel, assetId, channel.aliceIdentifier, node as INodeService, chainReader, logger);
-    node.sendDepositTx.getCall(0);
-
-    expect(
-      node.sendDepositTx.calledWith({
-        amount: BigNumber.from(profile.target).sub(getBalanceForAssetId(channel, assetId, "alice")).toString(),
-        assetId,
-        chainId: channel.networkContext.chainId,
-        channelAddress: channel.channelAddress,
-        publicIdentifier: channel.aliceIdentifier,
-      }),
-    ).to.be.true;
-  });
-
-  it("should request collateral with a requested amount higher than the target", async () => {
-    const assetId = AddressZero;
-    const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
-    const profile = rebalanceProfileRes.getValue();
-
-    const requestedAmount = BigNumber.from(profile.target).add(10);
-    await requestCollateral(
+  it("should fail if getRebalanceProfile fails", async () => {
+    getRebalanceProfile.returns(Result.fail(new Error("fail")));
+    const { channel } = createTestChannelState(UpdateType.deposit);
+    const res = await requestCollateral(
       channel,
-      assetId,
-      channel.aliceIdentifier,
+      AddressZero,
+      routerPublicIdentifier,
       node as INodeService,
       chainReader,
-      logger,
-      requestedAmount.toString(),
+      log,
     );
-    node.sendDepositTx.getCall(0);
-
-    expect(
-      node.sendDepositTx.calledWith({
-        amount: BigNumber.from(requestedAmount).sub(getBalanceForAssetId(channel, assetId, "alice")).toString(),
-        assetId,
-        chainId: channel.networkContext.chainId,
-        channelAddress: channel.channelAddress,
-        publicIdentifier: channel.aliceIdentifier,
-      }),
-    ).to.be.true;
+    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.UnableToGetRebalanceProfile);
   });
 
-  it("should request collateral with a requested amount lower than the target", async () => {
-    const assetId = AddressZero;
-    const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
-    const profile = rebalanceProfileRes.getValue();
-
-    const requestedAmount = BigNumber.from(profile.target).sub(10);
-    await requestCollateral(
+  it("should fail if requestedAmount > reclaimThreshold", async () => {
+    const { channel } = createTestChannelState(UpdateType.deposit);
+    const res = await requestCollateral(
       channel,
-      assetId,
-      channel.aliceIdentifier,
+      AddressZero,
+      routerPublicIdentifier,
       node as INodeService,
       chainReader,
-      logger,
-      requestedAmount.toString(),
+      log,
+      BigNumber.from(ethProfile.reclaimThreshold).add(120).toString(),
     );
-    node.sendDepositTx.getCall(0);
-
-    expect(
-      node.sendDepositTx.calledWith({
-        amount: BigNumber.from(requestedAmount).sub(getBalanceForAssetId(channel, assetId, "alice")).toString(),
-        assetId,
-        chainId: channel.networkContext.chainId,
-        channelAddress: channel.channelAddress,
-        publicIdentifier: channel.aliceIdentifier,
-      }),
-    ).to.be.true;
+    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.TargetHigherThanThreshold);
   });
 
-  it("should error on request collateral with a requested amount higher than reclaim threshold", async () => {
-    const assetId = AddressZero;
-    const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
-    const profile = rebalanceProfileRes.getValue();
-
-    const requestedAmount = BigNumber.from(profile.reclaimThreshold).add(10);
-    const req = await requestCollateral(
+  it("should fail if it cannot get the chainProviders", async () => {
+    const { channel } = createTestChannelState(UpdateType.deposit);
+    chainReader.getHydratedProviders.returns(Result.fail(new Error("fail") as any));
+    const res = await requestCollateral(
       channel,
-      assetId,
-      channel.aliceIdentifier,
+      AddressZero,
+      routerPublicIdentifier,
       node as INodeService,
       chainReader,
-      logger,
-      requestedAmount.toString(),
+      log,
     );
-    expect(req.isError).to.be.true;
+    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.ProviderNotFound);
   });
 
-  it("should request collateral with a transfer amount higher than the threshold", async () => {
-    const assetId = AddressZero;
-    const channel = createTestChannelState("create").channel;
-    const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
-    const profile = rebalanceProfileRes.getValue();
-
-    const requestedAmount = BigNumber.from(profile.target).sub(10);
-    const transferAmount = BigNumber.from(profile.reclaimThreshold).add(10);
-    await requestCollateral(
+  it("should fail if it cannot get a provider on the right chain", async () => {
+    const { channel } = createTestChannelState(UpdateType.deposit);
+    chainReader.getHydratedProviders.returns(Result.ok({ [7]: {} as any }));
+    const res = await requestCollateral(
       channel,
-      assetId,
-      channel.aliceIdentifier,
+      AddressZero,
+      routerPublicIdentifier,
       node as INodeService,
       chainReader,
-      logger,
-      requestedAmount.toString(),
-      transferAmount.toString(),
+      log,
     );
-    node.sendDepositTx.getCall(0);
+    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.ProviderNotFound);
+  });
 
-    expect(
-      node.sendDepositTx.calledWith({
-        amount: BigNumber.from(requestedAmount)
-          .add(transferAmount)
-          .sub(getBalanceForAssetId(channel, assetId, "alice"))
-          .toString(),
-        assetId,
-        chainId: channel.networkContext.chainId,
+  it("should fail if it cannot get the onchain balance", async () => {
+    const { channel } = createTestChannelState(UpdateType.deposit);
+    chainReader.getTotalDepositedB.resolves(Result.fail(new Error("fail") as any));
+    const res = await requestCollateral(
+      channel,
+      AddressZero,
+      routerPublicIdentifier,
+      node as INodeService,
+      chainReader,
+      log,
+    );
+    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.CouldNotGetOnchainDeposits);
+  });
+
+  describe("should work", () => {
+    it("if requestedAmount is provided (and higher than target)", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit);
+      const requestedAmount = BigNumber.from(ethProfile.target).add(10000);
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        requestedAmount.toString(),
+      );
+      expect(res.isError).to.be.false;
+      expect(node.sendDepositTx.callCount).to.be.eq(1);
+      expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
+        publicIdentifier: routerPublicIdentifier,
         channelAddress: channel.channelAddress,
-        publicIdentifier: channel.aliceIdentifier,
-      }),
-    ).to.be.true;
+        chainId: channel.networkContext.chainId,
+        assetId: AddressZero,
+        amount: requestedAmount.sub(channel.balances[0].amount[1]).toString(),
+      });
+      expect(node.reconcileDeposit.callCount).to.be.eq(1);
+    });
+
+    it("if requestedAmount is provided (and lower than target)", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit);
+      const requestedAmount = BigNumber.from(ethProfile.target).sub(10000);
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        requestedAmount.toString(),
+      );
+      expect(res.isError).to.be.false;
+      expect(node.sendDepositTx.callCount).to.be.eq(1);
+      expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
+        publicIdentifier: routerPublicIdentifier,
+        channelAddress: channel.channelAddress,
+        chainId: channel.networkContext.chainId,
+        assetId: AddressZero,
+        amount: requestedAmount.sub(channel.balances[0].amount[1]).toString(),
+      });
+      expect(node.reconcileDeposit.callCount).to.be.eq(1);
+    });
+
+    it("if requestedAmount is not provided", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit);
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+      );
+      expect(res.isError).to.be.false;
+      expect(node.sendDepositTx.callCount).to.be.eq(1);
+      expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
+        publicIdentifier: routerPublicIdentifier,
+        channelAddress: channel.channelAddress,
+        chainId: channel.networkContext.chainId,
+        assetId: AddressZero,
+        amount: BigNumber.from(ethProfile.target).sub(channel.balances[0].amount[1]).toString(),
+      });
+      expect(node.reconcileDeposit.callCount).to.be.eq(1);
+    });
+
+    it("if transferAmount provided", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit);
+      const requestedAmount = BigNumber.from(ethProfile.target).add(10000);
+      const transferAmount = BigNumber.from(17);
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        requestedAmount.toString(),
+        transferAmount.toString(),
+      );
+      expect(res.isError).to.be.false;
+      expect(node.sendDepositTx.callCount).to.be.eq(1);
+      expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
+        publicIdentifier: routerPublicIdentifier,
+        channelAddress: channel.channelAddress,
+        chainId: channel.networkContext.chainId,
+        assetId: AddressZero,
+        amount: requestedAmount.sub(channel.balances[0].amount[1]).add(transferAmount).toString(),
+      });
+      expect(node.reconcileDeposit.callCount).to.be.eq(1);
+    });
+
+    it("if no collateral needed", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit, {
+        balances: [
+          { to: [mkAddress(), mkAddress()], amount: [parseEther("10").toString(), parseEther("10").toString()] },
+        ],
+      });
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+      );
+      expect(res.isError).to.be.false;
+      expect(res.getValue()).to.be.undefined;
+      expect(node.sendDepositTx.callCount).to.be.eq(0);
+      expect(node.reconcileDeposit.callCount).to.be.eq(0);
+    });
+
+    it("if there is only offchain reconciliation needed (no deposit sent onchain)", async () => {
+      const { channel } = createTestChannelState(UpdateType.deposit);
+      chainReader.getTotalDepositedB.resolves(Result.ok(parseEther("10")));
+      const res = await requestCollateral(
+        channel,
+        AddressZero,
+        routerPublicIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+      );
+      expect(res.isError).to.be.false;
+      expect(node.sendDepositTx.callCount).to.be.eq(0);
+      expect(node.reconcileDeposit.callCount).to.be.eq(1);
+    });
+
+    it("if the transfer amount is higher than the threshold", async () => {
+      const assetId = AddressZero;
+      const channel = createTestChannelState("create").channel;
+      const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
+      const profile = rebalanceProfileRes.getValue();
+
+      const requestedAmount = BigNumber.from(profile.target).sub(10);
+      const transferAmount = BigNumber.from(profile.reclaimThreshold).add(10);
+      await requestCollateral(
+        channel,
+        assetId,
+        channel.aliceIdentifier,
+        node as INodeService,
+        chainReader,
+        log,
+        requestedAmount.toString(),
+        transferAmount.toString(),
+      );
+      node.sendDepositTx.getCall(0);
+
+      expect(
+        node.sendDepositTx.calledWith({
+          amount: BigNumber.from(requestedAmount)
+            .add(transferAmount)
+            .sub(getBalanceForAssetId(channel, assetId, "alice"))
+            .toString(),
+          assetId,
+          chainId: channel.networkContext.chainId,
+          channelAddress: channel.channelAddress,
+          publicIdentifier: channel.aliceIdentifier,
+        }),
+      ).to.be.true;
+    });
   });
 });

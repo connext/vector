@@ -37,7 +37,7 @@ export const requestCollateral = async (
     );
   }
 
-  let target = BigNumber.from(requestedAmount || profile.target);
+  let target = BigNumber.from(requestedAmount ?? profile.target);
   if (transferAmount) {
     target = target.add(transferAmount);
   }
