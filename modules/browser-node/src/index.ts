@@ -26,6 +26,7 @@ import pino, { BaseLogger } from "pino";
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
+import { CrossChainTransferParams, saveCrossChainTransfer } from "./services/crossChainTransferStore";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;
@@ -190,6 +191,15 @@ export class BrowserNode implements INodeService {
     withdrawalAddress?: string;
     meta?: any;
   }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
+    const storeParams: CrossChainTransferParams = {
+      amount: params.amount,
+      fromAssetId: params.fromAssetId,
+      fromChainId: params.fromChainId,
+      reconcileDeposit: params.reconcileDeposit ?? false,
+      toAssetId: params.toAssetId,
+      toChainId: params.toChainId,
+      withdrawalAddress: params.withdrawalAddress,
+    };
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
       chainId: params.fromChainId,
@@ -215,6 +225,8 @@ export class BrowserNode implements INodeService {
     }
 
     const crossChainTransferId = getRandomBytes32();
+    await saveCrossChainTransfer(crossChainTransferId, "INITIAL", storeParams);
+
     const { meta, ...res } = params;
     const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
 
@@ -229,6 +241,7 @@ export class BrowserNode implements INodeService {
       }
       const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
       this.logger.info({ updated }, "Deposit reconciled");
+      await saveCrossChainTransfer(crossChainTransferId, "DEPOSITED", storeParams);
     }
 
     const preImage = getRandomBytes32();
