@@ -76,3 +76,7 @@ cypress/videos
 **/react-app-env.d.ts
 .secret
 **/generated
+
+# Tests
+modules/**/.nyc_output
+modules/**/coverage

@@ -24,7 +24,7 @@
     "prettier": "prettier --write './src.sol/**/*.sol'",
     "build": "rm -rf dist && hardhat compile && tsc && npm run copy-wasm",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
-    "test": "mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
+    "test": "nyc mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
@@ -70,6 +70,7 @@
     "event-target-shim": "5.0.1",
     "hardhat-typechain": "0.3.3",
     "mocha": "8.2.0",
+    "nyc": "15.1.0",
     "prettier": "2.2.0",
     "prettier-plugin-solidity": "1.0.0-beta.1",
     "solc": "0.7.1",
