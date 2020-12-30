@@ -311,6 +311,7 @@ export class BrowserNode implements INodeService {
       const existingReceiverTransfer = transferRes.getValue();
       let receiverTransferId = existingReceiverTransfer?.transferId;
       withdrawalAmount = existingReceiverTransfer?.balance.amount[0];
+      this.logger.info({ existingReceiverTransfer }, "Existing receiver transfer");
 
       if (!existingReceiverTransfer) {
         receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
