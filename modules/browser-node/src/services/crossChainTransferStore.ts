@@ -7,6 +7,8 @@ export type CrossChainTransferParams = {
   reconcileDeposit: boolean;
   error: boolean;
   withdrawalAddress?: string;
+  preImage?: string;
+  withdrawalAmount?: string;
 };
 
 export const CrossChainTransferStatus = {
@@ -15,10 +17,9 @@ export const CrossChainTransferStatus = {
   TRANSFER_1: 2,
   TRANSFER_2: 3,
 } as const;
-export type CrossChainTransferStatus = keyof typeof CrossChainTransferStatus;
 
 export type StoredCrossChainTransfer = CrossChainTransferParams & {
-  status: CrossChainTransferStatus;
+  status: number;
   crossChainTransferId: string;
 };
 
@@ -48,7 +49,7 @@ export async function getCrossChainTransfer(
 
 export async function saveCrossChainTransfer(
   crossChainTransferId: string,
-  status: CrossChainTransferStatus,
+  status: number,
   params: CrossChainTransferParams,
 ): Promise<void> {
   const stringified = JSON.stringify({

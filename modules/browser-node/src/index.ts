@@ -198,7 +198,9 @@ export class BrowserNode implements INodeService {
     withdrawalAddress?: string;
     meta?: any;
     crossChainTransferId?: string;
-    startStage?: CrossChainTransferStatus;
+    startStage?: number;
+    preImage?: string;
+    withdrawalAmount?: string;
   }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
     const startStage = params.startStage ?? CrossChainTransferStatus.INITIAL;
     const { amount, fromAssetId, fromChainId, toAssetId, toChainId, withdrawalAddress, reconcileDeposit } = params;
@@ -238,7 +240,7 @@ export class BrowserNode implements INodeService {
     }
 
     const crossChainTransferId = params.crossChainTransferId ?? getRandomBytes32();
-    await saveCrossChainTransfer(crossChainTransferId, "INITIAL", storeParams);
+    await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, storeParams);
 
     const { meta, ...res } = params;
     const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
@@ -251,83 +253,123 @@ export class BrowserNode implements INodeService {
           meta: { ...updatedMeta },
         });
         if (depositRes.isError) {
-          await saveCrossChainTransfer(crossChainTransferId, "INITIAL", { ...storeParams, error: true });
+          await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, {
+            ...storeParams,
+            error: true,
+          });
           throw depositRes.getError();
         }
         const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
         this.logger.info({ updated }, "Deposit reconciled");
       }
-      await saveCrossChainTransfer(crossChainTransferId, "DEPOSITED", storeParams);
+      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, storeParams);
     }
 
-    const preImage = getRandomBytes32();
+    const preImage = params.preImage ?? getRandomBytes32();
     const lockHash = soliditySha256(["bytes32"], [preImage]);
-    this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
-    const transferParams = {
-      amount: amount,
-      assetId: fromAssetId,
-      channelAddress: senderChannel.channelAddress,
-      details: {
-        lockHash,
-        expiry: "0",
-      },
-      type: TransferNames.HashlockTransfer,
-      recipient: this.publicIdentifier,
-      recipientAssetId: toAssetId,
-      recipientChainId: toChainId,
-      meta: { ...updatedMeta },
-    };
-    const transferRes = await this.conditionalTransfer(transferParams);
-    if (transferRes.isError) {
-      await saveCrossChainTransfer(crossChainTransferId, "DEPOSITED", { ...storeParams, error: true });
-      throw transferRes.getError();
-    }
-    const senderTransfer = transferRes.getValue();
-    this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
-    await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_1", storeParams);
 
-    const receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
-      this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
-        if (
-          data.transfer.meta.routingId === senderTransfer.routingId &&
-          data.channelAddress === receiverChannel.channelAddress
-        ) {
-          res(data);
-        }
+    if (startStage < CrossChainTransferStatus.TRANSFER_1) {
+      this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
+      const transferParams = {
+        amount: amount,
+        assetId: fromAssetId,
+        channelAddress: senderChannel.channelAddress,
+        details: {
+          lockHash,
+          expiry: "0",
+        },
+        type: TransferNames.HashlockTransfer,
+        recipient: this.publicIdentifier,
+        recipientAssetId: toAssetId,
+        recipientChainId: toChainId,
+        meta: { ...updatedMeta },
+      };
+      const transferRes = await this.conditionalTransfer(transferParams);
+      if (transferRes.isError) {
+        await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, {
+          ...storeParams,
+          error: true,
+        });
+        throw transferRes.getError();
+      }
+      const senderTransfer = transferRes.getValue();
+      this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
+      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
+    }
+
+    let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
+    let withdrawalAmount = params.withdrawalAmount;
+    if (startStage < CrossChainTransferStatus.TRANSFER_2) {
+      // first try to pull the transfer from store in case this was called through the reclaimPendingCrossChainTransfer function
+      const transferRes = await this.getTransferByRoutingId({
+        channelAddress: receiverChannel.channelAddress,
+        routingId: crossChainTransferId,
       });
-    });
-    if (!receiverTransferData) {
-      this.logger.error(
-        { routingId: senderTransfer.routingId, channelAddress: receiverChannel.channelAddress },
-        "Failed to get receiver event",
-      );
-      await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_1", { ...storeParams, error: true });
-      throw new Error("Failed to get receiver event");
-    }
+      if (transferRes.isError) {
+        throw transferRes.getError();
+      }
+      const existingReceiverTransfer = transferRes.getValue();
+      let receiverTransferId = existingReceiverTransfer?.transferId;
+      withdrawalAmount = existingReceiverTransfer?.balance.amount[0];
 
-    this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
-    const resolveParams = {
-      channelAddress: receiverChannel.channelAddress,
-      transferId: receiverTransferData.transfer.transferId,
-      transferResolver: {
-        preImage,
-      },
-      meta: { ...updatedMeta },
-    };
-    const resolveRes = await this.resolveTransfer(resolveParams);
-    if (resolveRes.isError) {
-      await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_1", { ...storeParams, error: true });
-      throw resolveRes.getError();
+      if (!existingReceiverTransfer) {
+        receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
+          this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+            if (
+              data.transfer.meta.routingId === crossChainTransferId &&
+              data.channelAddress === receiverChannel.channelAddress
+            ) {
+              res(data);
+            }
+          });
+        });
+        if (!receiverTransferData) {
+          this.logger.error(
+            { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
+            "Failed to get receiver event",
+          );
+          await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
+            ...storeParams,
+            error: true,
+          });
+          throw new Error("Failed to get receiver event");
+        }
+        receiverTransferId = receiverTransferData.transfer.transferId;
+        withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
+      }
+
+      this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
+      const resolveParams = {
+        channelAddress: receiverChannel.channelAddress,
+        transferId: receiverTransferId!,
+        transferResolver: {
+          preImage,
+        },
+        meta: { ...updatedMeta },
+      };
+      const resolveRes = await this.resolveTransfer(resolveParams);
+      if (resolveRes.isError) {
+        await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
+          ...storeParams,
+          error: true,
+        });
+        throw resolveRes.getError();
+      }
+      const resolvedTransfer = resolveRes.getValue();
+      this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
+      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
+        ...storeParams,
+        withdrawalAmount,
+      });
     }
-    const resolvedTransfer = resolveRes.getValue();
-    this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
-    await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_2", storeParams);
 
     let withdrawalTx: string | undefined;
-    let withdrawalAmount: string | undefined;
     const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
     if (withdrawalAddress) {
-      withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
+      withdrawalAmount = params.withdrawalAmount ?? receiverTransferData?.transfer.balance.amount[0];
+      if (!withdrawalAmount) {
+        throw new Error(`Error, withdrawal amount not specified`);
+      }
       this.logger.info({ withdrawalAddress: withdrawalAddress, withdrawalAmount }, "Withdrawing to configured address");
       const withdrawRes = await this.withdraw({
         amount: withdrawalAmount, // bob is receiver
@@ -337,7 +379,10 @@ export class BrowserNode implements INodeService {
         meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
-        await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_2", { ...storeParams, error: true });
+        await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
+          ...storeParams,
+          error: true,
+        });
         throw withdrawRes.getError();
       }
       const withdrawal = withdrawRes.getValue();
