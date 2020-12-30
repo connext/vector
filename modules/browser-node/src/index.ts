@@ -18,6 +18,7 @@ import {
   TransferNames,
   EngineEvents,
   ConditionalTransferCreatedPayload,
+  FullChannelState,
 } from "@connext/vector-types";
 import { constructRpcRequest, getRandomBytes32, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
@@ -26,7 +27,13 @@ import pino, { BaseLogger } from "pino";
 import { BrowserStore } from "./services/store";
 import { BrowserLockService } from "./services/lock";
 import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "./channelProvider";
-import { CrossChainTransferParams, saveCrossChainTransfer } from "./services/crossChainTransferStore";
+import {
+  CrossChainTransferParams,
+  CrossChainTransferStatus,
+  getCrossChainTransfers,
+  saveCrossChainTransfer,
+  StoredCrossChainTransfer,
+} from "./services/crossChainTransferStore";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;
@@ -190,26 +197,32 @@ export class BrowserNode implements INodeService {
     reconcileDeposit?: boolean;
     withdrawalAddress?: string;
     meta?: any;
+    crossChainTransferId?: string;
+    startStage?: CrossChainTransferStatus;
   }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
+    const startStage = params.startStage ?? CrossChainTransferStatus.INITIAL;
+    const { amount, fromAssetId, fromChainId, toAssetId, toChainId, withdrawalAddress, reconcileDeposit } = params;
+
     const storeParams: CrossChainTransferParams = {
-      amount: params.amount,
-      fromAssetId: params.fromAssetId,
-      fromChainId: params.fromChainId,
-      reconcileDeposit: params.reconcileDeposit ?? false,
-      toAssetId: params.toAssetId,
-      toChainId: params.toChainId,
-      withdrawalAddress: params.withdrawalAddress,
+      amount: amount,
+      fromAssetId: fromAssetId,
+      fromChainId: fromChainId,
+      reconcileDeposit: reconcileDeposit ?? false,
+      toAssetId: toAssetId,
+      toChainId: toChainId,
+      withdrawalAddress: withdrawalAddress,
+      error: false,
     };
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
-      chainId: params.fromChainId,
+      chainId: fromChainId,
     });
     if (senderChannelRes.isError) {
       throw senderChannelRes.getError();
     }
     const receiverChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
-      chainId: params.toChainId,
+      chainId: toChainId,
     });
     if (receiverChannelRes.isError) {
       throw receiverChannelRes.getError();
@@ -218,29 +231,32 @@ export class BrowserNode implements INodeService {
     const receiverChannel = receiverChannelRes.getValue();
     if (!senderChannel || !receiverChannel) {
       throw new Error(
-        `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${
+        `Channel does not exist for chainId ${!senderChannel ? fromChainId : toChainId} with ${
           this.routerPublicIdentifier
         }`,
       );
     }
 
-    const crossChainTransferId = getRandomBytes32();
+    const crossChainTransferId = params.crossChainTransferId ?? getRandomBytes32();
     await saveCrossChainTransfer(crossChainTransferId, "INITIAL", storeParams);
 
     const { meta, ...res } = params;
     const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
 
-    if (params.reconcileDeposit) {
-      const depositRes = await this.reconcileDeposit({
-        assetId: params.fromAssetId,
-        channelAddress: senderChannel.channelAddress,
-        meta: { ...updatedMeta },
-      });
-      if (depositRes.isError) {
-        throw depositRes.getError();
+    if (startStage < CrossChainTransferStatus.DEPOSITED) {
+      if (reconcileDeposit) {
+        const depositRes = await this.reconcileDeposit({
+          assetId: fromAssetId,
+          channelAddress: senderChannel.channelAddress,
+          meta: { ...updatedMeta },
+        });
+        if (depositRes.isError) {
+          await saveCrossChainTransfer(crossChainTransferId, "INITIAL", { ...storeParams, error: true });
+          throw depositRes.getError();
+        }
+        const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
+        this.logger.info({ updated }, "Deposit reconciled");
       }
-      const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
-      this.logger.info({ updated }, "Deposit reconciled");
       await saveCrossChainTransfer(crossChainTransferId, "DEPOSITED", storeParams);
     }
 
@@ -248,8 +264,8 @@ export class BrowserNode implements INodeService {
     const lockHash = soliditySha256(["bytes32"], [preImage]);
     this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
     const transferParams = {
-      amount: params.amount,
-      assetId: params.fromAssetId,
+      amount: amount,
+      assetId: fromAssetId,
       channelAddress: senderChannel.channelAddress,
       details: {
         lockHash,
@@ -257,16 +273,19 @@ export class BrowserNode implements INodeService {
       },
       type: TransferNames.HashlockTransfer,
       recipient: this.publicIdentifier,
-      recipientAssetId: params.toAssetId,
-      recipientChainId: params.toChainId,
+      recipientAssetId: toAssetId,
+      recipientChainId: toChainId,
       meta: { ...updatedMeta },
     };
     const transferRes = await this.conditionalTransfer(transferParams);
     if (transferRes.isError) {
+      await saveCrossChainTransfer(crossChainTransferId, "DEPOSITED", { ...storeParams, error: true });
       throw transferRes.getError();
     }
     const senderTransfer = transferRes.getValue();
     this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
+    await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_1", storeParams);
+
     const receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
       this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
         if (
@@ -282,6 +301,7 @@ export class BrowserNode implements INodeService {
         { routingId: senderTransfer.routingId, channelAddress: receiverChannel.channelAddress },
         "Failed to get receiver event",
       );
+      await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_1", { ...storeParams, error: true });
       throw new Error("Failed to get receiver event");
     }
 
@@ -296,28 +316,28 @@ export class BrowserNode implements INodeService {
     };
     const resolveRes = await this.resolveTransfer(resolveParams);
     if (resolveRes.isError) {
+      await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_1", { ...storeParams, error: true });
       throw resolveRes.getError();
     }
     const resolvedTransfer = resolveRes.getValue();
     this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
+    await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_2", storeParams);
 
     let withdrawalTx: string | undefined;
     let withdrawalAmount: string | undefined;
     const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
-    if (params.withdrawalAddress) {
+    if (withdrawalAddress) {
       withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
-      this.logger.info(
-        { withdrawalAddress: params.withdrawalAddress, withdrawalAmount },
-        "Withdrawing to configured address",
-      );
+      this.logger.info({ withdrawalAddress: withdrawalAddress, withdrawalAmount }, "Withdrawing to configured address");
       const withdrawRes = await this.withdraw({
         amount: withdrawalAmount, // bob is receiver
-        assetId: params.toAssetId,
+        assetId: toAssetId,
         channelAddress: receiverChannel.channelAddress,
-        recipient: params.withdrawalAddress,
+        recipient: withdrawalAddress,
         meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
+        await saveCrossChainTransfer(crossChainTransferId, "TRANSFER_2", { ...storeParams, error: true });
         throw withdrawRes.getError();
       }
       const withdrawal = withdrawRes.getValue();
@@ -325,6 +345,45 @@ export class BrowserNode implements INodeService {
       withdrawalTx = withdrawal.transactionHash;
     }
     return { withdrawalTx, withdrawalAmount };
+  }
+
+  // separate from init(), can eventually be called as part of that
+  async reclaimPendingCrossChainTransfers(): Promise<void> {
+    const transfers = await getCrossChainTransfers();
+    for (const transfer of transfers) {
+      if (transfer.error) {
+        this.logger.error({ transfer }, "Found errored transfer, TODO: handle these properly");
+        continue;
+      }
+      await this.reclaimPendingCrossChainTransfer(transfer);
+    }
+  }
+
+  private async reclaimPendingCrossChainTransfer(transferData: StoredCrossChainTransfer) {
+    const {
+      amount,
+      withdrawalAddress,
+      toChainId,
+      toAssetId,
+      fromChainId,
+      fromAssetId,
+      status,
+      reconcileDeposit,
+      crossChainTransferId,
+    } = transferData;
+
+    if (status === CrossChainTransferStatus.INITIAL) {
+      await this.crossChainTransfer({
+        amount,
+        fromAssetId,
+        fromChainId,
+        toAssetId,
+        toChainId,
+        crossChainTransferId,
+        reconcileDeposit,
+        withdrawalAddress,
+      });
+    }
   }
   //////////////////
 
@@ -382,7 +441,7 @@ export class BrowserNode implements INodeService {
     try {
       const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
-      return Result.ok(res.map((chan) => chan.channelAddress));
+      return Result.ok(res.map((chan: FullChannelState) => chan.channelAddress));
     } catch (e) {
       return Result.fail(e);
     }
