@@ -20,6 +20,17 @@ export const justInTimeCollateral = async (
   logger: BaseLogger,
   transferAmount: string,
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
+  // If there is sufficient balance in the channel to handle the transfer
+  // amount, no need for collateralization
+  const myBalance = getBalanceForAssetId(
+    channel,
+    assetId,
+    publicIdentifier === channel.aliceIdentifier ? "alice" : "bob",
+  );
+  if (BigNumber.from(myBalance).gte(transferAmount)) {
+    return Result.ok(undefined);
+  }
+
   // Get profile information
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
