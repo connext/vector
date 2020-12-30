@@ -253,8 +253,8 @@ bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
 cadvisor_image="gcr.io/google-containers/cadvisor:latest"
 bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
 
-logdna_image="logdna/logspout:v1.2.0";
-pull_if_unavailable "$logdna_image"
+logdna_image="logdna/logspout:v1.2.0"
+bash "$root/ops/pull-images.sh" "$logdna_image" > /dev/null
 
 prometheus_services="prometheus:
     image: $prometheus_image
