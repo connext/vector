@@ -12,12 +12,15 @@ import { decodeTransferResolver, getBalanceForAssetId } from "@connext/vector-ut
 import { BigNumber } from "ethers";
 import { BaseLogger } from "pino";
 
-import { requestCollateral } from "../collateral";
+import { justInTimeCollateral } from "../collateral";
 import { ForwardTransferError } from "../errors";
 
 import { IRouterStore, RouterUpdateType } from "./store";
 
-export const transferWithAutoCollateralization = async (
+/**
+ * Will check liveness and queue transfer if recipient is not online.
+ */
+export const attemptTransferWithCollateralization = async (
   params: NodeParams.ConditionalTransfer,
   channel: FullChannelState,
   routerPublicIdentifier: string,
@@ -27,12 +30,11 @@ export const transferWithAutoCollateralization = async (
   logger: BaseLogger,
   requireOnline = true,
 ): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
-  // check if there is sufficient collateral
-  const routerBalance = getBalanceForAssetId(
-    channel,
-    params.assetId,
-    routerPublicIdentifier === channel.aliceIdentifier ? "alice" : "bob",
-  );
+  // TODO: collateralizing takes a long time, so the liveness check may
+  // not hold for the transfer even if it works here. instead, should
+  // check for liveness post-collateral attempt and queue then. (this is
+  // ok depsite the potential 2 timeouts because nobody is waiting on the
+  // completion of these functions)
 
   // check if recipient is available
   let available = false;
@@ -75,21 +77,42 @@ export const transferWithAutoCollateralization = async (
     return Result.ok(undefined);
   }
 
+  // transfer with autocollateralization
+  return transferWithCollateralization(params, channel, routerPublicIdentifier, nodeService, chainReader, logger);
+};
+
+/**
+ * Will transfer + collateralize if needed to handle payment
+ */
+export const transferWithCollateralization = async (
+  params: NodeParams.ConditionalTransfer,
+  channel: FullChannelState,
+  routerPublicIdentifier: string,
+  nodeService: INodeService,
+  chainReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
+  // check if there is sufficient collateral
+  const routerBalance = getBalanceForAssetId(
+    channel,
+    params.assetId,
+    routerPublicIdentifier === channel.aliceIdentifier ? "alice" : "bob",
+  );
+
   // check for inflight collateral
   if (BigNumber.from(routerBalance).lt(params.amount)) {
     logger.info({ routerBalance, recipientAmount: params.amount }, "Requesting collateral to cover transfer");
-    const requestCollateralRes = await requestCollateral(
+    const collateralRes = await justInTimeCollateral(
       channel,
       params.assetId,
       routerPublicIdentifier,
       nodeService,
       chainReader,
       logger,
-      undefined,
       params.amount,
     );
 
-    if (requestCollateralRes.isError) {
+    if (collateralRes.isError) {
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
           ...params,
