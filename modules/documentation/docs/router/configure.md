@@ -130,6 +130,7 @@ The router's node can be configured by adding any of the following keys to `rout
 |    `awsAccessKey`   |  `string` |  An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.                                |
 |     `domainName`    |  `string` |    If provided, https will be auto-configured & the stack will be exposed on port 443.                                   |
 |     `production`    | `boolean` | If `false`, ops will automatically build anything that isn't available locally. If `true, nothing will be built locally. |
+|     `logDnaKey`     | `string`  |             An API KEY secret that is used to connect to logdna for parsing and viewing router logs.                     |
 
 ### Setting Up Supported Chains
 
@@ -238,4 +239,3 @@ make restart-router
 
 !!! Tip
     `make start-$STACK` is optimized for development & will build everything that's out of date before starting the stack. `make restart-$STACK` on the other hand, won't try to build anything before starting the stack so is better to use in production.
-
