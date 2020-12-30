@@ -11,7 +11,7 @@ import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
 
-import { requestCollateral } from "./collateral";
+import { adjustCollateral, requestCollateral } from "./collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
 
@@ -160,6 +160,16 @@ export async function setupListeners(
         );
       }
       logger.info({ method: "forwardTransferResolution", result: res.getValue() }, "Successfully forwarded resolution");
+
+      // Adjust collateral in channel
+      await adjustCollateral(
+        data.channelAddress,
+        data.transfer.assetId,
+        routerPublicIdentifier,
+        nodeService,
+        chainReader,
+        logger,
+      );
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
