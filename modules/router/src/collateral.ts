@@ -16,7 +16,7 @@ export const requestCollateral = async (
   requestedAmount?: string,
   transferAmount?: string, // used when called internally
 ): Promise<Result<undefined | NodeResponses.Deposit, RequestCollateralError>> => {
-  const profileRes = await getRebalanceProfile(channel.networkContext.chainId, assetId);
+  const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
       new RequestCollateralError(RequestCollateralError.reasons.UnableToGetRebalanceProfile, {
@@ -37,7 +37,7 @@ export const requestCollateral = async (
     );
   }
 
-  let target = BigNumber.from(requestedAmount || profile.target);
+  let target = BigNumber.from(requestedAmount ?? profile.target);
   if (transferAmount) {
     target = target.add(transferAmount);
   }
@@ -76,7 +76,6 @@ export const requestCollateral = async (
       }),
     );
   }
-  console.log("***** provider", provider);
 
   // Check if a tx has already been sent, but has not been reconciled
   // Get the total deposits vs. processed deposits

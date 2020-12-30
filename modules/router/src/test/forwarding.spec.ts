@@ -113,7 +113,7 @@ describe("Forwarding", () => {
       // get sender channel
       node.getStateChannel.onFirstCall().resolves(Result.ok(senderChannel));
       // get swapped amount (optional)
-      getSwappedAmount.resolves(Result.ok(senderTransfer.balance.amount[0]));
+      getSwappedAmount.returns(Result.ok(senderTransfer.balance.amount[0]));
       // get receiver channel
       node.getStateChannelByParticipants.onFirstCall().resolves(Result.ok(receiverChannel));
       // check online
@@ -490,7 +490,7 @@ describe("Forwarding", () => {
       ctx.receiverChannel.networkContext.chainId = 1338;
       ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
       const mocked = prepEnv(ctx);
-      getSwappedAmount.resolves(Result.fail(new Error("fail")));
+      getSwappedAmount.returns(Result.fail(new Error("fail")));
 
       const result = await forwardTransferCreation(
         mocked.event,
@@ -549,9 +549,9 @@ describe("Forwarding", () => {
       });
     });
 
-    it("fails with cancellation if transferWithAutoCollateralization indicates sender-side should be cancelled", async () => {});
+    it.skip("fails with cancellation if transferWithAutoCollateralization indicates sender-side should be cancelled", async () => {});
 
-    it("fails without cancellation if transferWithAutoCollateralization got receiver timeout", async () => {});
+    it.skip("fails without cancellation if transferWithAutoCollateralization got receiver timeout", async () => {});
 
     // TODO: the code indicates that sender should not be cancelled, verify this with Layne
     it.skip("fails with cancellation if transfer creation fails", async () => {
@@ -576,14 +576,12 @@ describe("Forwarding", () => {
     });
   });
 
-  describe("forwardTransferResolution", () => {
+  describe.skip("forwardTransferResolution", () => {
     it("should fail if it cannot find the transfers", async () => {});
     it("should fail if it cannot find incoming transfer", async () => {});
     it("should fail + queue update if resolveTransfer fails", async () => {});
     it("should work", async () => {});
   });
 
-  describe("handleIsAlive", () => {
-    it("should ");
-  });
+  describe.skip("handleIsAlive", () => {});
 });

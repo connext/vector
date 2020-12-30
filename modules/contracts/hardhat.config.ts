@@ -59,6 +59,11 @@ const config: HardhatUserConfig = {
       saveDeployments: false,
       url: urlOverride || "http://localhost:8545",
     },
+    mainnet: {
+      accounts: { mnemonic },
+      chainId: 1,
+      url: urlOverride || "http://localhost:8545",
+    },
     rinkeby: {
       accounts: { mnemonic },
       chainId: 4,
@@ -72,6 +77,11 @@ const config: HardhatUserConfig = {
     kovan: {
       accounts: { mnemonic },
       chainId: 42,
+      url: urlOverride || "http://localhost:8545",
+    },
+    matic: {
+      accounts: { mnemonic },
+      chainId: 137,
       url: urlOverride || "http://localhost:8545",
     },
     mumbai: {

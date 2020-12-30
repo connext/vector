@@ -3,9 +3,7 @@
   "description": "This is only used to install & pin versions for a few global packages in the prod-mode docker container",
   "dependencies": {
     "mocha": "8.2.1",
+    "nyc": "15.1.0",
     "pino-pretty": "4.3.0"
   }
 }
-
-
-
