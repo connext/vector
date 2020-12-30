@@ -2,6 +2,14 @@
 
 ## Next Release
 
+## 0.1.0-rc.3
+
+- \[router\] add logdna service
+
+## 0.1.0-rc.3
+
+- \[contracts\] add deployment info for mainnet and matic mainnet
+
 ## 0.1.0-rc.1
 
 - \[router\] add isAlive check before forwarding transfer to increase odds of successful transfer
