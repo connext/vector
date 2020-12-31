@@ -18,7 +18,7 @@ import { parseEther } from "@ethersproject/units";
 import { config } from "../config";
 import { requestCollateral } from "../collateral";
 import * as configService from "../services/config";
-import { RequestCollateralError } from "../errors";
+import { CollateralError } from "../errors";
 
 const testName = "Collateral";
 const { log } = getTestLoggers(testName, config.logLevel as any);
@@ -68,7 +68,7 @@ describe(testName, () => {
       chainReader,
       log,
     );
-    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.UnableToGetRebalanceProfile);
+    expect(res.getError().message).to.be.eq(CollateralError.reasons.UnableToGetRebalanceProfile);
   });
 
   it("should fail if requestedAmount > reclaimThreshold", async () => {
@@ -82,7 +82,7 @@ describe(testName, () => {
       log,
       BigNumber.from(ethProfile.reclaimThreshold).add(120).toString(),
     );
-    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.TargetHigherThanThreshold);
+    expect(res.getError().message).to.be.eq(CollateralError.reasons.TargetHigherThanThreshold);
   });
 
   it("should fail if it cannot get the chainProviders", async () => {
@@ -96,7 +96,7 @@ describe(testName, () => {
       chainReader,
       log,
     );
-    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.ProviderNotFound);
+    expect(res.getError().message).to.be.eq(CollateralError.reasons.ProviderNotFound);
   });
 
   it("should fail if it cannot get a provider on the right chain", async () => {
@@ -110,7 +110,7 @@ describe(testName, () => {
       chainReader,
       log,
     );
-    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.ProviderNotFound);
+    expect(res.getError().message).to.be.eq(CollateralError.reasons.ProviderNotFound);
   });
 
   it("should fail if it cannot get the onchain balance", async () => {
@@ -124,7 +124,7 @@ describe(testName, () => {
       chainReader,
       log,
     );
-    expect(res.getError().message).to.be.eq(RequestCollateralError.reasons.CouldNotGetOnchainDeposits);
+    expect(res.getError().message).to.be.eq(CollateralError.reasons.CouldNotGetOnchainDeposits);
   });
 
   describe("should work", () => {
@@ -198,32 +198,6 @@ describe(testName, () => {
       expect(node.reconcileDeposit.callCount).to.be.eq(1);
     });
 
-    it("if transferAmount provided", async () => {
-      const { channel } = createTestChannelState(UpdateType.deposit);
-      const requestedAmount = BigNumber.from(ethProfile.target).add(10000);
-      const transferAmount = BigNumber.from(17);
-      const res = await requestCollateral(
-        channel,
-        AddressZero,
-        routerPublicIdentifier,
-        node as INodeService,
-        chainReader,
-        log,
-        requestedAmount.toString(),
-        transferAmount.toString(),
-      );
-      expect(res.isError).to.be.false;
-      expect(node.sendDepositTx.callCount).to.be.eq(1);
-      expect(node.sendDepositTx.firstCall.args[0]).to.be.deep.eq({
-        publicIdentifier: routerPublicIdentifier,
-        channelAddress: channel.channelAddress,
-        chainId: channel.networkContext.chainId,
-        assetId: AddressZero,
-        amount: requestedAmount.sub(channel.balances[0].amount[1]).add(transferAmount).toString(),
-      });
-      expect(node.reconcileDeposit.callCount).to.be.eq(1);
-    });
-
     it("if no collateral needed", async () => {
       const { channel } = createTestChannelState(UpdateType.deposit, {
         balances: [
@@ -258,40 +232,6 @@ describe(testName, () => {
       expect(res.isError).to.be.false;
       expect(node.sendDepositTx.callCount).to.be.eq(0);
       expect(node.reconcileDeposit.callCount).to.be.eq(1);
-    });
-
-    it("if the transfer amount is higher than the threshold", async () => {
-      const assetId = AddressZero;
-      const channel = createTestChannelState("create").channel;
-      const rebalanceProfileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
-      const profile = rebalanceProfileRes.getValue();
-
-      const requestedAmount = BigNumber.from(profile.target).sub(10);
-      const transferAmount = BigNumber.from(profile.reclaimThreshold).add(10);
-      await requestCollateral(
-        channel,
-        assetId,
-        channel.aliceIdentifier,
-        node as INodeService,
-        chainReader,
-        log,
-        requestedAmount.toString(),
-        transferAmount.toString(),
-      );
-      node.sendDepositTx.getCall(0);
-
-      expect(
-        node.sendDepositTx.calledWith({
-          amount: BigNumber.from(requestedAmount)
-            .add(transferAmount)
-            .sub(getBalanceForAssetId(channel, assetId, "alice"))
-            .toString(),
-          assetId,
-          chainId: channel.networkContext.chainId,
-          channelAddress: channel.channelAddress,
-          publicIdentifier: channel.aliceIdentifier,
-        }),
-      ).to.be.true;
     });
   });
 });

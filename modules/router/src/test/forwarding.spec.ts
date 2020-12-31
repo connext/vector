@@ -57,7 +57,7 @@ describe("Forwarding", () => {
     let receiverChannel: FullChannelState;
     let getSwappedAmount: Sinon.SinonStub;
     let cancelTransfer: Sinon.SinonStub;
-    let requestCollateral: Sinon.SinonStub;
+    let justInTimeCollateral: Sinon.SinonStub;
 
     const routerPublicIdentifier = mkPublicIdentifier("vectorRRR");
     const aliceIdentifier = mkPublicIdentifier("vectorA");
@@ -119,7 +119,7 @@ describe("Forwarding", () => {
       // check online
       node.sendIsAliveMessage.resolves(Result.ok({ channelAddress: receiverChannel.channelAddress }));
       // request collateral (optional)
-      requestCollateral.resolves(Result.ok(undefined));
+      justInTimeCollateral.resolves(Result.ok(undefined));
       cancelTransfer.resolves(Result.ok({ channelAddress: receiverChannel.channelAddress }));
       // create receiver transfer
       node.conditionalTransfer.onFirstCall().resolves(
@@ -164,7 +164,6 @@ describe("Forwarding", () => {
     ) => {
       const { senderTransfer, receiverChannel, event } = ctx;
       expect(result.getError()).to.be.undefined;
-      console.log("result.getValue() ==========> : ", result.getValue());
       expect(result.getValue()).to.containSubset({
         channelAddress: receiverChannel.channelAddress,
         routingId: senderTransfer.meta.routingId,
@@ -258,7 +257,7 @@ describe("Forwarding", () => {
 
       chainReader = Sinon.createStubInstance(VectorChainReader);
 
-      requestCollateral = Sinon.stub(collateralService, "requestCollateral");
+      justInTimeCollateral = Sinon.stub(collateralService, "justInTimeCollateral");
     });
 
     afterEach(() => {

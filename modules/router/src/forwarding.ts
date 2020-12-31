@@ -386,6 +386,9 @@ export async function handleIsAlive(
 
     // Handle transfer creation updates
     if (type === RouterUpdateType.TRANSFER_CREATION) {
+      // NOTE: this will *NOT* perform any additional liveness checks
+      // and it is assumed the receiver will stay online throughout the
+      // processing of these updates
       const createRes = await transferWithCollateralization(
         payload as NodeParams.ConditionalTransfer,
         channel,

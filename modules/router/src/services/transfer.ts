@@ -46,13 +46,17 @@ export const attemptTransferWithCollateralization = async (
     logger,
     params.amount,
   );
+  const collateralError = collateralRes.getError();
 
-  if (collateralRes.isError) {
+  // If it failed to collateralize, return a failure if the payment
+  // requires that the recipient is online. (offline collateral failures
+  // handled after queueing/availability checks)
+  if (collateralError && requireOnline) {
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
         ...params,
         channelAddress: channel.channelAddress,
-        shouldCancelSender: requireOnline, // cancel IFF recipient must be online
+        shouldCancelSender: true,
       }),
     );
   }
@@ -98,7 +102,23 @@ export const attemptTransferWithCollateralization = async (
     return Result.ok(undefined);
   }
 
-  // create transfer
+  // if available, but collateralizing failed, return failure
+  // NOTE: this check is performed *after* queueing update to
+  // ensure that offline collateral failures are discarded in
+  // the case where the receiver is online (but the payment doesnt
+  // explicitly require it)
+  if (available && collateralError) {
+    // NOTE: should always cancel the sender payment in this case
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        ...params,
+        channelAddress: channel.channelAddress,
+        shouldCancelSender: true,
+      }),
+    );
+  }
+
+  // safe to create transfer
   const transfer = await nodeService.conditionalTransfer(params);
   return transfer.isError
     ? Result.fail(

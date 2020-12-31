@@ -28,7 +28,7 @@ import * as Sinon from "sinon";
 import { config } from "../../config";
 import { ForwardTransferError } from "../../errors";
 import { PrismaStore, RouterUpdateType } from "../../services/store";
-import { cancelCreatedTransfer, transferWithAutoCollateralization } from "../../services/transfer";
+import { cancelCreatedTransfer, attemptTransferWithCollateralization } from "../../services/transfer";
 import * as collateral from "../../collateral";
 
 const testName = "Router transfer service";
@@ -36,7 +36,7 @@ const testName = "Router transfer service";
 const { log } = getTestLoggers(testName, config.logLevel as any);
 
 describe(testName, () => {
-  describe("transferWithAutoCollateralization", () => {
+  describe("attemptTransferWithCollateralization", () => {
     // Declare mocks
     let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
@@ -101,7 +101,7 @@ describe(testName, () => {
       });
       nodeService.sendIsAliveMessage.resolves(Result.fail(new Error("fail") as any));
       const params = mkParams();
-      const res = await transferWithAutoCollateralization(
+      const res = await attemptTransferWithCollateralization(
         params,
         channel,
         routerPublicIdentifier,
@@ -127,7 +127,7 @@ describe(testName, () => {
         assetIds: [mkAddress()],
         balances: [{ to: [routerAddr, recipientAddr], amount: ["700", "53"] }],
       });
-      const res = await transferWithAutoCollateralization(
+      const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
         routerPublicIdentifier,
@@ -151,7 +151,7 @@ describe(testName, () => {
         assetIds: [mkAddress()],
         balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
       });
-      const res = await transferWithAutoCollateralization(
+      const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
         routerPublicIdentifier,
@@ -177,7 +177,7 @@ describe(testName, () => {
         balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
       });
       nodeService.sendIsAliveMessage.resolves(Result.fail(new Error("fail") as any));
-      const res = await transferWithAutoCollateralization(
+      const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
         routerPublicIdentifier,
@@ -202,7 +202,7 @@ describe(testName, () => {
         balances: [{ to: [routerAddr, recipientAddr], amount: ["700", "53"] }],
       });
       nodeService.sendIsAliveMessage.resolves(Result.fail(new Error("fail") as any));
-      const res = await transferWithAutoCollateralization(
+      const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
         routerPublicIdentifier,
@@ -227,7 +227,7 @@ describe(testName, () => {
         balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
       });
       requestCollateral.resolves(Result.fail(new Error("fail")));
-      const res = await transferWithAutoCollateralization(
+      const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
         routerPublicIdentifier,
@@ -252,7 +252,7 @@ describe(testName, () => {
         balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
       });
       nodeService.conditionalTransfer.resolves(Result.fail(new Error("fail") as any));
-      const res = await transferWithAutoCollateralization(
+      const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
         routerPublicIdentifier,

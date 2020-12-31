@@ -69,7 +69,6 @@ describe("Router store", () => {
     const pending = await store.getQueuedUpdates(channelAddress, RouterUpdateStatus.PENDING);
     expect(pending.length).to.be.eq(toQueue.length);
     pending.map((s) => {
-      console.log("searching for", s);
       const expected = toQueue.find((t) => {
         if (s.type === RouterUpdateType.TRANSFER_RESOLUTION) {
           return (
