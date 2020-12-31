@@ -2,5 +2,6 @@
   "cache": false,
   "extension": [".ts"],
   "check-coverage": true,
-  "include": ["src/**"]
+  "include": ["src/**"],
+  "exclude": ["src/testing/**"]
 }
