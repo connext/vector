@@ -267,6 +267,7 @@ export class BrowserNode implements INodeService {
 
     const preImage = params.preImage ?? getRandomBytes32();
     const lockHash = soliditySha256(["bytes32"], [preImage]);
+    storeParams.preImage = preImage;
 
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
       const transferParams = {
@@ -294,10 +295,7 @@ export class BrowserNode implements INodeService {
       }
       const senderTransfer = transferRes.getValue();
       this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
-      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
-        ...storeParams,
-        preImage,
-      });
+      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
     }
 
     let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
@@ -342,6 +340,7 @@ export class BrowserNode implements INodeService {
         receiverTransferId = receiverTransferData.transfer.transferId;
         withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
       }
+      storeParams.withdrawalAmount = withdrawalAmount;
 
       this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
       const resolveParams = {
