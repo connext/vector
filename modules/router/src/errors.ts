@@ -1,6 +1,6 @@
 import { Values, VectorError } from "@connext/vector-types";
 
-export class RequestCollateralError extends VectorError {
+export class CollateralError extends VectorError {
   readonly type = VectorError.errors.RouterError;
 
   static readonly reasons = {
@@ -11,10 +11,11 @@ export class RequestCollateralError extends VectorError {
     TargetHigherThanThreshold: "Specified target is higher than reclaim threshold",
     TxError: "Error sending deposit transaction",
     UnableToCollateralize: "Could not collateralize channel",
+    UnableToReclaim: "Could not reclaim collateral from channel",
   } as const;
 
   constructor(
-    public readonly message: Values<typeof RequestCollateralError.reasons>,
+    public readonly message: Values<typeof CollateralError.reasons>,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context?: any,
   ) {
