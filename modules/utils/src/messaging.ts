@@ -460,9 +460,9 @@ export class NatsMessagingService implements IMessagingService {
     } catch (e) {
       return Result.fail(
         new MessagingError(
-          e.message.includes("Request timed out") ? MessagingError.reasons.Timeout : MessagingError.reasons.Unknown,
+          e.message?.includes("Request timed out") ? MessagingError.reasons.Timeout : MessagingError.reasons.Unknown,
           {
-            error: e.message,
+            error: e.message ?? e,
           },
         ),
       );
