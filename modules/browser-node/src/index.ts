@@ -294,7 +294,10 @@ export class BrowserNode implements INodeService {
       }
       const senderTransfer = transferRes.getValue();
       this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
-      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
+      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
+        ...storeParams,
+        preImage,
+      });
     }
 
     let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
@@ -417,20 +420,23 @@ export class BrowserNode implements INodeService {
       status,
       reconcileDeposit,
       crossChainTransferId,
+      preImage,
+      withdrawalAmount,
     } = transferData;
 
-    if (status === CrossChainTransferStatus.INITIAL) {
-      await this.crossChainTransfer({
-        amount,
-        fromAssetId,
-        fromChainId,
-        toAssetId,
-        toChainId,
-        crossChainTransferId,
-        reconcileDeposit,
-        withdrawalAddress,
-      });
-    }
+    await this.crossChainTransfer({
+      amount,
+      fromAssetId,
+      fromChainId,
+      toAssetId,
+      toChainId,
+      crossChainTransferId,
+      reconcileDeposit,
+      withdrawalAddress,
+      startStage: status,
+      preImage,
+      withdrawalAmount,
+    });
   }
   //////////////////
 
