@@ -31,6 +31,7 @@ import {
   CrossChainTransferParams,
   CrossChainTransferStatus,
   getCrossChainTransfers,
+  removeCrossChainTransfer,
   saveCrossChainTransfer,
   StoredCrossChainTransfer,
 } from "./services/crossChainTransferStore";
@@ -393,6 +394,7 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
+    await removeCrossChainTransfer(crossChainTransferId);
     return { withdrawalTx, withdrawalAmount };
   }
 
