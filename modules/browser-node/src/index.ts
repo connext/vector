@@ -189,28 +189,30 @@ export class BrowserNode implements INodeService {
     reconcileDeposit?: boolean;
     withdrawalAddress?: string;
     meta?: any;
-  }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
+  }): Promise<Result<{ withdrawalTx?: string; withdrawalAmount?: string }, NodeError | Error>> {
     const senderChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
       chainId: params.fromChainId,
     });
     if (senderChannelRes.isError) {
-      throw senderChannelRes.getError();
+      Result.fail(senderChannelRes.getError()!);
     }
     const receiverChannelRes = await this.getStateChannelByParticipants({
       counterparty: this.routerPublicIdentifier!,
       chainId: params.toChainId,
     });
     if (receiverChannelRes.isError) {
-      throw receiverChannelRes.getError();
+      Result.fail(receiverChannelRes.getError()!);
     }
     const senderChannel = senderChannelRes.getValue();
     const receiverChannel = receiverChannelRes.getValue();
     if (!senderChannel || !receiverChannel) {
-      throw new Error(
-        `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${
-          this.routerPublicIdentifier
-        }`,
+      Result.fail(
+        new Error(
+          `Channel does not exist for chainId ${!senderChannel ? params.fromChainId : params.toChainId} with ${
+            this.routerPublicIdentifier
+          }`,
+        ),
       );
     }
 
@@ -218,6 +220,7 @@ export class BrowserNode implements INodeService {
     const { meta, ...res } = params;
     const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
 
+    // Reconcile Deposit
     if (params.reconcileDeposit) {
       const depositRes = await this.reconcileDeposit({
         assetId: params.fromAssetId,
@@ -225,12 +228,13 @@ export class BrowserNode implements INodeService {
         meta: { ...updatedMeta },
       });
       if (depositRes.isError) {
-        throw depositRes.getError();
+        Result.fail(depositRes.getError()!);
       }
       const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
       this.logger.info({ updated }, "Deposit reconciled");
     }
 
+    // Conditional Transfer
     const preImage = getRandomBytes32();
     const lockHash = soliditySha256(["bytes32"], [preImage]);
     this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
@@ -250,10 +254,12 @@ export class BrowserNode implements INodeService {
     };
     const transferRes = await this.conditionalTransfer(transferParams);
     if (transferRes.isError) {
-      throw transferRes.getError();
+      Result.fail(transferRes.getError()!);
     }
     const senderTransfer = transferRes.getValue();
     this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
+
+    // Resolve Transfer
     const receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
       this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
         if (
@@ -269,7 +275,7 @@ export class BrowserNode implements INodeService {
         { routingId: senderTransfer.routingId, channelAddress: receiverChannel.channelAddress },
         "Failed to get receiver event",
       );
-      throw new Error("Failed to get receiver event");
+      Result.fail(new Error("Failed to get receiver event"));
     }
 
     this.logger.info({ receiverTransferData }, "Received receiver transfer, resolving...");
@@ -283,11 +289,12 @@ export class BrowserNode implements INodeService {
     };
     const resolveRes = await this.resolveTransfer(resolveParams);
     if (resolveRes.isError) {
-      throw resolveRes.getError();
+      Result.fail(resolveRes.getError()!);
     }
     const resolvedTransfer = resolveRes.getValue();
     this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
 
+    // Withdraw
     let withdrawalTx: string | undefined;
     let withdrawalAmount: string | undefined;
     const withdrawalMeta = { ...res, crossChainTransferId, ...(meta ?? {}) };
@@ -305,13 +312,13 @@ export class BrowserNode implements INodeService {
         meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
-        throw withdrawRes.getError();
+        Result.fail(withdrawRes.getError()!);
       }
       const withdrawal = withdrawRes.getValue();
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
-    return { withdrawalTx, withdrawalAmount };
+    return Result.ok({ withdrawalTx, withdrawalAmount });
   }
   //////////////////
 
