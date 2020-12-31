@@ -1,10 +1,11 @@
 import { FullChannelState, INodeService, Result, NodeResponses, IVectorChainReader } from "@connext/vector-types";
-import { getBalanceForAssetId, getSignerAddressFromPublicIdentifier } from "@connext/vector-utils";
+import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
-import { CollateralError } from "./errors";
-import { getRebalanceProfile } from "./services/config";
+import { CollateralError } from "../errors";
+
+import { getRebalanceProfile } from "./config";
 
 /**
  * This function should be called before a transfer is created/forwarded.
@@ -119,7 +120,7 @@ export const adjustCollateral = async (
     assetId,
     channelAddress: channel.channelAddress,
     amount: reclaimable.toString(),
-    recipient: getSignerAddressFromPublicIdentifier(publicIdentifier),
+    recipient: iAmAlice ? channel.alice : channel.bob,
   });
   if (!withdrawRes.isError) {
     return withdrawRes as Result<NodeResponses.Withdraw>;

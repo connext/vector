@@ -11,9 +11,9 @@ import {
 import { decodeTransferResolver } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
-import { justInTimeCollateral } from "../collateral";
 import { ForwardTransferError } from "../errors";
 
+import { justInTimeCollateral } from "./collateral";
 import { IRouterStore, RouterUpdateType } from "./store";
 
 /**
@@ -93,7 +93,7 @@ export const attemptTransferWithCollateralization = async (
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
           storeError: e.message,
-          shouldCancelSender: false,
+          shouldCancelSender: true,
           ...params,
         }),
       );

@@ -34,7 +34,7 @@ import { config } from "../config";
 import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
 import { ForwardTransferError } from "../errors";
-import * as collateralService from "../collateral";
+import * as collateralService from "../services/collateral";
 
 const testName = "Forwarding";
 

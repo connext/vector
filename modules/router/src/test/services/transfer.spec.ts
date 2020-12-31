@@ -29,7 +29,7 @@ import { config } from "../../config";
 import { ForwardTransferError } from "../../errors";
 import { PrismaStore, RouterUpdateType } from "../../services/store";
 import { cancelCreatedTransfer, attemptTransferWithCollateralization } from "../../services/transfer";
-import * as collateral from "../../collateral";
+import * as collateral from "../../services/collateral";
 
 const testName = "Router transfer service";
 
@@ -41,7 +41,7 @@ describe(testName, () => {
     let nodeService: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
     let chainReader: Sinon.SinonStubbedInstance<VectorChainReader>;
-    let requestCollateral: Sinon.SinonStub;
+    let justInTimeCollateral: Sinon.SinonStub;
 
     // Declare constants
     const routerPublicIdentifier = mkPublicIdentifier("vectorIII");
@@ -75,12 +75,12 @@ describe(testName, () => {
       nodeService = Sinon.createStubInstance(RestServerNodeService);
       store = Sinon.createStubInstance(PrismaStore);
       chainReader = Sinon.createStubInstance(VectorChainReader);
-      requestCollateral = Sinon.stub(collateral, "requestCollateral");
+      justInTimeCollateral = Sinon.stub(collateral, "justInTimeCollateral");
 
       // Default all stubs to return sucessful values
       nodeService.sendIsAliveMessage.resolves(Result.ok({ channelAddress }));
       store.queueUpdate.resolves(undefined);
-      requestCollateral.resolves(Result.ok(undefined));
+      justInTimeCollateral.resolves(Result.ok(undefined));
       nodeService.conditionalTransfer.resolves(Result.ok({ channelAddress, transferId, routingId }));
     });
 
@@ -141,7 +141,7 @@ describe(testName, () => {
       expect(res.getValue()).to.be.deep.eq({ channelAddress, transferId, routingId });
     });
 
-    it("should work if receiver is online and uncollateralized", async () => {
+    it("should work if receiver is online and undercollateralized", async () => {
       const { channel } = createTestChannelState(UpdateType.deposit, {
         channelAddress,
         aliceIdentifier: routerPublicIdentifier,
@@ -163,7 +163,7 @@ describe(testName, () => {
       );
       expect(res.getError()).to.be.undefined;
       expect(res.getValue()).to.be.deep.eq({ channelAddress, transferId, routingId });
-      expect(requestCollateral.callCount).to.be.eq(1);
+      expect(justInTimeCollateral.callCount).to.be.eq(1);
     });
 
     it("should fail if recipient if offline && requireOnline == true", async () => {
@@ -226,7 +226,7 @@ describe(testName, () => {
         assetIds: [mkAddress()],
         balances: [{ to: [routerAddr, recipientAddr], amount: ["0", "53"] }],
       });
-      requestCollateral.resolves(Result.fail(new Error("fail")));
+      justInTimeCollateral.resolves(Result.fail(new Error("fail")));
       const res = await attemptTransferWithCollateralization(
         mkParams(),
         channel,
