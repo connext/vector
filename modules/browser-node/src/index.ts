@@ -203,6 +203,7 @@ export class BrowserNode implements INodeService {
     preImage?: string;
     withdrawalAmount?: string;
   }): Promise<{ withdrawalTx?: string; withdrawalAmount?: string }> {
+    this.logger.info({ params }, "Starting crossChainTransfer");
     const startStage = params.startStage ?? CrossChainTransferStatus.INITIAL;
     const { amount, fromAssetId, fromChainId, toAssetId, toChainId, withdrawalAddress, reconcileDeposit } = params;
 
