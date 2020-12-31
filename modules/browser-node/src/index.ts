@@ -212,7 +212,7 @@ export class BrowserNode implements INodeService {
       reconcileDeposit: reconcileDeposit ?? false,
       toAssetId: toAssetId,
       toChainId: toChainId,
-      withdrawalAddress: withdrawalAddress,
+      withdrawalAddress,
       error: false,
     };
     const senderChannelRes = await this.getStateChannelByParticipants({
@@ -269,7 +269,6 @@ export class BrowserNode implements INodeService {
     const lockHash = soliditySha256(["bytes32"], [preImage]);
 
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
-      this.logger.info({ preImage, lockHash }, "Sending cross-chain transfer");
       const transferParams = {
         amount: amount,
         assetId: fromAssetId,
@@ -284,6 +283,7 @@ export class BrowserNode implements INodeService {
         recipientChainId: toChainId,
         meta: { ...updatedMeta },
       };
+      this.logger.info({ preImage, transferParams }, "Sending cross-chain transfer");
       const transferRes = await this.conditionalTransfer(transferParams);
       if (transferRes.isError) {
         await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, {
