@@ -301,6 +301,16 @@ export class BrowserNode implements INodeService {
     let withdrawalAmount = params.withdrawalAmount;
     if (startStage < CrossChainTransferStatus.TRANSFER_2) {
       // first try to pull the transfer from store in case this was called through the reclaimPendingCrossChainTransfer function
+      const receiverTransferDataPromise = new Promise<ConditionalTransferCreatedPayload>((res) => {
+        this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
+          if (
+            data.transfer.meta.routingId === crossChainTransferId &&
+            data.channelAddress === receiverChannel.channelAddress
+          ) {
+            res(data);
+          }
+        });
+      });
       const transferRes = await this.getTransferByRoutingId({
         channelAddress: receiverChannel.channelAddress,
         routingId: crossChainTransferId,
@@ -314,16 +324,7 @@ export class BrowserNode implements INodeService {
       this.logger.info({ existingReceiverTransfer }, "Existing receiver transfer");
 
       if (!existingReceiverTransfer) {
-        receiverTransferData = await new Promise<ConditionalTransferCreatedPayload>((res) => {
-          this.on(EngineEvents.CONDITIONAL_TRANSFER_CREATED, (data) => {
-            if (
-              data.transfer.meta.routingId === crossChainTransferId &&
-              data.channelAddress === receiverChannel.channelAddress
-            ) {
-              res(data);
-            }
-          });
-        });
+        receiverTransferData = await receiverTransferDataPromise;
         if (!receiverTransferData) {
           this.logger.error(
             { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
