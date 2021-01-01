@@ -143,6 +143,9 @@ const SignUtilityMessageParamsSchema = Type.Object({
   message: Type.String(),
 });
 
+// Ping-pong
+const SendIsAliveParamsSchema = Type.Object({ channelAddress: TAddress, skipCheckIn: Type.Boolean() });
+
 // Restore channel from counterparty
 const RestoreStateParamsSchema = Type.Object({
   counterpartyIdentifier: TPublicIdentifier,
@@ -169,6 +172,9 @@ export namespace EngineParams {
 
   export const SignUtilityMessageSchema = SignUtilityMessageParamsSchema;
   export type SignUtilityMessage = Static<typeof SignUtilityMessageParamsSchema>;
+
+  export const SendIsAliveSchema = SendIsAliveParamsSchema;
+  export type SendIsAlive = Static<typeof SendIsAliveParamsSchema>;
 
   export const GetTransferStateByRoutingIdSchema = GetTransferStateByRoutingIdParamsSchema;
   export type GetTransferStateByRoutingId = Static<typeof GetTransferStateByRoutingIdParamsSchema>;

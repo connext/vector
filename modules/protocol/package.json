@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-protocol",
-  "version": "0.1.0-rc.0",
+  "version": "0.1.0-rc.5",
   "description": "",
   "main": "dist/vector.js",
   "types": "dist/vector.d.ts",
@@ -9,14 +9,14 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc",
-    "test": "ts-mocha --check-leaks --global wallet --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/*.spec.ts'"
+    "test": "nyc ts-mocha --check-leaks --global wallet --exit --timeout 60000 --require src/testing/global-hooks.ts 'src/**/*.spec.ts'"
   },
   "author": "Arjun Bhuptani",
   "license": "MIT",
   "dependencies": {
-    "@connext/vector-contracts": "0.1.0-rc.0",
-    "@connext/vector-types": "0.1.0-rc.0",
-    "@connext/vector-utils": "0.1.0-rc.0",
+    "@connext/vector-contracts": "0.1.0-rc.5",
+    "@connext/vector-types": "0.1.0-rc.5",
+    "@connext/vector-utils": "0.1.0-rc.5",
     "@ethersproject/abi": "5.0.9",
     "@ethersproject/bignumber": "5.0.12",
     "@ethersproject/constants": "5.0.7",
@@ -42,6 +42,7 @@
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "mocha": "8.2.0",
+    "nyc": "15.1.0",
     "pino-pretty": "4.3.0",
     "sinon": "9.2.1",
     "ts-mocha": "8.0.0",

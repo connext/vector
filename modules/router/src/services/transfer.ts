@@ -3,21 +3,24 @@ import {
   FullTransferState,
   INodeService,
   IVectorChainReader,
-  NodeError,
   NodeParams,
   NodeResponses,
   Result,
+  NodeError,
 } from "@connext/vector-types";
-import { decodeTransferResolver, getBalanceForAssetId } from "@connext/vector-utils";
-import { BigNumber } from "ethers";
+import { decodeTransferResolver } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
-import { requestCollateral } from "../collateral";
 import { ForwardTransferError } from "../errors";
 
+import { justInTimeCollateral } from "./collateral";
 import { IRouterStore, RouterUpdateType } from "./store";
 
-export const transferWithAutoCollateralization = async (
+/**
+ * Will check liveness and queue transfer if recipient is not online.
+ * Used when forwarding transfers, NOT during checkIn
+ */
+export const attemptTransferWithCollateralization = async (
   params: NodeParams.ConditionalTransfer,
   channel: FullChannelState,
   routerPublicIdentifier: string,
@@ -25,88 +28,158 @@ export const transferWithAutoCollateralization = async (
   store: IRouterStore,
   chainReader: IVectorChainReader,
   logger: BaseLogger,
-  enqueue = true,
+  requireOnline = true,
 ): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
-  // check if there is sufficient collateral
-  const routerBalance = getBalanceForAssetId(
+  // NOTE: collateralizing takes a long time, so the liveness check may
+  // not hold for the transfer even if it works here. instead, should
+  // check for liveness post-collateral attempt and queue then. (this is
+  // ok depsite the potential 2 timeouts because nobody is waiting on the
+  // completion of these functions)
+
+  // collateralize if needed
+  const collateralRes = await justInTimeCollateral(
     channel,
     params.assetId,
-    routerPublicIdentifier === channel.aliceIdentifier ? "alice" : "bob",
+    routerPublicIdentifier,
+    nodeService,
+    chainReader,
+    logger,
+    params.amount,
   );
+  const collateralError = collateralRes.getError();
 
-  let collateralError: string | undefined = undefined;
-  if (BigNumber.from(routerBalance).lt(params.amount)) {
-    logger.info({ routerBalance, recipientAmount: params.amount }, "Requesting collateral to cover transfer");
-    const requestCollateralRes = await requestCollateral(
-      channel,
-      params.assetId,
-      routerPublicIdentifier,
-      nodeService,
-      chainReader,
-      logger,
-      undefined,
-      params.amount,
+  // If it failed to collateralize, return a failure if the payment
+  // requires that the recipient is online. (offline collateral failures
+  // handled after queueing/availability checks)
+  if (collateralError && requireOnline) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        ...params,
+        channelAddress: channel.channelAddress,
+        shouldCancelSender: true,
+      }),
     );
-    collateralError = requestCollateralRes.getError()?.context?.nodeError;
+  }
 
-    if (requestCollateralRes.isError && !enqueue) {
-      // Fail without enqueueing
+  // check if recipient is available
+  let available = false;
+  try {
+    const online = await nodeService.sendIsAliveMessage({ channelAddress: params.channelAddress, skipCheckIn: true });
+    available = !online.isError;
+  } catch (e) {
+    logger.warn({ error: e.message }, "Failed to ping recipient");
+  }
+
+  // if offline, and require online, fail payment
+  if (!available && requireOnline) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
+        shouldCancelSender: true,
+        ...params,
+      }),
+    );
+  }
+
+  // if offline and offline payment, queue creation
+  if (!available && !requireOnline) {
+    logger.info(
+      { channel: channel.channelAddress, routingId: params.meta?.routingid },
+      "Receiver offline, queueing transfer",
+    );
+    try {
+      await store.queueUpdate(channel.channelAddress, RouterUpdateType.TRANSFER_CREATION, params);
+    } catch (e) {
+      // Handle queue failure
       return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-          ...params,
-          channelAddress: channel.channelAddress,
+        new ForwardTransferError(ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
+          storeError: e.message,
           shouldCancelSender: true,
+          ...params,
         }),
       );
     }
-    // Fallthrough, transfer attempt will force an enqueue
+    // return undefined to show transfer queued
+    return Result.ok(undefined);
+  }
+
+  // if available, but collateralizing failed, return failure
+  // NOTE: this check is performed *after* queueing update to
+  // ensure that offline collateral failures are discarded in
+  // the case where the receiver is online (but the payment doesnt
+  // explicitly require it)
+  if (available && collateralError) {
+    // NOTE: should always cancel the sender payment in this case
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        ...params,
+        channelAddress: channel.channelAddress,
+        shouldCancelSender: true,
+      }),
+    );
+  }
+
+  // safe to create transfer
+  const transfer = await nodeService.conditionalTransfer(params);
+  return transfer.isError
+    ? Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
+          transferError: transfer.getError()?.message,
+          transferContext: transfer.getError()?.context,
+          // if its a timeout, could be withholding sig, so do not cancel
+          // sender transfer
+          shouldCancelSender: false,
+          ...params,
+        }),
+      )
+    : (transfer as Result<NodeResponses.ConditionalTransfer>);
+};
+
+/**
+ * Will transfer + collateralize if needed to handle payment. Does
+ * NOT check liveness, and does NOT queue updates. (Used in during
+ * counterparty checkIn)
+ */
+export const transferWithCollateralization = async (
+  params: NodeParams.ConditionalTransfer,
+  channel: FullChannelState,
+  routerPublicIdentifier: string,
+  nodeService: INodeService,
+  chainReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
+  // collateralize if needed
+  const collateralRes = await justInTimeCollateral(
+    channel,
+    params.assetId,
+    routerPublicIdentifier,
+    nodeService,
+    chainReader,
+    logger,
+    params.amount,
+  );
+
+  if (collateralRes.isError) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        ...params,
+        channelAddress: channel.channelAddress,
+      }),
+    );
   }
 
   // attempt to transfer
   // NOTE: as soon as you try to create a transfer with the receiver,
   // you CANNOT cancel the sender transfer until it has expired.
-  let transferError = collateralError;
-  if (!collateralError) {
-    const transfer = await nodeService.conditionalTransfer(params);
-    if (!transfer.isError) {
-      return transfer as Result<NodeResponses.ConditionalTransfer>;
-    }
-    transferError = transfer.getError()?.message;
-  }
-
-  // error transferring
-  if (!enqueue || transferError !== NodeError.reasons.Timeout) {
-    // do not enqueue transfer creation
-    return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
-        transferError,
-        // if its a timeout, could be withholding sig, so do not cancel
-        // sender transfer
-        shouldCancelSender: false, //transferError !== NodeError.reasons.Timeout,
-        ...params,
-      }),
-    );
-  }
-
-  // queue the transfer creation
-  logger.info(
-    { channel: channel.channelAddress, routingId: params.meta?.routingid },
-    "Receiver offline, queueing transfer",
-  );
-  try {
-    await store.queueUpdate(channel.channelAddress, RouterUpdateType.TRANSFER_CREATION, params);
-  } catch (e) {
-    // Handle queue failure
-    return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
-        storeError: e.message,
-        shouldCancelSender: false,
-        ...params,
-      }),
-    );
-  }
-  // return undefined to show transfer queued
-  return Result.ok(undefined);
+  const transfer = await nodeService.conditionalTransfer(params);
+  return transfer.isError
+    ? Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
+          transferError: transfer.getError()?.message,
+          transferContext: transfer.getError()?.context,
+          ...params,
+        }),
+      )
+    : (transfer as Result<NodeResponses.ConditionalTransfer>);
 };
 
 // Will return undefined IFF properly enqueued
@@ -162,15 +235,16 @@ export const cancelCreatedTransfer = async (
     transferResolver: decodeTransferResolver(encodedCancel, resolverEncoding),
     meta: {
       cancellationReason,
-      cancellationContext: { transferId: toCancel.transferId, channel: toCancel.channelAddress },
+      cancellationContext: { ...context },
     },
   };
   const resolveResult = await nodeService.resolveTransfer(resolveParams);
+  console.log("resolveResult", resolveResult.toJson());
   if (!resolveResult.isError) {
     return resolveResult as Result<NodeResponses.ResolveTransfer>;
   }
   // Failed to cancel sender side payment
-  if (enqueue) {
+  if (enqueue && resolveResult.getError()!.message === NodeError.reasons.Timeout) {
     try {
       await store.queueUpdate(toCancel.channelAddress, RouterUpdateType.TRANSFER_RESOLUTION, resolveParams);
       logger.warn({ ...resolveParams }, "Cancellation enqueued");

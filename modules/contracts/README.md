@@ -283,4 +283,4 @@ A withdraw from the channel is done by locking up some funds in a transfer and "
 
 ## Security
 
-These contracts have not yet been audited, but an audit is forthcoming. Stay tuned!
+These contracts were audited in Dec 2020 -- a report is publicly available [here](https://drive.google.com/file/d/1l42vxzHwLXrKU10v3FutG2DWthU43vB8/view).

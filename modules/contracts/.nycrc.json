@@ -1,0 +1,6 @@
+{
+  "cache": false,
+  "extension": [".ts"],
+  "include": ["src.ts/**"],
+  "exclude": ["src.ts/tests/**"]
+}

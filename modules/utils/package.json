@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-utils",
-  "version": "0.1.0-rc.0",
+  "version": "0.1.0-rc.5",
   "description": "Crypto & other utils for vector state channels",
   "main": "dist/index.js",
   "files": [
@@ -10,10 +10,10 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc",
-    "test": "ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
+    "test": "nyc ts-mocha --check-leaks --exit 'src/**/*.spec.ts'"
   },
   "dependencies": {
-    "@connext/vector-types": "0.1.0-rc.0",
+    "@connext/vector-types": "0.1.0-rc.5",
     "@ethereum-waffle/chai": "3.2.0",
     "@ethersproject/abi": "5.0.9",
     "@ethersproject/abstract-provider": "5.0.7",
@@ -39,6 +39,7 @@
     "eth-crypto": "1.8.0",
     "evt": "1.9.2",
     "mocha": "8.2.0",
+    "nyc": "15.1.0",
     "pino": "6.7.0",
     "pino-pretty": "4.3.0",
     "ts-natsutil": "1.1.1"

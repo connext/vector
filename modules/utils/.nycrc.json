@@ -1,0 +1,5 @@
+{
+  "cache": false,
+  "extension": [".ts"],
+  "include": ["src/**"]
+}

@@ -91,11 +91,6 @@ const func: DeployFunction = async () => {
     await registerTransfer("Withdraw", deployer);
     await registerTransfer("HashlockTransfer", deployer);
 
-    // Don't migrate to mainnet until audit is finished
-  } else if (chainId === "1") {
-    log.info(`Running mainnet migration`);
-    throw new Error(`Contract migration for chain ${chainId} is not supported yet`);
-
     // Default: run standard migration
   } else {
     log.info(`Running testnet migration`);

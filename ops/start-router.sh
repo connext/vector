@@ -44,6 +44,7 @@ messaging_url=$(getConfig messagingUrl)
 mnemonic=$(getConfig mnemonic)
 production=$(getConfig production)
 public_port=$(getConfig port)
+logdna_key=$(getConfig logDnaKey)
 
 chain_providers=$(echo "$config" | jq '.chainProviders' | tr -d '\n\r ')
 default_providers=$(jq '.chainProviders' "$root/ops/config/node.default.json" | tr -d '\n\r ')
@@ -252,6 +253,13 @@ bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
 cadvisor_image="gcr.io/google-containers/cadvisor:latest"
 bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
 
+# To save time, only pull logdna image if it will be used
+if [[ -z ${logdna_key+x} ]]
+then
+  logdna_image="logdna/logspout:v1.2.0"
+  bash "$root/ops/pull-images.sh" "$logdna_image" > /dev/null
+fi
+
 prometheus_services="prometheus:
     image: $prometheus_image
     $common
@@ -284,11 +292,30 @@ grafana_service="grafana:
       - '$root/ops/grafana/grafana:/etc/grafana'
       - '$root/ops/grafana/dashboards:/etc/dashboards'"
 
+logdna_service="logdna:
+    $common
+    image: '$logdna_image'
+    environment:
+      LOGDNA_KEY: '$logdna_key'
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'"
+
 # TODO we probably want to remove observability from dev env once it's working
 # bc these make indra take a log longer to wake up
-observability_services="$prometheus_services
+
+# Will only use logdna if in prod && API key provided in env
+if [ "$production" == "true" ] && [ -z ${logdna_key+x} ]
+then
+  observability_services="$logdna_service
+  
+  $prometheus_services
 
   $grafana_service"
+else
+  observability_services="$prometheus_services
+
+  $grafana_service"
+fi
 
 ####################
 # Launch stack

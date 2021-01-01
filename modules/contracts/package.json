@@ -1,6 +1,6 @@
 {
   "name": "@connext/vector-contracts",
-  "version": "0.1.0-rc.0",
+  "version": "0.1.0-rc.5",
   "license": "ISC",
   "description": "Smart contracts powering Connext's minimalist channel platform",
   "keywords": [
@@ -24,12 +24,12 @@
     "prettier": "prettier --write './src.sol/**/*.sol'",
     "build": "rm -rf dist && hardhat compile && tsc && npm run copy-wasm",
     "build-bundle": "rm -f dist/package.json && webpack --config ops/webpack.config.js",
-    "test": "mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
+    "test": "nyc mocha --exit --require ts-node/register --require hardhat/register --timeout 60000 'src.ts/**/*.spec.ts'"
   },
   "dependencies": {
     "@connext/pure-evm-wasm": "0.1.4",
-    "@connext/vector-types": "0.1.0-rc.0",
-    "@connext/vector-utils": "0.1.0-rc.0",
+    "@connext/vector-types": "0.1.0-rc.5",
+    "@connext/vector-utils": "0.1.0-rc.5",
     "@ethersproject/abi": "5.0.9",
     "@ethersproject/abstract-provider": "5.0.7",
     "@ethersproject/abstract-signer": "5.0.9",
@@ -70,6 +70,7 @@
     "event-target-shim": "5.0.1",
     "hardhat-typechain": "0.3.3",
     "mocha": "8.2.0",
+    "nyc": "15.1.0",
     "prettier": "2.2.0",
     "prettier-plugin-solidity": "1.0.0-beta.1",
     "solc": "0.7.1",

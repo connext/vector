@@ -366,6 +366,18 @@ const PostSendDefundTransferTxResponseSchema = {
   }),
 };
 
+// IS ALIVE
+const PostSendIsAliveBodySchema = Type.Intersect([
+  EngineParams.SendIsAliveSchema,
+  Type.Object({ publicIdentifier: TPublicIdentifier }),
+]);
+
+const PostSendIsAliveResponseSchema = {
+  200: Type.Object({
+    channelAddress: TAddress,
+  }),
+};
+
 // Namespace exports
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace NodeParams {
@@ -452,6 +464,9 @@ export namespace NodeParams {
 
   export const SendDefundTransferTxSchema = PostSendDefundTransferTxBodySchema;
   export type SendDefundTransferTx = Static<typeof SendDefundTransferTxSchema>;
+
+  export const SendIsAliveSchema = PostSendIsAliveBodySchema;
+  export type SendIsAlive = Static<typeof SendIsAliveSchema>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -544,4 +559,7 @@ export namespace NodeResponses {
 
   export const SendDefundTransferTxSchema = PostSendDefundTransferTxResponseSchema;
   export type SendDefundTransferTx = Static<typeof PostSendDefundTransferTxResponseSchema["200"]>;
+
+  export const SendIsAliveSchema = PostSendIsAliveResponseSchema;
+  export type SendIsAlive = Static<typeof PostSendIsAliveResponseSchema["200"]>;
 }

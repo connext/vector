@@ -6,7 +6,7 @@ This guide will take you through the e2e process of configuring and deploying a 
 
 Lets say you want to deploy a vector node + router to `https://vector.example.com` (we'll call this url `$DOMAINNAME`).
 
-!!! Info 
+!!! Info
     If you're planning to launch an instance on your local machine or to a non-Ubuntu OS, you can skip this section and instead install the following dependencies yourself:
     - `make`: Probably already installed, otherwise install w `brew install make` or `apt install make` or similar.
     - `jq`: Probably not installed yet, install w `brew install jq` or `apt install jq` or similar.
@@ -21,7 +21,7 @@ Set up DNS so that `$DOMAINNAME` points to `$SERVER_IP`. If you're using CloudFl
 
 We won't need to ssh into this server right away, most of the setup will be done locally. Start by cloning the repo to your local machine if you haven't already and `cd` into it.
 
-``` bash
+```bash
 git clone git@github.com:connext/vector.git
 cd vector
 ```
@@ -98,7 +98,7 @@ In the above command, `$mnemonic` controls a funded account on whatever chain yo
 
 After setting up dependencies, ssh into the server and enter the Vector repo:
 
-```
+```sh
 ssh new-vector
 cd vector
 ```
@@ -109,7 +109,7 @@ As we mentioned on the [Router Basics](./basics.md) page, the router sits on top
 
 Default router configuration can be found in `ops/config/router.default.json`. To setup your custom config, start out by copying this file to `router.config.json`:
 
-```
+```sh
 cp ops/config/router.default.json router.config.json
 ```
 
@@ -130,18 +130,19 @@ The router's node can be configured by adding any of the following keys to `rout
 |    `awsAccessKey`   |  `string` |  An API KEY secret that to authenticate on a remote AWS S3 bucket for storing db backups.                                |
 |     `domainName`    |  `string` |    If provided, https will be auto-configured & the stack will be exposed on port 443.                                   |
 |     `production`    | `boolean` | If `false`, ops will automatically build anything that isn't available locally. If `true, nothing will be built locally. |
+|     `logDnaKey`     | `string`  |             An API KEY secret that is used to connect to logdna for parsing and viewing router logs.                     |
 
 ### Setting Up Supported Chains
 
 To add support for one or many chains on this router, add a `chainAddresses` and `chainProviders` key to the `router.config.json` file in the root of the vector repo:
 
-``` bash
+```bash
 nano router.config.json
 ```
 
 Recall that you deployed contracts to the chain(s) you want to support [earlier in this guide](#contract-deployment). If you open up your `address-book.json`, you should find deployed addresses for your chain indexed by [chainId](https://chainid.network). Copy them over into the config file like below. Also, plug in a providerURL into your `chainProvider`s object indexed at the same chainId.
 
-``` json
+```json
 // Example Addresses
 "chainAddresses": {
     "4": {
@@ -166,7 +167,7 @@ In order to forward transfers, routers first need to have liquidity (i.e. collat
 
 An example profile just for Eth looks like the following. Note that we use a combination of `chainId` and `assetId` to represent a given asset (where `0x0` is the "base" asset of the chain):
 
-``` json
+```json
 // E.g. Eth
 {
     "chainId": 1,
@@ -179,7 +180,7 @@ An example profile just for Eth looks like the following. Note that we use a com
 
 You can add profiles by setting them under the `rebalanceProfile` key in your `router.config.json`:
 
-``` json
+```json
 "rebalanceProfiles": [
     {
       "chainId": 1,
@@ -232,10 +233,9 @@ Now that we have our configuration complete, we can spin up the router!
 
 This part is pretty easy - in the root of the vector repo, do:
 
-```
+```sh
 make restart-router
 ```
 
 !!! Tip
     `make start-$STACK` is optimized for development & will build everything that's out of date before starting the stack. `make restart-$STACK` on the other hand, won't try to build anything before starting the stack so is better to use in production.
-
