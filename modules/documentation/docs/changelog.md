@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.0-rc.9
+
+- \[router/server-node\] optionally skip checkin on start
+
 ## 0.1.0-rc.8
 
 - \[messaging\] add `undefined` check on error handling
@@ -25,6 +29,7 @@
 ## 0.1.0-rc.1
 
 - \[router\] add isAlive check before forwarding transfer to increase odds of successful transfer
+
 ## 0.1.0-rc.0
 
 - \[contracts\] audit results implemented

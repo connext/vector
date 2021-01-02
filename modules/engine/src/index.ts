@@ -75,6 +75,7 @@ export class VectorEngine implements IVectorEngine {
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
     validationService?: IExternalValidation,
+    skipCheckIn = false,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
       messaging,
@@ -97,6 +98,10 @@ export class VectorEngine implements IVectorEngine {
     );
     await engine.setupListener();
     logger.debug({}, "Setup engine listeners");
+    if (skipCheckIn) {
+      logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
+      return engine;
+    }
     await sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
