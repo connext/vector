@@ -1242,7 +1242,7 @@ describe("validateAndApplyInboundUpdate", () => {
         {
           name: "no transferResolver",
           overrides: { transferResolver: undefined },
-          error: "should have required property 'transferResolver'",
+          error: "should have required property '.transferResolver'",
         },
         {
           name: "malformed transferResolver",
