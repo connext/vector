@@ -396,7 +396,7 @@ export class NatsMessagingService implements IMessagingService {
     subscribedTo.forEach((subscribedSubject) => {
       let subjectIncludesAllSubstrings = true;
       substrsToMatch.forEach((match) => {
-        if (!subscribedSubject.includes(match) && match !== ``) {
+        if (!(subscribedSubject ?? "").includes(match) && match !== ``) {
           subjectIncludesAllSubstrings = false;
         }
       });
@@ -458,9 +458,12 @@ export class NatsMessagingService implements IMessagingService {
       const { result } = this.parseIncomingMessage<R>(msg);
       return result;
     } catch (e) {
+      this.log.error({ error: e.message, subject: subjectSuffix, data: data.toJson() }, "Sending message failed");
       return Result.fail(
         new MessagingError(
-          e.message.includes("Request timed out") ? MessagingError.reasons.Timeout : MessagingError.reasons.Unknown,
+          (e.message ?? "").includes("Request timed out")
+            ? MessagingError.reasons.Timeout
+            : MessagingError.reasons.Unknown,
           {
             error: e.message,
           },
