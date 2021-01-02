@@ -45,7 +45,7 @@ server.addHook("onReady", async () => {
   const persistedNodes = await store.getNodeIndexes();
   for (const nodeIndex of persistedNodes) {
     logger.info({ node: nodeIndex }, "Rehydrating persisted node");
-    await createNode(nodeIndex.index, store, storedMnemonic);
+    await createNode(nodeIndex.index, store, storedMnemonic, config.skipCheckIn ?? false);
   }
 });
 
@@ -707,7 +707,7 @@ server.post<{ Body: NodeParams.CreateNode }>(
         store.setMnemonic(request.body.mnemonic);
         storedMnemonic = request.body.mnemonic;
       }
-      const newNode = await createNode(request.body.index, store, storedMnemonic!);
+      const newNode = await createNode(request.body.index, store, storedMnemonic!, request.body.skipCheckIn ?? false);
       return reply.status(200).send({
         index: request.body.index,
         publicIdentifier: newNode.publicIdentifier,
