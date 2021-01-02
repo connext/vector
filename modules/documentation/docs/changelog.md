@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.0-rc.8
+
+- \[messaging\] add `undefined` check on error handling
+
 ## 0.1.0-rc.7
 
 - \[types\] relax `transferResolver` schema to allow for ethers decoded values
