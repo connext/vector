@@ -45,13 +45,14 @@ export class RestServerNodeService implements INodeService {
     logger: BaseLogger,
     evts?: EventCallbackConfig,
     index?: number,
+    skipCheckIn?: boolean,
   ): Promise<RestServerNodeService> {
     const service = new RestServerNodeService(serverNodeUrl, logger, evts);
     // If an index is provided, the service will only host a single engine
     // and the publicIdentifier will be automatically included in parameters
     if (typeof index === "number") {
       // Create the public identifier and signer address
-      const node = await service.createNode({ index });
+      const node = await service.createNode({ index, skipCheckIn });
       if (node.isError) {
         logger.error({ error: node.getError()!.message, method: "connect" }, "Failed to create node");
         throw node.getError();

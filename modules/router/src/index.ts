@@ -71,6 +71,7 @@ server.addHook("onReady", async () => {
     logger.child({ module: "RouterNodeService" }),
     evts,
     0,
+    true,
   );
   const chainService = new VectorChainReader(
     hydrateProviders(config.chainProviders),
