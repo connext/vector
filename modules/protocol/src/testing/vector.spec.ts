@@ -418,7 +418,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferResolver is undefined",
           params: { ...validParams, transferResolver: undefined },
-          error: "should have required property 'transferResolver'",
+          error: "should have required property '.transferResolver'",
         },
       ];
 

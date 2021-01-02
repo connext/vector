@@ -601,7 +601,7 @@ describe("VectorEngine", () => {
             method: "chan_resolveTransfer",
             params: { channelAddress: validAddress, transferId: getRandomBytes32() },
           },
-          error: missingParam("transferResolver"),
+          error: missingParam(".transferResolver"),
         },
         {
           name: "chan_resolveTransfer malformed parameter channelAddress",
