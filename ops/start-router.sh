@@ -253,8 +253,12 @@ bash "$root/ops/pull-images.sh" "$prometheus_image" > /dev/null
 cadvisor_image="gcr.io/google-containers/cadvisor:latest"
 bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
 
-logdna_image="logdna/logspout:v1.2.0"
-bash "$root/ops/pull-images.sh" "$logdna_image" > /dev/null
+# To save time, only pull logdna image if it will be used
+if [[ -z ${logdna_key+x} ]]
+then
+  logdna_image="logdna/logspout:v1.2.0"
+  bash "$root/ops/pull-images.sh" "$logdna_image" > /dev/null
+fi
 
 prometheus_services="prometheus:
     image: $prometheus_image
@@ -298,7 +302,9 @@ logdna_service="logdna:
 
 # TODO we probably want to remove observability from dev env once it's working
 # bc these make indra take a log longer to wake up
-if [[ "$production" == "true" ]]
+
+# Will only use logdna if in prod && API key provided in env
+if [ "$production" == "true" ] && [ -z ${logdna_key+x} ]
 then
   observability_services="$logdna_service
   

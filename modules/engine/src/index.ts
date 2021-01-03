@@ -74,6 +74,7 @@ export class VectorEngine implements IVectorEngine {
     chainService: IVectorChainService,
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
+    skipCheckIn: boolean,
     validationService?: IExternalValidation,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
@@ -83,6 +84,7 @@ export class VectorEngine implements IVectorEngine {
       signer,
       chainService,
       logger.child({ module: "VectorProtocol" }),
+      skipCheckIn,
       validationService,
     );
     const engine = new VectorEngine(
@@ -97,7 +99,11 @@ export class VectorEngine implements IVectorEngine {
     );
     await engine.setupListener();
     logger.debug({}, "Setup engine listeners");
-    await sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
+    if (!skipCheckIn) {
+      sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
+    } else {
+      logger.warn("Skipping isAlive broadcast because of skipCheckIn config");
+    }
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
   }

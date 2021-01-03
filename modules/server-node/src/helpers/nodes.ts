@@ -38,7 +38,12 @@ export const deleteNodes = async (store: IServerNodeStore): Promise<void> => {
   await store.removeNodeIndexes();
 };
 
-export const createNode = async (index: number, store: IServerNodeStore, mnemonic: string): Promise<IVectorEngine> => {
+export const createNode = async (
+  index: number,
+  store: IServerNodeStore,
+  mnemonic: string,
+  skipCheckIn: boolean,
+): Promise<IVectorEngine> => {
   const method = "createNode";
   const pk = Wallet.fromMnemonic(mnemonic, getPath(index)).privateKey;
   const signer = new ChannelSigner(pk);
@@ -75,6 +80,8 @@ export const createNode = async (index: number, store: IServerNodeStore, mnemoni
     vectorTx,
     config.chainAddresses,
     logger.child({ module: "VectorEngine" }),
+    skipCheckIn,
+    undefined,
   );
 
   for (const event of Object.values(EngineEvents)) {

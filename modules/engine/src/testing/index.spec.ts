@@ -52,6 +52,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(VectorChainService),
       chainAddresses,
       log,
+      false,
     );
     expect(engine).to.be.instanceOf(VectorEngine);
   });
@@ -65,6 +66,7 @@ describe("VectorEngine", () => {
       Sinon.createStubInstance(VectorChainService),
       chainAddresses,
       log,
+      false,
       {
         validateInbound: (update, state, transfer) => Promise.resolve(Result.ok(undefined)),
         validateOutbound: (params, state, transfer) => Promise.resolve(Result.ok(undefined)),
@@ -153,6 +155,7 @@ describe("VectorEngine", () => {
           Sinon.createStubInstance(VectorChainService),
           chainAddresses,
           log,
+          false,
         );
         const rpc: EngineParams.RpcRequest = { ...test.overrides } as any;
         await expect(engine.request(rpc)).rejectedWith(test.error);
@@ -601,7 +604,7 @@ describe("VectorEngine", () => {
             method: "chan_resolveTransfer",
             params: { channelAddress: validAddress, transferId: getRandomBytes32() },
           },
-          error: missingParam("transferResolver"),
+          error: missingParam(".transferResolver"),
         },
         {
           name: "chan_resolveTransfer malformed parameter channelAddress",
@@ -796,6 +799,7 @@ describe("VectorEngine", () => {
             Sinon.createStubInstance(VectorChainService),
             chainAddresses,
             log,
+            false,
           );
           const rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
           await expect(engine.request(rpc)).rejectedWith(test.error);
