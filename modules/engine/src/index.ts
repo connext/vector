@@ -74,8 +74,8 @@ export class VectorEngine implements IVectorEngine {
     chainService: IVectorChainService,
     chainAddresses: ChainAddresses,
     logger: pino.BaseLogger,
+    skipCheckIn: boolean,
     validationService?: IExternalValidation,
-    skipCheckIn = false,
   ): Promise<VectorEngine> {
     const vector = await Vector.connect(
       messaging,
