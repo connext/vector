@@ -84,6 +84,7 @@ export class VectorEngine implements IVectorEngine {
       signer,
       chainService,
       logger.child({ module: "VectorProtocol" }),
+      skipCheckIn,
       validationService,
     );
     const engine = new VectorEngine(
@@ -98,11 +99,11 @@ export class VectorEngine implements IVectorEngine {
     );
     await engine.setupListener();
     logger.debug({}, "Setup engine listeners");
-    if (skipCheckIn) {
-      logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
-      return engine;
+    if (!skipCheckIn) {
+      sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
+    } else {
+      logger.warn("Skipping isAlive broadcast because of skipCheckIn config");
     }
-    sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
   }
