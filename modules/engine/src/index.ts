@@ -102,7 +102,7 @@ export class VectorEngine implements IVectorEngine {
       logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
       return engine;
     }
-    await sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
+    sendIsAlive(engine.signer, engine.messaging, engine.store, engine.logger);
     logger.info({ vector: vector.publicIdentifier }, "Vector Engine connected 🚀!");
     return engine;
   }
