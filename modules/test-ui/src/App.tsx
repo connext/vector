@@ -616,6 +616,10 @@ function App() {
                       </Select>
                     </Form.Item>
 
+                    <Form.Item label="Withdrawal Address" name="withdrawalAddress">
+                      <Input placeholder="0x..." />
+                    </Form.Item>
+
                     <Form.Item wrapperCol={{ offset: 6 }}>
                       <Button type="primary" htmlType="submit" loading={transferLoading}>
                         Transfer
