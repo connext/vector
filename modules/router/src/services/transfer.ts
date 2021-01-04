@@ -30,6 +30,7 @@ export const attemptTransferWithCollateralization = async (
   logger: BaseLogger,
   requireOnline = true,
 ): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
+  logger.info({ params, method: "attemptTransferWithCollateralization" }, "Starting method");
   // NOTE: collateralizing takes a long time, so the liveness check may
   // not hold for the transfer even if it works here. instead, should
   // check for liveness post-collateral attempt and queue then. (this is
@@ -54,9 +55,11 @@ export const attemptTransferWithCollateralization = async (
   if (collateralError && requireOnline) {
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-        ...params,
+        params,
         channelAddress: channel.channelAddress,
         shouldCancelSender: true,
+        reason: "Failed justInTimeCollateral",
+        collateralError,
       }),
     );
   }
@@ -75,7 +78,8 @@ export const attemptTransferWithCollateralization = async (
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
         shouldCancelSender: true,
-        ...params,
+        params,
+        reason: "Receiver offline",
       }),
     );
   }
@@ -94,7 +98,8 @@ export const attemptTransferWithCollateralization = async (
         new ForwardTransferError(ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
           storeError: e.message,
           shouldCancelSender: true,
-          ...params,
+          params,
+          reason: "Failed store.queueUpdate",
         }),
       );
     }
@@ -111,9 +116,11 @@ export const attemptTransferWithCollateralization = async (
     // NOTE: should always cancel the sender payment in this case
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-        ...params,
+        params,
         channelAddress: channel.channelAddress,
         shouldCancelSender: true,
+        reason: "Failed justInTimeCollateral",
+        collateralError,
       }),
     );
   }
@@ -128,7 +135,7 @@ export const attemptTransferWithCollateralization = async (
           // if its a timeout, could be withholding sig, so do not cancel
           // sender transfer
           shouldCancelSender: false,
-          ...params,
+          params,
         }),
       )
     : (transfer as Result<NodeResponses.ConditionalTransfer>);
