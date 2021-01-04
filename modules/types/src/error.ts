@@ -146,8 +146,8 @@ export class ValidationError extends VectorError {
     TransferNotFound: "No transfer found in storage",
     TransferResolved: "Transfer has already been resolved",
     TransferTimeoutAboveChannel: `Transfer timeout must be less than the channel timeout`,
-    TransferTimeoutBelowMin: `Transfer timeout above minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
-    TransferTimeoutAboveMax: `Transfer timeout below maximum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    TransferTimeoutBelowMin: `Transfer timeout below minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
+    TransferTimeoutAboveMax: `Transfer timeout above maximum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
     UnrecognizedType: "Unrecognized update type",
   } as const;
 
