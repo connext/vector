@@ -60,6 +60,11 @@ if [[ -z "$version" || "$version" == "$current_version" ]]
 then echo "Aborting: A new, unique $project version is required" && exit 1
 fi
 
+# Check the changelog is updated
+if [ ! "$(grep "$version$" "$root/modules/documentation/docs/changelog.md")"  ]
+then echo "Aborting: Make sure you've updated the changelog for $version" && exit 1
+fi
+
 echo "Verifying..."
 if [[ -n "$(curl -sflL "$registry_url/${project}_node/tags/$version")" ]]
 then echo "Aborting: This version already exists on docker hub" && exit 1

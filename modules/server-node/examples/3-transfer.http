@@ -4,8 +4,8 @@
 @daveUrl = http://localhost:8006
 @rogerUrl = http://localhost:8007
 @aliceBobChannel = 0xD7b60870a3a0D52A2b9F7daBe5DCaB8EDC5bCD4e
-@carolRogerChannel = 0x08d324c5CA1CC52c185f9b026a7ed50994632167
-@daveRogerChannel = 0x05b2FFe2814240aa788FcD38Fe0DB29354E6d789
+@carolRogerChannel = 0x66920C67620b492C3FF7f904af6DC3a8B58D7C9C
+@daveRogerChannel = 0x7E513218D56ef4465208d587e9eff56e9035cd02
 @adminToken = cxt1234
 @alicePublicIdentifier = vector8WxfqTu8EC2FLM6g4y6TgbSrx4EPP9jeDFQk3VBsBM7Jv8NakR
 @bobPublicIdentifier = vector5ArRsL26avPNyfvJd2qMAppsEVeJv11n31ex542T9gCd5B1cP3
@@ -14,19 +14,19 @@
 @rogerPublicIdentifier = vector8Uz1BdpA9hV5uTm6QUv5jj1PsUyCH8m8ciA94voCzsxVmrBRor
 @chainId = 1337
 
-# 0.01 ETH
-@ethAmount = 1000000000000000
+# 0.1 ETH
+@ethAmount = 10000000000000000
 
 @preImage = 0x95e02c8389826c723217d30761cfac3e7bd76e6e4c2aa523213a6ddc67029e95
 @lockHash = 0x7783846bebe64b2dbf16ca981d27a73ada4bc6976e5be3ef92f0057af8368ce1
 
-@routingId = 0x5e7af61c2bd4243ea005c3e450dbee3feac55fef230e47db2cfa4e5394bd6942
+@routingId = 0x5e7af61c2bd4243ea005c3e450dbee3faec55fda230e47db2cfa4e5394bd6942
 @transferId = 0x
 
-@nodeUrl = {{aliceUrl}}
-@nodePublicIdentifier = {{alicePublicIdentifier}}
-@counterpartyPublicIdentifier = {{bobPublicIdentifier}}
-@channel = {{aliceBobChannel}}
+@nodeUrl = {{daveUrl}}
+@nodePublicIdentifier = {{davePublicIdentifier}}
+@recipientPublicIdentifier = {{carolPublicIdentifier}}
+@channel = {{daveRogerChannel}}
 
 ##############
 ### Create Transfer ETH
@@ -43,12 +43,13 @@ Content-Type: application/json
     "lockHash": "{{lockHash}}",
     "expiry": "0"
   },
-  "recipient": "{{counterpartyPublicIdentifier}}",
+  "recipient": "{{recipientPublicIdentifier}}",
   "meta": {
     "routingId": "{{routingId}}",
-    "hello": "world"
+    "hello": "world",
+    "requireOnline": false
   },
-  "timeout": "43200"
+  "timeout": "48000"
 }
 
 ##############

@@ -22,7 +22,7 @@ import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./h
 
 export const logger = pino();
 logger.info({ config }, "Loaded config from environment");
-const server = fastify({ logger, pluginTimeout: 0, disableRequestLogging: config.logLevel !== "debug" });
+const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
   origin: "*",
   methods: ["GET", "PUT", "POST", "OPTIONS"],

@@ -43,6 +43,7 @@ export class Vector implements IVectorProtocol {
     private readonly chainReader: IVectorChainReader,
     private readonly externalValidationService: IExternalValidation,
     private readonly logger: pino.BaseLogger,
+    private readonly skipCheckIn: boolean,
   ) {}
 
   static async connect(
@@ -52,6 +53,7 @@ export class Vector implements IVectorProtocol {
     signer: IChannelSigner,
     chainReader: IVectorChainReader,
     logger: pino.BaseLogger,
+    skipCheckIn: boolean,
     validationService?: IExternalValidation,
   ): Promise<Vector> {
     // Set the external validation service. If none is provided,
@@ -76,6 +78,7 @@ export class Vector implements IVectorProtocol {
       chainReader,
       externalValidation,
       logger,
+      skipCheckIn,
     ).setupServices();
 
     logger.info("Vector Protocol connected 🚀!");
@@ -245,42 +248,47 @@ export class Vector implements IVectorProtocol {
     // TODO: https://github.com/connext/vector/issues/52
 
     // sync latest state before starting
-    const channels = await this.storeService.getChannelStates();
+    // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue
+    if (!this.skipCheckIn) {
+      const channels = await this.storeService.getChannelStates();
 
-    // Handle disputes
-    // First check on current dispute status of all channels onchain
-    // Since we have no way of knowing the last time the protocol
-    // connected, we must check this on startup
-    // TODO: is there a better way to do this?
-    await Promise.all(
-      channels.map(async (channel) => {
-        const disputeRes = await this.chainReader.getChannelDispute(
-          channel.channelAddress,
-          channel.networkContext.chainId,
-        );
-        if (disputeRes.isError) {
-          this.logger.error(
-            { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
-            "Could not get dispute",
+      // Handle disputes
+      // First check on current dispute status of all channels onchain
+      // Since we have no way of knowing the last time the protocol
+      // connected, we must check this on startup
+      // TODO: is there a better way to do this?
+      await Promise.all(
+        channels.map(async (channel) => {
+          const disputeRes = await this.chainReader.getChannelDispute(
+            channel.channelAddress,
+            channel.networkContext.chainId,
           );
-          return;
-        }
-        const dispute = disputeRes.getValue();
-        if (!dispute) {
-          return;
-        }
-        try {
-          // save dispute record
-          // TODO: implement recovery from dispute
-          await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
-        } catch (e) {
-          this.logger.error(
-            { channelAddress: channel.channelAddress, error: e.message },
-            "Failed to update dispute on startup",
-          );
-        }
-      }),
-    );
+          if (disputeRes.isError) {
+            this.logger.error(
+              { channelAddress: channel.channelAddress, error: disputeRes.getError()!.message },
+              "Could not get dispute",
+            );
+            return;
+          }
+          const dispute = disputeRes.getValue();
+          if (!dispute) {
+            return;
+          }
+          try {
+            // save dispute record
+            // TODO: implement recovery from dispute
+            await this.storeService.saveChannelDispute({ ...channel, inDispute: true }, dispute);
+          } catch (e) {
+            this.logger.error(
+              { channelAddress: channel.channelAddress, error: e.message },
+              "Failed to update dispute on startup",
+            );
+          }
+        }),
+      );
+    } else {
+      this.logger.warn("Skipping checking disputes because of skipCheckIn config");
+    }
     return this;
   }
 
@@ -306,13 +314,6 @@ export class Vector implements IVectorProtocol {
   // calling `this.executeUpdate`. This includes all parameter validation,
   // as well as contextual validation (i.e. do I have sufficient funds to
   // create this transfer, is the channel in dispute, etc.)
-
-  // TODO: https://github.com/connext/vector/issues/53
-  public async isAlive(channelAddress: string) {
-    // isAlive should ping the channel counterparty with a message that contains nonce and then wait for an ack.
-    //         it should return an error (and emit it!) if the ack is not received.
-    //         on the sync inbound side, we should properly ack this message and also emit an event when you hear it (on both sides)
-  }
 
   public async setup(params: ProtocolParams.Setup): Promise<Result<FullChannelState, OutboundChannelUpdateError>> {
     // Validate all parameters

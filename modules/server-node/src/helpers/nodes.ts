@@ -80,8 +80,8 @@ export const createNode = async (
     vectorTx,
     config.chainAddresses,
     logger.child({ module: "VectorEngine" }),
-    undefined,
     skipCheckIn,
+    undefined,
   );
 
   for (const event of Object.values(EngineEvents)) {
