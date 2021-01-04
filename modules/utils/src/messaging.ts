@@ -465,7 +465,7 @@ export class NatsMessagingService implements IMessagingService {
             ? MessagingError.reasons.Timeout
             : MessagingError.reasons.Unknown,
           {
-            error: e.message,
+            error: e.message ?? e,
           },
         ),
       );
