@@ -211,21 +211,22 @@ export const requestCollateral = async (
 
   // Check if a tx has already been sent, but has not been reconciled
   // Get the total deposits vs. processed deposits
-  const onchainProcessed = iAmAlice
+  const totalDeposited = iAmAlice
     ? await chainReader.getTotalDepositedA(channel.channelAddress, channel.networkContext.chainId, assetId)
     : await chainReader.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
-  if (onchainProcessed.isError) {
+  if (totalDeposited.isError) {
     return Result.fail(
       new CollateralError(CollateralError.reasons.CouldNotGetOnchainDeposits, {
         channelAddress: channel.channelAddress,
-        error: onchainProcessed.getError()?.message,
-        context: onchainProcessed.getError()?.context,
+        error: totalDeposited.getError()?.message,
+        context: totalDeposited.getError()?.context,
       }),
     );
   }
-  const offchainProcessed = BigNumber.from(channel.processedDepositsA[assetIdx] ?? "0");
+  const processed = iAmAlice ? channel.processedDepositsA[assetIdx] : channel.processedDepositsB[assetIdx];
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
-  if (onchainProcessed.getValue().sub(offchainProcessed).lt(amountToDeposit)) {
+  const reconcilable = totalDeposited.getValue().sub(processed ?? "0");
+  if (reconcilable.lt(amountToDeposit)) {
     // Deposit needed
     logger.info({ amountToDeposit: amountToDeposit.toString() }, "Deposit amount calculated, submitting deposit tx");
     const txRes = await node.sendDepositTx({

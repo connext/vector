@@ -424,6 +424,42 @@ describe(testName, () => {
         expect(node.sendDepositTx.callCount).to.be.eq(0);
         expect(node.reconcileDeposit.callCount).to.be.eq(1);
       });
+
+      it("for two requests of the same amount", async () => {
+        const { channel } = createTestChannelState(UpdateType.deposit, {
+          aliceIdentifier: routerPublicIdentifier,
+          processedDepositsA: ["0"],
+          assetIds: [AddressZero],
+        });
+        const requestedAmount = parseEther("0.001");
+        chainReader.getTotalDepositedA.onFirstCall().resolves(Result.ok(BigNumber.from(0)));
+        chainReader.getTotalDepositedA.onSecondCall().resolves(Result.ok(requestedAmount));
+
+        const res1 = await requestCollateral(
+          channel,
+          AddressZero,
+          routerPublicIdentifier,
+          node as INodeService,
+          chainReader,
+          log,
+          requestedAmount.toString(),
+        );
+
+        const updatedChannel = { ...channel, processedDepositsA: [requestedAmount.toString()] };
+        const res2 = await requestCollateral(
+          updatedChannel,
+          AddressZero,
+          routerPublicIdentifier,
+          node as INodeService,
+          chainReader,
+          log,
+          requestedAmount.toString(),
+        );
+        expect(res1.isError).to.be.false;
+        expect(res2.isError).to.be.false;
+        expect(node.sendDepositTx.callCount).to.be.eq(2);
+        expect(node.reconcileDeposit.callCount).to.be.eq(2);
+      });
     });
   });
 });

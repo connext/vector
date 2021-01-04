@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[engine\] Retry on deposit race condition
+- \[router\] Cleanup collateral transaction logic + more tests
 - \[browser-node\] make crosschain transfers idempotent
 
 ## 0.1.0-rc.9

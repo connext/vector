@@ -1,4 +1,4 @@
-import { expect, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
+import { delay, expect, getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import {
   DEFAULT_CHANNEL_TIMEOUT,
   EngineEvents,
@@ -45,6 +45,53 @@ export const setup = async (
   });
   expect(bobChannel.getValue()).to.deep.eq(aliceChannel.getValue());
   return bobChannel.getValue()! as FullChannelState;
+};
+
+export const requestCollateral = async (
+  requester: INodeService,
+  counterparty: INodeService,
+  channelAddress: string,
+  assetId: string,
+  requestedAmount?: BigNumber,
+): Promise<FullChannelState> => {
+  const channelRes = await requester.getStateChannel({ channelAddress });
+  const channel = channelRes.getValue()! as FullChannelState;
+
+  const counterpartyAliceOrBob = counterparty.publicIdentifier === channel.aliceIdentifier ? "alice" : "bob";
+  const counterpartyBefore = getBalanceForAssetId(channel, assetId, counterpartyAliceOrBob);
+
+  const collateralRes = await requester.requestCollateral({
+    assetId,
+    channelAddress,
+    publicIdentifier: requester.publicIdentifier,
+    amount: !!requestedAmount ? requestedAmount?.toString() : undefined,
+  });
+  expect(collateralRes.getError()).to.be.undefined;
+  const collateral = collateralRes.getValue();
+  expect(collateral).to.be.deep.eq({ channelAddress });
+
+  // wait for reconciliation
+  await delay(2000);
+
+  const requesterChannel = (
+    await requester.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: requester.publicIdentifier,
+    })
+  ).getValue()! as FullChannelState;
+  const counterpartyChannel = (
+    await counterparty.getStateChannel({
+      channelAddress: channel.channelAddress,
+      publicIdentifier: counterparty.publicIdentifier,
+    })
+  ).getValue()!;
+
+  const counterpartyAfter = getBalanceForAssetId(requesterChannel, assetId, counterpartyAliceOrBob);
+  expect(requesterChannel).to.deep.eq(counterpartyChannel);
+  const min = BigNumber.from(counterpartyBefore).add(requestedAmount ?? "0");
+  expect(BigNumber.from(counterpartyAfter).gte(min)).to.be.true;
+  expect(BigNumber.from(counterpartyAfter).gt(counterpartyBefore)).to.be.true;
+  return requesterChannel;
 };
 
 export const deposit = async (
