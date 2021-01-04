@@ -2,6 +2,9 @@
 
 ## Next Release
 
+- \[engine\] Retry on deposit race condition
+- \[router\] Cleanup collateral transaction logic + more tests
+
 ## 0.1.0-rc.9
 
 - \[router/server-node\] optionally skip checkin on start
