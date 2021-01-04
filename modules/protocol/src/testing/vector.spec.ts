@@ -57,7 +57,15 @@ describe("Vector", () => {
   describe("Vector.connect", () => {
     it("should work", async () => {
       const signer = getRandomChannelSigner();
-      const node = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      const node = await Vector.connect(
+        messagingService,
+        lockService,
+        storeService,
+        signer,
+        chainReader,
+        pino(),
+        false,
+      );
       expect(node).to.be.instanceOf(Vector);
       expect(node.publicIdentifier).to.be.eq(signer.publicIdentifier);
       expect(node.signerAddress).to.be.eq(signer.address);
@@ -83,7 +91,7 @@ describe("Vector", () => {
     beforeEach(async () => {
       const signer = getRandomChannelSigner();
       storeService.getChannelStates.resolves([]);
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -212,7 +220,7 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -274,7 +282,7 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -374,7 +382,7 @@ describe("Vector", () => {
 
       storeService.getChannelState.resolves(createTestChannelState(UpdateType.setup, { channelAddress }).channel);
 
-      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino());
+      vector = await Vector.connect(messagingService, lockService, storeService, signer, chainReader, pino(), false);
     });
 
     it("should work", async () => {
@@ -418,7 +426,7 @@ describe("Vector", () => {
         {
           name: "should fail if transferResolver is undefined",
           params: { ...validParams, transferResolver: undefined },
-          error: "should have required property 'transferResolver'",
+          error: "should have required property '.transferResolver'",
         },
       ];
 

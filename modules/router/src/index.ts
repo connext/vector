@@ -57,7 +57,7 @@ const evts: EventCallbackConfig = {
 
 const logger = pino();
 logger.info({ config }, "Loaded config from environment");
-const server = fastify({ logger, disableRequestLogging: config.logLevel !== "debug" });
+const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 
 const register = new Registry();
 server.register(metricsPlugin, { endpoint: "/metrics", prefix: "router_", register });
@@ -71,6 +71,7 @@ server.addHook("onReady", async () => {
     logger.child({ module: "RouterNodeService" }),
     evts,
     0,
+    true,
   );
   const chainService = new VectorChainReader(
     hydrateProviders(config.chainProviders),

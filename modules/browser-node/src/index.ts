@@ -134,6 +134,7 @@ export class BrowserNode implements INodeService {
       chainService,
       config.chainAddresses!,
       config.logger.child({ module: "VectorEngine" }),
+      false,
     );
     node.channelProvider = new DirectProvider(engine);
     node.publicIdentifier = config.signer.publicIdentifier;

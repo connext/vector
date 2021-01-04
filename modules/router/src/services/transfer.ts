@@ -8,16 +8,19 @@ import {
   Result,
   NodeError,
 } from "@connext/vector-types";
-import { decodeTransferResolver, getBalanceForAssetId } from "@connext/vector-utils";
-import { BigNumber } from "ethers";
+import { decodeTransferResolver } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
-import { requestCollateral } from "../collateral";
 import { ForwardTransferError } from "../errors";
 
+import { justInTimeCollateral } from "./collateral";
 import { IRouterStore, RouterUpdateType } from "./store";
 
-export const transferWithAutoCollateralization = async (
+/**
+ * Will check liveness and queue transfer if recipient is not online.
+ * Used when forwarding transfers, NOT during checkIn
+ */
+export const attemptTransferWithCollateralization = async (
   params: NodeParams.ConditionalTransfer,
   channel: FullChannelState,
   routerPublicIdentifier: string,
@@ -27,12 +30,39 @@ export const transferWithAutoCollateralization = async (
   logger: BaseLogger,
   requireOnline = true,
 ): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
-  // check if there is sufficient collateral
-  const routerBalance = getBalanceForAssetId(
+  logger.info({ params, method: "attemptTransferWithCollateralization" }, "Starting method");
+  // NOTE: collateralizing takes a long time, so the liveness check may
+  // not hold for the transfer even if it works here. instead, should
+  // check for liveness post-collateral attempt and queue then. (this is
+  // ok depsite the potential 2 timeouts because nobody is waiting on the
+  // completion of these functions)
+
+  // collateralize if needed
+  const collateralRes = await justInTimeCollateral(
     channel,
     params.assetId,
-    routerPublicIdentifier === channel.aliceIdentifier ? "alice" : "bob",
+    routerPublicIdentifier,
+    nodeService,
+    chainReader,
+    logger,
+    params.amount,
   );
+  const collateralError = collateralRes.getError();
+
+  // If it failed to collateralize, return a failure if the payment
+  // requires that the recipient is online. (offline collateral failures
+  // handled after queueing/availability checks)
+  if (collateralError && requireOnline) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        params,
+        channelAddress: channel.channelAddress,
+        shouldCancelSender: true,
+        reason: "Failed justInTimeCollateral",
+        collateralError,
+      }),
+    );
+  }
 
   // check if recipient is available
   let available = false;
@@ -48,7 +78,8 @@ export const transferWithAutoCollateralization = async (
     return Result.fail(
       new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
         shouldCancelSender: true,
-        ...params,
+        params,
+        reason: "Receiver offline",
       }),
     );
   }
@@ -66,8 +97,9 @@ export const transferWithAutoCollateralization = async (
       return Result.fail(
         new ForwardTransferError(ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
           storeError: e.message,
-          shouldCancelSender: false,
-          ...params,
+          shouldCancelSender: true,
+          params,
+          reason: "Failed store.queueUpdate",
         }),
       );
     }
@@ -75,29 +107,71 @@ export const transferWithAutoCollateralization = async (
     return Result.ok(undefined);
   }
 
-  // check for inflight collateral
-  if (BigNumber.from(routerBalance).lt(params.amount)) {
-    logger.info({ routerBalance, recipientAmount: params.amount }, "Requesting collateral to cover transfer");
-    const requestCollateralRes = await requestCollateral(
-      channel,
-      params.assetId,
-      routerPublicIdentifier,
-      nodeService,
-      chainReader,
-      logger,
-      undefined,
-      params.amount,
+  // if available, but collateralizing failed, return failure
+  // NOTE: this check is performed *after* queueing update to
+  // ensure that offline collateral failures are discarded in
+  // the case where the receiver is online (but the payment doesnt
+  // explicitly require it)
+  if (available && collateralError) {
+    // NOTE: should always cancel the sender payment in this case
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        params,
+        channelAddress: channel.channelAddress,
+        shouldCancelSender: true,
+        reason: "Failed justInTimeCollateral",
+        collateralError,
+      }),
     );
+  }
 
-    if (requestCollateralRes.isError) {
-      return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-          ...params,
-          channelAddress: channel.channelAddress,
-          shouldCancelSender: true,
+  // safe to create transfer
+  const transfer = await nodeService.conditionalTransfer(params);
+  return transfer.isError
+    ? Result.fail(
+        new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
+          transferError: transfer.getError()?.message,
+          transferContext: transfer.getError()?.context,
+          // if its a timeout, could be withholding sig, so do not cancel
+          // sender transfer
+          shouldCancelSender: false,
+          params,
         }),
-      );
-    }
+      )
+    : (transfer as Result<NodeResponses.ConditionalTransfer>);
+};
+
+/**
+ * Will transfer + collateralize if needed to handle payment. Does
+ * NOT check liveness, and does NOT queue updates. (Used in during
+ * counterparty checkIn)
+ */
+export const transferWithCollateralization = async (
+  params: NodeParams.ConditionalTransfer,
+  channel: FullChannelState,
+  routerPublicIdentifier: string,
+  nodeService: INodeService,
+  chainReader: IVectorChainReader,
+  logger: BaseLogger,
+): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
+  // collateralize if needed
+  const collateralRes = await justInTimeCollateral(
+    channel,
+    params.assetId,
+    routerPublicIdentifier,
+    nodeService,
+    chainReader,
+    logger,
+    params.amount,
+  );
+
+  if (collateralRes.isError) {
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
+        ...params,
+        channelAddress: channel.channelAddress,
+      }),
+    );
   }
 
   // attempt to transfer
@@ -109,9 +183,6 @@ export const transferWithAutoCollateralization = async (
         new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
           transferError: transfer.getError()?.message,
           transferContext: transfer.getError()?.context,
-          // if its a timeout, could be withholding sig, so do not cancel
-          // sender transfer
-          shouldCancelSender: false,
           ...params,
         }),
       )

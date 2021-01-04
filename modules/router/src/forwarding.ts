@@ -14,15 +14,17 @@ import {
   IVectorChainReader,
   NodeError,
 } from "@connext/vector-types";
-import { getBalanceForAssetId } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
 
 import { getSwappedAmount } from "./services/swap";
 import { IRouterStore, RouterUpdateType, RouterUpdateStatus } from "./services/store";
-import { requestCollateral } from "./collateral";
 import { ForwardTransferError, ForwardResolutionError } from "./errors";
-import { cancelCreatedTransfer, transferWithAutoCollateralization } from "./services/transfer";
+import {
+  cancelCreatedTransfer,
+  attemptTransferWithCollateralization,
+  transferWithCollateralization,
+} from "./services/transfer";
 
 export async function forwardTransferCreation(
   data: ConditionalTransferCreatedPayload,
@@ -232,7 +234,7 @@ export async function forwardTransferCreation(
   };
   logger.info({ params, method }, "Generated new transfer params");
 
-  const transferRes = await transferWithAutoCollateralization(
+  const transferRes = await attemptTransferWithCollateralization(
     params,
     recipientChannel,
     routerPublicIdentifier,
@@ -359,8 +361,22 @@ export async function handleIsAlive(
     logger.info({ method, data }, "Skipping isAlive handler");
     return Result.ok(undefined);
   }
-  // This means the user is online and has checked in. Get all updates that are queued and then execute them.
+  // This means the user is online and has checked in. Get all updates that are
+  // queued and then execute them.
   const updates = await store.getQueuedUpdates(data.channelAddress, RouterUpdateStatus.PENDING);
+
+  // Get the channel (if needed, should only query 1x for it)
+  const channelRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
+  if (channelRes.isError || !channelRes.getValue()) {
+    // Do not proceed with processing updates
+    return Result.fail(
+      new ForwardTransferError(ForwardTransferError.reasons.CheckInError, {
+        getChannelError: channelRes.getError()?.message,
+      }),
+    );
+  }
+  const channel = channelRes.getValue() as FullChannelState;
+
   const erroredUpdates = [];
   for (const routerUpdate of updates) {
     // set status to processing to avoid race conditions
@@ -368,73 +384,57 @@ export async function handleIsAlive(
     logger.info({ method, update: routerUpdate }, "Found update for checkIn channel");
     const { type, payload } = routerUpdate;
 
-    let transferResult;
-    let nodeServiceError: string | undefined = undefined;
+    // Handle transfer creation updates
     if (type === RouterUpdateType.TRANSFER_CREATION) {
-      // first collateralize if needed
-      const params = payload as NodeParams.ConditionalTransfer;
-      const channelStateRes = await nodeService.getStateChannel({ channelAddress: data.channelAddress });
-      if (channelStateRes.isError) {
-        nodeServiceError = channelStateRes.getError()?.message;
-      } else {
-        const channelState = channelStateRes.getValue();
-        const routerBalance = getBalanceForAssetId(
-          channelState as FullChannelState,
-          params.assetId,
-          routerPublicIdentifier === channelState?.aliceIdentifier ? "alice" : "bob",
+      // NOTE: this will *NOT* perform any additional liveness checks
+      // and it is assumed the receiver will stay online throughout the
+      // processing of these updates
+      const createRes = await transferWithCollateralization(
+        payload as NodeParams.ConditionalTransfer,
+        channel,
+        routerPublicIdentifier,
+        nodeService,
+        chainReader,
+        logger,
+      );
+      if (createRes.isError) {
+        logger.error(
+          { createError: createRes.getError()?.message, update: routerUpdate },
+          "Handling router update failed",
         );
-        if (BigNumber.from(routerBalance).lt(params.amount)) {
-          logger.info({ routerBalance, recipientAmount: params.amount }, "Requesting collateral to cover transfer");
-          const requestCollateralRes = await requestCollateral(
-            channelState as FullChannelState,
-            params.assetId,
-            routerPublicIdentifier,
-            nodeService,
-            chainReader,
-            logger,
-            undefined,
-            params.amount,
-          );
-          // TODO: Do we want to cancel or hold payment in this case?
-          if (requestCollateralRes.isError) {
-            nodeServiceError = requestCollateralRes.getError()?.context.nodeError;
-          }
-        }
+        const error = createRes.getError()?.context?.transferError;
+        await store.setUpdateStatus(
+          routerUpdate.id,
+          error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+          error,
+        );
+        erroredUpdates.push(routerUpdate);
+      } else {
+        logger.info({ update: routerUpdate.id, method }, "Successfully handled checkIn update");
       }
-      if (!nodeServiceError) {
-        transferResult = await nodeService.conditionalTransfer(payload as NodeParams.ConditionalTransfer);
-      }
-    } else if (type === RouterUpdateType.TRANSFER_RESOLUTION) {
-      transferResult = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
-    } else {
+      continue;
+    }
+
+    // Handle transfer resolution updates
+    if (type !== RouterUpdateType.TRANSFER_RESOLUTION) {
       logger.error({ update: routerUpdate }, "Unknown update type");
       await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.FAILED, "Unknown update type");
       continue;
     }
-    nodeServiceError = nodeServiceError ?? transferResult?.getError()?.message;
-    if (nodeServiceError || !transferResult) {
-      logger.error(
-        {
-          method,
-          message: nodeServiceError,
-          update: routerUpdate,
-          transferResult: transferResult?.toJson(),
-        },
-        "Error handling checkIn update",
-      );
-      const isTimeout = nodeServiceError === NodeError.reasons.Timeout;
+    const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
+    // If failed, retry later
+    if (resolveRes.isError) {
+      logger.error({ resolveError: resolveRes.getError()?.message, routerUpdate }, "Handling router update failed");
+      const error = resolveRes.getError()?.message;
       await store.setUpdateStatus(
         routerUpdate.id,
-        isTimeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
-        nodeServiceError,
+        error === NodeError.reasons.Timeout ? RouterUpdateStatus.PENDING : RouterUpdateStatus.FAILED,
+        error,
       );
       erroredUpdates.push(routerUpdate);
-      continue;
+    } else {
+      logger.info({ update: routerUpdate.id, method }, "Successfully handled checkIn update");
     }
-    logger.info(
-      { transferResult: transferResult.getValue(), update: routerUpdate, method },
-      "Successfully handled checkIn update",
-    );
   }
   if (erroredUpdates.length > 0) {
     return Result.fail(
