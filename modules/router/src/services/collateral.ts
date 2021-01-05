@@ -162,15 +162,6 @@ export const requestCollateral = async (
     );
   }
   const profile = profileRes.getValue();
-  if (requestedAmount && BigNumber.from(requestedAmount).gt(profile.reclaimThreshold)) {
-    return Result.fail(
-      new CollateralError(CollateralError.reasons.TargetHigherThanThreshold, {
-        channelAddress: channel.channelAddress,
-        profile,
-        requestedAmount,
-      }),
-    );
-  }
 
   const target = BigNumber.from(requestedAmount ?? profile.target);
 
@@ -178,7 +169,7 @@ export const requestCollateral = async (
 
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
-  const assetIdx = channel.assetIds.findIndex((assetId) => assetId === assetId);
+  const assetIdx = channel.assetIds.findIndex((assetId: string) => assetId === assetId);
   const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
 
   if (myBalance.gte(target)) {
