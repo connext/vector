@@ -145,6 +145,7 @@ export async function outbound(
         previousState,
         {
           counterpartyError: error.message,
+          errorContext: error.context,
         },
       ),
     );

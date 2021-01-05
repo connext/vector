@@ -2,6 +2,12 @@
 
 ## Next Release
 
+## 0.1.0-rc.17
+
+- \[router\] Allow payments that exceed `reclaimThreshold` to be collateralized just in time
+- \[router\] Allow `profile.target` to be 0 (always use just in time collateralization)
+- \[messaging\] Improve error context
+
 ## 0.1.0-rc.16
 
 - \[engine\] Retry on deposit race condition

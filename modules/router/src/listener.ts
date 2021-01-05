@@ -10,10 +10,12 @@ import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BaseLogger } from "pino";
+import { BigNumber } from "ethers";
 
 import { adjustCollateral, requestCollateral } from "./services/collateral";
 import { forwardTransferCreation, forwardTransferResolution, handleIsAlive } from "./forwarding";
 import { IRouterStore } from "./services/store";
+import { getRebalanceProfile } from "./services/config";
 
 const ajv = new Ajv();
 
@@ -212,6 +214,7 @@ export async function setupListeners(
   );
 
   nodeService.on(EngineEvents.REQUEST_COLLATERAL, async (data) => {
+    const method = "requestCollateral event handler";
     logger.info({ data }, "Received request collateral event");
     const channelRes = await nodeService.getStateChannel({
       channelAddress: data.channelAddress,
@@ -223,13 +226,51 @@ export async function setupListeners(
           channelAddress: data.channelAddress,
           error: channelRes.getError()?.message,
           context: channelRes.getError()?.context,
+          method,
         },
-        "Error requesting collateral",
+        "Could not get channel",
       );
+      return;
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      logger.error({ channelAddress: data.channelAddress }, "Error requesting collateral");
+      logger.error({ channelAddress: data.channelAddress, method }, "Channel undefined");
+      return;
+    }
+
+    // Verify the requested amount here is less than the reclaimThreshold
+    // NOTE: this is done to allow users to request a specific amount of
+    // collateral via the server-node requestCollateral endpoint. If it
+    // is done within the `requestCollateral` function, then when that fn
+    // is called by `justInTimeCollateral` it will not allow for a large
+    // payment
+    const profileRes = getRebalanceProfile(channel.networkContext.chainId, data.assetId);
+    if (profileRes.isError) {
+      logger.error(
+        {
+          error: profileRes.getError()?.message,
+          context: profileRes.getError()?.context,
+          assetId: data.assetId,
+          channelAddress: channel.channelAddress,
+          method,
+        },
+        "Could not get rebalance profile",
+      );
+      return;
+    }
+    const profile = profileRes.getValue();
+    if (data.amount && BigNumber.from(data.amount).gt(profile.reclaimThreshold)) {
+      logger.error(
+        {
+          profile,
+          requestedAmount: data.amount,
+          assetId: data.assetId,
+          channelAddress: channel.channelAddress,
+          method,
+        },
+        "Could not get rebalance profile",
+      );
+      return;
     }
 
     const res = await requestCollateral(

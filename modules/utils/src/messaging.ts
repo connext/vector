@@ -449,8 +449,8 @@ export class NatsMessagingService implements IMessagingService {
     method: string,
   ): Promise<Result<R, any>> {
     this.assertConnected();
+    const subject = `${to}.${from}.${subjectSuffix}`;
     try {
-      const subject = `${to}.${from}.${subjectSuffix}`;
       const msgBody = safeJsonStringify(data.toJson());
       this.log.debug({ method, msgBody }, "Sending message");
       const msg = await this.connection!.request(subject, timeout, msgBody);
@@ -458,14 +458,20 @@ export class NatsMessagingService implements IMessagingService {
       const { result } = this.parseIncomingMessage<R>(msg);
       return result;
     } catch (e) {
-      this.log.error({ error: e.message, subject: subjectSuffix, data: data.toJson() }, "Sending message failed");
+      this.log.error(
+        { error: e.message ?? e, subject: subjectSuffix, data: data.toJson(), method },
+        "Sending message failed",
+      );
       return Result.fail(
         new MessagingError(
           (e.message ?? "").includes("Request timed out")
             ? MessagingError.reasons.Timeout
             : MessagingError.reasons.Unknown,
           {
-            error: e.message ?? e,
+            messagingError: e.message ?? e,
+            subject,
+            data: data.toJson(),
+            method,
           },
         ),
       );
