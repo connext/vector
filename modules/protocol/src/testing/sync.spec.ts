@@ -622,7 +622,7 @@ describe("outbound", () => {
     // Verify the error is returned as an outbound error
     const error = res.getError();
     expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.CounterpartyFailure);
-    expect(error?.context).to.deep.eq({ counterpartyError: counterpartyError.message });
+    expect(error?.context).to.deep.eq({ counterpartyError: counterpartyError.message, errorContext: {} });
 
     // Verify message only sent once by initiator
     expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
