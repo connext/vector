@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.0-rc.18
+
+- \[all\] Fix bad publishing
+
 ## 0.1.0-rc.17
 
 - \[router\] Allow payments that exceed `reclaimThreshold` to be collateralized just in time
