@@ -254,7 +254,7 @@ cadvisor_image="gcr.io/google-containers/cadvisor:latest"
 bash "$root/ops/pull-images.sh" "$cadvisor_image" > /dev/null
 
 # To save time, only pull logdna image if it will be used
-if [[ -z ${logdna_key+x} ]]
+if [ -n "$logdna_key" ]
 then
   logdna_image="logdna/logspout:v1.2.0"
   bash "$root/ops/pull-images.sh" "$logdna_image" > /dev/null
@@ -304,7 +304,7 @@ logdna_service="logdna:
 # bc these make indra take a log longer to wake up
 
 # Will only use logdna if in prod && API key provided in env
-if [ "$production" == "true" ] && [ -z ${logdna_key+x} ]
+if [ "$production" == "true" ] && [ -n "$logdna_key" ]
 then
   observability_services="$logdna_service
   
