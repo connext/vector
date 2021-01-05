@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[engine\] Retry on deposit race condition for inbound errors
+
 ## 0.1.0-rc.19
 
 - \[router\] Remove obtrusive metrics

@@ -23,6 +23,7 @@ import {
   FullChannelState,
   EngineError,
   UpdateType,
+  InboundChannelUpdateError,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -464,7 +465,18 @@ export class VectorEngine implements IVectorEngine {
     let depositRes = await this.vector.deposit(params);
     let count = 1;
     for (const _ of Array(3).fill(0)) {
-      if (!depositRes.isError || depositRes.getError()?.message !== OutboundChannelUpdateError.reasons.BadSignatures) {
+      // If its not an error, do not retry
+      if (!depositRes.isError) {
+        break;
+      }
+      const error = depositRes.getError()!;
+      // IFF deposit fails because you or the counterparty fails to recover
+      // signatures, retry
+      const recoveryFailed =
+        error.message === OutboundChannelUpdateError.reasons.BadSignatures ||
+        error.context?.counterpartyError === InboundChannelUpdateError.reasons.BadSignatures;
+
+      if (!recoveryFailed) {
         break;
       }
       this.logger.warn({ attempt: count, error: depositRes.getError()?.message }, "Retrying deposit reconciliation");
