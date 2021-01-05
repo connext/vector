@@ -2,6 +2,11 @@
 
 ## Next Release
 
+## 0.1.0-rc.19
+
+- \[router\] Remove obtrusive metrics
+- \[messaging\] Properly catch messaging timeouts
+
 ## 0.1.0-rc.18
 
 - \[all\] Fix bad publishing
