@@ -462,9 +462,10 @@ export class NatsMessagingService implements IMessagingService {
         { error: e.message ?? e, subject: subjectSuffix, data: data.toJson(), method },
         "Sending message failed",
       );
+      const error = e.message ?? e ?? "";
       return Result.fail(
         new MessagingError(
-          (e.message ?? "").includes("Request timed out")
+          error.includes("Request timed out") || error.includes("timeout")
             ? MessagingError.reasons.Timeout
             : MessagingError.reasons.Unknown,
           {
