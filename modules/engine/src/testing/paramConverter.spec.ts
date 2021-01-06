@@ -101,7 +101,8 @@ describe("ParamConverter", () => {
     };
 
     it("should fail if params.type is a name and chainReader.getRegisteredTransferByName fails", async () => {
-      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
+      const chainErr = new ChainError("Failure");
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(chainErr));
       const params: any = generateParams();
       // Set incorrect type
       params.conditionType = "FailingTest";
@@ -115,11 +116,17 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new ChainError("Failure"));
+      const err = ret.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
+      expect(err?.context.registryError).to.be.deep.eq(chainErr.toJson());
     });
 
     it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
-      chainReader.getRegisteredTransferByDefinition.resolves(Result.fail(new ChainError("Failure")));
+      const chainErr = new ChainError("Failure");
+      chainReader.getRegisteredTransferByDefinition.resolves(Result.fail(chainErr));
       const params: any = generateParams();
       // Set incorrect type
       params.type = getRandomAddress();
@@ -133,7 +140,12 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new ChainError("Failure"));
+      const err = ret.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
+      expect(err?.context.registryError).to.be.deep.eq(chainErr.toJson());
     });
 
     it("should fail if initiator is receiver for same chain/network", async () => {
@@ -150,13 +162,11 @@ describe("ParamConverter", () => {
       const ret = await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
 
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(
-        new ParameterConversionError(
-          ParameterConversionError.reasons.CannotSendToSelf,
-          channelState.channelAddress,
-          signerB.publicIdentifier,
-        ),
-      );
+      const err = ret.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.CannotSendToSelf);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
     });
 
     const runTest = async (params: any, result: CreateTransferParams, isUserA: boolean) => {
@@ -415,11 +425,17 @@ describe("ParamConverter", () => {
     });
     it("should fail if it cannot get registry information", async () => {
       const params = generateParams();
-      chainReader.getRegisteredTransferByName.resolves(Result.fail(new ChainError("Failure")));
+      const chainErr = new ChainError("Failure");
+      chainReader.getRegisteredTransferByName.resolves(Result.fail(chainErr));
       const { channelState, result } = await testSetup(params, true);
 
       expect(result.isError).to.be.true;
-      expect(result.getError()).to.contain(new ChainError("Failure"));
+      const err = result.getError();
+      expect(err?.message).to.be.eq(ParameterConversionError.reasons.FailedToGetRegisteredTransfer);
+      expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
+      expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
+      expect(err?.context.params).to.be.deep.eq(params);
+      expect(err?.context.registryError).to.be.deep.eq(chainErr.toJson());
     });
 
     const users = ["A", "B"];

@@ -210,7 +210,7 @@ describe("VectorEngine", () => {
       }
     });
 
-    describe.only("should fail if it has malformed request.params", async () => {
+    describe("should fail if it has malformed request.params", async () => {
       const malformedPublicIdentifier = 'should match pattern "^vector([a-zA-Z0-9]{50})$"';
       const malformedAddress = 'should match pattern "^0x[a-fA-F0-9]{40}$"';
       const malformedTransactionId = 'should match pattern "^0x([a-fA-F0-9]{64})$"';
