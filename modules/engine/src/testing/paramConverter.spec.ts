@@ -33,6 +33,7 @@ import {
   convertResolveConditionParams,
   convertWithdrawParams,
 } from "../paramConverter";
+import { ParameterConversionError } from "../errors";
 
 import { env } from "./env";
 
@@ -114,7 +115,7 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
+      expect(ret.getError()).to.contain(new ChainError("Failure"));
     });
 
     it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
@@ -132,7 +133,7 @@ describe("ParamConverter", () => {
       });
       const ret = await convertConditionalTransferParams(params, signerA, channelState, chainAddresses, chainReader);
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType("Failure"));
+      expect(ret.getError()).to.contain(new ChainError("Failure"));
     });
 
     it("should fail if initiator is receiver for same chain/network", async () => {
@@ -149,7 +150,13 @@ describe("ParamConverter", () => {
       const ret = await convertConditionalTransferParams(params, signerB, channelState, chainAddresses, chainReader);
 
       expect(ret.isError).to.be.true;
-      expect(ret.getError()).to.contain(new InvalidTransferType("An initiator cannot be a receiver on the same chain"));
+      expect(ret.getError()).to.contain(
+        new ParameterConversionError(
+          ParameterConversionError.reasons.CannotSendToSelf,
+          channelState.channelAddress,
+          signerB.publicIdentifier,
+        ),
+      );
     });
 
     const runTest = async (params: any, result: CreateTransferParams, isUserA: boolean) => {
@@ -412,7 +419,7 @@ describe("ParamConverter", () => {
       const { channelState, result } = await testSetup(params, true);
 
       expect(result.isError).to.be.true;
-      expect(result.getError()).to.contain(new InvalidTransferType("Failure"));
+      expect(result.getError()).to.contain(new ChainError("Failure"));
     });
 
     const users = ["A", "B"];

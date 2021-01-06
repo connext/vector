@@ -932,7 +932,7 @@ export class VectorEngine implements IVectorEngine {
         new DisputeError(DisputeError.reasons.CouldNotGetChannel, params.channelAddress, this.publicIdentifier, {
           storeMethod: "getChannelState",
           method: "disputeChannel",
-          getTransferError: channel.getError()!.toJson(),
+          getChannelStateError: channel.getError()!.toJson(),
         }),
       );
     }
