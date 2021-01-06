@@ -1,11 +1,4 @@
-import {
-  IChannelSigner,
-  Result,
-  LockError,
-  MessagingError,
-  InboundChannelUpdateError,
-  UpdateType,
-} from "@connext/vector-types";
+import { IChannelSigner, Result, LockError, MessagingError, UpdateType } from "@connext/vector-types";
 import {
   createTestChannelUpdate,
   delay,
@@ -81,7 +74,7 @@ describe("messaging", () => {
       fromIdentifier: signerA.publicIdentifier,
     });
 
-    const err = new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, update);
+    const err = new Error("failure");
 
     await messagingB.onReceiveProtocolMessage(
       signerB.publicIdentifier,
@@ -89,7 +82,7 @@ describe("messaging", () => {
         expect(result.isError).to.not.be.ok;
         expect(result.getValue()).to.containSubset({ update });
         expect(inbox).to.be.a("string");
-        await messagingB.respondWithProtocolError(inbox, err);
+        await messagingB.respondWithProtocolError(inbox, err as any);
       },
     );
 

@@ -5,12 +5,9 @@ import {
   Result,
   IChannelSigner,
   UpdateParams,
-  OutboundChannelUpdateError,
-  InboundChannelUpdateError,
   IVectorChainReader,
   Values,
   FullTransferState,
-  ValidationError,
   ResolveUpdateDetails,
   IExternalValidation,
   Balance,
@@ -29,6 +26,7 @@ import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/ve
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 
+import { InboundChannelUpdateError, OutboundChannelUpdateError, ValidationError } from "./errors";
 import { applyUpdate, generateAndApplyUpdate } from "./update";
 import {
   generateSignedChannelCommitment,

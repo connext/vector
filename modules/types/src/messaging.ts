@@ -1,5 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { InboundChannelUpdateError, LockError, OutboundChannelUpdateError, Result, VectorError } from "./error";
+import { EngineError, LockError, MessagingError, ProtocolError, Result } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -25,13 +25,13 @@ export interface IMessagingService {
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<LockInformation, LockError>>;
+  ): Promise<Result<LockInformation, LockError | MessagingError>>;
   respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void>;
 
   onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
       from: string,
       inbox: string,
     ) => void,
@@ -42,34 +42,31 @@ export interface IMessagingService {
     timeout?: number,
     numRetries?: number,
   ): Promise<
-    Result<
-      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
-      OutboundChannelUpdateError | InboundChannelUpdateError
-    >
+    Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError | MessagingError>
   >;
   respondToProtocolMessage(
     inbox: string,
     channelUpdate: ChannelUpdate<any>,
     previousUpdate?: ChannelUpdate<any>,
   ): Promise<void>;
-  respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
+  respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void>;
 
   sendSetupMessage(
-    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, VectorError>,
+    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, EngineError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ channelAddress: string }, VectorError>>;
+  ): Promise<Result<{ channelAddress: string }, EngineError | MessagingError>>;
   onReceiveSetupMessage(
     publicIdentifier: string,
     callback: (
-      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, VectorError>,
+      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, EngineError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
-  respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void>;
+  respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, EngineError>): Promise<void>;
 
   // restore flow:
   // - restore-r sends request
@@ -82,54 +79,56 @@ export interface IMessagingService {
   // - counterparty receives
   //    1. releases lock
   sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number } | { channelAddress: string }, VectorError>,
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, VectorError>>;
+  ): Promise<
+    Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError | MessagingError>
+  >;
   onReceiveRestoreStateMessage(
     publicIdentifier: string,
     callback: (
-      restoreData: Result<{ chainId: number } | { channelAddress: string }, VectorError>,
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
   respondToRestoreStateMessage(
     inbox: string,
-    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, VectorError>,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
   ): Promise<void>;
 
   sendIsAliveMessage(
-    isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, VectorError>,
+    isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, EngineError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ channelAddress: string }, VectorError>>;
+  ): Promise<Result<{ channelAddress: string }, EngineError | MessagingError>>;
   onReceiveIsAliveMessage(
     publicIdentifier: string,
     callback: (
-      isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, VectorError>,
+      isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, EngineError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
-  respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void>;
+  respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, EngineError>): Promise<void>;
 
   sendRequestCollateralMessage(
-    requestCollateralParams: Result<EngineParams.RequestCollateral, VectorError>,
+    requestCollateralParams: Result<EngineParams.RequestCollateral, EngineError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<undefined, VectorError>>;
+  ): Promise<Result<undefined, EngineError | MessagingError>>;
   onReceiveRequestCollateralMessage(
     publicIdentifier: string,
-    callback: (params: Result<EngineParams.RequestCollateral, VectorError>, from: string, inbox: string) => void,
+    callback: (params: Result<EngineParams.RequestCollateral, EngineError>, from: string, inbox: string) => void,
   ): Promise<void>;
-  respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, VectorError>): Promise<void>;
+  respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, EngineError>): Promise<void>;
 
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;

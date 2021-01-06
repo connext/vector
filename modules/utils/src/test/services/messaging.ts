@@ -1,17 +1,16 @@
 import {
   ChannelUpdate,
   IMessagingService,
-  InboundChannelUpdateError,
   LockError,
   LockInformation,
   MessagingError,
-  OutboundChannelUpdateError,
   Result,
   FullChannelState,
   EngineError,
   FullTransferState,
   EngineParams,
   VectorError,
+  ProtocolError,
 } from "@connext/vector-types";
 import { Evt } from "evt";
 
@@ -26,13 +25,13 @@ export class MemoryMessagingService implements IMessagingService {
     data: {
       update?: ChannelUpdate<any>;
       previousUpdate?: ChannelUpdate<any>;
-      error?: InboundChannelUpdateError;
+      error?: ProtocolError;
     };
   }> = Evt.create<{
     to?: string;
     from: string;
     inbox?: string;
-    data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: InboundChannelUpdateError };
+    data: { update?: ChannelUpdate<any>; previousUpdate?: ChannelUpdate<any>; error?: ProtocolError };
     replyTo?: string;
   }>();
 
@@ -53,12 +52,7 @@ export class MemoryMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout = 20_000,
     numRetries = 0,
-  ): Promise<
-    Result<
-      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
-      OutboundChannelUpdateError | InboundChannelUpdateError
-    >
-  > {
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     const inbox = getRandomBytes32();
     const responsePromise = this.evt.pipe((e) => e.inbox === inbox).waitFor(timeout);
     this.evt.post({
@@ -86,7 +80,7 @@ export class MemoryMessagingService implements IMessagingService {
     });
   }
 
-  async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
+  async respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void> {
     this.evt.post({
       inbox,
       data: { error },
@@ -97,7 +91,7 @@ export class MemoryMessagingService implements IMessagingService {
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
       from: string,
       inbox: string,
     ) => void,

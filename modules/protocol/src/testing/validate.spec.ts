@@ -19,12 +19,9 @@ import {
   ChannelUpdate,
   FullChannelState,
   FullTransferState,
-  InboundChannelUpdateError,
-  OutboundChannelUpdateError,
   Result,
   UpdateType,
   Values,
-  ValidationError,
   UpdateParams,
   IChannelSigner,
   DEFAULT_CHANNEL_TIMEOUT,
@@ -36,6 +33,7 @@ import {
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
 
+import { OutboundChannelUpdateError, InboundChannelUpdateError, ValidationError } from "../errors";
 import * as vectorUtils from "../utils";
 import * as validation from "../validate";
 import * as vectorUpdate from "../update";

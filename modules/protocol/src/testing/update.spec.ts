@@ -2,7 +2,6 @@
 import { VectorChainReader } from "@connext/vector-contracts";
 import {
   UpdateType,
-  InboundChannelUpdateError,
   FullChannelState,
   FullTransferState,
   Values,
@@ -13,7 +12,6 @@ import {
   HashlockTransferResolverEncoding,
   IChannelSigner,
   UpdateParams,
-  OutboundChannelUpdateError,
   ChainError,
 } from "@connext/vector-types";
 import {
@@ -37,6 +35,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero } from "@ethersproject/constants";
 import Sinon from "sinon";
 
+import { InboundChannelUpdateError, OutboundChannelUpdateError } from "../errors";
 import * as vectorUpdate from "../update";
 import * as vectorUtils from "../utils";
 

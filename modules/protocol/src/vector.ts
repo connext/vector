@@ -10,20 +10,20 @@ import {
   IVectorChainReader,
   IVectorProtocol,
   IVectorStore,
-  OutboundChannelUpdateError,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
   ProtocolParams,
   Result,
   UpdateParams,
   UpdateType,
-  InboundChannelUpdateError,
   TChannelUpdate,
+  ProtocolError,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
+import { OutboundChannelUpdateError } from "./errors";
 import * as sync from "./sync";
 import { validateSchema } from "./utils";
 
@@ -167,7 +167,7 @@ export class Vector implements IVectorProtocol {
     await this.messagingService.onReceiveProtocolMessage(
       this.publicIdentifier,
       async (
-        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, InboundChannelUpdateError>,
+        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, ProtocolError>,
         from: string,
         inbox: string,
       ) => {

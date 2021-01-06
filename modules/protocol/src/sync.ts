@@ -7,8 +7,6 @@ import {
   IChannelSigner,
   Result,
   UpdateParams,
-  InboundChannelUpdateError,
-  OutboundChannelUpdateError,
   Values,
   IVectorChainReader,
   FullTransferState,
@@ -17,6 +15,7 @@ import {
 } from "@connext/vector-types";
 import pino from "pino";
 
+import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";
 import { extractContextFromStore, validateChannelSignatures } from "./utils";
 import { validateAndApplyInboundUpdate, validateParamsAndApplyUpdate } from "./validate";
 

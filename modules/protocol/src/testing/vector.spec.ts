@@ -3,7 +3,6 @@ import {
   getRandomChannelSigner,
   mkAddress,
   mkBytes32,
-  mkPublicIdentifier,
   createTestHashlockTransferState,
   createTestChannelState,
   createTestUpdateParams,
@@ -15,7 +14,6 @@ import {
 } from "@connext/vector-utils";
 import pino from "pino";
 import {
-  OutboundChannelUpdateError,
   IVectorChainReader,
   ILockService,
   IMessagingService,
@@ -27,6 +25,7 @@ import {
 } from "@connext/vector-types";
 import Sinon from "sinon";
 
+import { OutboundChannelUpdateError } from "../errors";
 import { Vector } from "../vector";
 import * as vectorSync from "../sync";
 

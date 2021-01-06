@@ -18,8 +18,6 @@ import {
 import {
   UpdateType,
   ChannelUpdate,
-  InboundChannelUpdateError,
-  OutboundChannelUpdateError,
   Result,
   UpdateParams,
   FullChannelState,
@@ -32,6 +30,7 @@ import Sinon from "sinon";
 import { VectorChainReader } from "@connext/vector-contracts";
 
 // Import as full module for easy sinon function mocking
+import { OutboundChannelUpdateError, InboundChannelUpdateError } from "../errors";
 import * as vectorUtils from "../utils";
 import * as vectorValidation from "../validate";
 import { inbound, outbound } from "../sync";

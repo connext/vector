@@ -28,7 +28,6 @@ import {
   ChannelRpcMethods,
   EngineParams,
   ChannelRpcMethodsResponsesMap,
-  OutboundChannelUpdateError,
   Result,
   ChainError,
   EngineError,
@@ -54,9 +53,7 @@ export async function setupEngineListeners(
   logger: Pino.BaseLogger,
   setup: (
     params: EngineParams.Setup,
-  ) => Promise<
-    Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], OutboundChannelUpdateError | Error>
-  >,
+  ) => Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], EngineError>>,
   acquireRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
   releaseRestoreLocks: (channel: FullChannelState) => Promise<Result<void, EngineError>>,
 ): Promise<void> {

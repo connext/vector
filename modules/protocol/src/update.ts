@@ -14,8 +14,6 @@ import {
   Result,
   FullTransferState,
   IVectorChainReader,
-  InboundChannelUpdateError,
-  OutboundChannelUpdateError,
   SetupUpdateDetails,
   DepositUpdateDetails,
   CreateUpdateDetails,
@@ -23,6 +21,7 @@ import {
 } from "@connext/vector-types";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 
+import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";
 import { generateSignedChannelCommitment, getUpdatedChannelBalance, reconcileDeposit } from "./utils";
 
 // Should return a state with the given update applied

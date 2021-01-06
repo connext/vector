@@ -60,6 +60,7 @@ export class RestoreError extends EngineError {
     InvalidMerkleRoot: "Failed to validate merkleRoot for restoration",
     InvalidSignatures: "Failed to validate sigs on latestUpdate",
     NoData: "No data sent from counterparty to restore",
+    ReceivedError: "Got restore error from counterparty",
     ReleaseLockError: "Failed to release restore lock",
     SaveChannelFailed: "Failed to save channel state",
     SyncableState: "Cannot restore, state is syncable. Try reconcileDeposit",
@@ -116,11 +117,18 @@ export class RpcError extends EngineError {
   readonly type = "RpcError";
 
   static readonly reasons = {
+    ChainServiceFailure: "Failed to execute chain service method",
+    ChannelNotFound: "Channel not found",
+    DecryptFailed: "Failed to decrypt",
+    EngineMethodFailure: "Failed to execute engine method",
     InvalidParams: "Parameters from rpc request are malformed",
     InvalidRpcSchema: "Rpc request is malformed",
     InvalidMethod: "Rpc method is invalid",
-    StoreMethodFailed: "Failed to execute store method",
+    ParamConversionFailed: "Failed to convert engine ",
     ProtocolMethodFailed: "Failed to execute protocol method",
+    StoreMethodFailed: "Failed to execute store method",
+    TransferNotFound: "Transfer not found",
+    UtilitySigningFailed: "Failed to sign utility message",
   } as const;
 
   constructor(

@@ -2,10 +2,8 @@ import {
   IChannelSigner,
   ChannelUpdate,
   IMessagingService,
-  InboundChannelUpdateError,
   LockError,
   LockInformation,
-  OutboundChannelUpdateError,
   Result,
   EngineParams,
   FullChannelState,
@@ -13,6 +11,7 @@ import {
   EngineError,
   VectorError,
   MessagingError,
+  ProtocolError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -153,12 +152,7 @@ export class NatsMessagingService implements IMessagingService {
     previousUpdate?: ChannelUpdate<any>,
     timeout = 30_000,
     numRetries = 0,
-  ): Promise<
-    Result<
-      { update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> },
-      OutboundChannelUpdateError | InboundChannelUpdateError
-    >
-  > {
+  ): Promise<Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>> {
     return this.sendMessage(
       Result.ok({ update: channelUpdate, previousUpdate }),
       "protocol",
@@ -173,7 +167,7 @@ export class NatsMessagingService implements IMessagingService {
   async onReceiveProtocolMessage(
     myPublicIdentifier: string,
     callback: (
-      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, InboundChannelUpdateError>,
+      result: Result<{ update: ChannelUpdate<any>; previousUpdate: ChannelUpdate<any> }, ProtocolError>,
       from: string,
       inbox: string,
     ) => void,
@@ -193,7 +187,7 @@ export class NatsMessagingService implements IMessagingService {
     );
   }
 
-  async respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void> {
+  async respondWithProtocolError(inbox: string, error: ProtocolError): Promise<void> {
     return this.respondToMessage(inbox, Result.fail(error), "respondWithProtocolError");
   }
   ////////////
