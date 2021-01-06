@@ -603,7 +603,10 @@ describe("outbound", () => {
       details: { counterpartyIdentifier: signers[1].publicIdentifier },
     });
     // Create a messaging service stub
-    const counterpartyError = new InboundChannelUpdateError(InboundChannelUpdateError.reasons.RestoreNeeded, {} as any);
+    const counterpartyError = new InboundChannelUpdateError(
+      InboundChannelUpdateError.reasons.ChannelNotFound,
+      {} as any,
+    );
     messaging.sendProtocolMessage.resolves(Result.fail(counterpartyError));
 
     // Stub the generation function

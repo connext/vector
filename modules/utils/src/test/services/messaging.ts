@@ -11,9 +11,6 @@ import {
   EngineError,
   FullTransferState,
   EngineParams,
-  CheckInInfo,
-  CheckInResponse,
-  CheckInError,
   VectorError,
 } from "@connext/vector-types";
 import { Evt } from "evt";
@@ -93,7 +90,7 @@ export class MemoryMessagingService implements IMessagingService {
     this.evt.post({
       inbox,
       data: { error },
-      from: error.update.toIdentifier,
+      from: error.context.update.toIdentifier,
     });
   }
 
@@ -145,18 +142,18 @@ export class MemoryMessagingService implements IMessagingService {
   }
 
   sendRequestCollateralMessage(
-    requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
+    requestCollateralParams: Result<EngineParams.RequestCollateral, VectorError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<undefined, Error>> {
+  ): Promise<Result<undefined, VectorError>> {
     throw new Error("Method not implemented.");
   }
 
   onReceiveRequestCollateralMessage(
     publicIdentifier: string,
-    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
+    callback: (params: Result<EngineParams.RequestCollateral, VectorError>, from: string, inbox: string) => void,
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }

@@ -96,7 +96,7 @@ export async function outbound(
       {
         method,
         update: update.nonce,
-        counterparty: (error as InboundChannelUpdateError).update.nonce,
+        counterparty: (error as InboundChannelUpdateError).context.update.nonce,
       },
       `Behind, syncing and retrying`,
     );
@@ -308,7 +308,7 @@ export async function inbound(
     );
     if (syncRes.isError) {
       const error = syncRes.getError() as InboundChannelUpdateError;
-      return returnError(error.message, error.update, error.state as FullChannelState, error.context);
+      return returnError(error.message, error.context.update, error.context.state as FullChannelState, error.context);
     }
 
     const { updatedChannel: syncedChannel, updatedActiveTransfers: syncedActiveTransfers } = syncRes.getValue();
@@ -382,7 +382,7 @@ const syncStateAndRecreateUpdate = async (
   // channel, and regenerate the requested update from the user-supplied
   // parameters.
 
-  const counterpartyUpdate = receivedError.update;
+  const counterpartyUpdate = receivedError.context.update;
   const syncRes = await syncState(
     counterpartyUpdate,
     previousState,

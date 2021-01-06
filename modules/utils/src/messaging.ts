@@ -8,11 +8,11 @@ import {
   OutboundChannelUpdateError,
   Result,
   EngineParams,
-  MessagingError,
   FullChannelState,
   FullTransferState,
   EngineError,
   VectorError,
+  MessagingError,
 } from "@connext/vector-types";
 import axios, { AxiosResponse } from "axios";
 import pino, { BaseLogger } from "pino";
@@ -258,12 +258,12 @@ export class NatsMessagingService implements IMessagingService {
 
   // REQUEST COLLATERAL METHODS
   async sendRequestCollateralMessage(
-    requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
+    requestCollateralParams: Result<EngineParams.RequestCollateral, VectorError>,
     to: string,
     from: string,
     timeout = 30_000,
     numRetries = 0,
-  ): Promise<Result<undefined, Error>> {
+  ): Promise<Result<undefined, VectorError>> {
     return this.sendMessage(
       requestCollateralParams,
       "request-collateral",
@@ -277,7 +277,7 @@ export class NatsMessagingService implements IMessagingService {
 
   async onReceiveRequestCollateralMessage(
     publicIdentifier: string,
-    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
+    callback: (params: Result<EngineParams.RequestCollateral, VectorError>, from: string, inbox: string) => void,
   ): Promise<void> {
     return this.registerCallback(
       `${publicIdentifier}.*.request-collateral`,
@@ -286,7 +286,10 @@ export class NatsMessagingService implements IMessagingService {
     );
   }
 
-  async respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void> {
+  async respondToRequestCollateralMessage(
+    inbox: string,
+    params: Result<{ message?: string }, VectorError>,
+  ): Promise<void> {
     return this.respondToMessage(inbox, params, "respondToRequestCollateralMessage");
   }
   ////////////

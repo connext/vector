@@ -1,7 +1,7 @@
 import { Values, VectorError } from "@connext/vector-types";
 
 export class CollateralError extends VectorError {
-  readonly type = VectorError.errors.RouterError;
+  readonly type = "CollateralError";
 
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
@@ -14,17 +14,13 @@ export class CollateralError extends VectorError {
     UnableToReclaim: "Could not reclaim collateral from channel",
   } as const;
 
-  constructor(
-    public readonly message: Values<typeof CollateralError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
-  ) {
+  constructor(public readonly message: Values<typeof CollateralError.reasons>, public readonly context: any = {}) {
     super(message, context);
   }
 }
 
 export class ForwardTransferError extends VectorError {
-  readonly type = VectorError.errors.RouterError;
+  readonly type = "ForwardTransferError";
 
   static readonly reasons = {
     SenderChannelNotFound: "Sender channel not found",
@@ -42,17 +38,13 @@ export class ForwardTransferError extends VectorError {
     FailedToCancelSenderTransfer: "Could not cancel sender transfer",
   } as const;
 
-  constructor(
-    public readonly message: Values<typeof ForwardTransferError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
-  ) {
+  constructor(public readonly message: Values<typeof ForwardTransferError.reasons>, public readonly context: any = {}) {
     super(message, context);
   }
 }
 
 export class ForwardResolutionError extends VectorError {
-  readonly type = VectorError.errors.RouterError;
+  readonly type = "ForwardResolutionError";
 
   static readonly reasons = {
     IncomingChannelNotFound: "Incoming channel for transfer not found",
@@ -61,8 +53,7 @@ export class ForwardResolutionError extends VectorError {
 
   constructor(
     public readonly message: Values<typeof ForwardResolutionError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
+    public readonly context: any = {},
   ) {
     super(message, context);
   }

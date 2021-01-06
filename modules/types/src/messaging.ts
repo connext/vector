@@ -1,14 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import {
-  EngineError,
-  InboundChannelUpdateError,
-  CheckInError,
-  LockError,
-  MessagingError,
-  OutboundChannelUpdateError,
-  Result,
-  VectorError,
-} from "./error";
+import { InboundChannelUpdateError, LockError, OutboundChannelUpdateError, Result, VectorError } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -64,21 +55,21 @@ export interface IMessagingService {
   respondWithProtocolError(inbox: string, error: InboundChannelUpdateError): Promise<void>;
 
   sendSetupMessage(
-    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, Error>,
+    setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, VectorError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ channelAddress: string }, MessagingError>>;
+  ): Promise<Result<{ channelAddress: string }, VectorError>>;
   onReceiveSetupMessage(
     publicIdentifier: string,
     callback: (
-      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, MessagingError>,
+      setupInfo: Result<Omit<EngineParams.Setup, "counterpartyIdentifier">, VectorError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
-  respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, Error>): Promise<void>;
+  respondToSetupMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void>;
 
   // restore flow:
   // - restore-r sends request
@@ -91,27 +82,27 @@ export interface IMessagingService {
   // - counterparty receives
   //    1. releases lock
   sendRestoreStateMessage(
-    restoreData: Result<{ chainId: number } | { channelAddress: string }, Error>,
+    restoreData: Result<{ chainId: number } | { channelAddress: string }, VectorError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>>;
+  ): Promise<Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, VectorError>>;
   onReceiveRestoreStateMessage(
     publicIdentifier: string,
     callback: (
-      restoreData: Result<{ chainId: number } | { channelAddress: string }, EngineError>,
+      restoreData: Result<{ chainId: number } | { channelAddress: string }, VectorError>,
       from: string,
       inbox: string,
     ) => void,
   ): Promise<void>;
   respondToRestoreStateMessage(
     inbox: string,
-    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, EngineError>,
+    restoreData: Result<{ channel: FullChannelState; activeTransfers: FullTransferState[] } | void, VectorError>,
   ): Promise<void>;
 
   sendIsAliveMessage(
-    isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, Error>,
+    isAlive: Result<{ channelAddress: string; skipCheckIn?: boolean }, VectorError>,
     to: string,
     from: string,
     timeout?: number,
@@ -128,17 +119,17 @@ export interface IMessagingService {
   respondToIsAliveMessage(inbox: string, params: Result<{ channelAddress: string }, VectorError>): Promise<void>;
 
   sendRequestCollateralMessage(
-    requestCollateralParams: Result<EngineParams.RequestCollateral, Error>,
+    requestCollateralParams: Result<EngineParams.RequestCollateral, VectorError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<undefined, Error>>;
+  ): Promise<Result<undefined, VectorError>>;
   onReceiveRequestCollateralMessage(
     publicIdentifier: string,
-    callback: (params: Result<EngineParams.RequestCollateral, Error>, from: string, inbox: string) => void,
+    callback: (params: Result<EngineParams.RequestCollateral, VectorError>, from: string, inbox: string) => void,
   ): Promise<void>;
-  respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, Error>): Promise<void>;
+  respondToRequestCollateralMessage(inbox: string, params: Result<{ message?: string }, VectorError>): Promise<void>;
 
   publish(subject: string, data: any): Promise<void>;
   subscribe(subject: string, cb: (data: any) => any): Promise<void>;

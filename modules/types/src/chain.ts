@@ -27,7 +27,7 @@ export const ERC20Abi = [
 ];
 
 export class ChainError extends VectorError {
-  readonly type = VectorError.errors.ChainError;
+  readonly type = "ChainError";
   static readonly reasons = {
     ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",

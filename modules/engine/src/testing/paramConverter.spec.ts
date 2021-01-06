@@ -28,7 +28,6 @@ import { VectorChainReader, WithdrawCommitment } from "@connext/vector-contracts
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
-import { InvalidTransferType } from "../errors";
 import {
   convertConditionalTransferParams,
   convertResolveConditionParams,

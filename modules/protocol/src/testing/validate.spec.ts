@@ -193,9 +193,9 @@ describe("validateUpdateParams", () => {
     expect(error).to.be.ok;
     expect(error).to.be.instanceOf(ValidationError);
     expect(error?.message).to.be.eq(message);
-    expect(error?.context ?? {}).to.containSubset(context ?? {});
-    expect(error?.state).to.be.deep.eq(state);
-    expect(error?.params).to.be.deep.eq(params);
+    expect(error?.context).to.containSubset(context ?? {});
+    expect(error?.context.state).to.be.deep.eq(state);
+    expect(error?.context.params).to.be.deep.eq(params);
   };
 
   beforeEach(() => {
@@ -775,8 +775,8 @@ describe.skip("validateParamsAndApplyUpdate", () => {
       signer.publicIdentifier,
     );
     expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.OutboundValidationFailed);
-    expect(result.getError()?.params).to.be.deep.eq(params);
-    expect(result.getError()?.state).to.be.deep.eq(previousState);
+    expect(result.getError()?.context.params).to.be.deep.eq(params);
+    expect(result.getError()?.context.state).to.be.deep.eq(previousState);
     expect(result.getError()?.context.error).to.be.eq("fail");
     expect(result.isError).to.be.true;
   });
@@ -837,7 +837,7 @@ describe("validateAndApplyInboundUpdate", () => {
     expect(error).to.be.ok;
     expect(result.isError).to.be.true;
     expect(error?.message).to.be.eq(errorMessage);
-    expect(error?.state).to.be.deep.eq(previousState);
+    expect(error?.context.state).to.be.deep.eq(previousState);
     expect(error?.context ?? {}).to.containSubset(context);
     return;
   };
