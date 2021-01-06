@@ -56,17 +56,20 @@ export class BrowserNode implements INodeService {
   private supportedChains: number[] = [];
   private routerPublicIdentifier?: string;
   private iframeSrc?: string;
+  private chainProviders: ChainProviders = {};
 
   constructor(params: {
     logger?: pino.BaseLogger;
     routerPublicIdentifier?: string;
     supportedChains?: number[];
     iframeSrc?: string;
+    chainProviders: ChainProviders;
   }) {
     this.logger = params.logger || pino();
     this.routerPublicIdentifier = params.routerPublicIdentifier;
     this.supportedChains = params.supportedChains || [];
     this.iframeSrc = params.iframeSrc;
+    this.chainProviders = params.chainProviders;
   }
 
   // method for signer-based connections
@@ -74,7 +77,7 @@ export class BrowserNode implements INodeService {
     if (!config.logger) {
       config.logger = pino();
     }
-    const node = new BrowserNode({ logger: config.logger });
+    const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
     // TODO: validate schema
     config.logger.info(
       { method: "connect", publicIdentifier: config.signer.publicIdentifier, signerAddress: config.signer.address },
@@ -154,7 +157,7 @@ export class BrowserNode implements INodeService {
       src: iframeSrc!,
       id: "connext-iframe",
     });
-    const rpc = constructRpcRequest("connext_authenticate", {});
+    const rpc = constructRpcRequest("connext_authenticate", { chainProviders: this.chainProviders });
     const auth = await this.channelProvider.send(rpc);
     this.logger.info({ method: "connect", response: auth }, "Received response from auth method");
     const [nodeConfig] = await this.getConfig();
