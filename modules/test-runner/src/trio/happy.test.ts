@@ -4,7 +4,17 @@ import pino from "pino";
 import { INodeService } from "@connext/vector-types";
 
 import { env, fundIfBelow, getRandomIndex } from "../utils";
-import { chainId1, chainId2, deposit, setup, transfer, wallet1, wallet2, withdraw } from "../utils/channel";
+import {
+  chainId1,
+  chainId2,
+  deposit,
+  requestCollateral,
+  setup,
+  transfer,
+  wallet1,
+  wallet2,
+  withdraw,
+} from "../utils/channel";
 
 import { carolEvts, daveEvts } from "./eventSetup";
 
@@ -76,6 +86,43 @@ describe(testName, () => {
     );
     // withdraw to delegated recipient
     await withdraw(daveService, daveRogerPostSetup.channelAddress, assetId, withdrawAmt, Wallet.createRandom().address);
+  });
+
+  it("ETH: deposit, requestCollateral, transfer C -> R -> D, requestCollateral, transfer C -> R -> D,", async () => {
+    const assetId = constants.AddressZero;
+    const depositAmt = utils.parseEther("0.0001");
+    const transferAmt = utils.parseEther("0.00005");
+
+    const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
+    const daveRogerPostSetup = await setup(daveService, rogerService, chainId1);
+
+    // carol deposits
+    await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
+    // dave collateralizes
+    await requestCollateral(daveService, rogerService, daveRogerPostSetup.channelAddress, assetId, transferAmt);
+
+    // carol transfers
+    await transfer(
+      carolService,
+      daveService,
+      carolRogerPostSetup.channelAddress,
+      daveRogerPostSetup.channelAddress,
+      assetId,
+      transferAmt,
+    );
+
+    // dave collateralizes
+    await requestCollateral(daveService, rogerService, daveRogerPostSetup.channelAddress, assetId, transferAmt);
+
+    // carol transfers
+    await transfer(
+      carolService,
+      daveService,
+      carolRogerPostSetup.channelAddress,
+      daveRogerPostSetup.channelAddress,
+      assetId,
+      transferAmt,
+    );
   });
 
   it("cross-chain: deposit, transfer C -> R -> D, withdraw", async () => {

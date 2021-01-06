@@ -162,15 +162,6 @@ export const requestCollateral = async (
     );
   }
   const profile = profileRes.getValue();
-  if (requestedAmount && BigNumber.from(requestedAmount).gt(profile.reclaimThreshold)) {
-    return Result.fail(
-      new CollateralError(CollateralError.reasons.TargetHigherThanThreshold, {
-        channelAddress: channel.channelAddress,
-        profile,
-        requestedAmount,
-      }),
-    );
-  }
 
   const target = BigNumber.from(requestedAmount ?? profile.target);
 
@@ -178,7 +169,7 @@ export const requestCollateral = async (
 
   const iAmAlice = publicIdentifier === channel.aliceIdentifier;
 
-  const assetIdx = channel.assetIds.findIndex((assetId) => assetId === assetId);
+  const assetIdx = channel.assetIds.findIndex((assetId: string) => assetId === assetId);
   const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
 
   if (myBalance.gte(target)) {
@@ -211,21 +202,22 @@ export const requestCollateral = async (
 
   // Check if a tx has already been sent, but has not been reconciled
   // Get the total deposits vs. processed deposits
-  const onchainProcessed = iAmAlice
+  const totalDeposited = iAmAlice
     ? await chainReader.getTotalDepositedA(channel.channelAddress, channel.networkContext.chainId, assetId)
     : await chainReader.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
-  if (onchainProcessed.isError) {
+  if (totalDeposited.isError) {
     return Result.fail(
       new CollateralError(CollateralError.reasons.CouldNotGetOnchainDeposits, {
         channelAddress: channel.channelAddress,
-        error: onchainProcessed.getError()?.message,
-        context: onchainProcessed.getError()?.context,
+        error: totalDeposited.getError()?.message,
+        context: totalDeposited.getError()?.context,
       }),
     );
   }
-  const offchainProcessed = BigNumber.from(channel.processedDepositsA[assetIdx] ?? "0");
+  const processed = iAmAlice ? channel.processedDepositsA[assetIdx] : channel.processedDepositsB[assetIdx];
   const amountToDeposit = BigNumber.from(target).sub(myBalance);
-  if (onchainProcessed.getValue().sub(offchainProcessed).lt(amountToDeposit)) {
+  const reconcilable = totalDeposited.getValue().sub(processed ?? "0");
+  if (reconcilable.lt(amountToDeposit)) {
     // Deposit needed
     logger.info({ amountToDeposit: amountToDeposit.toString() }, "Deposit amount calculated, submitting deposit tx");
     const txRes = await node.sendDepositTx({

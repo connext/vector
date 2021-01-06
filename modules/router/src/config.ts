@@ -1,6 +1,7 @@
 import { TAddress, TChainId, TIntegerString, TDecimalString } from "@connext/vector-types";
 import { Static, Type } from "@sinclair/typebox";
 import Ajv from "ajv";
+import { BigNumber } from "ethers";
 
 const ajv = new Ajv();
 
@@ -61,6 +62,18 @@ const valid = validate(vectorConfig);
 if (!valid) {
   console.error(`Invalid config: ${JSON.stringify(vectorConfig, null, 2)}`);
   throw new Error(validate.errors?.map((err) => err.message).join(","));
+}
+
+// Profile sanity checks
+for (const profile of vectorConfig.rebalanceProfiles) {
+  const target = BigNumber.from(profile.target);
+  if (target.gt(profile.reclaimThreshold)) {
+    throw new Error("Rebalance target must be less than reclaim threshold");
+  }
+
+  if (target.lt(profile.collateralizeThreshold) && !target.isZero()) {
+    throw new Error("Rebalance target must be larger than collateralizeThreshold or 0");
+  }
 }
 
 export const config = {

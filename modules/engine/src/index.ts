@@ -23,6 +23,7 @@ import {
   FullChannelState,
   EngineError,
   UpdateType,
+  InboundChannelUpdateError,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -450,7 +451,40 @@ export class VectorEngine implements IVectorEngine {
       return Result.fail(new Error(validate.errors?.map((err) => err.message).join(",")));
     }
 
-    return this.vector.deposit(params);
+    // NOTE: There is a race-condition for deposits because the onchain process
+    // is out-of-band of the protocol. For instance:
+    // 1. Alice deposits 5 onchain
+    // 2a. Alice sends single-signed update where she has reconciled the 5
+    // 2b. Bob deposits 3 onchain
+    // 3. Bob receives Alice's signature, and attempts to reconcile on their
+    //    own. Bob reconciles 8 and fails to recover Alice's signature properly
+    //    leaving all 8 out of the channel.
+
+    // There is no way to eliminate this race condition, so instead just retry
+    // depositing if a signature validation error is detected.
+    let depositRes = await this.vector.deposit(params);
+    let count = 1;
+    for (const _ of Array(3).fill(0)) {
+      // If its not an error, do not retry
+      if (!depositRes.isError) {
+        break;
+      }
+      const error = depositRes.getError()!;
+      // IFF deposit fails because you or the counterparty fails to recover
+      // signatures, retry
+      const recoveryFailed =
+        error.message === OutboundChannelUpdateError.reasons.BadSignatures ||
+        error.context?.counterpartyError === InboundChannelUpdateError.reasons.BadSignatures;
+
+      if (!recoveryFailed) {
+        break;
+      }
+      this.logger.warn({ attempt: count, error: depositRes.getError()?.message }, "Retrying deposit reconciliation");
+      depositRes = await this.vector.deposit(params);
+      count++;
+    }
+
+    return depositRes;
   }
 
   private async requestCollateral(

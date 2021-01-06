@@ -2,6 +2,35 @@
 
 ## Next Release
 
+## 0.1.0-rc.21
+
+- \[browser-node\] Require `chainProviders` to be passed into iframe
+## 0.1.0-rc.20
+
+- \[engine\] Retry on deposit race condition for inbound errors
+
+## 0.1.0-rc.19
+
+- \[router\] Remove obtrusive metrics
+- \[messaging\] Properly catch messaging timeouts
+- \[ops\] Fix router logdna
+
+## 0.1.0-rc.18
+
+- \[all\] Fix bad publishing
+
+## 0.1.0-rc.17
+
+- \[router\] Allow payments that exceed `reclaimThreshold` to be collateralized just in time
+- \[router\] Allow `profile.target` to be 0 (always use just in time collateralization)
+- \[messaging\] Improve error context
+
+## 0.1.0-rc.16
+
+- \[engine\] Retry on deposit race condition
+- \[router\] Cleanup collateral transaction logic + more tests
+- \[browser-node\] make crosschain transfers idempotent
+
 ## 0.1.0-rc.9
 
 - \[router/server-node\] optionally skip checkin on start

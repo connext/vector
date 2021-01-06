@@ -14,6 +14,7 @@ import { CopyToClipboard } from "react-copy-to-clipboard";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
 import "./App.css";
+import { config } from "./config";
 
 function App() {
   const [node, setNode] = useState<BrowserNode>();
@@ -52,6 +53,7 @@ function App() {
         supportedChains,
         iframeSrc,
         routerPublicIdentifier,
+        chainProviders: config.chainProviders,
       });
       await client.init();
       const channelsRes = await client.getStateChannels();
@@ -614,6 +616,10 @@ function App() {
                           ),
                         )}
                       </Select>
+                    </Form.Item>
+
+                    <Form.Item label="Withdrawal Address" name="withdrawalAddress">
+                      <Input placeholder="0x..." />
                     </Form.Item>
 
                     <Form.Item wrapperCol={{ offset: 6 }}>

@@ -26,7 +26,7 @@ export default class ConnextManager {
     }
   }
 
-  private async initNode(): Promise<BrowserNode> {
+  private async initNode(chainProviders: { [chainId: number]: string }): Promise<BrowserNode> {
     // store entropy in local storage
     if (!localStorage) {
       throw new Error("localStorage not available in this window, please enable cross-site cookies and try again.");
@@ -46,14 +46,14 @@ export default class ConnextManager {
     // store publicIdentifier in local storage to see if indexedDB needs to be deleted
     const storedPublicIdentifier = localStorage.getItem("publicIdentifier");
     if (storedPublicIdentifier && storedPublicIdentifier !== signer.publicIdentifier) {
-      console.warn("Public identifier does not match what is in storage, deleting store");
+      console.warn("Public identifier does not match what is in storage, deleting store...");
       indexedDB.deleteDatabase("VectorIndexedDBDatabase");
     }
 
     this.browserNode = await BrowserNode.connect({
       signer,
       chainAddresses: config.chainAddresses,
-      chainProviders: config.chainProviders,
+      chainProviders,
       logger: pino(),
       messagingUrl: config.messagingUrl,
       authUrl: config.authUrl,
@@ -81,7 +81,7 @@ export default class ConnextManager {
     request: EngineParams.RpcRequest,
   ): Promise<ChannelRpcMethodsResponsesMap[T]> {
     if (request.method === "connext_authenticate") {
-      const node = await this.initNode();
+      const node = await this.initNode(request.params.chainProviders);
       return {
         publicIdentifier: node.publicIdentifier,
         signerAddress: node.signerAddress,
