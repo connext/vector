@@ -164,29 +164,31 @@ export class BrowserNode implements INodeService {
       { supportedChains: this.supportedChains, routerPublicIdentifier: this.routerPublicIdentifier },
       "Checking for existing channels",
     );
-    for (const chainId of this.supportedChains) {
-      const channelRes = await this.getStateChannelByParticipants({
-        chainId,
-        counterparty: this.routerPublicIdentifier!,
-      });
-      if (channelRes.isError) {
-        throw channelRes.getError();
-      }
-      let channel = channelRes.getValue();
-      if (!channel) {
-        this.logger.info({ chainId }, "Setting up channel");
-        const address = await this.setup({
+    await Promise.all(
+      this.supportedChains.map(async (chainId) => {
+        const channelRes = await this.getStateChannelByParticipants({
           chainId,
-          counterpartyIdentifier: this.routerPublicIdentifier!,
-          timeout: "100000",
+          counterparty: this.routerPublicIdentifier!,
         });
-        if (address.isError) {
-          throw address.getError();
+        if (channelRes.isError) {
+          throw channelRes.getError();
         }
-        channel = (await this.getStateChannel(address.getValue())).getValue();
-      }
-      this.logger.info({ channel, chainId });
-    }
+        let channel = channelRes.getValue();
+        if (!channel) {
+          this.logger.info({ chainId }, "Setting up channel");
+          const address = await this.setup({
+            chainId,
+            counterpartyIdentifier: this.routerPublicIdentifier!,
+            timeout: "100000",
+          });
+          if (address.isError) {
+            throw address.getError();
+          }
+          channel = (await this.getStateChannel(address.getValue())).getValue();
+        }
+        this.logger.info({ channel, chainId });
+      }),
+    );
   }
 
   // IFRAME SPECIFIC
