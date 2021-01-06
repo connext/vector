@@ -7,7 +7,6 @@ import {
   IVectorProtocol,
   Result,
   EngineParams,
-  OutboundChannelUpdateError,
   ChannelRpcMethodsResponsesMap,
   IVectorEngine,
   EngineEventMap,
@@ -23,7 +22,6 @@ import {
   FullChannelState,
   EngineError,
   UpdateType,
-  InboundChannelUpdateError,
   Values,
 } from "@connext/vector-types";
 import {
@@ -295,7 +293,12 @@ export class VectorEngine implements IVectorEngine {
       const transfers = await this.store.getActiveTransfers(params.channelAddress);
       return Result.ok(transfers);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress, this.publicIdentifier, {
+          storeMethod: "getActiveTransfers",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
@@ -319,7 +322,12 @@ export class VectorEngine implements IVectorEngine {
       const transfer = await this.store.getTransferByRoutingId(params.channelAddress, params.routingId);
       return Result.ok(transfer);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, params.channelAddress ?? "", this.publicIdentifier, {
+          storeMethod: "getTransferByRoutingId",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
@@ -342,7 +350,12 @@ export class VectorEngine implements IVectorEngine {
       const transfers = await this.store.getTransfersByRoutingId(params.routingId);
       return Result.ok(transfers);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getTransfersByRoutingId",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
@@ -365,7 +378,13 @@ export class VectorEngine implements IVectorEngine {
       const channel = await this.store.getChannelStateByParticipants(params.alice, params.bob, params.chainId);
       return Result.ok(channel);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getChannelStateByParticipants",
+          storeError: e.message,
+          params,
+        }),
+      );
     }
   }
 
@@ -376,7 +395,12 @@ export class VectorEngine implements IVectorEngine {
       const channel = await this.store.getChannelStates();
       return Result.ok(channel);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.StoreMethodFailed, "", this.publicIdentifier, {
+          storeMethod: "getChannelStates",
+          storeError: e.message,
+        }),
+      );
     }
   }
 
@@ -417,7 +441,12 @@ export class VectorEngine implements IVectorEngine {
 
     const chainProviders = this.chainService.getChainProviders();
     if (chainProviders.isError) {
-      return Result.fail(chainProviders.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.ChainServiceFailure, "", this.publicIdentifier, {
+          chainServiceMethod: "getChainProviders",
+          chainServiceError: chainProviders.getError()?.toJson(),
+        }),
+      );
     }
 
     const setupRes = await this.vector.setup({
@@ -433,7 +462,12 @@ export class VectorEngine implements IVectorEngine {
     });
 
     if (setupRes.isError) {
-      return setupRes;
+      return Result.fail(
+        new RpcError(RpcError.reasons.ProtocolMethodFailed, "", this.publicIdentifier, {
+          protocolMethod: "setup",
+          protocolError: setupRes.getError()?.toJson(),
+        }),
+      );
     }
 
     const channel = setupRes.getValue();
@@ -521,9 +555,10 @@ export class VectorEngine implements IVectorEngine {
       const error = depositRes.getError()!;
       // IFF deposit fails because you or the counterparty fails to recover
       // signatures, retry
-      const recoveryFailed =
-        error.message === OutboundChannelUpdateError.reasons.BadSignatures ||
-        error.context?.counterpartyError === InboundChannelUpdateError.reasons.BadSignatures;
+      // This should be the message from *.reasons.BadSignatures in the protocol
+      // errors
+      const recoveryErr = "Could not recover signers";
+      const recoveryFailed = error.message === recoveryErr || error.context?.counterpartyError === recoveryErr;
 
       if (!recoveryFailed) {
         break;
@@ -550,13 +585,16 @@ export class VectorEngine implements IVectorEngine {
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channelRes.isError) {
-      return Result.fail(channelRes.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
+          engineFailure: "getChannelState",
+          engineError: channelRes.getError()?.toJson(),
+        }),
+      );
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
-      );
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
 
     const request = await this.messaging.sendRequestCollateralMessage(
@@ -583,13 +621,16 @@ export class VectorEngine implements IVectorEngine {
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channelRes.isError) {
-      return Result.fail(channelRes.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
+          engineFailure: "getChannelState",
+          engineError: channelRes.getError()?.toJson(),
+        }),
+      );
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
-      );
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
@@ -601,12 +642,21 @@ export class VectorEngine implements IVectorEngine {
       this.chainService,
     );
     if (createResult.isError) {
-      return Result.fail(createResult.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.ParamConversionFailed, params.channelAddress, this.publicIdentifier, {
+          conversionError: createResult.getError()?.toJson(),
+        }),
+      );
     }
     const createParams = createResult.getValue();
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
-      return Result.fail(protocolRes.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.ProtocolMethodFailed, params.channelAddress, this.publicIdentifier, {
+          protocolError: protocolRes.getError()?.toJson(),
+          protocolMethod: "create",
+        }),
+      );
     }
     const res = protocolRes.getValue();
     return Result.ok(res);
@@ -628,24 +678,40 @@ export class VectorEngine implements IVectorEngine {
 
     const transferRes = await this.getTransferState({ transferId: params.transferId });
     if (transferRes.isError) {
-      return Result.fail(transferRes.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
+          engineError: transferRes.getError()?.toJson(),
+          engineMethod: "getTransferState",
+        }),
+      );
     }
     const transfer = transferRes.getValue();
     if (!transfer) {
       return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotFound, params as any),
+        new RpcError(RpcError.reasons.TransferNotFound, params.channelAddress ?? "", this.publicIdentifier, {
+          transferId: params.transferId,
+        }),
       );
     }
 
     // First, get translated `create` params using the passed in conditional transfer ones
     const resolveResult = convertResolveConditionParams(params, transfer);
     if (resolveResult.isError) {
-      return Result.fail(resolveResult.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.ParamConversionFailed, params.channelAddress ?? "", this.publicIdentifier, {
+          conversionError: resolveResult.getError()?.toJson(),
+        }),
+      );
     }
     const resolveParams = resolveResult.getValue();
     const protocolRes = await this.vector.resolve(resolveParams);
     if (protocolRes.isError) {
-      return Result.fail(protocolRes.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.ProtocolMethodFailed, params.channelAddress ?? "", this.publicIdentifier, {
+          protocolMethod: "resolve",
+          protocolError: resolveResult.getError()?.toJson(),
+        }),
+      );
     }
     const res = protocolRes.getValue();
     return Result.ok(res);
@@ -667,13 +733,16 @@ export class VectorEngine implements IVectorEngine {
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channelRes.isError) {
-      return Result.fail(channelRes.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
+          engineFailure: "getChannelState",
+          engineError: channelRes.getError()?.toJson(),
+        }),
+      );
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params as any),
-      );
+      return Result.fail(new RpcError(RpcError.reasons.ChannelNotFound, params.channelAddress, this.publicIdentifier));
     }
 
     // First, get translated `create` params from withdraw
@@ -685,12 +754,21 @@ export class VectorEngine implements IVectorEngine {
       this.chainService,
     );
     if (createResult.isError) {
-      return Result.fail(createResult.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.ParamConversionFailed, params.channelAddress, this.publicIdentifier, {
+          conversionError: createResult.getError()?.toJson(),
+        }),
+      );
     }
     const createParams = createResult.getValue();
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
-      return Result.fail(protocolRes.getError()!);
+      return Result.fail(
+        new RpcError(RpcError.reasons.ProtocolMethodFailed, params.channelAddress, this.publicIdentifier, {
+          protocolError: protocolRes.getError()?.toJson(),
+          protocolMethod: "create",
+        }),
+      );
     }
     const res = protocolRes.getValue();
     const transferId = res.latestUpdate.details.transferId;
@@ -716,7 +794,11 @@ export class VectorEngine implements IVectorEngine {
       const res = await this.signer.decrypt(encrypted);
       return Result.ok(res);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.DecryptFailed, "", this.publicIdentifier, {
+          decryptError: e.message,
+        }),
+      );
     }
   }
 
@@ -736,7 +818,11 @@ export class VectorEngine implements IVectorEngine {
       const sig = await this.signer.signUtilityMessage(params.message);
       return Result.ok(sig);
     } catch (e) {
-      return Result.fail(e);
+      return Result.fail(
+        new RpcError(RpcError.reasons.UtilitySigningFailed, "", this.publicIdentifier, {
+          signingError: e.message,
+        }),
+      );
     }
   }
 
@@ -798,7 +884,11 @@ export class VectorEngine implements IVectorEngine {
       this.signer.publicIdentifier,
     );
     if (restoreDataRes.isError) {
-      return Result.fail(restoreDataRes.getError()!);
+      return Result.fail(
+        new RestoreError(RestoreError.reasons.ReceivedError, "", this.publicIdentifier, {
+          receivedError: restoreDataRes.getError()?.toJson(),
+        }),
+      );
     }
 
     const { channel, activeTransfers } = restoreDataRes.getValue() ?? ({} as any);
