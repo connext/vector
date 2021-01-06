@@ -229,7 +229,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -284,7 +284,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -308,7 +308,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -493,7 +493,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -541,7 +541,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -574,7 +574,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -619,7 +619,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -658,7 +658,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -747,7 +747,7 @@ export class VectorEngine implements IVectorEngine {
     const valid = validate(params);
     if (!valid) {
       return Result.fail(
-        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress, this.publicIdentifier, {
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
           invalidParamsError: validate.errors?.map((e) => e.message).join(","),
           invalidParams: params,
         }),
@@ -923,9 +923,19 @@ export class VectorEngine implements IVectorEngine {
   }
 
   // DISPUTE METHODS
-  private async disputeChannel(
+  private async dispute(
     params: EngineParams.DisputeChannel,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], DisputeError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_dispute], EngineError>> {
+    const validate = ajv.compile(EngineParams.DisputeChannelSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
     const channel = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channel.isError) {
       return Result.fail(
@@ -954,9 +964,19 @@ export class VectorEngine implements IVectorEngine {
     return Result.ok({ transactionHash: disputeRes.getValue().hash });
   }
 
-  private async defundChannel(
+  private async defund(
     params: EngineParams.DefundChannel,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defund], DisputeError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defund], EngineError>> {
+    const validate = ajv.compile(EngineParams.DefundChannelSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, params.channelAddress ?? "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
     const channel = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channel.isError) {
       return Result.fail(
@@ -992,7 +1012,17 @@ export class VectorEngine implements IVectorEngine {
 
   private async disputeTransfer(
     params: EngineParams.DisputeTransfer,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_disputeTransfer], DisputeError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_disputeTransfer], EngineError>> {
+    const validate = ajv.compile(EngineParams.DisputeTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
     const transferRes = await this.getTransferState(params);
     if (transferRes.isError) {
       return Result.fail(
@@ -1036,7 +1066,18 @@ export class VectorEngine implements IVectorEngine {
 
   private async defundTransfer(
     params: EngineParams.DefundTransfer,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defundTransfer], DisputeError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_defundTransfer], EngineError>> {
+    const validate = ajv.compile(EngineParams.DefundTransferSchema);
+    const valid = validate(params);
+    if (!valid) {
+      return Result.fail(
+        new RpcError(RpcError.reasons.InvalidParams, "", this.publicIdentifier, {
+          invalidParamsError: validate.errors?.map((e) => e.message).join(","),
+          invalidParams: params,
+        }),
+      );
+    }
+
     const transferRes = await this.getTransferState(params);
     if (transferRes.isError) {
       return Result.fail(
@@ -1102,7 +1143,9 @@ export class VectorEngine implements IVectorEngine {
 
     const methodName = payload.method.replace("chan_", "");
     if (typeof this[methodName] !== "function") {
-      throw new Error(`Invalid method: ${methodName}`);
+      throw new RpcError(RpcError.reasons.InvalidMethod, payload.params?.channelAddress ?? "", this.publicIdentifier, {
+        payload,
+      });
     }
 
     // every method must be a result type

@@ -13,6 +13,7 @@ import {
 } from "@connext/vector-utils";
 import Sinon from "sinon";
 
+import { RpcError } from "../errors";
 import { VectorEngine } from "../index";
 
 import { env } from "./env";
@@ -158,11 +159,58 @@ describe("VectorEngine", () => {
           false,
         );
         const rpc: EngineParams.RpcRequest = { ...test.overrides } as any;
-        await expect(engine.request(rpc)).rejectedWith(test.error);
+        try {
+          await engine.request(rpc);
+          expect(false).to.be.true;
+        } catch (e) {
+          expect(e.message).to.be.eq(RpcError.reasons.InvalidRpcSchema);
+          expect(e.context.invalidRpcRequest).to.be.deep.eq(rpc);
+          expect(e.context.invalidRpcRequestError).to.include(test.error);
+          expect(e.context.publicIdentifier).to.be.eq(engine.publicIdentifier);
+          expect(e.context.channelAddress).to.be.eq(rpc.params?.channelAddress ?? "");
+        }
       });
     }
 
-    describe("should fail if it has malformed request.params", async () => {
+    describe("should fail if it is not a valid rpc method for the engine layer", async () => {
+      const tests = [
+        {
+          name: "chan_subscription is not a valid rpc method",
+          overrides: { method: "chan_subscription", params: { subscription: invalidAddress } },
+        },
+        {
+          name: "connext_authenticate is not valid rpc method",
+          overrides: { method: "connext_authenticate", params: { signature: invalidAddress } },
+        },
+      ];
+
+      for (const test of tests) {
+        it(test.name, async () => {
+          const engine = await VectorEngine.connect(
+            Sinon.createStubInstance(MemoryMessagingService),
+            Sinon.createStubInstance(MemoryLockService),
+            storeService,
+            getRandomChannelSigner(),
+            Sinon.createStubInstance(VectorChainService),
+            chainAddresses,
+            log,
+            false,
+          );
+          const rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
+          try {
+            await engine.request(rpc);
+            expect(false).to.be.true;
+          } catch (e) {
+            expect(e.message).to.be.eq(RpcError.reasons.InvalidMethod);
+            expect(e.context.payload).to.be.deep.eq(rpc);
+            expect(e.context.publicIdentifier).to.be.eq(engine.publicIdentifier);
+            expect(e.context.channelAddress).to.be.eq(rpc.params?.channelAddress ?? "");
+          }
+        });
+      }
+    });
+
+    describe.only("should fail if it has malformed request.params", async () => {
       const malformedPublicIdentifier = 'should match pattern "^vector([a-zA-Z0-9]{50})$"';
       const malformedAddress = 'should match pattern "^0x[a-fA-F0-9]{40}$"';
       const malformedTransactionId = 'should match pattern "^0x([a-fA-F0-9]{64})$"';
@@ -542,13 +590,13 @@ describe("VectorEngine", () => {
               channelAddress: validAddress,
               amount: "1",
               assetId: validAddress,
-              type: "",
+              type: 3,
               details: {},
               recipientChainId: 1,
               timeout: "1000",
             },
           },
-          error: "No channel found in storage",
+          error: "should be string",
         },
         {
           name: "chan_createTransfer malformed parameter recipientChainId",
@@ -707,53 +755,26 @@ describe("VectorEngine", () => {
           },
           error: malformedAddress,
         },
-
-        {
-          name: "chan_subscribe missing parameter event",
-          overrides: { method: "chan_subscribe", params: { once: true } },
-          error: "Invalid method: subscribe",
-        },
-        {
-          name: "chan_subscribe missing parameter once",
-          overrides: { method: "chan_subscribe", params: { event: invalidAddress } },
-          error: "Invalid method: subscribe",
-        },
-        {
-          name: "chan_subscribe malformed parameter event",
-          overrides: { method: "chan_subscribe", params: { event: invalidAddress, once: true } },
-          error: "Invalid method: subscribe",
-        },
-        {
-          name: "chan_subscribe malformed parameter once",
-          overrides: { method: "chan_subscribe", params: { event: invalidAddress, once: "true" } },
-          error: "Invalid method: subscribe",
-        },
-        {
-          name: "connext_authenticate malformed parameter signature",
-          overrides: { method: "connext_authenticate", params: { signature: invalidAddress } },
-          error: "Invalid method: connext_authenticate",
-        },
-
         {
           name: "chan_dispute missing parameter channelAddress",
           overrides: { method: "chan_dispute", params: { undefined } },
-          error: "Invalid method: dispute",
+          error: missingParam("channelAddress"),
         },
         {
           name: "chan_dispute malformed parameter channelAddress",
           overrides: { method: "chan_dispute", params: { channelAddress: invalidAddress } },
-          error: "Invalid method: dispute",
+          error: malformedAddress,
         },
 
         {
           name: "chan_defund missing parameter channelAddress",
           overrides: { method: "chan_defund", params: { undefined } },
-          error: "Invalid method: defund",
+          error: missingParam("channelAddress"),
         },
         {
           name: "chan_defund malformed parameter channelAddress",
           overrides: { method: "chan_defund", params: { channelAddress: invalidAddress } },
-          error: "Invalid method: defund",
+          error: malformedAddress,
         },
 
         {
@@ -777,16 +798,6 @@ describe("VectorEngine", () => {
           overrides: { method: "chan_defundTransfer", params: { transferId: invalidAddress } },
           error: malformedTransactionId,
         },
-        {
-          name: "chan_subscription missing parameter subscription",
-          overrides: { method: "chan_subscription", params: { data: "data" } },
-          error: "Invalid method: subscription",
-        },
-        {
-          name: "chan_subscription missing parameter data",
-          overrides: { method: "chan_subscription", params: { subscription: invalidAddress } },
-          error: "Invalid method: subscription",
-        },
       ];
 
       for (const test of paramsTests) {
@@ -802,7 +813,16 @@ describe("VectorEngine", () => {
             false,
           );
           const rpc: EngineParams.RpcRequest = { id: 1, jsonrpc: "2.0", ...test.overrides } as any;
-          await expect(engine.request(rpc)).rejectedWith(test.error);
+          try {
+            await engine.request(rpc);
+            expect(false).to.be.true;
+          } catch (e) {
+            expect(e.message).to.be.eq(RpcError.reasons.InvalidParams);
+            expect(e.context.invalidParams).to.be.deep.eq(rpc.params);
+            expect(e.context.invalidParamsError).to.include(test.error);
+            expect(e.context.publicIdentifier).to.be.eq(engine.publicIdentifier);
+            expect(e.context.channelAddress).to.be.eq(rpc.params?.channelAddress ?? "");
+          }
         });
       }
     });
