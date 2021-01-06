@@ -93,7 +93,11 @@ export type ChannelRpcMethodsResponsesMap = {
   [ChannelRpcMethods.chan_withdraw]: { channel: FullChannelState; transactionHash?: string };
   [ChannelRpcMethods.chan_subscribe]: any;
   [ChannelRpcMethods.chan_unsubscribeAll]: any;
-  [ChannelRpcMethods.connext_authenticate]: { publicIdentifier: string; signerAddress: string };
+  [ChannelRpcMethods.connext_authenticate]: {
+    publicIdentifier: string;
+    signerAddress: string;
+    chainProviders: { [chainId: number]: string };
+  };
   [ChannelRpcMethods.chan_dispute]: { transactionHash: string };
   [ChannelRpcMethods.chan_defund]: { transactionHash: string };
   [ChannelRpcMethods.chan_disputeTransfer]: { transactionHash: string };
