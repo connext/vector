@@ -88,9 +88,9 @@ export const requestCollateral = async (
 
   const counterpartyAfter = getBalanceForAssetId(requesterChannel, assetId, counterpartyAliceOrBob);
   expect(requesterChannel).to.deep.eq(counterpartyChannel);
-  const min = BigNumber.from(counterpartyBefore).add(requestedAmount ?? "0");
-  expect(BigNumber.from(counterpartyAfter).gte(min)).to.be.true;
+  const min = BigNumber.from(requestedAmount ?? counterpartyBefore);
   expect(BigNumber.from(counterpartyAfter).gt(counterpartyBefore)).to.be.true;
+  expect(BigNumber.from(counterpartyAfter).gte(min)).to.be.true;
   return requesterChannel;
 };
 
