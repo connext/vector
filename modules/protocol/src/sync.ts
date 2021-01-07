@@ -273,8 +273,9 @@ export async function inbound(
   // If we are behind by more than 3, we cannot sync from their latest
   // update, and must use restore
   if (diff >= 3) {
-    return returnError(InboundChannelUpdateError.reasons.StaleChannel, update, channelFromStore, {
+    return returnError(InboundChannelUpdateError.reasons.RestoreNeeded, update, channelFromStore, {
       counterpartyLatestUpdate: previousUpdate,
+      ourLatestNonce: prevNonce,
     });
   }
 
@@ -296,9 +297,16 @@ export async function inbound(
       activeTransfers,
       (message: string) =>
         Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.SyncFailure, previousUpdate, previousState, {
-            error: message,
-          }),
+          new InboundChannelUpdateError(
+            message !== InboundChannelUpdateError.reasons.CannotSyncSetup
+              ? InboundChannelUpdateError.reasons.SyncFailure
+              : InboundChannelUpdateError.reasons.CannotSyncSetup,
+            previousUpdate,
+            previousState,
+            {
+              syncError: message,
+            },
+          ),
         ),
       storeService,
       chainReader,
@@ -382,15 +390,34 @@ const syncStateAndRecreateUpdate = async (
   // parameters.
 
   const counterpartyUpdate = receivedError.context.update;
+
+  // make sure you *can* sync
+  const diff = counterpartyUpdate.nonce - (previousState.nonce ?? 0);
+  if (diff !== 1) {
+    return Result.fail(
+      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.RestoreNeeded, attemptedParams, previousState, {
+        counterpartyUpdate,
+        latestNonce: previousState.nonce,
+      }),
+    );
+  }
+
   const syncRes = await syncState(
     counterpartyUpdate,
     previousState,
     activeTransfers,
     (message: string) =>
       Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.SyncFailure, attemptedParams, previousState, {
-          error: message,
-        }),
+        new OutboundChannelUpdateError(
+          message !== InboundChannelUpdateError.reasons.CannotSyncSetup
+            ? OutboundChannelUpdateError.reasons.SyncFailure
+            : OutboundChannelUpdateError.reasons.CannotSyncSetup,
+          attemptedParams,
+          previousState,
+          {
+            syncError: message,
+          },
+        ),
       ),
     storeService,
     chainReader,
@@ -450,7 +477,7 @@ const syncState = async (
   // channel properly, we will have to handle the retry in the calling
   // function, so just ignore for now.
   if (toSync.type === UpdateType.setup) {
-    return handleError("Cannot sync setup update");
+    return handleError(InboundChannelUpdateError.reasons.CannotSyncSetup);
   }
 
   // As you receive an update to sync, it should *always* be double signed.
