@@ -2,9 +2,14 @@
 
 ## Next Release
 
+## 0.1.0-rc.22
+
+- \[types\] Update signature regex
+
 ## 0.1.0-rc.21
 
 - \[browser-node\] Require `chainProviders` to be passed into iframe
+
 ## 0.1.0-rc.20
 
 - \[engine\] Retry on deposit race condition for inbound errors
