@@ -2,6 +2,8 @@
 
 ## Next Release
 
+## 0.1.0-rc.22
+
 - \[types\] Update signature regex
 
 ## 0.1.0-rc.21
