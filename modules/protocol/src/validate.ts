@@ -283,6 +283,7 @@ export const validateParamsAndApplyUpdate = async (
   previousState: FullChannelState | undefined,
   activeTransfers: FullTransferState[],
   initiatorIdentifier: string,
+  logger?: BaseLogger,
 ): Promise<
   Result<
     {
@@ -326,6 +327,7 @@ export const validateParamsAndApplyUpdate = async (
     previousState,
     activeTransfers,
     initiatorIdentifier,
+    logger,
   );
   return updateRes;
 };
@@ -472,6 +474,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     previousState,
     activeTransfers,
     update.fromIdentifier,
+    logger,
   );
   if (validRes.isError) {
     return Result.fail(
@@ -506,6 +509,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     signer,
     update.aliceSignature,
     update.bobSignature,
+    logger,
   );
   if (signedRes.isError) {
     return Result.fail(new InboundChannelUpdateError(signedRes.getError()?.message as any, update, previousState));

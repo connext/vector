@@ -63,6 +63,7 @@ export async function outbound(
     previousState,
     activeTransfers,
     signer.publicIdentifier,
+    logger,
   );
   if (updateRes.isError) {
     logger.warn(
@@ -421,6 +422,7 @@ const syncStateAndRecreateUpdate = async (
     syncedChannel,
     syncedActiveTransfers,
     signer.publicIdentifier,
+    logger,
   );
 
   if (validationRes.isError) {

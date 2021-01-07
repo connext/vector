@@ -22,7 +22,7 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
 import Ajv from "ajv";
-import { BaseLogger } from "pino";
+import { BaseLogger, Level } from "pino";
 
 const ajv = new Ajv();
 
@@ -165,10 +165,19 @@ export async function generateSignedChannelCommitment(
   signer: IChannelSigner,
   aliceSignature?: string,
   bobSignature?: string,
+  logger?: BaseLogger,
 ): Promise<Result<{ core: CoreChannelState; aliceSignature?: string; bobSignature?: string }, Error>> {
+  const log = (msg: string, details: any = {}, level: Level = "info") => {
+    if (!logger) {
+      return;
+    }
+    logger[level](details, msg);
+  };
   const { networkContext, ...core } = newState;
+  const hash = hashChannelCommitment(core);
 
   if (aliceSignature && bobSignature) {
+    log("Double signed, doing nothing", { aliceSignature, bobSignature, hash });
     // No need to sign, we have already signed
     return Result.ok({
       core,
@@ -179,7 +188,8 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   try {
-    const sig = await signer.signMessage(hashChannelCommitment(core));
+    log("Signing hash", { hash, signer: signer.address, state: newState });
+    const sig = await signer.signMessage(hash);
     const isAlice = signer.address === newState.alice;
     return Result.ok({
       core,
