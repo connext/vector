@@ -15,12 +15,10 @@ export class ValidationError extends ProtocolError {
 
   static readonly reasons = {
     AssetNotFound: "Asset is not found in channel",
-    BadUpdateType: "Unrecognized update type",
     ChannelAlreadySetup: "Channel is already setup",
     ChannelNotFound: "No channel found in storage",
     ChainServiceFailure: "Failed to execute chain service method",
     DuplicateTransferId: "Transfer with matching transferId already stored",
-    ImproperlyReconciled: "Deposit was not properly reconciled",
     InDispute: "Channel currently in dispute",
     InsufficientFunds: "Insufficient funds in channel",
     InvalidArrayLength:
@@ -28,24 +26,13 @@ export class ValidationError extends ProtocolError {
     InvalidAssetId: "Asset ID is invalid",
     InvalidChannelAddress: "Provided channel address is invalid",
     InvalidCounterparty: "Channel counterparty is invalid",
-    InvalidFromIdentifier: "Update `fromIdentifier` is invalid",
     InvalidInitialState: "Initial transfer state is invalid",
     InvalidResolver: "Transfer resolver must be an object",
-    InvalidTransferDefinition: "Transfer definition is incorrect",
-    InvalidTransferEncodings: "Transfer encodings do not match regisry",
-    InvalidToIdentifier: "Update `toIdentifier` is invalid",
     LongChannelTimeout: `Channel timeout above maximum of ${MAXIMUM_CHANNEL_TIMEOUT.toString()}s`,
-    MiscalculatedTransferId: "Calculated transfer ID is different than provided transferId",
-    MiscalculatedChannelBalance: "Channel balance for update is miscalculated",
-    MiscalculatedMerkleRoot: "Merkle root in update was miscalculated",
-    MiscalculatedMerkleProof: "Merkle proof in update was miscalculated",
-    NoActiveTransfers: "Active transfers are undefined",
     OnlyResponderCanInitiateResolve: "Only transfer responder may initiate resolve update",
-    SetupTimeoutInvalid: "Provided state timeout is invalid",
     ShortChannelTimeout: `Channel timeout below minimum of ${MINIMUM_CHANNEL_TIMEOUT.toString()}s`,
     TooManyAssets: "20 or more assets already in channel state",
     TransferNotActive: "Transfer not found in activeTransfers",
-    TransferNotFound: "No transfer found in storage",
     TransferResolved: "Transfer has already been resolved",
     TransferTimeoutAboveChannel: `Transfer timeout must be less than the channel timeout`,
     TransferTimeoutBelowMin: `Transfer timeout below minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
@@ -84,7 +71,6 @@ export class InboundChannelUpdateError extends ProtocolError {
     InvalidUpdateNonce: "Update nonce must be previousState.nonce + 1",
     MalformedDetails: "Channel update details are malformed",
     MalformedUpdate: "Channel update is malformed",
-    MissingFinalBalance: "Final balance for resolve not found",
     SaveChannelFailed: "Failed to save channel",
     StoreFailure: "Failed to pull data from store",
     StaleChannel: "Channel state is behind, cannot apply update",
@@ -109,7 +95,6 @@ export class OutboundChannelUpdateError extends ProtocolError {
 
   static readonly reasons = {
     AcquireLockFailed: "Failed to acquire lock",
-    ApplyUpdateFailed: "Failed to apply update",
     BadSignatures: "Could not recover signers",
     ChannelNotFound: "No channel found in storage",
     CounterpartyFailure: "Counterparty failed to apply update",
@@ -125,7 +110,6 @@ export class OutboundChannelUpdateError extends ProtocolError {
     StaleChannel: "Channel state is behind, cannot apply update",
     StoreFailure: "Failed to pull data from store",
     SyncFailure: "Failed to sync channel from counterparty update",
-    TransferNotRegistered: "Transfer not found in registry",
   } as const;
 
   constructor(
@@ -143,7 +127,6 @@ export class CreateUpdateError extends ProtocolError {
 
   static readonly reasons = {
     BadUpdateType: "Cannot generate unrecognized update type",
-    ChannelNotFound: "Channel not found",
     CouldNotApplyUpdate: "Failed to apply update to generate sig",
     CouldNotSign: "Failed to sign updated channel hash",
     FailedToReconcileDeposit: "Could not reconcile deposit",

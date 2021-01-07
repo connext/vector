@@ -1089,7 +1089,7 @@ describe("generateAndApplyUpdate", () => {
       params,
       previousState,
       activeTransfers,
-      OutboundChannelUpdateError.reasons.TransferNotRegistered,
+      OutboundChannelUpdateError.reasons.OutboundValidationFailed,
       true,
     );
   });
