@@ -44,7 +44,7 @@ export async function outbound(
   if (storeRes.isError) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.StoreFailure, params, undefined, {
-        message: storeRes.getError()?.message,
+        storeError: storeRes.getError()?.message,
         method,
       }),
     );
@@ -143,8 +143,7 @@ export async function outbound(
         params,
         previousState,
         {
-          counterpartyError: error.message,
-          errorContext: error.context,
+          counterpartyError: error.toJson(),
         },
       ),
     );
@@ -166,7 +165,7 @@ export async function outbound(
       OutboundChannelUpdateError.reasons.BadSignatures,
       params,
       previousState,
-      { error: sigRes.getError()?.message },
+      { recoveryError: sigRes.getError()?.message },
     );
     logger.error({ method, error: error.message }, "Error receiving response, will not save state!");
     return Result.fail(error);
@@ -186,7 +185,7 @@ export async function outbound(
         params,
         { ...updatedChannel, latestUpdate: counterpartyUpdate },
         {
-          error: e.message,
+          saveChannelError: e.message,
         },
       ),
     );
@@ -232,7 +231,9 @@ export async function inbound(
 
   const storeRes = await extractContextFromStore(storeService, update.channelAddress);
   if (storeRes.isError) {
-    return returnError(InboundChannelUpdateError.reasons.StoreFailure);
+    return returnError(InboundChannelUpdateError.reasons.StoreFailure, undefined, undefined, {
+      storeError: storeRes.getError()?.message,
+    });
   }
 
   // eslint-disable-next-line prefer-const
@@ -336,7 +337,8 @@ export async function inbound(
     activeTransfers,
   );
   if (validateRes.isError) {
-    return returnError(validateRes.getError()!.message, update, previousState, validateRes.getError()?.context);
+    const { state: errState, params: errParams, update: errUpdate, ...usefulContext } = validateRes.getError()?.context;
+    return returnError(validateRes.getError()!.message, update, previousState, usefulContext);
   }
 
   const { updatedChannel, updatedActiveTransfers, updatedTransfer } = validateRes.getValue();
@@ -346,7 +348,7 @@ export async function inbound(
     await storeService.saveChannelState(updatedChannel, updatedTransfer);
   } catch (e) {
     return returnError(InboundChannelUpdateError.reasons.SaveChannelFailed, update, previousState, {
-      error: e.message,
+      saveChannelError: e.message,
     });
   }
 
@@ -444,13 +446,20 @@ const syncStateAndRecreateUpdate = async (
   );
 
   if (validationRes.isError) {
+    const {
+      state: errState,
+      params: errParams,
+      update: errUpdate,
+      ...usefulContext
+    } = validationRes.getError()?.context;
     return Result.fail(
       new OutboundChannelUpdateError(
         OutboundChannelUpdateError.reasons.RegenerateUpdateFailed,
         attemptedParams,
         syncedChannel,
         {
-          error: validationRes.getError()!.message,
+          regenerateUpdateError: validationRes.getError()!.message,
+          regenerateUpdateContext: usefulContext,
         },
       ),
     );
