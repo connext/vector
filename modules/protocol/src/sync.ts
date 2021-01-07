@@ -111,6 +111,7 @@ export async function outbound(
       chainReader,
       externalValidationService,
       signer,
+      logger,
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
@@ -161,6 +162,7 @@ export async function outbound(
     counterpartyUpdate.aliceSignature,
     counterpartyUpdate.bobSignature,
     "both",
+    logger,
   );
   if (sigRes.isError) {
     const error = new OutboundChannelUpdateError(
@@ -305,6 +307,7 @@ export async function inbound(
       chainReader,
       externalValidation,
       signer,
+      logger,
     );
     if (syncRes.isError) {
       const error = syncRes.getError() as InboundChannelUpdateError;
@@ -327,6 +330,7 @@ export async function inbound(
     update,
     previousState,
     activeTransfers,
+    logger,
   );
   if (validateRes.isError) {
     return returnError(validateRes.getError()!.message, update, previousState, validateRes.getError()?.context);
@@ -376,6 +380,7 @@ const syncStateAndRecreateUpdate = async (
   chainReader: IVectorChainReader,
   externalValidationService: IExternalValidation,
   signer: IChannelSigner,
+  logger?: pino.BaseLogger,
 ): Promise<Result<OutboundSync, OutboundChannelUpdateError>> => {
   // When receiving an update to sync from your counterparty, you
   // must make sure you can safely apply the update to your existing
@@ -397,6 +402,7 @@ const syncStateAndRecreateUpdate = async (
     chainReader,
     externalValidationService,
     signer,
+    logger,
   );
   if (syncRes.isError) {
     return Result.fail(syncRes.getError() as OutboundChannelUpdateError);
@@ -443,6 +449,7 @@ const syncState = async (
   chainReader: IVectorChainReader,
   externalValidation: IExternalValidation,
   signer: IChannelSigner,
+  logger?: pino.BaseLogger,
 ) => {
   // NOTE: We do not want to sync a setup update here, because it is a
   // bit of a pain -- the only time it is valid is if we are trying to
@@ -472,6 +479,7 @@ const syncState = async (
     toSync,
     previousState,
     activeTransfers,
+    logger,
   );
   if (validateRes.isError) {
     return handleError(validateRes.getError()!.message);

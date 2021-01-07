@@ -1,4 +1,5 @@
 import { FullChannelState, Result } from "@connext/vector-types";
+import { BaseLogger, Level } from "pino";
 
 import { hashChannelCommitment } from "./channel";
 import { recoverAddressFromChannelMessage } from "./crypto";
@@ -8,7 +9,14 @@ export async function validateChannelUpdateSignatures(
   aliceSignature?: string,
   bobSignature?: string,
   requiredSigners: "alice" | "bob" | "both" = "both",
+  logger?: BaseLogger,
 ): Promise<Result<void | Error>> {
+  const log = (msg: string, details: any = {}, level: Level = "info") => {
+    if (!logger) {
+      return;
+    }
+    logger[level](details, msg);
+  };
   // Generate the commitment
   const { networkContext, ...core } = state;
   let hash;
@@ -19,7 +27,8 @@ export async function validateChannelUpdateSignatures(
   }
 
   // Create a recovery helper to catch errors
-  const tryRecovery = async (sig?: string): Promise<string> => {
+  const tryRecovery = async (sig?: string, expectedSigner?: string): Promise<string> => {
+    log("Attempting recovery", { hash, sig });
     if (!sig) {
       return "No signature provided";
     }
@@ -27,12 +36,16 @@ export async function validateChannelUpdateSignatures(
     try {
       recovered = await recoverAddressFromChannelMessage(hash, sig);
     } catch (e) {
+      log("Recovery failed", { hash, sig, recoveryError: e.message, expectedSigner, state }, "error");
       recovered = e.message;
     }
     return recovered;
   };
 
-  const [rAlice, rBob] = await Promise.all([tryRecovery(aliceSignature), tryRecovery(bobSignature)]);
+  const [rAlice, rBob] = await Promise.all([
+    tryRecovery(aliceSignature, state.alice),
+    tryRecovery(bobSignature, state.bob),
+  ]);
 
   const aliceSigned = rAlice === state.alice;
   const bobSigned = rBob === state.bob;

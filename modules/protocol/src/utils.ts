@@ -22,6 +22,7 @@ import {
 import { BigNumber } from "@ethersproject/bignumber";
 import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
 import Ajv from "ajv";
+import { BaseLogger } from "pino";
 
 const ajv = new Ajv();
 
@@ -49,8 +50,9 @@ export async function validateChannelSignatures(
   aliceSignature: string | undefined,
   bobSignature: string | undefined,
   requiredSigners: "alice" | "bob" | "both",
+  logger?: BaseLogger,
 ): Promise<Result<void, Error>> {
-  return validateChannelUpdateSignatures(state, aliceSignature, bobSignature, requiredSigners);
+  return validateChannelUpdateSignatures(state, aliceSignature, bobSignature, requiredSigners, logger);
 }
 
 export const extractContextFromStore = async (
