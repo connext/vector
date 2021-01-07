@@ -43,7 +43,6 @@ import {
 export async function validateUpdateParams<T extends UpdateType = any>(
   signer: IChannelSigner,
   chainReader: IVectorChainReader,
-  externalValidationService: IExternalValidation,
   params: UpdateParams<T>,
   previousState: FullChannelState | undefined, // Undefined IFF setup
   activeTransfers: FullTransferState[], // Defined IFF create/resolve
@@ -291,7 +290,6 @@ export const validateParamsAndApplyUpdate = async (
   const validParamsRes = await validateUpdateParams(
     signer,
     chainReader,
-    externalValidation,
     params,
     previousState,
     activeTransfers,

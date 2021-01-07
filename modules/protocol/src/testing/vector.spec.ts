@@ -204,7 +204,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const error = ret.getError();
           expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(error?.context?.error).to.include(t.error);
+          expect(error?.context?.paramsError).to.include(t.error);
         });
       }
     });
@@ -266,7 +266,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.error).to.include(error);
+          expect(err?.context?.paramsError).to.include(error);
         });
       }
     });
@@ -366,7 +366,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.error).to.include(error);
+          expect(err?.context?.paramsError).to.include(error);
         });
       }
     });
@@ -435,7 +435,7 @@ describe("Vector", () => {
           expect(ret.isError).to.be.true;
           const err = ret.getError();
           expect(err?.message).to.be.eq(OutboundChannelUpdateError.reasons.InvalidParams);
-          expect(err?.context?.error).to.include(error);
+          expect(err?.context?.paramsError).to.include(error);
         });
       }
     });
