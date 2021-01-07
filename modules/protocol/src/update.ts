@@ -21,7 +21,7 @@ import {
 } from "@connext/vector-types";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 
-import { InboundChannelUpdateError, OutboundChannelUpdateError } from "./errors";
+import { ApplyUpdateError, CreateUpdateError } from "./errors";
 import { generateSignedChannelCommitment, getUpdatedChannelBalance, reconcileDeposit } from "./utils";
 
 // Should return a state with the given update applied
@@ -50,7 +50,7 @@ export function applyUpdate<T extends UpdateType>(
     updatedActiveTransfers: FullTransferState[];
     updatedTransfer?: FullTransferState;
   },
-  InboundChannelUpdateError
+  ApplyUpdateError
 > {
   const { type, details, channelAddress, fromIdentifier, toIdentifier, balance, assetId, nonce } = update;
 
@@ -58,18 +58,10 @@ export function applyUpdate<T extends UpdateType>(
 
   // Sanity check data presence so it is safe to force-unwrap
   if (!previousState && type !== UpdateType.setup) {
-    return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
-        applyError: "No previous state found",
-      }),
-    );
+    return Result.fail(new ApplyUpdateError(ApplyUpdateError.reasons.ChannelNotFound, update, previousState));
   }
   if (!finalTransferBalance && type === UpdateType.resolve) {
-    return Result.fail(
-      new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ApplyUpdateFailed, update, previousState, {
-        applyError: "No final transfer balance on resolve",
-      }),
-    );
+    return Result.fail(new ApplyUpdateError(ApplyUpdateError.reasons.MissingFinalBalance, update, previousState));
   }
 
   switch (type) {
@@ -176,11 +168,7 @@ export function applyUpdate<T extends UpdateType>(
       // Safe to force unwrap because the validation has been performed
       const transfer = previousActiveTransfers!.find((t) => t.transferId === transferId);
       if (!transfer) {
-        return Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.TransferNotFound, update, previousState, {
-            applyError: "No transfer found in activeTransfers",
-          }),
-        );
+        return Result.fail(new ApplyUpdateError(ApplyUpdateError.reasons.TransferNotActive, update, previousState));
       }
       const balances = reconcileBalanceWithExisting(balance, assetId, previousState!.balances, previousState!.assetIds);
       const updatedChannel = {
@@ -206,9 +194,7 @@ export function applyUpdate<T extends UpdateType>(
       });
     }
     default: {
-      return Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadUpdateType, update, previousState),
-      );
+      return Result.fail(new ApplyUpdateError(ApplyUpdateError.reasons.BadUpdateType, update, previousState));
     }
   }
 }
@@ -234,7 +220,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
       updatedActiveTransfers: FullTransferState[];
       updatedTransfer: FullTransferState | undefined;
     },
-    OutboundChannelUpdateError
+    CreateUpdateError
   >
 > {
   // Create the update from user parameters based on update type
@@ -258,9 +244,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         initiatorIdentifier,
       );
       if (depositRes.isError) {
-        return Result.fail(
-          new OutboundChannelUpdateError(depositRes.getError()!.message as any, params, previousState),
-        );
+        return Result.fail(depositRes.getError()!);
       }
       proposedUpdate = depositRes.getValue();
       break;
@@ -275,7 +259,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         initiatorIdentifier,
       );
       if (createRes.isError) {
-        return Result.fail(new OutboundChannelUpdateError(createRes.getError()!.message as any, params, previousState));
+        return Result.fail(createRes.getError()!);
       }
       proposedUpdate = createRes.getValue();
       break;
@@ -292,9 +276,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
         initiatorIdentifier,
       );
       if (resolveRes.isError) {
-        return Result.fail(
-          new OutboundChannelUpdateError(resolveRes.getError()!.message as any, params, previousState),
-        );
+        return Result.fail(resolveRes.getError()!);
       }
       const resolve = resolveRes.getValue();
       proposedUpdate = resolve.update;
@@ -302,9 +284,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
       break;
     }
     default: {
-      return Result.fail(
-        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.BadUpdateType, params, previousState),
-      );
+      return Result.fail(new CreateUpdateError(CreateUpdateError.reasons.BadUpdateType, params, previousState));
     }
   }
 
@@ -312,15 +292,25 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   // return any updated transfers/active transfers
   const applyUpdateRes = applyUpdate(proposedUpdate, previousState, activeTransfers, finalTransferBalance);
   if (applyUpdateRes.isError) {
-    const inboundError = applyUpdateRes.getError()!;
-    return Result.fail(new OutboundChannelUpdateError(inboundError.message as any, params, previousState));
+    const applyError = applyUpdateRes.getError()!;
+    const { state, params, ...res } = applyError.context;
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.CouldNotApplyUpdate, params, state, {
+        applyUpdateError: applyError.message,
+        applyUpdateContext: res,
+      }),
+    );
   }
   // Get all updated values
   const { updatedChannel, updatedTransfer, updatedActiveTransfers } = applyUpdateRes.getValue();
   // Sign updated channel
   const commitmentRes = await generateSignedChannelCommitment(updatedChannel, signer);
   if (commitmentRes.isError) {
-    return Result.fail(new OutboundChannelUpdateError(commitmentRes.getError()?.message as any, params, previousState));
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.CouldNotSign, params, previousState, {
+        signatureError: commitmentRes.getError()!.message,
+      }),
+    );
   }
   const { aliceSignature, bobSignature } = commitmentRes.getValue();
   // Add signature to update and return
@@ -369,7 +359,7 @@ async function generateDepositUpdate(
   signer: IChannelSigner,
   chainReader: IVectorChainReader,
   initiatorIdentifier: string,
-): Promise<Result<ChannelUpdate<"deposit">, Error>> {
+): Promise<Result<ChannelUpdate<"deposit">, CreateUpdateError>> {
   // The deposit update has the ability to change the values in
   // the following `FullChannelState` fields:
   // - balances
@@ -402,7 +392,11 @@ async function generateDepositUpdate(
     chainReader,
   );
   if (reconcileRes.isError) {
-    return Result.fail(reconcileRes.getError()!);
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.FailedToReconcileDeposit, params, state, {
+        reconcileError: reconcileRes.getError()?.toJson(),
+      }),
+    );
   }
 
   const { balance, totalDepositsAlice, totalDepositsBob } = reconcileRes.getValue();
@@ -426,7 +420,7 @@ async function generateCreateUpdate(
   transfers: FullTransferState[],
   chainReader: IVectorChainReader,
   initiatorIdentifier: string,
-): Promise<Result<ChannelUpdate<"create">, OutboundChannelUpdateError>> {
+): Promise<Result<ChannelUpdate<"create">, CreateUpdateError>> {
   const {
     details: { assetId, transferDefinition, timeout, transferInitialState, meta, balance },
   } = params;
@@ -451,13 +445,13 @@ async function generateCreateUpdate(
   );
   if (registryRes.isError) {
     return Result.fail(
-      new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.TransferNotRegistered, params, state, {
-        chainError: registryRes.getError()!.message,
+      new CreateUpdateError(CreateUpdateError.reasons.TransferNotRegistered, params, state, {
+        registryError: registryRes.getError()?.toJson(),
       }),
     );
   }
 
-  const { stateEncoding, resolverEncoding } = registryRes.getValue()!;
+  const { stateEncoding, resolverEncoding } = registryRes.getValue();
 
   // First, we must generate the merkle proof for the update
   // which means we must gather the list of open transfers for the channel
@@ -516,7 +510,7 @@ async function generateResolveUpdate(
   transfers: FullTransferState[],
   chainService: IVectorChainReader,
   initiatorIdentifier: string,
-): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, Error>> {
+): Promise<Result<{ update: ChannelUpdate<"resolve">; transferBalance: Balance }, CreateUpdateError>> {
   // A transfer resolution update can effect the following
   // channel fields:
   // - balances
@@ -528,7 +522,11 @@ async function generateResolveUpdate(
   // First generate latest merkle tree data
   const transferToResolve = transfers.find((x) => x.transferId === transferId);
   if (!transferToResolve) {
-    return Result.fail(new Error(OutboundChannelUpdateError.reasons.TransferNotActive));
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.TransferNotActive, params, state, {
+        active: transfers.map((t) => t.transferId),
+      }),
+    );
   }
   const { root } = generateMerkleTreeData(transfers.filter((x) => x.transferId !== transferId));
 
@@ -539,7 +537,11 @@ async function generateResolveUpdate(
   );
 
   if (transferBalanceResult.isError) {
-    return Result.fail(transferBalanceResult.getError()!);
+    return Result.fail(
+      new CreateUpdateError(CreateUpdateError.reasons.FailedToResolveTransferOnchain, params, state, {
+        resolveError: transferBalanceResult.getError()?.toJson(),
+      }),
+    );
   }
   const transferBalance = transferBalanceResult.getValue();
 

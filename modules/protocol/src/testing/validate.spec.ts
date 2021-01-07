@@ -307,7 +307,7 @@ describe("validateUpdateParams", () => {
       previousState,
       activeTransfers,
       initiatorIdentifier,
-      ValidationError.reasons.ExternalValidationFailed,
+      ValidationError.reasons.InvalidInitialState,
       { error: "fail" },
     );
   });
@@ -358,7 +358,7 @@ describe("validateUpdateParams", () => {
     it("should fail if chainReader.getChannelAddress fails", async () => {
       const { activeTransfers, initiatorIdentifier, params, previousState } = createValidSetupContext();
       chainReader.getChannelAddress.resolves(Result.fail(new ChainError("fail")));
-      await callAndVerifyError(initiator, params, previousState, activeTransfers, initiatorIdentifier, "fail");
+      await callAndVerifyError(initiator, params, previousState, activeTransfers, initiatorIdentifier, "fail" as any);
     });
     it("should fail if channelAddress is miscalculated", async () => {
       const { activeTransfers, initiatorIdentifier, params, previousState } = createValidSetupContext();
@@ -628,7 +628,7 @@ describe("validateUpdateParams", () => {
     it("should fail if chainReader.create fails", async () => {
       const { previousState, activeTransfers, initiatorIdentifier, params } = createValidCreateContext();
       chainReader.create.resolves(Result.fail(new ChainError("fail")));
-      await callAndVerifyError(initiator, params, previousState, activeTransfers, initiatorIdentifier, "fail");
+      await callAndVerifyError(initiator, params, previousState, activeTransfers, initiatorIdentifier, "fail" as any);
     });
 
     it("should fail if chainReader.create returns false", async () => {
@@ -1378,7 +1378,7 @@ describe("validateAndApplyInboundUpdate", () => {
       // Create update
       update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
       activeTransfers = [createTestFullHashlockTransferState({ transferId: update.details.transferId })];
-      await runErrorTest("fail");
+      await runErrorTest("fail" as any);
     });
 
     it("should fail if transfer is inactive", async () => {
@@ -1387,7 +1387,7 @@ describe("validateAndApplyInboundUpdate", () => {
       // Create update
       update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
       activeTransfers = [];
-      await runErrorTest(InboundChannelUpdateError.reasons.TransferNotFound, signers[0], { existing: [] });
+      await runErrorTest(InboundChannelUpdateError.reasons.TransferNotActive, signers[0], { existing: [] });
     });
 
     it("should fail if applyUpdate fails", async () => {
@@ -1439,7 +1439,7 @@ describe("validateAndApplyInboundUpdate", () => {
     validateParamsAndApplyUpdateStub.resolves(Result.fail(new Error("fail")));
 
     update = createTestChannelUpdate(UpdateType.setup, { nonce: 1, aliceSignature: undefined });
-    await runErrorTest(InboundChannelUpdateError.reasons.InboundValidationFailed, signers[0], { error: "fail" });
+    await runErrorTest(InboundChannelUpdateError.reasons.ApplyAndValidateInboundFailed, signers[0], { error: "fail" });
   });
 
   it("should fail if single signed + invalid sig", async () => {

@@ -359,7 +359,7 @@ describe("applyUpdate", () => {
     {
       name: "should fail for an unrecognized update type",
       updateType: ("fail" as unknown) as UpdateType,
-      error: InboundChannelUpdateError.reasons.BadUpdateType,
+      error: InboundChannelUpdateError.reasons.MalformedDetails,
     },
     {
       name: "should fail for `resolve` if there is no transfer balance",
@@ -1005,7 +1005,7 @@ describe("generateAndApplyUpdate", () => {
       params,
       previousState,
       activeTransfers,
-      OutboundChannelUpdateError.reasons.TransferNotActive,
+      OutboundChannelUpdateError.reasons.ChannelNotFound,
       true,
     );
   });

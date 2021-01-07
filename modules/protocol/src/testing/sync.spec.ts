@@ -153,7 +153,7 @@ describe("inbound", () => {
     // Set the validation stub
     validationStub.resolves(
       Result.fail(
-        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InboundValidationFailed, update, {} as any),
+        new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, {} as any),
       ),
     );
 
@@ -171,7 +171,7 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.InboundValidationFailed);
+    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.ExternalValidationFailed);
     // Make sure the calls were correctly performed
     expect(validationStub.callCount).to.be.eq(1);
     expect(store.saveChannelState.callCount).to.be.eq(0);
@@ -453,7 +453,7 @@ describe("inbound", () => {
       .onSecondCall()
       .resolves(
         Result.fail(
-          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.InboundValidationFailed, update, {} as any),
+          new InboundChannelUpdateError(InboundChannelUpdateError.reasons.ExternalValidationFailed, update, {} as any),
         ),
       );
     const result = await inbound(
@@ -470,7 +470,7 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.InboundValidationFailed);
+    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.ExternalValidationFailed);
     expect(validationStub.callCount).to.be.eq(2);
     expect(validationStub.firstCall.args[3].nonce).to.be.eq(2);
     expect(validationStub.secondCall.args[3].nonce).to.be.eq(3);
@@ -602,10 +602,7 @@ describe("outbound", () => {
       details: { counterpartyIdentifier: signers[1].publicIdentifier },
     });
     // Create a messaging service stub
-    const counterpartyError = new InboundChannelUpdateError(
-      InboundChannelUpdateError.reasons.ChannelNotFound,
-      {} as any,
-    );
+    const counterpartyError = new InboundChannelUpdateError(InboundChannelUpdateError.reasons.StoreFailure, {} as any);
     messaging.sendProtocolMessage.resolves(Result.fail(counterpartyError));
 
     // Stub the generation function
