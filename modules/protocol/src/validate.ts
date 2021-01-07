@@ -28,6 +28,7 @@ import {
 import { getSignerAddressFromPublicIdentifier, getTransferId } from "@connext/vector-utils";
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
+import { BaseLogger } from "pino";
 
 import { applyUpdate, generateAndApplyUpdate } from "./update";
 import {
@@ -282,6 +283,7 @@ export const validateParamsAndApplyUpdate = async (
   previousState: FullChannelState | undefined,
   activeTransfers: FullTransferState[],
   initiatorIdentifier: string,
+  logger?: BaseLogger,
 ): Promise<
   Result<
     {
@@ -325,6 +327,7 @@ export const validateParamsAndApplyUpdate = async (
     previousState,
     activeTransfers,
     initiatorIdentifier,
+    logger,
   );
   return updateRes;
 };
@@ -340,6 +343,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
   update: ChannelUpdate<T>,
   previousState: FullChannelState | undefined,
   activeTransfers: FullTransferState[],
+  logger?: BaseLogger,
 ): Promise<
   Result<
     {
@@ -421,7 +425,13 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
       );
     }
     const { updatedChannel, updatedActiveTransfers, updatedTransfer } = applyRes.getValue();
-    const sigRes = await validateChannelSignatures(updatedChannel, update.aliceSignature, update.bobSignature, "both");
+    const sigRes = await validateChannelSignatures(
+      updatedChannel,
+      update.aliceSignature,
+      update.bobSignature,
+      "both",
+      logger,
+    );
     if (sigRes.isError) {
       return Result.fail(
         new InboundChannelUpdateError(InboundChannelUpdateError.reasons.BadSignatures, update, previousState, {
@@ -464,6 +474,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     previousState,
     activeTransfers,
     update.fromIdentifier,
+    logger,
   );
   if (validRes.isError) {
     return Result.fail(
@@ -482,6 +493,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     update.aliceSignature,
     update.bobSignature,
     signer.address === updatedChannel.bob ? "alice" : "bob",
+    logger,
   );
   if (sigRes.isError) {
     return Result.fail(
@@ -497,6 +509,7 @@ export async function validateAndApplyInboundUpdate<T extends UpdateType = any>(
     signer,
     update.aliceSignature,
     update.bobSignature,
+    logger,
   );
   if (signedRes.isError) {
     return Result.fail(new InboundChannelUpdateError(signedRes.getError()?.message as any, update, previousState));

@@ -22,6 +22,7 @@ import {
   ResolveUpdateDetails,
 } from "@connext/vector-types";
 import { HashZero, AddressZero } from "@ethersproject/constants";
+import { BaseLogger } from "pino";
 
 import { generateSignedChannelCommitment, getUpdatedChannelBalance, reconcileDeposit } from "./utils";
 
@@ -227,6 +228,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   previousState: FullChannelState | undefined, // undefined IFF setup
   activeTransfers: FullTransferState[],
   initiatorIdentifier: string,
+  logger?: BaseLogger,
 ): Promise<
   Result<
     {
@@ -319,7 +321,7 @@ export async function generateAndApplyUpdate<T extends UpdateType>(
   // Get all updated values
   const { updatedChannel, updatedTransfer, updatedActiveTransfers } = applyUpdateRes.getValue();
   // Sign updated channel
-  const commitmentRes = await generateSignedChannelCommitment(updatedChannel, signer);
+  const commitmentRes = await generateSignedChannelCommitment(updatedChannel, signer, undefined, undefined, logger);
   if (commitmentRes.isError) {
     return Result.fail(new OutboundChannelUpdateError(commitmentRes.getError()?.message as any, params, previousState));
   }
