@@ -1,4 +1,5 @@
 import { UpdateParams, FullChannelState, ChannelUpdate } from "./channel";
+import { NodeParams } from "./schemas";
 export class Result<T, Y = any> {
   private value?: T;
   private error?: Y;
@@ -75,7 +76,6 @@ export type Values<E> = E[keyof E];
 // Abstract error for package
 export type VectorErrorJson = {
   message: string;
-  name: string;
   context: any;
   type: string;
   stack?: string;
@@ -91,7 +91,6 @@ export abstract class VectorError extends Error {
   public toJson(): VectorErrorJson {
     return {
       message: this.message,
-      name: this.name,
       context: this.context,
       type: this.type,
       stack: this.stack,
@@ -167,23 +166,23 @@ export class LockError extends VectorError {
   }
 }
 
-// NOTE: because this error is used between the browserNode AND
-// the serverNode, it must stay in the types module
+export type ServerNodeContext = {
+  publicIdentifier: string;
+  requestUrl: string;
+  params: any;
+} & any;
+export abstract class ServerNodeError extends VectorError {
+  readonly context: ServerNodeContext;
 
-// TODO: break out into browser-node and server-node error types
-export class NodeError extends VectorError {
-  readonly type = "NodeError";
-
-  static readonly reasons = {
-    InternalServerError: "Failed to send request",
-    InvalidParams: "Request has invalid parameters",
-    MultinodeProhibitted: "Not allowed to have multiple nodes",
-    NoEvts: "No evts for event",
-    NoPublicIdentifier: "Public identifier not supplied, and no default identifier",
-    Timeout: "Timeout",
-  } as const;
-
-  constructor(public readonly message: Values<typeof NodeError.reasons>, public readonly context: any = {}) {
-    super(message, context);
+  constructor(
+    public readonly msg: string,
+    publicIdentifier: string,
+    requestUrl: string,
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    params: any,
+    context: any = {},
+  ) {
+    super(msg, { ...context, publicIdentifier, requestUrl, params });
+    this.context = { ...context, requestUrl, publicIdentifier, params };
   }
 }
