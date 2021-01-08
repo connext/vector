@@ -1,6 +1,6 @@
-import { Values, VectorError } from "@connext/vector-types";
+import { Values, RouterError } from "@connext/vector-types";
 
-export class CollateralError extends VectorError {
+export class CollateralError extends RouterError {
   readonly type = "CollateralError";
 
   static readonly reasons = {
@@ -14,13 +14,38 @@ export class CollateralError extends VectorError {
     UnableToReclaim: "Could not reclaim collateral from channel",
   } as const;
 
-  constructor(public readonly message: Values<typeof CollateralError.reasons>, public readonly context: any = {}) {
-    super(message, context);
+  constructor(
+    public readonly message: Values<typeof CollateralError.reasons>,
+    channelAddress: string,
+    context: any = {},
+  ) {
+    super(message, channelAddress, context);
   }
 }
 
-export class ForwardTransferError extends VectorError {
-  readonly type = "ForwardTransferError";
+export class SwapError extends RouterError {
+  readonly type = "SwapError";
+
+  static readonly reasons = {
+    SwapNotAllowed: "Swap is not configured in allowed swaps",
+    SwapNotHardcoded: "Swap rate must be hardcoded",
+  } as const;
+
+  constructor(
+    public readonly message: Values<typeof SwapError.reasons>,
+    fromAmount: string,
+    fromAssetId: string,
+    fromChainId: number,
+    toAssetId: string,
+    toChainId: number,
+    context: any = {},
+  ) {
+    super(message, "", { fromAmount, fromAssetId, fromChainId, toAssetId, toChainId, ...context });
+  }
+}
+
+export class ForwardTransferCreationError extends RouterError {
+  readonly type = "ForwardTransferCreationError";
 
   static readonly reasons = {
     SenderChannelNotFound: "Sender channel not found",
@@ -38,13 +63,17 @@ export class ForwardTransferError extends VectorError {
     FailedToCancelSenderTransfer: "Could not cancel sender transfer",
   } as const;
 
-  constructor(public readonly message: Values<typeof ForwardTransferError.reasons>, public readonly context: any = {}) {
-    super(message, context);
+  constructor(
+    public readonly message: Values<typeof ForwardTransferCreationError.reasons>,
+    channelAddress: string,
+    context: any = {},
+  ) {
+    super(message, channelAddress, context);
   }
 }
 
-export class ForwardResolutionError extends VectorError {
-  readonly type = "ForwardResolutionError";
+export class ForwardTransferResolutionError extends RouterError {
+  readonly type = "ForwardTransferResolutionError";
 
   static readonly reasons = {
     IncomingChannelNotFound: "Incoming channel for transfer not found",
@@ -52,9 +81,10 @@ export class ForwardResolutionError extends VectorError {
   } as const;
 
   constructor(
-    public readonly message: Values<typeof ForwardResolutionError.reasons>,
-    public readonly context: any = {},
+    public readonly message: Values<typeof ForwardTransferResolutionError.reasons>,
+    channelAddress: string,
+    context: any = {},
   ) {
-    super(message, context);
+    super(message, channelAddress, context);
   }
 }

@@ -2,7 +2,7 @@ import { Result } from "@connext/vector-types";
 import { calculateExchangeAmount, inverse } from "@connext/vector-utils";
 
 import { config } from "../config";
-import { ForwardTransferError } from "../errors";
+import { SwapError } from "../errors";
 
 export const getSwappedAmount = (
   fromAmount: string,
@@ -10,7 +10,7 @@ export const getSwappedAmount = (
   fromChainId: number,
   toAssetId: string,
   toChainId: number,
-): Result<string, ForwardTransferError> => {
+): Result<string, SwapError> => {
   let swap = config.allowedSwaps.find(
     (s) =>
       s.fromAssetId === fromAssetId &&
@@ -35,13 +35,7 @@ export const getSwappedAmount = (
   // couldnt find both ways
   if (!swap) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.UnableToCalculateSwap, {
-        fromAssetId,
-        fromChainId,
-        toAssetId,
-        toChainId,
-        details: "Swap not found in allowed swaps config",
-      }),
+      new SwapError(SwapError.reasons.SwapNotAllowed, fromAmount, fromAssetId, fromChainId, toAssetId, toChainId),
     );
   }
 
@@ -54,8 +48,6 @@ export const getSwappedAmount = (
     }
   }
   return Result.fail(
-    new ForwardTransferError(ForwardTransferError.reasons.UnableToCalculateSwap, {
-      swap,
-    }),
+    new SwapError(SwapError.reasons.SwapNotHardcoded, fromAmount, fromAssetId, fromChainId, toAssetId, toChainId),
   );
 };

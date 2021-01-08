@@ -144,25 +144,6 @@ export abstract class EngineError extends VectorError {
   }
 }
 
-// export type LockErrorContext = {
-//   params: UpdateParams<any>;
-//   state?: FullChannelState;
-// } & any;
-// export class LockError extends VectorError {
-//   readonly type = "LockError";
-
-//   static readonly reasons = {
-//     Unknown: "Unknown Lock Error", // TODO
-//   };
-
-//   public context: LockErrorContext;
-
-//   constructor(public readonly message: string, lockName: string, context: any = {}) {
-//     super(message, { ...context, lockName });
-//     this.context = { ...context, lockName };
-//   }
-// }
-
 export type NodeErrorContext = {
   publicIdentifier: string;
   params: any;
@@ -179,5 +160,17 @@ export abstract class NodeError extends VectorError {
   ) {
     super(msg, { ...context, publicIdentifier, params });
     this.context = { ...context, publicIdentifier, params };
+  }
+}
+
+export type RouterErrorContext = {
+  channelAddress: string;
+} & any;
+export abstract class RouterError extends VectorError {
+  readonly context: RouterErrorContext;
+
+  constructor(public readonly msg: string, channelAddress: string, context: any = {}) {
+    super(msg, { ...context, channelAddress });
+    this.context = { ...context, channelAddress };
   }
 }

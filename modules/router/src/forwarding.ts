@@ -19,7 +19,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 import { getSwappedAmount } from "./services/swap";
 import { IRouterStore, RouterUpdateType, RouterUpdateStatus } from "./services/store";
-import { ForwardTransferError, ForwardResolutionError } from "./errors";
+import { ForwardTransferCreationError, ForwardTransferResolutionError } from "./errors";
 import {
   cancelCreatedTransfer,
   attemptTransferWithCollateralization,
@@ -34,7 +34,7 @@ export async function forwardTransferCreation(
   store: IRouterStore,
   logger: BaseLogger,
   chainReader: IVectorChainReader,
-): Promise<Result<any, ForwardTransferError>> {
+): Promise<Result<any, ForwardTransferCreationError>> {
   const method = "forwardTransferCreation";
   logger.info(
     { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
@@ -66,9 +66,9 @@ export async function forwardTransferCreation(
   const cancelSenderTransferAndReturnError = async (
     routingId: string,
     senderTransfer: FullTransferState,
-    errorReason: Values<typeof ForwardTransferError.reasons>,
+    errorReason: Values<typeof ForwardTransferCreationError.reasons>,
     context: any = {},
-  ): Promise<Result<any, ForwardTransferError>> => {
+  ): Promise<Result<any, ForwardTransferCreationError>> => {
     const cancelRes = await cancelCreatedTransfer(
       errorReason,
       senderTransfer,
@@ -87,9 +87,8 @@ export async function forwardTransferCreation(
     }
     // Cancellation either enqueued or executed
     return Result.fail(
-      new ForwardTransferError(errorReason, {
+      new ForwardTransferCreationError(errorReason, senderTransfer.channelAddress, {
         ...context,
-        senderChannel: senderTransfer.channelAddress,
         senderTransfer: senderTransfer.transferId,
         routingId,
         senderTransferCancellation: !!cancelRes.getValue() ? "executed" : "enqueued",
@@ -116,11 +115,14 @@ export async function forwardTransferCreation(
   const recipientIdentifier = path?.recipient;
   if (!routingId || !path || !recipientIdentifier) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.InvalidForwardingInfo, {
-        meta,
-        senderTransfer: senderTransfer.transferId,
-        senderChannel: senderTransfer.channelAddress,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.InvalidForwardingInfo,
+        senderChannelAddress,
+        {
+          meta,
+          senderTransfer: senderTransfer.transferId,
+        },
+      ),
     );
   }
 
@@ -131,18 +133,24 @@ export async function forwardTransferCreation(
   if (senderChannelRes.isError) {
     // Cancelling will fail
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
-        nodeError: senderChannelRes.getError()?.message,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.SenderChannelNotFound,
+        senderChannelAddress,
+        {
+          nodeError: senderChannelRes.getError()?.toJson(),
+        },
+      ),
     );
   }
   const senderChannel = senderChannelRes.getValue() as FullChannelState;
   if (!senderChannel) {
     // Cancelling will fail
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.SenderChannelNotFound, {
-        channelAddress: senderChannelAddress,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.SenderChannelNotFound,
+        senderChannelAddress,
+        { routingId, senderTransfer: senderTransfer.transferId },
+      ),
     );
   }
   const senderChainId = senderChannel.networkContext.chainId;
@@ -162,10 +170,9 @@ export async function forwardTransferCreation(
       return cancelSenderTransferAndReturnError(
         routingId,
         senderTransfer,
-        ForwardTransferError.reasons.UnableToCalculateSwap,
+        ForwardTransferCreationError.reasons.UnableToCalculateSwap,
         {
-          swapError: swapRes.getError()?.message,
-          swapContext: swapRes.getError()?.context,
+          swapError: swapRes.getError()?.toJson(),
         },
       );
     }
@@ -196,9 +203,9 @@ export async function forwardTransferCreation(
     return cancelSenderTransferAndReturnError(
       routingId,
       senderTransfer,
-      ForwardTransferError.reasons.RecipientChannelNotFound,
+      ForwardTransferCreationError.reasons.RecipientChannelNotFound,
       {
-        storeError: recipientChannelRes.getError()?.message,
+        storeError: recipientChannelRes.getError()?.toJson(),
       },
     );
   }
@@ -207,7 +214,7 @@ export async function forwardTransferCreation(
     return cancelSenderTransferAndReturnError(
       routingId,
       senderTransfer,
-      ForwardTransferError.reasons.RecipientChannelNotFound,
+      ForwardTransferCreationError.reasons.RecipientChannelNotFound,
       {
         participants: [routerPublicIdentifier, recipientIdentifier],
         chainId: recipientChainId,
@@ -250,7 +257,7 @@ export async function forwardTransferCreation(
     return !!value
       ? Result.ok(value)
       : Result.fail(
-          new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
+          new ForwardTransferCreationError(ForwardTransferCreationError.reasons.ReceiverOffline, senderChannelAddress, {
             routingId,
             senderTransfer: senderTransfer.transferId,
             recipientChannel: recipientChannel.channelAddress,
@@ -276,7 +283,7 @@ export async function forwardTransferResolution(
   nodeService: INodeService,
   store: IRouterStore,
   logger: BaseLogger,
-): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardResolutionError>> {
+): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardTransferResolutionError>> {
   const method = "forwardTransferResolution";
   logger.info(
     { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
@@ -295,10 +302,14 @@ export async function forwardTransferResolution(
   });
   if (transfersRes.isError) {
     return Result.fail(
-      new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
-        routingId,
-        error: transfersRes.getError()?.message,
-      }),
+      new ForwardTransferResolutionError(
+        ForwardTransferResolutionError.reasons.IncomingChannelNotFound,
+        channelAddress,
+        {
+          routingId,
+          error: transfersRes.getError()?.toJson(),
+        },
+      ),
     );
   }
 
@@ -307,9 +318,13 @@ export async function forwardTransferResolution(
 
   if (!incomingTransfer) {
     return Result.fail(
-      new ForwardResolutionError(ForwardResolutionError.reasons.IncomingChannelNotFound, {
-        routingId,
-      }),
+      new ForwardTransferResolutionError(
+        ForwardTransferResolutionError.reasons.IncomingChannelNotFound,
+        channelAddress,
+        {
+          routingId,
+        },
+      ),
     );
   }
 
@@ -328,14 +343,17 @@ export async function forwardTransferResolution(
     const type = RouterUpdateType.TRANSFER_RESOLUTION;
     await store.queueUpdate(incomingTransfer.channelAddress, type, resolveParams);
     return Result.fail(
-      new ForwardResolutionError(ForwardResolutionError.reasons.ErrorResolvingTransfer, {
-        message: resolution.getError()?.message,
-        routingId,
-        transferResolver,
-        incomingTransferChannel: incomingTransfer.channelAddress,
-        recipientTransferId: transferId,
-        recipientChannelAddress: channelAddress,
-      }),
+      new ForwardTransferResolutionError(
+        ForwardTransferResolutionError.reasons.ErrorResolvingTransfer,
+        channelAddress,
+        {
+          resolutionError: resolution.getError()?.toJson(),
+          routingId,
+          transferResolver,
+          incomingTransferChannel: incomingTransfer.channelAddress,
+          recipientTransferId: transferId,
+        },
+      ),
     );
   }
 
@@ -350,7 +368,7 @@ export async function handleIsAlive(
   store: IRouterStore,
   chainReader: IVectorChainReader,
   logger: BaseLogger,
-): Promise<Result<undefined, ForwardTransferError>> {
+): Promise<Result<undefined, ForwardTransferCreationError>> {
   const method = "handleIsAlive";
   logger.info(
     { data, method, node: { signerAddress, routerPublicIdentifier } },
@@ -370,7 +388,7 @@ export async function handleIsAlive(
   if (channelRes.isError || !channelRes.getValue()) {
     // Do not proceed with processing updates
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.CheckInError, {
+      new ForwardTransferCreationError(ForwardTransferCreationError.reasons.CheckInError, data.channelAddress, {
         getChannelError: channelRes.getError()?.message,
       }),
     );
@@ -438,7 +456,7 @@ export async function handleIsAlive(
   }
   if (erroredUpdates.length > 0) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.CheckInError, {
+      new ForwardTransferCreationError(ForwardTransferCreationError.reasons.CheckInError, data.channelAddress, {
         failedIds: erroredUpdates.map((update) => update.id),
       }),
     );

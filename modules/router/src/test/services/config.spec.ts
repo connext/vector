@@ -1,7 +1,7 @@
 import { expect, mkAddress } from "@connext/vector-utils";
 
 import { config } from "../../config";
-import { ForwardTransferError } from "../../errors";
+import { ForwardTransferCreationError } from "../../errors";
 import { getRebalanceProfile } from "../../services/config";
 
 describe("config.ts", () => {
@@ -10,8 +10,8 @@ describe("config.ts", () => {
     it("should fail if rebalance profile does not exist", () => {
       const assetId = mkAddress("0xeee");
       const res = getRebalanceProfile(chainId, assetId);
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.UnableToGetRebalanceProfile);
-      expect(res.getError().context).to.be.deep.eq({ chainId, assetId });
+      expect(res.getError().message).to.be.eq(ForwardTransferCreationError.reasons.UnableToGetRebalanceProfile);
+      expect(res.getError().context).to.be.deep.eq({ chainId, assetId, channelAddress: "" });
     });
 
     it("should return the rebalance profile for given chain/asset", () => {

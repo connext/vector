@@ -36,10 +36,8 @@ export const justInTimeCollateral = async (
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
-      new CollateralError(CollateralError.reasons.UnableToGetRebalanceProfile, {
-        channelAddress: channel.channelAddress,
-        error: profileRes.getError()?.message,
-        context: profileRes.getError()?.context,
+      new CollateralError(CollateralError.reasons.UnableToGetRebalanceProfile, channel.channelAddress, {
+        profileError: profileRes.getError()?.toJson(),
       }),
     );
   }
@@ -71,7 +69,7 @@ export const adjustCollateral = async (
   // Get channel
   const channelRes = await node.getStateChannel({ publicIdentifier, channelAddress });
   if (channelRes.isError || !channelRes.getValue()) {
-    return Result.fail(new CollateralError(CollateralError.reasons.ChannelNotFound, { channelAddress }));
+    return Result.fail(new CollateralError(CollateralError.reasons.ChannelNotFound, channelAddress));
   }
   const channel = channelRes.getValue() as FullChannelState;
 
@@ -79,10 +77,8 @@ export const adjustCollateral = async (
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
-      new CollateralError(CollateralError.reasons.UnableToGetRebalanceProfile, {
-        channelAddress: channel.channelAddress,
-        error: profileRes.getError()?.message,
-        context: profileRes.getError()?.context,
+      new CollateralError(CollateralError.reasons.UnableToGetRebalanceProfile, channelAddress, {
+        profileError: profileRes.getError()?.toJson(),
       }),
     );
   }
@@ -128,11 +124,10 @@ export const adjustCollateral = async (
 
   const withdrawalErr = withdrawRes.getError();
   return Result.fail(
-    new CollateralError(CollateralError.reasons.UnableToReclaim, {
+    new CollateralError(CollateralError.reasons.UnableToReclaim, channel.channelAddress, {
       assetId,
       channelAddress: channel.channelAddress,
-      withdrawError: withdrawalErr?.message,
-      withdrawContext: withdrawalErr?.context,
+      withdrawError: withdrawalErr?.toJson(),
     }),
   );
 };
@@ -154,9 +149,8 @@ export const requestCollateral = async (
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
-      new CollateralError(CollateralError.reasons.UnableToGetRebalanceProfile, {
-        channelAddress: channel.channelAddress,
-        error: profileRes.getError()?.message,
+      new CollateralError(CollateralError.reasons.UnableToGetRebalanceProfile, channel.channelAddress, {
+        profileError: profileRes.getError()?.toJson(),
         context: profileRes.getError()?.context,
       }),
     );
@@ -180,8 +174,7 @@ export const requestCollateral = async (
   const providers = chainReader.getHydratedProviders();
   if (providers.isError) {
     return Result.fail(
-      new CollateralError(CollateralError.reasons.ProviderNotFound, {
-        channelAddress: channel.channelAddress,
+      new CollateralError(CollateralError.reasons.ProviderNotFound, channel.channelAddress, {
         chainId: channel.networkContext.chainId,
         assetId,
         requestedAmount,
@@ -191,8 +184,7 @@ export const requestCollateral = async (
   const provider = providers.getValue()[channel.networkContext.chainId];
   if (!provider) {
     return Result.fail(
-      new CollateralError(CollateralError.reasons.ProviderNotFound, {
-        channelAddress: channel.channelAddress,
+      new CollateralError(CollateralError.reasons.ProviderNotFound, channel.channelAddress, {
         chainId: channel.networkContext.chainId,
         assetId,
         requestedAmount,
@@ -207,10 +199,9 @@ export const requestCollateral = async (
     : await chainReader.getTotalDepositedB(channel.channelAddress, channel.networkContext.chainId, assetId);
   if (totalDeposited.isError) {
     return Result.fail(
-      new CollateralError(CollateralError.reasons.CouldNotGetOnchainDeposits, {
+      new CollateralError(CollateralError.reasons.CouldNotGetOnchainDeposits, channel.channelAddress, {
         channelAddress: channel.channelAddress,
-        error: totalDeposited.getError()?.message,
-        context: totalDeposited.getError()?.context,
+        chainError: totalDeposited.getError()?.toJson(),
       }),
     );
   }
@@ -229,10 +220,8 @@ export const requestCollateral = async (
     });
     if (txRes.isError) {
       return Result.fail(
-        new CollateralError(CollateralError.reasons.TxError, {
-          channelAddress: channel.channelAddress,
-          error: txRes.getError()?.message,
-          context: txRes.getError()?.context,
+        new CollateralError(CollateralError.reasons.TxError, channel.channelAddress, {
+          error: txRes.getError()?.toJson(),
         }),
       );
     }
@@ -255,10 +244,9 @@ export const requestCollateral = async (
   }
   const error = depositRes.getError()!;
   return Result.fail(
-    new CollateralError(CollateralError.reasons.UnableToCollateralize, {
+    new CollateralError(CollateralError.reasons.UnableToCollateralize, channel.channelAddress, {
       channelAddress: channel.channelAddress,
-      nodeError: error.message,
-      context: error.context,
+      nodeError: error.toJson(),
     }),
   );
 };

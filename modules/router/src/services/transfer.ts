@@ -6,12 +6,11 @@ import {
   NodeParams,
   NodeResponses,
   Result,
-  NodeError,
 } from "@connext/vector-types";
-import { decodeTransferResolver } from "@connext/vector-utils";
+import { decodeTransferResolver, ServerNodeServiceError } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
-import { ForwardTransferError } from "../errors";
+import { ForwardTransferCreationError } from "../errors";
 
 import { justInTimeCollateral } from "./collateral";
 import { IRouterStore, RouterUpdateType } from "./store";
@@ -29,7 +28,7 @@ export const attemptTransferWithCollateralization = async (
   chainReader: IVectorChainReader,
   logger: BaseLogger,
   requireOnline = true,
-): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
+): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferCreationError>> => {
   logger.info({ params, method: "attemptTransferWithCollateralization" }, "Starting method");
   // NOTE: collateralizing takes a long time, so the liveness check may
   // not hold for the transfer even if it works here. instead, should
@@ -54,13 +53,15 @@ export const attemptTransferWithCollateralization = async (
   // handled after queueing/availability checks)
   if (collateralError && requireOnline) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-        params,
-        channelAddress: channel.channelAddress,
-        shouldCancelSender: true,
-        reason: "Failed justInTimeCollateral",
-        collateralError,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.UnableToCollateralize,
+        channel.channelAddress,
+        {
+          params,
+          shouldCancelSender: true,
+          collateralError: collateralError.toJson(),
+        },
+      ),
     );
   }
 
@@ -76,10 +77,9 @@ export const attemptTransferWithCollateralization = async (
   // if offline, and require online, fail payment
   if (!available && requireOnline) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.ReceiverOffline, {
+      new ForwardTransferCreationError(ForwardTransferCreationError.reasons.ReceiverOffline, channel.channelAddress, {
         shouldCancelSender: true,
         params,
-        reason: "Receiver offline",
       }),
     );
   }
@@ -95,12 +95,15 @@ export const attemptTransferWithCollateralization = async (
     } catch (e) {
       // Handle queue failure
       return Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.ErrorQueuingReceiverUpdate, {
-          storeError: e.message,
-          shouldCancelSender: true,
-          params,
-          reason: "Failed store.queueUpdate",
-        }),
+        new ForwardTransferCreationError(
+          ForwardTransferCreationError.reasons.ErrorQueuingReceiverUpdate,
+          channel.channelAddress,
+          {
+            storeError: e.message,
+            shouldCancelSender: true,
+            params,
+          },
+        ),
       );
     }
     // return undefined to show transfer queued
@@ -115,13 +118,15 @@ export const attemptTransferWithCollateralization = async (
   if (available && collateralError) {
     // NOTE: should always cancel the sender payment in this case
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-        params,
-        channelAddress: channel.channelAddress,
-        shouldCancelSender: true,
-        reason: "Failed justInTimeCollateral",
-        collateralError,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.UnableToCollateralize,
+        channel.channelAddress,
+        {
+          params,
+          shouldCancelSender: true,
+          collateralError: collateralError.toJson(),
+        },
+      ),
     );
   }
 
@@ -129,14 +134,17 @@ export const attemptTransferWithCollateralization = async (
   const transfer = await nodeService.conditionalTransfer(params);
   return transfer.isError
     ? Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
-          transferError: transfer.getError()?.message,
-          transferContext: transfer.getError()?.context,
-          // if its a timeout, could be withholding sig, so do not cancel
-          // sender transfer
-          shouldCancelSender: false,
-          params,
-        }),
+        new ForwardTransferCreationError(
+          ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+          channel.channelAddress,
+          {
+            transferError: transfer.getError()?.toJson(),
+            // if its a timeout, could be withholding sig, so do not cancel
+            // sender transfer
+            shouldCancelSender: false,
+            params,
+          },
+        ),
       )
     : (transfer as Result<NodeResponses.ConditionalTransfer>);
 };
@@ -153,7 +161,7 @@ export const transferWithCollateralization = async (
   nodeService: INodeService,
   chainReader: IVectorChainReader,
   logger: BaseLogger,
-): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferError>> => {
+): Promise<Result<NodeResponses.ConditionalTransfer | undefined, ForwardTransferCreationError>> => {
   // collateralize if needed
   const collateralRes = await justInTimeCollateral(
     channel,
@@ -167,10 +175,13 @@ export const transferWithCollateralization = async (
 
   if (collateralRes.isError) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.UnableToCollateralize, {
-        ...params,
-        channelAddress: channel.channelAddress,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.UnableToCollateralize,
+        channel.channelAddress,
+        {
+          ...params,
+        },
+      ),
     );
   }
 
@@ -180,11 +191,14 @@ export const transferWithCollateralization = async (
   const transfer = await nodeService.conditionalTransfer(params);
   return transfer.isError
     ? Result.fail(
-        new ForwardTransferError(ForwardTransferError.reasons.ErrorForwardingTransfer, {
-          transferError: transfer.getError()?.message,
-          transferContext: transfer.getError()?.context,
-          ...params,
-        }),
+        new ForwardTransferCreationError(
+          ForwardTransferCreationError.reasons.ErrorForwardingTransfer,
+          channel.channelAddress,
+          {
+            transferError: transfer.getError()?.toJson(),
+            ...params,
+          },
+        ),
       )
     : (transfer as Result<NodeResponses.ConditionalTransfer>);
 };
@@ -199,20 +213,23 @@ export const cancelCreatedTransfer = async (
   logger: BaseLogger,
   context: any = {},
   enqueue = true,
-): Promise<Result<NodeResponses.ResolveTransfer | undefined, ForwardTransferError>> => {
+): Promise<Result<NodeResponses.ResolveTransfer | undefined, ForwardTransferCreationError>> => {
   const transferResolverRes = await nodeService.getRegisteredTransfers({
     chainId: toCancel.chainId,
     publicIdentifier: routerPublicIdentifier,
   });
   if (transferResolverRes.isError) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
-        cancellationError: transferResolverRes.getError()?.message,
-        senderChannel: toCancel.channelAddress,
-        senderTransfer: toCancel.transferId,
-        cancellationReason,
-        ...context,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer,
+        toCancel.channelAddress,
+        {
+          cancellationError: transferResolverRes.getError()?.toJson(),
+          senderTransfer: toCancel.transferId,
+          cancellationReason,
+          ...context,
+        },
+      ),
     );
   }
 
@@ -221,15 +238,18 @@ export const cancelCreatedTransfer = async (
     transferResolverRes.getValue().find((t) => t.definition === toCancel.transferDefinition) ?? {};
   if (!encodedCancel || !resolverEncoding) {
     return Result.fail(
-      new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
-        cancellationError: "Sender transfer not in registry info",
-        senderChannel: toCancel.channelAddress,
-        senderTransfer: toCancel.transferId,
-        cancellationReason,
-        transferDefinition: toCancel.transferDefinition,
-        registered: transferResolverRes.getValue().map((t) => t.definition),
-        ...context,
-      }),
+      new ForwardTransferCreationError(
+        ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer,
+        toCancel.channelAddress,
+        {
+          cancellationError: "Sender transfer not in registry info",
+          senderTransfer: toCancel.transferId,
+          cancellationReason,
+          transferDefinition: toCancel.transferDefinition,
+          registered: transferResolverRes.getValue().map((t) => t.definition),
+          ...context,
+        },
+      ),
     );
   }
 
@@ -246,12 +266,11 @@ export const cancelCreatedTransfer = async (
     },
   };
   const resolveResult = await nodeService.resolveTransfer(resolveParams);
-  console.log("resolveResult", resolveResult.toJson());
   if (!resolveResult.isError) {
     return resolveResult as Result<NodeResponses.ResolveTransfer>;
   }
   // Failed to cancel sender side payment
-  if (enqueue && resolveResult.getError()!.message === NodeError.reasons.Timeout) {
+  if (enqueue && resolveResult.getError()!.message === ServerNodeServiceError.reasons.Timeout) {
     try {
       await store.queueUpdate(toCancel.channelAddress, RouterUpdateType.TRANSFER_RESOLUTION, resolveParams);
       logger.warn({ ...resolveParams }, "Cancellation enqueued");
@@ -262,12 +281,15 @@ export const cancelCreatedTransfer = async (
     }
   }
   return Result.fail(
-    new ForwardTransferError(ForwardTransferError.reasons.FailedToCancelSenderTransfer, {
-      cancellationError: resolveResult.getError()?.message,
-      transferId: toCancel.transferId,
-      channel: toCancel.channelAddress,
-      cancellationReason,
-      ...context,
-    }),
+    new ForwardTransferCreationError(
+      ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer,
+      toCancel.channelAddress,
+      {
+        cancellationError: resolveResult.getError()?.toJson(),
+        transferId: toCancel.transferId,
+        cancellationReason,
+        ...context,
+      },
+    ),
   );
 };
