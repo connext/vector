@@ -1,4 +1,4 @@
-import { IChannelSigner, Result, LockError, MessagingError, UpdateType } from "@connext/vector-types";
+import { IChannelSigner, Result, NodeError, MessagingError, UpdateType } from "@connext/vector-types";
 import {
   createTestChannelUpdate,
   delay,
@@ -12,6 +12,7 @@ import {
 import pino from "pino";
 
 import { config } from "../config";
+import { ServerNodeLockError } from "../helpers/errors";
 
 describe("messaging", () => {
   console.log("config.logLevel: ", config.logLevel);
@@ -125,8 +126,10 @@ describe("messaging", () => {
       },
       {
         name: "lock send failure messages properly from A --> B",
-        message: Result.fail(new LockError("sender failure", mkAddress("0xccc"), { type: "release" })),
-        response: Result.fail(new LockError("responder failure", mkAddress("0xccc"), { type: "acquire" })),
+        message: Result.fail(new ServerNodeLockError("sender failure" as any, mkAddress("0xccc"), { type: "release" })),
+        response: Result.fail(
+          new ServerNodeLockError("responder failure" as any, mkAddress("0xccc"), { type: "acquire" }),
+        ),
         type: "Lock",
       },
       {

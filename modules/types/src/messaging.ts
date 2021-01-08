@@ -1,5 +1,5 @@
 import { ChannelUpdate, FullChannelState, FullTransferState } from "./channel";
-import { EngineError, LockError, MessagingError, ProtocolError, Result } from "./error";
+import { EngineError, NodeError, MessagingError, ProtocolError, Result } from "./error";
 import { LockInformation } from "./lock";
 import { EngineParams } from "./schemas";
 
@@ -17,16 +17,16 @@ export interface IMessagingService {
 
   onReceiveLockMessage(
     myPublicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
+    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
   ): Promise<void>;
   sendLockMessage(
-    lockInfo: Result<LockInformation, LockError>,
+    lockInfo: Result<LockInformation, NodeError>,
     to: string,
     from: string,
     timeout?: number,
     numRetries?: number,
-  ): Promise<Result<LockInformation, LockError | MessagingError>>;
-  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void>;
+  ): Promise<Result<LockInformation, NodeError | MessagingError>>;
+  respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void>;
 
   onReceiveProtocolMessage(
     myPublicIdentifier: string,

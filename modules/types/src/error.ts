@@ -144,45 +144,40 @@ export abstract class EngineError extends VectorError {
   }
 }
 
-// NOTE: because this error is used between the browserNode AND
-// the serverNode, it must stay in the types module
-// TODO: break out into browser-node and server-node error types
-export type LockErrorContext = {
-  params: UpdateParams<any>;
-  state?: FullChannelState;
-} & any;
-export class LockError extends VectorError {
-  readonly type = "LockError";
+// export type LockErrorContext = {
+//   params: UpdateParams<any>;
+//   state?: FullChannelState;
+// } & any;
+// export class LockError extends VectorError {
+//   readonly type = "LockError";
 
-  static readonly reasons = {
-    Unknown: "Unknown Lock Error", // TODO
-  };
+//   static readonly reasons = {
+//     Unknown: "Unknown Lock Error", // TODO
+//   };
 
-  public context: LockErrorContext;
+//   public context: LockErrorContext;
 
-  constructor(public readonly message: string, lockName: string, context: any = {}) {
-    super(message, { ...context, lockName });
-    this.context = { ...context, lockName };
-  }
-}
+//   constructor(public readonly message: string, lockName: string, context: any = {}) {
+//     super(message, { ...context, lockName });
+//     this.context = { ...context, lockName };
+//   }
+// }
 
-export type ServerNodeContext = {
+export type NodeErrorContext = {
   publicIdentifier: string;
-  requestUrl: string;
   params: any;
 } & any;
-export abstract class ServerNodeError extends VectorError {
-  readonly context: ServerNodeContext;
+export abstract class NodeError extends VectorError {
+  readonly context: NodeErrorContext;
 
   constructor(
     public readonly msg: string,
     publicIdentifier: string,
-    requestUrl: string,
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     params: any,
     context: any = {},
   ) {
-    super(msg, { ...context, publicIdentifier, requestUrl, params });
-    this.context = { ...context, requestUrl, publicIdentifier, params };
+    super(msg, { ...context, publicIdentifier, params });
+    this.context = { ...context, publicIdentifier, params };
   }
 }

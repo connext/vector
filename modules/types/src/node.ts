@@ -1,5 +1,5 @@
 import { EngineEvent, EngineEventMap } from "./engine";
-import { ServerNodeError, Result } from "./error";
+import { NodeError, Result } from "./error";
 import { NodeParams, NodeResponses } from "./schemas";
 
 // NOTE: This interface will also wrap server nodes that support a default
@@ -15,102 +15,98 @@ export interface INodeService {
   publicIdentifier: string;
   signerAddress: string;
 
-  getStatus(): Promise<Result<NodeResponses.GetStatus, ServerNodeError>>;
+  getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>>;
 
   getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
-  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>>;
 
   getStateChannels(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStates>,
-  ): Promise<Result<NodeResponses.GetChannelStates, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetChannelStates, NodeError>>;
 
   getStateChannel(
     params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
-  ): Promise<Result<NodeResponses.GetChannelState, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetChannelState, NodeError>>;
 
   getTransferByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, NodeError>>;
 
   getTransfersByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStatesByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, NodeError>>;
 
   getTransfer(
     params: OptionalPublicIdentifier<NodeParams.GetTransferState>,
-  ): Promise<Result<NodeResponses.GetTransferState, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetTransferState, NodeError>>;
 
   getActiveTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
-  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>>;
 
   getRegisteredTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
-  ): Promise<Result<NodeResponses.GetRegisteredTransfers, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>>;
 
-  createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, ServerNodeError>>;
+  createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>>;
 
   setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
-  ): Promise<Result<NodeResponses.RequestSetup, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.RequestSetup, NodeError>>;
 
-  internalSetup(
-    params: OptionalPublicIdentifier<NodeParams.Setup>,
-  ): Promise<Result<NodeResponses.Setup, ServerNodeError>>;
+  internalSetup(params: OptionalPublicIdentifier<NodeParams.Setup>): Promise<Result<NodeResponses.Setup, NodeError>>;
 
   sendDepositTx(
     params: OptionalPublicIdentifier<NodeParams.SendDepositTx>,
-  ): Promise<Result<NodeResponses.SendDepositTx, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.SendDepositTx, NodeError>>;
 
   reconcileDeposit(
     params: OptionalPublicIdentifier<NodeParams.Deposit>,
-  ): Promise<Result<NodeResponses.Deposit, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.Deposit, NodeError>>;
 
   requestCollateral(
     params: OptionalPublicIdentifier<NodeParams.RequestCollateral>,
-  ): Promise<Result<NodeResponses.RequestCollateral, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.RequestCollateral, NodeError>>;
 
   conditionalTransfer(
     params: OptionalPublicIdentifier<NodeParams.ConditionalTransfer>,
-  ): Promise<Result<NodeResponses.ConditionalTransfer, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.ConditionalTransfer, NodeError>>;
 
   resolveTransfer(
     params: OptionalPublicIdentifier<NodeParams.ResolveTransfer>,
-  ): Promise<Result<NodeResponses.ResolveTransfer, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.ResolveTransfer, NodeError>>;
 
   signUtilityMessage(
     params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
-  ): Promise<Result<NodeResponses.SignUtilityMessage, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>>;
 
   sendIsAliveMessage(
     params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
-  ): Promise<Result<NodeResponses.SendIsAlive, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.SendIsAlive, NodeError>>;
 
   // Dispute methods
   sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
-  ): Promise<Result<NodeResponses.SendDisputeChannelTx, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>>;
 
   sendDefundChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
-  ): Promise<Result<NodeResponses.SendDefundChannelTx, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>>;
 
   sendDisputeTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
-  ): Promise<Result<NodeResponses.SendDisputeTransferTx, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>>;
 
   sendDefundTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
-  ): Promise<Result<NodeResponses.SendDefundTransferTx, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>>;
 
-  withdraw(
-    params: OptionalPublicIdentifier<NodeParams.Withdraw>,
-  ): Promise<Result<NodeResponses.Withdraw, ServerNodeError>>;
+  withdraw(params: OptionalPublicIdentifier<NodeParams.Withdraw>): Promise<Result<NodeResponses.Withdraw, NodeError>>;
 
   restoreState(
     params: OptionalPublicIdentifier<NodeParams.RestoreState>,
-  ): Promise<Result<NodeResponses.RestoreState, ServerNodeError>>;
+  ): Promise<Result<NodeResponses.RestoreState, NodeError>>;
 
   once<T extends EngineEvent>(
     event: T,

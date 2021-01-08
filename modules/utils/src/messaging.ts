@@ -2,7 +2,7 @@ import {
   IChannelSigner,
   ChannelUpdate,
   IMessagingService,
-  LockError,
+  NodeError,
   LockInformation,
   Result,
   EngineParams,
@@ -290,23 +290,23 @@ export class NatsMessagingService implements IMessagingService {
 
   // LOCK METHODS
   async sendLockMessage(
-    lockInfo: Result<LockInformation, LockError>,
+    lockInfo: Result<LockInformation, NodeError>,
     to: string,
     from: string,
     timeout = 30_000, // TODO this timeout is copied from memolock
     numRetries = 0,
-  ): Promise<Result<LockInformation, LockError>> {
+  ): Promise<Result<LockInformation, NodeError>> {
     return this.sendMessage(lockInfo, "lock", to, from, timeout, numRetries, "sendLockMessage");
   }
 
   async onReceiveLockMessage(
     publicIdentifier: string,
-    callback: (lockInfo: Result<LockInformation, LockError>, from: string, inbox: string) => void,
+    callback: (lockInfo: Result<LockInformation, NodeError>, from: string, inbox: string) => void,
   ): Promise<void> {
     return this.registerCallback(`${publicIdentifier}.*.lock`, callback, "onReceiveLockMessage");
   }
 
-  async respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, LockError>): Promise<void> {
+  async respondToLockMessage(inbox: string, lockInformation: Result<LockInformation, NodeError>): Promise<void> {
     return this.respondToMessage(inbox, lockInformation, "respondToLockMessage");
   }
   ////////////

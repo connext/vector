@@ -7,7 +7,7 @@ import {
   NodeResponses,
   OptionalPublicIdentifier,
   Values,
-  ServerNodeError,
+  NodeError,
 } from "@connext/vector-types";
 import Ajv from "ajv";
 import Axios from "axios";
@@ -28,7 +28,10 @@ type ContextContainer = {
   [publicIdentifier: string]: VoidCtx;
 };
 
-export class ServerNodeServiceError extends ServerNodeError {
+export type ServerNodeServiceErrorContext = NodeError & {
+  requestUrl: string;
+};
+export class ServerNodeServiceError extends NodeError {
   readonly type = "ServerNodeServiceError";
 
   static readonly reasons = {
@@ -48,7 +51,7 @@ export class ServerNodeServiceError extends ServerNodeError {
     params: any,
     context: any = {},
   ) {
-    super(msg, publicIdentifier, requestUrl, params, context);
+    super(msg, publicIdentifier, params, { requestUrl, ...context });
   }
 }
 
