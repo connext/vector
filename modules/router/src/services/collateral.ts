@@ -170,6 +170,7 @@ export const requestCollateral = async (
     logger.info({ balance: channel.balances[assetIdx], target }, "Current balance is sufficient, not collateralizing");
     return Result.ok(undefined);
   }
+  logger.info({ target: target.toString(), myBalance: myBalance.toString() }, "Adding collateral to channel");
 
   const providers = chainReader.getHydratedProviders();
   if (providers.isError) {
@@ -230,6 +231,15 @@ export const requestCollateral = async (
     logger.info({ txHash: tx.txHash }, "Submitted deposit tx");
     const receipt = await provider.waitForTransaction(tx.txHash);
     logger.info({ txHash: tx.txHash, logs: receipt.logs }, "Tx mined");
+  } else {
+    logger.info(
+      {
+        processed: processed.toString(),
+        amountToDeposit: amountToDeposit.toString(),
+        reconcilable: reconcilable.toString(),
+      },
+      "Owed onchain funds are sufficient",
+    );
   }
 
   const params = {
