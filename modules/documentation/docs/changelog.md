@@ -2,6 +2,14 @@
 
 ## Next Release
 
+## 0.1.0-rc.24
+
+- \[utils\] Update `eccrypto-js` to fix sig recovery bug
+## 0.1.0-rc.23
+
+- \[types\] Restore signature length to 130
+- \[protocol\] Add signature logging
+
 ## 0.1.0-rc.22
 
 - \[types\] Update signature regex
