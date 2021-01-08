@@ -12,7 +12,7 @@ export const TDecimalString = Type.RegEx(/^[0-9]*\.?[0-9]*$/);
 export const TPublicIdentifier = Type.RegEx(/^vector([a-zA-Z0-9]{50})$/);
 export const TBytes32 = Type.RegEx(/^0x([a-fA-F0-9]{64})$/);
 export const TBytes = Type.RegEx(/^0x([a-fA-F0-9])$/);
-export const TSignature = Type.RegEx(/^0x([a-fA-F0-9]{128,})$/);
+export const TSignature = Type.RegEx(/^0x([a-fA-F0-9]{130})$/);
 export const TUrl = Type.String({ format: "uri" });
 
 // Convenience types

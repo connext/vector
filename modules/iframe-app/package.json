@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@connext/vector-browser-node": "0.1.0-rc.21",
-    "@connext/vector-types": "0.1.0-rc.21",
-    "@connext/vector-utils": "0.1.0-rc.21",
+    "@connext/vector-browser-node": "0.1.0-rc.23",
+    "@connext/vector-types": "0.1.0-rc.23",
+    "@connext/vector-utils": "0.1.0-rc.23",
     "@ethersproject/bytes": "5.0.8",
     "@ethersproject/hdnode": "5.0.7",
     "@ethersproject/keccak256": "5.0.6",
