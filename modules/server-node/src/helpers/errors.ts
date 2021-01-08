@@ -1,5 +1,9 @@
-import { NodeError, Values } from "@connext/vector-types";
+import { NodeError, NodeErrorContext, Values } from "@connext/vector-types";
 
+type ServerNodeErrorContext = NodeErrorContext & {
+  publicIdentifier: string;
+  params: any;
+};
 export class ServerNodeError extends NodeError {
   readonly type = "ServerNodeError";
 
@@ -15,6 +19,8 @@ export class ServerNodeError extends NodeError {
     TransferNotFound: "Transfer not found",
   } as const;
 
+  readonly context: ServerNodeErrorContext;
+
   constructor(
     public readonly msg: Values<typeof ServerNodeError.reasons>,
     publicIdentifier: string,
@@ -22,10 +28,14 @@ export class ServerNodeError extends NodeError {
     params: any,
     context: any = {},
   ) {
-    super(msg, publicIdentifier, params, context);
+    super(msg, { params, publicIdentifier, ...context });
   }
 }
 
+type LockErrorContext = NodeErrorContext & {
+  lockName: string;
+  lockValue?: string;
+};
 export class ServerNodeLockError extends NodeError {
   readonly type = "ServerNodeLockError";
 
@@ -37,12 +47,14 @@ export class ServerNodeLockError extends NodeError {
     SentMessageAcquisitionFailed: "Could not acquire lock value, despite lock messsage",
   } as const;
 
+  readonly context: LockErrorContext;
+
   constructor(
     public readonly msg: Values<typeof ServerNodeLockError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    params: any,
+    lockName: string,
+    lockValue?: string,
     context: any = {},
   ) {
-    super(msg, "", params, context);
+    super(msg, { ...context, lockName, lockValue });
   }
 }

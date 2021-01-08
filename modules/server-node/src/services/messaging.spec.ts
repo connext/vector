@@ -126,9 +126,11 @@ describe("messaging", () => {
       },
       {
         name: "lock send failure messages properly from A --> B",
-        message: Result.fail(new ServerNodeLockError("sender failure" as any, mkAddress("0xccc"), { type: "release" })),
+        message: Result.fail(
+          new ServerNodeLockError("sender failure" as any, mkAddress("0xccc"), "", { type: "release" }),
+        ),
         response: Result.fail(
-          new ServerNodeLockError("responder failure" as any, mkAddress("0xccc"), { type: "acquire" }),
+          new ServerNodeLockError("responder failure" as any, mkAddress("0xccc"), "", { type: "acquire" }),
         ),
         type: "Lock",
       },

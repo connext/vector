@@ -4,7 +4,6 @@ import {
   ConditionalTransferCreatedPayload,
   FullChannelState,
   INodeService,
-  NodeError,
   Result,
   TransferNames,
   TRANSFER_DECREMENT,
@@ -49,7 +48,7 @@ type TransferCreatedTestContext = {
   event: ConditionalTransferCreatedPayload;
 };
 
-describe("Forwarding", () => {
+describe(testName, () => {
   describe("forwardTransferCreation", () => {
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
@@ -195,7 +194,6 @@ describe("Forwarding", () => {
       result: Result<any, ForwardTransferCreationError>,
       ctx: TransferCreatedTestContext,
       errorReason: Values<typeof ForwardTransferCreationError.reasons>,
-      attemptedTransfer: boolean,
       errorContext: any = {},
       senderCancelled = true,
       senderResolveFailed = false,
@@ -214,7 +212,7 @@ describe("Forwarding", () => {
       }
       expect(error.context).to.containSubset({
         senderTransfer: ctx.senderTransfer.transferId,
-        channelAddress: ctx.senderTransfer.channelAddress,
+        senderChannel: ctx.senderTransfer.channelAddress,
         senderTransferCancellation: senderResolveFailed ? "queued" : "executed",
         ...errorContext,
       });
@@ -364,11 +362,10 @@ describe("Forwarding", () => {
         result,
         mocked,
         ForwardTransferCreationError.reasons.InvalidForwardingInfo,
-        false,
         {
           meta: mocked.senderTransfer.meta,
           senderTransfer: mocked.senderTransfer.transferId,
-          channelAddress: mocked.senderTransfer.channelAddress,
+          senderChannel: mocked.senderTransfer.channelAddress,
         },
         false,
       );
@@ -393,11 +390,10 @@ describe("Forwarding", () => {
         result,
         mocked,
         ForwardTransferCreationError.reasons.InvalidForwardingInfo,
-        false,
         {
           meta: mocked.senderTransfer.meta,
           senderTransfer: mocked.senderTransfer.transferId,
-          channelAddress: mocked.senderTransfer.channelAddress,
+          senderChannel: mocked.senderTransfer.channelAddress,
         },
         false,
       );
@@ -422,11 +418,10 @@ describe("Forwarding", () => {
         result,
         mocked,
         ForwardTransferCreationError.reasons.InvalidForwardingInfo,
-        false,
         {
           meta: mocked.senderTransfer.meta,
           senderTransfer: mocked.senderTransfer.transferId,
-          channelAddress: mocked.senderTransfer.channelAddress,
+          senderChannel: mocked.senderTransfer.channelAddress,
         },
         false,
       );
@@ -452,7 +447,6 @@ describe("Forwarding", () => {
         result,
         ctx,
         ForwardTransferCreationError.reasons.SenderChannelNotFound,
-        false,
         {
           nodeError: sanitized,
         },
@@ -478,9 +472,8 @@ describe("Forwarding", () => {
         result,
         ctx,
         ForwardTransferCreationError.reasons.SenderChannelNotFound,
-        false,
         {
-          channelAddress: ctx.senderChannel.channelAddress,
+          senderChannel: ctx.senderChannel.channelAddress,
         },
         false,
       );
@@ -506,7 +499,7 @@ describe("Forwarding", () => {
       );
 
       const { stack, ...sanitized } = err.toJson();
-      await verifyErrorResult(result, mocked, ForwardTransferCreationError.reasons.UnableToCalculateSwap, false, {
+      await verifyErrorResult(result, mocked, ForwardTransferCreationError.reasons.UnableToCalculateSwap, {
         swapError: sanitized,
       });
     });
@@ -527,7 +520,7 @@ describe("Forwarding", () => {
       );
 
       const { stack, ...sanitized } = err.toJson();
-      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, false, {
+      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, {
         storeError: sanitized,
       });
     });
@@ -546,7 +539,7 @@ describe("Forwarding", () => {
         chainReader,
       );
 
-      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, false, {
+      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, {
         participants: [routerPublicIdentifier, ctx.receiverChannel.bobIdentifier],
         chainId: ctx.receiverChannel.networkContext.chainId,
       });
@@ -573,7 +566,7 @@ describe("Forwarding", () => {
       );
 
       const { stack, ...sanitized } = err.toJson();
-      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.ErrorForwardingTransfer, false, {
+      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.ErrorForwardingTransfer, {
         createError: sanitized,
       });
     });

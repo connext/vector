@@ -30,6 +30,8 @@ type ContextContainer = {
 
 export type ServerNodeServiceErrorContext = NodeError & {
   requestUrl: string;
+  publicIdentifier: string;
+  params: any;
 };
 export class ServerNodeServiceError extends NodeError {
   readonly type = "ServerNodeServiceError";
@@ -43,6 +45,8 @@ export class ServerNodeServiceError extends NodeError {
     Timeout: "Timeout",
   } as const;
 
+  readonly context: ServerNodeServiceErrorContext;
+
   constructor(
     public readonly msg: Values<typeof ServerNodeServiceError.reasons>,
     publicIdentifier: string,
@@ -51,7 +55,7 @@ export class ServerNodeServiceError extends NodeError {
     params: any,
     context: any = {},
   ) {
-    super(msg, publicIdentifier, params, { requestUrl, ...context });
+    super(msg, { requestUrl, publicIdentifier, params, ...context });
   }
 }
 

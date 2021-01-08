@@ -62,18 +62,11 @@ export class LockService implements ILockService {
             await this.messagingService.respondToLockMessage(
               inbox,
               Result.fail(
-                new ServerNodeLockError(
-                  ServerNodeLockError.reasons.AcquireLockFailed,
-                  {
-                    lockName,
-                    lockValue,
-                    acqValue,
-                  },
-                  {
-                    failingMethod: method,
-                    lockError: e.message,
-                  },
-                ),
+                new ServerNodeLockError(ServerNodeLockError.reasons.AcquireLockFailed, lockName, lockValue, {
+                  acqValue,
+                  failingMethod: method,
+                  lockError: e.message,
+                }),
               ),
             );
           }
@@ -94,11 +87,11 @@ export class LockService implements ILockService {
             await this.messagingService.respondToLockMessage(
               inbox,
               Result.fail(
-                new ServerNodeLockError(
-                  ServerNodeLockError.reasons.FailedToReleaseLock,
-                  { lockName, lockValue },
-                  { failingMethod: method, releaseError: e.message, ...(e.context ?? {}) },
-                ),
+                new ServerNodeLockError(ServerNodeLockError.reasons.FailedToReleaseLock, lockName, lockValue, {
+                  failingMethod: method,
+                  releaseError: e.message,
+                  ...(e.context ?? {}),
+                }),
               ),
             );
           }
@@ -117,24 +110,17 @@ export class LockService implements ILockService {
         this.publicIdentifier,
       );
       if (res.isError) {
-        throw new ServerNodeLockError(
-          ServerNodeLockError.reasons.AcquireMessageFailed,
-          {
-            counterpartyPublicIdentifier,
-            isAlice,
-            lockName,
-          },
-          {
-            messagingError: res.getError()!.toJson(),
-          },
-        );
+        throw new ServerNodeLockError(ServerNodeLockError.reasons.AcquireMessageFailed, lockName, undefined, {
+          counterpartyPublicIdentifier,
+          isAlice,
+          messagingError: res.getError()!.toJson(),
+        });
       }
       const { lockValue } = res.getValue();
       if (!lockValue) {
-        throw new ServerNodeLockError(ServerNodeLockError.reasons.SentMessageAcquisitionFailed, {
+        throw new ServerNodeLockError(ServerNodeLockError.reasons.SentMessageAcquisitionFailed, lockName, lockValue, {
           counterpartyPublicIdentifier,
           isAlice,
-          lockName,
         });
       }
       this.log.debug({ method: "acquireLock", lockName, lockValue }, "Acquired lock");
@@ -157,18 +143,11 @@ export class LockService implements ILockService {
         this.publicIdentifier,
       );
       if (result.isError) {
-        throw new ServerNodeLockError(
-          ServerNodeLockError.reasons.ReleaseMessageFailed,
-          {
-            counterpartyPublicIdentifier,
-            isAlice,
-            lockName,
-            lockValue,
-          },
-          {
-            messagingError: result.getError()!.toJson(),
-          },
-        );
+        throw new ServerNodeLockError(ServerNodeLockError.reasons.ReleaseMessageFailed, lockName, lockValue, {
+          messagingError: result.getError()!.toJson(),
+          counterpartyPublicIdentifier,
+          isAlice,
+        });
       }
       this.log.debug({ method: "releaseLock", lockName, lockValue }, "Released lock");
     }

@@ -17,7 +17,6 @@ describe("swap.ts", () => {
       expect(res.getError().message).to.be.eq(SwapError.reasons.SwapNotAllowed);
       expect(res.getError().context).to.be.deep.eq({
         fromAmount,
-        channelAddress: "",
         fromAssetId,
         fromChainId,
         toAssetId,

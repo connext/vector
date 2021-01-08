@@ -127,7 +127,6 @@ export abstract class ProtocolError extends VectorError {
     context: any = {},
   ) {
     super(msg, { ...context, update, state, params });
-    this.context = { ...context, update, state, params };
   }
 }
 
@@ -140,37 +139,23 @@ export abstract class EngineError extends VectorError {
 
   constructor(public readonly msg: string, channelAddress: string, publicIdentifier: string, context: any = {}) {
     super(msg, { ...context, channelAddress, publicIdentifier });
-    this.context = { ...context, channelAddress, publicIdentifier };
   }
 }
 
-export type NodeErrorContext = {
-  publicIdentifier: string;
-  params: any;
-} & any;
+export type NodeErrorContext = any;
 export abstract class NodeError extends VectorError {
   readonly context: NodeErrorContext;
 
-  constructor(
-    public readonly msg: string,
-    publicIdentifier: string,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    params: any,
-    context: any = {},
-  ) {
-    super(msg, { ...context, publicIdentifier, params });
-    this.context = { ...context, publicIdentifier, params };
+  constructor(public readonly msg: string, context: any = {}) {
+    super(msg, { ...context });
   }
 }
 
-export type RouterErrorContext = {
-  channelAddress: string;
-} & any;
+export type RouterErrorContext = any;
 export abstract class RouterError extends VectorError {
   readonly context: RouterErrorContext;
 
-  constructor(public readonly msg: string, channelAddress: string, context: any = {}) {
-    super(msg, { ...context, channelAddress });
-    this.context = { ...context, channelAddress };
+  constructor(public readonly msg: string, context: any = {}) {
+    super(msg, { ...context });
   }
 }

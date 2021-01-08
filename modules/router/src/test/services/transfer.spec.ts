@@ -327,7 +327,7 @@ describe(testName, () => {
       expect(res.getError().message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
       expect(res.getError().context).to.containSubset({
         cancellationError: { message: ServerNodeServiceError.reasons.Timeout },
-        channelAddress,
+        senderChannel: channelAddress,
         senderTransfer: transferId,
         cancellationReason,
       });
@@ -350,7 +350,7 @@ describe(testName, () => {
       expect(res.getError().message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
       expect(res.getError().context).to.containSubset({
         cancellationError: "Sender transfer not in registry info",
-        channelAddress,
+        senderChannel: channelAddress,
         senderTransfer: transferId,
         cancellationReason,
         transferDefinition: toCancel.transferDefinition,
@@ -375,7 +375,7 @@ describe(testName, () => {
       expect(res.getError().message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
       expect(res.getError().context).to.containSubset({
         cancellationError: "Sender transfer not in registry info",
-        channelAddress,
+        senderChannel: channelAddress,
         senderTransfer: transferId,
         cancellationReason,
         transferDefinition: toCancel.transferDefinition,
@@ -401,8 +401,8 @@ describe(testName, () => {
       expect(res.getError().message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
       expect(res.getError().context).to.containSubset({
         cancellationError: { message: ServerNodeServiceError.reasons.Timeout },
-        channelAddress,
-        transferId,
+        senderChannel: channelAddress,
+        senderTransfer: transferId,
         cancellationReason,
         queueError: "fail",
       });
@@ -420,15 +420,16 @@ describe(testName, () => {
         nodeService as any,
         store,
         log,
-        {},
+        undefined,
+        undefined,
         false,
       );
 
       expect(res.getError().message).to.be.eq(ForwardTransferCreationError.reasons.FailedToCancelSenderTransfer);
       expect(res.getError().context).to.containSubset({
         cancellationError: { message: ServerNodeServiceError.reasons.Timeout },
-        channelAddress,
-        transferId,
+        senderChannel: channelAddress,
+        senderTransfer: transferId,
         cancellationReason,
       });
       // Verify nothing enqueued
