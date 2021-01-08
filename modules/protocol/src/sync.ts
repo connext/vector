@@ -400,7 +400,7 @@ const syncStateAndRecreateUpdate = async (
   const counterpartyUpdate = receivedError.context.update;
 
   // make sure you *can* sync
-  const diff = counterpartyUpdate.nonce - (previousState.nonce ?? 0);
+  const diff = counterpartyUpdate.nonce - (previousState?.nonce ?? 0);
   if (diff !== 1) {
     return Result.fail(
       new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.RestoreNeeded, attemptedParams, previousState, {

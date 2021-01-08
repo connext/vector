@@ -22,6 +22,7 @@ import {
   UpdateParams,
   FullChannelState,
   FullTransferState,
+  ChainError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
@@ -134,7 +135,7 @@ describe("inbound", () => {
 
     expect(result.isError).to.be.true;
     const error = result.getError()!;
-    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.StaleChannel);
+    expect(error.message).to.be.eq(InboundChannelUpdateError.reasons.RestoreNeeded);
     // Make sure the calls were correctly performed
     expect(validationStub.callCount).to.be.eq(0);
     expect(store.saveChannelState.callCount).to.be.eq(0);
@@ -299,7 +300,7 @@ describe("inbound", () => {
         logger,
       );
       expect(result.getError()?.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.error).to.be.eq("Cannot sync single signed state");
+      expect(result.getError()?.context.syncError).to.be.eq("Cannot sync single signed state");
 
       // Verify nothing was saved and error properly sent
       expect(store.saveChannelState.callCount).to.be.eq(0);
@@ -335,7 +336,7 @@ describe("inbound", () => {
         logger,
       );
       expect(result.getError()!.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()!.context.error).to.be.eq("fail");
+      expect(result.getError()!.context.syncError).to.be.eq("fail");
 
       // Verify nothing was saved and error properly sent
       expect(store.saveChannelState.callCount).to.be.eq(0);
@@ -372,7 +373,7 @@ describe("inbound", () => {
         logger,
       );
       expect(result.getError()!.message).to.be.eq(InboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.error).to.be.eq("fail");
+      expect(result.getError()?.context.syncError).to.be.eq("fail");
 
       // Verify nothing was saved and error properly sent
       expect(store.saveChannelState.callCount).to.be.eq(1);
@@ -562,7 +563,7 @@ describe("outbound", () => {
     for (const method of methods) {
       it(method, async () => {
         // Set store stub
-        store[method].rejects("fail");
+        store[method].rejects(new Error("fail"));
 
         // Make outbound call
         const result = await outbound(
@@ -579,7 +580,7 @@ describe("outbound", () => {
         expect(result.isError).to.be.eq(true);
         const error = result.getError()!;
         expect(error.message).to.be.eq(OutboundChannelUpdateError.reasons.StoreFailure);
-        expect(error.context.message).to.include(method);
+        expect(error.context.storeError).to.be.eq(`${method} failed: fail`);
       });
     }
   });
@@ -621,7 +622,8 @@ describe("outbound", () => {
     // Verify the error is returned as an outbound error
     const error = res.getError();
     expect(error?.message).to.be.eq(OutboundChannelUpdateError.reasons.CounterpartyFailure);
-    expect(error?.context).to.deep.eq({ counterpartyError: counterpartyError.message, errorContext: {} });
+    expect(error?.context.counterpartyError.message).to.be.eq(counterpartyError.message);
+    expect(error?.context.counterpartyError.context).to.be.ok;
 
     // Verify message only sent once by initiator
     expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
@@ -765,8 +767,7 @@ describe("outbound", () => {
       );
 
       // Verify error
-      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.error).to.be.eq("Cannot sync setup update");
+      expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.CannotSyncSetup);
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
       // Verify channel was not updated
@@ -810,7 +811,7 @@ describe("outbound", () => {
 
       // Verify error
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.error).to.be.eq("Cannot sync single signed state");
+      expect(result.getError()?.context.syncError).to.be.eq("Cannot sync single signed state");
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
       // Verify channel was not updated
@@ -857,7 +858,7 @@ describe("outbound", () => {
 
       // Verify error
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.SyncFailure);
-      expect(result.getError()?.context.error).to.be.eq("fail");
+      expect(result.getError()?.context.syncError).to.be.eq("fail");
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
       // Verify channel was not updated
@@ -924,7 +925,7 @@ describe("outbound", () => {
 
       // Set generation mock
       validateParamsAndApplyStub.onFirstCall().resolves(Result.ok(applyRet));
-      validateParamsAndApplyStub.onSecondCall().resolves(Result.fail(new Error("fail")));
+      validateParamsAndApplyStub.onSecondCall().resolves(Result.fail(new ChainError("fail")));
 
       // Stub counterparty return
       messaging.sendProtocolMessage.resolves(
@@ -954,7 +955,7 @@ describe("outbound", () => {
 
       // Verify error
       expect(result.getError()?.message).to.be.eq(OutboundChannelUpdateError.reasons.RegenerateUpdateFailed);
-      expect(result.getError()?.context.error).to.be.eq("fail");
+      expect(result.getError()?.context.regenerateUpdateError).to.be.eq("fail");
       // Verify update was not retried
       expect(messaging.sendProtocolMessage.callCount).to.be.eq(1);
       // Verify channel save was called

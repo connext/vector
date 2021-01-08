@@ -35,7 +35,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero } from "@ethersproject/constants";
 import Sinon from "sinon";
 
-import { InboundChannelUpdateError, OutboundChannelUpdateError } from "../errors";
+import { ApplyUpdateError, CreateUpdateError, OutboundChannelUpdateError } from "../errors";
 import * as vectorUpdate from "../update";
 import * as vectorUtils from "../utils";
 
@@ -53,7 +53,7 @@ type ApplyUpdateTestParams<T extends UpdateType = any> = {
     activeTransfers: Partial<FullTransferState>[];
     transfer?: Partial<FullTransferState>;
   }>;
-  error?: Values<typeof InboundChannelUpdateError.reasons>;
+  error?: Values<typeof ApplyUpdateError.reasons>;
 };
 
 describe("applyUpdate", () => {
@@ -359,17 +359,17 @@ describe("applyUpdate", () => {
     {
       name: "should fail for an unrecognized update type",
       updateType: ("fail" as unknown) as UpdateType,
-      error: InboundChannelUpdateError.reasons.MalformedDetails,
+      error: ApplyUpdateError.reasons.BadUpdateType,
     },
     {
       name: "should fail for `resolve` if there is no transfer balance",
       updateType: UpdateType.resolve,
-      error: InboundChannelUpdateError.reasons.ApplyUpdateFailed,
+      error: ApplyUpdateError.reasons.MissingFinalBalance,
     },
     {
       name: "should fail if there is no state and it is not a setup update",
-      updateType: UpdateType.resolve,
-      error: InboundChannelUpdateError.reasons.ApplyUpdateFailed,
+      updateType: UpdateType.create,
+      error: ApplyUpdateError.reasons.ChannelNotFound,
     },
   ];
 
@@ -391,7 +391,7 @@ describe("applyUpdate", () => {
 
       // Generate the previous state
       const previousState =
-        updateType === UpdateType.setup
+        updateType === UpdateType.setup || error === ApplyUpdateError.reasons.ChannelNotFound
           ? undefined
           : createTestChannelStateWithSigners(signers, stateOverrides?.latestUpdate?.type ?? UpdateType.deposit, {
               channelAddress,
@@ -947,11 +947,18 @@ describe("generateAndApplyUpdate", () => {
     const signer = bobSigner;
 
     // Set mocks
-    const error = new Error("Failure");
+    const error = new ChainError("Failure");
     reconcileDeposit.resolves(Result.fail(error));
 
     // Make call
-    await makeAndVerifyCall(signer, params, previousState, activeTransfers, error.message, true);
+    await makeAndVerifyCall(
+      signer,
+      params,
+      previousState,
+      activeTransfers,
+      CreateUpdateError.reasons.FailedToReconcileDeposit,
+      true,
+    );
   });
 
   it("should fail if trying to resolve inactive transfer", async () => {
@@ -1005,7 +1012,7 @@ describe("generateAndApplyUpdate", () => {
       params,
       previousState,
       activeTransfers,
-      OutboundChannelUpdateError.reasons.ChannelNotFound,
+      CreateUpdateError.reasons.TransferNotActive,
       true,
     );
   });
@@ -1049,7 +1056,14 @@ describe("generateAndApplyUpdate", () => {
     chainService.resolve.resolves(Result.fail(error));
 
     // Make call
-    await makeAndVerifyCall(signer, params, previousState, activeTransfers, error.message, true);
+    await makeAndVerifyCall(
+      signer,
+      params,
+      previousState,
+      activeTransfers,
+      CreateUpdateError.reasons.FailedToResolveTransferOnchain,
+      true,
+    );
   });
 
   it("should fail if it cannot get the registered transfer", async () => {
@@ -1089,7 +1103,7 @@ describe("generateAndApplyUpdate", () => {
       params,
       previousState,
       activeTransfers,
-      OutboundChannelUpdateError.reasons.OutboundValidationFailed,
+      CreateUpdateError.reasons.TransferNotRegistered,
       true,
     );
   });
