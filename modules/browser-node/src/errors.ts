@@ -51,3 +51,30 @@ export class CrossChainTransferError extends NodeError {
     super(msg, { params, publicIdentifier, ...context });
   }
 }
+
+type LockErrorContext = NodeErrorContext & {
+  lockName: string;
+  lockValue?: string;
+};
+export class BrowserNodeLockError extends NodeError {
+  readonly type = "BrowserNodeLockError";
+
+  static readonly reasons = {
+    AcquireMessageFailed: "Could not send lock acquisition message",
+    CannotBeAlice: "Browser node cannot be Alice",
+    CounterpartyIdentifierMissing: "counterpartyPublicIdentifier is required",
+    ReleaseMessageFailed: "Could not send lock release message",
+    SentMessageAcquisitionFailed: "Could not acquire lock value, despite lock messsage",
+  } as const;
+
+  readonly context: LockErrorContext;
+
+  constructor(
+    public readonly msg: Values<typeof BrowserNodeLockError.reasons>,
+    lockName: string,
+    lockValue?: string,
+    context: any = {},
+  ) {
+    super(msg, { ...context, lockName, lockValue });
+  }
+}

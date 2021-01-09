@@ -1,5 +1,7 @@
-import { ILockService, IMessagingService, LockError, Result } from "@connext/vector-types";
+import { ILockService, IMessagingService, Result } from "@connext/vector-types";
 import { BaseLogger } from "pino";
+
+import { BrowserNodeLockError } from "../errors";
 
 export class BrowserLockService implements ILockService {
   constructor(
@@ -10,10 +12,10 @@ export class BrowserLockService implements ILockService {
 
   async acquireLock(lockName: string, isAlice?: boolean, counterpartyPublicIdentifier?: string): Promise<string> {
     if (!counterpartyPublicIdentifier) {
-      throw new LockError(`counterpartyPublicIdentifier is required`, lockName);
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.CounterpartyIdentifierMissing, lockName);
     }
     if (isAlice) {
-      throw new LockError(`Browser node cannot be Alice`, lockName);
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.CannotBeAlice, lockName);
     }
 
     const res = await this.messagingService.sendLockMessage(
@@ -22,11 +24,11 @@ export class BrowserLockService implements ILockService {
       this.publicIdentifier,
     );
     if (res.isError) {
-      throw res.getError()!;
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.AcquireMessageFailed, lockName);
     }
     const { lockValue } = res.getValue();
     if (!lockValue) {
-      throw new LockError("Could not get lock, successfully sent lock message", lockName);
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.SentMessageAcquisitionFailed, lockName);
     }
     this.log.debug({ method: "acquireLock", lockName, lockValue }, "Acquired lock");
     return lockValue;
@@ -39,10 +41,10 @@ export class BrowserLockService implements ILockService {
     counterpartyPublicIdentifier?: string,
   ): Promise<void> {
     if (!counterpartyPublicIdentifier) {
-      throw new LockError(`counterpartyPublicIdentifier is required`, lockName);
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.CounterpartyIdentifierMissing, lockName, lockValue);
     }
     if (isAlice) {
-      throw new LockError(`Browser node cannot be Alice`, lockName);
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.CannotBeAlice, lockName, lockValue);
     }
 
     const result = await this.messagingService.sendLockMessage(
@@ -51,7 +53,7 @@ export class BrowserLockService implements ILockService {
       this.publicIdentifier,
     );
     if (result.isError) {
-      throw result.getError()!;
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.ReleaseMessageFailed, lockName);
     }
     this.log.debug({ method: "releaseLock", lockName, lockValue }, "Released lock");
   }
