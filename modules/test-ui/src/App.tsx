@@ -9,7 +9,7 @@ import {
 } from "@connext/vector-utils";
 import React, { useEffect, useState } from "react";
 import { constants } from "ethers";
-import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs } from "antd";
+import { Col, Divider, Row, Statistic, Input, Typography, Table, Form, Button, List, Select, Tabs, Switch } from "antd";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { EngineEvents, FullChannelState, TransferNames } from "@connext/vector-types";
 
@@ -489,6 +489,7 @@ function App() {
                     initialValues={{
                       assetId: selectedChannel?.assetIds && selectedChannel?.assetIds[0],
                       preImage: getRandomBytes32(),
+                      numLoops: 1,
                     }}
                     onFinish={(values) => transfer(values.assetId, values.amount, values.recipient, values.preImage)}
                     onFinishFailed={onFinishFailed}
@@ -567,16 +568,21 @@ function App() {
                     labelCol={{ span: 6 }}
                     wrapperCol={{ span: 18 }}
                     name="crossChainTransfer"
-                    onFinish={(values) =>
-                      crossChainTransfer(
-                        values.amount,
-                        values.fromAssetId,
-                        values.fromChainId,
-                        values.toAssetId,
-                        values.toChainId,
-                        values.withdrawalAddress,
-                      )
-                    }
+                    onFinish={async (values) => {
+                      console.log("values.numLoops: ", values.numLoops);
+                      for (let index = 0; index < values.numLoops; index++) {
+                        console.log(`=====> START TRANSFER ${index}`);
+                        await crossChainTransfer(
+                          values.amount,
+                          values.fromAssetId,
+                          values.fromChainId,
+                          values.toAssetId,
+                          values.toChainId,
+                          values.withdrawalAddress,
+                        );
+                        console.log(`=====> FINISHED TRANSFER ${index}`);
+                      }
+                    }}
                     initialValues={{
                       fromAssetId: constants.AddressZero,
                       toAssetId: constants.AddressZero,
@@ -620,6 +626,10 @@ function App() {
 
                     <Form.Item label="Withdrawal Address" name="withdrawalAddress">
                       <Input placeholder="0x..." />
+                    </Form.Item>
+
+                    <Form.Item label="Number of Loops" name="numLoops">
+                      <Input />
                     </Form.Item>
 
                     <Form.Item wrapperCol={{ offset: 6 }}>
