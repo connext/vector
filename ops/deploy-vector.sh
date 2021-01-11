@@ -85,6 +85,7 @@ bash ops/npm-publish.sh <<EOF
 y
 $version
 y
+y
 EOF
 
 git checkout prod
