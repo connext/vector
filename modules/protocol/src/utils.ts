@@ -18,6 +18,7 @@ import {
   UpdateParams,
   UpdateParamsMap,
   UpdateType,
+  ChainError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { hashChannelCommitment, validateChannelUpdateSignatures } from "@connext/vector-utils";
@@ -89,7 +90,9 @@ export const extractContextFromStore = async (
 
 // Channels store `ChannelUpdate<T>` types as the `latestUpdate` field, which
 // must be converted to the `UpdateParams<T> when syncing
-export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelUpdate<T>): UpdateParams<T> {
+export function getParamsFromUpdate<T extends UpdateType = any>(
+  update: ChannelUpdate<T>,
+): Result<UpdateParams<T>, Error> {
   const { channelAddress, type, details, toIdentifier, assetId } = update;
   let paramDetails: SetupParams | DepositParams | CreateTransferParams | ResolveTransferParams;
   switch (type) {
@@ -148,14 +151,14 @@ export function getParamsFromUpdate<T extends UpdateType = any>(update: ChannelU
       break;
     }
     default: {
-      throw new Error(`Invalid update type ${type}`);
+      return Result.fail(new Error(`Invalid update type ${type}`));
     }
   }
-  return {
+  return Result.ok({
     channelAddress,
     type,
     details: paramDetails as UpdateParamsMap[T],
-  };
+  });
 }
 
 // This function signs the state after the update is applied,
@@ -188,7 +191,7 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   try {
-    log("Signing hash", { hash, signer: signer.address, state: newState });
+    log("Signing hash", { hash, signer: signer.address, state: newState }, "debug");
     const sig = await signer.signMessage(hash);
     const isAlice = signer.address === newState.alice;
     return Result.ok({
@@ -209,7 +212,7 @@ export const reconcileDeposit = async (
   processedDepositB: string,
   assetId: string,
   chainReader: IVectorChainReader,
-): Promise<Result<{ balance: Balance; totalDepositsAlice: string; totalDepositsBob: string }, Error>> => {
+): Promise<Result<{ balance: Balance; totalDepositsAlice: string; totalDepositsBob: string }, ChainError>> => {
   // First get totalDepositsAlice and totalDepositsBob
   const totalDepositedARes = await chainReader.getTotalDepositedA(channelAddress, chainId, assetId);
   if (totalDepositedARes.isError) {

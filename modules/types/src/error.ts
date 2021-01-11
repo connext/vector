@@ -1,11 +1,4 @@
-import { ChannelUpdate, UpdateParams, FullChannelState } from "./channel";
-import {
-  MAXIMUM_CHANNEL_TIMEOUT,
-  MAXIMUM_TRANSFER_TIMEOUT,
-  MINIMUM_CHANNEL_TIMEOUT,
-  MINIMUM_TRANSFER_TIMEOUT,
-} from "./constants";
-
+import { UpdateParams, FullChannelState, ChannelUpdate } from "./channel";
 export class Result<T, Y = any> {
   private value?: T;
   private error?: Y;
@@ -40,6 +33,12 @@ export class Result<T, Y = any> {
     if (!this.isError) {
       return { isError: false, value: this.value };
     }
+    if (this.error instanceof VectorError) {
+      return {
+        isError: true,
+        error: this.error.toJson(),
+      };
+    }
     return {
       isError: true,
       // NOTE: Error.message is not returned as a property
@@ -55,7 +54,13 @@ export class Result<T, Y = any> {
   }
 
   public static fromJson<U, Y extends Error>(json: ResultJson<U, Y>): Result<U, Y> {
-    return json.isError ? Result.fail(json.error) : Result.ok(json.value);
+    if (!json.isError) {
+      return Result.ok(json.value);
+    }
+    return (json.error as any).type
+      ? (Result.fail(VectorError.fromJson(json.error as any)) as any)
+      : Result.fail(json.error);
+    // return json.isError ? Result.fail(json.error) : Result.ok(json.value);
   }
 
   public static fail<U, Y extends Error>(error: Y): Result<U, Y> {
@@ -80,240 +85,104 @@ export type ResultJson<U = any, Y = any> =
 export type Values<E> = E[keyof E];
 
 // Abstract error for package
-export abstract class VectorError extends Error {
-  // These will define the subclasses of errors.
-  static readonly errors = {
-    OutboundChannelUpdateError: "OutboundChannelUpdateError",
-    InboundChannelUpdateError: "InboundChannelUpdateError",
-    ChainError: "ChainError",
-    ValidationError: "ValidationError",
-    RouterError: "RouterError",
-    NodeError: "NodeError",
-    LockError: "LockError",
-    MessagingError: "MessagingError",
-    EngineError: "EngineError",
-    CheckInError: "CheckInError",
-    // etc.
-  } as const;
-
-  abstract readonly type: Values<typeof VectorError.errors>;
+export type VectorErrorJson = {
+  message: string;
+  context: any;
+  type: string;
+  stack?: string;
+};
+export class VectorError extends Error {
   static readonly reasons: { [key: string]: string };
 
-  constructor(public readonly msg: Values<typeof VectorError.reasons>, public readonly context?: any) {
+  constructor(
+    public readonly msg: Values<typeof VectorError.reasons>,
+    public readonly context: any = {},
+    public readonly type = "VectorError",
+  ) {
     super(msg);
   }
-}
 
-export class ValidationError extends VectorError {
-  readonly type = VectorError.errors.ValidationError;
-
-  static readonly reasons = {
-    AssetNotFound: "Asset is not found in channel",
-    BadUpdateType: "Unrecognized update type",
-    ChannelAlreadySetup: "Channel is already setup",
-    ChannelNotFound: "No channel found in storage",
-    DuplicateTransferId: "Transfer with matching transferId already stored",
-    ExternalValidationFailed: "Failed external validation",
-    ImproperlyReconciled: "Deposit was not properly reconciled",
-    InDispute: "Channel currently in dispute",
-    InsufficientFunds: "Insufficient funds in channel",
-    InvalidArrayLength:
-      "Channel array values have mismatching lengths (balances, assetIds, defundNonces, processedDepositsA/B)",
-    InvalidAssetId: "Asset ID is invalid",
-    InvalidChannelAddress: "Provided channel address is invalid",
-    InvalidCounterparty: "Channel counterparty is invalid",
-    InvalidFromIdentifier: "Update `fromIdentifier` is invalid",
-    InvalidInitialState: "Initial transfer state is invalid",
-    InvalidResolver: "Transfer resolver must be an object",
-    InvalidTransferDefinition: "Transfer definition is incorrect",
-    InvalidTransferEncodings: "Transfer encodings do not match regisry",
-    InvalidToIdentifier: "Update `toIdentifier` is invalid",
-    InvalidUpdateNonce: "Update nonce must be previousState.nonce + 1",
-    LongChannelTimeout: `Channel timeout above maximum of ${MAXIMUM_CHANNEL_TIMEOUT.toString()}s`,
-    MalformedDetails: "Channel update details are malformed",
-    MalformedUpdate: "Channel update is malformed",
-    MiscalculatedTransferId: "Calculated transfer ID is different than provided transferId",
-    MiscalculatedChannelBalance: "Channel balance for update is miscalculated",
-    MiscalculatedMerkleRoot: "Merkle root in update was miscalculated",
-    MiscalculatedMerkleProof: "Merkle proof in update was miscalculated",
-    NoActiveTransfers: "Active transfers are undefined",
-    OnlyResponderCanInitiateResolve: "Only transfer responder may initiate resolve update",
-    SetupTimeoutInvalid: "Provided state timeout is invalid",
-    ShortChannelTimeout: `Channel timeout below minimum of ${MINIMUM_CHANNEL_TIMEOUT.toString()}s`,
-    StoreFailure: "Failed to pull data from store",
-    TooManyAssets: "20 or more assets already in channel state",
-    TransferNotActive: "Transfer not found in activeTransfers",
-    TransferNotFound: "No transfer found in storage",
-    TransferResolved: "Transfer has already been resolved",
-    TransferTimeoutAboveChannel: `Transfer timeout must be less than the channel timeout`,
-    TransferTimeoutBelowMin: `Transfer timeout below minimum of ${MINIMUM_TRANSFER_TIMEOUT.toString()}s`,
-    TransferTimeoutAboveMax: `Transfer timeout above maximum of ${MAXIMUM_TRANSFER_TIMEOUT.toString()}s`,
-    UnrecognizedType: "Unrecognized update type",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
-    public readonly params: UpdateParams<any> | ChannelUpdate<any>,
-    public readonly state?: FullChannelState,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
-  ) {
-    super(message, context);
+  public toJson(): VectorErrorJson {
+    return {
+      message: this.msg,
+      context: this.context,
+      type: this.type,
+      stack: this.stack,
+    };
   }
-}
 
-// Thrown by the protocol when initiating an update
-export class OutboundChannelUpdateError extends VectorError {
-  readonly type = VectorError.errors.OutboundChannelUpdateError;
-
-  static readonly reasons = {
-    ...ValidationError.reasons,
-    ApplyUpdateFailed: "Failed to apply update",
-    BadSignatures: "Could not recover signers",
-    CounterpartyFailure: "Counterparty failed to apply update",
-    CounterpartyOffline: "Message to counterparty timed out",
-    Create2Failed: "Failed to get create2 address",
-    InvalidParams: "Invalid params",
-    MessageFailed: "Failed to send message",
-    OutboundValidationFailed: "Failed to validate outbound update",
-    RestoreNeeded: "Channel too far out of sync, must be restored",
-    RegenerateUpdateFailed: "Failed to regenerate update after sync",
-    SaveChannelFailed: "Failed to save channel",
-    StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
-    StaleChannel: "Channel state is behind, cannot apply update",
-    StoreFailure: "Failed to execute store method",
-    SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
-    SyncFailure: "Failed to sync channel from counterparty update",
-    SyncValidationFailed: "Failed to validate update for sync",
-    TransferNotFound: "No transfer found in storage",
-    TransferNotActive: "Transfer not found in activeTransfers",
-    TransferNotRegistered: "Transfer not found in registry",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof OutboundChannelUpdateError.reasons>,
-    public readonly params: UpdateParams<any>,
-    public readonly state?: FullChannelState,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context?: any,
-  ) {
-    super(message, context);
-  }
-}
-
-export class LockError extends VectorError {
-  readonly type = VectorError.errors.LockError;
-
-  static readonly reasons = {
-    Unknown: "Unknown Lock Error", // TODO
-  };
-
-  constructor(public readonly message: string, public readonly lockName: string, public readonly context: any = {}) {
-    super(message, context);
-  }
-}
-
-// Thrown by the protocol when applying an update
-export class InboundChannelUpdateError extends VectorError {
-  readonly type = VectorError.errors.InboundChannelUpdateError;
-
-  static readonly reasons = {
-    ...ValidationError.reasons,
-    ApplyUpdateFailed: "Failed to apply update",
-    BadSignatures: "Could not recover signers",
-    DifferentIdentifiers: "Update changes channel publicIdentifiers",
-    DifferentChannelAddress: "Update changes channelAddress",
-    ExternalValidationFailed: "Failed to externally validate incoming update",
-    InboundValidationFailed: "Failed to validate incoming update",
-    InvalidAssetId: "Update `assetId` is invalid address",
-    InvalidChannelAddress: "Update `channelAddress` is invalid",
-    MergeUpdateFailed: "Failed to merge update",
-    MessageFailed: "Failed to send message",
-    RestoreNeeded: "Channel too far out of sync, must be restored",
-    StaleChannel: "Channel state is behind, cannot apply update",
-    StaleUpdate: "Update does not progress channel nonce",
-    StaleChannelNoUpdate: "Channel nonce is behind, no latest update from counterparty",
-    SaveChannelFailed: "Failed to save channel",
-    StoreFailure: "Failed to execute store method",
-    SyncSingleSigned: "Counterparty gave single signed update to sync, refusing",
-    SyncFailure: "Failed to sync channel from counterparty update",
-    TransferNotFound: "No transfer found in storage",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof InboundChannelUpdateError.reasons>,
-    public readonly update: ChannelUpdate<any>,
-    public readonly state?: FullChannelState,
-    public readonly context: any = {},
-  ) {
-    super(message, context);
-  }
-}
-
-export class NodeError extends VectorError {
-  readonly type = VectorError.errors.NodeError;
-
-  static readonly reasons = {
-    ChannelNotFound: "Channel not found",
-    InternalServerError: "Failed to send request",
-    InvalidParams: "Request has invalid parameters",
-    MultinodeProhibitted: "Not allowed to have multiple nodes",
-    NoEvts: "No evts for event",
-    NoPublicIdentifier: "Public identifier not supplied, and no default identifier",
-    ProviderNotFound: "Provider not available for chain",
-    Timeout: "Timeout",
-    TransactionNotMined: "Failed to wait for transaction to be mined",
-    TransferNotActive: "Transfer not found in channel active transfers",
-    TransferNotFound: "Transfer not found",
-  } as const;
-
-  constructor(
-    public readonly message: Values<typeof NodeError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context: any = {},
-  ) {
-    super(message, context);
+  public static fromJson(json: VectorErrorJson): VectorError {
+    return new VectorError(json.message, json.context, json.type);
   }
 }
 
 export class MessagingError extends VectorError {
-  readonly type = VectorError.errors.MessagingError;
-
   static readonly reasons = {
-    Response: "Error received in response",
     Timeout: "Request timed out",
     Unknown: "Unknown messaging error",
   } as const;
 
   constructor(
     public readonly message: Values<typeof MessagingError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public readonly context: any = {},
+    public readonly type = "MessagingError",
   ) {
-    super(message, context);
+    super(message, context, type);
   }
 }
 
-export class EngineError extends VectorError {
-  readonly type = VectorError.errors.EngineError;
-
-  constructor(public readonly msg: string, public readonly channelAddress: string, public readonly context: any = {}) {
-    super(msg, context);
-  }
-}
-export class CheckInError extends VectorError {
-  readonly type = VectorError.errors.CheckInError;
-
-  static readonly reasons = {
-    ChannelNotFound: "Channel not found",
-    Unknown: "Unknown check-in error",
-  } as const;
+export type ProtocolErrorContext = {
+  state?: FullChannelState;
+  params?: UpdateParams<any>;
+  update?: ChannelUpdate;
+} & any;
+export abstract class ProtocolError extends VectorError {
+  readonly context: ProtocolErrorContext;
 
   constructor(
-    public readonly message: Values<typeof CheckInError.reasons>,
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public readonly context: any = {},
+    public readonly msg: string,
+    state?: FullChannelState,
+    update?: ChannelUpdate,
+    params?: UpdateParams<any>,
+    context: any = {},
+    public readonly type = "ProtocolError",
   ) {
-    super(message, context);
+    super(msg, { ...context, update, state, params }, type);
+  }
+}
+
+export type EngineErrorContext = {
+  channelAddress: string;
+  publicIdentifier: string;
+} & any;
+export abstract class EngineError extends VectorError {
+  readonly context: EngineErrorContext;
+
+  constructor(
+    public readonly msg: string,
+    channelAddress: string,
+    publicIdentifier: string,
+    context: any = {},
+    public readonly type = "EngineError",
+  ) {
+    super(msg, { ...context, channelAddress, publicIdentifier }, type);
+  }
+}
+
+export type NodeErrorContext = any;
+export abstract class NodeError extends VectorError {
+  readonly context: NodeErrorContext;
+
+  constructor(public readonly msg: string, context: any = {}, public readonly type: string = "NodeError") {
+    super(msg, { ...context }, type);
+  }
+}
+
+export type RouterErrorContext = any;
+export abstract class RouterError extends VectorError {
+  readonly context: RouterErrorContext;
+
+  constructor(public readonly msg: string, context: any = {}, public readonly type = "RouterError") {
+    super(msg, { ...context }, type);
   }
 }

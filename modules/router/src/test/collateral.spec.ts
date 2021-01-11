@@ -11,7 +11,7 @@ import {
 import Sinon from "sinon";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { INodeService, Result, UpdateType } from "@connext/vector-types";
+import { ChainError, INodeService, Result, UpdateType } from "@connext/vector-types";
 import { parseEther } from "@ethersproject/units";
 
 import { config } from "../config";
@@ -80,7 +80,7 @@ describe(testName, () => {
     });
 
     it("should fail if it cannot get the collateral profile", async () => {
-      getRebalanceProfile.returns(Result.fail(new Error("fail")));
+      getRebalanceProfile.returns(Result.fail(new ChainError("fail" as any)));
       const { channel } = createTestChannelState(UpdateType.deposit);
       const res = await justInTimeCollateral(
         channel,
@@ -257,7 +257,8 @@ describe(testName, () => {
         ],
       });
       node.getStateChannel.resolves(Result.ok(channel));
-      node.withdraw.resolves(Result.fail(new Error("fail") as any));
+      const err = new ChainError("fail") as any;
+      node.withdraw.resolves(Result.fail(err));
       const res = await adjustCollateral(
         channel.channelAddress,
         AddressZero,
@@ -267,11 +268,11 @@ describe(testName, () => {
         log,
       );
       expect(res.getError().message).to.be.eq(CollateralError.reasons.UnableToReclaim);
-      expect(res.getError().context).to.be.deep.eq({
+      const { stack, ...sanitized } = err.toJson();
+      expect(res.getError().context).to.containSubset({
         assetId: AddressZero,
         channelAddress: channel.channelAddress,
-        withdrawError: "fail",
-        withdrawContext: undefined,
+        withdrawError: sanitized,
       });
       expect(node.sendDepositTx.callCount).to.be.eq(0);
       expect(node.withdraw.callCount).to.be.eq(1);
@@ -342,7 +343,7 @@ describe(testName, () => {
 
   describe("requestCollateral", () => {
     it("should fail if getRebalanceProfile fails", async () => {
-      getRebalanceProfile.returns(Result.fail(new Error("fail")));
+      getRebalanceProfile.returns(Result.fail(new ChainError("fail")));
       const { channel } = createTestChannelState(UpdateType.deposit);
       const res = await requestCollateral(
         channel,
@@ -357,7 +358,7 @@ describe(testName, () => {
 
     it("should fail if it cannot get the chainProviders", async () => {
       const { channel } = createTestChannelState(UpdateType.deposit);
-      chainReader.getHydratedProviders.returns(Result.fail(new Error("fail") as any));
+      chainReader.getHydratedProviders.returns(Result.fail(new ChainError("fail") as any));
       const res = await requestCollateral(
         channel,
         AddressZero,
@@ -385,7 +386,7 @@ describe(testName, () => {
 
     it("should fail if it cannot get the onchain balance", async () => {
       const { channel } = createTestChannelState(UpdateType.deposit);
-      chainReader.getTotalDepositedB.resolves(Result.fail(new Error("fail") as any));
+      chainReader.getTotalDepositedB.resolves(Result.fail(new ChainError("fail") as any));
       const res = await requestCollateral(
         channel,
         AddressZero,

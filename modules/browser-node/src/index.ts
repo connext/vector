@@ -9,7 +9,6 @@ import {
   EngineEventMap,
   IChannelSigner,
   INodeService,
-  NodeError,
   OptionalPublicIdentifier,
   Result,
   NodeParams,
@@ -35,6 +34,7 @@ import {
   saveCrossChainTransfer,
   StoredCrossChainTransfer,
 } from "./services/crossChainTransferStore";
+import { BrowserNodeError, CrossChainTransferError } from "./errors";
 
 export type BrowserNodeSignerConfig = {
   natsUrl?: string;
@@ -238,17 +238,24 @@ export class BrowserNode implements INodeService {
       throw receiverChannelRes.getError();
     }
     const senderChannel = senderChannelRes.getValue();
+    if (!senderChannel) {
+      throw new CrossChainTransferError(
+        CrossChainTransferError.reasons.MissingSenderChannel,
+        this.publicIdentifier,
+        params,
+      );
+    }
     const receiverChannel = receiverChannelRes.getValue();
-    if (!senderChannel || !receiverChannel) {
-      throw new Error(
-        `Channel does not exist for chainId ${!senderChannel ? fromChainId : toChainId} with ${
-          this.routerPublicIdentifier
-        }`,
+    if (!receiverChannel) {
+      throw new CrossChainTransferError(
+        CrossChainTransferError.reasons.MissingReceiverChannel,
+        this.publicIdentifier,
+        params,
       );
     }
 
     const crossChainTransferId = params.crossChainTransferId ?? getRandomBytes32();
-    await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, storeParams);
+    saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, storeParams);
 
     const { meta, ...res } = params;
     const updatedMeta = { ...res, crossChainTransferId, routingId: crossChainTransferId, ...(meta ?? {}) };
@@ -261,7 +268,7 @@ export class BrowserNode implements INodeService {
           meta: { ...updatedMeta },
         });
         if (depositRes.isError) {
-          await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, {
+          saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.INITIAL, {
             ...storeParams,
             error: true,
           });
@@ -270,13 +277,14 @@ export class BrowserNode implements INodeService {
         const updated = await this.getStateChannel({ channelAddress: senderChannel.channelAddress });
         this.logger.info({ updated }, "Deposit reconciled");
       }
-      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, storeParams);
+      saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, storeParams);
     }
 
     const preImage = params.preImage ?? getRandomBytes32();
     const lockHash = soliditySha256(["bytes32"], [preImage]);
     storeParams.preImage = preImage;
 
+    let senderTransferId = "";
     if (startStage < CrossChainTransferStatus.TRANSFER_1) {
       const transferParams = {
         amount: amount,
@@ -295,15 +303,16 @@ export class BrowserNode implements INodeService {
       this.logger.info({ preImage, transferParams }, "Sending cross-chain transfer");
       const transferRes = await this.conditionalTransfer(transferParams);
       if (transferRes.isError) {
-        await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, {
+        saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.DEPOSITED, {
           ...storeParams,
           error: true,
         });
         throw transferRes.getError();
       }
       const senderTransfer = transferRes.getValue();
+      senderTransferId = senderTransfer.transferId;
       this.logger.info({ senderTransfer }, "Sender transfer successfully completed, waiting for receiver transfer...");
-      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
+      saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, storeParams);
     }
 
     let receiverTransferData: ConditionalTransferCreatedPayload | undefined;
@@ -339,11 +348,16 @@ export class BrowserNode implements INodeService {
             { routingId: crossChainTransferId, channelAddress: receiverChannel.channelAddress },
             "Failed to get receiver event",
           );
-          await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
+          saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
             ...storeParams,
             error: true,
           });
-          throw new Error("Failed to get receiver event");
+          throw new CrossChainTransferError(
+            CrossChainTransferError.reasons.ReceiverEventMissed,
+            this.publicIdentifier,
+            params,
+            { senderTransfer: senderTransferId, preImage },
+          );
         }
         receiverTransferId = receiverTransferData.transfer.transferId;
         withdrawalAmount = receiverTransferData.transfer.balance.amount[0];
@@ -361,7 +375,7 @@ export class BrowserNode implements INodeService {
       };
       const resolveRes = await this.resolveTransfer(resolveParams);
       if (resolveRes.isError) {
-        await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
+        saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_1, {
           ...storeParams,
           error: true,
         });
@@ -369,7 +383,7 @@ export class BrowserNode implements INodeService {
       }
       const resolvedTransfer = resolveRes.getValue();
       this.logger.info({ resolvedTransfer }, "Resolved receiver transfer");
-      await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
+      saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
         ...storeParams,
         withdrawalAmount,
       });
@@ -380,7 +394,12 @@ export class BrowserNode implements INodeService {
     if (withdrawalAddress) {
       withdrawalAmount = params.withdrawalAmount ?? receiverTransferData?.transfer.balance.amount[0];
       if (!withdrawalAmount) {
-        throw new Error(`Error, withdrawal amount not specified`);
+        throw new CrossChainTransferError(
+          CrossChainTransferError.reasons.MissingWithdrawalAmount,
+          this.publicIdentifier,
+          params,
+          { senderTransfer: senderTransferId, receiverTransfer: receiverTransferData?.transfer.transferId },
+        );
       }
       this.logger.info({ withdrawalAddress: withdrawalAddress, withdrawalAmount }, "Withdrawing to configured address");
       const withdrawRes = await this.withdraw({
@@ -391,7 +410,7 @@ export class BrowserNode implements INodeService {
         meta: { ...withdrawalMeta },
       });
       if (withdrawRes.isError) {
-        await saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
+        saveCrossChainTransfer(crossChainTransferId, CrossChainTransferStatus.TRANSFER_2, {
           ...storeParams,
           error: true,
         });
@@ -401,7 +420,7 @@ export class BrowserNode implements INodeService {
       this.logger.info({ withdrawal }, "Withdrawal completed");
       withdrawalTx = withdrawal.transactionHash;
     }
-    await removeCrossChainTransfer(crossChainTransferId);
+    removeCrossChainTransfer(crossChainTransferId);
     return { withdrawalTx, withdrawalAmount };
   }
 
@@ -448,8 +467,10 @@ export class BrowserNode implements INodeService {
   }
   //////////////////
 
-  createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, NodeError>> {
-    return Promise.resolve(Result.fail(new NodeError(NodeError.reasons.MultinodeProhibitted, { params })));
+  createNode(params: NodeParams.CreateNode): Promise<Result<NodeResponses.CreateNode, BrowserNodeError>> {
+    return Promise.resolve(
+      Result.fail(new BrowserNodeError(BrowserNodeError.reasons.MultinodeProhibitted, this.publicIdentifier, params)),
+    );
   }
 
   async getConfig(): Promise<NodeResponses.GetConfig> {
@@ -457,7 +478,7 @@ export class BrowserNode implements INodeService {
     return this.send(rpc);
   }
 
-  async getStatus(): Promise<Result<NodeResponses.GetStatus, NodeError>> {
+  async getStatus(): Promise<Result<NodeResponses.GetStatus, BrowserNodeError>> {
     const rpc = constructRpcRequest("chan_getStatus", {});
     try {
       const res = await this.send(rpc);
@@ -469,7 +490,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannelByParticipants(
     params: OptionalPublicIdentifier<NodeParams.GetChannelStateByParticipants>,
-  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, NodeError>> {
+  ): Promise<Result<NodeResponses.GetChannelStateByParticipants, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getChannelStateByParticipants">(
         ChannelRpcMethods.chan_getChannelStateByParticipants,
@@ -479,7 +500,7 @@ export class BrowserNode implements INodeService {
           chainId: params.chainId,
         },
       );
-      const res = await this.channelProvider!.send(rpc);
+      const res = await this.send(rpc);
       return Result.ok(res);
     } catch (e) {
       return Result.fail(e);
@@ -488,7 +509,7 @@ export class BrowserNode implements INodeService {
 
   async getStateChannel(
     params: OptionalPublicIdentifier<NodeParams.GetChannelState>,
-  ): Promise<Result<NodeResponses.GetChannelState, NodeError>> {
+  ): Promise<Result<NodeResponses.GetChannelState, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getChannelState">(ChannelRpcMethods.chan_getChannelState, params);
       const res = await this.channelProvider!.send(rpc);
@@ -498,7 +519,7 @@ export class BrowserNode implements INodeService {
     }
   }
 
-  async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, NodeError>> {
+  async getStateChannels(): Promise<Result<NodeResponses.GetChannelStates, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getChannelStates">(ChannelRpcMethods.chan_getChannelStates, {});
       const res = await this.channelProvider!.send(rpc);
@@ -510,7 +531,7 @@ export class BrowserNode implements INodeService {
 
   async getTransferByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStateByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, NodeError>> {
+  ): Promise<Result<NodeResponses.GetTransferStateByRoutingId, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferStateByRoutingId">(
         ChannelRpcMethods.chan_getTransferStateByRoutingId,
@@ -525,7 +546,7 @@ export class BrowserNode implements INodeService {
 
   async getTransfersByRoutingId(
     params: OptionalPublicIdentifier<NodeParams.GetTransferStatesByRoutingId>,
-  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, NodeError>> {
+  ): Promise<Result<NodeResponses.GetTransferStatesByRoutingId, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferStatesByRoutingId">(
         ChannelRpcMethods.chan_getTransferStatesByRoutingId,
@@ -540,7 +561,7 @@ export class BrowserNode implements INodeService {
 
   async getTransfer(
     params: OptionalPublicIdentifier<NodeParams.GetTransferState>,
-  ): Promise<Result<NodeResponses.GetTransferState, NodeError>> {
+  ): Promise<Result<NodeResponses.GetTransferState, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getTransferState">(ChannelRpcMethods.chan_getTransferState, params);
       const res = await this.channelProvider!.send(rpc);
@@ -552,7 +573,7 @@ export class BrowserNode implements INodeService {
 
   async getActiveTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetActiveTransfersByChannelAddress>,
-  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, NodeError>> {
+  ): Promise<Result<NodeResponses.GetActiveTransfersByChannelAddress, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getActiveTransfers">(ChannelRpcMethods.chan_getActiveTransfers, params);
       const res = await this.channelProvider!.send(rpc);
@@ -564,7 +585,7 @@ export class BrowserNode implements INodeService {
 
   async getRegisteredTransfers(
     params: OptionalPublicIdentifier<NodeParams.GetRegisteredTransfers>,
-  ): Promise<Result<NodeResponses.GetRegisteredTransfers, NodeError>> {
+  ): Promise<Result<NodeResponses.GetRegisteredTransfers, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_getRegisteredTransfers">(
         ChannelRpcMethods.chan_getRegisteredTransfers,
@@ -579,7 +600,7 @@ export class BrowserNode implements INodeService {
 
   async setup(
     params: OptionalPublicIdentifier<NodeParams.RequestSetup>,
-  ): Promise<Result<NodeResponses.RequestSetup, NodeError>> {
+  ): Promise<Result<NodeResponses.RequestSetup, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_requestSetup">(ChannelRpcMethods.chan_requestSetup, params);
       const res = await this.channelProvider!.send(rpc);
@@ -590,18 +611,18 @@ export class BrowserNode implements INodeService {
   }
 
   // OK to leave unimplemented since browser node will never be Alice
-  async internalSetup(): Promise<Result<NodeResponses.Setup, NodeError>> {
-    throw new Error("Method not implemented");
+  async internalSetup(): Promise<Result<NodeResponses.Setup, BrowserNodeError>> {
+    return Result.fail(new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier));
   }
 
   // OK to leave unimplemented since all txes can be sent from outside the browser node
-  async sendDepositTx(): Promise<Result<NodeResponses.SendDepositTx, NodeError>> {
-    throw new Error("Method not implemented.");
+  async sendDepositTx(): Promise<Result<NodeResponses.SendDepositTx, BrowserNodeError>> {
+    return Result.fail(new BrowserNodeError(BrowserNodeError.reasons.MethodNotImplemented, this.publicIdentifier));
   }
 
   async reconcileDeposit(
     params: OptionalPublicIdentifier<NodeParams.Deposit>,
-  ): Promise<Result<NodeResponses.Deposit, NodeError>> {
+  ): Promise<Result<NodeResponses.Deposit, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_deposit">(ChannelRpcMethods.chan_deposit, params);
       const res = await this.channelProvider!.send(rpc);
@@ -613,7 +634,7 @@ export class BrowserNode implements INodeService {
 
   async requestCollateral(
     params: OptionalPublicIdentifier<NodeParams.RequestCollateral>,
-  ): Promise<Result<NodeResponses.RequestCollateral, NodeError>> {
+  ): Promise<Result<NodeResponses.RequestCollateral, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_requestCollateral">(ChannelRpcMethods.chan_requestCollateral, params);
       await this.channelProvider!.send(rpc);
@@ -625,7 +646,7 @@ export class BrowserNode implements INodeService {
 
   async conditionalTransfer(
     params: OptionalPublicIdentifier<NodeParams.ConditionalTransfer>,
-  ): Promise<Result<NodeResponses.ConditionalTransfer, NodeError>> {
+  ): Promise<Result<NodeResponses.ConditionalTransfer, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_createTransfer">(ChannelRpcMethods.chan_createTransfer, params);
       const res = await this.channelProvider!.send(rpc);
@@ -641,7 +662,7 @@ export class BrowserNode implements INodeService {
 
   async resolveTransfer(
     params: OptionalPublicIdentifier<NodeParams.ResolveTransfer>,
-  ): Promise<Result<NodeResponses.ResolveTransfer, NodeError>> {
+  ): Promise<Result<NodeResponses.ResolveTransfer, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_resolveTransfer">(ChannelRpcMethods.chan_resolveTransfer, params);
       const res = await this.channelProvider!.send(rpc);
@@ -657,7 +678,7 @@ export class BrowserNode implements INodeService {
 
   async withdraw(
     params: OptionalPublicIdentifier<NodeParams.Withdraw>,
-  ): Promise<Result<NodeResponses.Withdraw, NodeError>> {
+  ): Promise<Result<NodeResponses.Withdraw, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_withdraw">(ChannelRpcMethods.chan_withdraw, params);
       const res = await this.channelProvider!.send(rpc);
@@ -673,7 +694,7 @@ export class BrowserNode implements INodeService {
 
   async restoreState(
     params: OptionalPublicIdentifier<NodeParams.RestoreState>,
-  ): Promise<Result<NodeResponses.RestoreState, NodeError>> {
+  ): Promise<Result<NodeResponses.RestoreState, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_restoreState">(ChannelRpcMethods.chan_restoreState, params);
       const res = await this.channelProvider!.send(rpc);
@@ -685,7 +706,7 @@ export class BrowserNode implements INodeService {
 
   async signUtilityMessage(
     params: OptionalPublicIdentifier<NodeParams.SignUtilityMessage>,
-  ): Promise<Result<NodeResponses.SignUtilityMessage, NodeError>> {
+  ): Promise<Result<NodeResponses.SignUtilityMessage, BrowserNodeError>> {
     try {
       const rpc = constructRpcRequest<"chan_signUtilityMessage">(ChannelRpcMethods.chan_signUtilityMessage, params);
       const res = await this.channelProvider!.send(rpc);
@@ -699,7 +720,7 @@ export class BrowserNode implements INodeService {
 
   async sendIsAliveMessage(
     params: OptionalPublicIdentifier<NodeParams.SendIsAlive>,
-  ): Promise<Result<NodeResponses.SendIsAlive, NodeError>> {
+  ): Promise<Result<NodeResponses.SendIsAlive, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_sendIsAlive, params);
     try {
       const res = await this.channelProvider!.send(rpc);
@@ -717,7 +738,7 @@ export class BrowserNode implements INodeService {
   /// DISPUTE METHODS
   async sendDisputeChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeChannelTx>,
-  ): Promise<Result<NodeResponses.SendDisputeChannelTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDisputeChannelTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_dispute, params);
     try {
       const res = await this.channelProvider!.send(rpc);
@@ -729,7 +750,7 @@ export class BrowserNode implements INodeService {
 
   async sendDefundChannelTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundChannelTx>,
-  ): Promise<Result<NodeResponses.SendDefundChannelTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDefundChannelTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defund, params);
     try {
       const res = await this.channelProvider!.send(rpc);
@@ -741,7 +762,7 @@ export class BrowserNode implements INodeService {
 
   async sendDisputeTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDisputeTransferTx>,
-  ): Promise<Result<NodeResponses.SendDisputeTransferTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDisputeTransferTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_disputeTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);
@@ -753,7 +774,7 @@ export class BrowserNode implements INodeService {
 
   async sendDefundTransferTx(
     params: OptionalPublicIdentifier<NodeParams.SendDefundTransferTx>,
-  ): Promise<Result<NodeResponses.SendDefundTransferTx, NodeError>> {
+  ): Promise<Result<NodeResponses.SendDefundTransferTx, BrowserNodeError>> {
     const rpc = constructRpcRequest(ChannelRpcMethods.chan_defundTransfer, params);
     try {
       const res = await this.channelProvider!.send(rpc);

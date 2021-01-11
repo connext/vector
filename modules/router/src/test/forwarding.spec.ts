@@ -4,7 +4,6 @@ import {
   ConditionalTransferCreatedPayload,
   FullChannelState,
   INodeService,
-  NodeError,
   Result,
   TransferNames,
   TRANSFER_DECREMENT,
@@ -13,6 +12,7 @@ import {
   Values,
   HashlockTransferStateEncoding,
   HashlockTransferResolverEncoding,
+  ChainError,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -23,6 +23,7 @@ import {
   RestServerNodeService,
   getTestLoggers,
   encodeTransferResolver,
+  ServerNodeServiceError,
 } from "@connext/vector-utils";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -33,7 +34,7 @@ import { forwardTransferCreation } from "../forwarding";
 import { config } from "../config";
 import * as swapService from "../services/swap";
 import * as transferService from "../services/transfer";
-import { ForwardTransferError } from "../errors";
+import { ForwardTransferCreationError } from "../errors";
 import * as collateralService from "../services/collateral";
 
 const testName = "Forwarding";
@@ -47,7 +48,7 @@ type TransferCreatedTestContext = {
   event: ConditionalTransferCreatedPayload;
 };
 
-describe("Forwarding", () => {
+describe(testName, () => {
   describe("forwardTransferCreation", () => {
     let node: Sinon.SinonStubbedInstance<RestServerNodeService>;
     let store: Sinon.SinonStubbedInstance<PrismaStore>;
@@ -158,7 +159,7 @@ describe("Forwarding", () => {
     };
 
     const verifySuccessfulResult = async (
-      result: Result<any, ForwardTransferError>,
+      result: Result<any, ForwardTransferCreationError>,
       ctx: TransferCreatedTestContext,
       swapCallCount = 0,
     ) => {
@@ -190,10 +191,9 @@ describe("Forwarding", () => {
     };
 
     const verifyErrorResult = async (
-      result: Result<any, ForwardTransferError>,
+      result: Result<any, ForwardTransferCreationError>,
       ctx: TransferCreatedTestContext,
-      errorReason: Values<typeof ForwardTransferError.reasons>,
-      attemptedTransfer: boolean,
+      errorReason: Values<typeof ForwardTransferCreationError.reasons>,
       errorContext: any = {},
       senderCancelled = true,
       senderResolveFailed = false,
@@ -210,7 +210,6 @@ describe("Forwarding", () => {
         expect(store.queueUpdate.callCount).to.be.eq(0);
         return;
       }
-      console.log("verifyErrorResult ========> error.context: ", error.context);
       expect(error.context).to.containSubset({
         senderTransfer: ctx.senderTransfer.transferId,
         senderChannel: ctx.senderTransfer.channelAddress,
@@ -362,8 +361,7 @@ describe("Forwarding", () => {
       await verifyErrorResult(
         result,
         mocked,
-        ForwardTransferError.reasons.InvalidForwardingInfo,
-        false,
+        ForwardTransferCreationError.reasons.InvalidForwardingInfo,
         {
           meta: mocked.senderTransfer.meta,
           senderTransfer: mocked.senderTransfer.transferId,
@@ -391,8 +389,7 @@ describe("Forwarding", () => {
       await verifyErrorResult(
         result,
         mocked,
-        ForwardTransferError.reasons.InvalidForwardingInfo,
-        false,
+        ForwardTransferCreationError.reasons.InvalidForwardingInfo,
         {
           meta: mocked.senderTransfer.meta,
           senderTransfer: mocked.senderTransfer.transferId,
@@ -420,8 +417,7 @@ describe("Forwarding", () => {
       await verifyErrorResult(
         result,
         mocked,
-        ForwardTransferError.reasons.InvalidForwardingInfo,
-        false,
+        ForwardTransferCreationError.reasons.InvalidForwardingInfo,
         {
           meta: mocked.senderTransfer.meta,
           senderTransfer: mocked.senderTransfer.transferId,
@@ -433,7 +429,8 @@ describe("Forwarding", () => {
 
     it("should fail without cancelling if cannot get sender channel from store", async () => {
       const ctx = prepEnv();
-      node.getStateChannel.onFirstCall().resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+      const err = (new ChainError(ChainError.reasons.TransferNotFound) as unknown) as ServerNodeServiceError;
+      node.getStateChannel.onFirstCall().resolves(Result.fail(err));
 
       const result = await forwardTransferCreation(
         ctx.event,
@@ -445,13 +442,13 @@ describe("Forwarding", () => {
         chainReader,
       );
 
+      const { stack, ...sanitized } = err.toJson();
       await verifyErrorResult(
         result,
         ctx,
-        ForwardTransferError.reasons.SenderChannelNotFound,
-        false,
+        ForwardTransferCreationError.reasons.SenderChannelNotFound,
         {
-          nodeError: NodeError.reasons.InternalServerError,
+          nodeError: sanitized,
         },
         false,
       );
@@ -474,10 +471,9 @@ describe("Forwarding", () => {
       await verifyErrorResult(
         result,
         ctx,
-        ForwardTransferError.reasons.SenderChannelNotFound,
-        false,
+        ForwardTransferCreationError.reasons.SenderChannelNotFound,
         {
-          channelAddress: ctx.senderChannel.channelAddress,
+          senderChannel: ctx.senderChannel.channelAddress,
         },
         false,
       );
@@ -489,7 +485,8 @@ describe("Forwarding", () => {
       ctx.receiverChannel.networkContext.chainId = 1338;
       ctx.senderTransfer.meta.path[0].recipientChainId = 1338;
       const mocked = prepEnv(ctx);
-      getSwappedAmount.returns(Result.fail(new Error("fail")));
+      const err = new ChainError("fail");
+      getSwappedAmount.returns(Result.fail(err));
 
       const result = await forwardTransferCreation(
         mocked.event,
@@ -501,17 +498,16 @@ describe("Forwarding", () => {
         chainReader,
       );
 
-      await verifyErrorResult(result, mocked, ForwardTransferError.reasons.UnableToCalculateSwap, false, {
-        swapError: "fail",
-        swapContext: undefined,
+      const { stack, ...sanitized } = err.toJson();
+      await verifyErrorResult(result, mocked, ForwardTransferCreationError.reasons.UnableToCalculateSwap, {
+        swapError: sanitized,
       });
     });
 
     it("fails with cancellation if getting receiver channel fails", async () => {
       const ctx = prepEnv();
-      node.getStateChannelByParticipants
-        .onFirstCall()
-        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+      const err = new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {});
+      node.getStateChannelByParticipants.onFirstCall().resolves(Result.fail(err));
 
       const result = await forwardTransferCreation(
         ctx.event,
@@ -523,8 +519,9 @@ describe("Forwarding", () => {
         chainReader,
       );
 
-      await verifyErrorResult(result, ctx, ForwardTransferError.reasons.RecipientChannelNotFound, false, {
-        storeError: NodeError.reasons.InternalServerError,
+      const { stack, ...sanitized } = err.toJson();
+      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, {
+        storeError: sanitized,
       });
     });
 
@@ -542,7 +539,7 @@ describe("Forwarding", () => {
         chainReader,
       );
 
-      await verifyErrorResult(result, ctx, ForwardTransferError.reasons.RecipientChannelNotFound, false, {
+      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.RecipientChannelNotFound, {
         participants: [routerPublicIdentifier, ctx.receiverChannel.bobIdentifier],
         chainId: ctx.receiverChannel.networkContext.chainId,
       });
@@ -555,9 +552,8 @@ describe("Forwarding", () => {
     // TODO: the code indicates that sender should not be cancelled, verify this with Layne
     it.skip("fails with cancellation if transfer creation fails", async () => {
       const ctx = prepEnv();
-      node.conditionalTransfer
-        .onFirstCall()
-        .resolves(Result.fail(new NodeError(NodeError.reasons.InternalServerError)));
+      const err = new ServerNodeServiceError(ServerNodeServiceError.reasons.InternalServerError, "", "", {});
+      node.conditionalTransfer.onFirstCall().resolves(Result.fail(err));
 
       const result = await forwardTransferCreation(
         ctx.event,
@@ -569,8 +565,9 @@ describe("Forwarding", () => {
         chainReader,
       );
 
-      await verifyErrorResult(result, ctx, ForwardTransferError.reasons.ErrorForwardingTransfer, false, {
-        createError: NodeError.reasons.InternalServerError,
+      const { stack, ...sanitized } = err.toJson();
+      await verifyErrorResult(result, ctx, ForwardTransferCreationError.reasons.ErrorForwardingTransfer, {
+        createError: sanitized,
       });
     });
   });

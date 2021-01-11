@@ -88,9 +88,14 @@ export const requestCollateral = async (
 
   const counterpartyAfter = getBalanceForAssetId(requesterChannel, assetId, counterpartyAliceOrBob);
   expect(requesterChannel).to.deep.eq(counterpartyChannel);
-  const min = BigNumber.from(counterpartyBefore).add(requestedAmount ?? "0");
+  if (requestedAmount && requestedAmount.lte(counterpartyBefore)) {
+    // should not collateralize
+    expect(BigNumber.from(counterpartyAfter).eq(counterpartyBefore)).to.be.true;
+    return requesterChannel;
+  }
+  const min = BigNumber.from(requestedAmount ?? counterpartyBefore);
+  expect(BigNumber.from(counterpartyAfter).gte(counterpartyBefore)).to.be.true;
   expect(BigNumber.from(counterpartyAfter).gte(min)).to.be.true;
-  expect(BigNumber.from(counterpartyAfter).gt(counterpartyBefore)).to.be.true;
   return requesterChannel;
 };
 

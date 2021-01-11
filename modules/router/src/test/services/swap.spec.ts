@@ -2,7 +2,7 @@ import { calculateExchangeAmount, expect, getRandomAddress, inverse } from "@con
 
 import { getSwappedAmount } from "../../services/swap";
 import { config } from "../../config";
-import { ForwardTransferError } from "../../errors";
+import { SwapError } from "../../errors";
 
 describe("swap.ts", () => {
   describe("getSwappedAmount", () => {
@@ -14,13 +14,13 @@ describe("swap.ts", () => {
       const toChainId = config.allowedSwaps[0].toChainId;
 
       const res = getSwappedAmount(fromAmount, fromAssetId, fromChainId, toAssetId, toChainId);
-      expect(res.getError().message).to.be.eq(ForwardTransferError.reasons.UnableToCalculateSwap);
+      expect(res.getError().message).to.be.eq(SwapError.reasons.SwapNotAllowed);
       expect(res.getError().context).to.be.deep.eq({
+        fromAmount,
         fromAssetId,
         fromChainId,
         toAssetId,
         toChainId,
-        details: "Swap not found in allowed swaps config",
       });
     });
 

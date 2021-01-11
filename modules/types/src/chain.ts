@@ -27,7 +27,7 @@ export const ERC20Abi = [
 ];
 
 export class ChainError extends VectorError {
-  readonly type = VectorError.errors.ChainError;
+  static readonly type = "ChainError";
   static readonly reasons = {
     ProviderNotFound: "Provider not found for chainId",
     SignerNotFound: "Signer not found for chainId",
@@ -55,7 +55,7 @@ export class ChainError extends VectorError {
   readonly canRetry: boolean;
 
   constructor(public readonly message: Values<typeof ChainError.reasons>, public readonly context: any = {}) {
-    super(message);
+    super(message, context, ChainError.type);
     this.canRetry = Object.values(ChainError.retryableTxErrors).includes(this.message);
   }
 }
