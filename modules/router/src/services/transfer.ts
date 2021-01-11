@@ -6,6 +6,7 @@ import {
   NodeParams,
   NodeResponses,
   Result,
+  VectorError,
 } from "@connext/vector-types";
 import { decodeTransferResolver, ServerNodeServiceError } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
@@ -66,7 +67,7 @@ export const attemptTransferWithCollateralization = async (
         {
           params,
           shouldCancelSender: true,
-          collateralError: collateralError.toJson(),
+          collateralError: VectorError.jsonify(collateralError),
         },
       ),
     );
@@ -144,7 +145,7 @@ export const attemptTransferWithCollateralization = async (
         {
           params,
           shouldCancelSender: true,
-          collateralError: collateralError.toJson(),
+          collateralError: VectorError.jsonify(collateralError),
         },
       ),
     );
@@ -161,7 +162,7 @@ export const attemptTransferWithCollateralization = async (
           senderTransfer,
           recipientChannel.channelAddress,
           {
-            transferError: transfer.getError()?.toJson(),
+            transferError: VectorError.jsonify(transfer.getError()!),
             // if its a timeout, could be withholding sig, so do not cancel
             // sender transfer
             shouldCancelSender: false,
@@ -228,7 +229,7 @@ export const transferWithCollateralization = async (
           senderTransfer,
           channel.channelAddress,
           {
-            transferError: transfer.getError()?.toJson(),
+            transferError: VectorError.jsonify(transfer.getError()!),
             ...params,
           },
         ),
@@ -261,7 +262,7 @@ export const cancelCreatedTransfer = async (
         toCancel.transferId,
         receiverChannel,
         {
-          cancellationError: transferResolverRes.getError()?.toJson(),
+          cancellationError: VectorError.jsonify(transferResolverRes.getError()!),
           senderTransfer: toCancel.transferId,
           cancellationReason,
           ...context,
@@ -327,7 +328,7 @@ export const cancelCreatedTransfer = async (
       toCancel.transferId,
       receiverChannel,
       {
-        cancellationError: resolveResult.getError()?.toJson(),
+        cancellationError: VectorError.jsonify(resolveResult.getError()!),
         cancellationReason,
         ...context,
       },

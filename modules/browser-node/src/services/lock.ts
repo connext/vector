@@ -1,4 +1,4 @@
-import { ILockService, IMessagingService, Result } from "@connext/vector-types";
+import { ILockService, IMessagingService, Result, VectorError } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 
 import { BrowserNodeLockError } from "../errors";
@@ -24,7 +24,9 @@ export class BrowserLockService implements ILockService {
       this.publicIdentifier,
     );
     if (res.isError) {
-      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.AcquireMessageFailed, lockName);
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.AcquireMessageFailed, lockName, "", {
+        error: VectorError.jsonify(res.getError()!),
+      });
     }
     const { lockValue } = res.getValue();
     if (!lockValue) {
@@ -53,7 +55,9 @@ export class BrowserLockService implements ILockService {
       this.publicIdentifier,
     );
     if (result.isError) {
-      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.ReleaseMessageFailed, lockName);
+      throw new BrowserNodeLockError(BrowserNodeLockError.reasons.ReleaseMessageFailed, lockName, "", {
+        error: VectorError.jsonify(result.getError()!),
+      });
     }
     this.log.debug({ method: "releaseLock", lockName, lockValue }, "Released lock");
   }

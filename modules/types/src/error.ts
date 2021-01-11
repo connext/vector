@@ -1,5 +1,5 @@
 import { UpdateParams, FullChannelState, ChannelUpdate } from "./channel";
-export class Result<T, Y = any> {
+export class Result<T, Y extends Error = any> {
   private value?: T;
   private error?: Y;
 
@@ -33,23 +33,9 @@ export class Result<T, Y = any> {
     if (!this.isError) {
       return { isError: false, value: this.value };
     }
-    if (this.error instanceof VectorError) {
-      return {
-        isError: true,
-        error: this.error.toJson(),
-      };
-    }
     return {
       isError: true,
-      // NOTE: Error.message is not returned as a property
-      // on default
-      error:
-        this.error instanceof Error
-          ? {
-              ...this.error,
-              message: this.error.message,
-            }
-          : this.error,
+      error: VectorError.jsonify(this.error!),
     };
   }
 
@@ -60,7 +46,6 @@ export class Result<T, Y = any> {
     return (json.error as any).type
       ? (Result.fail(VectorError.fromJson(json.error as any)) as any)
       : Result.fail(json.error);
-    // return json.isError ? Result.fail(json.error) : Result.ok(json.value);
   }
 
   public static fail<U, Y extends Error>(error: Y): Result<U, Y> {
@@ -102,7 +87,19 @@ export class VectorError extends Error {
     super(msg);
   }
 
-  public toJson(): VectorErrorJson {
+  public static jsonify(error: VectorError | Error): VectorErrorJson {
+    if (error instanceof VectorError) {
+      return error.toJson();
+    }
+    return {
+      message: error.message,
+      type: error.name,
+      context: {},
+      stack: error.stack,
+    };
+  }
+
+  private toJson(): VectorErrorJson {
     return {
       message: this.msg,
       context: this.context,

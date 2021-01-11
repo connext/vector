@@ -12,9 +12,8 @@ import {
   ResolveUpdateDetails,
   CreateUpdateDetails,
   TPublicIdentifier,
-  EngineError,
-  VectorErrorJson,
   FullChannelState,
+  VectorError,
 } from "@connext/vector-types";
 import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
@@ -36,10 +35,6 @@ server.register(fastifyCors, {
 export const store = new PrismaStore();
 
 export const _providers = hydrateProviders(config.chainProviders);
-
-const createErrorPayload = (error: EngineError | ServerNodeError): VectorErrorJson => {
-  return error.toJson();
-};
 
 server.addHook("onReady", async () => {
   // get persisted mnemonic
@@ -83,7 +78,7 @@ server.get<{ Params: { publicIdentifier: string } }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -94,7 +89,7 @@ server.get<{ Params: { publicIdentifier: string } }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -108,7 +103,7 @@ server.get<{ Params: NodeParams.GetChannelState }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -121,7 +116,7 @@ server.get<{ Params: NodeParams.GetChannelState }>(
         return reply
           .status(404)
           .send(
-            createErrorPayload(
+            VectorError.jsonify(
               new ServerNodeError(
                 ServerNodeError.reasons.ChannelNotFound,
                 request.params.publicIdentifier,
@@ -133,7 +128,7 @@ server.get<{ Params: NodeParams.GetChannelState }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -147,7 +142,7 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -163,7 +158,7 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
         return reply
           .status(404)
           .send(
-            createErrorPayload(
+            VectorError.jsonify(
               new ServerNodeError(
                 ServerNodeError.reasons.ChannelNotFound,
                 request.params.publicIdentifier,
@@ -175,7 +170,7 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -189,7 +184,7 @@ server.get<{ Params: NodeParams.GetTransferState }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -201,7 +196,7 @@ server.get<{ Params: NodeParams.GetTransferState }>(
         return reply
           .status(404)
           .send(
-            createErrorPayload(
+            VectorError.jsonify(
               new ServerNodeError(
                 ServerNodeError.reasons.TransferNotFound,
                 request.params.publicIdentifier,
@@ -213,7 +208,7 @@ server.get<{ Params: NodeParams.GetTransferState }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -229,7 +224,7 @@ server.get<{ Params: NodeParams.GetTransferStatesByRoutingId }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -240,7 +235,7 @@ server.get<{ Params: NodeParams.GetTransferStatesByRoutingId }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -254,7 +249,7 @@ server.get<{ Params: NodeParams.GetTransferStateByRoutingId }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -266,7 +261,7 @@ server.get<{ Params: NodeParams.GetTransferStateByRoutingId }>(
         return reply
           .status(404)
           .send(
-            createErrorPayload(
+            VectorError.jsonify(
               new ServerNodeError(
                 ServerNodeError.reasons.TransferNotFound,
                 request.params.publicIdentifier,
@@ -278,7 +273,7 @@ server.get<{ Params: NodeParams.GetTransferStateByRoutingId }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -292,7 +287,7 @@ server.get<{ Params: NodeParams.GetActiveTransfersByChannelAddress }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -303,7 +298,7 @@ server.get<{ Params: NodeParams.GetActiveTransfersByChannelAddress }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -317,7 +312,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -334,7 +329,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
       return reply.status(200).send(filtered.map((chan) => chan.channelAddress));
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -350,7 +345,7 @@ server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.params.publicIdentifier, request.params),
           ),
         );
@@ -363,7 +358,7 @@ server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -377,7 +372,7 @@ server.post<{ Body: NodeParams.Setup }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -392,7 +387,7 @@ server.post<{ Body: NodeParams.Setup }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -406,7 +401,7 @@ server.post<{ Body: NodeParams.RequestSetup }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -422,7 +417,7 @@ server.post<{ Body: NodeParams.RequestSetup }>(
       return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -438,7 +433,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -451,7 +446,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       return reply
         .status(500)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.GetChannelFailed, request.body.publicIdentifier, request.body),
           ),
         );
@@ -460,7 +455,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       return reply
         .status(404)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.ChannelNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -495,7 +490,7 @@ server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -508,7 +503,7 @@ server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -527,7 +522,7 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -540,7 +535,7 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -559,7 +554,7 @@ server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -572,7 +567,7 @@ server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -591,7 +586,7 @@ server.post<{ Body: NodeParams.SendDefundTransferTx }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -604,7 +599,7 @@ server.post<{ Body: NodeParams.SendDefundTransferTx }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -618,7 +613,7 @@ server.post<{ Body: NodeParams.Deposit }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -633,7 +628,7 @@ server.post<{ Body: NodeParams.Deposit }>(
       return reply.status(200).send(res);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -647,7 +642,7 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -660,7 +655,7 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
       return reply.status(200).send({ ...result, channelAddress: request.body.channelAddress });
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -679,7 +674,7 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -695,7 +690,7 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
       } as NodeResponses.ConditionalTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -714,7 +709,7 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -728,7 +723,7 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
       } as NodeResponses.ResolveTransfer);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -747,7 +742,7 @@ server.post<{ Body: NodeParams.Withdraw }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -762,7 +757,7 @@ server.post<{ Body: NodeParams.Withdraw }>(
       } as NodeResponses.Withdraw);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -776,7 +771,7 @@ server.post<{ Body: NodeParams.RestoreState }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -787,7 +782,7 @@ server.post<{ Body: NodeParams.RestoreState }>(
       return reply.status(200).send({ channelAddress } as NodeResponses.RestoreState);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -801,7 +796,7 @@ server.post<{ Body: NodeParams.SendIsAlive }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.NodeNotFound, request.body.publicIdentifier, request.body),
           ),
         );
@@ -812,7 +807,7 @@ server.post<{ Body: NodeParams.SendIsAlive }>(
       return reply.status(200).send({ channelAddress } as NodeResponses.SendIsAlive);
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack, context: e.context });
-      return reply.status(500).send(createErrorPayload(e));
+      return reply.status(500).send(VectorError.jsonify(e));
     }
   },
 );
@@ -842,7 +837,7 @@ server.post<{ Body: NodeParams.RegisterListener }>(
       return reply
         .status(500)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(
               ServerNodeError.reasons.RegisterSubscriptionFailed,
               request.body.publicIdentifier,
@@ -869,7 +864,7 @@ server.get<{ Params: NodeParams.GetListener }>(
       return reply
         .status(404)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(
               ServerNodeError.reasons.SubscriptionNotFound,
               request.params.publicIdentifier,
@@ -910,7 +905,7 @@ server.post<{ Body: NodeParams.Admin }>(
       return reply
         .status(500)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.ClearStoreFailed, "", request.body, { storeError: e.message }),
           ),
         );
@@ -940,7 +935,7 @@ server.post<{ Body: NodeParams.CreateNode }>(
     } catch (e) {
       logger.error({ message: e.message, stack: e.stack });
       return reply.status(500).send(
-        createErrorPayload(
+        VectorError.jsonify(
           new ServerNodeError(ServerNodeError.reasons.CreateNodeFailed, "", request.body, {
             createNodeError: e.message,
             createNodeStack: e.stack,
@@ -966,7 +961,7 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
       return reply
         .status(400)
         .send(
-          createErrorPayload(
+          VectorError.jsonify(
             new ServerNodeError(ServerNodeError.reasons.ProviderNotConfigured, "", request.body.params),
           ),
         );

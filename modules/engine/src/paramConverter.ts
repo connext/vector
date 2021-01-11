@@ -16,6 +16,7 @@ import {
   TransferName,
   IVectorChainReader,
   EngineError,
+  VectorError,
 } from "@connext/vector-types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
@@ -87,7 +88,7 @@ export async function convertConditionalTransferParams(
         ParameterConversionError.reasons.FailedToGetRegisteredTransfer,
         channelAddress,
         signer.publicIdentifier,
-        { params, registryError: registryRes.getError()?.toJson() },
+        { params, registryError: VectorError.jsonify(registryRes.getError()!) },
       ),
     );
   }
@@ -195,7 +196,7 @@ export async function convertWithdrawParams(
         ParameterConversionError.reasons.FailedToGetRegisteredTransfer,
         channelAddress,
         signer.publicIdentifier,
-        { params, registryError: registryRes.getError()?.toJson() },
+        { params, registryError: VectorError.jsonify(registryRes.getError()!) },
       ),
     );
   }
