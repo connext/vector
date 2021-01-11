@@ -2,6 +2,10 @@
 
 ## Next Release
 
+## 0.1.0
+
+- \[all\] Mainnet release :tada:
+
 ## 0.1.0-rc.25
 
 - \[all\] Improve error handling
