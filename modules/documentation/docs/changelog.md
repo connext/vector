@@ -5,6 +5,7 @@
 ## 0.1.0
 
 - \[all\] Mainnet release :tada:
+- \[all\] Improve handling of non-vector errors
 
 ## 0.1.0-rc.25
 
