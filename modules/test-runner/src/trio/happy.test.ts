@@ -88,9 +88,9 @@ describe(testName, () => {
     await withdraw(daveService, daveRogerPostSetup.channelAddress, assetId, withdrawAmt, Wallet.createRandom().address);
   });
 
-  it("ETH: deposit, requestCollateral, transfer C -> R -> D, requestCollateral, transfer C -> R -> D,", async () => {
+  it("ETH: deposit, requestCollateral + transfer C -> R -> D (x3)", async () => {
     const assetId = constants.AddressZero;
-    const depositAmt = utils.parseEther("0.0001");
+    const depositAmt = utils.parseEther("0.0002");
     const transferAmt = utils.parseEther("0.00005");
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);
@@ -98,31 +98,21 @@ describe(testName, () => {
 
     // carol deposits
     await deposit(carolService, rogerService, carolRogerPostSetup.channelAddress, assetId, depositAmt);
-    // dave collateralizes
-    await requestCollateral(daveService, rogerService, daveRogerPostSetup.channelAddress, assetId, transferAmt);
 
-    // carol transfers
-    await transfer(
-      carolService,
-      daveService,
-      carolRogerPostSetup.channelAddress,
-      daveRogerPostSetup.channelAddress,
-      assetId,
-      transferAmt,
-    );
+    for (const _ of Array(3).fill(0)) {
+      // dave collateralizes
+      await requestCollateral(daveService, rogerService, daveRogerPostSetup.channelAddress, assetId, transferAmt);
 
-    // dave collateralizes
-    await requestCollateral(daveService, rogerService, daveRogerPostSetup.channelAddress, assetId, transferAmt);
-
-    // carol transfers
-    await transfer(
-      carolService,
-      daveService,
-      carolRogerPostSetup.channelAddress,
-      daveRogerPostSetup.channelAddress,
-      assetId,
-      transferAmt,
-    );
+      // carol transfers
+      await transfer(
+        carolService,
+        daveService,
+        carolRogerPostSetup.channelAddress,
+        daveRogerPostSetup.channelAddress,
+        assetId,
+        transferAmt,
+      );
+    }
   });
 
   it("cross-chain: deposit, transfer C -> R -> D, withdraw", async () => {

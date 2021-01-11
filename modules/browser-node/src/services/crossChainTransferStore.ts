@@ -47,11 +47,11 @@ export async function getCrossChainTransfer(
   return undefined;
 }
 
-export async function saveCrossChainTransfer(
+export function saveCrossChainTransfer(
   crossChainTransferId: string,
   status: number,
   params: CrossChainTransferParams,
-): Promise<void> {
+): void {
   const stringified = JSON.stringify({
     crossChainTransferId,
     status,
@@ -60,6 +60,6 @@ export async function saveCrossChainTransfer(
   window.localStorage.setItem(`${CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY}_${crossChainTransferId}`, stringified);
 }
 
-export async function removeCrossChainTransfer(crossChainTransferId: string): Promise<void> {
+export function removeCrossChainTransfer(crossChainTransferId: string): void {
   window.localStorage.removeItem(`${CROSS_CHAIN_TRANSFER_LOCAL_STORAGE_KEY}_${crossChainTransferId}`);
 }

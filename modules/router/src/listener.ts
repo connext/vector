@@ -97,7 +97,7 @@ export async function setupListeners(
       if (res.isError) {
         failed.labels(meta.routingId).inc(1);
         return logger.error(
-          { method: "forwardTransferCreation", error: res.getError()?.message, context: res.getError()?.context },
+          { method: "forwardTransferCreation", error: res.getError()?.toJson() },
           "Error forwarding transfer",
         );
       }
@@ -157,7 +157,7 @@ export async function setupListeners(
       );
       if (res.isError) {
         return logger.error(
-          { method: "forwardTransferResolution", error: res.getError()?.message, context: res.getError()?.context },
+          { method: "forwardTransferResolution", error: res.getError()?.toJson() },
           "Error forwarding resolution",
         );
       }
@@ -224,8 +224,7 @@ export async function setupListeners(
       logger.error(
         {
           channelAddress: data.channelAddress,
-          error: channelRes.getError()?.message,
-          context: channelRes.getError()?.context,
+          error: channelRes.getError()?.toJson(),
           method,
         },
         "Could not get channel",
@@ -248,8 +247,7 @@ export async function setupListeners(
     if (profileRes.isError) {
       logger.error(
         {
-          error: profileRes.getError()?.message,
-          context: profileRes.getError()?.context,
+          error: profileRes.getError()?.toJson(),
           assetId: data.assetId,
           channelAddress: channel.channelAddress,
           method,
@@ -283,7 +281,7 @@ export async function setupListeners(
       data.amount,
     );
     if (res.isError) {
-      logger.error({ error: res.getError()?.message, context: res.getError()?.context }, "Error requesting collateral");
+      logger.error({ error: res.getError()?.toJson() }, "Error requesting collateral");
       return;
     }
 
@@ -301,7 +299,7 @@ export async function setupListeners(
       logger,
     );
     if (res.isError) {
-      logger.error({ error: res.getError()?.message, context: res.getError()?.context }, "Error handling isAlive");
+      logger.error({ error: res.getError()?.toJson() }, "Error handling isAlive");
       return;
     }
 

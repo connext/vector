@@ -10,20 +10,20 @@ import {
   IVectorChainReader,
   IVectorProtocol,
   IVectorStore,
-  OutboundChannelUpdateError,
   ProtocolEventName,
   ProtocolEventPayloadsMap,
   ProtocolParams,
   Result,
   UpdateParams,
   UpdateType,
-  InboundChannelUpdateError,
   TChannelUpdate,
+  ProtocolError,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import { Evt } from "evt";
 import pino from "pino";
 
+import { OutboundChannelUpdateError } from "./errors";
 import * as sync from "./sync";
 import { validateSchema } from "./utils";
 
@@ -111,8 +111,7 @@ export class Vector implements IVectorProtocol {
       this.logger.error({
         method: "lockedOperation",
         variable: "outboundRes",
-        error: outboundRes.getError()?.message,
-        context: outboundRes.getError()?.context,
+        error: outboundRes.getError()?.toJson(),
       });
       return outboundRes as Result<any, OutboundChannelUpdateError>;
     }
@@ -139,11 +138,12 @@ export class Vector implements IVectorProtocol {
     });
     let aliceIdentifier: string;
     let bobIdentifier: string;
+    let channel: FullChannelState | undefined;
     if (params.type === UpdateType.setup) {
       aliceIdentifier = this.publicIdentifier;
       bobIdentifier = (params as UpdateParams<"setup">).details.counterpartyIdentifier;
     } else {
-      const channel = await this.storeService.getChannelState(params.channelAddress);
+      channel = await this.storeService.getChannelState(params.channelAddress);
       if (!channel) {
         return Result.fail(new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ChannelNotFound, params));
       }
@@ -152,9 +152,28 @@ export class Vector implements IVectorProtocol {
     }
     const isAlice = this.publicIdentifier === aliceIdentifier;
     const counterpartyIdentifier = isAlice ? bobIdentifier : aliceIdentifier;
-    const key = await this.lockService.acquireLock(params.channelAddress, isAlice, counterpartyIdentifier);
+    let key: string;
+    try {
+      key = await this.lockService.acquireLock(params.channelAddress, isAlice, counterpartyIdentifier);
+    } catch (e) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.AcquireLockFailed, params, channel, {
+          lockError: e.message,
+        }),
+      );
+    }
     const outboundRes = await this.lockedOperation(params);
-    await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
+    try {
+      await this.lockService.releaseLock(params.channelAddress, key, isAlice, counterpartyIdentifier);
+    } catch (e) {
+      return Result.fail(
+        new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.ReleaseLockFailed, params, channel, {
+          lockError: e.message,
+          outboundResult: outboundRes.toJson(),
+        }),
+      );
+    }
+
     return outboundRes;
   }
 
@@ -167,7 +186,7 @@ export class Vector implements IVectorProtocol {
     await this.messagingService.onReceiveProtocolMessage(
       this.publicIdentifier,
       async (
-        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, InboundChannelUpdateError>,
+        msg: Result<{ update: ChannelUpdate; previousUpdate: ChannelUpdate }, ProtocolError>,
         from: string,
         inbox: string,
       ) => {
@@ -229,7 +248,7 @@ export class Vector implements IVectorProtocol {
           this.logger,
         );
         if (inboundRes.isError) {
-          this.logger.warn({ error: inboundRes.getError()!.message }, "Failed to apply inbound update");
+          this.logger.warn({ error: inboundRes.getError()!.toJson() }, "Failed to apply inbound update");
           return;
         }
 
@@ -242,10 +261,6 @@ export class Vector implements IVectorProtocol {
         });
       },
     );
-
-    // TODO: https://github.com/connext/vector/issues/54
-
-    // TODO: https://github.com/connext/vector/issues/52
 
     // sync latest state before starting
     // TODO: skipping this, if it works, consider just not awaiting the promise so the rest of startup can continue
@@ -296,7 +311,7 @@ export class Vector implements IVectorProtocol {
     const error = validateSchema(params, schema);
     if (error) {
       return new OutboundChannelUpdateError(OutboundChannelUpdateError.reasons.InvalidParams, params, undefined, {
-        error,
+        paramsError: error,
       });
     }
     return undefined;
@@ -337,7 +352,7 @@ export class Vector implements IVectorProtocol {
           { details: params, channelAddress: "", type: UpdateType.setup },
           undefined,
           {
-            error: create2Res.getError()!.message,
+            create2Error: create2Res.getError()?.message,
           },
         ),
       );
