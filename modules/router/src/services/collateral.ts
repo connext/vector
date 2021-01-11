@@ -172,7 +172,7 @@ export const requestCollateral = async (
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "requestCollateral";
   const methodId = getRandomBytes32();
-  logger.debug({ method, methodId, assetId, publicIdentifier, channel: channel.channelAddress }, "Started");
+  logger.debug({ method, methodId, assetId, publicIdentifier, channel }, "Started");
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
