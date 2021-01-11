@@ -2,9 +2,14 @@
 
 ## Next Release
 
+## 0.1.0-rc.25
+
+- \[all\] Improve error handling
+
 ## 0.1.0-rc.24
 
 - \[utils\] Update `eccrypto-js` to fix sig recovery bug
+
 ## 0.1.0-rc.23
 
 - \[types\] Restore signature length to 130
