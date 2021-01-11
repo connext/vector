@@ -1,7 +1,7 @@
 import { EngineError, Values } from "@connext/vector-types";
 
 export class DisputeError extends EngineError {
-  readonly type = "DisputeError";
+  static readonly type = "DisputeError";
 
   static readonly reasons = {
     ChannelDefundTxFailed: "Failed to send defund channel tx",
@@ -24,12 +24,12 @@ export class DisputeError extends EngineError {
     publicIdentifier: string,
     context: any = {},
   ) {
-    super(message, channelAddress, publicIdentifier, context);
+    super(message, channelAddress, publicIdentifier, context, DisputeError.type);
   }
 }
 
 export class CheckInError extends EngineError {
-  readonly type = "CheckInError";
+  static readonly type = "CheckInError";
 
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
@@ -42,12 +42,12 @@ export class CheckInError extends EngineError {
     publicIdentifier: string,
     context: any = {},
   ) {
-    super(message, channelAddress, publicIdentifier, context);
+    super(message, channelAddress, publicIdentifier, context, CheckInError.type);
   }
 }
 
 export class RestoreError extends EngineError {
-  readonly type = "RestoreError";
+  static readonly type = "RestoreError";
 
   static readonly reasons = {
     AckFailed: "Could not send restore ack",
@@ -72,12 +72,12 @@ export class RestoreError extends EngineError {
     publicIdentifier: string,
     context: any = {},
   ) {
-    super(message, channelAddress, publicIdentifier, context);
+    super(message, channelAddress, publicIdentifier, context, RestoreError.type);
   }
 }
 
 export class IsAliveError extends EngineError {
-  readonly type = "IsAliveError";
+  static readonly type = "IsAliveError";
 
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
@@ -90,12 +90,12 @@ export class IsAliveError extends EngineError {
     publicIdentifier: string,
     context: any = {},
   ) {
-    super(message, channelAddress, publicIdentifier, context);
+    super(message, channelAddress, publicIdentifier, context, IsAliveError.type);
   }
 }
 
 export class ParameterConversionError extends EngineError {
-  readonly type = "ParameterConversionError";
+  static readonly type = "ParameterConversionError";
 
   static readonly reasons = {
     CannotSendToSelf: "An initiator cannot be a receiver on the same chain",
@@ -109,12 +109,12 @@ export class ParameterConversionError extends EngineError {
     publicIdentifier: string,
     context: any = {},
   ) {
-    super(message, channelAddress, publicIdentifier, context);
+    super(message, channelAddress, publicIdentifier, context, ParameterConversionError.type);
   }
 }
 
 export class RpcError extends EngineError {
-  readonly type = "RpcError";
+  static readonly type = "RpcError";
 
   static readonly reasons = {
     ChainServiceFailure: "Failed to execute chain service method",
@@ -137,6 +137,6 @@ export class RpcError extends EngineError {
     publicIdentifier: string,
     context: any = {},
   ) {
-    super(message, channelAddress, publicIdentifier, context);
+    super(message, channelAddress, publicIdentifier, context, RpcError.type);
   }
 }

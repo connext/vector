@@ -34,7 +34,7 @@ export type ServerNodeServiceErrorContext = NodeError & {
   params: any;
 };
 export class ServerNodeServiceError extends NodeError {
-  readonly type = "ServerNodeServiceError";
+  static readonly type = "ServerNodeServiceError";
 
   static readonly reasons = {
     InternalServerError: "Failed to send request",

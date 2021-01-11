@@ -90,7 +90,7 @@ describe(testName, () => {
 
   it("ETH: deposit, requestCollateral + transfer C -> R -> D (x3)", async () => {
     const assetId = constants.AddressZero;
-    const depositAmt = utils.parseEther("0.0001");
+    const depositAmt = utils.parseEther("0.0002");
     const transferAmt = utils.parseEther("0.00005");
 
     const carolRogerPostSetup = await setup(carolService, rogerService, chainId1);

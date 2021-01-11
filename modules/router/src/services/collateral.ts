@@ -1,5 +1,5 @@
 import { FullChannelState, INodeService, Result, NodeResponses, IVectorChainReader } from "@connext/vector-types";
-import { getBalanceForAssetId } from "@connext/vector-utils";
+import { getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
 
@@ -163,6 +163,9 @@ export const requestCollateral = async (
   logger: BaseLogger,
   requestedAmount?: string,
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
+  const method = "requestCollateral";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId, assetId, publicIdentifier, channel: channel.channelAddress }, "Started");
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
@@ -250,7 +253,10 @@ export const requestCollateral = async (
   const reconcilable = totalDeposited.getValue().sub(processed ?? "0");
   if (reconcilable.lt(amountToDeposit)) {
     // Deposit needed
-    logger.info({ amountToDeposit: amountToDeposit.toString() }, "Deposit amount calculated, submitting deposit tx");
+    logger.info(
+      { amountToDeposit: amountToDeposit.toString(), target: target.toString() },
+      "Deposit amount calculated, submitting deposit tx",
+    );
     const txRes = await node.sendDepositTx({
       amount: amountToDeposit.toString(),
       assetId: assetId,
@@ -284,6 +290,7 @@ export const requestCollateral = async (
         processed: processed.toString(),
         amountToDeposit: amountToDeposit.toString(),
         reconcilable: reconcilable.toString(),
+        target: target.toString(),
       },
       "Owed onchain funds are sufficient",
     );

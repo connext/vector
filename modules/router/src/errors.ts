@@ -9,7 +9,7 @@ export type CollateralErrorContext = RouterErrorContext & {
   requested?: string;
 };
 export class CollateralError extends RouterError {
-  readonly type = "CollateralError";
+  static readonly type = "CollateralError";
 
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
@@ -32,7 +32,7 @@ export class CollateralError extends RouterError {
     requested?: string,
     context: any = {},
   ) {
-    super(message, { channelAddress, assetId, profile, requested, ...context });
+    super(message, { channelAddress, assetId, profile, requested, ...context }, CollateralError.type);
   }
 }
 
@@ -44,7 +44,7 @@ export type SwapErrorContext = RouterErrorContext & {
   toChainId: number;
 };
 export class SwapError extends RouterError {
-  readonly type = "SwapError";
+  static readonly type = "SwapError";
 
   static readonly reasons = {
     SwapNotAllowed: "Swap is not configured in allowed swaps",
@@ -62,7 +62,7 @@ export class SwapError extends RouterError {
     toChainId: number,
     context: any = {},
   ) {
-    super(message, { fromAmount, fromAssetId, fromChainId, toAssetId, toChainId, ...context });
+    super(message, { fromAmount, fromAssetId, fromChainId, toAssetId, toChainId, ...context }, SwapError.type);
   }
 }
 
@@ -73,7 +73,7 @@ export type ForwardTransferCreationErrorContext = RouterErrorContext & {
   receiverChannel: string;
 };
 export class ForwardTransferCreationError extends RouterError {
-  readonly type = "ForwardTransferCreationError";
+  static readonly type = "ForwardTransferCreationError";
 
   static readonly reasons = {
     SenderChannelNotFound: "Sender channel not found",
@@ -99,13 +99,17 @@ export class ForwardTransferCreationError extends RouterError {
     receiverChannel: string,
     context: any = {},
   ) {
-    super(message, { routingId, senderChannel, senderTransfer, receiverChannel, ...context });
+    super(
+      message,
+      { routingId, senderChannel, senderTransfer, receiverChannel, ...context },
+      ForwardTransferCreationError.type,
+    );
   }
 }
 
 export type ForwardTransferResolutionErrorContext = ForwardTransferCreationErrorContext & { receiverTransfer: string };
 export class ForwardTransferResolutionError extends RouterError {
-  readonly type = "ForwardTransferResolutionError";
+  static readonly type = "ForwardTransferResolutionError";
 
   static readonly reasons = {
     IncomingChannelNotFound: "Incoming channel for transfer not found",
@@ -123,13 +127,17 @@ export class ForwardTransferResolutionError extends RouterError {
     receiverTransfer: string,
     context: any = {},
   ) {
-    super(message, { routingId, senderChannel, senderTransfer, receiverChannel, receiverTransfer, ...context });
+    super(
+      message,
+      { routingId, senderChannel, senderTransfer, receiverChannel, receiverTransfer, ...context },
+      ForwardTransferResolutionError.type,
+    );
   }
 }
 
 export type CheckInErrorContext = RouterErrorContext;
 export class CheckInError extends RouterError {
-  readonly type = "CheckInError";
+  static readonly type = "CheckInError";
 
   static readonly reasons = {
     CouldNotGetChannel: "Could not get channel, or not found",
@@ -139,7 +147,7 @@ export class CheckInError extends RouterError {
   readonly context: CheckInErrorContext;
 
   constructor(public readonly message: Values<typeof CheckInError.reasons>, channelAddress: string, context: any = {}) {
-    super(message, { channelAddress, ...context });
+    super(message, { channelAddress, ...context }, CheckInError.type);
   }
 }
 
@@ -148,7 +156,7 @@ export type ConfigServiceErrorContext = RouterErrorContext & {
   assetId: string;
 };
 export class ConfigServiceError extends RouterError {
-  readonly type = "ConfigServiceError";
+  static readonly type = "ConfigServiceError";
 
   static readonly reasons = {
     UnableToGetRebalanceProfile: "Could not get rebalance profile",
@@ -162,6 +170,6 @@ export class ConfigServiceError extends RouterError {
     assetId: string,
     context: any = {},
   ) {
-    super(message, { chainId, assetId, ...context });
+    super(message, { chainId, assetId, ...context }, ConfigServiceError.type);
   }
 }

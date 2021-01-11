@@ -5,7 +5,7 @@ type ServerNodeErrorContext = NodeErrorContext & {
   params: any;
 };
 export class ServerNodeError extends NodeError {
-  readonly type = "ServerNodeError";
+  static readonly type = "ServerNodeError";
 
   static readonly reasons = {
     ChannelNotFound: "Channel not found",
@@ -28,7 +28,7 @@ export class ServerNodeError extends NodeError {
     params: any,
     context: any = {},
   ) {
-    super(msg, { params, publicIdentifier, ...context });
+    super(msg, { params, publicIdentifier, ...context }, ServerNodeError.type);
   }
 }
 
@@ -37,7 +37,7 @@ type LockErrorContext = NodeErrorContext & {
   lockValue?: string;
 };
 export class ServerNodeLockError extends NodeError {
-  readonly type = "ServerNodeLockError";
+  static readonly type = "ServerNodeLockError";
 
   static readonly reasons = {
     AcquireLockFailed: "Failed to acquire lock",
@@ -55,6 +55,6 @@ export class ServerNodeLockError extends NodeError {
     lockValue?: string,
     context: any = {},
   ) {
-    super(msg, { ...context, lockName, lockValue });
+    super(msg, { ...context, lockName, lockValue }, ServerNodeLockError.type);
   }
 }

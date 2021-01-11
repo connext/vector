@@ -11,7 +11,7 @@ import {
 } from "@connext/vector-types";
 
 export class ValidationError extends ProtocolError {
-  readonly type = "ValidationError";
+  static readonly type = "ValidationError";
 
   static readonly reasons = {
     AssetNotFound: "Asset is not found in channel",
@@ -52,13 +52,14 @@ export class ValidationError extends ProtocolError {
       Object.keys(params).includes("fromIdentifier") ? (params as ChannelUpdate) : undefined,
       !Object.keys(params).includes("fromIdentifier") ? (params as UpdateParams<any>) : undefined,
       context,
+      ValidationError.type,
     );
   }
 }
 
 // Thrown by the protocol when applying an update
 export class InboundChannelUpdateError extends ProtocolError {
-  readonly type = "InboundChannelUpdateError";
+  static readonly type = "InboundChannelUpdateError";
 
   static readonly reasons = {
     ApplyAndValidateInboundFailed: "Failed to validate + apply incoming update",
@@ -87,13 +88,13 @@ export class InboundChannelUpdateError extends ProtocolError {
     state?: FullChannelState,
     context: any = {},
   ) {
-    super(message, state, update, undefined, context);
+    super(message, state, update, undefined, context, InboundChannelUpdateError.type);
   }
 }
 
 // Thrown by the protocol when initiating an update
 export class OutboundChannelUpdateError extends ProtocolError {
-  readonly type = "OutboundChannelUpdateError";
+  static readonly type = "OutboundChannelUpdateError";
 
   static readonly reasons = {
     AcquireLockFailed: "Failed to acquire lock",
@@ -122,12 +123,12 @@ export class OutboundChannelUpdateError extends ProtocolError {
     state?: FullChannelState,
     context: any = {},
   ) {
-    super(message, state, undefined, params, context);
+    super(message, state, undefined, params, context, OutboundChannelUpdateError.type);
   }
 }
 
 export class CreateUpdateError extends ProtocolError {
-  readonly type = "CreateUpdateError";
+  static readonly type = "CreateUpdateError";
 
   static readonly reasons = {
     BadUpdateType: "Cannot generate unrecognized update type",
@@ -145,12 +146,12 @@ export class CreateUpdateError extends ProtocolError {
     state?: FullChannelState,
     context: any = {},
   ) {
-    super(message, state, undefined, params, context);
+    super(message, state, undefined, params, context, CreateUpdateError.type);
   }
 }
 
 export class ApplyUpdateError extends ProtocolError {
-  readonly type = "ApplyUpdateError";
+  static readonly type = "ApplyUpdateError";
 
   static readonly reasons = {
     BadUpdateType: "Cannot apply unrecognized update type",
@@ -165,6 +166,6 @@ export class ApplyUpdateError extends ProtocolError {
     state?: FullChannelState,
     context: any = {},
   ) {
-    super(message, state, update, undefined, context);
+    super(message, state, update, undefined, context, ApplyUpdateError.type);
   }
 }

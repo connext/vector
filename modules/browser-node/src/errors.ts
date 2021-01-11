@@ -8,7 +8,7 @@ type BrowserNodeErrorContext = NodeErrorContext & {
 };
 
 export class BrowserNodeError extends NodeError {
-  readonly type = "BrowserNodeError";
+  static readonly type = "BrowserNodeError";
 
   static readonly reasons = {
     MethodNotImplemented: "Method not implemented in browser",
@@ -24,12 +24,12 @@ export class BrowserNodeError extends NodeError {
     params: any = {},
     context: any = {},
   ) {
-    super(msg, { params, publicIdentifier, ...context });
+    super(msg, { params, publicIdentifier, ...context }, BrowserNodeError.type);
   }
 }
 
 export class CrossChainTransferError extends NodeError {
-  readonly type = "CrossChainTransferError";
+  static readonly type = "CrossChainTransferError";
 
   static readonly reasons = {
     MissingReceiverChannel: "Missing channel on receiver chain",
@@ -48,7 +48,7 @@ export class CrossChainTransferError extends NodeError {
     params: any,
     context: any = {},
   ) {
-    super(msg, { params, publicIdentifier, ...context });
+    super(msg, { params, publicIdentifier, ...context }, CrossChainTransferError.type);
   }
 }
 
@@ -57,7 +57,7 @@ type LockErrorContext = NodeErrorContext & {
   lockValue?: string;
 };
 export class BrowserNodeLockError extends NodeError {
-  readonly type = "BrowserNodeLockError";
+  static readonly type = "BrowserNodeLockError";
 
   static readonly reasons = {
     AcquireMessageFailed: "Could not send lock acquisition message",
@@ -75,6 +75,6 @@ export class BrowserNodeLockError extends NodeError {
     lockValue?: string,
     context: any = {},
   ) {
-    super(msg, { ...context, lockName, lockValue });
+    super(msg, { ...context, lockName, lockValue }, BrowserNodeLockError.type);
   }
 }

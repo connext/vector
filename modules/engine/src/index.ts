@@ -23,6 +23,7 @@ import {
   EngineError,
   UpdateType,
   Values,
+  VectorError,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -427,7 +428,7 @@ export class VectorEngine implements IVectorEngine {
 
   private async setup(
     params: EngineParams.Setup,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], EngineError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_setup], VectorError>> {
     const validate = ajv.compile(EngineParams.SetupSchema);
     const valid = validate(params);
     if (!valid) {
@@ -441,12 +442,7 @@ export class VectorEngine implements IVectorEngine {
 
     const chainProviders = this.chainService.getChainProviders();
     if (chainProviders.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ChainServiceFailure, "", this.publicIdentifier, {
-          chainServiceMethod: "getChainProviders",
-          chainServiceError: chainProviders.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(chainProviders.getError()!);
     }
 
     const setupRes = await this.vector.setup({
@@ -462,12 +458,7 @@ export class VectorEngine implements IVectorEngine {
     });
 
     if (setupRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ProtocolMethodFailed, "", this.publicIdentifier, {
-          protocolMethod: "setup",
-          protocolError: setupRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(setupRes.getError()!);
     }
 
     const channel = setupRes.getValue();
@@ -585,12 +576,7 @@ export class VectorEngine implements IVectorEngine {
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channelRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
-          engineFailure: "getChannelState",
-          engineError: channelRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(channelRes.getError()!);
     }
     const channel = channelRes.getValue();
     if (!channel) {
@@ -607,7 +593,7 @@ export class VectorEngine implements IVectorEngine {
 
   private async createTransfer(
     params: EngineParams.ConditionalTransfer,
-  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_createTransfer], EngineError>> {
+  ): Promise<Result<ChannelRpcMethodsResponsesMap[typeof ChannelRpcMethods.chan_createTransfer], VectorError>> {
     const validate = ajv.compile(EngineParams.ConditionalTransferSchema);
     const valid = validate(params);
     if (!valid) {
@@ -621,12 +607,7 @@ export class VectorEngine implements IVectorEngine {
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channelRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
-          engineFailure: "getChannelState",
-          engineError: channelRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(channelRes.getError()!);
     }
     const channel = channelRes.getValue();
     if (!channel) {
@@ -642,21 +623,12 @@ export class VectorEngine implements IVectorEngine {
       this.chainService,
     );
     if (createResult.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ParamConversionFailed, params.channelAddress, this.publicIdentifier, {
-          conversionError: createResult.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ProtocolMethodFailed, params.channelAddress, this.publicIdentifier, {
-          protocolError: protocolRes.getError()?.toJson(),
-          protocolMethod: "create",
-        }),
-      );
+      return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
     return Result.ok(res);
@@ -678,12 +650,7 @@ export class VectorEngine implements IVectorEngine {
 
     const transferRes = await this.getTransferState({ transferId: params.transferId });
     if (transferRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
-          engineError: transferRes.getError()?.toJson(),
-          engineMethod: "getTransferState",
-        }),
-      );
+      return Result.fail(transferRes.getError()!);
     }
     const transfer = transferRes.getValue();
     if (!transfer) {
@@ -697,21 +664,12 @@ export class VectorEngine implements IVectorEngine {
     // First, get translated `create` params using the passed in conditional transfer ones
     const resolveResult = convertResolveConditionParams(params, transfer);
     if (resolveResult.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ParamConversionFailed, params.channelAddress ?? "", this.publicIdentifier, {
-          conversionError: resolveResult.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(resolveResult.getError()!);
     }
     const resolveParams = resolveResult.getValue();
     const protocolRes = await this.vector.resolve(resolveParams);
     if (protocolRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ProtocolMethodFailed, params.channelAddress ?? "", this.publicIdentifier, {
-          protocolMethod: "resolve",
-          protocolError: resolveResult.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
     return Result.ok(res);
@@ -733,12 +691,7 @@ export class VectorEngine implements IVectorEngine {
 
     const channelRes = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channelRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.EngineMethodFailure, params.channelAddress, this.publicIdentifier, {
-          engineFailure: "getChannelState",
-          engineError: channelRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(channelRes.getError()!);
     }
     const channel = channelRes.getValue();
     if (!channel) {
@@ -754,21 +707,12 @@ export class VectorEngine implements IVectorEngine {
       this.chainService,
     );
     if (createResult.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ParamConversionFailed, params.channelAddress, this.publicIdentifier, {
-          conversionError: createResult.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(createResult.getError()!);
     }
     const createParams = createResult.getValue();
     const protocolRes = await this.vector.create(createParams);
     if (protocolRes.isError) {
-      return Result.fail(
-        new RpcError(RpcError.reasons.ProtocolMethodFailed, params.channelAddress, this.publicIdentifier, {
-          protocolError: protocolRes.getError()?.toJson(),
-          protocolMethod: "create",
-        }),
-      );
+      return Result.fail(protocolRes.getError()!);
     }
     const res = protocolRes.getValue();
     const transferId = res.latestUpdate.details.transferId;
@@ -884,11 +828,7 @@ export class VectorEngine implements IVectorEngine {
       this.signer.publicIdentifier,
     );
     if (restoreDataRes.isError) {
-      return Result.fail(
-        new RestoreError(RestoreError.reasons.ReceivedError, "", this.publicIdentifier, {
-          receivedError: restoreDataRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(restoreDataRes.getError()!);
     }
 
     const { channel, activeTransfers } = restoreDataRes.getValue() ?? ({} as any);
@@ -1028,13 +968,7 @@ export class VectorEngine implements IVectorEngine {
     }
     const channel = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channel.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.CouldNotGetChannel, params.channelAddress, this.publicIdentifier, {
-          storeMethod: "getChannelState",
-          method: "disputeChannel",
-          getChannelStateError: channel.getError()!.toJson(),
-        }),
-      );
+      return Result.fail(channel.getError()!);
     }
     const state = channel.getValue();
     if (!state) {
@@ -1044,11 +978,7 @@ export class VectorEngine implements IVectorEngine {
     }
     const disputeRes = await this.chainService.sendDisputeChannelTx(state);
     if (disputeRes.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.ChannelDisputeTxFailed, params.channelAddress, this.publicIdentifier, {
-          disputeError: disputeRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(disputeRes.getError()!);
     }
 
     return Result.ok({ transactionHash: disputeRes.getValue().hash });
@@ -1069,13 +999,7 @@ export class VectorEngine implements IVectorEngine {
     }
     const channel = await this.getChannelState({ channelAddress: params.channelAddress });
     if (channel.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.CouldNotGetChannel, params.channelAddress, this.publicIdentifier, {
-          storeMethod: "getChannelState",
-          method: "defundChannel",
-          getTransferError: channel.getError()!.toJson(),
-        }),
-      );
+      return Result.fail(channel.getError()!);
     }
     const state = channel.getValue();
     if (!state) {
@@ -1090,11 +1014,7 @@ export class VectorEngine implements IVectorEngine {
     }
     const disputeRes = await this.chainService.sendDefundChannelTx(state);
     if (disputeRes.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.ChannelDefundTxFailed, params.channelAddress, this.publicIdentifier, {
-          defundError: disputeRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(disputeRes.getError()!);
     }
 
     return Result.ok({ transactionHash: disputeRes.getValue().hash });
@@ -1115,13 +1035,7 @@ export class VectorEngine implements IVectorEngine {
     }
     const transferRes = await this.getTransferState(params);
     if (transferRes.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.CouldNotGetTransfer, "", this.publicIdentifier, {
-          storeMethod: "getTransferState",
-          method: "disputeTransfer",
-          getTransferError: transferRes.getError()!.toJson(),
-        }),
-      );
+      return Result.fail(transferRes.getError()!);
     }
     const transfer = transferRes.getValue();
     if (!transfer) {
@@ -1135,21 +1049,11 @@ export class VectorEngine implements IVectorEngine {
     // Get active transfers
     const activeRes = await this.getActiveTransfers({ channelAddress: transfer.channelAddress });
     if (activeRes.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.TransferNotFound, transfer.channelAddress, this.publicIdentifier, {
-          transferId: params.transferId,
-          getActiveTransfersError: activeRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(activeRes.getError()!);
     }
     const disputeRes = await this.chainService.sendDisputeTransferTx(transfer.transferId, activeRes.getValue());
     if (disputeRes.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.TransferDisputeTxFailed, transfer.channelAddress, this.publicIdentifier, {
-          transferId: params.transferId,
-          disputeError: disputeRes.getError()?.toJson(),
-        }),
-      );
+      return Result.fail(disputeRes.getError()!);
     }
     return Result.ok({ transactionHash: disputeRes.getValue().hash });
   }
@@ -1170,13 +1074,7 @@ export class VectorEngine implements IVectorEngine {
 
     const transferRes = await this.getTransferState(params);
     if (transferRes.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.CouldNotGetTransfer, "", this.publicIdentifier, {
-          storeMethod: "getTransferState",
-          method: "defundTransfer",
-          getTransferError: transferRes.getError()!.toJson(),
-        }),
-      );
+      return Result.fail(transferRes.getError()!);
     }
     const transfer = transferRes.getValue();
     if (!transfer) {
@@ -1197,12 +1095,7 @@ export class VectorEngine implements IVectorEngine {
 
     const defundRes = await this.chainService.sendDefundTransferTx(transfer);
     if (defundRes.isError) {
-      return Result.fail(
-        new DisputeError(DisputeError.reasons.TransferNotDisputed, transfer.channelAddress, this.publicIdentifier, {
-          transferId: transfer.transferId,
-          defundError: defundRes.getError()!.toJson(),
-        }),
-      );
+      return Result.fail(defundRes.getError()!);
     }
     return Result.ok({ transactionHash: defundRes.getValue().hash });
   }

@@ -1,5 +1,4 @@
 import { UpdateParams, FullChannelState, ChannelUpdate } from "./channel";
-import { NodeParams } from "./schemas";
 export class Result<T, Y = any> {
   private value?: T;
   private error?: Y;
@@ -34,6 +33,12 @@ export class Result<T, Y = any> {
     if (!this.isError) {
       return { isError: false, value: this.value };
     }
+    if (this.error instanceof VectorError) {
+      return {
+        isError: true,
+        error: this.error.toJson(),
+      };
+    }
     return {
       isError: true,
       // NOTE: Error.message is not returned as a property
@@ -49,7 +54,13 @@ export class Result<T, Y = any> {
   }
 
   public static fromJson<U, Y extends Error>(json: ResultJson<U, Y>): Result<U, Y> {
-    return json.isError ? Result.fail(json.error) : Result.ok(json.value);
+    if (!json.isError) {
+      return Result.ok(json.value);
+    }
+    return (json.error as any).type
+      ? (Result.fail(VectorError.fromJson(json.error as any)) as any)
+      : Result.fail(json.error);
+    // return json.isError ? Result.fail(json.error) : Result.ok(json.value);
   }
 
   public static fail<U, Y extends Error>(error: Y): Result<U, Y> {
@@ -80,34 +91,43 @@ export type VectorErrorJson = {
   type: string;
   stack?: string;
 };
-export abstract class VectorError extends Error {
-  abstract readonly type: string;
+export class VectorError extends Error {
   static readonly reasons: { [key: string]: string };
 
-  constructor(public readonly msg: Values<typeof VectorError.reasons>, public readonly context: any = {}) {
+  constructor(
+    public readonly msg: Values<typeof VectorError.reasons>,
+    public readonly context: any = {},
+    public readonly type = "VectorError",
+  ) {
     super(msg);
   }
 
   public toJson(): VectorErrorJson {
     return {
-      message: this.message,
+      message: this.msg,
       context: this.context,
       type: this.type,
       stack: this.stack,
     };
   }
+
+  public static fromJson(json: VectorErrorJson): VectorError {
+    return new VectorError(json.message, json.context, json.type);
+  }
 }
 
 export class MessagingError extends VectorError {
-  readonly type = "MessagingError";
-
   static readonly reasons = {
     Timeout: "Request timed out",
     Unknown: "Unknown messaging error",
   } as const;
 
-  constructor(public readonly message: Values<typeof MessagingError.reasons>, public readonly context: any = {}) {
-    super(message, context);
+  constructor(
+    public readonly message: Values<typeof MessagingError.reasons>,
+    public readonly context: any = {},
+    public readonly type = "MessagingError",
+  ) {
+    super(message, context, type);
   }
 }
 
@@ -125,8 +145,9 @@ export abstract class ProtocolError extends VectorError {
     update?: ChannelUpdate,
     params?: UpdateParams<any>,
     context: any = {},
+    public readonly type = "ProtocolError",
   ) {
-    super(msg, { ...context, update, state, params });
+    super(msg, { ...context, update, state, params }, type);
   }
 }
 
@@ -137,8 +158,14 @@ export type EngineErrorContext = {
 export abstract class EngineError extends VectorError {
   readonly context: EngineErrorContext;
 
-  constructor(public readonly msg: string, channelAddress: string, publicIdentifier: string, context: any = {}) {
-    super(msg, { ...context, channelAddress, publicIdentifier });
+  constructor(
+    public readonly msg: string,
+    channelAddress: string,
+    publicIdentifier: string,
+    context: any = {},
+    public readonly type = "EngineError",
+  ) {
+    super(msg, { ...context, channelAddress, publicIdentifier }, type);
   }
 }
 
@@ -146,8 +173,8 @@ export type NodeErrorContext = any;
 export abstract class NodeError extends VectorError {
   readonly context: NodeErrorContext;
 
-  constructor(public readonly msg: string, context: any = {}) {
-    super(msg, { ...context });
+  constructor(public readonly msg: string, context: any = {}, public readonly type: string = "NodeError") {
+    super(msg, { ...context }, type);
   }
 }
 
@@ -155,7 +182,7 @@ export type RouterErrorContext = any;
 export abstract class RouterError extends VectorError {
   readonly context: RouterErrorContext;
 
-  constructor(public readonly msg: string, context: any = {}) {
-    super(msg, { ...context });
+  constructor(public readonly msg: string, context: any = {}, public readonly type = "RouterError") {
+    super(msg, { ...context }, type);
   }
 }

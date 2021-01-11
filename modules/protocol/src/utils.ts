@@ -191,7 +191,7 @@ export async function generateSignedChannelCommitment(
 
   // Only counterparty has signed
   try {
-    log("Signing hash", { hash, signer: signer.address, state: newState });
+    log("Signing hash", { hash, signer: signer.address, state: newState }, "debug");
     const sig = await signer.signMessage(hash);
     const isAlice = signer.address === newState.alice;
     return Result.ok({
