@@ -1,4 +1,4 @@
-import { IChannelSigner, Result, NodeError, MessagingError, UpdateType } from "@connext/vector-types";
+import { IChannelSigner, Result, NodeError, MessagingError, UpdateType, VectorError } from "@connext/vector-types";
 import {
   createTestChannelUpdate,
   delay,
@@ -92,10 +92,10 @@ describe("messaging", () => {
     const res = await messagingA.sendProtocolMessage(update);
     expect(res.isError).to.be.true;
     const errReceived = res.getError()!;
-    Object.keys(errReceived).map((key: string) => {
-      const val = (errReceived as any)[key] ?? undefined;
-      expect(val).to.be.deep.eq((err as any)[key]);
-    });
+    const expected = VectorError.fromJson(VectorError.jsonify(err));
+    expect(errReceived.message).to.be.eq(expected.message);
+    expect(errReceived.context).to.be.deep.eq(expected.context);
+    expect(errReceived.type).to.be.deep.eq(expected.type);
   });
 
   describe("other methods", () => {
@@ -198,10 +198,10 @@ describe("messaging", () => {
               expect(result.getValue()).to.be.deep.eq(message.getValue());
             } else {
               const errReceived = result.getError()!;
-              Object.keys(errReceived).map((key: string) => {
-                const val = (errReceived as any)[key] ?? undefined;
-                expect(val).to.be.deep.eq((message.getError() as any)[key]);
-              });
+              const expected = VectorError.fromJson(VectorError.jsonify(message.getError()!));
+              expect(errReceived.message).to.be.eq(expected.message);
+              expect(errReceived.context).to.be.deep.eq(expected.context);
+              expect(errReceived.type).to.be.deep.eq(expected.type);
             }
             await (messagingB as any)[respondKey](inbox, response as any);
           },
@@ -221,10 +221,10 @@ describe("messaging", () => {
           expect(test.getValue()).to.be.deep.eq(response.getValue());
         } else {
           const errReceived = test.getError()!;
-          Object.keys(errReceived).map((key: string) => {
-            const val = (errReceived as any)[key] ?? undefined;
-            expect(val).to.be.deep.eq((response.getError() as any)[key]);
-          });
+          const expected = VectorError.fromJson(VectorError.jsonify(response.getError()!));
+          expect(errReceived.message).to.be.eq(expected.message);
+          expect(errReceived.context).to.be.deep.eq(expected.context);
+          expect(errReceived.type).to.be.deep.eq(expected.type);
         }
       });
     }
