@@ -1,4 +1,11 @@
-import { FullChannelState, INodeService, Result, NodeResponses, IVectorChainReader } from "@connext/vector-types";
+import {
+  FullChannelState,
+  INodeService,
+  Result,
+  NodeResponses,
+  IVectorChainReader,
+  VectorError,
+} from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { BaseLogger } from "pino";
@@ -43,7 +50,7 @@ export const justInTimeCollateral = async (
         {} as any,
         undefined,
         {
-          profileError: profileRes.getError()?.toJson(),
+          profileError: VectorError.jsonify(profileRes.getError()!),
           transferAmount,
         },
       ),
@@ -79,7 +86,7 @@ export const adjustCollateral = async (
   if (channelRes.isError || !channelRes.getValue()) {
     return Result.fail(
       new CollateralError(CollateralError.reasons.ChannelNotFound, channelAddress, assetId, {} as any, undefined, {
-        getChannelError: channelRes.getError()?.toJson(),
+        getChannelError: VectorError.jsonify(channelRes.getError()!),
       }),
     );
   }
@@ -96,7 +103,7 @@ export const adjustCollateral = async (
         {} as any,
         undefined,
         {
-          profileError: profileRes.getError()?.toJson(),
+          profileError: VectorError.jsonify(profileRes.getError()!),
         },
       ),
     );
@@ -144,7 +151,7 @@ export const adjustCollateral = async (
   const withdrawalErr = withdrawRes.getError();
   return Result.fail(
     new CollateralError(CollateralError.reasons.UnableToReclaim, channel.channelAddress, assetId, profile, undefined, {
-      withdrawError: withdrawalErr?.toJson(),
+      withdrawError: VectorError.jsonify(withdrawalErr!),
     }),
   );
 };
@@ -165,7 +172,7 @@ export const requestCollateral = async (
 ): Promise<Result<undefined | NodeResponses.Deposit, CollateralError>> => {
   const method = "requestCollateral";
   const methodId = getRandomBytes32();
-  logger.debug({ method, methodId, assetId, publicIdentifier, channel: channel.channelAddress }, "Started");
+  logger.debug({ method, methodId, assetId, publicIdentifier, channel }, "Started");
   const profileRes = getRebalanceProfile(channel.networkContext.chainId, assetId);
   if (profileRes.isError) {
     return Result.fail(
@@ -176,7 +183,7 @@ export const requestCollateral = async (
         {} as any,
         requestedAmount,
         {
-          profileError: profileRes.getError()?.toJson(),
+          profileError: VectorError.jsonify(profileRes.getError()!),
         },
       ),
     );
@@ -243,7 +250,7 @@ export const requestCollateral = async (
         profile,
         requestedAmount,
         {
-          chainError: totalDeposited.getError()?.toJson(),
+          chainError: VectorError.jsonify(totalDeposited.getError()!),
         },
       ),
     );
@@ -273,7 +280,7 @@ export const requestCollateral = async (
           profile,
           requestedAmount,
           {
-            error: txRes.getError()?.toJson(),
+            error: VectorError.jsonify(txRes.getError()!),
             amountToDeposit: amountToDeposit.toString(),
           },
         ),
@@ -315,7 +322,7 @@ export const requestCollateral = async (
       profile,
       requestedAmount,
       {
-        nodeError: error.toJson(),
+        nodeError: VectorError.jsonify(error),
       },
     ),
   );

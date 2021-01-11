@@ -846,7 +846,7 @@ export class VectorEngine implements IVectorEngine {
         );
         if (res.isError) {
           error = RestoreError.reasons.AckFailed;
-          context = { error: res.getError()?.toJson() };
+          context = { error: VectorError.jsonify(res.getError()!) };
         } else {
           return Result.ok(channel);
         }
@@ -881,7 +881,7 @@ export class VectorEngine implements IVectorEngine {
     );
     if (calculated.isError) {
       return sendResponseToCounterparty(RestoreError.reasons.GetChannelAddressFailed, {
-        getChannelAddressError: calculated.getError()?.toJson(),
+        getChannelAddressError: VectorError.jsonify(calculated.getError()!),
       });
     }
     if (calculated.getValue() !== channel.channelAddress) {
@@ -917,7 +917,7 @@ export class VectorEngine implements IVectorEngine {
     const existing = await this.getChannelState({ channelAddress: channel.channelAddress });
     if (existing.isError) {
       return sendResponseToCounterparty(RestoreError.reasons.CouldNotGetChannel, {
-        getChannelStateError: existing.getError()?.toJson(),
+        getChannelStateError: VectorError.jsonify(existing.getError()!),
       });
     }
     const nonce = existing.getValue()?.nonce ?? 0;

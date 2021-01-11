@@ -12,6 +12,7 @@ import {
   FullTransferState,
   IExternalValidation,
   MessagingError,
+  VectorError,
 } from "@connext/vector-types";
 import pino from "pino";
 
@@ -145,7 +146,7 @@ export async function outbound(
         params,
         previousState,
         {
-          counterpartyError: error.toJson(),
+          counterpartyError: VectorError.jsonify(error),
         },
       ),
     );

@@ -18,6 +18,7 @@ import {
   UpdateType,
   TChannelUpdate,
   ProtocolError,
+  VectorError,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress } from "@connext/vector-utils";
 import { Evt } from "evt";
@@ -111,7 +112,7 @@ export class Vector implements IVectorProtocol {
       this.logger.error({
         method: "lockedOperation",
         variable: "outboundRes",
-        error: outboundRes.getError()?.toJson(),
+        error: VectorError.jsonify(outboundRes.getError()!),
       });
       return outboundRes as Result<any, OutboundChannelUpdateError>;
     }
@@ -248,7 +249,7 @@ export class Vector implements IVectorProtocol {
           this.logger,
         );
         if (inboundRes.isError) {
-          this.logger.warn({ error: inboundRes.getError()!.toJson() }, "Failed to apply inbound update");
+          this.logger.warn({ error: VectorError.jsonify(inboundRes.getError()!) }, "Failed to apply inbound update");
           return;
         }
 
