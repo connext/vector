@@ -19,7 +19,13 @@ import {
   ConditionalTransferCreatedPayload,
   FullChannelState,
 } from "@connext/vector-types";
-import { constructRpcRequest, getRandomBytes32, hydrateProviders, NatsMessagingService } from "@connext/vector-utils";
+import {
+  constructRpcRequest,
+  getPublicIdentifierFromPublicKey,
+  getRandomBytes32,
+  hydrateProviders,
+  NatsMessagingService,
+} from "@connext/vector-utils";
 import { sha256 as soliditySha256 } from "@ethersproject/solidity";
 import pino, { BaseLogger } from "pino";
 
@@ -75,7 +81,8 @@ export class BrowserNode implements INodeService {
   // method for signer-based connections
   static async connect(config: BrowserNodeSignerConfig): Promise<BrowserNode> {
     if (!config.logger) {
-      config.logger = pino();
+      const configuredIdentifier = getPublicIdentifierFromPublicKey(config.signer.publicKey);
+      config.logger = pino({ name: configuredIdentifier });
     }
     const node = new BrowserNode({ logger: config.logger, chainProviders: config.chainProviders });
     // TODO: validate schema
