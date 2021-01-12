@@ -88,7 +88,7 @@ server.get<{ Params: { publicIdentifier: string } }>(
       const res = await engine.request<"chan_getStatus">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -127,7 +127,7 @@ server.get<{ Params: NodeParams.GetChannelState }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -169,7 +169,7 @@ server.get<{ Params: NodeParams.GetChannelStateByParticipants }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -207,7 +207,7 @@ server.get<{ Params: NodeParams.GetTransferState }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -234,7 +234,7 @@ server.get<{ Params: NodeParams.GetTransferStatesByRoutingId }>(
       const res = await engine.request<"chan_getTransferStatesByRoutingId">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -272,7 +272,7 @@ server.get<{ Params: NodeParams.GetTransferStateByRoutingId }>(
       }
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -297,7 +297,7 @@ server.get<{ Params: NodeParams.GetActiveTransfersByChannelAddress }>(
       const res = await engine.request<"chan_getActiveTransfers">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -328,7 +328,7 @@ server.get<{ Params: NodeParams.GetChannelStates }>(
       );
       return reply.status(200).send(filtered.map((chan) => chan.channelAddress));
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -357,7 +357,7 @@ server.get<{ Params: NodeParams.GetRegisteredTransfers }>(
       const res = await engine.request<"chan_getRegisteredTransfers">(params);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -386,7 +386,7 @@ server.post<{ Body: NodeParams.Setup }>(
       const res = await engine.request<"chan_setup">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -416,7 +416,7 @@ server.post<{ Body: NodeParams.RequestSetup }>(
       logger.info({ result }, "Request collateral completed");
       return reply.status(200).send({ ...result, channelAddress: result.channelAddress });
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -470,6 +470,7 @@ server.post<{ Body: NodeParams.SendDepositTx }>(
       if (depositRes.getError()!.message === ChainError.reasons.NotEnoughFunds) {
         return reply.status(400).send({ message: depositRes.getError()!.message });
       }
+      logger.error({ error: depositRes.getError()!.toJson() });
       return reply.status(500).send({ message: depositRes.getError()!.message.substring(0, 100) });
     }
     return reply.status(200).send({ txHash: depositRes.getValue().hash });
@@ -502,7 +503,7 @@ server.post<{ Body: NodeParams.SendDisputeChannelTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_dispute>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -534,7 +535,7 @@ server.post<{ Body: NodeParams.SendDefundChannelTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_defund>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -566,7 +567,7 @@ server.post<{ Body: NodeParams.SendDisputeTransferTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_disputeTransfer>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -598,7 +599,7 @@ server.post<{ Body: NodeParams.SendDefundTransferTx }>(
       const res = await engine.request<typeof ChannelRpcMethods.chan_defundTransfer>(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -627,7 +628,7 @@ server.post<{ Body: NodeParams.Deposit }>(
       const res = await engine.request<"chan_deposit">(rpc);
       return reply.status(200).send(res);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -654,7 +655,7 @@ server.post<{ Body: NodeParams.RequestCollateral }>(
       logger.info({ result }, "Request collateral completed");
       return reply.status(200).send({ ...result, channelAddress: request.body.channelAddress });
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -689,7 +690,7 @@ server.post<{ Body: NodeParams.ConditionalTransfer }>(
         routingId: (res.latestUpdate.details as CreateUpdateDetails).meta?.routingId,
       } as NodeResponses.ConditionalTransfer);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -722,7 +723,7 @@ server.post<{ Body: NodeParams.ResolveTransfer }>(
         transferId: (res.latestUpdate.details as ResolveUpdateDetails).transferId,
       } as NodeResponses.ResolveTransfer);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -756,7 +757,7 @@ server.post<{ Body: NodeParams.Withdraw }>(
         transactionHash,
       } as NodeResponses.Withdraw);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -781,7 +782,7 @@ server.post<{ Body: NodeParams.RestoreState }>(
       const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_restoreState>(rpc);
       return reply.status(200).send({ channelAddress } as NodeResponses.RestoreState);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -806,7 +807,7 @@ server.post<{ Body: NodeParams.SendIsAlive }>(
       const { channelAddress } = await engine.request<typeof ChannelRpcMethods.chan_sendIsAlive>(rpc);
       return reply.status(200).send({ channelAddress } as NodeResponses.SendIsAlive);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack, context: e.context });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(VectorError.jsonify(e));
     }
   },
@@ -837,14 +838,12 @@ server.post<{ Body: NodeParams.RegisterListener }>(
       return reply
         .status(500)
         .send(
-          VectorError.jsonify(
-            new ServerNodeError(
-              ServerNodeError.reasons.RegisterSubscriptionFailed,
-              request.body.publicIdentifier,
-              request.body,
-              { registerError: e.message },
-            ),
-          ),
+          new ServerNodeError(
+            ServerNodeError.reasons.RegisterSubscriptionFailed,
+            request.body.publicIdentifier,
+            request.body,
+            { registerError: e.message },
+          ).toJson(),
         );
     }
   },
@@ -864,13 +863,11 @@ server.get<{ Params: NodeParams.GetListener }>(
       return reply
         .status(404)
         .send(
-          VectorError.jsonify(
-            new ServerNodeError(
-              ServerNodeError.reasons.SubscriptionNotFound,
-              request.params.publicIdentifier,
-              request.params,
-            ),
-          ),
+          new ServerNodeError(
+            ServerNodeError.reasons.SubscriptionNotFound,
+            request.params.publicIdentifier,
+            request.params,
+          ).toJson(),
         );
     }
     return reply.status(200).send({ url });
@@ -902,13 +899,11 @@ server.post<{ Body: NodeParams.Admin }>(
       await store.clear();
       return reply.status(200).send({ message: "success" });
     } catch (e) {
-      return reply
-        .status(500)
-        .send(
-          VectorError.jsonify(
-            new ServerNodeError(ServerNodeError.reasons.ClearStoreFailed, "", request.body, { storeError: e.message }),
-          ),
-        );
+      return reply.status(500).send(
+        new ServerNodeError(ServerNodeError.reasons.ClearStoreFailed, "", request.body, {
+          storeError: e.message,
+        }).toJson(),
+      );
     }
   },
 );
@@ -933,14 +928,12 @@ server.post<{ Body: NodeParams.CreateNode }>(
         signerAddress: newNode.signerAddress,
       } as NodeResponses.CreateNode);
     } catch (e) {
-      logger.error({ message: e.message, stack: e.stack });
+      logger.error({ error: e.toJson() });
       return reply.status(500).send(
-        VectorError.jsonify(
-          new ServerNodeError(ServerNodeError.reasons.CreateNodeFailed, "", request.body, {
-            createNodeError: e.message,
-            createNodeStack: e.stack,
-          }),
-        ),
+        new ServerNodeError(ServerNodeError.reasons.CreateNodeFailed, "", request.body, {
+          createNodeError: e.message,
+          createNodeStack: e.stack,
+        }).toJson,
       );
     }
   },
@@ -960,11 +953,7 @@ server.post<{ Params: { chainId: string }; Body: JsonRpcRequest }>(
     if (!provider) {
       return reply
         .status(400)
-        .send(
-          VectorError.jsonify(
-            new ServerNodeError(ServerNodeError.reasons.ProviderNotConfigured, "", request.body.params),
-          ),
-        );
+        .send(new ServerNodeError(ServerNodeError.reasons.ProviderNotConfigured, "", request.body.params).toJson());
     }
     try {
       const result = await provider.send(request.body.method, request.body.params);
