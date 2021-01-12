@@ -15,15 +15,17 @@ import {
   FullChannelState,
   VectorError,
 } from "@connext/vector-types";
-import { constructRpcRequest, hydrateProviders } from "@connext/vector-utils";
+import { constructRpcRequest, getPublicIdentifierFromPublicKey, hydrateProviders } from "@connext/vector-utils";
 import { Static, Type } from "@sinclair/typebox";
+import { Wallet } from "ethers";
 
 import { PrismaStore } from "./services/store";
 import { config } from "./config";
 import { createNode, deleteNodes, getChainService, getNode, getNodes } from "./helpers/nodes";
 import { ServerNodeError } from "./helpers/errors";
 
-export const logger = pino();
+const configuredIdentifier = getPublicIdentifierFromPublicKey(Wallet.fromMnemonic(config.mnemonic).publicKey);
+export const logger = pino({ name: configuredIdentifier });
 logger.info({ config }, "Loaded config from environment");
 const server = fastify({ logger, pluginTimeout: 300_000, disableRequestLogging: config.logLevel !== "debug" });
 server.register(fastifyCors, {
