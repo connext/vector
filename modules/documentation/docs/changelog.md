@@ -2,6 +2,8 @@
 
 ## Next Release
 
+- \[all\] Improve logging
+
 ## 0.1.0
 
 - \[all\] Mainnet release :tada:
