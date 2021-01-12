@@ -1,5 +1,5 @@
 import { WithdrawCommitment } from "@connext/vector-contracts";
-import { Values } from "@connext/vector-types";
+import { Values, jsonifyError } from "@connext/vector-types";
 import {
   ChainAddresses,
   ChannelUpdateEvent,
@@ -244,7 +244,7 @@ export async function setupEngineListeners(
       const res = await acquireRestoreLocks(channel);
       if (res.isError) {
         return sendCannotRestoreFromError(RestoreError.reasons.AcquireLockError, {
-          acquireLockError: VectorError.jsonify(res.getError()!),
+          acquireLockError: jsonifyError(res.getError()!),
         });
       }
 

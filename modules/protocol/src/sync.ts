@@ -12,7 +12,7 @@ import {
   FullTransferState,
   IExternalValidation,
   MessagingError,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { getRandomBytes32 } from "@connext/vector-utils";
 import pino from "pino";
@@ -69,10 +69,7 @@ export async function outbound(
     logger,
   );
   if (updateRes.isError) {
-    logger.warn(
-      { method, methodId, error: VectorError.jsonify(updateRes.getError()!) },
-      "Failed to apply proposed update",
-    );
+    logger.warn({ method, methodId, error: jsonifyError(updateRes.getError()!) }, "Failed to apply proposed update");
     return Result.fail(updateRes.getError()!);
   }
 
@@ -120,7 +117,7 @@ export async function outbound(
     );
     if (syncedResult.isError) {
       // Failed to sync channel, throw the error
-      logger.error({ method, methodId, error: VectorError.jsonify(syncedResult.getError()!) }, "Error syncing channel");
+      logger.error({ method, methodId, error: jsonifyError(syncedResult.getError()!) }, "Error syncing channel");
       return Result.fail(syncedResult.getError()!);
     }
 
@@ -141,10 +138,7 @@ export async function outbound(
   // original error. Either way, we do not want to handle it
   if (error) {
     // Error is for some other reason, do not retry update.
-    logger.error(
-      { method, methodId, error: VectorError.jsonify(error) },
-      "Error receiving response, will not save state!",
-    );
+    logger.error({ method, methodId, error: jsonifyError(error) }, "Error receiving response, will not save state!");
     return Result.fail(
       new OutboundChannelUpdateError(
         error.message === MessagingError.reasons.Timeout
@@ -153,7 +147,7 @@ export async function outbound(
         params,
         previousState,
         {
-          counterpartyError: VectorError.jsonify(error),
+          counterpartyError: jsonifyError(error),
         },
       ),
     );
@@ -178,7 +172,7 @@ export async function outbound(
       previousState,
       { recoveryError: sigRes.getError()?.message },
     );
-    logger.error({ method, error: VectorError.jsonify(error) }, "Error receiving response, will not save state!");
+    logger.error({ method, error: jsonifyError(error) }, "Error receiving response, will not save state!");
     return Result.fail(error);
   }
 

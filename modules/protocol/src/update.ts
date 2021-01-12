@@ -18,7 +18,7 @@ import {
   DepositUpdateDetails,
   CreateUpdateDetails,
   ResolveUpdateDetails,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 import { BaseLogger } from "pino";
@@ -397,7 +397,7 @@ async function generateDepositUpdate(
   if (reconcileRes.isError) {
     return Result.fail(
       new CreateUpdateError(CreateUpdateError.reasons.FailedToReconcileDeposit, params, state, {
-        reconcileError: VectorError.jsonify(reconcileRes.getError()!),
+        reconcileError: jsonifyError(reconcileRes.getError()!),
       }),
     );
   }
@@ -449,7 +449,7 @@ async function generateCreateUpdate(
   if (registryRes.isError) {
     return Result.fail(
       new CreateUpdateError(CreateUpdateError.reasons.TransferNotRegistered, params, state, {
-        registryError: VectorError.jsonify(registryRes.getError()!),
+        registryError: jsonifyError(registryRes.getError()!),
       }),
     );
   }
@@ -542,7 +542,7 @@ async function generateResolveUpdate(
   if (transferBalanceResult.isError) {
     return Result.fail(
       new CreateUpdateError(CreateUpdateError.reasons.FailedToResolveTransferOnchain, params, state, {
-        resolveError: VectorError.jsonify(transferBalanceResult.getError()!),
+        resolveError: jsonifyError(transferBalanceResult.getError()!),
       }),
     );
   }

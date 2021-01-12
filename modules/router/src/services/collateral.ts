@@ -4,7 +4,7 @@ import {
   Result,
   NodeResponses,
   IVectorChainReader,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { getBalanceForAssetId, getRandomBytes32 } from "@connext/vector-utils";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -50,7 +50,7 @@ export const justInTimeCollateral = async (
         {} as any,
         undefined,
         {
-          profileError: VectorError.jsonify(profileRes.getError()!),
+          profileError: jsonifyError(profileRes.getError()!),
           transferAmount,
         },
       ),
@@ -86,7 +86,7 @@ export const adjustCollateral = async (
   if (channelRes.isError || !channelRes.getValue()) {
     return Result.fail(
       new CollateralError(CollateralError.reasons.ChannelNotFound, channelAddress, assetId, {} as any, undefined, {
-        getChannelError: VectorError.jsonify(channelRes.getError()!),
+        getChannelError: jsonifyError(channelRes.getError()!),
       }),
     );
   }
@@ -103,7 +103,7 @@ export const adjustCollateral = async (
         {} as any,
         undefined,
         {
-          profileError: VectorError.jsonify(profileRes.getError()!),
+          profileError: jsonifyError(profileRes.getError()!),
         },
       ),
     );
@@ -151,7 +151,7 @@ export const adjustCollateral = async (
   const withdrawalErr = withdrawRes.getError();
   return Result.fail(
     new CollateralError(CollateralError.reasons.UnableToReclaim, channel.channelAddress, assetId, profile, undefined, {
-      withdrawError: VectorError.jsonify(withdrawalErr!),
+      withdrawError: jsonifyError(withdrawalErr!),
     }),
   );
 };
@@ -183,7 +183,7 @@ export const requestCollateral = async (
         {} as any,
         requestedAmount,
         {
-          profileError: VectorError.jsonify(profileRes.getError()!),
+          profileError: jsonifyError(profileRes.getError()!),
         },
       ),
     );
@@ -253,7 +253,7 @@ export const requestCollateral = async (
         profile,
         requestedAmount,
         {
-          chainError: VectorError.jsonify(totalDeposited.getError()!),
+          chainError: jsonifyError(totalDeposited.getError()!),
         },
       ),
     );
@@ -283,7 +283,7 @@ export const requestCollateral = async (
           profile,
           requestedAmount,
           {
-            error: VectorError.jsonify(txRes.getError()!),
+            error: jsonifyError(txRes.getError()!),
             amountToDeposit: amountToDeposit.toString(),
           },
         ),
@@ -325,7 +325,7 @@ export const requestCollateral = async (
       profile,
       requestedAmount,
       {
-        nodeError: VectorError.jsonify(error),
+        nodeError: jsonifyError(error),
       },
     ),
   );

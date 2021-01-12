@@ -6,7 +6,7 @@ import {
   NodeParams,
   NodeResponses,
   Result,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { decodeTransferResolver, ServerNodeServiceError } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
@@ -67,7 +67,7 @@ export const attemptTransferWithCollateralization = async (
         {
           params,
           shouldCancelSender: true,
-          collateralError: VectorError.jsonify(collateralError),
+          collateralError: jsonifyError(collateralError),
         },
       ),
     );
@@ -145,7 +145,7 @@ export const attemptTransferWithCollateralization = async (
         {
           params,
           shouldCancelSender: true,
-          collateralError: VectorError.jsonify(collateralError),
+          collateralError: jsonifyError(collateralError),
         },
       ),
     );
@@ -162,7 +162,7 @@ export const attemptTransferWithCollateralization = async (
           senderTransfer,
           recipientChannel.channelAddress,
           {
-            transferError: VectorError.jsonify(transfer.getError()!),
+            transferError: jsonifyError(transfer.getError()!),
             // if its a timeout, could be withholding sig, so do not cancel
             // sender transfer
             shouldCancelSender: false,
@@ -229,7 +229,7 @@ export const transferWithCollateralization = async (
           senderTransfer,
           channel.channelAddress,
           {
-            transferError: VectorError.jsonify(transfer.getError()!),
+            transferError: jsonifyError(transfer.getError()!),
             ...params,
           },
         ),
@@ -262,7 +262,7 @@ export const cancelCreatedTransfer = async (
         toCancel.transferId,
         receiverChannel,
         {
-          cancellationError: VectorError.jsonify(transferResolverRes.getError()!),
+          cancellationError: jsonifyError(transferResolverRes.getError()!),
           senderTransfer: toCancel.transferId,
           cancellationReason,
           ...context,
@@ -328,7 +328,7 @@ export const cancelCreatedTransfer = async (
       toCancel.transferId,
       receiverChannel,
       {
-        cancellationError: VectorError.jsonify(resolveResult.getError()!),
+        cancellationError: jsonifyError(resolveResult.getError()!),
         cancellationReason,
         ...context,
       },

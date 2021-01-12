@@ -24,6 +24,7 @@ import {
   UpdateType,
   Values,
   VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import {
   generateMerkleTreeData,
@@ -498,7 +499,7 @@ export class VectorEngine implements IVectorEngine {
     await tx.wait();
     this.logger.debug({ chainId: channel.networkContext.chainId, hash: tx.hash }, "Deploy tx mined");
     this.logger.info(
-      { result: setupRes.isError ? VectorError.jsonify(setupRes.getError()!) : setupRes.getValue(), method, methodId },
+      { result: setupRes.isError ? jsonifyError(setupRes.getError()!) : setupRes.getValue(), method, methodId },
       "Method complete",
     );
     return setupRes;
@@ -525,7 +526,7 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier,
     );
     this.logger.info(
-      { result: res.isError ? VectorError.jsonify(res.getError()!) : res.getValue(), method, methodId },
+      { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
       "Method complete",
     );
     return res;
@@ -583,7 +584,7 @@ export class VectorEngine implements IVectorEngine {
     }
     this.logger.info(
       {
-        result: depositRes.isError ? VectorError.jsonify(depositRes.getError()!) : depositRes.getValue(),
+        result: depositRes.isError ? jsonifyError(depositRes.getError()!) : depositRes.getValue(),
         method,
         methodId,
       },
@@ -623,7 +624,7 @@ export class VectorEngine implements IVectorEngine {
       this.publicIdentifier,
     );
     this.logger.info(
-      { result: request.isError ? VectorError.jsonify(request.getError()!) : request.getValue(), method, methodId },
+      { result: request.isError ? jsonifyError(request.getError()!) : request.getValue(), method, methodId },
       "Method complete",
     );
     return request as Result<undefined, EngineError>;
@@ -861,7 +862,7 @@ export class VectorEngine implements IVectorEngine {
         this.signer.publicIdentifier,
       );
       this.logger.info(
-        { result: res.isError ? VectorError.jsonify(res.getError()!) : res.getValue(), method, methodId },
+        { result: res.isError ? jsonifyError(res.getError()!) : res.getValue(), method, methodId },
         "Method complete",
       );
       return res;
@@ -921,7 +922,7 @@ export class VectorEngine implements IVectorEngine {
         );
         if (res.isError) {
           error = RestoreError.reasons.AckFailed;
-          context = { error: VectorError.jsonify(res.getError()!) };
+          context = { error: jsonifyError(res.getError()!) };
         } else {
           return Result.ok(channel);
         }
@@ -956,7 +957,7 @@ export class VectorEngine implements IVectorEngine {
     );
     if (calculated.isError) {
       return sendResponseToCounterparty(RestoreError.reasons.GetChannelAddressFailed, {
-        getChannelAddressError: VectorError.jsonify(calculated.getError()!),
+        getChannelAddressError: jsonifyError(calculated.getError()!),
       });
     }
     if (calculated.getValue() !== channel.channelAddress) {
@@ -992,7 +993,7 @@ export class VectorEngine implements IVectorEngine {
     const existing = await this.getChannelState({ channelAddress: channel.channelAddress });
     if (existing.isError) {
       return sendResponseToCounterparty(RestoreError.reasons.CouldNotGetChannel, {
-        getChannelStateError: VectorError.jsonify(existing.getError()!),
+        getChannelStateError: jsonifyError(existing.getError()!),
       });
     }
     const nonce = existing.getValue()?.nonce ?? 0;
@@ -1026,7 +1027,7 @@ export class VectorEngine implements IVectorEngine {
 
     this.logger.info(
       {
-        result: returnVal.isError ? VectorError.jsonify(returnVal.getError()!) : returnVal.getValue(),
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
         method,
         methodId,
       },

@@ -5,7 +5,7 @@ import {
   ConditionalTransferCreatedPayload,
   FullChannelState,
   IVectorChainReader,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
@@ -98,7 +98,7 @@ export async function setupListeners(
       if (res.isError) {
         failed.labels(meta.routingId).inc(1);
         return logger.error(
-          { method: "forwardTransferCreation", error: VectorError.jsonify(res.getError()!) },
+          { method: "forwardTransferCreation", error: jsonifyError(res.getError()!) },
           "Error forwarding transfer",
         );
       }
@@ -158,7 +158,7 @@ export async function setupListeners(
       );
       if (res.isError) {
         return logger.error(
-          { method: "forwardTransferResolution", error: VectorError.jsonify(res.getError()!) },
+          { method: "forwardTransferResolution", error: jsonifyError(res.getError()!) },
           "Error forwarding resolution",
         );
       }
@@ -225,7 +225,7 @@ export async function setupListeners(
       logger.error(
         {
           channelAddress: data.channelAddress,
-          error: VectorError.jsonify(channelRes.getError()!),
+          error: jsonifyError(channelRes.getError()!),
           method,
         },
         "Could not get channel",
@@ -248,7 +248,7 @@ export async function setupListeners(
     if (profileRes.isError) {
       logger.error(
         {
-          error: VectorError.jsonify(profileRes.getError()!),
+          error: jsonifyError(profileRes.getError()!),
           assetId: data.assetId,
           channelAddress: channel.channelAddress,
           method,
@@ -282,7 +282,7 @@ export async function setupListeners(
       data.amount,
     );
     if (res.isError) {
-      logger.error({ error: VectorError.jsonify(res.getError()!) }, "Error requesting collateral");
+      logger.error({ error: jsonifyError(res.getError()!) }, "Error requesting collateral");
       return;
     }
 
@@ -300,7 +300,7 @@ export async function setupListeners(
       logger,
     );
     if (res.isError) {
-      logger.error({ error: VectorError.jsonify(res.getError()!) }, "Error handling isAlive");
+      logger.error({ error: jsonifyError(res.getError()!) }, "Error handling isAlive");
       return;
     }
 

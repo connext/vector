@@ -18,7 +18,7 @@ import {
   UpdateType,
   TChannelUpdate,
   ProtocolError,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { getCreate2MultisigAddress, getRandomBytes32 } from "@connext/vector-utils";
 import { Evt } from "evt";
@@ -112,7 +112,7 @@ export class Vector implements IVectorProtocol {
       this.logger.error({
         method: "lockedOperation",
         variable: "outboundRes",
-        error: VectorError.jsonify(outboundRes.getError()!),
+        error: jsonifyError(outboundRes.getError()!),
       });
       return outboundRes as Result<any, OutboundChannelUpdateError>;
     }
@@ -217,7 +217,7 @@ export class Vector implements IVectorProtocol {
         const receivedError = this.validateParamSchema(received.update, TChannelUpdate);
         if (receivedError) {
           this.logger.warn(
-            { method, methodId, update: received.update, error: VectorError.jsonify(receivedError) },
+            { method, methodId, update: received.update, error: jsonifyError(receivedError) },
             "Received malformed proposed update",
           );
           return;
@@ -226,7 +226,7 @@ export class Vector implements IVectorProtocol {
         const previousError = this.validateParamSchema(received.previousUpdate, TChannelUpdate);
         if (previousError && received.previousUpdate) {
           this.logger.warn(
-            { method, methodId, update: received.previousUpdate, error: VectorError.jsonify(previousError) },
+            { method, methodId, update: received.previousUpdate, error: jsonifyError(previousError) },
             "Received malformed previous update",
           );
           return;
@@ -251,7 +251,7 @@ export class Vector implements IVectorProtocol {
         );
         if (inboundRes.isError) {
           this.logger.warn(
-            { method, methodId, error: VectorError.jsonify(inboundRes.getError()!) },
+            { method, methodId, error: jsonifyError(inboundRes.getError()!) },
             "Failed to apply inbound update",
           );
           return;
@@ -343,7 +343,7 @@ export class Vector implements IVectorProtocol {
     // Validate all parameters
     const error = this.validateParamSchema(params, ProtocolParams.SetupSchema);
     if (error) {
-      this.logger.error({ method, methodId, params, error: VectorError.jsonify(error) });
+      this.logger.error({ method, methodId, params, error: jsonifyError(error) });
       return Result.fail(error);
     }
 
@@ -378,7 +378,7 @@ export class Vector implements IVectorProtocol {
     const returnVal = await this.executeUpdate(updateParams);
     this.logger.debug(
       {
-        result: returnVal.isError ? VectorError.jsonify(returnVal.getError()!) : returnVal.getValue(),
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
         method,
         methodId,
       },
@@ -408,7 +408,7 @@ export class Vector implements IVectorProtocol {
     const returnVal = await this.executeUpdate(updateParams);
     this.logger.debug(
       {
-        result: returnVal.isError ? VectorError.jsonify(returnVal.getError()!) : returnVal.getValue(),
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
         method,
         methodId,
       },
@@ -437,7 +437,7 @@ export class Vector implements IVectorProtocol {
     const returnVal = await this.executeUpdate(updateParams);
     this.logger.debug(
       {
-        result: returnVal.isError ? VectorError.jsonify(returnVal.getError()!) : returnVal.getValue(),
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
         method,
         methodId,
       },
@@ -466,7 +466,7 @@ export class Vector implements IVectorProtocol {
     const returnVal = await this.executeUpdate(updateParams);
     this.logger.debug(
       {
-        result: returnVal.isError ? VectorError.jsonify(returnVal.getError()!) : returnVal.getValue(),
+        result: returnVal.isError ? jsonifyError(returnVal.getError()!) : returnVal.getValue(),
         method,
         methodId,
       },
