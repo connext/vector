@@ -11,16 +11,17 @@ import {
   MemoryLockService,
   getRandomBytes32,
 } from "@connext/vector-utils";
-import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "../channelProvider";
 import { AddressZero } from "@ethersproject/constants";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet } from "@ethersproject/wallet";
 import { BigNumber } from "@ethersproject/bignumber";
+import Sinon from "sinon";
+
+import { DirectProvider, IframeChannelProvider, IRpcChannelProvider } from "../channelProvider";
+import { createVectorInstances } from "../../../protocol/src/testing/utils";
 import { BrowserNode } from "../index";
 
-import Sinon from "sinon";
 import { env } from "./env";
-import { createVectorInstances } from "../../../protocol/src/testing/utils";
 
 const testName = "VectorEngine index utils";
 const { log } = getTestLoggers(testName, env.logLevel);
