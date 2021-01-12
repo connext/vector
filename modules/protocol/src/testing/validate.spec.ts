@@ -29,6 +29,7 @@ import {
   MAXIMUM_TRANSFER_TIMEOUT,
   MINIMUM_TRANSFER_TIMEOUT,
   MAXIMUM_CHANNEL_TIMEOUT,
+  VectorError,
 } from "@connext/vector-types";
 import Sinon from "sinon";
 import { AddressZero } from "@ethersproject/constants";
@@ -341,7 +342,7 @@ describe("validateUpdateParams", () => {
         activeTransfers,
         initiatorIdentifier,
         ValidationError.reasons.ChainServiceFailure,
-        { chainServiceMethod: "getChannelAddress", chainServiceError: chainErr.toJson() },
+        { chainServiceMethod: "getChannelAddress", chainServiceError: VectorError.jsonify(chainErr) },
       );
     });
 
@@ -614,7 +615,7 @@ describe("validateUpdateParams", () => {
         activeTransfers,
         initiatorIdentifier,
         ValidationError.reasons.ChainServiceFailure,
-        { chainServiceMethod: "create", chainServiceError: chainErr.toJson() },
+        { chainServiceMethod: "create", chainServiceError: VectorError.jsonify(chainErr) },
       );
     });
 
@@ -1363,7 +1364,7 @@ describe("validateAndApplyInboundUpdate", () => {
       update = createTestChannelUpdate(UpdateType.resolve, { aliceSignature, bobSignature, nonce: updateNonce });
       activeTransfers = [createTestFullHashlockTransferState({ transferId: update.details.transferId })];
       await runErrorTest(InboundChannelUpdateError.reasons.CouldNotGetFinalBalance, undefined, {
-        chainServiceError: chainErr.toJson(),
+        chainServiceError: VectorError.jsonify(chainErr),
       });
     });
 

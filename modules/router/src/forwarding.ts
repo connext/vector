@@ -13,6 +13,7 @@ import {
   FullTransferState,
   IVectorChainReader,
   NodeError,
+  VectorError,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -146,7 +147,7 @@ export async function forwardTransferCreation(
         senderTransfer.transferId,
         "",
         {
-          nodeError: senderChannelRes.getError()?.toJson(),
+          nodeError: VectorError.jsonify(senderChannelRes.getError()!),
         },
       ),
     );
@@ -184,7 +185,7 @@ export async function forwardTransferCreation(
         ForwardTransferCreationError.reasons.UnableToCalculateSwap,
         "",
         {
-          swapError: swapRes.getError()?.toJson(),
+          swapError: swapRes.getError(),
         },
       );
     }
@@ -218,7 +219,7 @@ export async function forwardTransferCreation(
       ForwardTransferCreationError.reasons.RecipientChannelNotFound,
       "",
       {
-        storeError: recipientChannelRes.getError()?.toJson(),
+        storeError: VectorError.jsonify(recipientChannelRes.getError()!),
         recipientChainId,
         recipientIdentifier,
       },
@@ -329,7 +330,7 @@ export async function forwardTransferResolution(
         channelAddress,
         transferId,
         {
-          getChannelError: transfersRes.getError()?.toJson(),
+          getChannelError: VectorError.jsonify(transfersRes.getError()!),
         },
       ),
     );
@@ -374,7 +375,7 @@ export async function forwardTransferResolution(
         channelAddress,
         transferId,
         {
-          resolutionError: resolution.getError()?.toJson(),
+          resolutionError: VectorError.jsonify(resolution.getError()!),
           transferResolver,
         },
       ),

@@ -1,4 +1,11 @@
-import { ILockService, IMessagingService, LockInformation, NodeError, Result } from "@connext/vector-types";
+import {
+  ILockService,
+  IMessagingService,
+  LockInformation,
+  NodeError,
+  Result,
+  VectorError,
+} from "@connext/vector-types";
 import { MemoryLockService } from "@connext/vector-utils";
 import { BaseLogger } from "pino";
 
@@ -113,7 +120,7 @@ export class LockService implements ILockService {
         throw new ServerNodeLockError(ServerNodeLockError.reasons.AcquireMessageFailed, lockName, undefined, {
           counterpartyPublicIdentifier,
           isAlice,
-          messagingError: res.getError()!.toJson(),
+          messagingError: VectorError.jsonify(res.getError()!),
         });
       }
       const { lockValue } = res.getValue();
@@ -144,7 +151,7 @@ export class LockService implements ILockService {
       );
       if (result.isError) {
         throw new ServerNodeLockError(ServerNodeLockError.reasons.ReleaseMessageFailed, lockName, lockValue, {
-          messagingError: result.getError()!.toJson(),
+          messagingError: VectorError.jsonify(result.getError()!),
           counterpartyPublicIdentifier,
           isAlice,
         });

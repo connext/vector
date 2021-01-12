@@ -530,17 +530,16 @@ export class RestServerNodeService implements INodeService {
     } catch (e) {
       const jsonErr = Object.keys(e).includes("toJSON") ? e.toJSON() : e;
       const msg = e.response?.data?.message ?? jsonErr.message ?? ServerNodeServiceError.reasons.InternalServerError;
-      return Result.fail(
-        new ServerNodeServiceError(
-          msg.includes("timed out") || msg.includes("timeout") ? ServerNodeServiceError.reasons.Timeout : msg,
-          filled.publicIdentifier,
-          urlPath,
-          params,
-          {
-            ...(e.response?.data ?? jsonErr.stack ?? {}),
-          },
-        ),
+      const toThrow = new ServerNodeServiceError(
+        msg.includes("timed out") || msg.includes("timeout") ? ServerNodeServiceError.reasons.Timeout : msg,
+        filled.publicIdentifier,
+        urlPath,
+        params,
+        {
+          ...(e.response?.data ?? { stack: jsonErr.stack ?? "" }),
+        },
       );
+      return Result.fail(toThrow);
     }
   }
 }

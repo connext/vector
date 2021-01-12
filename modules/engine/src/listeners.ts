@@ -244,7 +244,7 @@ export async function setupEngineListeners(
       const res = await acquireRestoreLocks(channel);
       if (res.isError) {
         return sendCannotRestoreFromError(RestoreError.reasons.AcquireLockError, {
-          acquireLockError: res.getError()?.toJson(),
+          acquireLockError: VectorError.jsonify(res.getError()!),
         });
       }
 
