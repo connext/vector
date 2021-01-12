@@ -99,7 +99,7 @@ export class VectorError extends Error {
     };
   }
 
-  private toJson(): VectorErrorJson {
+  public toJson(): VectorErrorJson {
     return {
       message: this.msg,
       context: this.context,
