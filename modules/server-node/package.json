@@ -34,6 +34,7 @@
     "ts-nats": "1.2.15"
   },
   "devDependencies": {
+    "@protobuf-ts/plugin": "^1.0.12",
     "@prisma/cli": "2.12.1",
     "@types/chai": "4.2.14",
     "@types/chai-as-promised": "7.1.3",
