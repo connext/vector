@@ -11,7 +11,7 @@ import {
   TransferNames,
   ChainError,
   UpdateType,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import {
   createTestChannelState,
@@ -122,7 +122,7 @@ describe("ParamConverter", () => {
       expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
       expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
       expect(err?.context.params).to.be.deep.eq(params);
-      expect(err?.context.registryError).to.be.deep.eq(VectorError.jsonify(chainErr));
+      expect(err?.context.registryError).to.be.deep.eq(jsonifyError(chainErr));
     });
 
     it("should fail if params.type is an address and chainReader.getRegisteredTransferByDefinition fails", async () => {
@@ -146,7 +146,7 @@ describe("ParamConverter", () => {
       expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
       expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
       expect(err?.context.params).to.be.deep.eq(params);
-      expect(err?.context.registryError).to.be.deep.eq(VectorError.jsonify(chainErr));
+      expect(err?.context.registryError).to.be.deep.eq(jsonifyError(chainErr));
     });
 
     it("should fail if initiator is receiver for same chain/network", async () => {
@@ -436,7 +436,7 @@ describe("ParamConverter", () => {
       expect(err?.context.channelAddress).to.be.eq(channelState.channelAddress);
       expect(err?.context.publicIdentifier).to.be.eq(signerA.publicIdentifier);
       expect(err?.context.params).to.be.deep.eq(params);
-      expect(err?.context.registryError).to.be.deep.eq(VectorError.jsonify(chainErr));
+      expect(err?.context.registryError).to.be.deep.eq(jsonifyError(chainErr));
     });
 
     const users = ["A", "B"];

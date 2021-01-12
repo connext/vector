@@ -5,8 +5,9 @@ import {
   ConditionalTransferCreatedPayload,
   FullChannelState,
   IVectorChainReader,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
+import { getRandomBytes32 } from "@connext/vector-utils";
 import { Gauge, Registry } from "prom-client";
 import Ajv from "ajv";
 import { JsonRpcProvider } from "@ethersproject/providers";
@@ -76,6 +77,9 @@ export async function setupListeners(
   logger: BaseLogger,
   register: Registry,
 ): Promise<void> {
+  const method = "setupListeners";
+  const methodId = getRandomBytes32();
+  logger.debug({ method, methodId, routerPublicIdentifier, routerSignerAddress }, "Method started");
   // TODO, node should be wrapper around grpc
   const { failed, successful, attempts, activeTransfers, transferSendTime } = configureMetrics(register);
 
@@ -98,7 +102,7 @@ export async function setupListeners(
       if (res.isError) {
         failed.labels(meta.routingId).inc(1);
         return logger.error(
-          { method: "forwardTransferCreation", error: VectorError.jsonify(res.getError()!) },
+          { method: "forwardTransferCreation", error: jsonifyError(res.getError()!) },
           "Error forwarding transfer",
         );
       }
@@ -118,7 +122,7 @@ export async function setupListeners(
             transferId: data.transfer.transferId,
             routingId: meta.routingId,
             channelAddress: data.channelAddress,
-            errors: validate.errors?.map((err) => err.message),
+            errors: validate.errors?.map((err) => err.message).join(","),
           },
           "Not forwarding non-routing transfer",
         );
@@ -158,14 +162,14 @@ export async function setupListeners(
       );
       if (res.isError) {
         return logger.error(
-          { method: "forwardTransferResolution", error: VectorError.jsonify(res.getError()!) },
+          { method: "forwardTransferResolution", error: jsonifyError(res.getError()!) },
           "Error forwarding resolution",
         );
       }
       logger.info({ method: "forwardTransferResolution", result: res.getValue() }, "Successfully forwarded resolution");
 
       // Adjust collateral in channel
-      await adjustCollateral(
+      const response = await adjustCollateral(
         data.channelAddress,
         data.transfer.assetId,
         routerPublicIdentifier,
@@ -173,6 +177,13 @@ export async function setupListeners(
         chainReader,
         logger,
       );
+      if (res.isError) {
+        return logger.error(
+          { method: "adjustCollateral", error: jsonifyError(res.getError()!) },
+          "Error adjusting collateral",
+        );
+      }
+      logger.info({ method: "adjustCollateral", result: response.getValue() }, "Successfully adjusted collateral");
     },
     (data: ConditionalTransferCreatedPayload) => {
       // Only forward transfers with valid routing metas
@@ -215,8 +226,13 @@ export async function setupListeners(
   );
 
   nodeService.on(EngineEvents.REQUEST_COLLATERAL, async (data) => {
-    const method = "requestCollateral event handler";
-    logger.info({ data }, "Received request collateral event");
+    const method = "requestCollateral";
+    const methodId = getRandomBytes32();
+    logger.info(
+      { method, methodId, channelAddress: data.channelAddress, assetId: data.assetId, amount: data.amount },
+      "Received request collateral event",
+    );
+    logger.debug({ method, methodId, event: data }, "Handling event");
     const channelRes = await nodeService.getStateChannel({
       channelAddress: data.channelAddress,
       publicIdentifier: routerPublicIdentifier,
@@ -224,9 +240,10 @@ export async function setupListeners(
     if (channelRes.isError) {
       logger.error(
         {
-          channelAddress: data.channelAddress,
-          error: VectorError.jsonify(channelRes.getError()!),
           method,
+          methodId,
+          channelAddress: data.channelAddress,
+          error: jsonifyError(channelRes.getError()!),
         },
         "Could not get channel",
       );
@@ -234,7 +251,7 @@ export async function setupListeners(
     }
     const channel = channelRes.getValue();
     if (!channel) {
-      logger.error({ channelAddress: data.channelAddress, method }, "Channel undefined");
+      logger.error({ method, methodId, channelAddress: data.channelAddress }, "Channel undefined");
       return;
     }
 
@@ -248,10 +265,11 @@ export async function setupListeners(
     if (profileRes.isError) {
       logger.error(
         {
-          error: VectorError.jsonify(profileRes.getError()!),
+          method,
+          methodId,
+          error: jsonifyError(profileRes.getError()!),
           assetId: data.assetId,
           channelAddress: channel.channelAddress,
-          method,
         },
         "Could not get rebalance profile",
       );
@@ -261,13 +279,14 @@ export async function setupListeners(
     if (data.amount && BigNumber.from(data.amount).gt(profile.reclaimThreshold)) {
       logger.error(
         {
+          method,
+          methodId,
           profile,
           requestedAmount: data.amount,
           assetId: data.assetId,
           channelAddress: channel.channelAddress,
-          method,
         },
-        "Could not get rebalance profile",
+        "Requested amount gt reclaimThreshold",
       );
       return;
     }
@@ -282,11 +301,14 @@ export async function setupListeners(
       data.amount,
     );
     if (res.isError) {
-      logger.error({ error: VectorError.jsonify(res.getError()!) }, "Error requesting collateral");
+      logger.error({ method, methodId, error: jsonifyError(res.getError()!) }, "Error requesting collateral");
       return;
     }
 
-    logger.info({ res: res.getValue() }, "Succesfully requested collateral");
+    logger.info(
+      { method, methodId, assetId: data.assetId, channelAddress: channel.channelAddress },
+      "Succesfully requested collateral",
+    );
   });
 
   nodeService.on(EngineEvents.IS_ALIVE, async (data) => {
@@ -300,10 +322,11 @@ export async function setupListeners(
       logger,
     );
     if (res.isError) {
-      logger.error({ error: VectorError.jsonify(res.getError()!) }, "Error handling isAlive");
+      logger.error({ method: "handleIsAlive", error: jsonifyError(res.getError()!) }, "Error handling isAlive");
       return;
     }
 
-    logger.info({ res: res.getValue() }, "Succesfully handled isAlive");
+    logger.info({ method: "handleIsAlive", res: res.getValue() }, "Succesfully handled isAlive");
   });
+  logger.debug({ method, methodId }, "Method complete");
 }
