@@ -13,10 +13,11 @@ import {
   FullTransferState,
   IVectorChainReader,
   NodeError,
-  VectorError,
+  jsonifyError,
 } from "@connext/vector-types";
 import { BaseLogger } from "pino";
 import { BigNumber } from "@ethersproject/bignumber";
+import { getRandomBytes32 } from "@connext/vector-utils";
 
 import { getSwappedAmount } from "./services/swap";
 import { IRouterStore, RouterUpdateType, RouterUpdateStatus } from "./services/store";
@@ -37,10 +38,20 @@ export async function forwardTransferCreation(
   chainReader: IVectorChainReader,
 ): Promise<Result<any, ForwardTransferCreationError>> {
   const method = "forwardTransferCreation";
+  const methodId = getRandomBytes32();
   logger.info(
-    { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
-    "Received transfer event, starting forwarding",
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      routerSignerAddress,
+      senderTransferId: data.transfer.transferId,
+      senderChannelAddress: data.channelAddress,
+      routingId: data.transfer?.meta?.routingId,
+    },
+    "Method started",
   );
+  logger.debug({ method, methodId, event: data }, "Event data");
 
   /*
   A note on the transfer event data and conditionalTransfer() params:
@@ -71,6 +82,18 @@ export async function forwardTransferCreation(
     receiverChannel = "",
     context: any = {},
   ): Promise<Result<any, ForwardTransferCreationError>> => {
+    logger.warn(
+      {
+        method,
+        methodId,
+        senderChannelAddress: senderTransfer.channelAddress,
+        senderTransferId: senderTransfer.transferId,
+        routingId,
+        receiverChannelAddress: receiverChannel,
+        cancellationReason: errorReason,
+      },
+      "Cancelling sender transfer",
+    );
     const cancelRes = await cancelCreatedTransfer(
       errorReason,
       senderTransfer,
@@ -176,7 +199,18 @@ export async function forwardTransferCreation(
   // potential swaps/crosschain stuff
   let recipientAmount = senderAmount;
   if (recipientAssetId !== senderAssetId || recipientChainId !== senderChainId) {
-    logger.warn({ method, recipientAssetId, senderAssetId, recipientChainId }, "Detected inflight swap");
+    logger.info(
+      {
+        method,
+        methodId,
+        recipientAssetId,
+        senderAssetId,
+        recipientChainId,
+        senderChainId,
+        conditionType,
+      },
+      "Detected inflight swap",
+    );
     const swapRes = getSwappedAmount(senderAmount, senderAssetId, senderChainId, recipientAssetId, recipientChainId);
     if (swapRes.isError) {
       return cancelSenderTransferAndReturnError(
@@ -191,16 +225,12 @@ export async function forwardTransferCreation(
     }
     recipientAmount = swapRes.getValue();
 
-    logger.warn(
+    logger.info(
       {
         method,
-        recipientAssetId,
+        methodId,
         recipientAmount,
-        recipientChainId,
-        senderTransferDefinition,
         senderAmount,
-        senderAssetId,
-        conditionType,
       },
       "Inflight swap calculated",
     );
@@ -256,7 +286,7 @@ export async function forwardTransferCreation(
     details,
     meta: newMeta,
   };
-  logger.info({ params, method }, "Generated new transfer params");
+  logger.info({ method, methodId, params }, "Generated new transfer params");
 
   const transferRes = await attemptTransferWithCollateralization(
     params,
@@ -287,13 +317,14 @@ export async function forwardTransferCreation(
 
   // check if you should cancel the sender
   const error = transferRes.getError()!;
+  logger.error({ ...jsonifyError(error) }, "Failed to forward transfer");
   if (error.context.shouldCancelSender) {
-    logger.warn({ ...error }, "Cancelling sender-side transfer");
     return cancelSenderTransferAndReturnError(routingId, senderTransfer, error.message);
   }
 
   // return failure without cancelling
-  return Result.fail(transferRes.getError()!);
+  logger.info({ method, methodId }, "Method complete");
+  return Result.fail(error);
 }
 
 export async function forwardTransferResolution(
@@ -305,10 +336,20 @@ export async function forwardTransferResolution(
   logger: BaseLogger,
 ): Promise<Result<undefined | NodeResponses.ResolveTransfer, ForwardTransferResolutionError>> {
   const method = "forwardTransferResolution";
+  const methodId = getRandomBytes32();
   logger.info(
-    { data, method, node: { routerSignerAddress, routerPublicIdentifier } },
-    "Received transfer resolution, starting forwarding",
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      routerSignerAddress,
+      receiverTransferId: data.transfer.transferId,
+      receiverChannelAddress: data.channelAddress,
+      routingId: data.transfer?.meta?.routingId,
+    },
+    "Method started",
   );
+  logger.debug({ methodId, method, data }, "Handling event");
   const {
     channelAddress,
     transfer: { transferId, transferResolver, meta },
@@ -360,10 +401,31 @@ export async function forwardTransferResolution(
     transferResolver,
     publicIdentifier: routerPublicIdentifier,
   };
+  logger.info(
+    {
+      method,
+      methodId,
+      transferResolver,
+      senderTransferId: incomingTransfer.transferId,
+      senderChannelAddress: incomingTransfer.channelAddress,
+      routingId,
+    },
+    "Forwarding resolution",
+  );
   const resolution = await nodeService.resolveTransfer(resolveParams);
   if (resolution.isError) {
+    logger.warn(
+      {
+        method,
+        methodId,
+        error: jsonifyError(resolution.getError()!),
+        routingId,
+        senderTransferId: incomingTransfer.transferId,
+        senderChannelAddress: incomingTransfer.channelAddress,
+      },
+      "Failed to forward resolution, queueing",
+    );
     // Store the transfer, retry later
-    // TODO: add logic to periodically retry resolving transfers
     const type = RouterUpdateType.TRANSFER_RESOLUTION;
     await store.queueUpdate(incomingTransfer.channelAddress, type, resolveParams);
     return Result.fail(
@@ -375,13 +437,14 @@ export async function forwardTransferResolution(
         channelAddress,
         transferId,
         {
-          resolutionError: resolution.getError()!.toJson(),
+          resolutionError: jsonifyError(resolution.getError()!),
           transferResolver,
         },
       ),
     );
   }
 
+  logger.info({ method, methodId }, "Method complete");
   return Result.ok(resolution.getValue());
 }
 
@@ -395,13 +458,21 @@ export async function handleIsAlive(
   logger: BaseLogger,
 ): Promise<Result<undefined, CheckInError>> {
   const method = "handleIsAlive";
+  const methodId = getRandomBytes32();
   logger.info(
-    { data, method, node: { signerAddress, routerPublicIdentifier } },
-    "Received isAlive event, starting handler",
+    {
+      method,
+      methodId,
+      routerPublicIdentifier,
+      routerSignerAddress: signerAddress,
+      channelAddress: data.channelAddress,
+    },
+    "Method started",
   );
+  logger.info({ method, methodId, event: data }, "Handling event");
 
   if (data.skipCheckIn) {
-    logger.info({ method, data }, "Skipping isAlive handler");
+    logger.info({ method, methodId, channelAddress: data.channelAddress }, "Skipping isAlive handler");
     return Result.ok(undefined);
   }
   // This means the user is online and has checked in. Get all updates that are
@@ -424,7 +495,8 @@ export async function handleIsAlive(
   for (const routerUpdate of updates) {
     // set status to processing to avoid race conditions
     await store.setUpdateStatus(routerUpdate.id, RouterUpdateStatus.PROCESSING);
-    logger.info({ method, update: routerUpdate }, "Found update for checkIn channel");
+    logger.info({ method, methodId, updateType: routerUpdate.type, updateId: routerUpdate.id }, "Processing update");
+    logger.debug({ method, methodId, update: routerUpdate }, "Update details");
     const { type, payload } = routerUpdate;
 
     // Handle transfer creation updates
@@ -442,8 +514,8 @@ export async function handleIsAlive(
       );
       if (createRes.isError) {
         logger.error(
-          { createError: createRes.getError()?.message, update: routerUpdate },
-          "Handling router update failed",
+          { method, methodId, transferError: jsonifyError(createRes.getError()!), update: routerUpdate },
+          "Handling update failed",
         );
         const error = createRes.getError()?.context?.transferError;
         await store.setUpdateStatus(
@@ -453,7 +525,7 @@ export async function handleIsAlive(
         );
         erroredUpdates.push(routerUpdate);
       } else {
-        logger.info({ update: routerUpdate.id, method }, "Successfully handled checkIn update");
+        logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled checkIn update");
       }
       continue;
     }
@@ -467,7 +539,10 @@ export async function handleIsAlive(
     const resolveRes = await nodeService.resolveTransfer(payload as NodeParams.ResolveTransfer);
     // If failed, retry later
     if (resolveRes.isError) {
-      logger.error({ resolveError: resolveRes.getError()?.message, routerUpdate }, "Handling router update failed");
+      logger.error(
+        { method, methodId, resolveError: jsonifyError(resolveRes.getError()!), update: routerUpdate },
+        "Handling update failed",
+      );
       const error = resolveRes.getError()?.message;
       await store.setUpdateStatus(
         routerUpdate.id,
@@ -476,15 +551,17 @@ export async function handleIsAlive(
       );
       erroredUpdates.push(routerUpdate);
     } else {
-      logger.info({ update: routerUpdate.id, method }, "Successfully handled checkIn update");
+      logger.info({ method, methodId, updateId: routerUpdate.id }, "Successfully handled update");
     }
   }
   if (erroredUpdates.length > 0) {
+    logger.error({ method, methodId, erroredUpdates }, "Failed to handle updates");
     return Result.fail(
       new CheckInError(CheckInError.reasons.UpdatesFailed, data.channelAddress, {
         failedIds: erroredUpdates.map((update) => update.id),
       }),
     );
   }
+  logger.info({ method, methodId }, "Method complete");
   return Result.ok(undefined);
 }
