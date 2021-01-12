@@ -200,7 +200,10 @@ export const requestCollateral = async (
   const myBalance = BigNumber.from(getBalanceForAssetId(channel, assetId, iAmAlice ? "alice" : "bob"));
 
   if (myBalance.gte(target)) {
-    logger.info({ balance: channel.balances[assetIdx], target }, "Current balance is sufficient, not collateralizing");
+    logger.info(
+      { balance: channel.balances[assetIdx], target: target.toString() },
+      "Current balance is sufficient, not collateralizing",
+    );
     return Result.ok(undefined);
   }
   logger.info({ target: target.toString(), myBalance: myBalance.toString() }, "Adding collateral to channel");
